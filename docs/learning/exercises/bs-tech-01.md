@@ -14,8 +14,8 @@ relational schema, keys, cardinality and durable ownership
 
 ## BodySense target files
 
-- `apps/api/migrations/000032_create_body_state.up.sql`
-- `apps/api/migrations/000034_complete_longitudinal_health_loop.up.sql`
+- `apps/api/migrations/000001_vnext_baseline.up.sql`
+- `apps/api/migrations/000001_vnext_baseline.up.sql`
 - `apps/api/internal/model`
 
 ## Prediction before reading/running

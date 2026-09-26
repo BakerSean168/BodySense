@@ -151,6 +151,7 @@
 }
 
 :root {
+  color-scheme: light;
   /* BodySense green palette mapped to shadcn semantic tokens */
   --background: oklch(0.99 0.003 155);
   --foreground: oklch(0.17 0.03 155);

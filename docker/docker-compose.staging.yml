@@ -2,7 +2,7 @@
 # External exposure is loopback-only; Tailscale Serve terminates tailnet HTTPS.
 services:
   postgres:
-    image: pgvector/pgvector:pg18
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-bodysense}
@@ -19,7 +19,7 @@ services:
       retries: 8
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
     volumes:
@@ -32,7 +32,7 @@ services:
       retries: 8
 
   litellm-gateway:
-    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
     restart: unless-stopped
     command: ['--config', '/app/config.yaml', '--port', '4000']
     environment:

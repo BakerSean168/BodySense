@@ -63,8 +63,8 @@
         "semantic_audit": "public-title-only",
         "objective": "Design DB schema and generate SQL code with dbdiagram.io",
         "target_files": [
-          "apps/api/migrations/000032_create_body_state.up.sql",
-          "apps/api/migrations/000034_complete_longitudinal_health_loop.up.sql",
+          "apps/api/migrations/000001_vnext_baseline.up.sql",
+          "apps/api/migrations/000001_vnext_baseline.up.sql",
           "apps/api/internal/model"
         ],
         "task_summary": "Reverse-engineer the selected BodySense slice into an ER diagram from migrations/models. Annotate aggregate ownership, immutable history versus current pointers, uniqueness constraints and where user ownership is enforced.",
@@ -463,7 +463,7 @@
         "objective": "Implement RESTful HTTP API in Go using Gin",
         "target_files": [
           "apps/api/cmd/server/main.go",
-          "apps/api/internal/handler/body_state_handler.go",
+          "apps/api/internal/transport/httpapi/body_state.go",
           "apps/api/internal/service/body_state_service.go",
           "apps/api/internal/repository/body_state_repository.go"
         ],
@@ -605,8 +605,8 @@
         "semantic_audit": "public-title-only",
         "objective": "Add users table with unique & foreign key constraints in PostgreSQL",
         "target_files": [
-          "apps/api/migrations/000001_create_users.up.sql",
-          "apps/api/migrations/000032_create_body_state.up.sql",
+          "apps/api/migrations/000001_vnext_baseline.up.sql",
+          "apps/api/migrations/000001_vnext_baseline.up.sql",
           "apps/api/internal/repository/user_repository.go"
         ],
         "task_summary": "Trace at least one unique constraint and one FK/relationship constraint from migration DDL to repository behavior. Explain why pre-checks in application code cannot replace the database constraint under concurrency.",
@@ -649,8 +649,8 @@
         "target_files": [
           "apps/api/internal/service/auth_service.go",
           "apps/api/internal/repository/user_repository.go",
-          "apps/api/internal/handler/auth_handler.go",
-          "apps/api/internal/handler/auth_handler_test.go"
+          "apps/api/internal/transport/httpapi/auth.go",
+          "apps/api/internal/transport/httpapi/auth_test.go"
         ],
         "task_summary": "Trace errors from GORM/PostgreSQL through repository/service/handler for registration or another unique-constrained resource. Distinguish expected constraint conflict, not-found, transient DB failure, and internal bug.",
         "completion_evidence_plan": [
@@ -783,7 +783,7 @@
         "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
         "authority": "public-readme; video-internal objectives not audited"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-TECH-20",
@@ -805,8 +805,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly separated JWT cryptographic validity from live user/session/authorization state, explained short-lived access token plus long-lived refresh token trade-off and why refresh token can be opaque. Focused BodySense auth tests verified token generation/validation, SessionID claim, malformed-token rejection and wrong-secret rejection. Learner identified that signature integrity/authenticity does not prove user existence, session liveness, or resource authorization."
+        ]
       }
     },
     {
@@ -823,7 +825,7 @@
         "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
         "authority": "public-readme; video-internal objectives not audited"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-TECH-21",
@@ -831,7 +833,7 @@
         "objective": "Implement login user API that returns PASETO or JWT access token in Go",
         "target_files": [
           "apps/api/internal/service/auth_service.go",
-          "apps/api/internal/handler/auth_handler.go",
+          "apps/api/internal/transport/httpapi/auth.go",
           "apps/api/internal/repository/user_repository.go"
         ],
         "task_summary": "Trace BodySense login end to end from HTTP handler into `AuthService.Login` and token/session creation. Mark which operations are security-critical and which best-effort side effects may fail without rejecting login.",
@@ -846,8 +848,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly predicted BodySense login sequence from request parsing through user lookup, bcrypt verification, best-effort last_login update, access/refresh issuance, Redis refresh/session authority, HttpOnly cookie delivery, and JSON access-token response; explained indistinguishable unknown-email/wrong-password responses to prevent account enumeration, why last_login metadata failure should not reject authentication, and why session-authority failure must fail closed before credentials are returned."
+        ]
       }
     },
     {
@@ -864,7 +868,7 @@
         "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
         "authority": "public-readme; video-internal objectives not audited"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-TECH-22",
@@ -888,8 +892,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly classified missing Authorization as 401, revoked session as 401, Redis/session-authority outage as 503 fail-closed, member-only role denial as 403, resource ownership as a server-side authorization boundary that may deliberately surface 404, and rejected frontend-only gating as insufficient. Learner asked for deeper explanation of Redis session/refresh authority before L4 verification.",
+          "Learner correctly distinguished revoked session (known unauthorized -> 401) from Redis/session-authority outage (authorization state unknown -> fail closed with 503), and focused middleware tests verified both paths."
+        ]
       }
     },
     {
@@ -1377,7 +1384,7 @@
         "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
         "authority": "public-readme; video-internal objectives not audited"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-TECH-37",
@@ -1402,8 +1409,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly predicted that concurrent refresh requests using the same old credential require an atomic consume-and-replace operation to prevent two valid descendants, and that replay of a consumed refresh credential is evidence of possible credential theft warranting revocation of the refresh family/session. Focused BodySense tests verified single-winner rotation, replay-triggered family/session revocation, and logout using a consumed refresh token."
+        ]
       }
     },
     {

@@ -2,6 +2,7 @@
   "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.13",
+  "include": ["src"],
   "typeCheckingMode": "basic",
   "strict": ["src/api/runtime_proto_adapter.py"],
   "ignore": [

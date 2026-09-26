@@ -20,7 +20,7 @@ async function withFakeDocker(fn) {
   await mkdir(bin);
   await writeFile(
     path.join(bin, "docker"),
-    `#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' "$*" >> "$DOCKER_LOG"\nif [[ "$1 $2" == "image ls" ]]; then\n  printf '%s\\n' image-a image-b image-a\nfi\n`,
+    `#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' "$*" >> "$DOCKER_LOG"\nif [[ "$1 $2" == "image ls" ]]; then\n  printf '%s\\n' image-a image-b image-a\nfi\nif [[ "$1 $2" == "buildx rm" ]]; then\n  case "\${FAKE_BUILDX_RM_MODE:-success}" in\n    fail-removed|fail-present) exit 1 ;;\n  esac\nfi\nif [[ "$1 $2" == "buildx ls" ]]; then\n  if [[ "\${FAKE_BUILDX_RM_MODE:-success}" == "fail-present" ]]; then\n    printf '%s\\n' "\${FAKE_BUILDER_NAME:-bodysense-validator-test-builder}"\n  fi\nfi\n`,
     { mode: 0o755 },
   );
   try {
@@ -30,11 +30,12 @@ async function withFakeDocker(fn) {
   }
 }
 
-function runLifecycle({ bin, log, script }) {
+function runLifecycle({ bin, log, script, env = {} }) {
   return spawnSync("bash", ["-c", script], {
     cwd: repoRoot,
     env: {
       ...process.env,
+      ...env,
       PATH: `${bin}:${process.env.PATH}`,
       DOCKER_LOG: log,
       LIFECYCLE: lifecycle,
@@ -66,6 +67,51 @@ test("cleanup removes only the validator project stack, project images, and its 
     assert.match(calls, /image rm -f image-a image-b/);
     assert.match(calls, /buildx rm -f bodysense-validator-test-builder/);
     assert.doesNotMatch(calls, /volume prune|system prune|container prune/);
+  });
+});
+
+test("builder cleanup accepts a nonzero rm when postcondition proves the builder is gone", async () => {
+  await withFakeDocker(async ({ bin, log }) => {
+    const result = runLifecycle({
+      bin,
+      log,
+      env: { FAKE_BUILDX_RM_MODE: "fail-removed" },
+      script: `source "$LIFECYCLE"; validator_cleanup "$REPO_ROOT" bodysense-validator-test bodysense-validator-test-builder 1 0`,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(
+      result.stdout,
+      /VALIDATOR_TEARDOWN_STEP=RECOVERED step=builder-remove/,
+    );
+    assert.match(result.stdout, /VALIDATOR_TEARDOWN=PASS/);
+
+    const calls = await readFile(log, "utf8");
+    assert.match(calls, /buildx rm -f bodysense-validator-test-builder/);
+    assert.match(calls, /buildx ls --format \{\{\.Name\}\}/);
+  });
+});
+
+test("builder cleanup retries boundedly and fails when the builder still exists", async () => {
+  await withFakeDocker(async ({ bin, log }) => {
+    const result = runLifecycle({
+      bin,
+      log,
+      env: {
+        FAKE_BUILDX_RM_MODE: "fail-present",
+        VALIDATOR_BUILDER_REMOVE_ATTEMPTS: "2",
+        VALIDATOR_BUILDER_REMOVE_RETRY_SECONDS: "0",
+      },
+      script: `source "$LIFECYCLE"; validator_cleanup "$REPO_ROOT" bodysense-validator-test bodysense-validator-test-builder 1 0`,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /VALIDATOR_TEARDOWN_STEP=FAIL step=builder-remove/);
+    assert.match(result.stderr, /VALIDATOR_TEARDOWN=FAIL/);
+
+    const calls = await readFile(log, "utf8");
+    const rmCalls = calls
+      .split("\n")
+      .filter((line) => line.includes("buildx rm -f bodysense-validator-test-builder"));
+    assert.equal(rmCalls.length, 2);
   });
 });
 

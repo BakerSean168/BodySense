@@ -1,7 +1,7 @@
 # ── Atlas acquisition: immutable Vanatome release ─────────────────────
 # Keep this stage independent from application source so the ~92 MiB verified
 # atlas layer remains cacheable across ordinary Web code changes.
-FROM node:24-slim AS anatomy-atlas
+FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS anatomy-atlas
 
 ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
 WORKDIR /atlas
@@ -14,21 +14,22 @@ RUN node scripts/anatomy/sync.mjs \
       --root "/release/${BODYSENSE_ANATOMY_ATLAS_VERSION}"
 
 # ── Builder: Node 24 + pnpm 11, build Vite app ────────────────────────
-FROM node:24-slim AS builder
+FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS builder
 
 ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
 ARG VITE_BODYSENSE_ANATOMY_CATALOG_URL
 ARG VITE_ASSET_BASE
 
 # Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11 --activate
+RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 
 WORKDIR /app
 
-# Parameterized npm mirror — default is npmmirror for China-based CI,
-# override with --build-arg NPM_REGISTRY=https://registry.npmjs.org on GHA runners.
-ARG NPM_REGISTRY=https://registry.npmmirror.com
-RUN npm config set registry ${NPM_REGISTRY}
+# Parameterized npm registry. Reproducible/supply-chain-validated builds
+# default to the canonical npm registry so release-age metadata is authoritative.
+# China-local builds may explicitly override this to https://registry.npmmirror.com.
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN pnpm config set registry ${NPM_REGISTRY}
 
 # Copy workspace root files for pnpm workspace resolution
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
@@ -57,7 +58,7 @@ RUN cd apps/web \
        npx vite build
 
 # ── Runtime: nginx serves static files ─────────────────────────────────
-FROM nginx:1.27-alpine
+FROM nginx:1.30.5-alpine@sha256:bf3201ab56f23e5954646379c775d511fc466e9f11376d9725361064ad07ed35
 
 ARG BUILD_DATE
 ARG VCS_REF

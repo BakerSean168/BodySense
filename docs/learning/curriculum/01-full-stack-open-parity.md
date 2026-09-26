@@ -63,7 +63,7 @@ Examples:
 Node/Express       -> Go/Gin transport/runtime comparison + direct HTTP semantics
 Mongo/Mongoose     -> PostgreSQL/GORM persistence + explicit NoSQL comparison when relevant
 Redux legacy path  -> compare; current Zustand/Query/Context ownership is direct
-GraphQL            -> structured compare against current REST/SSE; current Part 8 source is verified and section-audited
+GraphQL            -> isolated executable GraphQL/Apollo Server + Apollo Client learning lab + structured compare against current REST/TanStack/SSE; current Part 8 source is verified/section-audited and a core GraphQL slice is EXERCISE_READY
 ```
 
 No production framework/library is changed merely to make the repository look like the source course.
@@ -72,4 +72,4 @@ No production framework/library is changed merely to make the repository look li
 
 The first FSO cards currently ready for actual L4 learning are generated/listed in [`views/coverage-status.md`](./views/coverage-status.md). More cards are promoted from `MAPPED` only after target files, failure cases and verification evidence are concrete.
 
-Current Parts 8-14 exercise records and section-heading units are now mapped/dispositioned; historical Part 8-11 mappings were not silently reused. The next work is (1) expanding the fingerprinted prose-risk selection to additional high-risk sections while preserving the explicit non-exhaustive boundary and (2) promotion of mapped exercises/concepts to concrete `EXERCISE_READY` cards with reviewed prerequisite closure.
+Current Parts 8-14 exercise records and section-heading units are now mapped/dispositioned; historical Part 8-11 mappings were not silently reused. Part 8 now has a dedicated executable GraphQL core slice and an isolated lab so coaching cannot substitute SSE for GraphQL. Remaining work is (1) expanding the fingerprinted prose-risk selection to additional high-risk sections while preserving the explicit non-exhaustive boundary and (2) promoting additional mapped exercises/concepts to concrete `EXERCISE_READY` cards with reviewed prerequisite closure.

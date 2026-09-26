@@ -24,6 +24,22 @@ import { createReleaseManifest, validateReleaseManifest } from './release-manife
 const A = 'a'.repeat(40);
 const B = 'b'.repeat(40);
 
+test('workflow actions use immutable SHAs with version comments', () => {
+  const workflows = fs.readdirSync('.github/workflows').filter((file) => /\.ya?ml$/.test(file));
+  let references = 0;
+  for (const file of workflows) {
+    const contents = fs.readFileSync(path.join('.github/workflows', file), 'utf8');
+    for (const line of contents.split('\n')) {
+      const match = line.match(/^\s*(?:- )?uses:\s*(\S+)(.*)$/);
+      if (!match) continue;
+      references++;
+      assert.match(match[1], /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${file}: ${line.trim()}`);
+      assert.match(match[2], /^\s+# v\d+(?:\.\d+){0,2}\s*$/, `${file}: ${line.trim()}`);
+    }
+  }
+  assert.ok(references > 0, 'expected workflow action references');
+});
+
 function manifestFor(paths, options = {}) {
   return createManifest({
     requestedBaseSha: A,
@@ -605,7 +621,7 @@ test('AI Dockerfile keeps heavy runtime identity independent from Git release me
   assert.match(contents, /FROM \${AI_RUNTIME_BASE} AS application/);
   assert.doesNotMatch(contents, /^ARG (BUILD_DATE|VCS_REF)$/m);
   assert.doesNotMatch(contents, /org\.opencontainers\.image\.(created|revision)=/);
-  assert.match(recipe, /python:3\.13-slim@sha256:[0-9a-f]{64}/);
+  assert.match(recipe, /python:3\.13\.15-slim@sha256:[0-9a-f]{64}/);
   assert.match(recipe, /ghcr\.io\/astral-sh\/uv:latest@sha256:[0-9a-f]{64}/);
   assert.match(recipe, /uv sync --frozen --no-dev/);
   assert.doesNotMatch(recipe, /--no-cache/);

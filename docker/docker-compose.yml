@@ -2,7 +2,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────
   postgres-dev:
     profiles: [dev]
-    image: pgvector/pgvector:pg18
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
     environment:
       POSTGRES_USER: ${DB_USER:-bodysense}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
@@ -21,7 +21,7 @@ services:
 
   redis-dev:
     profiles: [dev]
-    image: redis:7-alpine
+    image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     ports:
       - '${DEV_BIND_HOST:-127.0.0.1}:${REDIS_PORT:-20111}:6379'
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-bodysense123}
@@ -35,7 +35,7 @@ services:
 
   litellm-gateway:
     profiles: [dev]
-    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
     command: ['--config', '/app/config.yaml', '--port', '4000']
     ports:
       - '${DEV_BIND_HOST:-127.0.0.1}:${LITELLM_PORT:-20112}:4000'
@@ -190,6 +190,9 @@ services:
     environment:
       VITE_WS_URL: ws://localhost:${API_PORT:-20101}/ws
       VITE_DEV_API_TARGET: http://api:8080
+      # Remote/disposable dev must not expose Chromium to Vite's cold
+      # dependency-optimizer restart window (ERR_NETWORK_CHANGED on lazy routes).
+      BODYSENSE_VITE_BUNDLED_DEV: ${BODYSENSE_VITE_BUNDLED_DEV:-true}
     depends_on:
       api:
         condition: service_healthy

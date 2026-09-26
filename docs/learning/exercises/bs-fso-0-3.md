@@ -16,7 +16,7 @@ form controls, submission, validation and request payload
 
 - `apps/web/src/features/auth/components/LoginForm.tsx`
 - `apps/web/src/features/auth/services/authService.ts`
-- `apps/api/internal/handler/auth_handler.go`
+- `apps/api/internal/transport/httpapi/auth.go`
 
 ## Prediction before reading/running
 

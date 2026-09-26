@@ -22,7 +22,7 @@ Active current-source exercise inventory: **356 records across Parts 0-14**.
 
 | Part | Current source exercises | Mapped | Exercise ready | Learner verified | Source authority |
 |---:|---:|---:|---:|---:|---|
-| 0 | 6 | 6 | 5 | 0 | pinned course-repository snapshot |
+| 0 | 6 | 6 | 5 | 1 | pinned course-repository snapshot |
 | 1 | 14 | 14 | 0 | 0 | pinned course-repository snapshot |
 | 2 | 20 | 20 | 2 | 0 | pinned course-repository snapshot |
 | 3 | 22 | 22 | 1 | 0 | pinned course-repository snapshot |
@@ -61,7 +61,7 @@ Public README baseline: `97f000fe58ad01a0774179ffa8884ac7784cf263`.
 - Public lecture IDs/titles indexed: **78/78**.
 - Title-level BodySense mappings: **78/78**.
 - Exercise-ready lecture reps: **16/78**.
-- Learner-verified lecture reps: **0/78**.
+- Learner-verified lecture reps: **4/78**.
 
 This does **not** claim that paid/video-internal teaching semantics were audited. The source authority is the public README title/index only.
 
@@ -69,11 +69,11 @@ This does **not** claim that paid/video-internal teaching semantics were audited
 
 - Project-defined modules mapped: **8/8**.
 - Exercise-ready: **8/8**.
-- Learner-verified: **0/8**.
+- Learner-verified: **1/8**.
 
 ## Exercise-ready spine
 
-There are currently **113** executable cards and **0** learner-verified cards.
+There are currently **125** executable cards and **20** learner-verified cards.
 
 - `BS-FSO-0.1` -> [card](../../exercises/bs-fso-0-1.md)
 - `BS-FSO-0.3` -> [card](../../exercises/bs-fso-0-3.md)
@@ -144,6 +144,18 @@ There are currently **113** executable cards and **0** learner-verified cards.
 - `BS-P9-CONCEPT-EXHAUSTIVE-NARROWING` -> [card](../../exercises/bs-p9-concept-exhaustive-narrowing.md)
 - `BS-P9-CONCEPT-TYPED-SERVER-DATA` -> [card](../../exercises/bs-p9-concept-typed-server-data.md)
 - `BS-P9-CONCEPT-SCHEMA-VALIDATION` -> [card](../../exercises/bs-p9-concept-schema-validation.md)
+- `BS-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY` -> [card](../../exercises/bs-p8-concept-graphql-schema-query.md)
+- `BS-P8-CONCEPT-APOLLO-SERVER` -> [card](../../exercises/bs-p8-concept-apollo-server.md)
+- `BS-P8-CONCEPT-RESOLVER-ARGS-CONTEXT` -> [card](../../exercises/bs-p8-concept-resolver-args-context.md)
+- `BS-P8-CONCEPT-GRAPHQL-MUTATION` -> [card](../../exercises/bs-p8-concept-graphql-mutation.md)
+- `BS-P8-CONCEPT-GRAPHQL-ERRORS` -> [card](../../exercises/bs-p8-concept-graphql-errors.md)
+- `BS-P8-CONCEPT-GRAPHQL-AUTH-CONTEXT` -> [card](../../exercises/bs-p8-concept-graphql-auth-context.md)
+- `BS-P8-CONCEPT-APOLLO-CACHE-UPDATE` -> [card](../../exercises/bs-p8-concept-apollo-cache-update.md)
+- `BS-P8-CONCEPT-GRAPHQL-SUBSCRIPTIONS` -> [card](../../exercises/bs-p8-concept-graphql-subscriptions.md)
+- `BS-P8-CONCEPT-GRAPHQL-NPLUS1` -> [card](../../exercises/bs-p8-concept-graphql-nplus1.md)
+- `BS-P8-CONCEPT-APOLLO-CLIENT` -> [card](../../exercises/bs-p8-concept-apollo-client.md)
+- `BS-P8-CONCEPT-GRAPHQL-VARIABLES` -> [card](../../exercises/bs-p8-concept-graphql-variables.md)
+- `BS-P8-CONCEPT-NORMALIZED-CACHE` -> [card](../../exercises/bs-p8-concept-normalized-cache.md)
 - `BS-P11-CONCEPT-REPRODUCIBLE-PIPELINE` -> [card](../../exercises/bs-p11-concept-reproducible-pipeline.md)
 - `BS-P11-CONCEPT-DEPLOYED-REVISION-PROVENANCE` -> [card](../../exercises/bs-p11-concept-deployed-revision-provenance.md)
 - `BS-P11-CONCEPT-CI-QUALITY-GATES` -> [card](../../exercises/bs-p11-concept-ci-quality-gates.md)

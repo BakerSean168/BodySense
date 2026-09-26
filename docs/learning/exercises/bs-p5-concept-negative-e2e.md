@@ -16,7 +16,7 @@ negative E2E paths assert rejection plus safe unchanged state and usable user fe
 ## BodySense target files
 
 - `apps/web/src/features/auth`
-- `apps/api/internal/handler/auth_handler.go`
+- `apps/api/internal/transport/httpapi/auth.go`
 
 ## Prediction before reading/running
 

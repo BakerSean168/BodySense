@@ -65,6 +65,7 @@ export REDIS_PORT="${VALIDATOR_REDIS_PORT:-$(pick_port 56379)}"
 export LITELLM_PORT="${VALIDATOR_LITELLM_PORT:-$(pick_port 0)}"
 export API_PORT="${VALIDATOR_API_PORT:-$(pick_port 18080)}"
 export AI_SERVICE_PORT="${VALIDATOR_AI_PORT:-$(pick_port 18100)}"
+export DOCUMENT_SERVICE_PORT="${VALIDATOR_DOCUMENT_PORT:-$(pick_port 18103)}"
 export WEB_PORT="${VALIDATOR_WEB_PORT:-$(pick_port 15173)}"
 
 wait_http() {

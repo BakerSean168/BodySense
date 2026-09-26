@@ -15,7 +15,7 @@ serve a collection/read model through Gin REST
 ## BodySense target files
 
 - `apps/api/cmd/server/main.go`
-- `apps/api/internal/handler/health_workspace_handler.go`
+- `apps/api/internal/transport/httpapi/health_workspace.go`
 - `apps/api/internal/service/health_workspace_service.go`
 
 ## Prediction before reading/running

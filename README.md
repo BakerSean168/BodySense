@@ -130,7 +130,7 @@ pnpm dev:infra:down    # explicit teardown; persistent volumes are preserved
 
 The default direct-dev ports are Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, and LiteLLM `20112`. Infrastructure containers use `restart: unless-stopped`, so a normal Docker/host restart brings them back without requiring the application processes to stay running.
 
-Put host-specific overrides and provider credentials in the gitignored `.env.dev.local`; `scripts/dev-env.sh` supplies non-secret development defaults, so copying `.env.example` to `.env` is not required.
+Put host-specific overrides and provider credentials in the gitignored `.env.dev.local`; `scripts/dev-env.sh` supplies non-secret development defaults, so copying `.env.example` to `.env` is not required. The direct-dev Web lane enables Vite Bundled Dev by default so a workstation reaching GCP over Tailscale/SSH receives a small set of bundled development assets instead of a large native-ESM request waterfall while keeping HMR. Set `BODYSENSE_VITE_BUNDLED_DEV=false` in `.env.dev.local` to temporarily return to classic Vite for diagnostics; tests remain on classic Vite.
 
 Run a single surface when you do not need the full stack:
 

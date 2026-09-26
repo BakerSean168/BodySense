@@ -37,7 +37,7 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-PG_IMAGE="${OFFHOST_DR_PG_IMAGE:-pgvector/pgvector:pg18}"
+PG_IMAGE="${OFFHOST_DR_PG_IMAGE:-pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a}"
 GO_IMAGE="${OFFHOST_DR_GO_IMAGE:-golang:1.26-alpine}"
 ALPINE_IMAGE="${OFFHOST_DR_ALPINE_IMAGE:-alpine:3.20}"
 NET="bodysense-dr-net-$$"

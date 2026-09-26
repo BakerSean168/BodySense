@@ -15,7 +15,7 @@ login credential verification and session/token issuance
 ## BodySense target files
 
 - `apps/api/internal/service/auth_service.go`
-- `apps/api/internal/handler/auth_handler.go`
+- `apps/api/internal/transport/httpapi/auth.go`
 - `apps/api/internal/repository/user_repository.go`
 
 ## Prediction before reading/running

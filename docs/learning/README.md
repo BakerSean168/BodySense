@@ -45,6 +45,7 @@ Current generated counts are in [`curriculum/views/coverage-status.md`](./curric
 
 Browse every mapped training point without opening JSON through:
 
+- [`Full Stack Open source-course spine`](./curriculum/views/course-spine.md) — canonical meaning of `Part N / 第 N 章`; **Part 8 is GraphQL**
 - [`Full Stack Open catalog`](./curriculum/views/full-stack-open-catalog.md)
 - [`TECH SCHOOL backend catalog`](./curriculum/views/techschool-backend-catalog.md)
 - [`Agent engineering catalog`](./curriculum/views/agent-engineering-catalog.md)
@@ -53,6 +54,7 @@ Browse every mapped training point without opening JSON through:
 - [`Pinned-core targeted prose-risk audit`](./curriculum/views/core-prose-risk-audit.md) — fingerprinted full-fragment review of selected high-risk h3 sections; explicitly non-exhaustive
 - [`Exercise-ready study tracks`](./curriculum/views/study-tracks.md) — the recommended learner-facing path through the current ready graph
 - [`Learner placement status`](./curriculum/views/placement-status.md) — active track, prerequisite closure, assessed gaps/verification and the next placement target
+- [`Learner progress by canonical source`](./curriculum/views/learner-progress.md) — reconciles mastery to canonical FSO Parts regardless of old conversational chapter labels
 
 ## Current source-integrity boundary
 
@@ -118,6 +120,7 @@ docs/learning/
 │   └── views/
 │       ├── coverage-status.md
 │       ├── prerequisite-spine.md
+│       ├── course-spine.md
 │       ├── full-stack-open-catalog.md
 │       ├── techschool-backend-catalog.md
 │       ├── agent-engineering-catalog.md
@@ -158,6 +161,19 @@ pnpm curriculum:check
 
 `record-placement.mjs` can be run with `--dry-run` to preview lifecycle/mastery effects. No placement result is written without explicit evidence, and existing production code/tests are never converted into mastery automatically.
 
+## Course numbering and navigation
+
+Inside the BodySense Master Course, source-course numbering and learner-facing tracks are deliberately different namespaces:
+
+```text
+Full Stack Open Part 8 = GraphQL
+Study Track = topical ready-graph lens, never a numbered chapter
+BS-A1..A8 = BodySense Agent extension modules
+Architecture doc §8 = document section only
+```
+
+If the learner says “进入第八章” while following Full Stack Open, coaching must resolve that to **Part 8 GraphQL**. It must not infer chapter numbers from the ordinal position of a Study Track, from Agent module numbers, or from a numbered architecture section. If a requested Part is not exercise-ready, say so explicitly and prepare that Part rather than silently substituting another ready topic. See [`course-spine.md`](./curriculum/views/course-spine.md).
+
 ## Current execution order
 
 Do **not** jump directly to Treatment or placement merely because an old roadmap named it next.
@@ -173,4 +189,4 @@ The current order is:
 6. Start from the first prerequisite gap below L4 and continue through the dependency graph
 ```
 
-The executable curriculum is now a **113-node ready graph** (89 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into ten coherent tracks: Web/browser foundations, React component/hooks, React testing/failure isolation, frontend routing/build/application architecture, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering. The track generator fails if any ready node is omitted from the learner-facing map. Placement state is tracked separately in `learner-placement.json`; the current active placement slice is generated in [`placement-status.md`](./curriculum/views/placement-status.md) and begins with TypeScript/runtime-trust without granting any mastery in advance.
+The executable curriculum size and current mastery are generated in [`coverage-status.md`](./curriculum/views/coverage-status.md); do not copy those changing counts into this README. Rather than asking the learner to navigate the graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups ready nodes into named Tracks, including a dedicated `fso-part-8-graphql` track. Track headings are intentionally **not numbered** so “Track 8” can never be confused with “Full Stack Open Part 8”. The track generator fails if any ready node is omitted from the learner-facing map. Placement state is tracked separately in `learner-placement.json`; the current active placement slice is always generated in [`placement-status.md`](./curriculum/views/placement-status.md).

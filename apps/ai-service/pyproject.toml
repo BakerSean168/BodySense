@@ -4,43 +4,43 @@ version = "0.1.0"
 description = "BodySense AI Service - posture analysis and RAG"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.140.13",
-    "uvicorn>=0.51.0",
-    "openai>=2.50.0",
-    "psycopg[binary,pool]>=3.3.4",
+    "fastapi>=0.141.1",
+    "uvicorn>=0.53.0",
+    "openai==3.19.2",
+    "psycopg[binary,pool]>=3.3.6",
     "pgvector>=0.5.0",
-    "redis>=7.0.0",
-    "python-dotenv>=1.2.2",
+    "redis>=8.1.0",
+    "python-dotenv>=1.2.3",
     "Pillow>=12.3.0",
     "python-multipart>=0.0.32",
-    "langgraph>=1.2.10",
+    "langgraph>=1.2.12",
     "pyyaml>=6.0.3",
-    "langgraph-checkpoint-postgres>=3.1.0",
-    "pydantic-ai-slim[openai]>=2.31.0",
-    "pydantic-evals>=2.31.0",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "pydantic-ai-slim[openai]==2.50.0",
+    "pydantic-evals==2.50.0",
     "protovalidate>=1.0.0",
-    "protobuf>=6.32.1",
+    "protobuf>=7.36.2",
 ]
 
 [project.optional-dependencies]
 ocr = [
     "pytesseract>=0.3.13",
-    "PyMuPDF>=1.27.0",
+    "PyMuPDF==1.28.0",
 ]
 ml = [
     "sentence-transformers>=5.6.1",
 ]
 pose = [
     # MediaPipe 1.x Tasks API (solutions API removed in 1.0).
-    "mediapipe>=1.0.0",
-    "numpy>=2.5.0",
+    "mediapipe==1.0.0",
+    "numpy>=2.5.3",
 ]
 dev = [
-    "ruff>=0.16.0",
+    "ruff>=0.16.9",
     "pytest>=9.1.0",
     "pytest-asyncio>=1.4.0",
     "httpx>=0.28.1",
-    "httpx2>=2.9.0",
+    "httpx2>=2.13.1",
 ]
 document-ocr = [
     "onnxruntime==1.29.0",
@@ -65,7 +65,7 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.411",
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
-    "ruff>=0.16.0",
+    "ruff>=0.16.9",
 ]

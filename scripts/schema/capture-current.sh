@@ -18,7 +18,7 @@ docker run --rm -d \
   -e POSTGRES_PASSWORD="$PASSWORD" \
   -e POSTGRES_DB=bodysense \
   -p 127.0.0.1::5432 \
-  pgvector/pgvector:pg18 >/dev/null
+  pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a >/dev/null
 
 for _ in $(seq 1 60); do
   if docker exec "$NAME" pg_isready -U bodysense -d bodysense >/dev/null 2>&1; then
@@ -56,7 +56,7 @@ sleep 1
 docker exec "$NAME" psql -U bodysense -d bodysense -X -q -t -A -c "
 SELECT jsonb_pretty(jsonb_build_object(
   'schema_version', 1,
-  'runtime_image', 'pgvector/pgvector:pg18',
+  'runtime_image', 'pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a',
   'migration_state', (SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1),
   'tables', (
     SELECT jsonb_agg(jsonb_build_object(

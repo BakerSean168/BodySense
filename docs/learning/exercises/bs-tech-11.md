@@ -16,7 +16,7 @@ REST transport semantics and handler/service/repository separation
 ## BodySense target files
 
 - `apps/api/cmd/server/main.go`
-- `apps/api/internal/handler/body_state_handler.go`
+- `apps/api/internal/transport/httpapi/body_state.go`
 - `apps/api/internal/service/body_state_service.go`
 - `apps/api/internal/repository/body_state_repository.go`
 
