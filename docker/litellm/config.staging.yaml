@@ -1,10 +1,12 @@
 model_list:
-  # Diagnosis: immutable Agent configuration selects this logical group only.
+  # Staging keeps the same logical model groups as production while using the
+  # provider credential that is mandatory and continuously qualified here.
+  # MiMo remains a production profile; staging must not depend on an optional,
+  # potentially empty MIMO_API_KEY just to exercise real Agent paths.
   - model_name: bodysense-diagnosis
     litellm_params:
-      model: openai/mimo-v2.5-pro
-      api_base: os.environ/MIMO_BASE_URL
-      api_key: os.environ/MIMO_API_KEY
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
       timeout: 45
   - model_name: bodysense-diagnosis-fallback
     litellm_params:
@@ -15,9 +17,8 @@ model_list:
   # General chat/tool use. Application code never names the physical model.
   - model_name: bodysense-consultation
     litellm_params:
-      model: openai/mimo-v2.5-pro
-      api_base: os.environ/MIMO_BASE_URL
-      api_key: os.environ/MIMO_API_KEY
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
       timeout: 45
 
   # Structured typed-Agent / knowledge JSON generation.
@@ -31,9 +32,8 @@ model_list:
   # Small text generation such as conversation titles.
   - model_name: bodysense-text
     litellm_params:
-      model: openai/mimo-v2.5-pro
-      api_base: os.environ/MIMO_BASE_URL
-      api_key: os.environ/MIMO_API_KEY
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
       timeout: 45
 
   # Shared operational fallback for non-vision general groups.
