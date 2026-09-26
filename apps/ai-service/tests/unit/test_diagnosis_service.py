@@ -143,7 +143,38 @@ async def test_generate_diagnosis_blocks_current_positive_red_flag_before_agent_
     assert result["agent_configuration"]["id"].startswith("diag-config-")
     assert result["execution_provenance"]["status"] == "bypassed"
     assert result["execution_provenance"]["reason"] == "python_pre_agent_safety_gate"
+    assert result["evidence_acquisition"]["trace_revision"] == "evidence-acquisition-trace-v2"
+    assert result["evidence_acquisition"]["policy_revision"] == "diagnosis-evidence-gap-v2"
+    assert result["evidence_acquisition"]["external_evidence_status"] == "not_required"
+    assert result["evidence_acquisition"]["attempts"] == []
     assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_governance_rejection_preserves_evidence_trace_without_leaking_clinical_payload(
+) -> None:
+    unsafe_claim = "用户描述剧烈疼痛且麻木无力，但仍建议自行拉伸即可。"
+    candidate = _candidate()
+    candidate["basis"] = unsafe_claim
+    service, _ = _service(_agent_output([candidate]))
+
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        configuration_id=CONFIG_ID,
+        body_state=_body_state(12),
+    )
+
+    assert result["governance"]["verdict"] == "rejected"
+    assert "candidates" not in result
+    assert unsafe_claim not in str(result)
+    assert result["evidence_acquisition"]["trace_revision"] == "evidence-acquisition-trace-v2"
+    assert result["evidence_acquisition"]["policy_revision"] == "diagnosis-evidence-gap-v2"
+    assert result["evidence_acquisition"]["external_evidence_status"] == "not_required"
+    assert all(
+        attempt["gap"]["kind"] == "user_fact"
+        and attempt["search_performed"] is False
+        for attempt in result["evidence_acquisition"]["attempts"]
+    )
 
 
 @pytest.mark.asyncio

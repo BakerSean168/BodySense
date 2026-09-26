@@ -251,7 +251,7 @@ func safetyBlockedDiagnosisPayload(
 	policyRevision string,
 	route DiagnosisRouteSelection,
 ) map[string]any {
-	return map[string]any{
+	payload := map[string]any{
 		"status": "safety_blocked", "scope": "full_body",
 		"summary":    "当前身体状态包含需要优先处理的安全信号，暂不生成普通可能性候选。",
 		"candidates": []any{}, "cross_concern_patterns": []any{}, "information_gaps": []any{},
@@ -268,6 +268,22 @@ func safetyBlockedDiagnosisPayload(
 			"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
 		},
 	}
+	if configurationID == diagnosisDecisionAuthorityConfigID {
+		payload["evidence_acquisition"] = map[string]any{
+			"trace_revision":           evidenceAvailabilityTraceV2,
+			"policy_revision":          diagnosisEvidenceAvailabilityPolicyV2,
+			"external_evidence_status": externalEvidenceNotRequired,
+			"budget": map[string]any{
+				"max_searches":           2,
+				"max_results_per_search": 5,
+				"used_searches":          0,
+				"remaining_searches":     2,
+			},
+			"attempts":                 []any{},
+			"unresolved_critical_gaps": []any{},
+		}
+	}
+	return payload
 }
 
 func (s *DiagnosisApplicationService) publicPayload(
