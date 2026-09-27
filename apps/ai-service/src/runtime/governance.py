@@ -297,6 +297,7 @@ def _collect_issues(
         claim_text = _diagnosis_v4_current_claim_text(payload)
     detector_revision = DEFAULT_RED_FLAG_DETECTOR_REVISION
     if kind == "diagnosis":
+        assert policy_revision is not None
         detector_revision = DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY[policy_revision]
     issues.extend(
         check_red_flags(
