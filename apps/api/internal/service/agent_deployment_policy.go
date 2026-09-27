@@ -13,6 +13,7 @@ const (
 	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
 	diagnosisClaimSurfaceConfigID      = "diag-config-4a517fea19cb6c49"
 	diagnosisNegationAwareConfigID     = "diag-config-375187050b203078"
+	diagnosisNegationBridgeConfigID    = "diag-config-4377355ba2012ce8"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
@@ -189,6 +190,9 @@ var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration
 	diagnosisNegationAwareConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
+	diagnosisNegationBridgeConfigID: {
+		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
 }
 
 var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistration{
@@ -199,6 +203,10 @@ var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistra
 	"diagnosis_promotion_v3": {
 		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
 		ChallengerConfigurationID: diagnosisNegationAwareConfigID,
+	},
+	"diagnosis_promotion_v4": {
+		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
+		ChallengerConfigurationID: diagnosisNegationBridgeConfigID,
 	},
 }
 

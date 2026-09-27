@@ -3,8 +3,9 @@
 Design note: The default/literal v1 detector intentionally remains context-free
 and high recall; this preserves historical behavior. The opt-in v2 detector is
 an explicit-negation-aware revision used only by the v5 Diagnosis configuration.
-It applies a small, conservative local rule rather than general NLP rewriting:
-ambiguous phrasing remains a positive safety signal.
+The opt-in v3 detector adds a small allowlisted bridge grammar for v6; it does
+not broaden v2 semantics. Both revisions use conservative local rules rather
+than general NLP rewriting: ambiguous phrasing remains a positive signal.
 """
 
 import re
@@ -13,6 +14,7 @@ from typing import Any
 
 RED_FLAG_DETECTOR_REVISION_LITERAL_V1 = "red-flag-detector-literal-v1"
 RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2 = "red-flag-detector-negation-aware-v2"
+RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3 = "red-flag-detector-negation-bridge-v3"
 DEFAULT_RED_FLAG_DETECTOR_REVISION = RED_FLAG_DETECTOR_REVISION_LITERAL_V1
 
 _NEGATION_CUE_RE = re.compile(
@@ -21,6 +23,7 @@ _NEGATION_CUE_RE = re.compile(
 _AMBIGUOUS_NEGATION_PREFIX_RE = re.compile(
     r"(?:不是|并非|非|没有|没|无|不|未|不能说|不能确认|无法确认)\s*$"
 )
+_NEGATION_BRIDGE_RE = re.compile(r"(?:明显的?|出现|存在|任何|再出现)?\s*$")
 
 
 def _is_explicitly_negated(text: str, start: int) -> bool:
@@ -33,14 +36,32 @@ def _is_explicitly_negated(text: str, start: int) -> bool:
     return _AMBIGUOUS_NEGATION_PREFIX_RE.search(before_cue) is None
 
 
+def _is_explicitly_negated_with_bridge(text: str, start: int) -> bool:
+    """Recognize v3's finite, safe bridge tokens without free-text gaps."""
+    prefix = text[max(0, start - 32) : start]
+    bridge = _NEGATION_BRIDGE_RE.search(prefix)
+    if bridge is None:
+        return False
+    cue_prefix = prefix[: bridge.start()]
+    return _is_explicitly_negated(cue_prefix, len(cue_prefix))
+
+
 def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
     if revision == RED_FLAG_DETECTOR_REVISION_LITERAL_V1:
         return keyword in text
-    if revision != RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2:
+    if revision not in {
+        RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+        RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+    }:
         raise ValueError(f"unsupported red-flag detector revision: {revision}")
     start = text.find(keyword)
     while start >= 0:
-        if not _is_explicitly_negated(text, start):
+        is_negated = (
+            _is_explicitly_negated_with_bridge(text, start)
+            if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
+            else _is_explicitly_negated(text, start)
+        )
+        if not is_negated:
             return True
         start = text.find(keyword, start + len(keyword))
     return False
@@ -170,6 +191,7 @@ class RedFlagDetector:
         if revision not in {
             RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
             RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
         }:
             raise ValueError(f"unsupported red-flag detector revision: {revision}")
 
@@ -198,7 +220,10 @@ class RedFlagDetector:
                 combined_text += " " + notes
 
         scan_segments = [combined_text]
-        if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2:
+        if revision in {
+            RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+        }:
             scan_segments = [conversation_text]
             scan_segments.extend(
                 info.get("additional_notes", "")

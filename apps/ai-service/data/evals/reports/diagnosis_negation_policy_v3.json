@@ -1,0 +1,109 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "legacy-v1-flags-bridged-negatives",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "v2-keeps-bridged-negatives-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "v3-accepts-five-bridged-negative-forms",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "v3-accepts-explicit-safe-bridge-modifiers",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "true-positive-trauma-radiating-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "mixed-trauma-negative-radiating-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "historical-negative-current-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-not-denying-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-not-confirming-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-cannot-say-absence-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "exclusion-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "exclusion-without-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "source-boundary-isolation",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "worsening-remains-positive",
+      "passed": true
+    }
+  ],
+  "configuration_id": "diag-config-4377355ba2012ce8",
+  "detector_revision": "red-flag-detector-negation-bridge-v3",
+  "failed": 0,
+  "governance_policy_revision": "diagnosis-governance-v6-negation-bridge-claims",
+  "name": "diagnosis-negation-policy-v3",
+  "passed": 14,
+  "total": 14
+}

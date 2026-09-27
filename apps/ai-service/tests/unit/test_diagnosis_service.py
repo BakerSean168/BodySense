@@ -11,6 +11,7 @@ from src.services.diagnosis_service import DiagnosisService
 CONFIG_ID = get_default_diagnosis_configuration().configuration_id
 V4_CONFIG_ID = "diag-config-4a517fea19cb6c49"
 V5_CONFIG_ID = "diag-config-375187050b203078"
+V6_CONFIG_ID = "diag-config-4377355ba2012ce8"
 
 
 def _body_state(revision: int = 12) -> dict:
@@ -106,6 +107,34 @@ async def test_v5_positive_red_flag_still_bypasses_typed_agent():
     )
     assert result["status"] == "safety_blocked"
     assert result["execution_provenance"]["reason"] == "python_pre_agent_safety_gate"
+    assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_v6_bridged_negative_body_state_reaches_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = (
+        "没有明显放射痛，无明显头晕，未见明显麻木无力，目前没有出现放射痛，否认存在头晕"
+    )
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V6_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "completed"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+async def test_v6_true_positive_still_bypasses_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = "目前出现放射痛"
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V6_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "safety_blocked"
+    assert result["execution_provenance"]["status"] == "bypassed"
     assert model.last_model_request_parameters is None
 
 

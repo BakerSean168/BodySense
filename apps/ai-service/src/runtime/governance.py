@@ -46,6 +46,7 @@ from ..services.red_flag_detector import (
     DEFAULT_RED_FLAG_DETECTOR_REVISION,
     RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+    RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ OutputKind = Literal["diagnosis", "treatment", "posture", "assessment"]
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3 = "diagnosis-governance-v3"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4 = "diagnosis-governance-v4-claim-surface"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5 = "diagnosis-governance-v5-negation-aware-claims"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6 = "diagnosis-governance-v6-negation-bridge-claims"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION = DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
 ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
@@ -63,6 +65,7 @@ DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY = {
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3: RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4: RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5: RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6: RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
 }
 
 # Fields that must be present for each structured kind.
@@ -293,6 +296,7 @@ def _collect_issues(
     if kind == "diagnosis" and policy_revision in {
         DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
         DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
+        DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
     }:
         claim_text = _diagnosis_v4_current_claim_text(payload)
     detector_revision = DEFAULT_RED_FLAG_DETECTOR_REVISION
@@ -378,6 +382,7 @@ def guard_structured_output(
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
         }:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if kind == "diagnosis" and effective_policy_revision is None:

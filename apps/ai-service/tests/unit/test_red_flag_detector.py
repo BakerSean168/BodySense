@@ -4,6 +4,7 @@ import pytest
 
 from src.services.red_flag_detector import (
     RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+    RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
     RedFlagDetector,
     get_red_flag_detector,
 )
@@ -78,6 +79,34 @@ def test_negation_aware_revision_does_not_suppress_negation_like_positive_phrase
         [], "症状无法缓解，休息也不缓解", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
     )
     assert {flag.category for flag in result.flags} == {"worsening"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["没有明显放射痛", "无明显放射痛", "未见明显放射痛", "目前没有出现放射痛", "否认存在放射痛"],
+)
+def test_negation_bridge_revision_suppresses_only_allowlisted_negative_forms(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
+    )
+    assert result.has_red_flags is False
+
+
+@pytest.mark.parametrize("text", ["没有排除放射痛", "不排除放射痛"])
+def test_negation_bridge_revision_keeps_exclusions_positive(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
+    )
+    assert {flag.category for flag in result.flags} == {"radiating_pain"}
+
+
+def test_negation_bridge_revision_does_not_cross_source_boundary():
+    result = RedFlagDetector().detect(
+        [{"additional_notes": "放射痛"}],
+        "没有明显",
+        revision=RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+    )
+    assert {flag.category for flag in result.flags} == {"radiating_pain"}
 
 
 def test_unknown_revision_fails_closed():

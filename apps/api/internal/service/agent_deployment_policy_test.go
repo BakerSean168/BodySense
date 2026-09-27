@@ -192,6 +192,9 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationAwareConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
 		t.Fatalf("Diagnosis negation-aware policy=%q err=%v", got, err)
 	}
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationBridgeConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("Diagnosis negation-bridge policy=%q err=%v", got, err)
+	}
 	if got, err := TreatmentDecisionPolicyRevisionForConfiguration(defaultTreatmentConfigurationID); err != nil || got != TreatmentDecisionPolicyV1 {
 		t.Fatalf("Treatment policy=%q err=%v", got, err)
 	}
@@ -236,7 +239,9 @@ func TestDiagnosisPromotionAdmissionRequiresExactRegisteredPair(t *testing.T) {
 	}{
 		{"v3-to-v4-approved", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "diagnosis_promotion_v2", false},
 		{"v3-to-v5-approved", diagnosisDecisionAuthorityConfigID, diagnosisNegationAwareConfigID, "diagnosis_promotion_v3", false},
+		{"v3-to-v6-approved", diagnosisDecisionAuthorityConfigID, diagnosisNegationBridgeConfigID, "diagnosis_promotion_v4", false},
 		{"v3-to-v5-with-v2-rejected", diagnosisDecisionAuthorityConfigID, diagnosisNegationAwareConfigID, "diagnosis_promotion_v2", true},
+		{"v3-to-v6-with-v3-rejected", diagnosisDecisionAuthorityConfigID, diagnosisNegationBridgeConfigID, "diagnosis_promotion_v3", true},
 		{"v3-to-v4-with-v3-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "diagnosis_promotion_v3", true},
 		{"arbitrary-record-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "approved-but-unknown", true},
 		{"missing-record-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "", true},

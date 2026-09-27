@@ -1,0 +1,100 @@
+name: diagnosis_negation_policy_v3
+cases:
+  - name: legacy-v1-flags-bridged-negatives
+    inputs:
+      text: 没有明显放射痛，也无明显的头晕，未见出现麻木无力
+      revision: red-flag-detector-literal-v1
+    metadata:
+      expected_categories: [neurological, numbness, radiating_pain]
+
+  - name: v2-keeps-bridged-negatives-positive
+    inputs:
+      text: 没有明显放射痛，无明显的头晕，未见出现麻木无力
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological, numbness, radiating_pain]
+
+  - name: v3-accepts-five-bridged-negative-forms
+    inputs:
+      text: 没有明显放射痛；无明显放射痛；未见明显放射痛；目前没有出现放射痛；否认存在放射痛
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: []
+
+  - name: v3-accepts-explicit-safe-bridge-modifiers
+    inputs:
+      text: 没有任何放射痛，也无再出现放射痛
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: []
+
+  - name: true-positive-trauma-radiating-dizziness
+    inputs:
+      text: 外伤后出现放射痛并伴头晕
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [neurological, radiating_pain, trauma]
+
+  - name: mixed-trauma-negative-radiating-positive
+    inputs:
+      text: 没有外伤，但出现放射痛
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [radiating_pain]
+
+  - name: historical-negative-current-positive
+    inputs:
+      text: 之前没有头晕，现在头晕
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [neurological]
+
+  - name: ambiguous-not-denying-remains-positive
+    inputs:
+      text: 不否认头晕
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [neurological]
+
+  - name: ambiguous-not-confirming-remains-positive
+    inputs:
+      text: 未否认头晕
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [neurological]
+
+  - name: ambiguous-cannot-say-absence-remains-positive
+    inputs:
+      text: 不能说没有头晕
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [neurological]
+
+  - name: exclusion-remains-positive
+    inputs:
+      text: 没有排除放射痛
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [radiating_pain]
+
+  - name: exclusion-without-remains-positive
+    inputs:
+      text: 不排除放射痛
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [radiating_pain]
+
+  - name: source-boundary-isolation
+    inputs:
+      text: 没有
+      additional_notes: [放射痛]
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [radiating_pain]
+
+  - name: worsening-remains-positive
+    inputs:
+      text: 症状无法缓解，休息也不缓解
+      revision: red-flag-detector-negation-bridge-v3
+    metadata:
+      expected_categories: [worsening]

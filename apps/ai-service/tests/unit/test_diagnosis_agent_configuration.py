@@ -67,6 +67,28 @@ def test_v5_is_repository_known_successor_with_only_governance_behavior_change()
         assert getattr(v5, field) == getattr(v4, field)
 
 
+def test_v6_is_repository_known_successor_with_only_governance_behavior_change() -> None:
+    v5 = load_manifest(CONFIG_ROOT / "diagnosis-v5-negation-aware.yaml")
+    v6 = load_manifest(CONFIG_ROOT / "diagnosis-v6-negation-bridge.yaml")
+
+    assert v6.configuration_id == "diag-config-4377355ba2012ce8"
+    assert get_diagnosis_configuration(v6.configuration_id) == v6
+    assert v6.configuration_id != v5.configuration_id
+    assert v6.governance_policy_revision == "diagnosis-governance-v6-negation-bridge-claims"
+    for field in (
+        "role",
+        "logical_model",
+        "model_group_revision",
+        "prompt_revision",
+        "output_schema_revision",
+        "tool_policy_revision",
+        "evidence_policy_revision",
+        "decision_policy_revision",
+        "generation",
+    ):
+        assert getattr(v6, field) == getattr(v5, field)
+
+
 def test_behavior_significant_revision_changes_configuration_id(tmp_path: Path) -> None:
     data = yaml.safe_load(
         (ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8")
