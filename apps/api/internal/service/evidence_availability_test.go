@@ -90,18 +90,13 @@ func TestEvidenceAvailabilityTraceRejectsLegacyOrInconsistentRetrieval(t *testin
 	}
 }
 
-func TestEvidenceAvailabilityTraceRequiresCurrentDiagnosisTrace(t *testing.T) {
-	if _, err := validateEvidenceAvailabilityForConfiguration(diagnosisDecisionAuthorityConfigID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
-		t.Fatalf("current Diagnosis evidence-gap policy must require a trace, got %v", err)
-	}
-}
-
-func TestRetiredV3ConfigurationIsNotCurrentEvidenceAuthority(t *testing.T) {
-	status, err := validateEvidenceAvailabilityForConfiguration(
-		retiredDiagnosisDecisionAuthorityConfigID,
-		nil,
-	)
-	if err != nil || status != externalEvidenceNotRequired {
-		t.Fatalf("retired v3 evidence contract drifted: status=%q err=%v", status, err)
+func TestEvidenceAvailabilityTraceRequiresDiagnosisTraceForV3AndV4(t *testing.T) {
+	for _, configurationID := range []string{
+		diagnosisDecisionAuthorityConfigID,
+		diagnosisClaimSurfaceConfigID,
+	} {
+		if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
+			t.Fatalf("Diagnosis configuration %q must require a trace, got %v", configurationID, err)
+		}
 	}
 }

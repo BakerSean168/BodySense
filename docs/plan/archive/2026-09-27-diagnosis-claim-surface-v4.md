@@ -41,10 +41,13 @@ qualification and replay.
 
 ## Closure evidence
 
-Status: complete. The v4 successor is `diag-config-4a517fea19cb6c49` with
-`diagnosis-governance-v4-claim-surface`; v3 remains
-`diag-config-5a4a13627e14b4cf` with `diagnosis-governance-v3` in the offline
-archive and replay path.
+Status: implementation and qualification complete; promotion pending. The v3
+Champion remains `diag-config-5a4a13627e14b4cf` with
+`diagnosis-governance-v3`. The v4 successor is
+`diag-config-4a517fea19cb6c49` with
+`diagnosis-governance-v4-claim-surface`, qualified and ready for shadow under
+`diagnosis_promotion_v2`. ADR0010 forbids silently treating qualification as
+promotion.
 
 - Canonical Diagnosis qualification: v4 7/7, non-inferior to v3, zero critical
   regressions.

@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: Current evidence-acquisition contract is implemented by `diagnosis-evidence-gap-v2`. Diagnosis v4 is the live configuration; v3 remains historical/replay evidence with its original governance semantics.
+> Status: Current evidence-acquisition contract is implemented by `diagnosis-evidence-gap-v2`. Diagnosis v3 remains the live Champion; v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2` only.
 
 ## Ownership
 
@@ -90,12 +90,15 @@ phase. The later DecisionAuthority and claim-surface transitions are recorded by
 their own immutable promotion evidence rather than rewriting this historical
 qualification.
 
-## Current live successor
+## Current Champion and qualified successor
+
+Diagnosis v3 remains the current Champion with immutable identity
+`diag-config-5a4a13627e14b4cf` and `diagnosis-governance-v3`.
 
 Diagnosis v4 keeps the exact Phase-5 model, prompt, tool, output-schema, and
 `diagnosis-evidence-gap-v2` behavior. It introduces only the
 `diagnosis-governance-v4-claim-surface` revision, whose post-agent scan separates
 current-user claims from generic candidate education. Its immutable configuration
-identity is `diag-config-4a517fea19cb6c49`; the v3 manifest and
-`diagnosis-governance-v3` projection remain available from the offline eval archive
-for historical qualification and replay.
+identity is `diag-config-4a517fea19cb6c49`. It is a qualified Challenger, ready
+for shadow under `diagnosis_promotion_v2`; ADR0010 forbids silently treating
+qualification as promotion.

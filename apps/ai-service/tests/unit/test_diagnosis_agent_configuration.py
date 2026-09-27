@@ -10,36 +10,33 @@ from src.configuration.diagnosis_agent_config import (
     get_diagnosis_configuration,
     load_manifest,
 )
-from src.evals.agent_config_archive import (
-    ARCHIVED_AGENT_CONFIG_ROOT,
-    get_diagnosis_evaluation_configuration,
-)
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 
 
 def test_default_diagnosis_configuration_is_repository_versioned_and_stable() -> None:
     config = get_default_diagnosis_configuration()
     assert config.role == "diagnosis"
     assert config.logical_model == "bodysense-diagnosis"
-    assert config.configuration_id == "diag-config-4a517fea19cb6c49"
-    assert config.governance_policy_revision == "diagnosis-governance-v4-claim-surface"
-    assert (CONFIG_ROOT / "diagnosis-v4-claim-surface.yaml").exists()
+    assert config.configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert config.governance_policy_revision == "diagnosis-governance-v3"
+    assert (CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml").exists()
     assert get_diagnosis_configuration(config.configuration_id) == config
 
 
-def test_v3_diagnosis_manifest_remains_resolvable_with_legacy_policy() -> None:
-    v3 = load_manifest(ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
+def test_v3_diagnosis_manifest_remains_live_resolvable() -> None:
+    v3 = load_manifest(CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
 
     assert v3.configuration_id == "diag-config-5a4a13627e14b4cf"
     assert v3.governance_policy_revision == "diagnosis-governance-v3"
-    assert get_diagnosis_evaluation_configuration(v3.configuration_id) == v3
-    with pytest.raises(ValueError, match="unknown Diagnosis configuration_id"):
-        get_diagnosis_configuration(v3.configuration_id)
+    assert get_diagnosis_configuration(v3.configuration_id) == v3
 
 
-def test_v4_is_an_immutable_successor_of_v3() -> None:
-    v3 = load_manifest(ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
-    v4 = get_default_diagnosis_configuration()
+def test_v4_is_repository_known_successor_challenger_of_v3() -> None:
+    v3 = load_manifest(CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
+    v4 = load_manifest(CONFIG_ROOT / "diagnosis-v4-claim-surface.yaml")
 
+    assert v4.configuration_id == "diag-config-4a517fea19cb6c49"
+    assert get_diagnosis_configuration(v4.configuration_id) == v4
     assert v4.configuration_id != v3.configuration_id
     assert v4.governance_policy_revision != v3.governance_policy_revision
     assert v4.prompt_revision == v3.prompt_revision
@@ -105,5 +102,5 @@ def test_runtime_rejects_manifest_revision_that_is_not_implemented() -> None:
         create_diagnosis_agent(tool_policy_revision="diagnosis-tools-does-not-exist")
     with pytest.raises(ValueError, match="evidence policy revision"):
         create_diagnosis_agent(evidence_policy_revision="diagnosis-evidence-does-not-exist")
-    assert config.configuration_id == "diag-config-4a517fea19cb6c49"
+    assert config.configuration_id == "diag-config-5a4a13627e14b4cf"
     assert config.prompt_revision == "diagnosis-prompt-v4-evidence-gap"

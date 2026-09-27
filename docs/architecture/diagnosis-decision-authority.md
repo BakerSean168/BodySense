@@ -1,6 +1,6 @@
 # Diagnosis Decision Authority and SafetyEnvelope
 
-> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Diagnosis v4 is now the repository Champion; v3 remains historical/replay evidence with its original governance semantics.
+> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Diagnosis v3 remains the current repository Champion; v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2` only.
 
 ## Authority boundary
 
@@ -62,21 +62,29 @@ Unknown enum values, contradictory safety state, missing required fields, and un
 
 ## Configuration boundary
 
-The current live path uses the cumulative immutable configuration:
+The current live path uses the v3 immutable Champion configuration:
 
 ```text
-diag-config-4a517fea19cb6c49
+diag-config-5a4a13627e14b4cf
 prompt:   diagnosis-prompt-v4-evidence-gap
 tools:    diagnosis-evidence-acquisition-tools-v2
 evidence: diagnosis-evidence-gap-v2
-governance: diagnosis-governance-v4-claim-surface
+governance: diagnosis-governance-v3
 decision: diagnosis-decision-policy-v1
 ```
 
 The Go control plane accepts only repository-known immutable configuration IDs and
-binds each ID to its expected decision-policy revision. The v3 manifest remains in
-the offline eval archive with `diagnosis-governance-v3` so historical qualification
-and replay retain their original semantics; it is not a live serving target.
+binds each ID to its expected decision-policy revision. The v4 manifest is also
+repository-known and binds to the same `diagnosis-decision-policy-v1` revision:
+
+```text
+diag-config-4a517fea19cb6c49
+governance: diagnosis-governance-v4-claim-surface
+```
+
+It remains a qualified Challenger, ready for shadow under
+`diagnosis_promotion_v2`; qualification does not change the live v3 default.
+ADR0010 forbids silently treating qualification as promotion.
 
 ### Diagnosis v4 claim surface
 
@@ -87,12 +95,13 @@ themselves assert that the user has the red flag. Candidate `basis`, `impact`, a
 `reasoning_summary`, the overall summary, and unknown fields remain current-claim
 surface and are scanned fail-closed. The deterministic pre-agent BodyState gate
 and the high-recall `RedFlagDetector` are unchanged. The v3 broad projection is
-retained exactly for historical qualification and replay.
+retained exactly for the current Champion, historical qualification, and replay.
 
 ## Qualification evidence
 
 The v4 Agent configuration passes 7/7 on the same Diagnosis qualification dataset
 and is paired non-inferior to v3 with pass-rate delta `+0.000` and zero critical
-regressions. The v3 qualification evidence remains immutable.
+regressions. It is qualified and ready for shadow under `diagnosis_promotion_v2`,
+but remains distinct from the current v3 Champion.
 
 The Go policy has a versioned fixture suite covering normal, degraded, insufficient-information, critical-gap, new-red-flag, active-safety, Python-rejection, unknown-governance, and malformed-safety states. The fixture explicitly proves that high candidate confidence cannot override hard blockers.

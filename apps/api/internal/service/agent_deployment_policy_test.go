@@ -5,7 +5,6 @@ import "testing"
 const (
 	retiredDiagnosisV1ConfigurationID          = "diag-config-f492eb1c0c6676ae"
 	retiredDiagnosisEvidenceGapConfigurationID = "diag-config-20fbfc23ca09cbab"
-	retiredDiagnosisDecisionAuthorityConfigID  = "diag-config-5a4a13627e14b4cf"
 	retiredTreatmentV1ConfigurationID          = "treat-config-85718f8e90ac9d80"
 	retiredConsultationV1ConfigurationID       = "consult-config-2bd9b46735dd693c"
 	retiredPostureV1ConfigurationID            = "posture-config-3a774008db422a31"
@@ -89,7 +88,6 @@ func TestRetiredAgentConfigurationsCannotReenterRuntimeServing(t *testing.T) {
 	}{
 		{"diagnosis-v1", "DIAGNOSIS_CHAMPION_CONFIGURATION_ID", retiredDiagnosisV1ConfigurationID},
 		{"diagnosis-v2", "DIAGNOSIS_CHAMPION_CONFIGURATION_ID", retiredDiagnosisEvidenceGapConfigurationID},
-		{"diagnosis-v3", "DIAGNOSIS_CHAMPION_CONFIGURATION_ID", retiredDiagnosisDecisionAuthorityConfigID},
 		{"treatment-v1", "TREATMENT_CHAMPION_CONFIGURATION_ID", retiredTreatmentV1ConfigurationID},
 		{"consultation-v1", "CONSULTATION_CHAMPION_CONFIGURATION_ID", retiredConsultationV1ConfigurationID},
 		{"posture-v1", "POSTURE_CHAMPION_CONFIGURATION_ID", retiredPostureV1ConfigurationID},
@@ -114,9 +112,6 @@ func TestRetiredConfigurationResolversFailClosed(t *testing.T) {
 	}
 	if _, err := DiagnosisDecisionPolicyRevisionForConfiguration(retiredDiagnosisEvidenceGapConfigurationID); err == nil {
 		t.Fatal("retired Diagnosis evidence-gap configuration must not resolve")
-	}
-	if _, err := DiagnosisDecisionPolicyRevisionForConfiguration(retiredDiagnosisDecisionAuthorityConfigID); err == nil {
-		t.Fatal("retired Diagnosis decision-authority configuration must not resolve")
 	}
 	if _, err := TreatmentDecisionPolicyRevisionForConfiguration(retiredTreatmentV1ConfigurationID); err == nil {
 		t.Fatal("retired Treatment configuration must not resolve")
@@ -177,11 +172,17 @@ func TestNonChampionRolloutRequiresADistinctRepositoryKnownChallenger(t *testing
 }
 
 func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
-	if defaultDiagnosisConfigurationID != "diag-config-4a517fea19cb6c49" {
+	if defaultDiagnosisConfigurationID != "diag-config-5a4a13627e14b4cf" {
 		t.Fatalf("Diagnosis Champion identity drifted: %q", defaultDiagnosisConfigurationID)
 	}
 	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(defaultDiagnosisConfigurationID); err != nil || got != DiagnosisDecisionPolicyV1 {
 		t.Fatalf("Diagnosis policy=%q err=%v", got, err)
+	}
+	if diagnosisClaimSurfaceConfigID != "diag-config-4a517fea19cb6c49" {
+		t.Fatalf("Diagnosis Challenger identity drifted: %q", diagnosisClaimSurfaceConfigID)
+	}
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisClaimSurfaceConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("Diagnosis Challenger policy=%q err=%v", got, err)
 	}
 	if got, err := TreatmentDecisionPolicyRevisionForConfiguration(defaultTreatmentConfigurationID); err != nil || got != TreatmentDecisionPolicyV1 {
 		t.Fatalf("Treatment policy=%q err=%v", got, err)
@@ -194,6 +195,26 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 	}
 	if got, err := PostureDecisionPolicyRevisionForConfiguration(defaultPostureConfigurationID); err != nil || got != PostureDecisionPolicyV1 {
 		t.Fatalf("Posture policy=%q err=%v", got, err)
+	}
+}
+
+func TestDiagnosisClaimSurfaceConfigurationIsAnExplicitDistinctChallenger(t *testing.T) {
+	clearAgentDeploymentEnv(t)
+	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisClaimSurfaceConfigID)
+	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
+
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	route := policy.SelectDiagnosisRoute("user-1")
+	if route.Stage != DiagnosisRolloutShadow ||
+		route.ServedConfigurationID != diagnosisDecisionAuthorityConfigID ||
+		route.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
+		route.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID ||
+		route.ShadowConfigurationID != diagnosisClaimSurfaceConfigID {
+		t.Fatalf("unexpected Diagnosis Champion/Challenger route: %#v", route)
 	}
 }
 

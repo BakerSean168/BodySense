@@ -40,8 +40,8 @@ func TestClaimSurfacePromotionPolicyBindsV4Successor(t *testing.T) {
 		t.Fatal(err)
 	}
 	if policy.Name != "diagnosis_promotion_v2" ||
-		policy.ChampionConfigurationID != retiredDiagnosisDecisionAuthorityConfigID ||
-		policy.ChallengerConfigurationID != defaultDiagnosisConfigurationID {
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("claim-surface promotion identity drifted: %#v", policy)
 	}
 }
