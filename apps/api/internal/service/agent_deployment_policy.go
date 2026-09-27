@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
+	diagnosisDecisionAuthorityConfigID = "diag-config-4a517fea19cb6c49"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"

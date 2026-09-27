@@ -4,6 +4,13 @@ Diagnosis, treatment, posture, and Assessment leave Python only after passing th
 ``guard_structured_output``. Callers must not invent parallel policy ifs —
 this module is the forced gate before emit/persist.
 
+Diagnosis governance v3 deliberately scans the broad clinical serialization used
+by its historical artifacts. Diagnosis governance v4 narrows only the
+post-agent Diagnosis scan to fields that assert something about the current
+user; candidate names, ``typical_symptoms``, and ``differential`` remain
+generic candidate education. The v3 projection is retained for replay and
+historical qualification.
+
 Hard gates (per P2 risk note):
 - schema validation failures (missing required structure) → rejected
 - red-flag hits on *clinical claim content* for diagnosis/treatment → rejected.
@@ -40,7 +47,9 @@ logger = logging.getLogger(__name__)
 
 OutputKind = Literal["diagnosis", "treatment", "posture", "assessment"]
 
-DIAGNOSIS_GOVERNANCE_POLICY_REVISION = "diagnosis-governance-v3"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3 = "diagnosis-governance-v3"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4 = "diagnosis-governance-v4-claim-surface"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION = DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
 ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
 
@@ -159,9 +168,32 @@ _RED_FLAG_SCAN_EXCLUDE = frozenset(
     }
 )
 
+# Diagnosis v4 treats these candidate fields as education about a possibility,
+# not assertions about the current user. In particular, ``differential`` stays
+# on this non-user-claim surface: it explains how a candidate differs from
+# nearby possibilities and may mention the red-flag concepts that distinguish
+# them. Unknown fields remain scan-visible so a new current-claim field cannot
+# silently bypass the safety gate.
+_DIAGNOSIS_V4_CANDIDATE_EDUCATION_FIELDS = frozenset(
+    {"name", "typical_symptoms", "differential"}
+)
+
+# These fields carry provenance, authority, or acquisition metadata. The v3
+# serializer intentionally does not use this set; changing it there would
+# change the historical v3 behavior.
+_DIAGNOSIS_V4_METADATA_FIELDS = _RED_FLAG_SCAN_EXCLUDE | frozenset(
+    {
+        "agent_configuration",
+        "decision_authority",
+        "evidence_acquisition",
+        "execution_provenance",
+        "rollout_provenance",
+    }
+)
+
 
 def _clinical_claim_text(payload: dict[str, Any]) -> str:
-    """Serialize only the clinical claim surface for red-flag scanning."""
+    """Serialize the historical v3 clinical claim surface unchanged."""
 
     def _strip(value: Any) -> Any:
         if isinstance(value, dict):
@@ -177,10 +209,63 @@ def _clinical_claim_text(payload: dict[str, Any]) -> str:
     return json.dumps(_strip(payload), ensure_ascii=False)
 
 
+def _diagnosis_v4_current_claim_text(payload: dict[str, Any]) -> str:
+    """Serialize only Diagnosis fields that assert current-user clinical facts.
+
+    ``typical_symptoms`` and ``differential`` describe candidate education, not
+    the user's present state, so v4 intentionally excludes them from this
+    current-claim scan. Candidate ``basis``, ``impact`` and
+    ``reasoning_summary`` are current-user claims and remain scanned.
+    """
+
+    def _strip_metadata(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: _strip_metadata(item)
+                for key, item in value.items()
+                if key not in _RED_FLAG_SCAN_EXCLUDE
+            }
+        if isinstance(value, list):
+            return [_strip_metadata(item) for item in value]
+        return value
+
+    claims: dict[str, Any] = {}
+    for field_name, value in payload.items():
+        if field_name in _DIAGNOSIS_V4_METADATA_FIELDS:
+            continue
+        if field_name != "candidates":
+            claims[field_name] = _strip_metadata(value)
+            continue
+
+        if not isinstance(value, list):
+            claims[field_name] = _strip_metadata(value)
+            continue
+
+        current_claims: list[Any] = []
+        for candidate in value:
+            if not isinstance(candidate, dict):
+                current_claims.append(_strip_metadata(candidate))
+                continue
+            current_claims.append(
+                {
+                    field_name: _strip_metadata(field_value)
+                    for field_name, field_value in candidate.items()
+                    if (
+                        field_name not in _DIAGNOSIS_V4_CANDIDATE_EDUCATION_FIELDS
+                        and field_name not in _RED_FLAG_SCAN_EXCLUDE
+                    )
+                }
+            )
+        claims[field_name] = current_claims
+
+    return json.dumps(claims, ensure_ascii=False)
+
+
 def _collect_issues(
     kind: OutputKind,
     payload: dict[str, Any],
     *,
+    policy_revision: str | None,
     rag_results: list[dict[str, Any]] | None,
     extracted_info: list[dict[str, Any]] | None,
     assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None,
@@ -192,12 +277,10 @@ def _collect_issues(
     if kind == "assessment":
         issues.extend(assessment_evidence_issues(payload, assessment_evidence_catalog or {}))
 
-    issues.extend(
-        check_red_flags(
-            _clinical_claim_text(payload),
-            {"extracted_info": []},
-        )
-    )
+    claim_text = _clinical_claim_text(payload)
+    if kind == "diagnosis" and policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4:
+        claim_text = _diagnosis_v4_current_claim_text(payload)
+    issues.extend(check_red_flags(claim_text, {"extracted_info": []}))
 
     if kind == "treatment" and rag_results:
         ctx = GovernanceContext(
@@ -264,9 +347,15 @@ def guard_structured_output(
     assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None = None,
 ) -> GuardedOutput:
     """Force-gate a structured diagnosis, treatment, posture, or Assessment payload."""
+    effective_policy_revision = policy_revision
     if kind == "diagnosis" and policy_revision is not None:
-        if policy_revision != DIAGNOSIS_GOVERNANCE_POLICY_REVISION:
+        if policy_revision not in {
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+        }:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
+    if kind == "diagnosis" and effective_policy_revision is None:
+        effective_policy_revision = DIAGNOSIS_GOVERNANCE_POLICY_REVISION
     if kind == "treatment" and policy_revision is not None:
         if policy_revision != TREATMENT_GOVERNANCE_POLICY_REVISION:
             raise ValueError(f"unsupported Treatment governance policy revision: {policy_revision}")
@@ -287,6 +376,7 @@ def guard_structured_output(
     issues = _collect_issues(
         kind,
         payload,
+        policy_revision=effective_policy_revision,
         rag_results=rag_results,
         extracted_info=extracted_info,
         assessment_evidence_catalog=assessment_evidence_catalog,

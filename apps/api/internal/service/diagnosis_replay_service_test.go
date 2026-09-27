@@ -114,6 +114,25 @@ func TestHistoricalDiagnosisReplayRecomputesFrozenDecisionWithoutModelCall(t *te
 	}
 }
 
+func TestHistoricalDiagnosisReplayPreservesRetiredV3ConfigurationIdentity(t *testing.T) {
+	diagnosis, _, userID, analysisID := persistReplayTestAnalysis(
+		t, retiredDiagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck",
+	)
+
+	report, err := NewDiagnosisReplayService(diagnosis, nil).HistoricalReplay(
+		context.Background(), userID, analysisID,
+	)
+	if err != nil {
+		t.Fatalf("HistoricalReplay of retired v3 artifact: %v", err)
+	}
+	if report.TargetConfigurationID != retiredDiagnosisDecisionAuthorityConfigID {
+		t.Fatalf("retired v3 identity was not preserved: %#v", report)
+	}
+	if !report.ArtifactIntegrity.Match || !report.Comparison.Hard.Match {
+		t.Fatalf("retired v3 replay must reproduce stored invariants: %#v", report)
+	}
+}
+
 func TestHistoricalDiagnosisReplayFailsClosedWhenFrozenInputPredatesPhase8(t *testing.T) {
 	repo := &fakeDiagnosisAnalysisRepository{}
 	diagnosis := NewDiagnosisAnalysisService(repo)

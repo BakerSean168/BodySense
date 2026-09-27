@@ -95,7 +95,7 @@ fi
 # Runtime-only environment starts here. Historical rollout behavior remains
 # covered by unit/promotion-policy tests; this disposable stack proves clean
 # environments serve the current Champions without operator overrides.
-export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
+export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-4a517fea19cb6c49"
 export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=""
 export DIAGNOSIS_ROLLOUT_STAGE="champion"
 export DIAGNOSIS_PROMOTION_RECORD=""
@@ -163,8 +163,8 @@ E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \
 pnpm e2e
 
-diagnosis_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-5a4a13627e14b4cf';")"
-diagnosis_non_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id<>'diag-config-5a4a13627e14b4cf';")"
+diagnosis_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-4a517fea19cb6c49';")"
+diagnosis_non_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id<>'diag-config-4a517fea19cb6c49';")"
 diagnosis_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations;")"
 if [[ "$diagnosis_current_analyses" -lt 1 || "$diagnosis_non_current_analyses" -ne 0 || "$diagnosis_rollout_observations" -ne 0 ]]; then
   echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}" >&2

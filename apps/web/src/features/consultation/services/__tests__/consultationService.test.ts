@@ -488,7 +488,7 @@ describe("consultationApi", () => {
         safety_summary: {},
         citations: [],
         governance: {},
-        agent_configuration_id: "diag-config-5a4a13627e14b4cf",
+        agent_configuration_id: "diag-config-4a517fea19cb6c49",
         agent_configuration: {},
         decision_trace: {},
         execution_provenance: {},
