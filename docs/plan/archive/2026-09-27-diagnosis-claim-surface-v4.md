@@ -38,3 +38,23 @@ qualification and replay.
    and preserve v3 replay/config compatibility.
 6. Run focused Python/Go checks, repository-required affected checks, then
    commit, push, and open a non-merged PR if all gates pass.
+
+## Closure evidence
+
+Status: complete. The v4 successor is `diag-config-4a517fea19cb6c49` with
+`diagnosis-governance-v4-claim-surface`; v3 remains
+`diag-config-5a4a13627e14b4cf` with `diagnosis-governance-v3` in the offline
+archive and replay path.
+
+- Canonical Diagnosis qualification: v4 7/7, non-inferior to v3, zero critical
+  regressions.
+- Canonical promotion readiness: ready for shadow; required EvidenceGap policy
+  suite 5/5.
+- Python focused suite: 49 passed; full Python suite with OCR extra: 517 passed.
+- Ruff, focused Go service tests, `go vet ./...`, and `go test ./...`: passed.
+- Focused web contract test: 25 passed; development, staging, and production
+  Compose configuration checks passed with disposable placeholders.
+- Commit: `edafe0fa703ceb91ae48db7fea4f972a98bd1ac8`.
+- Pull request: https://github.com/BakerSean168/BodySense/pull/202 (open,
+  targeting `main`, not merged).
+- No staging or production deployment was performed.
