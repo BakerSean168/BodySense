@@ -42,11 +42,11 @@ verified in the second repair commit:
 
 ## Final repair evidence
 
-- Negation policy qualification: 9/9 passed.
+- Negation policy qualification: 10/10 passed, including the independent-source boundary regression.
 - v5 general qualification regenerated: 7/7 passed; non-inferior and
   promotion-eligible versus v4.
 - Promotion readiness regenerated: `ready_for_shadow=true`, with EvidenceGap
-  5/5 and negation policy 9/9 required reports green.
+  5/5 and negation policy 10/10 required reports green.
 - AI service: 539 tests passed; Ruff passed on touched Python.
 - Go: `go vet ./...` and `go test ./...` passed, including exact promotion
   admission tests; `gofmt` and `git diff --check` passed.

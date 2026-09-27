@@ -197,9 +197,21 @@ class RedFlagDetector:
             if notes:
                 combined_text += " " + notes
 
+        scan_segments = [combined_text]
+        if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2:
+            scan_segments = [conversation_text]
+            scan_segments.extend(
+                info.get("additional_notes", "")
+                for info in extracted_info
+                if info.get("additional_notes", "")
+            )
+
         for pattern in RED_FLAG_PATTERNS:
             for keyword in pattern["keywords"]:
-                if _keyword_is_present(combined_text, keyword, revision):
+                if any(
+                    _keyword_is_present(segment, keyword, revision)
+                    for segment in scan_segments
+                ):
                     flags.append(
                         RedFlag(
                             category=pattern["category"],

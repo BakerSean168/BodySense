@@ -45,7 +45,7 @@ transitions. ADR0010 forbids silently treating qualification as promotion.
 - v5 negation-aware Challenger vs v4: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
 - one shared qualification dataset fingerprint across the chain;
 - EvidenceGap policy suite: 5/5;
-- dedicated negation policy suite: 9/9, identity-bound to v5 and detector v2;
+- dedicated negation policy suite: 10/10, identity-bound to v5 and detector v2;
 - the declared immutable Champion and final Challenger both resolve from repository manifests.
 
 The historical generated evidence artifact is

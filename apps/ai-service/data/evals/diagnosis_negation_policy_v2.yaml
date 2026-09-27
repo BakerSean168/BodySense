@@ -14,6 +14,14 @@ cases:
     metadata:
       expected_categories: []
 
+  - name: negation-does-not-cross-source-boundary
+    inputs:
+      text: 没有
+      additional_notes: [头晕]
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]
+
   - name: true-positive-trauma-radiating-dizziness
     inputs:
       text: 外伤后出现放射痛并伴头晕

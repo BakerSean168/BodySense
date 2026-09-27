@@ -131,9 +131,9 @@
       },
       "minimum_pass_rate": 1.0,
       "pass_rate": 1.0,
-      "passed": 9,
+      "passed": 10,
       "report": "data/evals/reports/diagnosis_negation_policy_v2.json",
-      "total": 9
+      "total": 10
     }
   ],
   "rollout": {

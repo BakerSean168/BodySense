@@ -18,6 +18,13 @@
       "assertions": {
         "NegationPolicyBehavior": true
       },
+      "name": "negation-does-not-cross-source-boundary",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
       "name": "true-positive-trauma-radiating-dizziness",
       "passed": true
     },
@@ -69,6 +76,6 @@
   "failed": 0,
   "governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims",
   "name": "diagnosis-negation-policy-v2",
-  "passed": 9,
-  "total": 9
+  "passed": 10,
+  "total": 10
 }

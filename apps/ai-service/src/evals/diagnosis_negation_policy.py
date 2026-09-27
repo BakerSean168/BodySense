@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -26,6 +26,7 @@ class NegationPolicyEvalInputs(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     text: str
+    additional_notes: list[str] = Field(default_factory=list)
     revision: str
 
 
@@ -81,7 +82,11 @@ def load_negation_policy_dataset(
 
 def build_negation_policy_task() -> Any:
     def task(inputs: NegationPolicyEvalInputs) -> NegationPolicyEvalOutput:
-        result = RedFlagDetector().detect([], inputs.text, revision=inputs.revision)
+        result = RedFlagDetector().detect(
+            [{"additional_notes": notes} for notes in inputs.additional_notes],
+            inputs.text,
+            revision=inputs.revision,
+        )
         return NegationPolicyEvalOutput(
             categories=sorted(flag.category for flag in result.flags),
         )
