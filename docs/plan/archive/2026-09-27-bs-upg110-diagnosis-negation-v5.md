@@ -22,6 +22,37 @@ produce real v5 qualification and `diagnosis_promotion_v3` readiness evidence.
   Challenger requiring an exact promotion record and evidence-gap-v2 trace.
 - No compose defaults, staging, production, or deployment state changed.
 
+## Independent-review repair
+
+The independent review identified three acceptance blockers, all repaired and
+verified in the second repair commit:
+
+- v2 now treats `不否认头晕`, `未否认头晕`, and `不能说没有头晕` as
+  conservative positive signals while preserving the exact blocker suppression,
+  literal v1 behavior, mixed-clause behavior, historical/current behavior, and
+  worsening behavior.
+- The dedicated deterministic report
+  `data/evals/reports/diagnosis_negation_policy_v2.json` is identity-bound to
+  v5, governance revision `diagnosis-governance-v5-negation-aware-claims`, and
+  detector revision `red-flag-detector-negation-aware-v2`; it is required at
+  100% by `diagnosis_promotion_v3` alongside EvidenceGap 5/5.
+- Go rollout admission now requires an exact repository-known promotion
+  record/pair for every non-Champion Diagnosis stage. v3 -> v4 accepts only
+  `diagnosis_promotion_v2`; v3 -> v5 accepts only `diagnosis_promotion_v3`.
+
+## Final repair evidence
+
+- Negation policy qualification: 9/9 passed.
+- v5 general qualification regenerated: 7/7 passed; non-inferior and
+  promotion-eligible versus v4.
+- Promotion readiness regenerated: `ready_for_shadow=true`, with EvidenceGap
+  5/5 and negation policy 9/9 required reports green.
+- AI service: 539 tests passed; Ruff passed on touched Python.
+- Go: `go vet ./...` and `go test ./...` passed, including exact promotion
+  admission tests; `gofmt` and `git diff --check` passed.
+- v5 configuration ID remains `diag-config-375187050b203078`; v3 remains the
+  default Champion and no deployment occurred.
+
 ## Completed verification
 
 - v5 manifest fingerprint: `375187050b20307849aedd3d470c7c09fcf5b5fed9cca80291da88254d9126af`.

@@ -1,0 +1,74 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "legacy-v1-flags-negated-blocker",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "v2-suppresses-exact-blocker",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "true-positive-trauma-radiating-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "mixed-trauma-negative-radiating-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "historical-negative-current-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "worsening-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-not-denying-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-not-confirming-remains-positive",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "ambiguous-cannot-say-absence-remains-positive",
+      "passed": true
+    }
+  ],
+  "configuration_id": "diag-config-375187050b203078",
+  "detector_revision": "red-flag-detector-negation-aware-v2",
+  "failed": 0,
+  "governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims",
+  "name": "diagnosis-negation-policy-v2",
+  "passed": 9,
+  "total": 9
+}

@@ -1,14 +1,10 @@
 """Red flag symptom detector for consultation safety.
 
-Design note: This detector uses a conservative (high-recall) strategy.
-Keyword matching without context analysis means phrases like "我之前摔倒过，
-但现在好多了" will still trigger the "trauma" flag due to the "摔倒" keyword.
-This is intentional — in a health consultation context, false negatives
-(missing a real red flag) are far more costly than false positives (showing
-an unnecessary safety warning). Users can dismiss false-positive warnings.
-
-Future improvement: use NLP context analysis or an LLM-based classifier
-to reduce false positives while maintaining high recall.
+Design note: The default/literal v1 detector intentionally remains context-free
+and high recall; this preserves historical behavior. The opt-in v2 detector is
+an explicit-negation-aware revision used only by the v5 Diagnosis configuration.
+It applies a small, conservative local rule rather than general NLP rewriting:
+ambiguous phrasing remains a positive safety signal.
 """
 
 import re
@@ -22,7 +18,9 @@ DEFAULT_RED_FLAG_DETECTOR_REVISION = RED_FLAG_DETECTOR_REVISION_LITERAL_V1
 _NEGATION_CUE_RE = re.compile(
     r"(?P<cue>也没有|并没有|并无|没有|没|未见|未出现|否认|不伴有|不伴|不存在|无)\s*$"
 )
-_AMBIGUOUS_NEGATION_PREFIX_RE = re.compile(r"(?:不是|并非|非|没有|没|无)\s*$")
+_AMBIGUOUS_NEGATION_PREFIX_RE = re.compile(
+    r"(?:不是|并非|非|没有|没|无|不|未|不能说|不能确认|无法确认)\s*$"
+)
 
 
 def _is_explicitly_negated(text: str, start: int) -> bool:

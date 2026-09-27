@@ -47,6 +47,14 @@ def test_negation_aware_revision_keeps_current_symptom_after_history():
     assert {flag.category for flag in result.flags} == {"neurological"}
 
 
+@pytest.mark.parametrize("text", ["不否认头晕", "未否认头晕", "不能说没有头晕"])
+def test_negation_aware_revision_keeps_ambiguous_absence_phrases(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert {flag.category for flag in result.flags} == {"neurological"}
+
+
 def test_negation_aware_revision_does_not_suppress_negation_like_positive_phrase():
     result = RedFlagDetector().detect(
         [], "症状无法缓解，休息也不缓解", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2

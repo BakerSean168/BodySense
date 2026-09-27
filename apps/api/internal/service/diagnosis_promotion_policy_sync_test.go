@@ -81,6 +81,15 @@ func TestNegationAwarePromotionPolicyBindsV5Successor(t *testing.T) {
 	}
 }
 
+func TestDiagnosisPromotionRegistryMatchesImmutablePolicies(t *testing.T) {
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v2"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
+		t.Fatalf("v2 runtime promotion registry drifted: %#v", got)
+	}
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v3"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisNegationAwareConfigID {
+		t.Fatalf("v3 runtime promotion registry drifted: %#v", got)
+	}
+}
+
 func TestRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing.T) {
 	_, current, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))

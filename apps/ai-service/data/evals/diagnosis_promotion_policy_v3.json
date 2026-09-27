@@ -23,11 +23,19 @@
     {
       "report": "data/evals/reports/diagnosis_evidence_policy_v2.json",
       "minimum_pass_rate": 1.0
+    },
+    {
+      "report": "data/evals/reports/diagnosis_negation_policy_v2.json",
+      "minimum_pass_rate": 1.0,
+      "expected_name": "diagnosis-negation-policy-v2",
+      "expected_configuration_id": "diag-config-375187050b203078",
+      "expected_governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims",
+      "expected_detector_revision": "red-flag-detector-negation-aware-v2"
     }
   ],
   "interaction_experiment": {
     "required": false,
-    "reason": "The v5 change is a deterministic, versioned safety interpretation used before and after the typed agent; qualification exercises the real service path, while focused detector/service/governance regressions cover explicit negation, mixed clauses, positive red flags, and immutable v4 literal behavior. No provider interaction can alter this deterministic decision."
+    "reason": "The v5 change is a deterministic, versioned safety interpretation qualified by the dedicated negation policy report and service/governance regressions on the pre-agent gate. Provider interaction cannot change this deterministic pre/post decision, so an interaction experiment is not required."
   },
   "rollout": {
     "shadow_min_samples": 20,

@@ -26,6 +26,10 @@ class RequiredPolicyReport(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     report: str
     minimum_pass_rate: float = Field(ge=0.0, le=1.0)
+    expected_name: str | None = None
+    expected_configuration_id: str | None = None
+    expected_governance_policy_revision: str | None = None
+    expected_detector_revision: str | None = None
 
 
 class InteractionExperimentPolicy(BaseModel):
@@ -153,6 +157,14 @@ def evaluate_promotion_readiness(
         pass_rate = passed / total if total else 0.0
         if pass_rate < required.minimum_pass_rate:
             reasons.append(f"required policy report failed: {required.report}")
+        for field, expected in (
+            ("name", required.expected_name),
+            ("configuration_id", required.expected_configuration_id),
+            ("governance_policy_revision", required.expected_governance_policy_revision),
+            ("detector_revision", required.expected_detector_revision),
+        ):
+            if expected is not None and report.get(field) != expected:
+                reasons.append(f"required policy report {field} mismatch: {required.report}")
         policy_reports.append(
             {
                 "report": required.report,
@@ -160,6 +172,19 @@ def evaluate_promotion_readiness(
                 "total": total,
                 "pass_rate": pass_rate,
                 "minimum_pass_rate": required.minimum_pass_rate,
+                "identity": {
+                    field: expected
+                    for field, expected in (
+                        ("name", required.expected_name),
+                        ("configuration_id", required.expected_configuration_id),
+                        (
+                            "governance_policy_revision",
+                            required.expected_governance_policy_revision,
+                        ),
+                        ("detector_revision", required.expected_detector_revision),
+                    )
+                    if expected is not None
+                },
             }
         )
 

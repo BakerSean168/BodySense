@@ -226,6 +226,35 @@ func TestDiagnosisClaimSurfaceConfigurationIsAnExplicitDistinctChallenger(t *tes
 	}
 }
 
+func TestDiagnosisPromotionAdmissionRequiresExactRegisteredPair(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		champion   string
+		challenger string
+		record     string
+		wantErr    bool
+	}{
+		{"v3-to-v4-approved", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "diagnosis_promotion_v2", false},
+		{"v3-to-v5-approved", diagnosisDecisionAuthorityConfigID, diagnosisNegationAwareConfigID, "diagnosis_promotion_v3", false},
+		{"v3-to-v5-with-v2-rejected", diagnosisDecisionAuthorityConfigID, diagnosisNegationAwareConfigID, "diagnosis_promotion_v2", true},
+		{"v3-to-v4-with-v3-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "diagnosis_promotion_v3", true},
+		{"arbitrary-record-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "approved-but-unknown", true},
+		{"missing-record-rejected", diagnosisDecisionAuthorityConfigID, diagnosisClaimSurfaceConfigID, "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clearAgentDeploymentEnv(t)
+			t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", tc.champion)
+			t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", tc.challenger)
+			t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", tc.record)
+			_, err := NewAgentDeploymentPolicy()
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("NewAgentDeploymentPolicy error=%v wantErr=%v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
 	for _, bps := range []int{500, 2500, 5000} {
 		t.Run(fmt.Sprintf("accepts-%d", bps), func(t *testing.T) {
