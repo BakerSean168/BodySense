@@ -7,6 +7,7 @@ from src.runtime.governance import (
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
     guard_structured_output,
 )
 
@@ -315,6 +316,35 @@ def test_guard_treatment_rejected_missing_plan_blocks_raw():
 
     assert guarded.verdict == "rejected"
     assert guarded.payload is None
+
+
+def test_v6_guard_accepts_supported_negated_current_user_claim_fields():
+    payload = {
+        "summary": "用户当前没有明显放射痛，也否认存在头晕。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "basis": "用户当前无明显放射痛，未见明显头晕。",
+                "impact": "目前没有出现放射痛。",
+                "reasoning_summary": "否认存在放射痛，也没有明显的头晕。",
+                "typical_symptoms": "可能包括放射痛。",
+            }
+        ],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6
+    )
+    assert guarded.verdict == "accepted"
+
+
+def test_v6_guard_rejects_asserted_current_user_red_flag():
+    payload = {
+        "candidates": [{"name": "候选", "basis": "用户当前出现放射痛。"}],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6
+    )
+    assert guarded.verdict == "rejected"
     emitted = guarded.to_emit_dict()
     assert "treatment_plan" not in emitted
     assert "other" not in emitted

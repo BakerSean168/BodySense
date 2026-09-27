@@ -64,6 +64,28 @@ def test_negation_aware_successor_promotion_evidence_is_ready_for_shadow() -> No
     }
 
 
+def test_negation_bridge_successor_promotion_evidence_is_ready_for_shadow() -> None:
+    policy_path = (
+        Path(__file__).resolve().parents[2]
+        / "data/evals/diagnosis_promotion_policy_v4.json"
+    )
+    policy = load_promotion_policy(policy_path)
+    report = evaluate_promotion_readiness(policy)
+
+    assert policy.name == "diagnosis_promotion_v4"
+    assert policy.champion_configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert policy.challenger_configuration_id == "diag-config-4377355ba2012ce8"
+    assert report["ready_for_shadow"] is True
+    assert report["reasons"] == []
+    assert [item["configuration_id"] for item in report["qualification_chain"]] == [
+        "diag-config-5a4a13627e14b4cf",
+        "diag-config-4a517fea19cb6c49",
+        "diag-config-375187050b203078",
+        "diag-config-4377355ba2012ce8",
+    ]
+    assert report["required_policy_reports"][1]["passed"] == 14
+
+
 def test_partial_negation_policy_report_blocks_readiness(monkeypatch) -> None:
     policy_path = (
         Path(__file__).resolve().parents[2]
