@@ -1,18 +1,49 @@
 """Red flag symptom detector for consultation safety.
 
-Design note: This detector uses a conservative (high-recall) strategy.
-Keyword matching without context analysis means phrases like "我之前摔倒过，
-但现在好多了" will still trigger the "trauma" flag due to the "摔倒" keyword.
-This is intentional — in a health consultation context, false negatives
-(missing a real red flag) are far more costly than false positives (showing
-an unnecessary safety warning). Users can dismiss false-positive warnings.
-
-Future improvement: use NLP context analysis or an LLM-based classifier
-to reduce false positives while maintaining high recall.
+Design note: The default/literal v1 detector intentionally remains context-free
+and high recall; this preserves historical behavior. The opt-in v2 detector is
+an explicit-negation-aware revision used only by the v5 Diagnosis configuration.
+It applies a small, conservative local rule rather than general NLP rewriting:
+ambiguous phrasing remains a positive safety signal.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
+
+RED_FLAG_DETECTOR_REVISION_LITERAL_V1 = "red-flag-detector-literal-v1"
+RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2 = "red-flag-detector-negation-aware-v2"
+DEFAULT_RED_FLAG_DETECTOR_REVISION = RED_FLAG_DETECTOR_REVISION_LITERAL_V1
+
+_NEGATION_CUE_RE = re.compile(
+    r"(?P<cue>也没有|并没有|并无|没有|没|未见|未出现|否认|不伴有|不伴|不存在|无)\s*$"
+)
+_AMBIGUOUS_NEGATION_PREFIX_RE = re.compile(
+    r"(?:不是|并非|非|没有|没|无|不|未|不能说|不能确认|无法确认)\s*$"
+)
+
+
+def _is_explicitly_negated(text: str, start: int) -> bool:
+    """Return true only for a narrow, unambiguous local absence clause."""
+    prefix = text[max(0, start - 24) : start]
+    match = _NEGATION_CUE_RE.search(prefix)
+    if match is None:
+        return False
+    before_cue = prefix[: match.start()]
+    return _AMBIGUOUS_NEGATION_PREFIX_RE.search(before_cue) is None
+
+
+def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
+    if revision == RED_FLAG_DETECTOR_REVISION_LITERAL_V1:
+        return keyword in text
+    if revision != RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2:
+        raise ValueError(f"unsupported red-flag detector revision: {revision}")
+    start = text.find(keyword)
+    while start >= 0:
+        if not _is_explicitly_negated(text, start):
+            return True
+        start = text.find(keyword, start + len(keyword))
+    return False
 
 
 @dataclass
@@ -123,6 +154,8 @@ class RedFlagDetector:
         self,
         extracted_info: list[dict],
         conversation_text: str = "",
+        *,
+        revision: str = DEFAULT_RED_FLAG_DETECTOR_REVISION,
     ) -> RedFlagResult:
         """
         Scan extracted info and conversation for red flags.
@@ -134,6 +167,12 @@ class RedFlagDetector:
         Returns:
             RedFlagResult with detected flags.
         """
+        if revision not in {
+            RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+        }:
+            raise ValueError(f"unsupported red-flag detector revision: {revision}")
+
         flags: list[RedFlag] = []
 
         # Check extracted info for severity red flags
@@ -158,9 +197,21 @@ class RedFlagDetector:
             if notes:
                 combined_text += " " + notes
 
+        scan_segments = [combined_text]
+        if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2:
+            scan_segments = [conversation_text]
+            scan_segments.extend(
+                info.get("additional_notes", "")
+                for info in extracted_info
+                if info.get("additional_notes", "")
+            )
+
         for pattern in RED_FLAG_PATTERNS:
             for keyword in pattern["keywords"]:
-                if keyword in combined_text:
+                if any(
+                    _keyword_is_present(segment, keyword, revision)
+                    for segment in scan_segments
+                ):
                     flags.append(
                         RedFlag(
                             category=pattern["category"],
@@ -188,9 +239,11 @@ class RedFlagDetector:
         self,
         extracted_info: list[dict],
         conversation_text: str = "",
+        *,
+        revision: str = DEFAULT_RED_FLAG_DETECTOR_REVISION,
     ) -> bool:
         """Quick check if any red flags detected."""
-        return self.detect(extracted_info, conversation_text).has_red_flags
+        return self.detect(extracted_info, conversation_text, revision=revision).has_red_flags
 
 
 # Singleton

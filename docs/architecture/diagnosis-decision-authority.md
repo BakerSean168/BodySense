@@ -86,7 +86,7 @@ It remains a qualified Challenger, ready for shadow under
 `diagnosis_promotion_v2`; qualification does not change the live v3 default.
 ADR0010 forbids silently treating qualification as promotion.
 
-### Diagnosis v4 claim surface
+### Diagnosis v4 and v5 claim surface
 
 The v4 post-agent governance projection scans fields that assert facts about the
 current user. Candidate `name`, `typical_symptoms`, and `differential` are generic
@@ -94,8 +94,22 @@ education about a possible candidate, so red-flag terms in those fields do not b
 themselves assert that the user has the red flag. Candidate `basis`, `impact`, and
 `reasoning_summary`, the overall summary, and unknown fields remain current-claim
 surface and are scanned fail-closed. The deterministic pre-agent BodyState gate
-and the high-recall `RedFlagDetector` are unchanged. The v3 broad projection is
-retained exactly for the current Champion, historical qualification, and replay.
+and the high-recall literal `RedFlagDetector` revision v1 are unchanged for v3
+and v4. The v3 broad projection is retained exactly for the current Champion,
+historical qualification, and replay.
+
+Diagnosis v5 keeps this exact v4 projection and changes only the explicit,
+versioned red-flag interpretation: detector revision v2 suppresses a keyword
+only when a narrow local clause explicitly asserts absence (`没有`, `无`, `未见`,
+`否认`, `不伴`, and equivalent supported cues). Mixed clauses and current
+positive assertions remain red flags; phrases such as `无法缓解` remain
+positive. The legacy literal revision remains the default for every existing
+caller and for v3/v4, so v4 was not mutated.
+
+The v5 immutable manifest is `diag-config-375187050b203078` with governance
+revision `diagnosis-governance-v5-negation-aware-claims`. It remains a known
+qualified successor Challenger only; v3 remains Champion/default and v4 remains
+resolvable historical/qualified evidence.
 
 ## Qualification evidence
 

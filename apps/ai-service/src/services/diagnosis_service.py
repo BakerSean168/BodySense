@@ -31,7 +31,10 @@ from ..models.evidence import (
     EvidenceBudget,
     ExternalEvidenceStatus,
 )
-from ..runtime.governance import guard_structured_output
+from ..runtime.governance import (
+    DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY,
+    guard_structured_output,
+)
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
     deterministic_diagnosis_model,
@@ -80,9 +83,19 @@ class DiagnosisService:
         relevant_history = relevant_history or []
         red_flag_input = _body_state_to_extracted_info(body_state)
         detector = get_red_flag_detector()
+        try:
+            detector_revision = DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY[
+                config.governance_policy_revision
+            ]
+        except KeyError as exc:
+            raise ValueError(
+                "unsupported Diagnosis governance policy for red-flag detection: "
+                f"{config.governance_policy_revision}"
+            ) from exc
         red_flag_result = detector.detect(
             red_flag_input,
             _body_state_safety_text(body_state),
+            revision=detector_revision,
         )
         if red_flag_result.has_red_flags:
             evidence_trace = EvidenceAcquisitionTrace(

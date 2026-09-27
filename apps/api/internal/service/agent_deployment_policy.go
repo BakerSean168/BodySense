@@ -12,6 +12,7 @@ import (
 const (
 	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
 	diagnosisClaimSurfaceConfigID      = "diag-config-4a517fea19cb6c49"
+	diagnosisNegationAwareConfigID     = "diag-config-375187050b203078"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
@@ -59,6 +60,11 @@ const (
 
 type diagnosisConfigurationRegistration struct {
 	DecisionPolicyRevision string
+}
+
+type diagnosisPromotionRecordRegistration struct {
+	ChampionConfigurationID   string
+	ChallengerConfigurationID string
 }
 
 type treatmentConfigurationRegistration struct {
@@ -179,6 +185,20 @@ var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration
 	},
 	diagnosisClaimSurfaceConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
+	diagnosisNegationAwareConfigID: {
+		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
+}
+
+var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistration{
+	"diagnosis_promotion_v2": {
+		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
+		ChallengerConfigurationID: diagnosisClaimSurfaceConfigID,
+	},
+	"diagnosis_promotion_v3": {
+		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
+		ChallengerConfigurationID: diagnosisNegationAwareConfigID,
 	},
 }
 
@@ -304,6 +324,11 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 		if diagnosisPromotionRecord == "" {
 			return nil, fmt.Errorf("Diagnosis rollout stage %q requires an approved promotion record", diagnosisStage)
+		}
+		if err := validateDiagnosisPromotionRecord(
+			diagnosisPromotionRecord, diagnosisChampion, diagnosisChallenger,
+		); err != nil {
+			return nil, err
 		}
 	}
 
@@ -485,6 +510,20 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		knowledgeCuratorConfigurationID:     knowledgeCurator,
 		knowledgeSplitterConfigurationID:    knowledgeSplitter,
 	}, nil
+}
+
+func validateDiagnosisPromotionRecord(recordID, championID, challengerID string) error {
+	record, ok := knownDiagnosisPromotionRecords[recordID]
+	if !ok {
+		return fmt.Errorf("unknown Diagnosis promotion record %q", recordID)
+	}
+	if record.ChampionConfigurationID != championID || record.ChallengerConfigurationID != challengerID {
+		return fmt.Errorf(
+			"Diagnosis promotion record %q does not approve Champion %q -> Challenger %q",
+			recordID, championID, challengerID,
+		)
+	}
+	return nil
 }
 
 // DiagnosisConfigurationID returns the current repository Champion.

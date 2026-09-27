@@ -1,0 +1,72 @@
+name: diagnosis_negation_policy_v2
+cases:
+  - name: legacy-v1-flags-negated-blocker
+    inputs:
+      text: 没有外伤，没有放射痛，也没有头晕
+      revision: red-flag-detector-literal-v1
+    metadata:
+      expected_categories: [neurological, radiating_pain, trauma]
+
+  - name: v2-suppresses-exact-blocker
+    inputs:
+      text: 久坐办公后只有轻微颈肩僵硬和酸胀，活动后会缓解；没有外伤，没有放射痛，没有麻木，没有无力，也没有头晕。
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: []
+
+  - name: negation-does-not-cross-source-boundary
+    inputs:
+      text: 没有
+      additional_notes: [头晕]
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]
+
+  - name: true-positive-trauma-radiating-dizziness
+    inputs:
+      text: 外伤后出现放射痛并伴头晕
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological, radiating_pain, trauma]
+
+  - name: mixed-trauma-negative-radiating-positive
+    inputs:
+      text: 没有外伤，但出现放射痛
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [radiating_pain]
+
+  - name: historical-negative-current-positive
+    inputs:
+      text: 之前没有头晕，现在头晕
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]
+
+  - name: worsening-remains-positive
+    inputs:
+      text: 症状无法缓解，休息也不缓解
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [worsening]
+
+  - name: ambiguous-not-denying-remains-positive
+    inputs:
+      text: 不否认头晕
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]
+
+  - name: ambiguous-not-confirming-remains-positive
+    inputs:
+      text: 未否认头晕
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]
+
+  - name: ambiguous-cannot-say-absence-remains-positive
+    inputs:
+      text: 不能说没有头晕
+      revision: red-flag-detector-negation-aware-v2
+    metadata:
+      expected_categories: [neurological]

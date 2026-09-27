@@ -42,6 +42,11 @@ from ..services.governance.types import (
     GovernanceStatus,
     IssueSeverity,
 )
+from ..services.red_flag_detector import (
+    DEFAULT_RED_FLAG_DETECTOR_REVISION,
+    RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
+    RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +54,16 @@ OutputKind = Literal["diagnosis", "treatment", "posture", "assessment"]
 
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3 = "diagnosis-governance-v3"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4 = "diagnosis-governance-v4-claim-surface"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5 = "diagnosis-governance-v5-negation-aware-claims"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION = DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
 ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
+
+DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY = {
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3: RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4: RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5: RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+}
 
 # Fields that must be present for each structured kind.
 _REQUIRED_FIELDS: dict[OutputKind, list[str]] = {
@@ -278,9 +290,22 @@ def _collect_issues(
         issues.extend(assessment_evidence_issues(payload, assessment_evidence_catalog or {}))
 
     claim_text = _clinical_claim_text(payload)
-    if kind == "diagnosis" and policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4:
+    if kind == "diagnosis" and policy_revision in {
+        DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+        DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
+    }:
         claim_text = _diagnosis_v4_current_claim_text(payload)
-    issues.extend(check_red_flags(claim_text, {"extracted_info": []}))
+    detector_revision = DEFAULT_RED_FLAG_DETECTOR_REVISION
+    if kind == "diagnosis":
+        assert policy_revision is not None
+        detector_revision = DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY[policy_revision]
+    issues.extend(
+        check_red_flags(
+            claim_text,
+            {"extracted_info": []},
+            detector_revision=detector_revision,
+        )
+    )
 
     if kind == "treatment" and rag_results:
         ctx = GovernanceContext(
@@ -352,6 +377,7 @@ def guard_structured_output(
         if policy_revision not in {
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
         }:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if kind == "diagnosis" and effective_policy_revision is None:

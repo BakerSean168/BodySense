@@ -1,0 +1,59 @@
+{
+  "name": "diagnosis_promotion_v3",
+  "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+  "challenger_configuration_id": "diag-config-375187050b203078",
+  "qualification_chain": [
+    {
+      "report": "data/evals/reports/diagnosis_decision_authority_challenger.json",
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "predecessor_configuration_id": null
+    },
+    {
+      "report": "data/evals/reports/diagnosis_claim_surface_challenger.json",
+      "configuration_id": "diag-config-4a517fea19cb6c49",
+      "predecessor_configuration_id": "diag-config-5a4a13627e14b4cf"
+    },
+    {
+      "report": "data/evals/reports/diagnosis_negation_aware_challenger.json",
+      "configuration_id": "diag-config-375187050b203078",
+      "predecessor_configuration_id": "diag-config-4a517fea19cb6c49"
+    }
+  ],
+  "required_policy_reports": [
+    {
+      "report": "data/evals/reports/diagnosis_evidence_policy_v2.json",
+      "minimum_pass_rate": 1.0
+    },
+    {
+      "report": "data/evals/reports/diagnosis_negation_policy_v2.json",
+      "minimum_pass_rate": 1.0,
+      "expected_name": "diagnosis-negation-policy-v2",
+      "expected_configuration_id": "diag-config-375187050b203078",
+      "expected_governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims",
+      "expected_detector_revision": "red-flag-detector-negation-aware-v2"
+    }
+  ],
+  "interaction_experiment": {
+    "required": false,
+    "reason": "The v5 change is a deterministic, versioned safety interpretation qualified by the dedicated negation policy report and service/governance regressions on the pre-agent gate. Provider interaction cannot change this deterministic pre/post decision, so an interaction experiment is not required."
+  },
+  "rollout": {
+    "shadow_min_samples": 20,
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "promotion_bps": 10000,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "unsafe_relaxations": 0,
+      "forbidden_side_effects": 0,
+      "configuration_mismatches": 0,
+      "challenger_errors_before_pause": 1,
+      "rate_gate_min_samples": 20,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25
+    }
+  }
+}

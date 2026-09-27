@@ -90,10 +90,11 @@ func TestEvidenceAvailabilityTraceRejectsLegacyOrInconsistentRetrieval(t *testin
 	}
 }
 
-func TestEvidenceAvailabilityTraceRequiresDiagnosisTraceForV3AndV4(t *testing.T) {
+func TestEvidenceAvailabilityTraceRequiresDiagnosisTraceForV3V4AndV5(t *testing.T) {
 	for _, configurationID := range []string{
 		diagnosisDecisionAuthorityConfigID,
 		diagnosisClaimSurfaceConfigID,
+		diagnosisNegationAwareConfigID,
 	} {
 		if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
 			t.Fatalf("Diagnosis configuration %q must require a trace, got %v", configurationID, err)

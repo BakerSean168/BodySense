@@ -3,10 +3,14 @@
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
+from src.configuration.diagnosis_agent_config import (
+    get_default_diagnosis_configuration,
+)
 from src.services.diagnosis_service import DiagnosisService
 
 CONFIG_ID = get_default_diagnosis_configuration().configuration_id
+V4_CONFIG_ID = "diag-config-4a517fea19cb6c49"
+V5_CONFIG_ID = "diag-config-375187050b203078"
 
 
 def _body_state(revision: int = 12) -> dict:
@@ -68,6 +72,54 @@ def _service(output: dict) -> tuple[DiagnosisService, TestModel]:
     model = TestModel(custom_output_args=output)
     service = DiagnosisService(model_resolver=lambda _config: model)
     return service, model
+
+
+def _blocker_body_state(revision: int = 12) -> dict:
+    state = _body_state(revision)
+    state["facts"][0]["value"] = (
+        "久坐办公后只有轻微颈肩僵硬和酸胀，活动后会缓解；没有外伤，没有放射痛，"
+        "没有麻木，没有无力，也没有头晕。"
+    )
+    return state
+
+
+@pytest.mark.asyncio
+async def test_v5_exact_negated_blocker_executes_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        configuration_id=V5_CONFIG_ID,
+        body_state=_blocker_body_state(),
+    )
+    assert result["status"] == "completed"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+async def test_v5_positive_red_flag_still_bypasses_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _blocker_body_state()
+    state["facts"][0]["value"] += " 现在出现放射痛。"
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V5_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "safety_blocked"
+    assert result["execution_provenance"]["reason"] == "python_pre_agent_safety_gate"
+    assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_v4_exact_negated_blocker_retains_literal_behavior():
+    service, model = _service(_agent_output([_candidate()]))
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        configuration_id=V4_CONFIG_ID,
+        body_state=_blocker_body_state(),
+    )
+    assert result["status"] == "safety_blocked"
+    assert result["execution_provenance"]["reason"] == "python_pre_agent_safety_gate"
+    assert model.last_model_request_parameters is None
 
 
 @pytest.mark.asyncio
