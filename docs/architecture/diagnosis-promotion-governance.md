@@ -1,6 +1,8 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
-Status: Current rollout mechanism. Diagnosis v3 became the repository Champion on 2026-09-01 under ADR 0010; v1 is now the explicit rollback/historical target and there is no active Challenger by default.
+Status: Current rollout mechanism. Diagnosis v3 remains the repository Champion;
+v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2`, and
+there is no active Challenger by default.
 
 ## North-star rule
 
@@ -21,30 +23,36 @@ champion
 any rollout stage -> rollback
 ```
 
-Repository/default production state remains `champion`, but Champion now means the
-latest qualified v3 baseline. `shadow/canary/promoted` are only meaningful after a
-future distinct Challenger and matching promotion record exist. The historical
-v1 -> v3 record remains immutable evidence for the baseline transition.
+Repository/default production state remains `champion`, with v3 as the current
+Champion. v4 is a distinct qualified Challenger; `shadow/canary/promoted` are only
+meaningful after an explicit rollout selection and matching promotion record. The
+historical v1 -> v3 and v3 -> v4 records remain immutable evidence for their
+transitions. ADR0010 forbids silently treating qualification as promotion.
 
 ## Promotion evidence
 
-`apps/ai-service/data/evals/diagnosis_promotion_policy.json` is the machine-readable
-promotion specification. `run_diagnosis_promotion_eval.py` validates:
+`apps/ai-service/data/evals/diagnosis_promotion_policy.json` is the historical
+`diagnosis_promotion_v1` specification. The v3 -> v4 successor specification is
+`data/evals/diagnosis_promotion_policy_v2.json`; the same
+`run_diagnosis_promotion_eval.py` validates both policies:
 
 - v1 Champion qualification: 7/7;
 - v2 EvidenceGap Challenger vs v1: non-inferior, promotion-eligible, no critical regression;
 - v3 DecisionAuthority Challenger vs v2: non-inferior, promotion-eligible, no critical regression;
+- v4 claim-surface Challenger vs v3: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
 - one shared qualification dataset fingerprint across the chain;
 - EvidenceGap policy suite: 5/5;
 - the declared immutable Champion and final Challenger both resolve from repository manifests.
 
-The generated evidence artifact is
-`data/evals/reports/diagnosis_promotion_readiness.json`.
+The historical generated evidence artifact is
+`data/evals/reports/diagnosis_promotion_readiness.json`; the v4 successor
+artifact is `data/evals/reports/diagnosis_promotion_readiness_v2.json`.
 
 No interaction experiment is required for this chain because the cumulative
 Challengers changed one governed boundary at a time: v2 isolates EvidenceGap;
-v3 isolates Go DecisionAuthority. If a future change combines model, prompt,
-tools, or policy changes such that attribution is ambiguous, a promotion policy
+v3 isolates Go DecisionAuthority; v4 isolates the Diagnosis claim-surface scan.
+If a future change combines model, prompt, tools, or policy changes such that
+attribution is ambiguous, a promotion policy
 must explicitly require the interaction experiment instead of reusing this waiver.
 
 ## Runtime admission
@@ -54,14 +62,13 @@ Current clean-environment baseline:
 ```text
 DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
 DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=
-DIAGNOSIS_ROLLBACK_CONFIGURATION_ID=diag-config-f492eb1c0c6676ae
 DIAGNOSIS_ROLLOUT_STAGE=champion
 ```
 
-The old v1 -> v3 pair may still be configured explicitly in hermetic/history tests
-with `diagnosis_promotion_v1`; that does not make v1 the current Champion. A future
-non-Champion stage requires a distinct Challenger and an approved record for that
-exact pair. `DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
+The v3 -> v4 pair is immutable qualification evidence; v4 may be selected
+explicitly as the Challenger for `shadow` with the approved
+`diagnosis_promotion_v2` record. Qualification alone does not promote v4, and
+`DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
 
 ## Stable canary assignment
 
@@ -86,14 +93,14 @@ The served run is the only path allowed to create DiagnosisAnalysis, Evidence,
 Hypothesis, BodyState safety state, or consultation phase changes.
 
 The paired run reuses the Phase-8 frozen input and counterfactual path. It may read
-knowledge, but it never creates those business artifacts. A target v3 pre-agent
+knowledge, but it never creates those business artifacts. A target v4 pre-agent
 safety block is recomputed in Go and bypasses the model, preserving Phase-6
 semantics even in shadow.
 
-Legacy v1 governance-rejected responses are deliberately not forced into a new
-DiagnosisAnalysis shape. Instead, a transient frozen baseline can still be paired
-against v3 so `Champion block -> Challenger allow` remains observable as an
-unsafe relaxation without changing the user's characterized v1 response.
+Historical governance-rejected responses are deliberately not forced into a new
+DiagnosisAnalysis shape. The current v3 Champion can still be paired against v4
+through the frozen counterfactual path so `Champion block -> Challenger allow`
+remains observable as an unsafe relaxation without changing durable semantics.
 
 ## Durable rollout observations
 
@@ -161,6 +168,6 @@ returns non-zero when the stop gate says pause/rollback.
 `local-deploy-validate.sh` now runs the disposable production-shaped stack on the
 same baseline as clean environments: Diagnosis v3 serves directly in `champion`
 with no active Challenger. After longitudinal E2E, PostgreSQL must contain v3
-Diagnosis artifacts, zero newly served v1 artifacts and zero rollout observations.
-Historical v1 -> v3 shadow/canary mechanics remain covered by focused Go tests and
-the immutable promotion-policy evaluator.
+Diagnosis artifacts, zero non-Champion Diagnosis artifacts and zero rollout
+observations. Historical v1 -> v3 and v3 -> v4 mechanics remain covered by
+focused Go tests and the immutable promotion-policy evaluators.

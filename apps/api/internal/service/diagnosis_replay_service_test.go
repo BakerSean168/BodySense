@@ -60,7 +60,7 @@ func replayTestRaw(configurationID, decisionRevision, concernKey string) json.Ra
 			"reasons":         []any{},
 		}
 	}
-	if configurationID == defaultDiagnosisConfigurationID {
+	if configurationID == defaultDiagnosisConfigurationID || configurationID == diagnosisClaimSurfaceConfigID {
 		payload["evidence_acquisition"] = map[string]any{
 			"trace_revision":           evidenceAvailabilityTraceV2,
 			"policy_revision":          "diagnosis-evidence-gap-v2",
@@ -149,7 +149,7 @@ func TestCounterfactualDiagnosisReplayUsesFrozenInputAndSelectedConfigurationWit
 		}
 		w.Header().Set("Content-Type", "application/json")
 		var counterfactual map[string]any
-		_ = json.Unmarshal(replayTestRaw(diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:shoulder"), &counterfactual)
+		_ = json.Unmarshal(replayTestRaw(diagnosisClaimSurfaceConfigID, DiagnosisDecisionPolicyV1, "region:shoulder"), &counterfactual)
 		counterfactual["status"] = "partial"
 		counterfactual["governance"].(map[string]any)["verdict"] = "degraded"
 		delete(counterfactual, "decision_authority")
@@ -160,19 +160,19 @@ func TestCounterfactualDiagnosisReplayUsesFrozenInputAndSelectedConfigurationWit
 	t.Setenv("AI_SERVICE_URL", server.URL)
 
 	report, err := NewDiagnosisReplayService(diagnosis, NewAIClient()).CounterfactualReplay(
-		context.Background(), userID, analysisID, diagnosisDecisionAuthorityConfigID,
+		context.Background(), userID, analysisID, diagnosisClaimSurfaceConfigID,
 	)
 	if err != nil {
 		t.Fatalf("CounterfactualReplay: %v", err)
 	}
-	if captured.BodyStateRevision != 12 || captured.ConfigurationID != diagnosisDecisionAuthorityConfigID {
+	if captured.BodyStateRevision != 12 || captured.ConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("counterfactual must use frozen revision and selected config: %#v", captured)
 	}
 	if !json.Valid(captured.BodyState) || !strings.Contains(string(captured.BodyState), "fact-neck-1") {
 		t.Fatalf("counterfactual must use the frozen BodyState: %s", captured.BodyState)
 	}
 	if report.Comparison.Hard.Match {
-		t.Fatal("configuration authority change from pre-envelope to v1 must be visible as a hard comparison change")
+		t.Fatal("configuration authority change from pre-envelope to v4 must be visible as a hard comparison change")
 	}
 	if report.Comparison.Semantic.Match {
 		t.Fatal("changed concern key must be visible as semantic drift")

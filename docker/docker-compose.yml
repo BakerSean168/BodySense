@@ -94,8 +94,8 @@ services:
       HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID:-hdex-config-f2495c95b6ed9de2}
       HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID: ${HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
 
-      # vNext runtime exposes only repository-current serving configurations.
-      # Historical configurations remain offline eval evidence, never rollback targets.
+      # v3 is the current Champion; v4 is a qualified Challenger selected
+      # explicitly for shadow under diagnosis_promotion_v2.
       DIAGNOSIS_CHAMPION_CONFIGURATION_ID: ${DIAGNOSIS_CHAMPION_CONFIGURATION_ID:-diag-config-5a4a13627e14b4cf}
       DIAGNOSIS_CHALLENGER_CONFIGURATION_ID: ${DIAGNOSIS_CHALLENGER_CONFIGURATION_ID:-}
       DIAGNOSIS_ROLLOUT_STAGE: ${DIAGNOSIS_ROLLOUT_STAGE:-champion}

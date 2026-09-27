@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from src.runtime.governance import guard_structured_output
+from src.runtime.governance import (
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+    guard_structured_output,
+)
 
 
 def test_guard_diagnosis_accepted():
@@ -26,6 +31,10 @@ def test_guard_diagnosis_accepted():
     assert emitted["governance"]["verdict"] == "accepted"
     assert "candidates" in emitted
     assert "safety_fallback" not in emitted
+
+
+def test_current_diagnosis_policy_alias_is_v4():
+    assert DIAGNOSIS_GOVERNANCE_POLICY_REVISION == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 
 
 def test_guard_diagnosis_rejected_missing_schema_blocks_raw_payload():
@@ -67,6 +76,130 @@ def test_guard_diagnosis_rejected_on_clinical_red_flag_claim():
     # Reasons may mention the matched keyword for audit, but the raw model
     # diagnoses list must never be delivered.
     assert "basis" not in emitted
+
+
+def test_v4_guard_accepts_red_flags_in_generic_candidate_education():
+    payload = {
+        "summary": "当前信息更符合轻度颈肩负荷模式。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "confidence": "中",
+                "severity": "轻度",
+                "basis": "用户报告久坐后颈肩僵硬，活动后缓解。",
+                "impact": "目前影响轻微。",
+                "typical_symptoms": "可能包括放射到手臂、麻木无力等表现。",
+                "differential": "若出现放射到手臂，应与神经受压相关情况鉴别。",
+                "reasoning_summary": "当前证据仅支持轻度负荷相关表现。",
+            }
+        ],
+    }
+
+    guarded = guard_structured_output(
+        "diagnosis",
+        payload,
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+    )
+
+    assert guarded.verdict == "accepted"
+    assert guarded.payload == payload
+
+
+def test_v4_guard_rejects_red_flags_in_asserted_current_user_claim():
+    payload = {
+        "summary": "用户当前疼痛放射到手臂。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "confidence": "中",
+                "severity": "轻度",
+                "basis": "用户报告久坐后颈肩僵硬，活动后缓解。",
+                "typical_symptoms": "可能包括放射到手臂。",
+                "differential": "与神经受压相关情况鉴别。",
+            }
+        ],
+    }
+
+    guarded = guard_structured_output(
+        "diagnosis",
+        payload,
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+    )
+
+    assert guarded.verdict == "rejected"
+    assert guarded.payload is None
+
+
+def test_v4_guard_rejects_red_flags_in_each_current_claim_field():
+    for field_name in ("basis", "impact", "reasoning_summary"):
+        payload = {
+            "summary": "当前信息更符合轻度颈肩负荷模式。",
+            "candidates": [
+                {
+                    "name": "颈肩负荷模式",
+                    "confidence": "中",
+                    "severity": "轻度",
+                    "basis": "用户报告久坐后颈肩僵硬，活动后缓解。",
+                    "impact": "目前影响轻微。",
+                    "typical_symptoms": "可能包括放射到手臂。",
+                    "differential": "与神经受压相关情况鉴别。",
+                    "reasoning_summary": "当前证据仅支持轻度负荷相关表现。",
+                }
+            ],
+        }
+        payload["candidates"][0][field_name] = "用户当前疼痛放射到手臂。"
+
+        guarded = guard_structured_output(
+            "diagnosis",
+            payload,
+            policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+        )
+
+        assert guarded.verdict == "rejected", field_name
+        assert guarded.payload is None, field_name
+
+
+def test_v4_guard_scans_unknown_claim_fields_fail_closed():
+    payload = {
+        "summary": "当前信息更符合轻度颈肩负荷模式。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "confidence": "中",
+                "typical_symptoms": "可能包括放射到手臂。",
+                "future_current_claim": "用户当前疼痛放射到手臂。",
+            }
+        ],
+    }
+
+    guarded = guard_structured_output(
+        "diagnosis",
+        payload,
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+    )
+
+    assert guarded.verdict == "rejected"
+
+
+def test_v3_guard_preserves_legacy_scan_of_candidate_education():
+    payload = {
+        "summary": "当前信息更符合轻度颈肩负荷模式。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "confidence": "中",
+                "typical_symptoms": "可能包括放射到手臂等表现。",
+            }
+        ],
+    }
+
+    guarded = guard_structured_output(
+        "diagnosis",
+        payload,
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
+    )
+
+    assert guarded.verdict == "rejected"
 
 
 def test_guard_ignores_red_flag_keywords_in_warning_signs():

@@ -9,8 +9,10 @@ import (
 )
 
 type promotionPolicyFixture struct {
-	Name    string `json:"name"`
-	Rollout struct {
+	Name                      string `json:"name"`
+	ChampionConfigurationID   string `json:"champion_configuration_id"`
+	ChallengerConfigurationID string `json:"challenger_configuration_id"`
+	Rollout                   struct {
 		ShadowMinSamples int   `json:"shadow_min_samples"`
 		CanaryStepsBPS   []int `json:"canary_steps_bps"`
 		PromotionBPS     int   `json:"promotion_bps"`
@@ -24,6 +26,24 @@ type promotionPolicyFixture struct {
 			MaxSemanticMismatchRate     float64 `json:"max_semantic_mismatch_rate"`
 		} `json:"stop_rules"`
 	} `json:"rollout"`
+}
+
+func TestClaimSurfacePromotionPolicyBindsV4Successor(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v2.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	if policy.Name != "diagnosis_promotion_v2" ||
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
+		t.Fatalf("claim-surface promotion identity drifted: %#v", policy)
+	}
 }
 
 func TestRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing.T) {

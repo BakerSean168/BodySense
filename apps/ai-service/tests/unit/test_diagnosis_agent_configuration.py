@@ -17,9 +17,32 @@ def test_default_diagnosis_configuration_is_repository_versioned_and_stable() ->
     config = get_default_diagnosis_configuration()
     assert config.role == "diagnosis"
     assert config.logical_model == "bodysense-diagnosis"
-    assert config.configuration_id.startswith("diag-config-")
+    assert config.configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert config.governance_policy_revision == "diagnosis-governance-v3"
     assert (CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml").exists()
     assert get_diagnosis_configuration(config.configuration_id) == config
+
+
+def test_v3_diagnosis_manifest_remains_live_resolvable() -> None:
+    v3 = load_manifest(CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
+
+    assert v3.configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert v3.governance_policy_revision == "diagnosis-governance-v3"
+    assert get_diagnosis_configuration(v3.configuration_id) == v3
+
+
+def test_v4_is_repository_known_successor_challenger_of_v3() -> None:
+    v3 = load_manifest(CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml")
+    v4 = load_manifest(CONFIG_ROOT / "diagnosis-v4-claim-surface.yaml")
+
+    assert v4.configuration_id == "diag-config-4a517fea19cb6c49"
+    assert get_diagnosis_configuration(v4.configuration_id) == v4
+    assert v4.configuration_id != v3.configuration_id
+    assert v4.governance_policy_revision != v3.governance_policy_revision
+    assert v4.prompt_revision == v3.prompt_revision
+    assert v4.tool_policy_revision == v3.tool_policy_revision
+    assert v4.evidence_policy_revision == v3.evidence_policy_revision
+    assert v4.decision_policy_revision == v3.decision_policy_revision
 
 
 def test_behavior_significant_revision_changes_configuration_id(tmp_path: Path) -> None:

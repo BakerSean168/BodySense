@@ -5,6 +5,7 @@ from __future__ import annotations
 
 
 def _main() -> int:
+    import argparse
     import json
     import sys
     from pathlib import Path
@@ -20,9 +21,15 @@ def _main() -> int:
         load_promotion_policy,
     )
 
-    policy = load_promotion_policy(DEFAULT_POLICY_PATH)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY_PATH)
+    parser.add_argument("--json-output", type=Path, default=DEFAULT_REPORT_PATH)
+    args = parser.parse_args()
+
+    policy = load_promotion_policy(args.policy)
     report = evaluate_promotion_readiness(policy)
-    DEFAULT_REPORT_PATH.write_text(
+    args.json_output.parent.mkdir(parents=True, exist_ok=True)
+    args.json_output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

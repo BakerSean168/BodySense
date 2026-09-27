@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: Historical Phase-5 implementation checkpoint; capability and rollout machinery are implemented. Under ADR 0010, Diagnosis v3 is now the repository Champion; v1 remains rollback/historical replay only.
+> Status: Current evidence-acquisition contract is implemented by `diagnosis-evidence-gap-v2`. Diagnosis v3 remains the live Champion; v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2` only.
 
 ## Ownership
 
@@ -49,7 +49,7 @@ Every requested gap produces an `EvidenceAttempt` with one of these stopping rea
 
 A critical gap whose attempt remains unresolved is merged back into final `information_gaps` even if the model omitted it after the tool call. This is a runtime invariant, not merely a prompt instruction.
 
-## Immutable configurations
+## Historical Phase-5 configurations
 
 The original Champion remains unchanged:
 
@@ -85,4 +85,20 @@ A second deterministic Pydantic Evals suite covers the acquisition policy itself
 4. critical gap with zero budget -> `budget_exhausted` and preserved critical gap;
 5. second critical gap after budget consumption -> no second search and preserved critical gap.
 
-The Challenger is qualified but is not promoted by Phase 5. The Go production deployment pointer remains on the v1 Champion until the explicit Shadow/Canary/Promotion phase so architecture migration does not bypass its own release-governance model.
+At the end of Phase 5, the Challenger was qualified but not promoted by that
+phase. The later DecisionAuthority and claim-surface transitions are recorded by
+their own immutable promotion evidence rather than rewriting this historical
+qualification.
+
+## Current Champion and qualified successor
+
+Diagnosis v3 remains the current Champion with immutable identity
+`diag-config-5a4a13627e14b4cf` and `diagnosis-governance-v3`.
+
+Diagnosis v4 keeps the exact Phase-5 model, prompt, tool, output-schema, and
+`diagnosis-evidence-gap-v2` behavior. It introduces only the
+`diagnosis-governance-v4-claim-surface` revision, whose post-agent scan separates
+current-user claims from generic candidate education. Its immutable configuration
+identity is `diag-config-4a517fea19cb6c49`. It is a qualified Challenger, ready
+for shadow under `diagnosis_promotion_v2`; ADR0010 forbids silently treating
+qualification as promotion.

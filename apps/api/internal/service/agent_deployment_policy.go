@@ -11,6 +11,7 @@ import (
 
 const (
 	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
+	diagnosisClaimSurfaceConfigID      = "diag-config-4a517fea19cb6c49"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
@@ -174,6 +175,9 @@ var knownKnowledgeSplitterConfigurations = map[string]knowledgeConfigurationRegi
 
 var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration{
 	diagnosisDecisionAuthorityConfigID: {
+		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
+	diagnosisClaimSurfaceConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
 }

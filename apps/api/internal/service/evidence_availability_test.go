@@ -90,8 +90,13 @@ func TestEvidenceAvailabilityTraceRejectsLegacyOrInconsistentRetrieval(t *testin
 	}
 }
 
-func TestEvidenceAvailabilityTraceRequiresCurrentDiagnosisTrace(t *testing.T) {
-	if _, err := validateEvidenceAvailabilityForConfiguration(defaultDiagnosisConfigurationID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
-		t.Fatalf("current Diagnosis evidence-gap policy must require a trace, got %v", err)
+func TestEvidenceAvailabilityTraceRequiresDiagnosisTraceForV3AndV4(t *testing.T) {
+	for _, configurationID := range []string{
+		diagnosisDecisionAuthorityConfigID,
+		diagnosisClaimSurfaceConfigID,
+	} {
+		if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
+			t.Fatalf("Diagnosis configuration %q must require a trace, got %v", configurationID, err)
+		}
 	}
 }
