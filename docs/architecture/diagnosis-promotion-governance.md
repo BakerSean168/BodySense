@@ -1,8 +1,9 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
 Status: Current rollout mechanism. Diagnosis v3 remains the repository Champion;
-v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2`, and
-there is no active Challenger by default.
+v4 remains immutable historical qualification evidence, and v5 is the current
+qualified successor Challenger, ready for shadow under `diagnosis_promotion_v3`.
+There is no active Challenger by default and no promotion/deployment has occurred.
 
 ## North-star rule
 
@@ -33,24 +34,32 @@ transitions. ADR0010 forbids silently treating qualification as promotion.
 
 `apps/ai-service/data/evals/diagnosis_promotion_policy.json` is the historical
 `diagnosis_promotion_v1` specification. The v3 -> v4 successor specification is
-`data/evals/diagnosis_promotion_policy_v2.json`; the same
-`run_diagnosis_promotion_eval.py` validates both policies:
+`data/evals/diagnosis_promotion_policy_v2.json`; v3's successor specification is
+`data/evals/diagnosis_promotion_policy_v3.json`. The same
+`run_diagnosis_promotion_eval.py` validates these immutable policies:
 
 - v1 Champion qualification: 7/7;
 - v2 EvidenceGap Challenger vs v1: non-inferior, promotion-eligible, no critical regression;
 - v3 DecisionAuthority Challenger vs v2: non-inferior, promotion-eligible, no critical regression;
 - v4 claim-surface Challenger vs v3: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
+- v5 negation-aware Challenger vs v4: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
 - one shared qualification dataset fingerprint across the chain;
 - EvidenceGap policy suite: 5/5;
 - the declared immutable Champion and final Challenger both resolve from repository manifests.
 
 The historical generated evidence artifact is
 `data/evals/reports/diagnosis_promotion_readiness.json`; the v4 successor
-artifact is `data/evals/reports/diagnosis_promotion_readiness_v2.json`.
+artifact is `data/evals/reports/diagnosis_promotion_readiness_v2.json`; the v5
+successor artifact is `data/evals/reports/diagnosis_promotion_readiness_v3.json`.
 
-No interaction experiment is required for this chain because the cumulative
-Challengers changed one governed boundary at a time: v2 isolates EvidenceGap;
-v3 isolates Go DecisionAuthority; v4 isolates the Diagnosis claim-surface scan.
+No interaction experiment is required for v5 because its explicit-negation
+interpretation is deterministic and is exercised on the actual pre-agent and
+post-agent service path; provider interaction cannot change that decision. The
+focused regression suite covers explicit negation, mixed clauses, positive and
+ambiguous phrases, and immutable v4 literal behavior. The cumulative
+Challengers otherwise changed one governed boundary at a time: v2 isolates
+EvidenceGap; v3 isolates Go DecisionAuthority; v4 isolates the Diagnosis
+claim-surface scan.
 If a future change combines model, prompt, tools, or policy changes such that
 attribution is ambiguous, a promotion policy
 must explicitly require the interaction experiment instead of reusing this waiver.
@@ -71,10 +80,10 @@ The operator canary steps are exactly 500 -> 2500 -> 5000 basis points. A clean
 baseline defaults to the first step, 500 bps. Staging Compose must propagate both
 `DIAGNOSIS_CANARY_BPS` and `DIAGNOSIS_ROLLOUT_SALT` into the API container.
 
-The v3 -> v4 pair is immutable qualification evidence; v4 may be selected
-explicitly as the Challenger for `shadow` with the approved
-`diagnosis_promotion_v2` record. Qualification alone does not promote v4, and
-`DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
+The v3 -> v4 pair and `diagnosis_promotion_v2` remain immutable historical
+qualification evidence. v5 may be selected explicitly as the Challenger for
+`shadow` only with the approved `diagnosis_promotion_v3` record. Qualification
+alone does not promote v5, and `DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
 
 ## Stable canary assignment
 

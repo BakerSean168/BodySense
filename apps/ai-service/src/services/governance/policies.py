@@ -5,18 +5,26 @@ from __future__ import annotations
 from typing import Any
 
 from ..faithfulness_checker import get_faithfulness_checker
-from ..red_flag_detector import get_red_flag_detector
+from ..red_flag_detector import (
+    DEFAULT_RED_FLAG_DETECTOR_REVISION,
+    get_red_flag_detector,
+)
 from .types import GovernanceContext, GovernanceIssue, IssueSeverity
 
 
-def check_red_flags(output_text: str, context: dict[str, Any]) -> list[GovernanceIssue]:
+def check_red_flags(
+    output_text: str,
+    context: dict[str, Any],
+    *,
+    detector_revision: str = DEFAULT_RED_FLAG_DETECTOR_REVISION,
+) -> list[GovernanceIssue]:
     """Check for red flags in the output text."""
     issues: list[GovernanceIssue] = []
     detector = get_red_flag_detector()
 
     # Scan the output text for red flag patterns
     extracted_info = context.get("extracted_info", [])
-    result = detector.detect(extracted_info, output_text)
+    result = detector.detect(extracted_info, output_text, revision=detector_revision)
 
     if result.has_red_flags:
         for flag in result.flags:

@@ -6,6 +6,7 @@ from src.runtime.governance import (
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
     guard_structured_output,
 )
 
@@ -128,6 +129,53 @@ def test_v4_guard_rejects_red_flags_in_asserted_current_user_claim():
 
     assert guarded.verdict == "rejected"
     assert guarded.payload is None
+
+
+def test_v5_guard_accepts_explicitly_negated_current_user_claim():
+    payload = {
+        "summary": "当前没有头晕，也没有放射痛。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "confidence": "中",
+                "basis": "用户没有外伤，没有放射痛，也没有头晕。",
+                "typical_symptoms": "可能包括放射到手臂。",
+                "differential": "与神经受压相关情况鉴别。",
+            }
+        ],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5
+    )
+    assert guarded.verdict == "accepted"
+
+
+def test_v5_guard_rejects_true_current_user_red_flag():
+    payload = {
+        "summary": "当前出现放射痛。",
+        "candidates": [{"name": "候选", "basis": "用户当前出现放射痛。"}],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5
+    )
+    assert guarded.verdict == "rejected"
+
+
+def test_v5_guard_preserves_v4_candidate_education_exclusions():
+    payload = {
+        "candidates": [
+            {
+                "name": "候选",
+                "basis": "用户颈肩轻微酸胀。",
+                "typical_symptoms": "可能放射到手臂、出现麻木。",
+                "differential": "若出现放射痛需鉴别。",
+            }
+        ]
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5
+    )
+    assert guarded.verdict == "accepted"
 
 
 def test_v4_guard_rejects_red_flags_in_each_current_claim_field():

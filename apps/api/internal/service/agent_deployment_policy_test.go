@@ -189,6 +189,9 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisClaimSurfaceConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
 		t.Fatalf("Diagnosis Challenger policy=%q err=%v", got, err)
 	}
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationAwareConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("Diagnosis negation-aware policy=%q err=%v", got, err)
+	}
 	if got, err := TreatmentDecisionPolicyRevisionForConfiguration(defaultTreatmentConfigurationID); err != nil || got != TreatmentDecisionPolicyV1 {
 		t.Fatalf("Treatment policy=%q err=%v", got, err)
 	}

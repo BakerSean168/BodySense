@@ -30,3 +30,23 @@ def test_claim_surface_successor_promotion_evidence_is_ready_for_shadow() -> Non
     assert policy.challenger_configuration_id == "diag-config-4a517fea19cb6c49"
     assert report["ready_for_shadow"] is True
     assert report["reasons"] == []
+
+
+def test_negation_aware_successor_promotion_evidence_is_ready_for_shadow() -> None:
+    policy_path = (
+        Path(__file__).resolve().parents[2]
+        / "data/evals/diagnosis_promotion_policy_v3.json"
+    )
+    policy = load_promotion_policy(policy_path)
+    report = evaluate_promotion_readiness(policy)
+
+    assert policy.name == "diagnosis_promotion_v3"
+    assert policy.champion_configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert policy.challenger_configuration_id == "diag-config-375187050b203078"
+    assert report["ready_for_shadow"] is True
+    assert report["reasons"] == []
+    assert report["qualification_chain"][1]["configuration_id"] == "diag-config-4a517fea19cb6c49"
+    assert (
+        report["qualification_chain"][2]["predecessor_configuration_id"]
+        == "diag-config-4a517fea19cb6c49"
+    )

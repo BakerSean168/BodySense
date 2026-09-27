@@ -12,6 +12,7 @@ import (
 const (
 	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
 	diagnosisClaimSurfaceConfigID      = "diag-config-4a517fea19cb6c49"
+	diagnosisNegationAwareConfigID     = "diag-config-375187050b203078"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
@@ -178,6 +179,9 @@ var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
 	diagnosisClaimSurfaceConfigID: {
+		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
+	diagnosisNegationAwareConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
 }

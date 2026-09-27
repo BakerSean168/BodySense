@@ -1,6 +1,62 @@
 """Tests for red flag detector."""
 
-from src.services.red_flag_detector import RedFlagDetector, get_red_flag_detector
+import pytest
+
+from src.services.red_flag_detector import (
+    RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
+    RedFlagDetector,
+    get_red_flag_detector,
+)
+
+BLOCKER_TEXT = (
+    "久坐办公后只有轻微颈肩僵硬和酸胀，活动后会缓解；没有外伤，没有放射痛，"
+    "没有麻木，没有无力，也没有头晕。"
+)
+
+
+def test_legacy_literal_revision_preserves_negated_false_positive():
+    result = RedFlagDetector().detect([], "没有外伤，没有放射痛，也没有头晕")
+    assert {flag.category for flag in result.flags} == {"trauma", "radiating_pain", "neurological"}
+
+
+def test_negation_aware_revision_suppresses_exact_blocker_phrase():
+    result = RedFlagDetector().detect(
+        [], BLOCKER_TEXT, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert result.has_red_flags is False
+
+
+def test_negation_aware_revision_detects_positive_red_flags():
+    result = RedFlagDetector().detect(
+        [], "外伤后出现放射痛并伴头晕", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert {flag.category for flag in result.flags} == {"trauma", "radiating_pain", "neurological"}
+
+
+def test_negation_aware_revision_keeps_mixed_positive_clause():
+    result = RedFlagDetector().detect(
+        [], "没有外伤，但出现放射痛", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert {flag.category for flag in result.flags} == {"radiating_pain"}
+
+
+def test_negation_aware_revision_keeps_current_symptom_after_history():
+    result = RedFlagDetector().detect(
+        [], "之前没有头晕，现在头晕", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert {flag.category for flag in result.flags} == {"neurological"}
+
+
+def test_negation_aware_revision_does_not_suppress_negation_like_positive_phrase():
+    result = RedFlagDetector().detect(
+        [], "症状无法缓解，休息也不缓解", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2
+    )
+    assert {flag.category for flag in result.flags} == {"worsening"}
+
+
+def test_unknown_revision_fails_closed():
+    with pytest.raises(ValueError, match="unsupported red-flag detector revision"):
+        RedFlagDetector().detect([], "头晕", revision="red-flag-detector-v999")
 
 
 def test_detect_severe_pain_in_conversation():
