@@ -44,6 +44,20 @@ func TestClaimSurfacePromotionPolicyBindsV4Successor(t *testing.T) {
 		policy.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("claim-surface promotion identity drifted: %#v", policy)
 	}
+	if len(policy.Rollout.CanaryStepsBPS) != 3 ||
+		policy.Rollout.CanaryStepsBPS[0] != defaultDiagnosisCanaryBPS {
+		t.Fatalf("Diagnosis default canary step drifted from v2 policy: %#v", policy.Rollout.CanaryStepsBPS)
+	}
+	for _, step := range policy.Rollout.CanaryStepsBPS {
+		if !approvedDiagnosisCanaryStep(step) {
+			t.Fatalf("Diagnosis canary step is not admitted by runtime: %#v", policy.Rollout.CanaryStepsBPS)
+		}
+	}
+	for i, want := range []int{500, 2500, 5000} {
+		if policy.Rollout.CanaryStepsBPS[i] != want {
+			t.Fatalf("Diagnosis canary steps drifted: %#v", policy.Rollout.CanaryStepsBPS)
+		}
+	}
 }
 
 func TestRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing.T) {

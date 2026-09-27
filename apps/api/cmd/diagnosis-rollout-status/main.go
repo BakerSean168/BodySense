@@ -20,7 +20,7 @@ func main() {
 	champion := flag.String("champion", deployment.DiagnosisConfigurationID(), "Champion configuration ID")
 	challenger := flag.String("challenger", "", "Challenger configuration ID (required)")
 	stage := flag.String("stage", service.DiagnosisRolloutShadow, "Rollout stage to summarize")
-	canaryBPS := flag.Int("canary-bps", 1000, "Canary basis-point step to summarize")
+	canaryBPS := flag.Int("canary-bps", 500, "Canary basis-point step to summarize")
 	limit := flag.Int("limit", 1000, "Maximum recent observations")
 	flag.Parse()
 	if *challenger == "" {

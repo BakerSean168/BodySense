@@ -1,6 +1,11 @@
 package service
 
-import "testing"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"testing"
+)
 
 const (
 	retiredDiagnosisV1ConfigurationID          = "diag-config-f492eb1c0c6676ae"
@@ -215,6 +220,47 @@ func TestDiagnosisClaimSurfaceConfigurationIsAnExplicitDistinctChallenger(t *tes
 		route.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID ||
 		route.ShadowConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("unexpected Diagnosis Champion/Challenger route: %#v", route)
+	}
+}
+
+func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
+	for _, bps := range []int{500, 2500, 5000} {
+		t.Run(fmt.Sprintf("accepts-%d", bps), func(t *testing.T) {
+			clearAgentDeploymentEnv(t)
+			t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+			t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisClaimSurfaceConfigID)
+			t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutCanary)
+			t.Setenv("DIAGNOSIS_CANARY_BPS", strconv.Itoa(bps))
+			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
+
+			policy, err := NewAgentDeploymentPolicy()
+			if err != nil {
+				t.Fatal(err)
+			}
+			route := policy.SelectDiagnosisRoute("user-1")
+			if route.Stage != DiagnosisRolloutCanary || route.CanaryBPS != bps ||
+				route.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
+				route.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID ||
+				route.PromotionRecord != "diagnosis_promotion_v2" {
+				t.Fatalf("unexpected Diagnosis canary route: %#v", route)
+			}
+		})
+	}
+
+	for _, bps := range []int{1000, 1234} {
+		t.Run(fmt.Sprintf("rejects-%d", bps), func(t *testing.T) {
+			clearAgentDeploymentEnv(t)
+			t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+			t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisClaimSurfaceConfigID)
+			t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutCanary)
+			t.Setenv("DIAGNOSIS_CANARY_BPS", strconv.Itoa(bps))
+			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
+
+			_, err := NewAgentDeploymentPolicy()
+			if err == nil || !strings.Contains(err.Error(), "500, 2500, 5000") {
+				t.Fatalf("expected approved-step error for %d, got %v", bps, err)
+			}
+		})
 	}
 }
 
