@@ -316,6 +316,10 @@ def test_guard_treatment_rejected_missing_plan_blocks_raw():
 
     assert guarded.verdict == "rejected"
     assert guarded.payload is None
+    emitted = guarded.to_emit_dict()
+    assert "treatment_plan" not in emitted
+    assert "other" not in emitted
+    assert emitted["safety_fallback"]
 
 
 def test_v6_guard_accepts_supported_negated_current_user_claim_fields():
@@ -345,9 +349,9 @@ def test_v6_guard_rejects_asserted_current_user_red_flag():
         "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6
     )
     assert guarded.verdict == "rejected"
+    assert guarded.payload is None
     emitted = guarded.to_emit_dict()
-    assert "treatment_plan" not in emitted
-    assert "other" not in emitted
+    assert "candidates" not in emitted
     assert emitted["safety_fallback"]
 
 
