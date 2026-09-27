@@ -19,7 +19,7 @@ const (
 	DiagnosisRolloutCanary   = "canary"
 	DiagnosisRolloutPromoted = "promoted"
 
-	defaultDiagnosisCanaryBPS   = 1000
+	defaultDiagnosisCanaryBPS   = 500
 	defaultDiagnosisRolloutSalt = "diagnosis-rollout-v1"
 
 	AssessmentRolloutChampion = "champion"
@@ -290,8 +290,8 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if diagnosisCanaryBPS < 0 || diagnosisCanaryBPS > 10000 {
 		return nil, fmt.Errorf("DIAGNOSIS_CANARY_BPS must be between 0 and 10000")
 	}
-	if diagnosisStage == DiagnosisRolloutCanary && (diagnosisCanaryBPS <= 0 || diagnosisCanaryBPS >= 10000) {
-		return nil, fmt.Errorf("canary stage requires DIAGNOSIS_CANARY_BPS between 1 and 9999")
+	if diagnosisStage == DiagnosisRolloutCanary && !approvedDiagnosisCanaryStep(diagnosisCanaryBPS) {
+		return nil, fmt.Errorf("Diagnosis canary stage requires DIAGNOSIS_CANARY_BPS to be one of 500, 2500, 5000")
 	}
 	diagnosisRolloutSalt := strings.TrimSpace(os.Getenv("DIAGNOSIS_ROLLOUT_SALT"))
 	if diagnosisRolloutSalt == "" {
@@ -818,6 +818,10 @@ func validRolloutStage(stage string) bool {
 }
 
 func approvedTreatmentCanaryStep(bps int) bool {
+	return bps == 500 || bps == 2500 || bps == 5000
+}
+
+func approvedDiagnosisCanaryStep(bps int) bool {
 	return bps == 500 || bps == 2500 || bps == 5000
 }
 

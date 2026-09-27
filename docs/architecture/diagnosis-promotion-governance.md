@@ -15,9 +15,9 @@ The rollout state machine is:
 ```text
 champion
   -> shadow
-  -> canary 5%
-  -> canary 25%
-  -> canary 50%
+  -> canary 500 bps (5%)
+  -> canary 2500 bps (25%)
+  -> canary 5000 bps (50%)
   -> promoted 100%
 
 any rollout stage -> rollback
@@ -63,7 +63,13 @@ Current clean-environment baseline:
 DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
 DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=
 DIAGNOSIS_ROLLOUT_STAGE=champion
+DIAGNOSIS_CANARY_BPS=500
+DIAGNOSIS_ROLLOUT_SALT=diagnosis-rollout-v1
 ```
+
+The operator canary steps are exactly 500 -> 2500 -> 5000 basis points. A clean
+baseline defaults to the first step, 500 bps. Staging Compose must propagate both
+`DIAGNOSIS_CANARY_BPS` and `DIAGNOSIS_ROLLOUT_SALT` into the API container.
 
 The v3 -> v4 pair is immutable qualification evidence; v4 may be selected
 explicitly as the Challenger for `shadow` with the approved
@@ -80,8 +86,8 @@ challenger iff bucket < canary_bps
 ```
 
 The same subject remains in the same bucket for a fixed rollout salt. Canary
-stages are only valid between 1 and 9999 basis points; 100% cannot be smuggled in
-as a canary and must use the explicit `promoted` stage.
+stages accept only the predeclared 500, 2500, and 5000 basis-point steps; 100%
+cannot be smuggled in as a canary and must use the explicit `promoted` stage.
 
 During `shadow`, Champion serves and Challenger is paired read-only. During
 `canary`, the assigned config serves and the opposite config runs as the paired
