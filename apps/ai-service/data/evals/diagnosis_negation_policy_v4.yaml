@@ -1,0 +1,147 @@
+name: diagnosis_negation_policy_v4
+cases:
+  - name: exact-provider-red-flag-summary
+    inputs:
+      text: 无外伤、放射痛、麻木、无力或头晕等红旗信号。
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: []
+  - name: exact-provider-stable-symptom-basis
+    inputs:
+      text: 症状由久坐办公触发，活动后改善，持续 2 周且稳定，无外伤、神经症状或头晕。
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: []
+  - name: bounded-listed-separators
+    inputs:
+      text: 无放射痛/麻木/无力/头晕/外伤
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: []
+  - name: bounded-coordination
+    inputs:
+      text: 无神经压迫或外伤相关红旗信号
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: []
+  - name: bounded-final-neutral-suffix
+    inputs:
+      text: 无外伤、放射痛、麻木、无力或头晕等警示症状
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: []
+  - name: positive-later-appears
+    inputs:
+      text: 无外伤、后来出现放射痛
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: positive-current-claim
+    inputs:
+      text: 无外伤、头晕持续
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-exclusion
+    inputs:
+      text: 不排除放射痛
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: positive-exclusion-dizziness
+    inputs:
+      text: 无外伤、不排除头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-exclusion-dizziness-cannot-rule-out
+    inputs:
+      text: 无外伤、不能排除头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-attack
+    inputs:
+      text: 无外伤、头晕发作
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-appears
+    inputs:
+      text: 无外伤、头晕出现
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-exists
+    inputs:
+      text: 无外伤、头晕存在
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-still-present
+    inputs:
+      text: 无外伤、仍有头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-currently-present
+    inputs:
+      text: 无外伤、现有头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-now-present
+    inputs:
+      text: 无外伤、现在有头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-dizziness-currently-has
+    inputs:
+      text: 无外伤、目前有头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-frequent-dizziness
+    inputs:
+      text: 无外伤、头晕频繁
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-recurrent-dizziness
+    inputs:
+      text: 无外伤、头晕反复
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-severe-dizziness
+    inputs:
+      text: 无外伤、头晕严重
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-recent-current
+    inputs:
+      text: 之前没有头晕，现在头晕
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [neurological]
+  - name: positive-chinese-comma
+    inputs:
+      text: 无外伤，放射痛
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: positive-english-comma
+    inputs:
+      text: 无外伤,放射痛
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: source-boundary
+    inputs:
+      text: 没有
+      additional_notes: [放射痛]
+      revision: red-flag-detector-negation-list-v4
+    metadata:
+      expected_categories: [radiating_pain]

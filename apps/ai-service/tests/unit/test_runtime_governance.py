@@ -8,6 +8,7 @@ from src.runtime.governance import (
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7,
     guard_structured_output,
 )
 
@@ -158,6 +159,42 @@ def test_v5_guard_rejects_true_current_user_red_flag():
     }
     guarded = guard_structured_output(
         "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5
+    )
+    assert guarded.verdict == "rejected"
+
+
+def test_v7_post_agent_governance_accepts_exact_provider_summary_and_basis():
+    payload = {
+        "summary": "无外伤、放射痛、麻木、无力或头晕等红旗信号。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "basis": (
+                    "症状由久坐办公触发，活动后改善，持续 2 周且稳定，无外伤、神经症状或头晕。"
+                ),
+                "typical_symptoms": "可能包括放射痛。",
+            }
+        ],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
+    )
+    assert guarded.verdict == "accepted"
+
+
+def test_v7_post_agent_governance_rejects_separate_current_positive_claim():
+    payload = {
+        "summary": "无外伤、放射痛、麻木、无力或头晕等红旗信号。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "basis": "当前出现放射痛。",
+                "typical_symptoms": "可能包括放射痛。",
+            }
+        ],
+    }
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
     )
     assert guarded.verdict == "rejected"
 

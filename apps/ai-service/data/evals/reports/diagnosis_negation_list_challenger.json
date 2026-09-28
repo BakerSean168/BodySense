@@ -1,0 +1,25 @@
+{
+  "configuration_id": "diag-config-4eb948f419994367",
+  "dataset": {
+    "fingerprint": "82c4ed3bf191e5318c347ac3a9aa5b15986f2934e2ead55a1a0ea0d6b2519c52"
+  },
+  "pass_rate": 1.0,
+  "qualification": {
+    "qualified": true,
+    "reasons": []
+  },
+  "comparison": {
+    "candidate_configuration_id": "diag-config-4eb948f419994367",
+    "champion_configuration_id": "diag-config-4377355ba2012ce8",
+    "candidate_pass_rate": 1.0,
+    "champion_pass_rate": 1.0,
+    "margin": 0.02,
+    "pass_rate_delta": 0.0,
+    "non_inferior": true,
+    "promotion_eligible": true,
+    "critical_regressions": [],
+    "regressions": [],
+    "slice_regressions": [],
+    "slice_deltas": {}
+  }
+}
