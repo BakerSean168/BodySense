@@ -1,0 +1,179 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "exact-provider-red-flag-summary",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "exact-provider-stable-symptom-basis",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "bounded-listed-separators",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "bounded-coordination",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "bounded-final-neutral-suffix",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-later-appears",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-current-claim",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-exclusion",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-exclusion-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-exclusion-dizziness-cannot-rule-out",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-attack",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-appears",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-exists",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-still-present",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-currently-present",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-now-present",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-dizziness-currently-has",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-frequent-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-recurrent-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-severe-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-recent-current",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-chinese-comma",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "positive-english-comma",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "source-boundary",
+      "passed": true
+    }
+  ],
+  "configuration_id": "diag-config-4eb948f419994367",
+  "detector_revision": "red-flag-detector-negation-list-v4",
+  "failed": 0,
+  "governance_policy_revision": "diagnosis-governance-v7-negation-list-claims",
+  "name": "diagnosis-negation-policy-v4",
+  "passed": 24,
+  "total": 24
+}

@@ -3,8 +3,10 @@
 import pytest
 
 from src.services.red_flag_detector import (
+    RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
     RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+    RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
     RedFlagDetector,
     get_red_flag_detector,
 )
@@ -107,6 +109,86 @@ def test_negation_bridge_revision_does_not_cross_source_boundary():
         revision=RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
     )
     assert {flag.category for flag in result.flags} == {"radiating_pain"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "无外伤、放射痛、麻木、无力或头晕",
+        "阴性症状（无放射痛/麻木/无力/头晕/外伤）",
+        "无神经/外伤红旗",
+        "无神经压迫或外伤相关红旗信号",
+        "且无外伤、放射痛、麻木、无力、头晕等警示症状",
+        "无放射痛/麻木/无力/头晕/外伤",
+        "无外伤、放射痛",
+        "无外伤、神经症状或头晕",
+        "无外伤、放射痛、麻木、无力或头晕等红旗信号。",
+        "症状由久坐办公触发，活动后改善，持续 2 周且稳定，无外伤、神经症状或头晕。",
+    ],
+)
+def test_negation_list_revision_suppresses_bounded_provider_lists(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4
+    )
+    assert result.has_red_flags is False
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "无外伤，但出现放射痛",
+        "无外伤，后来出现放射痛",
+        "无外伤，现在有放射痛",
+        "无外伤史，现有放射痛",
+        "无外伤、后来出现头晕",
+        "无外伤、不排除头晕",
+        "无外伤、不能排除头晕",
+        "无外伤、头晕明显",
+        "无外伤、头晕加重",
+        "无外伤、头晕持续",
+        "不排除放射痛",
+        "未排除放射痛",
+        "无法排除外伤",
+        "不能排除外伤",
+        "不否认头晕",
+        "未否认头晕",
+        "不能说没有头晕",
+        "症状无法缓解，休息也不缓解",
+        "之前没有头晕，现在头晕",
+        "无外伤，后来出现放射痛",
+        "无外伤，但出现放射痛",
+        "无外伤,放射痛",
+        "无外伤，放射痛",
+    ],
+)
+def test_negation_list_revision_fails_closed_for_positive_or_ambiguous_text(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4
+    )
+    assert result.has_red_flags is True
+
+
+def test_negation_list_revision_does_not_cross_source_boundary():
+    result = RedFlagDetector().detect(
+        [{"additional_notes": "放射痛"}],
+        "没有",
+        revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
+    )
+    assert {flag.category for flag in result.flags} == {"radiating_pain"}
+
+
+@pytest.mark.parametrize(
+    ("revision", "text", "expected"),
+    [
+        (RED_FLAG_DETECTOR_REVISION_LITERAL_V1, "没有放射痛", True),
+        (RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2, "没有放射痛", False),
+        (RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3, "没有明显放射痛", False),
+        (RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3, "不排除放射痛", True),
+    ],
+)
+def test_v1_v2_v3_semantics_remain_unchanged(revision: str, text: str, expected: bool):
+    result = RedFlagDetector().detect([], text, revision=revision)
+    assert result.has_red_flags is expected
 
 
 def test_unknown_revision_fails_closed():

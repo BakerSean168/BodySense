@@ -4,8 +4,9 @@ Design note: The default/literal v1 detector intentionally remains context-free
 and high recall; this preserves historical behavior. The opt-in v2 detector is
 an explicit-negation-aware revision used only by the v5 Diagnosis configuration.
 The opt-in v3 detector adds a small allowlisted bridge grammar for v6; it does
-not broaden v2 semantics. Both revisions use conservative local rules rather
-than general NLP rewriting: ambiguous phrasing remains a positive signal.
+not broaden v2 semantics. The opt-in v4 detector adds a finite grammar for
+short, explicitly negated red-flag lists. All revisions use conservative local
+rules rather than general NLP rewriting: ambiguous phrasing remains positive.
 """
 
 import re
@@ -15,6 +16,7 @@ from typing import Any
 RED_FLAG_DETECTOR_REVISION_LITERAL_V1 = "red-flag-detector-literal-v1"
 RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2 = "red-flag-detector-negation-aware-v2"
 RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3 = "red-flag-detector-negation-bridge-v3"
+RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4 = "red-flag-detector-negation-list-v4"
 DEFAULT_RED_FLAG_DETECTOR_REVISION = RED_FLAG_DETECTOR_REVISION_LITERAL_V1
 
 _NEGATION_CUE_RE = re.compile(
@@ -24,6 +26,26 @@ _AMBIGUOUS_NEGATION_PREFIX_RE = re.compile(
     r"(?:不是|并非|非|没有|没|无|不|未|不能说|不能确认|无法确认)\s*$"
 )
 _NEGATION_BRIDGE_RE = re.compile(r"(?:明显的?|出现|存在|任何|再出现)?\s*$")
+_LIST_ITEM = (
+    r"(?:扭伤后肿胀|外伤相关红旗信号|外伤相关红旗|外伤红旗|结构性损伤|放射到手臂|放射到腿部|"
+    r"神经压迫|神经症状|麻木无力|红旗信号|警示症状|放射痛|外伤|"
+    r"神经|红旗|麻木|无力|头晕)"
+)
+_LIST_ITEM_RE = re.compile(_LIST_ITEM)
+_LIST_SEPARATOR_RE = re.compile(r"(?:、|／|/|或|和|及|以及)")
+_LIST_NEGATION_RE = re.compile(r"(?:无|没有|没|未见|否认)")
+_LIST_OPTIONAL_MODIFIER_RE = re.compile(r"(?:明显的?|任何|相关的?)?")
+_LIST_TERMINAL_RE = re.compile(
+    r"(?:等红旗信号|等警示症状|等症状|等表现|等信号)(?=$|[\s。！？；：:，,、）】》\]])"
+)
+_LIST_END_PUNCTUATION_RE = re.compile(r'^[\s。！？；：:，,、）】》\]"}\]]*$')
+_LIST_FORBIDDEN_SUFFIX_RE = re.compile(
+    r"^(?:明显|加重|持续|发作|出现|存在|仍有|现有|现在有|目前有|频繁|反复|严重)"
+)
+
+
+def _has_ambiguous_prefix(text: str) -> bool:
+    return bool(re.search(r"(?:不是|并非|非|没有|没|无|不|未|不能说|不能确认|无法确认)\s*$", text))
 
 
 def _is_explicitly_negated(text: str, start: int) -> bool:
@@ -46,20 +68,68 @@ def _is_explicitly_negated_with_bridge(text: str, start: int) -> bool:
     return _is_explicitly_negated(cue_prefix, len(cue_prefix))
 
 
+def _is_explicitly_negated_list(text: str, start: int) -> bool:
+    """Recognize one complete, allowlisted list containing ``start``.
+
+    The complete list is validated through its terminal suffix. This prevents a
+    negated first item from hiding a later positive clause such as ``无外伤、后来
+    出现头晕``. Commas are deliberately not list separators.
+    """
+    window_start = max(0, start - 64)
+    window = text[window_start:]
+    for cue in _LIST_NEGATION_RE.finditer(window):
+        absolute_cue = window_start + cue.start()
+        if _has_ambiguous_prefix(text[:absolute_cue]):
+            continue
+        cursor = cue.end()
+        modifier = _LIST_OPTIONAL_MODIFIER_RE.match(window, cursor)
+        assert modifier is not None
+        cursor = modifier.end()
+        items: list[tuple[int, int]] = []
+        while True:
+            item = _LIST_ITEM_RE.match(window, cursor)
+            if item is None:
+                break
+            items.append((window_start + item.start(), window_start + item.end()))
+            cursor = item.end()
+            separator = _LIST_SEPARATOR_RE.match(window, cursor)
+            if separator is None:
+                break
+            cursor = separator.end()
+
+        if not items or not any(item_start <= start < item_end for item_start, item_end in items):
+            continue
+
+        suffix = text[window_start + cursor :]
+        if _LIST_FORBIDDEN_SUFFIX_RE.match(suffix):
+            continue
+        if _LIST_TERMINAL_RE.match(suffix) or _LIST_END_PUNCTUATION_RE.match(suffix):
+            return True
+    return False
+
+
 def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
     if revision == RED_FLAG_DETECTOR_REVISION_LITERAL_V1:
         return keyword in text
     if revision not in {
         RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
         RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+        RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
     }:
         raise ValueError(f"unsupported red-flag detector revision: {revision}")
     start = text.find(keyword)
     while start >= 0:
         is_negated = (
-            _is_explicitly_negated_with_bridge(text, start)
-            if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
-            else _is_explicitly_negated(text, start)
+            (
+                _is_explicitly_negated_with_bridge(text, start)
+                or _is_explicitly_negated_list(text, start)
+            )
+            if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4
+            else (
+                _is_explicitly_negated_with_bridge(text, start)
+                if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
+                else _is_explicitly_negated(text, start)
+            )
         )
         if not is_negated:
             return True
@@ -192,6 +262,7 @@ class RedFlagDetector:
             RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
             RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
             RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
         }:
             raise ValueError(f"unsupported red-flag detector revision: {revision}")
 
@@ -223,6 +294,7 @@ class RedFlagDetector:
         if revision in {
             RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
             RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
         }:
             scan_segments = [conversation_text]
             scan_segments.extend(
