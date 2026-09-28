@@ -24,6 +24,12 @@ Legacy `{}` remains readable; existing `has_red_flags`/`status`/`flags` JSON rem
 
 `RedFlagDetector` remains available for historical replay, consultation/free-text intake fallback, posture compatibility, and shadow telemetry. It is not the north-star Diagnosis authority. Existing v3–v7 manifests, policies, defaults, and promotion records remain immutable. Batch A sends the envelope over the internal Go→Python request and freezes it in replay input; the Python service still executes existing v3–v7 behavior.
 
+## Batch B refinement: capture coverage and successor authority
+
+The branch-local `SafetyEnvelopeV2` now carries `SafetyCoverageV1` (`body-state-safety-coverage-v1`). Coverage requires at least one current active, reasoning-eligible `discomfort` fact and, for every such fact, a `body-state-safety-capture-v1` marker plus strict booleans for trauma, radiating pain, numbness, weakness, and dizziness in that same source. Missing marker, key, or object details make that source incomplete without creating a projection error. Other fact kinds do not affect coverage. Existing strict boolean assertions remain projected without the marker for historical transport compatibility. Coverage does not clear an active blocker, and absence in one source cannot clear another source's positive assertion.
+
+The immutable v8 successor uses Go's frozen envelope for preflight and final authority. Incomplete coverage abstains before model execution; active blockers block before model execution. Its output schema adds current, present-or-uncertain `safety_findings` with exact pinned BodyState fact or observation references. Python governance validates those references and does not scan Diagnosis prose for red flags under v8. A valid finding is escalation evidence for Go, not a durable BodyState mutation. Go decision policy v2 applies deny-overrides and strips ordinary candidates on block, abstain, or escalation. v3–v7 retain decision policy v1 and their historical detector paths.
+
 ## Consequences
 
 - A later immutable Diagnosis successor can consume typed safety evidence without changing the meaning of historical configurations.

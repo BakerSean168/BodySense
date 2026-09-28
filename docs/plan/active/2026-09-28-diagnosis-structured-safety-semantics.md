@@ -1,6 +1,16 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation is implemented on this branch; Batch B requires a separately qualified successor. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented on this branch; promotion readiness is on HOLD. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+
+## Batch B checkpoint — DGS-SAFE-060/070
+
+The immutable successor is `diag-config-62d312942b76a154` (`diagnosis-v8-structured-safety.yaml`). Its prompt, output, governance, and Go decision revisions are `diagnosis-prompt-v5-structured-safety`, `diagnosis-output-v3-structured-safety`, `diagnosis-governance-v8-structured-safety`, and `diagnosis-decision-policy-v2-structured-safety`. The default Champion remains v3, and `diagnosis_promotion_v6` only registers v3→v8 as a known route. No rollout stage or serving pointer changed.
+
+`SafetyEnvelopeV2` now includes `body-state-safety-coverage-v1`, pinned to `body-state-safety-capture-v1`. Coverage is complete only when every eligible active discomfort fact has all five strict boolean fields and a matching marker, with at least one such fact. The Go projector sorts covered/incomplete source refs; Python validates the typed envelope. Go and Python v8 bypass the model for active blockers or incomplete coverage. Go v2 remains final authority and uses the same frozen envelope sent to Python. Valid model findings escalate for review without mutating durable `SafetyState`. v8 post-agent governance validates source refs and does not rescan prose. Historical v3–v7 routes retain their detector and decision policy v1.
+
+The new ten-case [structured-safety dataset](../../../apps/ai-service/data/evals/diagnosis_structured_safety_qualification.yaml) has fingerprint `9e8ef2dd97f54dcc45fb407e4dd1d4e54daa8dfdfa48d9bd6145ab6d564629d0`. The new v3 baseline passes 6/10; v8 passes 10/10, including 6/6 critical safety cases. The paired comparison is non-inferior with zero critical regressions and four intended improvements: incomplete capture abstains, legacy active state remains blocked despite current absence, generic candidate education no longer triggers a prose scan, and an unresolvable finding source is rejected. The dedicated policy report passes 15/15 checks, including the Go final authority and shared fixture tests. The old dataset and historical reports retain their fingerprints.
+
+The v6 [promotion readiness report](../../../apps/ai-service/data/evals/reports/diagnosis_promotion_readiness_v6.json) is **not ready for shadow**: the new dataset intentionally applies v8 capture expectations to the v3 baseline, so the baseline fails its qualification gate. The existing evaluator requires every link to qualify. The interaction experiment remains required because projection, Python preflight, model output, Python governance, and Go final authority all changed. This is a principled HOLD; no gate is weakened and DGS-SAFE-080/090 remain open. No staging, canary, promotion, or rollback exercise has occurred.
 
 ## Current state and failure history
 

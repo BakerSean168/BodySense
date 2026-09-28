@@ -70,6 +70,36 @@ class SafetyAssertionV1(BaseModel):
     provenance: dict[str, JsonValue] | None = None
 
 
+class SafetyCoverageV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    revision: Literal["body-state-safety-coverage-v1"]
+    capture_revision: Literal["body-state-safety-capture-v1"]
+    required_concepts: tuple[
+        Literal["trauma"],
+        Literal["radiating_pain"],
+        Literal["numbness"],
+        Literal["weakness"],
+        Literal["dizziness"],
+    ]
+    covered_source_refs: list[str]
+    incomplete_source_refs: list[str]
+    complete: StrictBool
+
+    @model_validator(mode="after")
+    def validate_coverage(self) -> "SafetyCoverageV1":
+        for refs in (self.covered_source_refs, self.incomplete_source_refs):
+            if refs != sorted(set(refs)) or any(
+                not ref.startswith("body-state:fact:") for ref in refs
+            ):
+                raise ValueError("coverage source refs must be unique sorted fact refs")
+        if set(self.covered_source_refs) & set(self.incomplete_source_refs):
+            raise ValueError("coverage source refs overlap")
+        if self.complete != (bool(self.covered_source_refs) and not self.incomplete_source_refs):
+            raise ValueError("coverage complete does not match source refs")
+        return self
+
+
 class SafetyEnvelopeV2(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -80,6 +110,7 @@ class SafetyEnvelopeV2(BaseModel):
     active_blockers: list[SafetyBlockerV1]
     requires_review: StrictBool
     legacy_state_present: StrictBool
+    coverage: SafetyCoverageV1
 
     @model_validator(mode="after")
     def validate_blockers(self) -> "SafetyEnvelopeV2":

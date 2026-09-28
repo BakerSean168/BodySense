@@ -15,11 +15,13 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .dependencies import EvidenceAcquirer, EvidenceSearcher
+from .safety import SafetyConceptV1, SafetyEnvelopeV2
 
 DIAGNOSIS_OUTPUT_SCHEMA_REVISION = "diagnosis-output-v2"
+DIAGNOSIS_OUTPUT_SCHEMA_REVISION_V3 = "diagnosis-output-v3-structured-safety"
 
 
 class DiagnosisConfidence(StrEnum):
@@ -113,11 +115,33 @@ class DiagnosisAgentOutput(BaseModel):
         return self
 
 
+class DiagnosisSafetyFindingV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    concept: SafetyConceptV1
+    polarity: Literal["present", "uncertain"]
+    temporality: Literal["current"]
+    source_refs: list[str] = Field(min_length=1)
+    rationale: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def validate_source_refs(self) -> "DiagnosisSafetyFindingV1":
+        if len(self.source_refs) != len(set(self.source_refs)):
+            raise ValueError("duplicate safety finding source refs")
+        return self
+
+
+class DiagnosisAgentOutputV3(DiagnosisAgentOutput):
+    safety_findings: list[DiagnosisSafetyFindingV1] = Field(default_factory=list)
+
+
 def get_diagnosis_output_type(revision: str) -> type[DiagnosisAgentOutput]:
     """Resolve the structured output schema bound to an Agent configuration."""
-    if revision != DIAGNOSIS_OUTPUT_SCHEMA_REVISION:
-        raise ValueError(f"unsupported Diagnosis output schema revision: {revision}")
-    return DiagnosisAgentOutput
+    if revision == DIAGNOSIS_OUTPUT_SCHEMA_REVISION:
+        return DiagnosisAgentOutput
+    if revision == DIAGNOSIS_OUTPUT_SCHEMA_REVISION_V3:
+        return DiagnosisAgentOutputV3
+    raise ValueError(f"unsupported Diagnosis output schema revision: {revision}")
 
 
 @dataclass(slots=True)
@@ -137,3 +161,4 @@ class DiagnosisDependencies:
     evidence_searcher: EvidenceSearcher | None = None
     evidence_acquirer: EvidenceAcquirer | None = None
     retrieved_evidence: list[dict[str, Any]] = field(default_factory=list)
+    safety_envelope: SafetyEnvelopeV2 | None = None

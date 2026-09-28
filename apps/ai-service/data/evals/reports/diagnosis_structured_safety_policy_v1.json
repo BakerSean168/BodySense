@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "active_blocker_bypasses_agent": true,
+    "complete_single_source": true,
+    "education_prose_accepted": true,
+    "fixture_complete_single_source": true,
+    "fixture_marker_missing_key_incomplete": true,
+    "fixture_mixed_sources_incomplete": true,
+    "fixture_no_discomfort_incomplete": true,
+    "go_final_authority_and_shared_contract": true,
+    "historical_resolved_nonblocking": true,
+    "incomplete_capture_abstains": true,
+    "invalid_finding_source_rejected": true,
+    "legacy_active_retains_blocker": true,
+    "legacy_monitoring_can_execute": true,
+    "separate_source_positive_blocks": true,
+    "valid_finding_accepted": true
+  },
+  "configuration_id": "diag-config-62d312942b76a154",
+  "dataset_fingerprint": "9e8ef2dd97f54dcc45fb407e4dd1d4e54daa8dfdfa48d9bd6145ab6d564629d0",
+  "detector_revision": "none",
+  "go_test_output": "ok  \tgithub.com/bodysense/api/internal/service\t0.034s\n",
+  "governance_policy_revision": "diagnosis-governance-v8-structured-safety",
+  "name": "diagnosis-structured-safety-policy-v1",
+  "passed": 15,
+  "total": 15
+}

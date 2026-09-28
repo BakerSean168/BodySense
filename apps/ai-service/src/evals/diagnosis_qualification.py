@@ -11,6 +11,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import ToolCallPart, capture_run_messages
+from pydantic_ai.models.test import TestModel
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -25,6 +26,7 @@ from src.evals.retired_diagnosis_runtime import (
     OfflineHistoricalDiagnosisService,
     retired_diagnosis_tool_names,
 )
+from src.models.safety import SafetyEnvelopeV2
 from src.services.diagnosis_service import DiagnosisService
 from src.testing_support.deterministic_ai import deterministic_diagnosis_model
 
@@ -56,6 +58,8 @@ class DiagnosisEvalInputs(BaseModel):
     body_state: dict[str, Any]
     relevant_history: list[dict[str, Any]] = Field(default_factory=list)
     profile: dict[str, Any] = Field(default_factory=dict)
+    safety_envelope: SafetyEnvelopeV2 | None = None
+    model_output: dict[str, Any] | None = None
 
 
 class DiagnosisEvalMetadata(BaseModel):
@@ -235,8 +239,13 @@ def load_dataset_document(path: Path = DEFAULT_DATASET_PATH) -> DiagnosisDataset
 
 
 def dataset_fingerprint(document: DiagnosisDatasetDocument) -> str:
+    payload = document.model_dump(mode="json")
+    for case in payload["cases"]:
+        for optional in ("safety_envelope", "model_output"):
+            if case["inputs"].get(optional) is None:
+                case["inputs"].pop(optional, None)
     canonical = json.dumps(
-        document.model_dump(mode="json"),
+        payload,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -281,8 +290,13 @@ def load_diagnosis_dataset(
 
 def _configured_deterministic_service(
     config: DiagnosisAgentManifest,
+    deterministic_output: dict[str, Any] | None = None,
 ) -> tuple[DiagnosisService, Any]:
-    model = deterministic_diagnosis_model(call_tools=[])
+    model = (
+        TestModel(call_tools=[], custom_output_args=deterministic_output)
+        if deterministic_output is not None
+        else deterministic_diagnosis_model(call_tools=[])
+    )
 
     def resolve_configuration(configuration_id: str) -> DiagnosisAgentManifest:
         if configuration_id != config.configuration_id:
@@ -312,7 +326,7 @@ def build_deterministic_task(configuration_id: str | None = None) -> Any:
     )
 
     async def task(inputs: DiagnosisEvalInputs) -> DiagnosisEvalExecution:
-        service, model = _configured_deterministic_service(config)
+        service, model = _configured_deterministic_service(config, inputs.model_output)
         with capture_run_messages() as messages:
             payload = await service.generate_diagnosis(
                 user_id=inputs.user_id,
@@ -321,6 +335,7 @@ def build_deterministic_task(configuration_id: str | None = None) -> Any:
                 body_state=inputs.body_state,
                 relevant_history=inputs.relevant_history,
                 profile=inputs.profile,
+                safety_envelope=inputs.safety_envelope,
             )
 
         parameters = getattr(model, "last_model_request_parameters", None)

@@ -124,6 +124,10 @@ func (s *DiagnosisReplayService) HistoricalReplay(
 	if policyRevision == DiagnosisDecisionPolicyV1 {
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), recomputed)
 		recomputed = ApplyDiagnosisDecision(recomputed, decision)
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, recomputed)
+		recomputed = ApplyDiagnosisDecision(recomputed, decision)
+		recomputed = normalizedDiagnosisReplayPayload(recomputed)
 	}
 	replayRaw, _ := json.Marshal(recomputed)
 	return buildDiagnosisReplayReport(
@@ -182,6 +186,28 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 				baseline, replayed, result,
 			), nil
 		}
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		if input.SafetyEnvelope == nil {
+			return nil, errors.New("counterfactual Diagnosis v8 requires frozen structured safety envelope")
+		}
+		probe := map[string]any{"status": "completed", "candidates": []any{map[string]any{"name": "counterfactual-preflight"}}, "governance": map[string]any{"verdict": "accepted"}, "safety_findings": []any{}}
+		preflight := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, probe)
+		if preflight.Outcome != DiagnosisAllowNormal {
+			status := "safety_blocked"
+			if preflight.Outcome == DiagnosisAbstain {
+				status = "insufficient_information"
+			}
+			replayed := ApplyDiagnosisDecision(map[string]any{
+				"status": status, "scope": "full_body", "summary": "structured safety preflight bypassed the agent",
+				"candidates": []any{}, "cross_concern_patterns": []any{}, "information_gaps": []any{}, "citations": []any{},
+				"governance":           map[string]any{"kind": "diagnosis", "verdict": "rejected", "reasons": preflight.Reasons, "issues": []any{}},
+				"agent_configuration":  map[string]any{"id": targetConfigurationID, "role": "diagnosis", "decision_policy_revision": policyRevision},
+				"execution_provenance": map[string]any{"status": "bypassed", "runtime": "go", "reason": preflight.Reasons[0]},
+			}, preflight)
+			result, _ := json.Marshal(replayed)
+			replayed = normalizedDiagnosisReplayPayload(replayed)
+			return buildDiagnosisReplayReport("counterfactual", analysis, input, targetConfigurationID, baseline, replayed, result), nil
+		}
 	}
 	if s.ai == nil {
 		return nil, errors.New("Diagnosis replay AI client is not configured")
@@ -209,11 +235,23 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), replayed)
 		replayed = ApplyDiagnosisDecision(replayed, decision)
 		result, _ = json.Marshal(replayed)
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, replayed)
+		replayed = ApplyDiagnosisDecision(replayed, decision)
+		result, _ = json.Marshal(replayed)
+		replayed = normalizedDiagnosisReplayPayload(replayed)
 	}
 	return buildDiagnosisReplayReport(
 		"counterfactual", analysis, input, targetConfigurationID,
 		baseline, replayed, result,
 	), nil
+}
+
+func normalizedDiagnosisReplayPayload(payload map[string]any) map[string]any {
+	raw, _ := json.Marshal(payload)
+	var normalized map[string]any
+	_ = json.Unmarshal(raw, &normalized)
+	return normalized
 }
 
 func (s *DiagnosisReplayService) ExportRegressionCase(

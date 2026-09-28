@@ -48,6 +48,33 @@ func TestDiagnosisReplayInputFreezesSafetyEnvelope(t *testing.T) {
 	}
 }
 
+func TestV8CounterfactualReplayRequiresFrozenEnvelopeAndBypassesIncompleteCoverage(t *testing.T) {
+	diagnosis, repo, userID, _ := persistReplayTestAnalysis(t, diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck")
+	baseline := map[string]any{}
+	if err := json.Unmarshal(repo.byID.RawOutput, &baseline); err != nil {
+		t.Fatal(err)
+	}
+	input, err := decodeDiagnosisReplayInput(json.RawMessage(repo.byID.ReplayInput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay := NewDiagnosisReplayService(diagnosis, nil)
+	if _, err := replay.counterfactualCompare(context.Background(), userID, repo.byID, input, baseline, diagnosisStructuredSafetyConfigID); err == nil || !strings.Contains(err.Error(), "frozen structured safety envelope") {
+		t.Fatalf("old replay invented v8 safety input: %v", err)
+	}
+	envelope := completeSafetyEnvelope()
+	envelope.Coverage.Complete = false
+	envelope.Coverage.IncompleteSourceRefs = []string{"body-state:fact:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}
+	input.SafetyEnvelope = envelope
+	report, err := replay.counterfactualCompare(context.Background(), userID, repo.byID, input, baseline, diagnosisStructuredSafetyConfigID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Replay.Status != "insufficient_information" || report.Replay.DecisionOutcome != string(DiagnosisAbstain) {
+		t.Fatalf("v8 replay failed to abstain from frozen incomplete coverage: %+v", report.Replay)
+	}
+}
+
 func replayTestRaw(configurationID, decisionRevision, concernKey string) json.RawMessage {
 	payload := map[string]any{
 		"status":  "completed",

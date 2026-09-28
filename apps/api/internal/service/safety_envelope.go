@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	SafetyEnvelopeSchemaV2 = "body-state-safety-envelope-v2"
-	SafetyEnvelopePolicyV1 = "body-state-safety-policy-v1"
+	SafetyEnvelopeSchemaV2   = "body-state-safety-envelope-v2"
+	SafetyEnvelopePolicyV1   = "body-state-safety-policy-v1"
+	SafetyCoverageRevisionV1 = "body-state-safety-coverage-v1"
+	SafetyCaptureRevisionV1  = "body-state-safety-capture-v1"
 )
 
 type SafetyConceptV1 string
@@ -95,6 +97,16 @@ type SafetyEnvelopeV2 struct {
 	ActiveBlockers     []SafetyBlockerV1   `json:"active_blockers"`
 	RequiresReview     bool                `json:"requires_review"`
 	LegacyStatePresent bool                `json:"legacy_state_present"`
+	Coverage           SafetyCoverageV1    `json:"coverage"`
+}
+
+type SafetyCoverageV1 struct {
+	Revision             string   `json:"revision"`
+	CaptureRevision      string   `json:"capture_revision"`
+	RequiredConcepts     []string `json:"required_concepts"`
+	CoveredSourceRefs    []string `json:"covered_source_refs"`
+	IncompleteSourceRefs []string `json:"incomplete_source_refs"`
+	Complete             bool     `json:"complete"`
 }
 
 var structuredSafetyDetails = []struct {
@@ -108,6 +120,7 @@ var structuredSafetyDetails = []struct {
 // ProjectSafetyEnvelopeV2 is a pure projection over one pinned BodyState snapshot.
 func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, error) {
 	envelope := SafetyEnvelopeV2{SchemaRevision: SafetyEnvelopeSchemaV2, PolicyRevision: SafetyEnvelopePolicyV1, Assertions: []SafetyAssertionV1{}, ActiveBlockers: []SafetyBlockerV1{}}
+	envelope.Coverage = SafetyCoverageV1{Revision: SafetyCoverageRevisionV1, CaptureRevision: SafetyCaptureRevisionV1, RequiredConcepts: []string{"trauma", "radiating_pain", "numbness", "weakness", "dizziness"}, CoveredSourceRefs: []string{}, IncompleteSourceRefs: []string{}}
 	if snapshot == nil || snapshot.CurrentRevision <= 0 {
 		return envelope, fmt.Errorf("safety projection requires a pinned BodyState revision")
 	}
@@ -130,11 +143,30 @@ func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, err
 		if fact.LifecycleState != "active" || fact.ExcludedFromReasoning || (fact.ReviewState != "confirmed" && fact.ReviewState != "unverified") {
 			continue
 		}
+		ref := "body-state:fact:" + fact.ID.String()
 		var details map[string]json.RawMessage
-		if len(fact.Details) == 0 {
-			continue
+		if len(fact.Details) > 0 {
+			_ = json.Unmarshal(fact.Details, &details)
 		}
-		if err := json.Unmarshal(fact.Details, &details); err != nil || details == nil {
+		if fact.Kind == "discomfort" {
+			covered := details != nil
+			var marker string
+			if covered {
+				covered = json.Unmarshal(details["safety_capture_revision"], &marker) == nil && marker == SafetyCaptureRevisionV1
+			}
+			for _, field := range structuredSafetyDetails {
+				var value bool
+				if _, exists := details[field.key]; !exists || json.Unmarshal(details[field.key], &value) != nil {
+					covered = false
+				}
+			}
+			if covered {
+				envelope.Coverage.CoveredSourceRefs = append(envelope.Coverage.CoveredSourceRefs, ref)
+			} else {
+				envelope.Coverage.IncompleteSourceRefs = append(envelope.Coverage.IncompleteSourceRefs, ref)
+			}
+		}
+		if details == nil {
 			continue
 		}
 		for _, field := range structuredSafetyDetails {
@@ -153,13 +185,13 @@ func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, err
 			if value {
 				polarity = SafetyPresent
 			}
-			ref := "body-state:fact:" + fact.ID.String()
 			envelope.Assertions = append(envelope.Assertions, SafetyAssertionV1{Concept: field.concept, Polarity: polarity, Temporality: SafetyCurrent, ReviewState: SafetyReviewStateV1(fact.ReviewState), SourceRef: ref, SourceKind: SafetyBodyStateFact, ObservedAt: fact.ObservedAt})
 			if value {
 				envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: field.concept, SourceRef: ref, SourceKind: SafetyBodyStateFact, Reason: SafetyStructuredCurrentSignal})
 			}
 		}
 	}
+	envelope.Coverage.Complete = len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0
 	envelope.RequiresReview = len(envelope.ActiveBlockers) > 0
 	return envelope, nil
 }
