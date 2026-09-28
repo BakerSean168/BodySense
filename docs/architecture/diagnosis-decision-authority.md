@@ -111,6 +111,20 @@ revision `diagnosis-governance-v5-negation-aware-claims`. It remains a known
 qualified successor Challenger only; v3 remains Champion/default and v4 remains
 resolvable historical/qualified evidence.
 
+Diagnosis v6 keeps the v5 claim projection and changes only the explicit-negation
+bridge detector to `red-flag-detector-negation-bridge-v3`, under governance
+revision `diagnosis-governance-v6-negation-bridge-claims`. Diagnosis v7 keeps
+that detector and the v4-v6 current-claim projection, but excludes only
+top-level `information_gaps` because the field is unresolved evidence-gap
+metadata rather than an asserted current-user fact. Candidate `basis`,
+`impact`, `reasoning_summary`, the overall summary, unknown fields, and nested
+candidate fields remain scan-visible; v3-v6 projections are unchanged.
+
+The v7 immutable manifest is `diag-config-0206f70742d8a7a1` with governance
+revision `diagnosis-governance-v7-information-gap-surface`. It is a qualified
+successor Challenger only; v3 remains Champion/default and no automatic
+promotion is implied.
+
 ## Qualification evidence
 
 The v4 Agent configuration passes 7/7 on the same Diagnosis qualification dataset

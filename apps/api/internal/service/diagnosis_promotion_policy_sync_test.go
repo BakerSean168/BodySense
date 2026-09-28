@@ -102,6 +102,27 @@ func TestNegationBridgePromotionPolicyBindsV6Successor(t *testing.T) {
 	}
 }
 
+func TestInformationGapSurfacePromotionPolicyBindsV7Successor(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v5.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	if policy.Name != "diagnosis_promotion_v5" ||
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisInformationGapSurfaceConfigID {
+		t.Fatalf("information-gap-surface promotion identity drifted: %#v", policy)
+	}
+	if len(policy.Rollout.CanaryStepsBPS) != 3 || policy.Rollout.PromotionBPS != 10000 {
+		t.Fatalf("Diagnosis v5 rollout policy drifted: %#v", policy.Rollout)
+	}
+}
+
 func TestDiagnosisPromotionRegistryMatchesImmutablePolicies(t *testing.T) {
 	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v2"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("v2 runtime promotion registry drifted: %#v", got)
@@ -111,6 +132,9 @@ func TestDiagnosisPromotionRegistryMatchesImmutablePolicies(t *testing.T) {
 	}
 	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v4"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisNegationBridgeConfigID {
 		t.Fatalf("v4 runtime promotion registry drifted: %#v", got)
+	}
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v5"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisInformationGapSurfaceConfigID {
+		t.Fatalf("v5 runtime promotion registry drifted: %#v", got)
 	}
 }
 

@@ -12,6 +12,7 @@ CONFIG_ID = get_default_diagnosis_configuration().configuration_id
 V4_CONFIG_ID = "diag-config-4a517fea19cb6c49"
 V5_CONFIG_ID = "diag-config-375187050b203078"
 V6_CONFIG_ID = "diag-config-4377355ba2012ce8"
+V7_CONFIG_ID = "diag-config-0206f70742d8a7a1"
 
 
 def _body_state(revision: int = 12) -> dict:
@@ -136,6 +137,59 @@ async def test_v6_true_positive_still_bypasses_typed_agent():
     assert result["status"] == "safety_blocked"
     assert result["execution_provenance"]["status"] == "bypassed"
     assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_v7_bridged_negative_body_state_reaches_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = (
+        "没有明显放射痛，无明显头晕，未见明显麻木无力，目前没有出现放射痛，否认存在头晕"
+    )
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V7_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "completed"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+async def test_v7_true_positive_still_bypasses_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = "目前出现放射痛"
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V7_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "safety_blocked"
+    assert result["execution_provenance"]["status"] == "bypassed"
+    assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_v6_information_gap_red_flags_remain_rejected():
+    output = _agent_output([_candidate()])
+    output["information_gaps"] = ["仍需确认是否存在放射痛、头晕、外伤或发热。"]
+    service, model = _service(output)
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V6_CONFIG_ID, body_state=_body_state()
+    )
+    assert result["governance"]["verdict"] == "rejected"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+async def test_v7_information_gap_red_flags_are_not_current_claims():
+    output = _agent_output([_candidate()])
+    output["information_gaps"] = ["仍需确认是否存在放射痛、头晕、外伤或发热。"]
+    service, model = _service(output)
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V7_CONFIG_ID, body_state=_body_state()
+    )
+    assert result["governance"]["verdict"] == "accepted"
+    assert result["information_gaps"] == output["information_gaps"]
+    assert model.last_model_request_parameters is not None
 
 
 @pytest.mark.asyncio

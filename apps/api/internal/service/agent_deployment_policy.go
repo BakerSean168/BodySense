@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
-	diagnosisClaimSurfaceConfigID      = "diag-config-4a517fea19cb6c49"
-	diagnosisNegationAwareConfigID     = "diag-config-375187050b203078"
-	diagnosisNegationBridgeConfigID    = "diag-config-4377355ba2012ce8"
-	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
+	diagnosisDecisionAuthorityConfigID     = "diag-config-5a4a13627e14b4cf"
+	diagnosisClaimSurfaceConfigID          = "diag-config-4a517fea19cb6c49"
+	diagnosisNegationAwareConfigID         = "diag-config-375187050b203078"
+	diagnosisNegationBridgeConfigID        = "diag-config-4377355ba2012ce8"
+	diagnosisInformationGapSurfaceConfigID = "diag-config-0206f70742d8a7a1"
+	defaultDiagnosisConfigurationID        = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
 	DiagnosisRolloutShadow   = "shadow"
@@ -193,6 +194,9 @@ var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration
 	diagnosisNegationBridgeConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
+	diagnosisInformationGapSurfaceConfigID: {
+		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	},
 }
 
 var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistration{
@@ -207,6 +211,10 @@ var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistra
 	"diagnosis_promotion_v4": {
 		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
 		ChallengerConfigurationID: diagnosisNegationBridgeConfigID,
+	},
+	"diagnosis_promotion_v5": {
+		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
+		ChallengerConfigurationID: diagnosisInformationGapSurfaceConfigID,
 	},
 }
 
