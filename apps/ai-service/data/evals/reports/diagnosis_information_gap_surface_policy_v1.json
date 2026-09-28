@@ -1,0 +1,66 @@
+{
+  "cases": [
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "v6-information-gaps-remain-scanned",
+      "passed": true
+    },
+    {
+      "actual": "accepted",
+      "expected": "accepted",
+      "name": "v7-top-level-information-gaps-excluded",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "summary-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "candidate-basis-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "candidate-impact-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "candidate-reasoning-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "unknown-top-level-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "unknown-candidate-current-claim",
+      "passed": true
+    },
+    {
+      "actual": "rejected",
+      "expected": "rejected",
+      "name": "nested-information-gaps-are-not-top-level",
+      "passed": true
+    }
+  ],
+  "configuration_id": "diag-config-0206f70742d8a7a1",
+  "dataset_fingerprint": "46c7d488f48cc30f10aa957149a3df345d1588d20f1b3d1046922c0e2165efa1",
+  "detector_revision": "red-flag-detector-negation-bridge-v3",
+  "failed": 0,
+  "governance_policy_revision": "diagnosis-governance-v7-information-gap-surface",
+  "name": "diagnosis-information-gap-surface-v7",
+  "passed": 9,
+  "total": 9
+}

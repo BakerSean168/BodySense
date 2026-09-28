@@ -1,8 +1,8 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
 Status: Current rollout mechanism. Diagnosis v3 remains the repository Champion;
-v4 remains immutable historical qualification evidence, and v5 is the current
-qualified successor Challenger, ready for shadow under `diagnosis_promotion_v3`.
+v4-v6 remain immutable historical qualification evidence, and v7 is the current
+qualified successor Challenger, ready for shadow under `diagnosis_promotion_v5`.
 There is no active Challenger by default and no promotion/deployment has occurred.
 
 ## North-star rule
@@ -43,10 +43,22 @@ transitions. ADR0010 forbids silently treating qualification as promotion.
 - v3 DecisionAuthority Challenger vs v2: non-inferior, promotion-eligible, no critical regression;
 - v4 claim-surface Challenger vs v3: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
 - v5 negation-aware Challenger vs v4: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
+- v6 negation-bridge Challenger vs v5: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
+- v7 information-gap-surface Challenger vs v6: 7/7 qualified, non-inferior, promotion-eligible, no critical regression;
 - one shared qualification dataset fingerprint across the chain;
 - EvidenceGap policy suite: 5/5;
-- dedicated negation policy suite: 10/10, identity-bound to v5 and detector v2;
+- dedicated negation-bridge policy suite: 14/14, identity-bound to v6 and detector v3;
+- dedicated information-gap claim-surface policy suite: 9/9, identity-bound to v7 and detector v3;
 - the declared immutable Champion and final Challenger both resolve from repository manifests.
+
+The v6 successor policy is `data/evals/diagnosis_promotion_policy_v4.json`.
+The v7 successor policy is `data/evals/diagnosis_promotion_policy_v5.json` and
+extends the qualification chain through
+`diag-config-0206f70742d8a7a1`. Its dedicated information-gap boundary report
+is identity-bound to v7 and the v3 negation-bridge detector. The rollout remains
+shadow 20 samples, canary 500/2500/5000 bps, and promotion 10000 bps with the
+existing fail-closed stop rules. No default switch or automatic promotion is
+allowed by qualification.
 
 The historical generated evidence artifact is
 `data/evals/reports/diagnosis_promotion_readiness.json`; the v4 successor

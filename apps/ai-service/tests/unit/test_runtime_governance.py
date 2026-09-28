@@ -8,6 +8,7 @@ from src.runtime.governance import (
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7,
     guard_structured_output,
 )
 
@@ -353,6 +354,87 @@ def test_v6_guard_rejects_asserted_current_user_red_flag():
     emitted = guarded.to_emit_dict()
     assert "candidates" not in emitted
     assert emitted["safety_fallback"]
+
+
+def _information_gap_surface_payload() -> dict:
+    return {
+        "summary": "当前信息更符合轻度颈肩负荷模式。",
+        "candidates": [
+            {
+                "name": "颈肩负荷模式",
+                "basis": "用户报告久坐后颈肩僵硬，活动后缓解。",
+                "impact": "目前影响轻微。",
+                "reasoning_summary": "当前证据仅支持轻度负荷相关表现。",
+                "typical_symptoms": "可能包括放射痛、头晕、外伤或发热。",
+                "differential": "若出现放射痛需进一步鉴别。",
+            }
+        ],
+        "information_gaps": ["仍需确认是否存在放射痛、头晕、外伤或发热。"],
+    }
+
+
+def test_v6_information_gaps_remain_on_historical_current_claim_surface():
+    guarded = guard_structured_output(
+        "diagnosis",
+        _information_gap_surface_payload(),
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
+    )
+    assert guarded.verdict == "rejected"
+
+
+def test_v7_excludes_only_top_level_information_gaps():
+    guarded = guard_structured_output(
+        "diagnosis",
+        _information_gap_surface_payload(),
+        policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7,
+    )
+    assert guarded.verdict == "accepted"
+
+
+def test_v7_scans_current_claim_fields_and_unknown_fields_fail_closed():
+    for field, value in (
+        ("summary", "用户当前出现放射痛。"),
+        ("information_gaps", "仍需确认是否存在放射痛。"),
+    ):
+        payload = _information_gap_surface_payload()
+        if field == "information_gaps":
+            payload["information_gaps"] = [value]
+        else:
+            payload[field] = value
+        if field == "information_gaps":
+            payload["candidates"][0]["typical_symptoms"] = "颈肩酸胀"
+        guarded = guard_structured_output(
+            "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
+        )
+        expected = "accepted" if field == "information_gaps" else "rejected"
+        assert guarded.verdict == expected
+
+    for candidate_field in ("basis", "impact", "reasoning_summary", "future_current_claim"):
+        payload = _information_gap_surface_payload()
+        payload["candidates"][0][candidate_field] = "用户当前出现放射痛。"
+        payload["candidates"][0]["typical_symptoms"] = "颈肩酸胀"
+        payload["candidates"][0]["differential"] = "颈肩酸胀"
+        guarded = guard_structured_output(
+            "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
+        )
+        assert guarded.verdict == "rejected"
+
+    payload = _information_gap_surface_payload()
+    payload["future_current_claim"] = "用户当前出现放射痛。"
+    payload["candidates"][0]["typical_symptoms"] = "颈肩酸胀"
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
+    )
+    assert guarded.verdict == "rejected"
+
+    payload = _information_gap_surface_payload()
+    payload["candidates"][0]["information_gaps"] = ["用户当前出现放射痛。"]
+    payload["candidates"][0]["typical_symptoms"] = "颈肩酸胀"
+    payload["candidates"][0]["differential"] = "颈肩酸胀"
+    guarded = guard_structured_output(
+        "diagnosis", payload, policy_revision=DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7
+    )
+    assert guarded.verdict == "rejected"
 
 
 def test_guard_diagnosis_rejected_empty_diagnoses_list_still_has_field():

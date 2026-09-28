@@ -9,7 +9,8 @@ by its historical artifacts. Diagnosis governance v4 narrows only the
 post-agent Diagnosis scan to fields that assert something about the current
 user; candidate names, ``typical_symptoms``, and ``differential`` remain
 generic candidate education. The v3 projection is retained for replay and
-historical qualification.
+historical qualification. Diagnosis governance v7 keeps the v4-v6 projection
+but excludes only top-level ``information_gaps`` evidence-gap metadata.
 
 Hard gates (per P2 risk note):
 - schema validation failures (missing required structure) → rejected
@@ -57,6 +58,7 @@ DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V3 = "diagnosis-governance-v3"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4 = "diagnosis-governance-v4-claim-surface"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5 = "diagnosis-governance-v5-negation-aware-claims"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6 = "diagnosis-governance-v6-negation-bridge-claims"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7 = "diagnosis-governance-v7-information-gap-surface"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION = DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
 ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
@@ -66,6 +68,7 @@ DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY = {
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4: RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5: RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
     DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6: RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7: RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
 }
 
 # Fields that must be present for each structured kind.
@@ -276,6 +279,14 @@ def _diagnosis_v4_current_claim_text(payload: dict[str, Any]) -> str:
     return json.dumps(claims, ensure_ascii=False)
 
 
+def _diagnosis_v7_current_claim_text(payload: dict[str, Any]) -> str:
+    """Use the v4-v6 claim surface without top-level evidence-gap metadata."""
+
+    projected = dict(payload)
+    projected.pop("information_gaps", None)
+    return _diagnosis_v4_current_claim_text(projected)
+
+
 def _collect_issues(
     kind: OutputKind,
     payload: dict[str, Any],
@@ -299,6 +310,8 @@ def _collect_issues(
         DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
     }:
         claim_text = _diagnosis_v4_current_claim_text(payload)
+    elif kind == "diagnosis" and policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7:
+        claim_text = _diagnosis_v7_current_claim_text(payload)
     detector_revision = DEFAULT_RED_FLAG_DETECTOR_REVISION
     if kind == "diagnosis":
         assert policy_revision is not None
@@ -383,6 +396,7 @@ def guard_structured_output(
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7,
         }:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if kind == "diagnosis" and effective_policy_revision is None:
