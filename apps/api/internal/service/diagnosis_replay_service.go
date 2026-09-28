@@ -22,10 +22,11 @@ var (
 const DiagnosisRegressionExportSchema = "diagnosis_qualification_v1"
 
 type DiagnosisReplayInput struct {
-	BodyStateRevision int64           `json:"body_state_revision"`
-	BodyState         json.RawMessage `json:"body_state"`
-	RelevantHistory   json.RawMessage `json:"relevant_history"`
-	Profile           json.RawMessage `json:"profile"`
+	BodyStateRevision int64             `json:"body_state_revision"`
+	BodyState         json.RawMessage   `json:"body_state"`
+	RelevantHistory   json.RawMessage   `json:"relevant_history"`
+	Profile           json.RawMessage   `json:"profile"`
+	SafetyEnvelope    *SafetyEnvelopeV2 `json:"safety_envelope,omitempty"`
 }
 
 type DiagnosisReplayCheck struct {
@@ -83,6 +84,7 @@ func EncodeDiagnosisReplayInput(
 	bodyState json.RawMessage,
 	relevantHistory json.RawMessage,
 	profile json.RawMessage,
+	safetyEnvelope *SafetyEnvelopeV2,
 ) (json.RawMessage, error) {
 	if bodyStateRevision <= 0 || len(bodyState) == 0 || !json.Valid(bodyState) {
 		return nil, errors.New("valid replay BodyState and revision are required")
@@ -93,11 +95,15 @@ func EncodeDiagnosisReplayInput(
 	if len(profile) == 0 {
 		profile = json.RawMessage(`{}`)
 	}
+	if safetyEnvelope != nil && (safetyEnvelope.BodyStateRevision != bodyStateRevision || safetyEnvelope.SchemaRevision != SafetyEnvelopeSchemaV2 || safetyEnvelope.PolicyRevision != SafetyEnvelopePolicyV1) {
+		return nil, errors.New("replay safety envelope does not match pinned BodyState revision or policy")
+	}
 	return json.Marshal(DiagnosisReplayInput{
 		BodyStateRevision: bodyStateRevision,
 		BodyState:         bodyState,
 		RelevantHistory:   relevantHistory,
 		Profile:           profile,
+		SafetyEnvelope:    safetyEnvelope,
 	})
 }
 
@@ -187,6 +193,7 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 		BodyState:         input.BodyState,
 		RelevantHistory:   input.RelevantHistory,
 		Profile:           input.Profile,
+		SafetyEnvelope:    input.SafetyEnvelope,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("counterfactual Diagnosis replay: %w", err)

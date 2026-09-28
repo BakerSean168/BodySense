@@ -31,6 +31,7 @@ from ..models.evidence import (
     EvidenceBudget,
     ExternalEvidenceStatus,
 )
+from ..models.safety import SafetyEnvelopeV2
 from ..runtime.governance import (
     DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY,
     guard_structured_output,
@@ -65,6 +66,7 @@ class DiagnosisService:
         body_state_revision: int,
         configuration_id: str,
         body_state: dict[str, Any],
+        safety_envelope: SafetyEnvelopeV2 | None = None,
         relevant_history: list[dict[str, Any]] | None = None,
         profile: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -77,6 +79,11 @@ class DiagnosisService:
         current_revision = int(body_state.get("current_revision") or 0)
         if current_revision and current_revision != body_state_revision:
             raise ValueError("body_state_revision does not match body_state.current_revision")
+        if (
+            safety_envelope is not None
+            and safety_envelope.body_state_revision != body_state_revision
+        ):
+            raise ValueError("safety_envelope does not match body_state_revision")
 
         config = self._configuration_resolver(configuration_id)
         profile = profile or {}

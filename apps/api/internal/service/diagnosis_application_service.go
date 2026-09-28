@@ -145,12 +145,23 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode body state", err)
 	}
 	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
-	replayInput, err := EncodeDiagnosisReplayInput(snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON)
+	// Preserve the historical pre-agent block for malformed legacy state. A
+	// projection error must never authorize an ordinary AI call.
+	preflightBlock := s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route)
+	envelope, projectionErr := ProjectSafetyEnvelopeV2(snapshot)
+	if projectionErr != nil && preflightBlock == nil {
+		return nil, diagnosisApplicationError("INVALID_SAFETY_STATE", "failed to project BodyState safety", projectionErr)
+	}
+	var frozenEnvelope *SafetyEnvelopeV2
+	if projectionErr == nil {
+		frozenEnvelope = &envelope
+	}
+	replayInput, err := EncodeDiagnosisReplayInput(snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON, frozenEnvelope)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to freeze Diagnosis replay input", err)
 	}
 
-	if blocked := s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route); blocked != nil {
+	if blocked := preflightBlock; blocked != nil {
 		analysis, persistErr := s.analyses.PersistAIResultWithReplayInput(ctx, userID, snapshot.CurrentRevision, blocked, replayInput)
 		if persistErr != nil {
 			return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to persist diagnosis safety state", persistErr)
@@ -165,6 +176,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	result, err := s.ai.AnalyzeDiagnosis(ctx, DiagnosisRequest{
 		UserID: userID.String(), ConfigurationID: configurationID,
 		BodyStateRevision: snapshot.CurrentRevision, BodyState: bodyStateJSON,
+		SafetyEnvelope:  frozenEnvelope,
 		RelevantHistory: historyJSON, Profile: profileJSON,
 	})
 	if err != nil {

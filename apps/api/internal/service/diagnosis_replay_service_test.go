@@ -23,11 +23,29 @@ func replayTestInput(t *testing.T, revision int64) json.RawMessage {
 		payload["current_revision"] = revision
 		bodyState, _ = json.Marshal(payload)
 	}
-	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","birth_date":"1996-08-27","age_years":30}`))
+	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","birth_date":"1996-08-27","age_years":30}`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return input
+}
+
+func TestDiagnosisReplayInputFreezesSafetyEnvelope(t *testing.T) {
+	envelope := &SafetyEnvelopeV2{SchemaRevision: SafetyEnvelopeSchemaV2, PolicyRevision: SafetyEnvelopePolicyV1, BodyStateRevision: 12, Assertions: []SafetyAssertionV1{}, ActiveBlockers: []SafetyBlockerV1{}}
+	raw, err := EncodeDiagnosisReplayInput(12, json.RawMessage(`{"current_revision":12}`), nil, nil, envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var input DiagnosisReplayInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		t.Fatal(err)
+	}
+	if input.SafetyEnvelope == nil || input.SafetyEnvelope.BodyStateRevision != 12 {
+		t.Fatalf("safety envelope was not frozen: %s", raw)
+	}
+	if _, err := EncodeDiagnosisReplayInput(13, json.RawMessage(`{"current_revision":13}`), nil, nil, envelope); err == nil {
+		t.Fatal("mismatched safety revision accepted")
+	}
 }
 
 func replayTestRaw(configurationID, decisionRevision, concernKey string) json.RawMessage {
