@@ -195,6 +195,12 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationBridgeConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
 		t.Fatalf("Diagnosis negation-bridge policy=%q err=%v", got, err)
 	}
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationListConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("Diagnosis negation-list policy=%q err=%v", got, err)
+	}
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisNegationListLocalConfigID); err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("Diagnosis local-negation policy=%q err=%v", got, err)
+	}
 	if got, err := TreatmentDecisionPolicyRevisionForConfiguration(defaultTreatmentConfigurationID); err != nil || got != TreatmentDecisionPolicyV1 {
 		t.Fatalf("Treatment policy=%q err=%v", got, err)
 	}

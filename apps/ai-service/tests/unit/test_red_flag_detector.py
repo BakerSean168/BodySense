@@ -6,6 +6,7 @@ from src.services.red_flag_detector import (
     RED_FLAG_DETECTOR_REVISION_LITERAL_V1,
     RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
     RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
+    RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5,
     RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
     RedFlagDetector,
     get_red_flag_detector,
@@ -175,6 +176,60 @@ def test_negation_list_revision_does_not_cross_source_boundary():
         revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
     )
     assert {flag.category for flag in result.flags} == {"radiating_pain"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "且无外伤、放射痛、麻木、无力或头晕。现有信息更支持姿势/肌肉紧张相关的功能性颈肩不适。",
+        "无外伤、放射痛、麻木、无力或头晕；其余情况稳定。",
+    ],
+)
+def test_v8_negation_list_completes_at_local_sentence_or_clause_boundary(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5
+    )
+    assert result.has_red_flags is False
+
+
+def test_v8_later_explicit_dizziness_after_comma_remains_neurological():
+    result = RedFlagDetector().detect(
+        [], "无外伤、头晕，头晕明显", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5
+    )
+    assert {flag.category for flag in result.flags} == {"neurological"}
+
+
+def test_v8_later_worsening_after_comma_remains_a_red_flag():
+    result = RedFlagDetector().detect(
+        [], "无外伤、头晕，持续加重", revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5
+    )
+    assert result.has_red_flags is True
+    assert {flag.category for flag in result.flags} & {"neurological", "worsening"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "无外伤、头晕。随后出现头晕",
+        "无外伤、放射痛，但后来出现头晕",
+        "无外伤、头晕明显。",
+        "无外伤、头晕加重。",
+        "无外伤、头晕持续。",
+        "无外伤、后来出现头晕。",
+        "无外伤、不排除头晕。",
+        "无外伤、不能排除头晕。",
+        "无外伤，头晕明显。",
+        "不排除放射痛。",
+        "未排除放射痛。",
+        "不否认头晕。",
+        "之前没有头晕，现在头晕。",
+    ],
+)
+def test_v8_negation_list_remains_fail_closed_for_positive_or_ambiguous_text(text: str):
+    result = RedFlagDetector().detect(
+        [], text, revision=RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5
+    )
+    assert result.has_red_flags is True
 
 
 @pytest.mark.parametrize(

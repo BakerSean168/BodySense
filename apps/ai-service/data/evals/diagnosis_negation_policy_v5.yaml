@@ -1,0 +1,92 @@
+name: diagnosis_negation_policy_v5
+cases:
+  - name: real-provider-summary-local-boundary
+    inputs:
+      text: 当前 BodyState 仅包含一条已确认的颈部不适记录：久坐办公后出现轻度颈肩僵硬和酸胀，活动后缓解，持续约2周，趋势稳定，且无外伤、放射痛、麻木、无力或头晕。现有信息更支持姿势/肌肉紧张相关的功能性颈肩不适。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: []
+  - name: local-semicolon-boundary
+    inputs:
+      text: 无外伤、放射痛、麻木、无力或头晕；其余情况稳定。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: []
+  - name: later-positive-dizziness
+    inputs:
+      text: 无外伤、头晕。随后出现头晕
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: later-positive-dizziness-after-comma
+    inputs:
+      text: 无外伤、放射痛，但后来出现头晕
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: current-dizziness-obvious
+    inputs:
+      text: 无外伤、头晕明显。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: current-dizziness-worsening
+    inputs:
+      text: 无外伤、头晕加重。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: current-dizziness-persistent
+    inputs:
+      text: 无外伤、头晕持续。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: later-dizziness-appears
+    inputs:
+      text: 无外伤、后来出现头晕。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: dizziness-not-ruled-out
+    inputs:
+      text: 无外伤、不排除头晕。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: dizziness-cannot-be-ruled-out
+    inputs:
+      text: 无外伤、不能排除头晕。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: comma-does-not-join-list
+    inputs:
+      text: 无外伤，头晕明显。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: radiating-pain-not-ruled-out
+    inputs:
+      text: 不排除放射痛。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: radiating-pain-not-excluded
+    inputs:
+      text: 未排除放射痛。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [radiating_pain]
+  - name: dizziness-not-denied
+    inputs:
+      text: 不否认头晕。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]
+  - name: historical-negative-current-positive
+    inputs:
+      text: 之前没有头晕，现在头晕。
+      revision: red-flag-detector-negation-list-local-v5
+    metadata:
+      expected_categories: [neurological]

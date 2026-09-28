@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "real-provider-summary-local-boundary",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "local-semicolon-boundary",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "later-positive-dizziness",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "later-positive-dizziness-after-comma",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "current-dizziness-obvious",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "current-dizziness-worsening",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "current-dizziness-persistent",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "later-dizziness-appears",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "dizziness-not-ruled-out",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "dizziness-cannot-be-ruled-out",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "comma-does-not-join-list",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "radiating-pain-not-ruled-out",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "radiating-pain-not-excluded",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "dizziness-not-denied",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "NegationPolicyBehavior": true
+      },
+      "name": "historical-negative-current-positive",
+      "passed": true
+    }
+  ],
+  "configuration_id": "diag-config-d041da102ba90b81",
+  "detector_revision": "red-flag-detector-negation-list-local-v5",
+  "failed": 0,
+  "governance_policy_revision": "diagnosis-governance-v8-negation-list-local-claims",
+  "name": "diagnosis-negation-policy-v5",
+  "passed": 15,
+  "total": 15
+}

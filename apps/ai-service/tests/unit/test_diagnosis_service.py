@@ -13,6 +13,7 @@ V4_CONFIG_ID = "diag-config-4a517fea19cb6c49"
 V5_CONFIG_ID = "diag-config-375187050b203078"
 V6_CONFIG_ID = "diag-config-4377355ba2012ce8"
 V7_CONFIG_ID = "diag-config-4eb948f419994367"
+V8_CONFIG_ID = "diag-config-d041da102ba90b81"
 
 
 def _body_state(revision: int = 12) -> dict:
@@ -161,6 +162,36 @@ async def test_v7_current_positive_claim_still_bypasses_typed_agent():
     state["facts"][0]["value"] = "无外伤、头晕持续"
     result = await service.generate_diagnosis(
         body_state_revision=12, configuration_id=V7_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "safety_blocked"
+    assert result["execution_provenance"]["status"] == "bypassed"
+    assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_v8_exact_local_boundary_body_state_reaches_typed_agent():
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = (
+        "久坐办公后出现轻度颈肩僵硬和酸胀，活动后缓解，持续约2周，趋势稳定，"
+        "且无外伤、放射痛、麻木、无力或头晕。现有信息更支持姿势/肌肉紧张相关的功能性颈肩不适。"
+    )
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V8_CONFIG_ID, body_state=state
+    )
+    assert result["status"] == "completed"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", ["无外伤、头晕。随后出现头晕", "目前出现放射痛"])
+async def test_v8_true_or_later_positive_red_flag_still_bypasses_typed_agent(value: str):
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state()
+    state["facts"][0]["value"] = value
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=V8_CONFIG_ID, body_state=state
     )
     assert result["status"] == "safety_blocked"
     assert result["execution_provenance"]["status"] == "bypassed"

@@ -17,6 +17,7 @@ RED_FLAG_DETECTOR_REVISION_LITERAL_V1 = "red-flag-detector-literal-v1"
 RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2 = "red-flag-detector-negation-aware-v2"
 RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3 = "red-flag-detector-negation-bridge-v3"
 RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4 = "red-flag-detector-negation-list-v4"
+RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5 = "red-flag-detector-negation-list-local-v5"
 DEFAULT_RED_FLAG_DETECTOR_REVISION = RED_FLAG_DETECTOR_REVISION_LITERAL_V1
 
 _NEGATION_CUE_RE = re.compile(
@@ -39,6 +40,7 @@ _LIST_TERMINAL_RE = re.compile(
     r"(?:等红旗信号|等警示症状|等症状|等表现|等信号)(?=$|[\s。！？；：:，,、）】》\]])"
 )
 _LIST_END_PUNCTUATION_RE = re.compile(r'^[\s。！？；：:，,、）】》\]"}\]]*$')
+_LIST_LOCAL_BOUNDARY_RE = re.compile(r'^[\s]*(?:$|[。！？；：:，,])')
 _LIST_FORBIDDEN_SUFFIX_RE = re.compile(
     r"^(?:明显|加重|持续|发作|出现|存在|仍有|现有|现在有|目前有|频繁|反复|严重)"
 )
@@ -108,6 +110,41 @@ def _is_explicitly_negated_list(text: str, start: int) -> bool:
     return False
 
 
+def _is_explicitly_negated_list_local(text: str, start: int) -> bool:
+    """Recognize v8 lists whose terminal punctuation is local to the list."""
+    window_start = max(0, start - 64)
+    window = text[window_start:]
+    for cue in _LIST_NEGATION_RE.finditer(window):
+        absolute_cue = window_start + cue.start()
+        if _has_ambiguous_prefix(text[:absolute_cue]):
+            continue
+        cursor = cue.end()
+        modifier = _LIST_OPTIONAL_MODIFIER_RE.match(window, cursor)
+        assert modifier is not None
+        cursor = modifier.end()
+        items: list[tuple[int, int]] = []
+        while True:
+            item = _LIST_ITEM_RE.match(window, cursor)
+            if item is None:
+                break
+            items.append((window_start + item.start(), window_start + item.end()))
+            cursor = item.end()
+            separator = _LIST_SEPARATOR_RE.match(window, cursor)
+            if separator is None:
+                break
+            cursor = separator.end()
+
+        if not items or not any(item_start <= start < item_end for item_start, item_end in items):
+            continue
+
+        suffix = text[window_start + cursor :]
+        if _LIST_FORBIDDEN_SUFFIX_RE.match(suffix):
+            continue
+        if _LIST_TERMINAL_RE.match(suffix) or _LIST_LOCAL_BOUNDARY_RE.match(suffix):
+            return True
+    return False
+
+
 def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
     if revision == RED_FLAG_DETECTOR_REVISION_LITERAL_V1:
         return keyword in text
@@ -115,6 +152,7 @@ def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
         RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
         RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
         RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
+        RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5,
     }:
         raise ValueError(f"unsupported red-flag detector revision: {revision}")
     start = text.find(keyword)
@@ -122,9 +160,16 @@ def _keyword_is_present(text: str, keyword: str, revision: str) -> bool:
         is_negated = (
             (
                 _is_explicitly_negated_with_bridge(text, start)
-                or _is_explicitly_negated_list(text, start)
+                or (
+                    _is_explicitly_negated_list_local(text, start)
+                    if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5
+                    else _is_explicitly_negated_list(text, start)
+                )
             )
-            if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4
+            if revision in {
+                RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
+                RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5,
+            }
             else (
                 _is_explicitly_negated_with_bridge(text, start)
                 if revision == RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3
@@ -263,6 +308,7 @@ class RedFlagDetector:
             RED_FLAG_DETECTOR_REVISION_NEGATION_AWARE_V2,
             RED_FLAG_DETECTOR_REVISION_NEGATION_BRIDGE_V3,
             RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_V4,
+            RED_FLAG_DETECTOR_REVISION_NEGATION_LIST_LOCAL_V5,
         }:
             raise ValueError(f"unsupported red-flag detector revision: {revision}")
 
