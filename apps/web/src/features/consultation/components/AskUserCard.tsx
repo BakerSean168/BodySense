@@ -49,7 +49,7 @@ export function AskUserCard({
   };
 
   const handleMultiFieldSubmit = () => {
-    const fields: Record<string, string> = {};
+    const fields: Record<string, string | string[]> = {};
     const missing: string[] = [];
     for (const field of multiFields) {
       const raw = (fieldValues[field.key] ?? "").trim();
@@ -58,7 +58,10 @@ export function AskUserCard({
         continue;
       }
       if (raw) {
-        fields[field.key] = raw;
+        fields[field.key] =
+          field.answer_type === "multi_choice"
+            ? raw.split("，").filter(Boolean)
+            : raw;
       }
     }
     if (missing.length > 0) {
@@ -66,7 +69,10 @@ export function AskUserCard({
     }
     const text = multiFields
       .filter((f) => fields[f.key])
-      .map((f) => `${f.label}: ${fields[f.key]}`)
+      .map((f) => {
+        const value = fields[f.key];
+        return `${f.label}: ${Array.isArray(value) ? value.join("，") : value}`;
+      })
       .join("；");
     onSubmit({ text, fields });
   };
@@ -153,7 +159,14 @@ export function AskUserCard({
                 checked={selected.includes(opt)}
                 onChange={(e) => {
                   const next = e.target.checked
-                    ? [...selected, opt]
+                    ? field.exclusive_options?.includes(opt)
+                      ? [opt]
+                      : [
+                          ...selected.filter(
+                            (o) => !field.exclusive_options?.includes(o),
+                          ),
+                          opt,
+                        ]
                     : selected.filter((o) => o !== opt);
                   setValue(next.join("，"));
                 }}

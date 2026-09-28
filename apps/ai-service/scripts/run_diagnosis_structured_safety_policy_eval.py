@@ -4,9 +4,18 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.services.consultation_state_acquisition import (  # noqa: E402
+    apply_structured_intake_answer,
+    build_symptom_intake_question,
+)
+
 REPO = ROOT.parents[1]
 REPORT = ROOT / "data/evals/reports/diagnosis_structured_safety_v8.json"
 OUTPUT = ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v1.json"
@@ -47,13 +56,46 @@ def main() -> int:
         "fixture_marker_missing_key_incomplete": fixtures["coverage-marker-missing-key"]["complete"]
         is False,
     }
+    question = build_symptom_intake_question(
+        {"capture_id": "0123456789abcdef01234567", "body_part": "右臀", "symptom_type": "疼痛"}
+    )
+    assert question is not None
+    none = apply_structured_intake_answer(question, {"fields": {"safety_signals": ["以上均无"]}})
+    selected = apply_structured_intake_answer(question, {"fields": {"safety_signals": ["麻木"]}})
+    invalid = apply_structured_intake_answer(
+        question, {"fields": {"safety_signals": ["以上均无", "麻木"]}}
+    )
+    concepts = ("trauma", "radiating_pain", "numbness", "weakness", "dizziness")
+    checks["producer_checklist_is_first_and_bounded"] = (
+        question["fields"][0]["key"] == "safety_signals"
+        and len(question["fields"]) <= 3
+        and question["fields"][0]["options"]
+        == ["外伤或创伤", "放射痛", "麻木", "无力", "头晕", "以上均无"]
+        and question["fields"][0].get("exclusive_options") == ["以上均无"]
+    )
+    checks["producer_none_captures_five_absences"] = (
+        none is not None
+        and none.get("safety_capture_revision") == "body-state-safety-capture-v1"
+        and all(none.get(concept) is False for concept in concepts)
+    )
+    checks["producer_selected_captures_exact_map"] = (
+        selected is not None
+        and selected.get("safety_capture_revision") == "body-state-safety-capture-v1"
+        and selected.get("numbness") is True
+        and all(selected.get(concept) is False for concept in concepts if concept != "numbness")
+    )
+    checks["producer_invalid_does_not_claim_capture"] = (
+        invalid is not None
+        and "safety_capture_revision" not in invalid
+        and all(concept not in invalid for concept in concepts)
+    )
     go = subprocess.run(
         [
             "go",
             "test",
             "./internal/service",
             "-run",
-            "TestDiagnosisDecisionPolicyV2DenyOverrides|TestStructuredDiagnosisPreflightBypassesIncompleteAndBlocked|TestSafetyEnvelopeSharedContract",
+            "TestDiagnosisDecisionPolicyV2DenyOverrides|TestSafetyEnvelopeSharedContract",
             "-count=1",
         ],
         cwd=REPO / "apps/api",
@@ -62,6 +104,36 @@ def main() -> int:
         check=False,
     )
     checks["go_final_authority_and_shared_contract"] = go.returncode == 0
+    preflight = subprocess.run(
+        [
+            "go",
+            "test",
+            "./internal/service",
+            "-run",
+            "TestStructuredDiagnosisPreflightBypassesIncompleteAndBlocked",
+            "-count=1",
+        ],
+        cwd=REPO / "apps/api",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    checks["go_preflight_consistent_payloads"] = preflight.returncode == 0
+    producer = subprocess.run(
+        [
+            "go",
+            "test",
+            "./internal/service",
+            "-run",
+            "TestBoundSafetyChecklistPersistsOnlyValidExplicitCapture|TestBodyStateExtractedSymptomCreatesUnverifiedFact",
+            "-count=1",
+        ],
+        cwd=REPO / "apps/api",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    checks["go_producer_capture_and_coverage"] = producer.returncode == 0
     result = {
         "name": "diagnosis-structured-safety-policy-v1",
         "configuration_id": qualification["configuration_id"],
@@ -71,7 +143,12 @@ def main() -> int:
         "passed": sum(checks.values()),
         "total": len(checks),
         "checks": checks,
-        "go_test_output": go.stdout + go.stderr,
+        "go_test_output": go.stdout
+        + go.stderr
+        + preflight.stdout
+        + preflight.stderr
+        + producer.stdout
+        + producer.stderr,
     }
     OUTPUT.write_text(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"

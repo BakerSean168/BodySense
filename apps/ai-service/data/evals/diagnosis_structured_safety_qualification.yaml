@@ -75,6 +75,10 @@ cases:
         complete: true
   metadata:
     scenario_family_id: complete-benign
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-5a4a13627e14b4cf
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: development
     slices:
@@ -160,6 +164,10 @@ cases:
         complete: true
   metadata:
     scenario_family_id: active-dizziness
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-5a4a13627e14b4cf
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: holdout
     slices:
@@ -288,6 +296,10 @@ cases:
         complete: true
   metadata:
     scenario_family_id: separate-sources-positive
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-5a4a13627e14b4cf
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: regression
     slices:
@@ -339,6 +351,10 @@ cases:
         complete: false
   metadata:
     scenario_family_id: capture-incomplete
+    applicability_reason: "v8-only capture coverage abstention; v3 has no structured coverage contract."
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: challenge
     slices:
@@ -433,6 +449,10 @@ cases:
         complete: true
   metadata:
     scenario_family_id: legacy-active-current-absent
+    applicability_reason: "v8 cross-layer authority; Python-only v3 harness cannot represent Go v1 final authority faithfully."
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: holdout
     slices:
@@ -523,6 +543,10 @@ cases:
         complete: true
   metadata:
     scenario_family_id: legacy-monitoring-current-absent
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-5a4a13627e14b4cf
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: development
     slices:
@@ -628,6 +652,10 @@ cases:
       safety_summary: &id010 {}
   metadata:
     scenario_family_id: generic-candidate-education
+    applicability_reason: "v8-only no-prose-scan rule; v3 intentionally uses its historical prose detector."
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: regression
     slices:
@@ -740,6 +768,10 @@ cases:
         rationale: 新发现需要审核
   metadata:
     scenario_family_id: valid-typed-finding
+    applicability_reason: "v8-only typed finding validation and escalation contract."
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: challenge
     slices:
@@ -835,6 +867,10 @@ cases:
         - body-state:fact:ffffffff-ffff-ffff-ffff-ffffffffffff
   metadata:
     scenario_family_id: invalid-finding-source
+    applicability_reason: "v8-only source-ref validation for typed findings."
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-62d312942b76a154
     case_category: structured-safety
     split: holdout
     slices:
@@ -917,8 +953,12 @@ cases:
         complete: true
   metadata:
     scenario_family_id: historical-resolved-nonblocking
+    applicability_revision: diagnosis-case-applicability-v1
+    applicable_configuration_ids:
+    - diag-config-5a4a13627e14b4cf
+    - diag-config-62d312942b76a154
     case_category: structured-safety
-    split: development
+    split: challenge
     slices:
     - structured-safety
     critical: false

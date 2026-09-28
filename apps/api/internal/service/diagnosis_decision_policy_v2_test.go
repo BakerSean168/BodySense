@@ -92,16 +92,33 @@ func TestStructuredDiagnosisPreflightBypassesIncompleteAndBlocked(t *testing.T) 
 			e := completeSafetyEnvelope()
 			test.mutate(e)
 			var payload map[string]any
-			if err := json.Unmarshal(structuredDiagnosisPreflight(e, 12, json.RawMessage(`{}`), diagnosisStructuredSafetyConfigID, route), &payload); err != nil {
+			if err := json.Unmarshal(structuredDiagnosisPreflight(e, 12, diagnosisStructuredSafetyConfigID, route), &payload); err != nil {
 				t.Fatal(err)
 			}
 			decision := payload["decision_authority"].(map[string]any)
 			if decision["outcome"] != string(test.outcome) || payload["status"] != test.status || len(payload["candidates"].([]any)) != 0 {
 				t.Fatalf("unexpected preflight payload: %+v", payload)
 			}
+			governance := payload["governance"].(map[string]any)
+			if _, legacy := payload["safety_summary"].(string); legacy {
+				t.Fatalf("v8 preflight included legacy SafetyState prose: %+v", payload)
+			}
+			if test.outcome == DiagnosisAbstain {
+				if governance["verdict"] != "accepted" || len(governance["reasons"].([]any)) != 0 ||
+					len(decision["reasons"].([]any)) != 1 || decision["reasons"].([]any)[0] != "structured_safety_capture_incomplete" ||
+					payload["execution_provenance"].(map[string]any)["reason"] != "structured_safety_coverage_incomplete" ||
+					payload["summary"] != "结构化安全信息尚未完整采集，请完成安全信号确认后重新分析。" {
+					t.Fatalf("inconsistent coverage abstain: %+v", payload)
+				}
+			} else if governance["verdict"] != "rejected" ||
+				len(decision["reasons"].([]any)) != 1 || decision["reasons"].([]any)[0] != "active_structured_safety_blocker" ||
+				len(governance["reasons"].([]any)) != 1 || governance["reasons"].([]any)[0] != "active_structured_safety_blocker" ||
+				payload["execution_provenance"].(map[string]any)["reason"] != "active_structured_safety_blocker" {
+				t.Fatalf("inconsistent structured blocker: %+v", payload)
+			}
 		})
 	}
-	if blocked := structuredDiagnosisPreflight(completeSafetyEnvelope(), 12, nil, diagnosisStructuredSafetyConfigID, route); blocked != nil {
+	if blocked := structuredDiagnosisPreflight(completeSafetyEnvelope(), 12, diagnosisStructuredSafetyConfigID, route); blocked != nil {
 		t.Fatalf("complete clear coverage bypassed agent: %s", blocked)
 	}
 }

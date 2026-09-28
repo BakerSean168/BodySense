@@ -156,7 +156,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	if policyRevision == DiagnosisDecisionPolicyV1 {
 		preflightBlock = s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route)
 	} else {
-		preflightBlock = structuredDiagnosisPreflight(frozenEnvelope, snapshot.CurrentRevision, snapshot.SafetyState, configurationID, route)
+		preflightBlock = structuredDiagnosisPreflight(frozenEnvelope, snapshot.CurrentRevision, configurationID, route)
 	}
 	if projectionErr != nil && preflightBlock == nil {
 		return nil, diagnosisApplicationError("INVALID_SAFETY_STATE", "failed to project BodyState safety", projectionErr)
@@ -245,21 +245,44 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	return payload, nil
 }
 
-func structuredDiagnosisPreflight(envelope *SafetyEnvelopeV2, revision int64, safetyState json.RawMessage, configurationID string, route DiagnosisRouteSelection) json.RawMessage {
+func structuredDiagnosisPreflight(envelope *SafetyEnvelopeV2, revision int64, configurationID string, route DiagnosisRouteSelection) json.RawMessage {
 	probe := map[string]any{"status": "completed", "candidates": []any{map[string]any{"name": "preflight"}}, "governance": map[string]any{"verdict": "accepted"}, "safety_findings": []any{}}
 	decision := EvaluateDiagnosisDecisionV2(envelope, revision, probe)
 	if decision.Outcome == DiagnosisAllowNormal {
 		return nil
 	}
-	payload := safetyBlockedDiagnosisPayload(safetyState, configurationID, DiagnosisDecisionPolicyV2, route)
+	payload := map[string]any{
+		"scope": "full_body", "candidates": []any{}, "cross_concern_patterns": []any{},
+		"information_gaps": []any{}, "safety_summary": map[string]any{}, "citations": []any{},
+		"agent_configuration": map[string]any{
+			"id": configurationID, "role": "diagnosis", "decision_policy_revision": DiagnosisDecisionPolicyV2,
+		},
+		"execution_provenance": map[string]any{
+			"status": "bypassed", "runtime": "go",
+		},
+		"evidence_acquisition": map[string]any{
+			"trace_revision":           evidenceAvailabilityTraceV2,
+			"policy_revision":          diagnosisEvidenceAvailabilityV2,
+			"external_evidence_status": externalEvidenceNotRequired,
+			"attempts":                 []any{},
+		},
+		"rollout_provenance": route,
+		"governance": map[string]any{
+			"kind": "diagnosis", "verdict": "rejected", "reasons": decision.Reasons, "issues": []any{},
+		},
+	}
 	if decision.Outcome == DiagnosisAbstain {
-		payload["status"] = "insufficient_information"
 		payload["execution_provenance"].(map[string]any)["reason"] = "structured_safety_coverage_incomplete"
 		payload["governance"].(map[string]any)["verdict"] = "accepted"
+		payload["governance"].(map[string]any)["reasons"] = []string{}
 	} else {
 		payload["execution_provenance"].(map[string]any)["reason"] = decision.Reasons[0]
 	}
-	encoded, _ := json.Marshal(ApplyDiagnosisDecision(payload, decision))
+	payload = ApplyDiagnosisDecision(payload, decision)
+	if decision.Outcome == DiagnosisAbstain {
+		payload["summary"] = "结构化安全信息尚未完整采集，请完成安全信号确认后重新分析。"
+	}
+	encoded, _ := json.Marshal(payload)
 	return encoded
 }
 

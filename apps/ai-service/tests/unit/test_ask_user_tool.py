@@ -166,3 +166,35 @@ async def test_handle_ask_user_multi_field_form():
     assert len(fields) == 3
     assert fields[0]["key"] == "body_part"
     assert fields[1]["options"] == ["是", "否"]
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_preserves_only_valid_exclusive_options():
+    cases = [
+        ("multi_choice", ["以上均无"], ["以上均无"]),
+        ("multi_choice", ["以上均无", "以上均无"], None),
+        ("multi_choice", ["未知"], None),
+        ("multi_choice", [1], None),
+        ("multi_choice", "以上均无", None),
+        ("single_choice", ["以上均无"], None),
+    ]
+    for answer_type, exclusive_options, expected in cases:
+        result = await handle_ask_user(
+            {
+                "question": "请选择",
+                "fields": [
+                    {
+                        "key": "signals",
+                        "label": "信号",
+                        "answer_type": answer_type,
+                        "options": ["麻木", "以上均无"],
+                        "exclusive_options": exclusive_options,
+                    }
+                ],
+            }
+        )
+        field = result.content["fields"][0]
+        if expected is None:
+            assert "exclusive_options" not in field
+        else:
+            assert field["exclusive_options"] == expected

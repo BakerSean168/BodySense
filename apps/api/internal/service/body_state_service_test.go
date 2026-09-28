@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -213,7 +214,7 @@ func TestBodyStateExtractedSymptomCreatesUnverifiedFact(t *testing.T) {
 	svc := NewBodyStateService(repo)
 	if err := svc.UpsertExtractedSymptom(
 		context.Background(), uuid.New(), uuid.New(),
-		json.RawMessage(`{"body_part":"左臀","symptom_type":"酸胀","trigger":"久坐"}`),
+		json.RawMessage(`{"body_part":"左臀","symptom_type":"酸胀","trigger":"久坐","safety_capture_revision":"body-state-safety-capture-v1","trauma":false,"radiating_pain":false,"numbness":false,"weakness":false,"dizziness":false}`),
 	); err != nil {
 		t.Fatalf("UpsertExtractedSymptom returned error: %v", err)
 	}
@@ -226,6 +227,20 @@ func TestBodyStateExtractedSymptomCreatesUnverifiedFact(t *testing.T) {
 	}
 	if fact.Origin != "ai_extracted" || fact.ReviewState != "unverified" {
 		t.Fatalf("AI extraction must not become confirmed user truth: %#v", fact)
+	}
+	var details map[string]any
+	if err := json.Unmarshal(fact.Details, &details); err != nil {
+		t.Fatal(err)
+	}
+	if _, marked := details["safety_capture_revision"]; marked {
+		t.Fatalf("AI extraction claimed complete safety capture: %#v", details)
+	}
+	var provenance map[string]any
+	if err := json.Unmarshal(fact.Provenance, &provenance); err != nil {
+		t.Fatal(err)
+	}
+	if raw, ok := provenance["raw"].(map[string]any); !ok || raw["safety_capture_revision"] != nil || raw["trauma"] != nil {
+		t.Fatalf("AI extraction retained untrusted safety capture fields: %#v", provenance)
 	}
 }
 
@@ -277,6 +292,69 @@ func TestStructuredSymptomInteractionPromotesSameCaptureToConfirmedFact(t *testi
 	}
 	if details["duration"] != "1–4周" || details["severity"] != "中度（5–6/10）" {
 		t.Fatalf("structured fields were not merged: %#v", details)
+	}
+}
+
+func TestBoundSafetyChecklistPersistsOnlyValidExplicitCapture(t *testing.T) {
+	question := datatypes.JSON(`{"purpose":"symptom_intake","fields":[{"key":"safety_signals","answer_type":"multi_choice","required":true,"options":["外伤或创伤","放射痛","麻木","无力","头晕","以上均无"],"exclusive_options":["以上均无"]}],"state_binding":{"revision":"symptom-intake-binding-v1","capture_id":"0123456789abcdef01234567","seed_info":{"body_part":"右臀","symptom_type":"疼痛","radiation":"小腿"},"field_map":{"safety_signals":"safety_signals","duration":"duration"}}}`)
+	for _, tc := range []struct {
+		name     string
+		question datatypes.JSON
+		answer   string
+		expected map[string]bool
+	}{
+		{"none", nil, `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, map[string]bool{"trauma": false, "radiating_pain": false, "numbness": false, "weakness": false, "dizziness": false}},
+		{"selected", nil, `{"fields":{"safety_signals":["放射痛","麻木"],"duration":"1–4周"}}`, map[string]bool{"trauma": false, "radiating_pain": true, "numbness": true, "weakness": false, "dizziness": false}},
+		{"missing-exclusivity", datatypes.JSON(strings.Replace(string(question), `,"exclusive_options":["以上均无"]`, "", 1)), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil},
+		{"wrong-exclusivity", datatypes.JSON(strings.Replace(string(question), `"exclusive_options":["以上均无"]`, `"exclusive_options":["麻木"]`, 1)), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil},
+		{"extra-exclusivity", datatypes.JSON(strings.Replace(string(question), `"exclusive_options":["以上均无"]`, `"exclusive_options":["以上均无","麻木"]`, 1)), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil},
+		{"contradictory", nil, `{"fields":{"safety_signals":["以上均无","麻木"],"duration":"1–4周"}}`, nil},
+		{"unknown", nil, `{"fields":{"safety_signals":["未知"],"duration":"1–4周"}}`, nil},
+		{"missing", nil, `{"fields":{"duration":"1–4周"}}`, nil},
+		{"non-list", nil, `{"fields":{"safety_signals":"麻木","duration":"1–4周"}}`, nil},
+		{"forged-marker", nil, `{"fields":{"duration":"1–4周","safety_capture_revision":"body-state-safety-capture-v1","trauma":false,"radiating_pain":false,"numbness":false,"weakness":false,"dizziness":false}}`, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &fakeBodyStateRepository{}
+			svc := NewBodyStateService(repo)
+			boundQuestion := question
+			if tc.question != nil {
+				boundQuestion = tc.question
+			}
+			if err := svc.RecordInteractionAnswer(context.Background(), uuid.New(), uuid.New(), "intake-0123456789abcdef01234567", boundQuestion, json.RawMessage(tc.answer)); err != nil {
+				t.Fatal(err)
+			}
+			if len(repo.upsertedFacts) != 1 {
+				t.Fatalf("expected one bound fact, got %d", len(repo.upsertedFacts))
+			}
+			fact := repo.upsertedFacts[0]
+			var details map[string]any
+			if err := json.Unmarshal(fact.Details, &details); err != nil {
+				t.Fatal(err)
+			}
+			if details["duration"] != "1–4周" || details["radiation"] != "小腿" {
+				t.Fatalf("other details lost: %#v", details)
+			}
+			if tc.expected == nil {
+				if _, marked := details["safety_capture_revision"]; marked {
+					t.Fatalf("invalid answer marked complete: %#v", details)
+				}
+				return
+			}
+			if details["safety_capture_revision"] != SafetyCaptureRevisionV1 {
+				t.Fatalf("capture marker missing: %#v", details)
+			}
+			for key, expected := range tc.expected {
+				if details[key] != expected {
+					t.Fatalf("%s = %v, want %v", key, details[key], expected)
+				}
+			}
+			fact.ID = uuid.New()
+			envelope, err := ProjectSafetyEnvelopeV2(&BodyStateSnapshot{CurrentRevision: 1, Facts: []model.BodyStateFact{fact}})
+			if err != nil || !envelope.Coverage.Complete {
+				t.Fatalf("real bound answer did not satisfy SafetyCoverageV1: %+v, %v", envelope.Coverage, err)
+			}
+		})
 	}
 }
 

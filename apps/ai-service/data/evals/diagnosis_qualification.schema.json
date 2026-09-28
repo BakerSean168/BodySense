@@ -91,6 +91,46 @@
       "additionalProperties": false,
       "description": "Case taxonomy plus deterministic hard expectations used for qualification.",
       "properties": {
+        "applicability_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability Reason"
+        },
+        "applicability_revision": {
+          "anyOf": [
+            {
+              "const": "diagnosis-case-applicability-v1",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability Revision"
+        },
+        "applicable_configuration_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicable Configuration Ids"
+        },
         "case_category": {
           "minLength": 1,
           "title": "Case Category",

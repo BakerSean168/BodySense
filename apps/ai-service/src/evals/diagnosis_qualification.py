@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_ai import ToolCallPart, capture_run_messages
 from pydantic_ai.models.test import TestModel
 from pydantic_evals import Case, Dataset
@@ -68,6 +68,9 @@ class DiagnosisEvalMetadata(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     scenario_family_id: str = Field(min_length=1)
+    applicability_revision: Literal["diagnosis-case-applicability-v1"] | None = None
+    applicable_configuration_ids: list[str] | None = None
+    applicability_reason: str | None = None
     case_category: str = Field(min_length=1)
     split: EvalSplit
     slices: list[str] = Field(min_length=1)
@@ -81,6 +84,21 @@ class DiagnosisEvalMetadata(BaseModel):
     forbidden_output_fields: list[str] = Field(
         default_factory=lambda: ["treatment", "training_plan"]
     )
+
+    @model_validator(mode="after")
+    def validate_applicability(self) -> "DiagnosisEvalMetadata":
+        ids = self.applicable_configuration_ids
+        if (self.applicability_revision is None) != (ids is None):
+            raise ValueError(
+                "case applicability revision and configuration IDs must be declared together"
+            )
+        if ids is not None and (
+            not ids or len(ids) != len(set(ids)) or any(not item for item in ids)
+        ):
+            raise ValueError("applicable_configuration_ids must be nonempty and unique")
+        if self.applicability_reason is not None and ids is None:
+            raise ValueError("applicability_reason requires explicit configuration IDs")
+        return self
 
 
 class DiagnosisEvalCaseDocument(BaseModel):
@@ -244,6 +262,13 @@ def dataset_fingerprint(document: DiagnosisDatasetDocument) -> str:
         for optional in ("safety_envelope", "model_output"):
             if case["inputs"].get(optional) is None:
                 case["inputs"].pop(optional, None)
+        for optional in (
+            "applicability_revision",
+            "applicable_configuration_ids",
+            "applicability_reason",
+        ):
+            if case["metadata"].get(optional) is None:
+                case["metadata"].pop(optional, None)
     canonical = json.dumps(
         payload,
         ensure_ascii=False,
@@ -267,12 +292,18 @@ def dataset_schema_json() -> str:
 
 def load_diagnosis_dataset(
     path: Path = DEFAULT_DATASET_PATH,
+    *,
+    configuration_id: str | None = None,
 ) -> Dataset[DiagnosisEvalInputs, DiagnosisEvalExecution, DiagnosisEvalMetadata]:
     """Load typed YAML cases and attach deterministic BodySense evaluators."""
 
     document = load_dataset_document(path)
     cases = [
-        Case(name=item.name, inputs=item.inputs, metadata=item.metadata) for item in document.cases
+        Case(name=item.name, inputs=item.inputs, metadata=item.metadata)
+        for item in document.cases
+        if item.metadata.applicable_configuration_ids is None
+        or configuration_id is None
+        or configuration_id in item.metadata.applicable_configuration_ids
     ]
     return Dataset(
         name=document.name,
@@ -374,7 +405,7 @@ def run_diagnosis_qualification(
         else get_default_diagnosis_configuration()
     )
     document = load_dataset_document(path)
-    dataset = load_diagnosis_dataset(path)
+    dataset = load_diagnosis_dataset(path, configuration_id=config.configuration_id)
     report = dataset.evaluate_sync(
         build_deterministic_task(config.configuration_id),
         progress=False,
@@ -434,6 +465,7 @@ def report_summary(run: DiagnosisQualificationRun) -> dict[str, Any]:
                 "split": split,
                 "slices": slices,
                 "critical": critical,
+                "applicability_reason": getattr(metadata, "applicability_reason", None),
                 "assertions": assertions,
                 "trace": trace.model_dump(mode="json") if trace is not None else {},
             }
@@ -467,6 +499,7 @@ def report_summary(run: DiagnosisQualificationRun) -> dict[str, Any]:
         "dataset": {
             "path": str(run.dataset_path.relative_to(SERVICE_ROOT)),
             "fingerprint": run.dataset_fingerprint,
+            "full_case_count": len(load_dataset_document(run.dataset_path).cases),
         },
         "configuration_id": run.configuration.configuration_id,
         "configuration": run.configuration.provenance(),
@@ -502,8 +535,15 @@ def compare_qualification_summaries(
 
     champion_cases = {str(case["name"]): case for case in champion.get("cases", [])}
     candidate_cases = {str(case["name"]): case for case in candidate.get("cases", [])}
-    if champion_cases.keys() != candidate_cases.keys():
-        raise ValueError("qualification comparison requires identical paired case names")
+    champion_only = sorted(champion_cases.keys() - candidate_cases.keys())
+    if champion_only:
+        raise ValueError(f"candidate report is missing Champion cases: {', '.join(champion_only)}")
+    shared_names = sorted(champion_cases)
+    candidate_only = sorted(candidate_cases.keys() - champion_cases.keys())
+    for name in shared_names:
+        for field in ("split", "slices", "critical"):
+            if champion_cases[name].get(field) != candidate_cases[name].get(field):
+                raise ValueError(f"paired case taxonomy differs for {name}: {field}")
 
     effective_margin = (
         float(DEFAULT_QUALIFICATION_POLICY["non_inferiority_margin"]) if margin is None else margin
@@ -523,17 +563,37 @@ def compare_qualification_summaries(
     champion_rate = sum(bool(case.get("passed")) for case in champion_cases.values()) / max(
         1, len(champion_cases)
     )
-    candidate_rate = sum(bool(case.get("passed")) for case in candidate_cases.values()) / max(
-        1, len(candidate_cases)
+    candidate_rate = sum(bool(candidate_cases[name].get("passed")) for name in shared_names) / max(
+        1, len(shared_names)
     )
     pass_rate_delta = candidate_rate - champion_rate
 
-    all_slices = set(champion.get("slices", {})) | set(candidate.get("slices", {}))
+    all_slices = {
+        slice_name for name in shared_names for slice_name in champion_cases[name].get("slices", [])
+    }
     slice_deltas: dict[str, float] = {}
     slice_regressions: list[str] = []
     for name in sorted(all_slices):
-        champion_stats = champion.get("slices", {}).get(name, {"passed": 0, "total": 0})
-        candidate_stats = candidate.get("slices", {}).get(name, {"passed": 0, "total": 0})
+        champion_stats = {
+            "passed": sum(
+                bool(champion_cases[case_name].get("passed"))
+                for case_name in shared_names
+                if name in champion_cases[case_name].get("slices", [])
+            ),
+            "total": sum(
+                name in champion_cases[case_name].get("slices", []) for case_name in shared_names
+            ),
+        }
+        candidate_stats = {
+            "passed": sum(
+                bool(candidate_cases[case_name].get("passed"))
+                for case_name in shared_names
+                if name in candidate_cases[case_name].get("slices", [])
+            ),
+            "total": sum(
+                name in candidate_cases[case_name].get("slices", []) for case_name in shared_names
+            ),
+        }
         delta = _rate(candidate_stats) - _rate(champion_stats)
         slice_deltas[name] = delta
         if delta < -effective_margin:
@@ -546,6 +606,17 @@ def compare_qualification_summaries(
         "champion_configuration_id": champion.get("configuration_id"),
         "candidate_configuration_id": candidate.get("configuration_id"),
         "margin": effective_margin,
+        "shared_case_count": len(shared_names),
+        "shared_case_names": shared_names,
+        "candidate_only_case_names": candidate_only,
+        "candidate_only_cases": [
+            {
+                "name": name,
+                "passed": bool(candidate_cases[name].get("passed")),
+                "applicability_reason": candidate_cases[name].get("applicability_reason"),
+            }
+            for name in candidate_only
+        ],
         "champion_pass_rate": champion_rate,
         "candidate_pass_rate": candidate_rate,
         "pass_rate_delta": pass_rate_delta,
@@ -555,7 +626,8 @@ def compare_qualification_summaries(
         "slice_deltas": slice_deltas,
         "slice_regressions": slice_regressions,
         "non_inferior": non_inferior,
-        "promotion_eligible": bool(candidate.get("qualification", {}).get("qualified"))
+        "promotion_eligible": bool(champion.get("qualification", {}).get("qualified"))
+        and bool(candidate.get("qualification", {}).get("qualified"))
         and non_inferior,
     }
 
@@ -600,6 +672,9 @@ def render_summary(
                 f"- Non-inferior: {'YES' if comparison['non_inferior'] else 'NO'}",
                 f"- Promotion eligible: {'YES' if comparison['promotion_eligible'] else 'NO'}",
                 f"- Pass-rate delta: {comparison['pass_rate_delta']:+.3f}",
+                f"- Shared paired cases: {comparison['shared_case_count']}",
+                "- Candidate-only cases: "
+                + (", ".join(comparison["candidate_only_case_names"]) or "none"),
             ]
         )
     return "\n".join(lines) + "\n"

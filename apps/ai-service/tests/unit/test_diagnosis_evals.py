@@ -7,7 +7,9 @@ from src.evals.diagnosis_qualification import (
     DATASET_SCHEMA_PATH,
     DEFAULT_DATASET_PATH,
     compare_qualification_summaries,
+    dataset_fingerprint,
     dataset_schema_json,
+    load_dataset_document,
     load_diagnosis_dataset,
     report_summary,
     run_diagnosis_qualification,
@@ -83,9 +85,7 @@ def test_evidence_gap_challenger_is_paired_non_inferior_to_v1_champion() -> None
     champion = report_summary(
         run_diagnosis_qualification(configuration_id="diag-config-f492eb1c0c6676ae")
     )
-    challenger_config = load_manifest(
-        ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml"
-    )
+    challenger_config = load_manifest(ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml")
     challenger = report_summary(
         run_diagnosis_qualification(configuration_id=challenger_config.configuration_id)
     )
@@ -99,3 +99,47 @@ def test_evidence_gap_challenger_is_paired_non_inferior_to_v1_champion() -> None
     assert comparison["critical_regressions"] == []
     cases = {case["name"]: case for case in challenger["cases"]}
     assert cases["mild-neck-load"]["trace"]["available_tools"] == ["acquire_evidence"]
+
+
+def test_structured_dataset_applies_only_meaningful_cases_to_champion() -> None:
+    path = DEFAULT_DATASET_PATH.parent / "diagnosis_structured_safety_qualification.yaml"
+    champion_id = "diag-config-5a4a13627e14b4cf"
+    candidate_id = "diag-config-62d312942b76a154"
+    document = load_dataset_document(path)
+    assert len(document.cases) == 10
+    assert all(
+        case.metadata.applicability_revision == "diagnosis-case-applicability-v1"
+        for case in document.cases
+    )
+    assert len(load_diagnosis_dataset(path, configuration_id=champion_id).cases) == 5
+    assert len(load_diagnosis_dataset(path, configuration_id=candidate_id).cases) == 10
+    assert {
+        case.metadata.split
+        for case in load_diagnosis_dataset(path, configuration_id=champion_id).cases
+        if case.metadata
+    } == {"development", "holdout", "regression", "challenge"}
+    assert dataset_fingerprint(document) != dataset_fingerprint(
+        load_dataset_document(DEFAULT_DATASET_PATH)
+    )
+
+
+def test_paired_comparison_accepts_candidate_superset_and_rejects_missing_champion_case() -> None:
+    champion = report_summary(run_diagnosis_qualification())
+    candidate = copy.deepcopy(champion)
+    candidate["cases"].append(
+        {"name": "candidate-only", "passed": False, "slices": ["critical-safety"], "critical": True}
+    )
+    comparison = compare_qualification_summaries(champion, candidate)
+    assert comparison["shared_case_count"] == champion["total"]
+    assert comparison["candidate_only_case_names"] == ["candidate-only"]
+    assert comparison["critical_regressions"] == []
+    assert comparison["pass_rate_delta"] == 0
+    candidate["cases"] = candidate["cases"][1:]
+    import pytest
+
+    with pytest.raises(ValueError, match="missing Champion cases"):
+        compare_qualification_summaries(champion, candidate)
+    candidate = copy.deepcopy(champion)
+    candidate["cases"][0]["slices"] = ["other"]
+    with pytest.raises(ValueError, match="paired case taxonomy differs"):
+        compare_qualification_summaries(champion, candidate)

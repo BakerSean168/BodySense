@@ -1,6 +1,7 @@
 {
   "cases": [
     {
+      "applicability_reason": null,
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -25,6 +26,7 @@
       }
     },
     {
+      "applicability_reason": null,
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -47,6 +49,7 @@
       }
     },
     {
+      "applicability_reason": null,
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -69,6 +72,7 @@
       }
     },
     {
+      "applicability_reason": "v8-only capture coverage abstention; v3 has no structured coverage contract.",
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -91,6 +95,7 @@
       }
     },
     {
+      "applicability_reason": "v8 cross-layer authority; Python-only v3 harness cannot represent Go v1 final authority faithfully.",
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -113,6 +118,7 @@
       }
     },
     {
+      "applicability_reason": null,
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -137,6 +143,7 @@
       }
     },
     {
+      "applicability_reason": "v8-only no-prose-scan rule; v3 intentionally uses its historical prose detector.",
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -161,6 +168,7 @@
       }
     },
     {
+      "applicability_reason": "v8-only typed finding validation and escalation contract.",
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -185,6 +193,7 @@
       }
     },
     {
+      "applicability_reason": "v8-only source-ref validation for typed findings.",
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -209,6 +218,7 @@
       }
     },
     {
+      "applicability_reason": null,
       "assertions": {
         "CandidatePolicy": true,
         "ConfigurationProvenance": true,
@@ -223,7 +233,7 @@
       "slices": [
         "structured-safety"
       ],
-      "split": "development",
+      "split": "challenge",
       "trace": {
         "agent_executed": true,
         "available_tools": [
@@ -235,24 +245,61 @@
   ],
   "comparison": {
     "candidate_configuration_id": "diag-config-62d312942b76a154",
-    "candidate_pass_rate": 1.0,
-    "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
-    "champion_pass_rate": 0.6,
-    "critical_regressions": [],
-    "improvements": [
+    "candidate_only_case_names": [
       "capture-incomplete",
       "generic-candidate-education",
       "invalid-finding-source",
-      "legacy-active-current-absent"
+      "legacy-active-current-absent",
+      "valid-typed-finding"
     ],
+    "candidate_only_cases": [
+      {
+        "applicability_reason": "v8-only capture coverage abstention; v3 has no structured coverage contract.",
+        "name": "capture-incomplete",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only no-prose-scan rule; v3 intentionally uses its historical prose detector.",
+        "name": "generic-candidate-education",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only source-ref validation for typed findings.",
+        "name": "invalid-finding-source",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8 cross-layer authority; Python-only v3 harness cannot represent Go v1 final authority faithfully.",
+        "name": "legacy-active-current-absent",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only typed finding validation and escalation contract.",
+        "name": "valid-typed-finding",
+        "passed": true
+      }
+    ],
+    "candidate_pass_rate": 1.0,
+    "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+    "champion_pass_rate": 1.0,
+    "critical_regressions": [],
+    "improvements": [],
     "margin": 0.02,
     "non_inferior": true,
-    "pass_rate_delta": 0.4,
+    "pass_rate_delta": 0.0,
     "promotion_eligible": true,
     "regressions": [],
+    "shared_case_count": 5,
+    "shared_case_names": [
+      "active-dizziness",
+      "complete-benign",
+      "historical-resolved-nonblocking",
+      "legacy-monitoring-current-absent",
+      "separate-sources-positive"
+    ],
     "slice_deltas": {
-      "critical-safety": 0.5,
-      "structured-safety": 0.25
+      "critical-safety": 0.0,
+      "structured-safety": 0.0
     },
     "slice_regressions": []
   },
@@ -271,7 +318,8 @@
   },
   "configuration_id": "diag-config-62d312942b76a154",
   "dataset": {
-    "fingerprint": "9e8ef2dd97f54dcc45fb407e4dd1d4e54daa8dfdfa48d9bd6145ab6d564629d0",
+    "fingerprint": "7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876",
+    "full_case_count": 10,
     "path": "data/evals/diagnosis_structured_safety_qualification.yaml"
   },
   "evaluators": {
@@ -336,12 +384,12 @@
   },
   "splits": {
     "challenge": {
-      "passed": 2,
-      "total": 2
-    },
-    "development": {
       "passed": 3,
       "total": 3
+    },
+    "development": {
+      "passed": 2,
+      "total": 2
     },
     "holdout": {
       "passed": 3,

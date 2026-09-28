@@ -188,6 +188,88 @@ describe("AskUserCard", () => {
     });
   });
 
+  it("submits safety checklist selections as a list in the bound form", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AskUserCard
+        question={{
+          question: "请补全症状信息",
+          answer_type: "text",
+          required: true,
+          fields: [
+            {
+              key: "safety_signals",
+              label: "请选择所有安全信号",
+              answer_type: "multi_choice",
+              options: [
+                "外伤或创伤",
+                "放射痛",
+                "麻木",
+                "无力",
+                "头晕",
+                "以上均无",
+              ],
+              exclusive_options: ["以上均无"],
+              required: true,
+            },
+          ],
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+    await user.click(screen.getByLabelText("放射痛"));
+    await user.click(screen.getByLabelText("麻木"));
+    await user.click(screen.getByText("提交"));
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "请选择所有安全信号: 放射痛，麻木",
+      fields: { safety_signals: ["放射痛", "麻木"] },
+    });
+  });
+
+  it.each([
+    { order: ["麻木", "以上均无"], expected: ["以上均无"] },
+    { order: ["以上均无", "麻木"], expected: ["麻木"] },
+  ])(
+    "keeps exclusive field options mutually exclusive: $order",
+    async ({ order, expected }) => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <AskUserCard
+          question={{
+            question: "请选择",
+            answer_type: "text",
+            fields: [
+              {
+                key: "signals",
+                label: "信号",
+                answer_type: "multi_choice",
+                options: ["麻木", "以上均无"],
+                exclusive_options: ["以上均无"],
+              },
+            ],
+          }}
+          onSubmit={onSubmit}
+        />,
+      );
+      for (const option of order) {
+        await user.click(screen.getByLabelText(option));
+      }
+      expect((screen.getByLabelText("麻木") as HTMLInputElement).checked).toBe(
+        expected.includes("麻木"),
+      );
+      expect(
+        (screen.getByLabelText("以上均无") as HTMLInputElement).checked,
+      ).toBe(expected.includes("以上均无"));
+      await user.click(screen.getByText("提交"));
+      expect(onSubmit).toHaveBeenCalledWith({
+        text: `信号: ${expected.join("，")}`,
+        fields: { signals: expected },
+      });
+    },
+  );
+
   it("disables submit button when isSubmitting", () => {
     render(
       <AskUserCard
