@@ -10,11 +10,13 @@
     "mixed_governance_not_authorized": true,
     "promotion_cohorts_remain_separate": true,
     "promotion_registry_binds_v2": true,
+    "provider_fresh_promotion_registry_binds_v2": true,
     "qualified_dataset_identity_matches": true,
     "runtime_authority_evidence_extracted": true,
     "shadow_errors_stay_in_v2_cohort": true,
     "stop_rules_remain_fail_closed": true,
     "unproven_relaxations_fail_closed": true,
+    "v10_explicitly_binds_provider_fresh_cohort": true,
     "v7_historical_policy_remains_implicit_v1": true,
     "v8_explicitly_binds_structured_authority_policy": true,
     "v9_explicitly_binds_budget_successor": true
@@ -32,12 +34,13 @@
     "mixed_governance_not_authorized": "TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues",
     "promotion_cohorts_remain_separate": "TestStructuredAuthorityPromotionCohortsRemainSeparate",
     "promotion_registry_binds_v2": "TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor",
+    "provider_fresh_promotion_registry_binds_v2": "TestStructuredSafetyPromotionPolicyV10BindsProviderFreshCohort",
     "runtime_authority_evidence_extracted": "TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive",
     "shadow_errors_stay_in_v2_cohort": "TestStructuredAuthorityShadowErrorStaysInV2PromotionCohort",
     "unproven_relaxations_fail_closed": "TestStructuredAuthorityRolloutStillRejectsUnprovenRelaxations"
   },
   "name": "diagnosis-rollout-authority-policy-v2",
-  "passed": 18,
+  "passed": 20,
   "rollout_policy_revision": "diagnosis-rollout-policy-v2-structured-authority",
-  "total": 18
+  "total": 20
 }

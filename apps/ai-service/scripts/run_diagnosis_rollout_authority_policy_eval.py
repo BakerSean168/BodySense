@@ -13,6 +13,7 @@ OUTPUT_V2 = ROOT / "data/evals/reports/diagnosis_rollout_authority_policy_v2.jso
 PROMOTION_V7 = ROOT / "data/evals/diagnosis_promotion_policy_v7.json"
 PROMOTION_V8 = ROOT / "data/evals/diagnosis_promotion_policy_v8.json"
 PROMOTION_V9 = ROOT / "data/evals/diagnosis_promotion_policy_v9.json"
+PROMOTION_V10 = ROOT / "data/evals/diagnosis_promotion_policy_v10.json"
 QUALIFICATION_V9 = ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
 QUALIFICATION_V10 = ROOT / "data/evals/reports/diagnosis_structured_safety_v10.json"
 
@@ -77,13 +78,17 @@ def main(*, budget_successor: bool = False) -> int:
         go_tests["promotion_registry_binds_v2"] = (
             "TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor"
         )
+        go_tests["provider_fresh_promotion_registry_binds_v2"] = (
+            "TestStructuredSafetyPromotionPolicyV10BindsProviderFreshCohort"
+        )
     for check, test_name in go_tests.items():
         checks[check] = run_go_test(test_name)
 
     v7 = json.loads(PROMOTION_V7.read_text(encoding="utf-8"))
     v8 = json.loads(PROMOTION_V8.read_text(encoding="utf-8"))
     v9 = json.loads(PROMOTION_V9.read_text(encoding="utf-8"))
-    current = v9 if budget_successor else v8
+    v10 = json.loads(PROMOTION_V10.read_text(encoding="utf-8"))
+    current = v10 if budget_successor else v8
     configuration_id = V10_CONFIGURATION_ID if budget_successor else V9_CONFIGURATION_ID
     qualification = json.loads(
         (QUALIFICATION_V10 if budget_successor else QUALIFICATION_V9).read_text(encoding="utf-8")
@@ -104,6 +109,12 @@ def main(*, budget_successor: bool = False) -> int:
             and v9["champion_configuration_id"] == "diag-config-5a4a13627e14b4cf"
             and v9["challenger_configuration_id"] == V10_CONFIGURATION_ID
             and v9["rollout"].get("policy_revision") == ROLLOUT_POLICY
+        )
+        checks["v10_explicitly_binds_provider_fresh_cohort"] = (
+            v10["name"] == "diagnosis_promotion_v10"
+            and v10["champion_configuration_id"] == "diag-config-5a4a13627e14b4cf"
+            and v10["challenger_configuration_id"] == V10_CONFIGURATION_ID
+            and v10["rollout"].get("policy_revision") == ROLLOUT_POLICY
         )
     checks["stop_rules_remain_fail_closed"] = current["rollout"].get("stop_rules") == {
         "unsafe_relaxations": 0,
