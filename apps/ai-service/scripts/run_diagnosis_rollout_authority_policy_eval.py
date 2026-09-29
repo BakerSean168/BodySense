@@ -8,14 +8,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
-OUTPUT = ROOT / "data/evals/reports/diagnosis_rollout_authority_policy_v1.json"
+OUTPUT_V1 = ROOT / "data/evals/reports/diagnosis_rollout_authority_policy_v1.json"
+OUTPUT_V2 = ROOT / "data/evals/reports/diagnosis_rollout_authority_policy_v2.json"
 PROMOTION_V7 = ROOT / "data/evals/diagnosis_promotion_policy_v7.json"
 PROMOTION_V8 = ROOT / "data/evals/diagnosis_promotion_policy_v8.json"
+PROMOTION_V9 = ROOT / "data/evals/diagnosis_promotion_policy_v9.json"
 QUALIFICATION_V9 = ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
+QUALIFICATION_V10 = ROOT / "data/evals/reports/diagnosis_structured_safety_v10.json"
 
-CONFIGURATION_ID = "diag-config-ba10b8e6820c3691"
+V9_CONFIGURATION_ID = "diag-config-ba10b8e6820c3691"
+V10_CONFIGURATION_ID = "diag-config-3f64de162dc937ee"
 ROLLOUT_POLICY = "diagnosis-rollout-policy-v2-structured-authority"
-POLICY_NAME = "diagnosis-rollout-authority-policy-v1"
 
 GO_TESTS = {
     "authorized_legacy_false_positive_removal": (
@@ -67,14 +70,24 @@ def run_go_test(name: str) -> bool:
     return proc.returncode == 0
 
 
-def main() -> int:
+def main(*, budget_successor: bool = False) -> int:
     checks: dict[str, bool] = {}
-    for check, test_name in GO_TESTS.items():
+    go_tests = dict(GO_TESTS)
+    if budget_successor:
+        go_tests["promotion_registry_binds_v2"] = (
+            "TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor"
+        )
+    for check, test_name in go_tests.items():
         checks[check] = run_go_test(test_name)
 
     v7 = json.loads(PROMOTION_V7.read_text(encoding="utf-8"))
     v8 = json.loads(PROMOTION_V8.read_text(encoding="utf-8"))
-    qualification = json.loads(QUALIFICATION_V9.read_text(encoding="utf-8"))
+    v9 = json.loads(PROMOTION_V9.read_text(encoding="utf-8"))
+    current = v9 if budget_successor else v8
+    configuration_id = V10_CONFIGURATION_ID if budget_successor else V9_CONFIGURATION_ID
+    qualification = json.loads(
+        (QUALIFICATION_V10 if budget_successor else QUALIFICATION_V9).read_text(encoding="utf-8")
+    )
 
     checks["v7_historical_policy_remains_implicit_v1"] = (
         "policy_revision" not in v7["rollout"] and v7["name"] == "diagnosis_promotion_v7"
@@ -82,10 +95,17 @@ def main() -> int:
     checks["v8_explicitly_binds_structured_authority_policy"] = (
         v8["name"] == "diagnosis_promotion_v8"
         and v8["champion_configuration_id"] == "diag-config-5a4a13627e14b4cf"
-        and v8["challenger_configuration_id"] == CONFIGURATION_ID
+        and v8["challenger_configuration_id"] == V9_CONFIGURATION_ID
         and v8["rollout"].get("policy_revision") == ROLLOUT_POLICY
     )
-    checks["stop_rules_remain_fail_closed"] = v8["rollout"].get("stop_rules") == {
+    if budget_successor:
+        checks["v9_explicitly_binds_budget_successor"] = (
+            v9["name"] == "diagnosis_promotion_v9"
+            and v9["champion_configuration_id"] == "diag-config-5a4a13627e14b4cf"
+            and v9["challenger_configuration_id"] == V10_CONFIGURATION_ID
+            and v9["rollout"].get("policy_revision") == ROLLOUT_POLICY
+        )
+    checks["stop_rules_remain_fail_closed"] = current["rollout"].get("stop_rules") == {
         "unsafe_relaxations": 0,
         "forbidden_side_effects": 0,
         "configuration_mismatches": 0,
@@ -95,23 +115,27 @@ def main() -> int:
         "max_semantic_mismatch_rate": 0.25,
     }
     checks["qualified_dataset_identity_matches"] = (
-        qualification.get("configuration_id") == CONFIGURATION_ID
+        qualification.get("configuration_id") == configuration_id
         and qualification.get("dataset", {}).get("fingerprint")
         == "7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876"
         and qualification.get("qualification", {}).get("qualified") is True
     )
 
     result = {
-        "name": POLICY_NAME,
-        "configuration_id": CONFIGURATION_ID,
+        "name": (
+            "diagnosis-rollout-authority-policy-v2"
+            if budget_successor
+            else "diagnosis-rollout-authority-policy-v1"
+        ),
+        "configuration_id": configuration_id,
         "rollout_policy_revision": ROLLOUT_POLICY,
         "dataset_fingerprint": qualification.get("dataset", {}).get("fingerprint"),
         "passed": sum(checks.values()),
         "total": len(checks),
         "checks": checks,
-        "go_tests": GO_TESTS,
+        "go_tests": go_tests,
     }
-    OUTPUT.write_text(
+    (OUTPUT_V2 if budget_successor else OUTPUT_V1).write_text(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
@@ -120,4 +144,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import sys
+
+    raise SystemExit(main(budget_successor="--budget-successor" in sys.argv))

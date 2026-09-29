@@ -111,6 +111,18 @@ def test_v7_is_repository_known_successor_with_only_governance_behavior_change()
         assert getattr(v7, field) == getattr(v6, field)
 
 
+def test_v10_is_repository_known_budget_successor_of_v9() -> None:
+    v9 = load_manifest(CONFIG_ROOT / "diagnosis-v9-structured-safety-context.yaml")
+    v10 = load_manifest(CONFIG_ROOT / "diagnosis-v10-structured-safety-budget.yaml")
+
+    assert v10.configuration_id == "diag-config-3f64de162dc937ee"
+    assert get_diagnosis_configuration(v10.configuration_id) == v10
+    assert v9.generation.max_tokens == 2048
+    assert v10.generation.max_tokens == 960
+    assert v9.generation.temperature == v10.generation.temperature == 0.3
+    assert v9.model_dump(exclude={"generation"}) == v10.model_dump(exclude={"generation"})
+
+
 def test_behavior_significant_revision_changes_configuration_id(tmp_path: Path) -> None:
     data = yaml.safe_load(
         (ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8")

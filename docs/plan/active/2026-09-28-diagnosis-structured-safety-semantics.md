@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 has begun in controlled staging: v8 exposed a provider-capacity failure, v9 removed the duplicate context and executed successfully, and the first v9 shadow comparison exposed an outcome-only rollout-comparator mismatch that is now being repaired with a versioned structured-authority policy. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator, then its promotion_v8 cohort exposed a separate immutable output-budget limit. v10 now pins a free-tier-safe 960-token generation budget and is ready for a new promotion_v9 shadow cohort. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -223,7 +223,7 @@ remain visible in raw comparison JSON, increment `authority_migrations`, and are
 only from hard/semantic mismatch rate gates.
 
 Deterministic evidence for the comparator is
-`data/evals/reports/diagnosis_rollout_authority_policy_v1.json`: 15/15 checks pass,
+`data/evals/reports/diagnosis_rollout_authority_policy_v1.json`: 17/17 checks pass,
 including fail-closed negative cases, v1 preservation, v7/v8 cohort isolation, shadow
 error retention, missing-report retention, promotion-cohort separation, and canary
 direction normalization. `diagnosis_promotion_readiness_v8.json` requires both the
@@ -239,7 +239,7 @@ production promotion is authorized by this comparator repair.
 ### Rollout comparator v2 validation
 
 Before delivery, the comparator repair passed the complete local acceptance set: the new
-rollout-authority policy report is deterministic at 15/15, promotion v8 readiness is
+rollout-authority policy report is deterministic at 17/17, promotion v8 readiness is
 `ready_for_shadow=true` with both required policy reports at 100%, and a second
 regeneration produced identical policy/readiness hashes. Regenerating historical
 `diagnosis_promotion_v7` readiness is byte-for-byte identical to its committed artifact.
@@ -249,3 +249,44 @@ Six protected v7/v9 qualification/configuration artifacts byte-compare unchanged
 `origin/main`; five local links in the changed ADR/plan resolve and `git diff --check`
 passes. These results permit a new v8 shadow experiment only; they do not close
 DGS-SAFE-080 or authorize canary/promotion by themselves.
+
+## v10 immutable generation-budget successor (2026-09-29)
+
+`diagnosis_promotion_v8` is retained as immutable staging evidence for v9. Three v8-cohort
+shadow observations were recorded under `diagnosis-rollout-policy-v2-structured-authority`:
+
+1. two comparisons completed with `authorized_legacy_prose_false_positive_removal`; the
+   Champion v3 prose detector reported `radiating_pain` and `trauma`, while the same frozen
+   SafetyEnvelope proved both concepts `current + confirmed + absent` and v9 had no safety
+   findings, forbidden side effects, or configuration mismatch;
+2. the third comparison failed before replay comparison because the primary Groq route
+   rejected the request on output-token capacity: OTPM limit 1000, requested 1196. The
+   fallback OpenRouter route could not fund the configured 2048-token maximum.
+
+Because `challenger_errors_before_pause=1`, promotion_v8 remains paused. The failed row is
+not deleted or reclassified. Spacing/retry cannot solve this error because it is a per-request
+output-budget ceiling rather than a rolling request-frequency window.
+
+The repair is a new immutable configuration,
+`diag-config-3f64de162dc937ee` (`diagnosis-v10-structured-safety-budget.yaml`). It is
+identical to v9 in prompt (`diagnosis-prompt-v6-structured-safety-context`), model group,
+output schema, tools, evidence, governance and Go decision policy. The only behavior change
+is `generation.max_tokens: 2048 -> 960`. This leaves headroom below the observed Groq 1000
+OTPM request ceiling and below the fallback account's observed affordable maximum, without
+mutating v9 or the global LiteLLM route.
+
+Deterministic evidence remains on the unchanged dataset fingerprint
+`7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876`:
+
+- v10 qualification: 10/10, paired against v9 on all 10 cases, zero critical regressions;
+- `diagnosis-structured-safety-policy-v3`: 41/41, including immutable v9=2048, v10=960,
+  runtime model-settings propagation, and generation-budget-only manifest delta;
+- `diagnosis-rollout-authority-policy-v2`: 18/18, including exact legacy-category proof,
+  promotion cohort isolation, and promotion_v9 registry binding;
+- `diagnosis_promotion_v9`: v3 Champion -> v10 Challenger, rollout-policy-v2, unchanged
+  20-sample shadow / 5% / 25% / 50% gates and hard stop rules;
+- `diagnosis_promotion_readiness_v9`: `ready_for_shadow=true`, reasons empty, while
+  `interaction_experiment.required=true`.
+
+DGS-SAFE-080 must continue with a fresh promotion_v9 cohort. promotion_v7 and promotion_v8
+remain queryable historical evidence and are never reset to manufacture a clean gate.

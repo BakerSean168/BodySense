@@ -210,3 +210,33 @@ func TestStructuredSafetyPromotionPolicyV8BindsStructuredAuthorityRollout(t *tes
 		t.Fatalf("structured-authority rollout identity drifted: %#v, %#v", policy, registered)
 	}
 }
+
+func TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v9.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	if diagnosisSafetyBudgetConfigID != "diag-config-3f64de162dc937ee" {
+		t.Fatal("v10 identity drift")
+	}
+	revision, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisSafetyBudgetConfigID)
+	if err != nil || revision != DiagnosisDecisionPolicyV2 {
+		t.Fatal("v10 decision policy drift", err)
+	}
+	registered := knownDiagnosisPromotionRecords[policy.Name]
+	if policy.Name != "diagnosis_promotion_v9" ||
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
+		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
+		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
+		registered.ChampionConfigurationID != policy.ChampionConfigurationID ||
+		registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+		t.Fatalf("budget-successor rollout identity drifted: %#v, %#v", policy, registered)
+	}
+}

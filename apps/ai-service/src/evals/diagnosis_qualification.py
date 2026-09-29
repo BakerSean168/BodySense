@@ -298,12 +298,15 @@ def load_diagnosis_dataset(
     """Load typed YAML cases and attach deterministic BodySense evaluators."""
 
     document = load_dataset_document(path)
-    # v9 inherits the exact v8 case scope without rewriting the frozen dataset.
-    applicability_id = (
-        "diag-config-62d312942b76a154"
-        if configuration_id == "diag-config-ba10b8e6820c3691"
-        else configuration_id
-    )
+    # Structured-safety successors inherit the exact v8 case scope without rewriting
+    # the frozen dataset. New immutable behavior revisions remain distinguishable by
+    # configuration_id while applicability stays pinned to the same contract corpus.
+    applicability_id = configuration_id
+    if configuration_id is not None:
+        applicability_id = {
+            "diag-config-ba10b8e6820c3691": "diag-config-62d312942b76a154",
+            "diag-config-3f64de162dc937ee": "diag-config-62d312942b76a154",
+        }.get(configuration_id, configuration_id)
     cases = [
         Case(name=item.name, inputs=item.inputs, metadata=item.metadata)
         for item in document.cases
