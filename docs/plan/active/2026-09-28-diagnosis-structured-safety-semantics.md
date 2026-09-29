@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator, then its promotion_v8 cohort exposed a separate immutable output-budget limit. v10 now pins a free-tier-safe 960-token generation budget and is ready for a new promotion_v9 shadow cohort. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort then exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis is now being re-qualified on a fixed `gemini-3.7-flash` transport under fresh `diagnosis_promotion_v10`; deterministic readiness is green, but the new 20-sample shadow gate has not started yet. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -288,8 +288,9 @@ Deterministic evidence remains on the unchanged dataset fingerprint
 - `diagnosis_promotion_readiness_v9`: `ready_for_shadow=true`, reasons empty, while
   `interaction_experiment.required=true`.
 
-DGS-SAFE-080 must continue with a fresh promotion_v9 cohort. promotion_v7 and promotion_v8
-remain queryable historical evidence and are never reset to manufacture a clean gate.
+At that checkpoint, DGS-SAFE-080 was authorized to continue with a fresh promotion_v9 cohort.
+promotion_v7 and promotion_v8 remain queryable historical evidence and are never reset to manufacture
+a clean gate. The later provider-transport failure and successor cohort are recorded below.
 
 ## Provider-transport cohort reset (2026-09-29)
 
