@@ -60,7 +60,7 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
 
 
 
-def test_staging_nonvision_routes_use_qualified_groq_provider_profile() -> None:
+def test_staging_diagnosis_uses_fixed_gemini_provider_profile() -> None:
     production = _load(CONFIG)
     staging = _load(STAGING_CONFIG)
     assert set(_groups(staging)) == set(_groups(production))
@@ -73,8 +73,12 @@ def test_staging_nonvision_routes_use_qualified_groq_provider_profile() -> None:
         item["model_name"]: item["litellm_params"] for item in staging["model_list"]
     }
 
+    diagnosis = staging_groups["bodysense-diagnosis"]
+    assert diagnosis["model"] == "openai/gemini-3.7-flash"
+    assert diagnosis["api_base"] == "os.environ/STAGING_DIAGNOSIS_BASE_URL"
+    assert diagnosis["api_key"] == "os.environ/STAGING_DIAGNOSIS_API_KEY"
+
     for logical_model in (
-        "bodysense-diagnosis",
         "bodysense-consultation",
         "bodysense-structured",
         "bodysense-text",

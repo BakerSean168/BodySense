@@ -41,6 +41,8 @@ services:
       MIMO_API_KEY: ${MIMO_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY}
+      STAGING_DIAGNOSIS_BASE_URL: ${STAGING_DIAGNOSIS_BASE_URL:-https://api.ark717.com/v1}
+      STAGING_DIAGNOSIS_API_KEY: ${STAGING_DIAGNOSIS_API_KEY:?set STAGING_DIAGNOSIS_API_KEY}
     volumes:
       - ./litellm/config.staging.yaml:/app/config.yaml:ro
     networks: [bodysense-staging]
