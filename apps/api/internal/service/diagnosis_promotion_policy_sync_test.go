@@ -162,3 +162,27 @@ func TestRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing.T) {
 		t.Fatalf("runtime stop-rule constants drifted from promotion evidence: %#v", rules)
 	}
 }
+
+func TestStructuredSafetyPromotionPolicyBindsV9ContextSuccessor(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v7.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	if diagnosisSafetyContextConfigID != "diag-config-ba10b8e6820c3691" {
+		t.Fatal("v9 identity drift")
+	}
+	revision, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisSafetyContextConfigID)
+	if err != nil || revision != DiagnosisDecisionPolicyV2 {
+		t.Fatal("v9 decision policy drift", err)
+	}
+	registered := knownDiagnosisPromotionRecords[policy.Name]
+	if policy.Name != "diagnosis_promotion_v7" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+		t.Fatalf("structured safety promotion identity drifted: %#v, %#v", policy, registered)
+	}
+}

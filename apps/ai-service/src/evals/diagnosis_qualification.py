@@ -298,12 +298,19 @@ def load_diagnosis_dataset(
     """Load typed YAML cases and attach deterministic BodySense evaluators."""
 
     document = load_dataset_document(path)
+    # v9 inherits the exact v8 case scope without rewriting the frozen dataset.
+    applicability_id = (
+        "diag-config-62d312942b76a154"
+        if configuration_id == "diag-config-ba10b8e6820c3691"
+        else configuration_id
+    )
     cases = [
         Case(name=item.name, inputs=item.inputs, metadata=item.metadata)
         for item in document.cases
         if item.metadata.applicable_configuration_ids is None
         or configuration_id is None
         or configuration_id in item.metadata.applicable_configuration_ids
+        or applicability_id in item.metadata.applicable_configuration_ids
     ]
     return Dataset(
         name=document.name,

@@ -36,3 +36,28 @@ The immutable v8 successor uses Go's frozen envelope for preflight and final aut
 - Old analyses retain their historical replay inputs; new analyses freeze the envelope alongside the pinned BodyState.
 - A projection failure prevents an ordinary Diagnosis call and must be surfaced as a fail-closed result.
 - Structured detail coverage is deliberately narrow until producers emit a reviewed, versioned safety assertion contract.
+
+## Model-facing context views (v9 clarification)
+
+Frozen replay and governance retain the full BodyState, relevant history and
+SafetyEnvelopeV2. Prompt serialization is explicitly versioned rather than treated as
+an implementation detail:
+
+- v3–v7 keep their historical JSON serialization, including BodyState
+  `recent_revisions`, the separately supplied history, row/user identifiers, and normal
+  JSON spacing. Compatibility sanitation removes only structured-safety authority keys
+  that were introduced later from `fact.details`. For an old frozen input that never
+  contained those successor fields, the complete generated instruction string remains
+  byte-for-byte identical to the pre-v9 runtime.
+- v8 is fully frozen for replay: no sanitation, deduplication, compaction, or field
+  removal is applied, and the original SafetyEnvelopeV2 suffix remains exact.
+- v9 owns the new model-facing projection: BodyState drops duplicate
+  `recent_revisions` and top-level `user_id`, history drops transport row/user IDs, and
+  dynamic JSON is compact. Only fact payload `details` lose the six structured-safety
+  authority keys; observation, hypothesis, current-context, and arbitrary non-fact
+  `details` remain untouched. SafetyEnvelopeV2 is still supplied separately as the sole
+  structured safety authority.
+
+The projection is never written back to replay storage and is never substituted for
+the full BodyState/envelope used by post-agent governance. This preserves immutable
+historical identities while giving v9 a separately versioned context contract.

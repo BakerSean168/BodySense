@@ -16,9 +16,19 @@ from ..models.diagnosis import (
 )
 from ..models.evidence import EvidenceGap
 from ..prompts.diagnosis import (
+    DIAGNOSIS_CONTEXT_PROMPT_REVISION,
+    DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION,
     DIAGNOSIS_PROMPT_REVISION,
     DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION,
     get_diagnosis_system_prompt,
+)
+from .diagnosis_prompt_context import (
+    body_state_prompt_view,
+    compact_json,
+    history_prompt_view,
+    legacy_body_state_prompt_view,
+    legacy_history_prompt_view,
+    profile_prompt_view,
 )
 
 DIAGNOSIS_TOOL_POLICY_V2 = "diagnosis-evidence-acquisition-tools-v2"
@@ -65,22 +75,7 @@ def create_diagnosis_agent(
 
     @agent.instructions
     def body_state_context(ctx: RunContext[DiagnosisDependencies]) -> str:
-        deps = ctx.deps
-        instructions = (
-            "Analyze the exact durable BodyState revision supplied for this run.\n"
-            f"BodyState revision: R{deps.body_state_revision}\n"
-            f"BodyState JSON: {json.dumps(deps.body_state, ensure_ascii=False)}\n"
-            f"Relevant history JSON: {json.dumps(deps.relevant_history, ensure_ascii=False)}\n"
-            f"Profile JSON: {json.dumps(deps.profile, ensure_ascii=False)}\n"
-            "Use acquire_evidence only for a typed, material EvidenceGap. "
-            "User facts must use kind=user_fact and can never be supplied by RAG."
-        )
-
-        if prompt_revision == DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION:
-            if deps.safety_envelope is None:
-                raise ValueError("v8 Diagnosis requires SafetyEnvelopeV2")
-            instructions += "\nSafetyEnvelopeV2 JSON: " + deps.safety_envelope.model_dump_json()
-        return instructions
+        return diagnosis_context_instructions(ctx.deps, prompt_revision)
 
     @agent.tool
     async def acquire_evidence(
@@ -109,3 +104,50 @@ def _append_evidence(
         if evidence_id and evidence_id not in known:
             destination.append(item)
             known.add(evidence_id)
+
+
+def _legacy_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def diagnosis_context_instructions(deps: DiagnosisDependencies, prompt_revision: str) -> str:
+    """Serialize an explicitly versioned model-facing Diagnosis context."""
+
+    legacy_revisions = {DIAGNOSIS_PROMPT_REVISION, DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION}
+    if prompt_revision in legacy_revisions:
+        body = legacy_body_state_prompt_view(deps.body_state)
+        history = legacy_history_prompt_view(deps.relevant_history)
+        profile = deps.profile
+        serialize = _legacy_json
+        requires_envelope = False
+    elif prompt_revision == DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION:
+        # v8 is frozen byte-for-byte for historical replay evidence.
+        body = deps.body_state
+        history = deps.relevant_history
+        profile = deps.profile
+        serialize = _legacy_json
+        requires_envelope = True
+    elif prompt_revision == DIAGNOSIS_CONTEXT_PROMPT_REVISION:
+        body = body_state_prompt_view(deps.body_state)
+        history = history_prompt_view(deps.relevant_history)
+        profile = profile_prompt_view(deps.profile)
+        serialize = compact_json
+        requires_envelope = True
+    else:
+        raise ValueError(f"unsupported Diagnosis prompt revision: {prompt_revision}")
+
+    instructions = (
+        "Analyze the exact durable BodyState revision supplied for this run.\n"
+        f"BodyState revision: R{deps.body_state_revision}\n"
+        f"BodyState JSON: {serialize(body)}\n"
+        f"Relevant history JSON: {serialize(history)}\n"
+        f"Profile JSON: {serialize(profile)}\n"
+        "Use acquire_evidence only for a typed, material EvidenceGap. "
+        "User facts must use kind=user_fact and can never be supplied by RAG."
+    )
+
+    if requires_envelope:
+        if deps.safety_envelope is None:
+            raise ValueError("Structured Diagnosis requires SafetyEnvelopeV2")
+        instructions += "\nSafetyEnvelopeV2 JSON: " + deps.safety_envelope.model_dump_json()
+    return instructions

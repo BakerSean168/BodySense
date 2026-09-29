@@ -1,4 +1,4 @@
-"""Verify v8 safety invariants against generated qualification and Go policy tests."""
+"""Verify immutable structured-safety candidates against qualification and policy tests."""
 
 from __future__ import annotations
 
@@ -21,8 +21,18 @@ REPORT = ROOT / "data/evals/reports/diagnosis_structured_safety_v8.json"
 OUTPUT = ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v1.json"
 
 
-def main() -> int:
-    qualification = json.loads(REPORT.read_text(encoding="utf-8"))
+def main(*, context_successor: bool = False) -> int:
+    report_path = (
+        ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
+        if context_successor
+        else REPORT
+    )
+    output_path = (
+        ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v2.json"
+        if context_successor
+        else OUTPUT
+    )
+    qualification = json.loads(report_path.read_text(encoding="utf-8"))
     cases = {case["name"]: case for case in qualification["cases"]}
     contract = json.loads(
         (REPO / "contracts/internal/diagnosis/safety-envelope-v2.json").read_text(encoding="utf-8")
@@ -134,8 +144,21 @@ def main() -> int:
         check=False,
     )
     checks["go_producer_capture_and_coverage"] = producer.returncode == 0
+    if context_successor:
+        from src.evals.diagnosis_prompt_context_checks import context_checks, context_measurements
+        from src.evals.diagnosis_qualification import compare_qualification_summaries
+
+        checks.update(context_checks())
+        baseline = json.loads(
+            (ROOT / "data/evals/reports/diagnosis_structured_safety_v3.json").read_text()
+        )
+        comparison = compare_qualification_summaries(baseline, qualification)
+        checks["v3_shared_cases_non_inferior"] = comparison["non_inferior"]
+        checks["zero_critical_regressions"] = not comparison["critical_regressions"]
     result = {
-        "name": "diagnosis-structured-safety-policy-v1",
+        "name": "diagnosis-structured-safety-policy-v2"
+        if context_successor
+        else "diagnosis-structured-safety-policy-v1",
         "configuration_id": qualification["configuration_id"],
         "governance_policy_revision": "diagnosis-governance-v8-structured-safety",
         "detector_revision": "none",
@@ -150,7 +173,10 @@ def main() -> int:
         + producer.stdout
         + producer.stderr,
     }
-    OUTPUT.write_text(
+    if context_successor:
+        result["context_measurements"] = context_measurements()
+        result["champion_comparison"] = comparison
+    output_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     print(f"{result['passed']}/{result['total']} structured safety policy checks passed")
@@ -158,4 +184,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(context_successor="--context-successor" in sys.argv))
