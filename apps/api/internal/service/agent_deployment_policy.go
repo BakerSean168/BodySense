@@ -69,6 +69,7 @@ type diagnosisConfigurationRegistration struct {
 type diagnosisPromotionRecordRegistration struct {
 	ChampionConfigurationID   string
 	ChallengerConfigurationID string
+	RolloutPolicyRevision     string
 }
 
 type treatmentConfigurationRegistration struct {
@@ -206,27 +207,15 @@ var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration
 }
 
 var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistration{
-	"diagnosis_promotion_v7": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID},
-	"diagnosis_promotion_v2": {
-		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
-		ChallengerConfigurationID: diagnosisClaimSurfaceConfigID,
-	},
-	"diagnosis_promotion_v3": {
-		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
-		ChallengerConfigurationID: diagnosisNegationAwareConfigID,
-	},
-	"diagnosis_promotion_v4": {
-		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
-		ChallengerConfigurationID: diagnosisNegationBridgeConfigID,
-	},
-	"diagnosis_promotion_v5": {
-		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
-		ChallengerConfigurationID: diagnosisNegationListConfigID,
-	},
-	"diagnosis_promotion_v6": {
-		ChampionConfigurationID:   diagnosisDecisionAuthorityConfigID,
-		ChallengerConfigurationID: diagnosisStructuredSafetyConfigID,
-	},
+	"diagnosis_promotion_v2": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisClaimSurfaceConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v3": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisNegationAwareConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v4": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisNegationBridgeConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v5": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisNegationListConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v6": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisStructuredSafetyConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	// v7 was exercised in staging with the historical outcome-only comparator and
+	// remains immutable evidence even though its first observation exposed a false-positive migration.
+	"diagnosis_promotion_v7": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v8": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
 }
 
 type DiagnosisRouteSelection struct {
@@ -240,6 +229,7 @@ type DiagnosisRouteSelection struct {
 	ChallengerConfigurationID    string `json:"challenger_configuration_id,omitempty"`
 	CanaryBPS                    int    `json:"canary_bps"`
 	PromotionRecord              string `json:"promotion_record,omitempty"`
+	RolloutPolicyRevision        string `json:"rollout_policy_revision"`
 }
 
 type TreatmentRouteSelection struct {
@@ -544,6 +534,9 @@ func validateDiagnosisPromotionRecord(recordID, championID, challengerID string)
 	if !ok {
 		return fmt.Errorf("unknown Diagnosis promotion record %q", recordID)
 	}
+	if !validDiagnosisRolloutPolicyRevision(record.RolloutPolicyRevision) {
+		return fmt.Errorf("Diagnosis promotion record %q has unsupported rollout policy %q", recordID, record.RolloutPolicyRevision)
+	}
 	if record.ChampionConfigurationID != championID || record.ChallengerConfigurationID != challengerID {
 		return fmt.Errorf(
 			"Diagnosis promotion record %q does not approve Champion %q -> Challenger %q",
@@ -590,6 +583,10 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 		served = p.diagnosisChallengerConfigurationID
 	}
 
+	rolloutPolicyRevision := DiagnosisRolloutPolicyV1
+	if record, ok := knownDiagnosisPromotionRecords[p.diagnosisPromotionRecord]; ok {
+		rolloutPolicyRevision = record.RolloutPolicyRevision
+	}
 	selection := DiagnosisRouteSelection{
 		Stage: stageOrChampion(p.diagnosisStage), SubjectBucket: bucket,
 		ServedConfigurationID:        served,
@@ -599,6 +596,7 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 		ChallengerConfigurationID:    p.diagnosisChallengerConfigurationID,
 		CanaryBPS:                    p.diagnosisCanaryBPS,
 		PromotionRecord:              p.diagnosisPromotionRecord,
+		RolloutPolicyRevision:        rolloutPolicyRevision,
 	}
 	if shadow != "" {
 		selection.ShadowDecisionPolicyRevision = knownDiagnosisConfigurations[shadow].DecisionPolicyRevision

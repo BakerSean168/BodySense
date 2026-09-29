@@ -10,8 +10,7 @@ def test_repository_promotion_evidence_is_ready_for_shadow() -> None:
     assert report["reasons"] == []
     assert report["qualification_chain"][0]["configuration_id"] == policy.champion_configuration_id
     assert (
-        report["qualification_chain"][-1]["configuration_id"]
-        == policy.challenger_configuration_id
+        report["qualification_chain"][-1]["configuration_id"] == policy.challenger_configuration_id
     )
     assert report["interaction_experiment"]["required"] is False
     assert report["rollout"]["canary_steps_bps"] == [500, 2500, 5000]
@@ -19,8 +18,7 @@ def test_repository_promotion_evidence_is_ready_for_shadow() -> None:
 
 def test_claim_surface_successor_promotion_evidence_is_ready_for_shadow() -> None:
     policy_path = (
-        Path(__file__).resolve().parents[2]
-        / "data/evals/diagnosis_promotion_policy_v2.json"
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v2.json"
     )
     policy = load_promotion_policy(policy_path)
     report = evaluate_promotion_readiness(policy)
@@ -34,8 +32,7 @@ def test_claim_surface_successor_promotion_evidence_is_ready_for_shadow() -> Non
 
 def test_negation_aware_successor_promotion_evidence_is_ready_for_shadow() -> None:
     policy_path = (
-        Path(__file__).resolve().parents[2]
-        / "data/evals/diagnosis_promotion_policy_v3.json"
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v3.json"
     )
     policy = load_promotion_policy(policy_path)
     report = evaluate_promotion_readiness(policy)
@@ -66,8 +63,7 @@ def test_negation_aware_successor_promotion_evidence_is_ready_for_shadow() -> No
 
 def test_negation_bridge_successor_promotion_evidence_is_ready_for_shadow() -> None:
     policy_path = (
-        Path(__file__).resolve().parents[2]
-        / "data/evals/diagnosis_promotion_policy_v4.json"
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v4.json"
     )
     policy = load_promotion_policy(policy_path)
     report = evaluate_promotion_readiness(policy)
@@ -88,8 +84,7 @@ def test_negation_bridge_successor_promotion_evidence_is_ready_for_shadow() -> N
 
 def test_partial_negation_policy_report_blocks_readiness(monkeypatch) -> None:
     policy_path = (
-        Path(__file__).resolve().parents[2]
-        / "data/evals/diagnosis_promotion_policy_v3.json"
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v3.json"
     )
     policy = load_promotion_policy(policy_path)
     from src.evals import diagnosis_promotion
@@ -113,8 +108,7 @@ def test_partial_negation_policy_report_blocks_readiness(monkeypatch) -> None:
 
 def test_negation_policy_identity_mismatch_blocks_readiness(monkeypatch) -> None:
     policy_path = (
-        Path(__file__).resolve().parents[2]
-        / "data/evals/diagnosis_promotion_policy_v3.json"
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v3.json"
     )
     policy = load_promotion_policy(policy_path)
     from src.evals import diagnosis_promotion
@@ -132,6 +126,24 @@ def test_negation_policy_identity_mismatch_blocks_readiness(monkeypatch) -> None
     assert result["ready_for_shadow"] is False
     assert (
         "required policy report detector_revision mismatch: "
-        "data/evals/reports/diagnosis_negation_policy_v2.json"
-        in result["reasons"]
+        "data/evals/reports/diagnosis_negation_policy_v2.json" in result["reasons"]
+    )
+
+
+def test_structured_authority_rollout_promotion_v8_is_ready_for_shadow() -> None:
+    policy_path = (
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v8.json"
+    )
+    policy = load_promotion_policy(policy_path)
+    report = evaluate_promotion_readiness(policy)
+
+    assert policy.name == "diagnosis_promotion_v8"
+    assert policy.champion_configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert policy.challenger_configuration_id == "diag-config-ba10b8e6820c3691"
+    assert policy.rollout.policy_revision == "diagnosis-rollout-policy-v2-structured-authority"
+    assert report["ready_for_shadow"] is True
+    assert report["reasons"] == []
+    assert report["interaction_experiment"]["required"] is True
+    assert (
+        report["rollout"]["policy_revision"] == "diagnosis-rollout-policy-v2-structured-authority"
     )

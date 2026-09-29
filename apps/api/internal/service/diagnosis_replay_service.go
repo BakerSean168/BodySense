@@ -41,10 +41,37 @@ type DiagnosisReplayLayer struct {
 	Checks []DiagnosisReplayCheck `json:"checks"`
 }
 
+type DiagnosisReplayAuthorityEndpoint struct {
+	DecisionPolicyRevision      string `json:"decision_policy_revision"`
+	GovernanceVerdict           string `json:"governance_verdict"`
+	LegacyProseGovernanceOnly   bool   `json:"legacy_prose_governance_only"`
+	SafetyFindingCount          int    `json:"safety_finding_count"`
+	ForbiddenSideEffectsPresent bool   `json:"forbidden_side_effects_present"`
+}
+
+type DiagnosisReplayAuthorityEvidence struct {
+	SafetyEnvelopePresent bool                             `json:"safety_envelope_present"`
+	CoverageComplete      bool                             `json:"coverage_complete"`
+	ActiveBlockerCount    int                              `json:"active_blocker_count"`
+	RequiresReview        bool                             `json:"requires_review"`
+	Baseline              DiagnosisReplayAuthorityEndpoint `json:"baseline"`
+	Replay                DiagnosisReplayAuthorityEndpoint `json:"replay"`
+}
+
+type DiagnosisReplayAuthorityComparison struct {
+	PolicyRevision  string                           `json:"policy_revision,omitempty"`
+	PromotionRecord string                           `json:"promotion_record,omitempty"`
+	Classification  string                           `json:"classification,omitempty"`
+	GateEquivalent  bool                             `json:"gate_equivalent"`
+	ReasonCodes     []string                         `json:"reason_codes,omitempty"`
+	Evidence        DiagnosisReplayAuthorityEvidence `json:"evidence"`
+}
+
 type DiagnosisReplayComparison struct {
-	Hard         DiagnosisReplayLayer `json:"hard"`
-	Semantic     DiagnosisReplayLayer `json:"semantic"`
-	Presentation DiagnosisReplayLayer `json:"presentation"`
+	Hard         DiagnosisReplayLayer               `json:"hard"`
+	Semantic     DiagnosisReplayLayer               `json:"semantic"`
+	Presentation DiagnosisReplayLayer               `json:"presentation"`
+	Authority    DiagnosisReplayAuthorityComparison `json:"authority,omitempty"`
 }
 
 type DiagnosisReplaySnapshot struct {
@@ -58,16 +85,17 @@ type DiagnosisReplaySnapshot struct {
 }
 
 type DiagnosisReplayReport struct {
-	Mode                  string                    `json:"mode"`
-	SourceAnalysisID      uuid.UUID                 `json:"source_analysis_id"`
-	SourceConfigurationID string                    `json:"source_configuration_id"`
-	TargetConfigurationID string                    `json:"target_configuration_id"`
-	InputFingerprint      string                    `json:"input_fingerprint"`
-	ArtifactIntegrity     DiagnosisReplayLayer      `json:"artifact_integrity"`
-	Baseline              DiagnosisReplaySnapshot   `json:"baseline"`
-	Replay                DiagnosisReplaySnapshot   `json:"replay"`
-	Comparison            DiagnosisReplayComparison `json:"comparison"`
-	Output                json.RawMessage           `json:"output"`
+	Mode                  string                           `json:"mode"`
+	SourceAnalysisID      uuid.UUID                        `json:"source_analysis_id"`
+	SourceConfigurationID string                           `json:"source_configuration_id"`
+	TargetConfigurationID string                           `json:"target_configuration_id"`
+	InputFingerprint      string                           `json:"input_fingerprint"`
+	ArtifactIntegrity     DiagnosisReplayLayer             `json:"artifact_integrity"`
+	Baseline              DiagnosisReplaySnapshot          `json:"baseline"`
+	Replay                DiagnosisReplaySnapshot          `json:"replay"`
+	Comparison            DiagnosisReplayComparison        `json:"comparison"`
+	AuthorityEvidence     DiagnosisReplayAuthorityEvidence `json:"authority_evidence"`
+	Output                json.RawMessage                  `json:"output"`
 }
 
 type DiagnosisReplayService struct {
@@ -393,8 +421,107 @@ func buildDiagnosisReplayReport(
 		Baseline:              diagnosisReplaySnapshot(baseline),
 		Replay:                diagnosisReplaySnapshot(replayed),
 		Comparison:            compareDiagnosisReplayOutputs(baseline, replayed),
+		AuthorityEvidence:     diagnosisReplayAuthorityEvidence(input, baseline, replayed),
 		Output:                replayRaw,
 	}
+}
+
+func diagnosisReplayAuthorityEvidence(input DiagnosisReplayInput, baseline, replayed map[string]any) DiagnosisReplayAuthorityEvidence {
+	evidence := DiagnosisReplayAuthorityEvidence{
+		SafetyEnvelopePresent: input.SafetyEnvelope != nil,
+		Baseline:              diagnosisReplayAuthorityEndpoint(baseline),
+		Replay:                diagnosisReplayAuthorityEndpoint(replayed),
+	}
+	if input.SafetyEnvelope != nil {
+		evidence.CoverageComplete = input.SafetyEnvelope.Coverage.Complete
+		evidence.ActiveBlockerCount = len(input.SafetyEnvelope.ActiveBlockers)
+		evidence.RequiresReview = input.SafetyEnvelope.RequiresReview
+	}
+	return evidence
+}
+
+func diagnosisReplayAuthorityEndpoint(payload map[string]any) DiagnosisReplayAuthorityEndpoint {
+	return DiagnosisReplayAuthorityEndpoint{
+		DecisionPolicyRevision:      replayPayloadDecisionPolicyRevision(payload),
+		GovernanceVerdict:           replayPayloadGovernanceVerdict(payload),
+		LegacyProseGovernanceOnly:   replayLegacyProseGovernanceOnly(payload),
+		SafetyFindingCount:          replayPayloadSafetyFindingCount(payload),
+		ForbiddenSideEffectsPresent: replayHasForbiddenSideEffects(payload),
+	}
+}
+
+func replayPayloadDecisionPolicyRevision(payload map[string]any) string {
+	if configuration, ok := payload["agent_configuration"].(map[string]any); ok {
+		if revision, ok := configuration["decision_policy_revision"].(string); ok && strings.TrimSpace(revision) != "" {
+			return strings.TrimSpace(revision)
+		}
+	}
+	if authority, ok := payload["decision_authority"].(map[string]any); ok {
+		if revision, ok := authority["policy_revision"].(string); ok {
+			return strings.TrimSpace(revision)
+		}
+	}
+	return ""
+}
+
+func replayPayloadGovernanceVerdict(payload map[string]any) string {
+	governance, _ := payload["governance"].(map[string]any)
+	verdict, _ := governance["verdict"].(string)
+	return strings.TrimSpace(verdict)
+}
+
+func replayPayloadSafetyFindingCount(payload map[string]any) int {
+	findings, _ := payload["safety_findings"].([]any)
+	return len(findings)
+}
+
+func replayLegacyProseGovernanceOnly(payload map[string]any) bool {
+	status, _ := payload["status"].(string)
+	if status != "safety_blocked" || replayPayloadDecisionPolicyRevision(payload) != DiagnosisDecisionPolicyV1 {
+		return false
+	}
+	authority, _ := payload["decision_authority"].(map[string]any)
+	outcome, _ := authority["outcome"].(string)
+	if outcome != string(DiagnosisBlock) || !replayStringListContains(authority["reasons"], "agent_output_failed_safety_governance") {
+		return false
+	}
+	governance, _ := payload["governance"].(map[string]any)
+	verdict, _ := governance["verdict"].(string)
+	issues, _ := governance["issues"].([]any)
+	if verdict != "rejected" || len(issues) == 0 {
+		return false
+	}
+	for _, raw := range issues {
+		issue, ok := raw.(map[string]any)
+		if !ok {
+			return false
+		}
+		policy, _ := issue["policy"].(string)
+		if policy != "red_flag_safety" {
+			return false
+		}
+	}
+	return true
+}
+
+func replayStringListContains(raw any, want string) bool {
+	items, ok := raw.([]any)
+	if !ok {
+		if strings, ok := raw.([]string); ok {
+			for _, item := range strings {
+				if item == want {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, item := range items {
+		if value, ok := item.(string); ok && value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func diagnosisReplayArtifactIntegrity(
