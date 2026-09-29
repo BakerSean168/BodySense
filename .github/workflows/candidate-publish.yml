@@ -254,7 +254,7 @@ jobs:
             dockerfile: docker/Dockerfile.web
             cache_scope: candidate-web
             timeout_minutes: 30
-            extra_build_args: ""
+            extra_build_args: BUNDLE_ANATOMY_ATLAS=false
           - component: api
             image: bodysense-api
             context: apps/api
@@ -503,6 +503,10 @@ jobs:
           docker cp "$container:/usr/share/nginx/html/." "$RUNNER_TEMP/bodysense-web-root/"
           grep -Fq "$ASSET_BASE" "$RUNNER_TEMP/bodysense-web-root/index.html" || {
             echo "candidate Web image does not reference expected CDN base: $ASSET_BASE" >&2
+            exit 1
+          }
+          [[ ! -e "$RUNNER_TEMP/bodysense-web-root/static/anatomy/vanatome" ]] || {
+            echo 'candidate Web image unexpectedly bundles the Vanatome atlas already published to CDN' >&2
             exit 1
           }
           failures=0
