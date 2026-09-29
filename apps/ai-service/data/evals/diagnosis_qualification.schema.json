@@ -37,6 +37,19 @@
           "title": "Body State Revision",
           "type": "integer"
         },
+        "model_output": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Output"
+        },
         "profile": {
           "additionalProperties": true,
           "title": "Profile",
@@ -49,6 +62,17 @@
           },
           "title": "Relevant History",
           "type": "array"
+        },
+        "safety_envelope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SafetyEnvelopeV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "user_id": {
           "default": "eval-user",
@@ -67,6 +91,46 @@
       "additionalProperties": false,
       "description": "Case taxonomy plus deterministic hard expectations used for qualification.",
       "properties": {
+        "applicability_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability Reason"
+        },
+        "applicability_revision": {
+          "anyOf": [
+            {
+              "const": "diagnosis-case-applicability-v1",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability Revision"
+        },
+        "applicable_configuration_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicable Configuration Ids"
+        },
         "case_category": {
           "minLength": 1,
           "title": "Case Category",
@@ -159,6 +223,284 @@
       ],
       "title": "DiagnosisEvalMetadata",
       "type": "object"
+    },
+    "JsonValue": {},
+    "SafetyAssertionV1": {
+      "additionalProperties": false,
+      "properties": {
+        "concept": {
+          "$ref": "#/$defs/SafetyConceptV1"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed At"
+        },
+        "polarity": {
+          "$ref": "#/$defs/SafetyPolarityV1"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance"
+        },
+        "review_state": {
+          "$ref": "#/$defs/SafetyReviewStateV1"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/SafetySourceKindV1"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "temporality": {
+          "$ref": "#/$defs/SafetyTemporalityV1"
+        }
+      },
+      "required": [
+        "concept",
+        "polarity",
+        "temporality",
+        "review_state",
+        "source_ref",
+        "source_kind"
+      ],
+      "title": "SafetyAssertionV1",
+      "type": "object"
+    },
+    "SafetyBlockerReasonV1": {
+      "enum": [
+        "structured_current_signal",
+        "legacy_active_state"
+      ],
+      "title": "SafetyBlockerReasonV1",
+      "type": "string"
+    },
+    "SafetyBlockerV1": {
+      "additionalProperties": false,
+      "properties": {
+        "concept": {
+          "$ref": "#/$defs/SafetyConceptV1"
+        },
+        "reason": {
+          "$ref": "#/$defs/SafetyBlockerReasonV1"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/SafetySourceKindV1"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "concept",
+        "source_ref",
+        "source_kind",
+        "reason"
+      ],
+      "title": "SafetyBlockerV1",
+      "type": "object"
+    },
+    "SafetyConceptV1": {
+      "enum": [
+        "trauma",
+        "radiating_pain",
+        "numbness",
+        "weakness",
+        "dizziness",
+        "gait_instability",
+        "severe_pain",
+        "worsening",
+        "infection",
+        "systemic",
+        "unknown_red_flag"
+      ],
+      "title": "SafetyConceptV1",
+      "type": "string"
+    },
+    "SafetyCoverageV1": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_revision": {
+          "const": "body-state-safety-capture-v1",
+          "title": "Capture Revision",
+          "type": "string"
+        },
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "covered_source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Covered Source Refs",
+          "type": "array"
+        },
+        "incomplete_source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Incomplete Source Refs",
+          "type": "array"
+        },
+        "required_concepts": {
+          "maxItems": 5,
+          "minItems": 5,
+          "prefixItems": [
+            {
+              "const": "trauma",
+              "type": "string"
+            },
+            {
+              "const": "radiating_pain",
+              "type": "string"
+            },
+            {
+              "const": "numbness",
+              "type": "string"
+            },
+            {
+              "const": "weakness",
+              "type": "string"
+            },
+            {
+              "const": "dizziness",
+              "type": "string"
+            }
+          ],
+          "title": "Required Concepts",
+          "type": "array"
+        },
+        "revision": {
+          "const": "body-state-safety-coverage-v1",
+          "title": "Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "revision",
+        "capture_revision",
+        "required_concepts",
+        "covered_source_refs",
+        "incomplete_source_refs",
+        "complete"
+      ],
+      "title": "SafetyCoverageV1",
+      "type": "object"
+    },
+    "SafetyEnvelopeV2": {
+      "additionalProperties": false,
+      "properties": {
+        "active_blockers": {
+          "items": {
+            "$ref": "#/$defs/SafetyBlockerV1"
+          },
+          "title": "Active Blockers",
+          "type": "array"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/SafetyAssertionV1"
+          },
+          "title": "Assertions",
+          "type": "array"
+        },
+        "body_state_revision": {
+          "exclusiveMinimum": 0,
+          "title": "Body State Revision",
+          "type": "integer"
+        },
+        "coverage": {
+          "$ref": "#/$defs/SafetyCoverageV1"
+        },
+        "legacy_state_present": {
+          "title": "Legacy State Present",
+          "type": "boolean"
+        },
+        "policy_revision": {
+          "const": "body-state-safety-policy-v1",
+          "title": "Policy Revision",
+          "type": "string"
+        },
+        "requires_review": {
+          "title": "Requires Review",
+          "type": "boolean"
+        },
+        "schema_revision": {
+          "const": "body-state-safety-envelope-v2",
+          "title": "Schema Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_revision",
+        "policy_revision",
+        "body_state_revision",
+        "assertions",
+        "active_blockers",
+        "requires_review",
+        "legacy_state_present",
+        "coverage"
+      ],
+      "title": "SafetyEnvelopeV2",
+      "type": "object"
+    },
+    "SafetyPolarityV1": {
+      "enum": [
+        "present",
+        "absent",
+        "uncertain"
+      ],
+      "title": "SafetyPolarityV1",
+      "type": "string"
+    },
+    "SafetyReviewStateV1": {
+      "enum": [
+        "confirmed",
+        "unverified"
+      ],
+      "title": "SafetyReviewStateV1",
+      "type": "string"
+    },
+    "SafetySourceKindV1": {
+      "enum": [
+        "body_state_fact",
+        "legacy_safety_state"
+      ],
+      "title": "SafetySourceKindV1",
+      "type": "string"
+    },
+    "SafetyTemporalityV1": {
+      "enum": [
+        "current",
+        "historical",
+        "resolved"
+      ],
+      "title": "SafetyTemporalityV1",
+      "type": "string"
     }
   },
   "additionalProperties": false,

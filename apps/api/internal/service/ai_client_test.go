@@ -197,6 +197,7 @@ func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 		UserID:            "user-1",
 		ConfigurationID:   defaultDiagnosisConfigurationID,
 		BodyStateRevision: 12,
+		SafetyEnvelope:    &SafetyEnvelopeV2{SchemaRevision: SafetyEnvelopeSchemaV2, PolicyRevision: SafetyEnvelopePolicyV1, BodyStateRevision: 12, Assertions: []SafetyAssertionV1{}, ActiveBlockers: []SafetyBlockerV1{}},
 		BodyState:         json.RawMessage(`{"current_revision":12,"facts":[{"id":"fact-1","kind":"discomfort","value":"颈肩酸胀"}],"observations":[]}`),
 		RelevantHistory:   json.RawMessage(`[{"revision":11,"change_type":"fact.temporal_changed"}]`),
 		Profile:           json.RawMessage(`{"gender":"male","birth_date":"1996-08-27","age_years":30}`),
@@ -212,7 +213,7 @@ func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 		t.Fatalf("unexpected body_state_revision: %#v", captured["body_state_revision"])
 	}
 
-	for _, key := range []string{"user_id", "configuration_id", "body_state", "relevant_history", "profile"} {
+	for _, key := range []string{"user_id", "configuration_id", "body_state", "safety_envelope", "relevant_history", "profile"} {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing %s in request: %#v", key, captured)
 		}

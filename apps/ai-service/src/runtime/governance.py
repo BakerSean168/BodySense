@@ -30,6 +30,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from pydantic import ValidationError
+
+from ..models.diagnosis import DiagnosisSafetyFindingV1
+from ..models.safety import SafetyEnvelopeV2
 from ..services.assessment_evidence import (
     AssessmentEvidenceItem,
     assessment_evidence_issues,
@@ -59,6 +63,7 @@ DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4 = "diagnosis-governance-v4-claim-surface
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5 = "diagnosis-governance-v5-negation-aware-claims"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6 = "diagnosis-governance-v6-negation-bridge-claims"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7 = "diagnosis-governance-v7-negation-list-claims"
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8 = "diagnosis-governance-v8-structured-safety"
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION = DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V4
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
 ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
@@ -192,9 +197,7 @@ _RED_FLAG_SCAN_EXCLUDE = frozenset(
 # nearby possibilities and may mention the red-flag concepts that distinguish
 # them. Unknown fields remain scan-visible so a new current-claim field cannot
 # silently bypass the safety gate.
-_DIAGNOSIS_V4_CANDIDATE_EDUCATION_FIELDS = frozenset(
-    {"name", "typical_symptoms", "differential"}
-)
+_DIAGNOSIS_V4_CANDIDATE_EDUCATION_FIELDS = frozenset({"name", "typical_symptoms", "differential"})
 
 # These fields carry provenance, authority, or acquisition metadata. The v3
 # serializer intentionally does not use this set; changing it there would
@@ -287,10 +290,61 @@ def _collect_issues(
     rag_results: list[dict[str, Any]] | None,
     extracted_info: list[dict[str, Any]] | None,
     assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None,
+    body_state: dict[str, Any] | None,
+    safety_envelope: SafetyEnvelopeV2 | None,
 ) -> list[GovernanceIssue]:
     """Run schema + red_flag + (treatment) faithfulness policies."""
     issues: list[GovernanceIssue] = []
     issues.extend(check_schema_valid(payload, _REQUIRED_FIELDS[kind]))
+
+    if kind == "diagnosis" and policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8:
+        if safety_envelope is not None and safety_envelope.requires_review:
+            issues.append(
+                GovernanceIssue(
+                    "schema.structured_safety",
+                    IssueSeverity.ERROR,
+                    "active_structured_safety_blocker",
+                )
+            )
+        if body_state is None:
+            issues.append(
+                GovernanceIssue(
+                    "schema.structured_safety",
+                    IssueSeverity.ERROR,
+                    "pinned BodyState required for safety findings",
+                )
+            )
+        else:
+            refs = {
+                f"body-state:{kind}:{item['id']}"
+                for kind, key in (("fact", "facts"), ("observation", "observations"))
+                for item in body_state.get(key, [])
+                if isinstance(item, dict) and isinstance(item.get("id"), str)
+            }
+            findings = payload.get("safety_findings", [])
+            if not isinstance(findings, list):
+                issues.append(
+                    GovernanceIssue(
+                        "schema.structured_safety",
+                        IssueSeverity.ERROR,
+                        "safety_findings must be a list",
+                    )
+                )
+            else:
+                for raw in findings:
+                    try:
+                        finding = DiagnosisSafetyFindingV1.model_validate(raw)
+                        if any(ref not in refs for ref in finding.source_refs):
+                            raise ValueError("unresolvable safety finding source ref")
+                    except (ValidationError, ValueError):
+                        issues.append(
+                            GovernanceIssue(
+                                "schema.structured_safety",
+                                IssueSeverity.ERROR,
+                                "invalid or unresolvable safety finding",
+                            )
+                        )
+        return issues
 
     if kind == "assessment":
         issues.extend(assessment_evidence_issues(payload, assessment_evidence_catalog or {}))
@@ -378,6 +432,8 @@ def guard_structured_output(
     extracted_info: list[dict[str, Any]] | None = None,
     policy_revision: str | None = None,
     assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None = None,
+    body_state: dict[str, Any] | None = None,
+    safety_envelope: SafetyEnvelopeV2 | None = None,
 ) -> GuardedOutput:
     """Force-gate a structured diagnosis, treatment, posture, or Assessment payload."""
     effective_policy_revision = policy_revision
@@ -388,6 +444,7 @@ def guard_structured_output(
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V5,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V6,
             DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V7,
+            DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8,
         }:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if kind == "diagnosis" and effective_policy_revision is None:
@@ -416,6 +473,8 @@ def guard_structured_output(
         rag_results=rag_results,
         extracted_info=extracted_info,
         assessment_evidence_catalog=assessment_evidence_catalog,
+        body_state=body_state,
+        safety_envelope=safety_envelope,
     )
     status = _decide_verdict(kind, issues)
     reasons = [i.message for i in issues]

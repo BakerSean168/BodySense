@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ...configuration.diagnosis_agent_config import get_diagnosis_configuration
 from ...models.evidence import EvidenceAcquisitionTrace, EvidenceBudget, ExternalEvidenceStatus
+from ...models.safety import SafetyEnvelopeV2
 from ...services.diagnosis_service import get_diagnosis_service
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class DiagnosisRequest(BaseModel):
     body_state_revision: int = Field(gt=0)
     configuration_id: str = Field(min_length=1)
     body_state: dict[str, Any]
+    safety_envelope: SafetyEnvelopeV2 | None = None
     relevant_history: list[dict[str, Any]] = Field(default_factory=list)
     profile: dict[str, Any] = Field(default_factory=dict)
 
@@ -99,6 +101,9 @@ async def analyze_diagnosis(request: DiagnosisRequest):
     """Generate a typed possible-diagnosis analysis from durable BodyState."""
 
     try:
+        kwargs: dict[str, Any] = {}
+        if request.safety_envelope is not None:
+            kwargs["safety_envelope"] = request.safety_envelope
         return await get_diagnosis_service().generate_diagnosis(
             user_id=request.user_id,
             body_state_revision=request.body_state_revision,
@@ -106,6 +111,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             body_state=request.body_state,
             relevant_history=request.relevant_history,
             profile=request.profile,
+            **kwargs,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -31,7 +31,9 @@ from ..models.evidence import (
     EvidenceBudget,
     ExternalEvidenceStatus,
 )
+from ..models.safety import SafetyEnvelopeV2
 from ..runtime.governance import (
+    DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8,
     DIAGNOSIS_RED_FLAG_DETECTOR_REVISION_BY_POLICY,
     guard_structured_output,
 )
@@ -65,6 +67,7 @@ class DiagnosisService:
         body_state_revision: int,
         configuration_id: str,
         body_state: dict[str, Any],
+        safety_envelope: SafetyEnvelopeV2 | None = None,
         relevant_history: list[dict[str, Any]] | None = None,
         profile: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -77,10 +80,34 @@ class DiagnosisService:
         current_revision = int(body_state.get("current_revision") or 0)
         if current_revision and current_revision != body_state_revision:
             raise ValueError("body_state_revision does not match body_state.current_revision")
+        if (
+            safety_envelope is not None
+            and safety_envelope.body_state_revision != body_state_revision
+        ):
+            raise ValueError("safety_envelope does not match body_state_revision")
 
         config = self._configuration_resolver(configuration_id)
         profile = profile or {}
         relevant_history = relevant_history or []
+        if (
+            config.decision_policy_revision == "diagnosis-decision-policy-v2-structured-safety"
+            and config.governance_policy_revision != DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8
+        ):
+            raise ValueError("decision policy v2 requires v8 structured governance")
+        if config.governance_policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8:
+            if config.decision_policy_revision != "diagnosis-decision-policy-v2-structured-safety":
+                raise ValueError("v8 governance requires decision policy v2")
+            if safety_envelope is None:
+                raise ValueError("v8 Diagnosis requires SafetyEnvelopeV2")
+            return await self._generate_structured(
+                user_id=user_id,
+                body_state_revision=body_state_revision,
+                body_state=body_state,
+                safety_envelope=safety_envelope,
+                relevant_history=relevant_history,
+                profile=profile,
+                config=config,
+            )
         red_flag_input = _body_state_to_extracted_info(body_state)
         detector = get_red_flag_detector()
         try:
@@ -170,6 +197,96 @@ class DiagnosisService:
             evidence_trace=evidence_trace,
         )
 
+    async def _generate_structured(
+        self,
+        *,
+        user_id: str,
+        body_state_revision: int,
+        body_state: dict[str, Any],
+        safety_envelope: SafetyEnvelopeV2,
+        relevant_history: list[dict[str, Any]],
+        profile: dict[str, Any],
+        config: DiagnosisAgentManifest,
+    ) -> dict[str, Any]:
+        if safety_envelope.body_state_revision != body_state_revision:
+            raise ValueError("safety_envelope does not match body_state_revision")
+        if not safety_envelope.coverage.complete or safety_envelope.requires_review:
+            reason = (
+                "active_structured_safety_blocker"
+                if safety_envelope.requires_review
+                else "structured_safety_coverage_incomplete"
+            )
+            status = (
+                "safety_blocked" if safety_envelope.requires_review else "insufficient_information"
+            )
+            trace = EvidenceAcquisitionTrace(
+                policy_revision=config.evidence_policy_revision,
+                external_evidence_status=ExternalEvidenceStatus.NOT_REQUIRED,
+                budget=EvidenceBudget().snapshot(),
+            )
+            payload: dict[str, Any] = {
+                "status": status,
+                "scope": "full_body",
+                "summary": "结构化安全信息需要补充或审核。",
+                "candidates": [],
+                "cross_concern_patterns": [],
+                "information_gaps": [],
+                "safety_summary": {},
+                "safety_findings": [],
+            }
+            guarded = guard_structured_output(
+                "diagnosis",
+                payload,
+                policy_revision=config.governance_policy_revision,
+                body_state=body_state,
+                safety_envelope=safety_envelope,
+            )
+            emitted = guarded.to_emit_dict()
+            if guarded.verdict == "rejected":
+                emitted = _v8_rejected_payload(emitted)
+            return _emit_with_configuration(
+                emitted,
+                config,
+                execution_provenance=_bypassed_execution_provenance(config, reason),
+                evidence_trace=trace,
+            )
+
+        output, citations, evidence_trace, execution_provenance = await self._run_typed_agent(
+            user_id=user_id,
+            body_state_revision=body_state_revision,
+            body_state=body_state,
+            relevant_history=relevant_history,
+            profile=profile,
+            config=config,
+            safety_envelope=safety_envelope,
+        )
+        payload = output.model_dump(mode="json")
+        payload["information_gaps"] = _merge_information_gaps(
+            output.information_gaps, evidence_trace
+        )
+        payload["agent_configuration"] = config.provenance()
+        if citations:
+            payload["citations"] = citations
+        if evidence_trace is not None:
+            payload["evidence_acquisition"] = evidence_trace.model_dump(mode="json")
+        guarded = guard_structured_output(
+            "diagnosis",
+            payload,
+            rag_results=citations,
+            policy_revision=config.governance_policy_revision,
+            body_state=body_state,
+            safety_envelope=safety_envelope,
+        )
+        emitted = guarded.to_emit_dict()
+        if guarded.verdict == "rejected":
+            emitted = _v8_rejected_payload(emitted)
+        return _emit_with_configuration(
+            emitted,
+            config,
+            execution_provenance=execution_provenance,
+            evidence_trace=evidence_trace,
+        )
+
     async def _run_typed_agent(
         self,
         *,
@@ -179,6 +296,7 @@ class DiagnosisService:
         relevant_history: list[dict[str, Any]],
         profile: dict[str, Any],
         config: DiagnosisAgentManifest,
+        safety_envelope: SafetyEnvelopeV2 | None = None,
     ) -> tuple[
         DiagnosisAgentOutput,
         list[dict[str, Any]],
@@ -207,6 +325,7 @@ class DiagnosisService:
             profile=profile,
             evidence_searcher=searcher,
             evidence_acquirer=evidence_acquirer,
+            safety_envelope=safety_envelope,
         )
         run_kwargs: dict[str, Any] = {
             "deps": deps,
@@ -230,6 +349,19 @@ class DiagnosisService:
             evidence_trace,
             _execution_provenance(result, config),
         )
+
+
+def _v8_rejected_payload(emitted: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **emitted,
+        "status": "safety_blocked",
+        "scope": "full_body",
+        "candidates": [],
+        "cross_concern_patterns": [],
+        "information_gaps": [],
+        "safety_summary": {},
+        "safety_findings": [],
+    }
 
 
 def _merge_information_gaps(

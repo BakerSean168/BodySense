@@ -22,10 +22,11 @@ var (
 const DiagnosisRegressionExportSchema = "diagnosis_qualification_v1"
 
 type DiagnosisReplayInput struct {
-	BodyStateRevision int64           `json:"body_state_revision"`
-	BodyState         json.RawMessage `json:"body_state"`
-	RelevantHistory   json.RawMessage `json:"relevant_history"`
-	Profile           json.RawMessage `json:"profile"`
+	BodyStateRevision int64             `json:"body_state_revision"`
+	BodyState         json.RawMessage   `json:"body_state"`
+	RelevantHistory   json.RawMessage   `json:"relevant_history"`
+	Profile           json.RawMessage   `json:"profile"`
+	SafetyEnvelope    *SafetyEnvelopeV2 `json:"safety_envelope,omitempty"`
 }
 
 type DiagnosisReplayCheck struct {
@@ -83,6 +84,7 @@ func EncodeDiagnosisReplayInput(
 	bodyState json.RawMessage,
 	relevantHistory json.RawMessage,
 	profile json.RawMessage,
+	safetyEnvelope *SafetyEnvelopeV2,
 ) (json.RawMessage, error) {
 	if bodyStateRevision <= 0 || len(bodyState) == 0 || !json.Valid(bodyState) {
 		return nil, errors.New("valid replay BodyState and revision are required")
@@ -93,11 +95,15 @@ func EncodeDiagnosisReplayInput(
 	if len(profile) == 0 {
 		profile = json.RawMessage(`{}`)
 	}
+	if safetyEnvelope != nil && (safetyEnvelope.BodyStateRevision != bodyStateRevision || safetyEnvelope.SchemaRevision != SafetyEnvelopeSchemaV2 || safetyEnvelope.PolicyRevision != SafetyEnvelopePolicyV1) {
+		return nil, errors.New("replay safety envelope does not match pinned BodyState revision or policy")
+	}
 	return json.Marshal(DiagnosisReplayInput{
 		BodyStateRevision: bodyStateRevision,
 		BodyState:         bodyState,
 		RelevantHistory:   relevantHistory,
 		Profile:           profile,
+		SafetyEnvelope:    safetyEnvelope,
 	})
 }
 
@@ -118,6 +124,10 @@ func (s *DiagnosisReplayService) HistoricalReplay(
 	if policyRevision == DiagnosisDecisionPolicyV1 {
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), recomputed)
 		recomputed = ApplyDiagnosisDecision(recomputed, decision)
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, recomputed)
+		recomputed = ApplyDiagnosisDecision(recomputed, decision)
+		recomputed = normalizedDiagnosisReplayPayload(recomputed)
 	}
 	replayRaw, _ := json.Marshal(recomputed)
 	return buildDiagnosisReplayReport(
@@ -176,6 +186,28 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 				baseline, replayed, result,
 			), nil
 		}
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		if input.SafetyEnvelope == nil {
+			return nil, errors.New("counterfactual Diagnosis v8 requires frozen structured safety envelope")
+		}
+		probe := map[string]any{"status": "completed", "candidates": []any{map[string]any{"name": "counterfactual-preflight"}}, "governance": map[string]any{"verdict": "accepted"}, "safety_findings": []any{}}
+		preflight := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, probe)
+		if preflight.Outcome != DiagnosisAllowNormal {
+			status := "safety_blocked"
+			if preflight.Outcome == DiagnosisAbstain {
+				status = "insufficient_information"
+			}
+			replayed := ApplyDiagnosisDecision(map[string]any{
+				"status": status, "scope": "full_body", "summary": "structured safety preflight bypassed the agent",
+				"candidates": []any{}, "cross_concern_patterns": []any{}, "information_gaps": []any{}, "citations": []any{},
+				"governance":           map[string]any{"kind": "diagnosis", "verdict": "rejected", "reasons": preflight.Reasons, "issues": []any{}},
+				"agent_configuration":  map[string]any{"id": targetConfigurationID, "role": "diagnosis", "decision_policy_revision": policyRevision},
+				"execution_provenance": map[string]any{"status": "bypassed", "runtime": "go", "reason": preflight.Reasons[0]},
+			}, preflight)
+			result, _ := json.Marshal(replayed)
+			replayed = normalizedDiagnosisReplayPayload(replayed)
+			return buildDiagnosisReplayReport("counterfactual", analysis, input, targetConfigurationID, baseline, replayed, result), nil
+		}
 	}
 	if s.ai == nil {
 		return nil, errors.New("Diagnosis replay AI client is not configured")
@@ -187,6 +219,7 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 		BodyState:         input.BodyState,
 		RelevantHistory:   input.RelevantHistory,
 		Profile:           input.Profile,
+		SafetyEnvelope:    input.SafetyEnvelope,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("counterfactual Diagnosis replay: %w", err)
@@ -202,11 +235,23 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), replayed)
 		replayed = ApplyDiagnosisDecision(replayed, decision)
 		result, _ = json.Marshal(replayed)
+	} else if policyRevision == DiagnosisDecisionPolicyV2 {
+		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, replayed)
+		replayed = ApplyDiagnosisDecision(replayed, decision)
+		result, _ = json.Marshal(replayed)
+		replayed = normalizedDiagnosisReplayPayload(replayed)
 	}
 	return buildDiagnosisReplayReport(
 		"counterfactual", analysis, input, targetConfigurationID,
 		baseline, replayed, result,
 	), nil
+}
+
+func normalizedDiagnosisReplayPayload(payload map[string]any) map[string]any {
+	raw, _ := json.Marshal(payload)
+	var normalized map[string]any
+	_ = json.Unmarshal(raw, &normalized)
+	return normalized
 }
 
 func (s *DiagnosisReplayService) ExportRegressionCase(

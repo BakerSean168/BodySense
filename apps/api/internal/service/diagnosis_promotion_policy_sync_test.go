@@ -114,6 +114,23 @@ func TestDiagnosisPromotionRegistryMatchesImmutablePolicies(t *testing.T) {
 	}
 }
 
+func TestStructuredSafetyPromotionPolicyBindsV8Successor(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v6.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	registered := knownDiagnosisPromotionRecords[policy.Name]
+	if policy.Name != "diagnosis_promotion_v6" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisStructuredSafetyConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+		t.Fatalf("structured safety promotion identity drifted: %#v, %#v", policy, registered)
+	}
+}
+
 func TestRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing.T) {
 	_, current, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))

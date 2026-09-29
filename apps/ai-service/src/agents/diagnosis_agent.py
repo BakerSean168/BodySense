@@ -15,7 +15,11 @@ from ..models.diagnosis import (
     get_diagnosis_output_type,
 )
 from ..models.evidence import EvidenceGap
-from ..prompts.diagnosis import DIAGNOSIS_PROMPT_REVISION, get_diagnosis_system_prompt
+from ..prompts.diagnosis import (
+    DIAGNOSIS_PROMPT_REVISION,
+    DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION,
+    get_diagnosis_system_prompt,
+)
 
 DIAGNOSIS_TOOL_POLICY_V2 = "diagnosis-evidence-acquisition-tools-v2"
 
@@ -62,7 +66,7 @@ def create_diagnosis_agent(
     @agent.instructions
     def body_state_context(ctx: RunContext[DiagnosisDependencies]) -> str:
         deps = ctx.deps
-        return (
+        instructions = (
             "Analyze the exact durable BodyState revision supplied for this run.\n"
             f"BodyState revision: R{deps.body_state_revision}\n"
             f"BodyState JSON: {json.dumps(deps.body_state, ensure_ascii=False)}\n"
@@ -71,6 +75,12 @@ def create_diagnosis_agent(
             "Use acquire_evidence only for a typed, material EvidenceGap. "
             "User facts must use kind=user_fact and can never be supplied by RAG."
         )
+
+        if prompt_revision == DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION:
+            if deps.safety_envelope is None:
+                raise ValueError("v8 Diagnosis requires SafetyEnvelopeV2")
+            instructions += "\nSafetyEnvelopeV2 JSON: " + deps.safety_envelope.model_dump_json()
+        return instructions
 
     @agent.tool
     async def acquire_evidence(

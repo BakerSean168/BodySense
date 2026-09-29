@@ -145,18 +145,26 @@ func (s *BodyStateService) UpsertExtractedSymptom(
 		return nil
 	}
 
-	detailsJSON := bodyStateSymptomDetails(raw)
+	detailsJSON := bodyStateSymptomDetails(raw, false)
 	durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(bodyRegion)
 	captureID := strings.ToLower(bodyStateString(raw["capture_id"]))
 	sourceKey := "consultation:" + runID.String() + ":symptom:" + bodyStateHash(bodyRegion+"|"+symptom)
 	if bodyStateValidCaptureID(captureID) {
 		sourceKey = "consultation:capture:" + captureID
 	}
+	provenanceRaw := make(map[string]any, len(raw))
+	for key, value := range raw {
+		provenanceRaw[key] = value
+	}
+	delete(provenanceRaw, "safety_capture_revision")
+	for _, field := range structuredSafetyDetails {
+		delete(provenanceRaw, field.key)
+	}
 	provenanceJSON, _ := json.Marshal(map[string]any{
 		"source_type": "consultation_intake",
 		"run_id":      runID,
 		"capture_id":  captureID,
-		"raw":         raw,
+		"raw":         provenanceRaw,
 	})
 
 	// Model-mediated extraction is durable and visible for review, but cannot
@@ -212,7 +220,7 @@ func (s *BodyStateService) RecordInteractionAnswer(
 			BodyRegion:            durableRegion,
 			BodyRegionID:          durableRegionID,
 			Value:                 symptomType,
-			Details:               bodyStateSymptomDetails(symptom),
+			Details:               bodyStateSymptomDetails(symptom, true),
 			Origin:                "structured_answer",
 			ReviewState:           "confirmed",
 			LifecycleState:        "active",
@@ -681,7 +689,7 @@ func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UU
 	return err
 }
 
-func bodyStateSymptomDetails(raw map[string]any) datatypes.JSON {
+func bodyStateSymptomDetails(raw map[string]any, trustedSafety bool) datatypes.JSON {
 	details := map[string]any{}
 	for _, key := range []string{
 		"duration", "trigger", "relief", "severity", "radiation",
@@ -691,7 +699,51 @@ func bodyStateSymptomDetails(raw map[string]any) datatypes.JSON {
 			details[key] = value
 		}
 	}
+	if trustedSafety && raw["safety_capture_revision"] == SafetyCaptureRevisionV1 {
+		valid := true
+		for _, field := range structuredSafetyDetails {
+			if _, ok := raw[field.key].(bool); !ok {
+				valid = false
+			}
+		}
+		if valid {
+			details["safety_capture_revision"] = SafetyCaptureRevisionV1
+			for _, field := range structuredSafetyDetails {
+				details[field.key] = raw[field.key]
+			}
+		}
+	}
 	return datatypes.JSON(bodyStateMustJSON(details))
+}
+
+var bodyStateSafetySignalOptions = []struct{ option, concept string }{
+	{"外伤或创伤", "trauma"}, {"放射痛", "radiating_pain"}, {"麻木", "numbness"},
+	{"无力", "weakness"}, {"头晕", "dizziness"},
+}
+
+func bodyStateSafetySelection(value any) (map[string]any, bool) {
+	items, ok := value.([]any)
+	if !ok || len(items) == 0 {
+		return nil, false
+	}
+	selected := map[string]bool{}
+	for _, item := range items {
+		option, ok := item.(string)
+		if !ok || selected[option] {
+			return nil, false
+		}
+		selected[option] = true
+	}
+	if selected["以上均无"] && len(selected) != 1 {
+		return nil, false
+	}
+	result := map[string]any{"safety_capture_revision": SafetyCaptureRevisionV1}
+	for _, item := range bodyStateSafetySignalOptions {
+		result[item.concept] = selected[item.option]
+		delete(selected, item.option)
+	}
+	delete(selected, "以上均无")
+	return result, len(selected) == 0
 }
 
 func bodyStateValidCaptureID(value string) bool {
@@ -708,7 +760,14 @@ func bodyStateBoundSymptomAnswer(
 	answer json.RawMessage,
 ) (map[string]any, string, bool, error) {
 	var envelope struct {
-		Purpose      string `json:"purpose"`
+		Purpose string `json:"purpose"`
+		Fields  []struct {
+			Key              string   `json:"key"`
+			AnswerType       string   `json:"answer_type"`
+			Options          []string `json:"options"`
+			ExclusiveOptions []string `json:"exclusive_options"`
+			Required         bool     `json:"required"`
+		} `json:"fields"`
 		StateBinding struct {
 			Revision  string            `json:"revision"`
 			CaptureID string            `json:"capture_id"`
@@ -738,6 +797,28 @@ func bodyStateBoundSymptomAnswer(
 		"radiation": true, "functional_impact": true, "neurological_signs": true,
 		"onset": true, "additional_notes": true,
 	}
+	// Only the runtime's bounded select-all checklist can establish complete
+	// safety capture. Seed text and unrelated answer fields cannot supply it.
+	var safetyCapture map[string]any
+	if envelope.StateBinding.FieldMap["safety_signals"] == "safety_signals" {
+		for _, field := range envelope.Fields {
+			if field.Key != "safety_signals" || field.AnswerType != "multi_choice" || !field.Required || len(field.Options) != 6 || len(field.ExclusiveOptions) != 1 || field.ExclusiveOptions[0] != "以上均无" {
+				continue
+			}
+			validOptions := true
+			for i, option := range bodyStateSafetySignalOptions {
+				if field.Options[i] != option.option {
+					validOptions = false
+				}
+			}
+			if validOptions && field.Options[5] == "以上均无" {
+				if safety, valid := bodyStateSafetySelection(payload.Fields["safety_signals"]); valid {
+					safetyCapture = safety
+				}
+			}
+			break
+		}
+	}
 	symptom := map[string]any{}
 	for _, key := range []string{
 		"body_part", "symptom_type", "duration", "trigger", "relief", "severity",
@@ -754,6 +835,9 @@ func bodyStateBoundSymptomAnswer(
 		if value := bodyStateString(payload.Fields[answerKey]); value != "" {
 			symptom[target] = value
 		}
+	}
+	for key, value := range safetyCapture {
+		symptom[key] = value
 	}
 	if bodyStateString(symptom["body_part"]) == "" || bodyStateString(symptom["symptom_type"]) == "" {
 		return nil, captureID, true, errors.New("structured symptom intake binding is missing symptom identity")

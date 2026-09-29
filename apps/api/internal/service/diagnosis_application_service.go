@@ -133,7 +133,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	route := s.deployment.SelectDiagnosisRoute(userID.String())
 	configurationID := route.ServedConfigurationID
 	policyRevision := route.ServedDecisionPolicyRevision
-	if policyRevision != DiagnosisDecisionPolicyV1 {
+	if policyRevision != DiagnosisDecisionPolicyV1 && policyRevision != DiagnosisDecisionPolicyV2 {
 		return nil, diagnosisApplicationError(
 			"INVALID_AGENT_CONFIGURATION",
 			"selected Diagnosis configuration does not use the current decision authority",
@@ -145,12 +145,28 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode body state", err)
 	}
 	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
-	replayInput, err := EncodeDiagnosisReplayInput(snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON)
+	// Preserve the historical pre-agent block for malformed legacy state. A
+	// projection error must never authorize an ordinary AI call.
+	envelope, projectionErr := ProjectSafetyEnvelopeV2(snapshot)
+	var frozenEnvelope *SafetyEnvelopeV2
+	if projectionErr == nil {
+		frozenEnvelope = &envelope
+	}
+	preflightBlock := json.RawMessage(nil)
+	if policyRevision == DiagnosisDecisionPolicyV1 {
+		preflightBlock = s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route)
+	} else {
+		preflightBlock = structuredDiagnosisPreflight(frozenEnvelope, snapshot.CurrentRevision, configurationID, route)
+	}
+	if projectionErr != nil && preflightBlock == nil {
+		return nil, diagnosisApplicationError("INVALID_SAFETY_STATE", "failed to project BodyState safety", projectionErr)
+	}
+	replayInput, err := EncodeDiagnosisReplayInput(snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON, frozenEnvelope)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to freeze Diagnosis replay input", err)
 	}
 
-	if blocked := s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route); blocked != nil {
+	if blocked := preflightBlock; blocked != nil {
 		analysis, persistErr := s.analyses.PersistAIResultWithReplayInput(ctx, userID, snapshot.CurrentRevision, blocked, replayInput)
 		if persistErr != nil {
 			return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to persist diagnosis safety state", persistErr)
@@ -165,6 +181,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	result, err := s.ai.AnalyzeDiagnosis(ctx, DiagnosisRequest{
 		UserID: userID.String(), ConfigurationID: configurationID,
 		BodyStateRevision: snapshot.CurrentRevision, BodyState: bodyStateJSON,
+		SafetyEnvelope:  frozenEnvelope,
 		RelevantHistory: historyJSON, Profile: profileJSON,
 	})
 	if err != nil {
@@ -185,7 +202,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis rollout provenance", err)
 	}
 
-	if redFlags, ok := parsed["red_flags"].(map[string]any); ok {
+	if redFlags, ok := parsed["red_flags"].(map[string]any); ok && policyRevision == DiagnosisDecisionPolicyV1 {
 		safetyPayload, marshalErr := json.Marshal(redFlags)
 		if marshalErr != nil {
 			return nil, diagnosisApplicationError("INVALID_AI_RESPONSE", "diagnosis safety response was not valid", marshalErr)
@@ -198,6 +215,9 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 
 	s.recordGovernedOutput(ctx, "diagnosis", &userID, &conversationID, nil, parsed, result)
 	decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, parsed)
+	if policyRevision == DiagnosisDecisionPolicyV2 {
+		decision = EvaluateDiagnosisDecisionV2(frozenEnvelope, snapshot.CurrentRevision, parsed)
+	}
 	parsed = ApplyDiagnosisDecision(parsed, decision)
 	result, err = json.Marshal(parsed)
 	if err != nil {
@@ -223,6 +243,47 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 
 	payload := s.publicPayload(ctx, userID, analysis)
 	return payload, nil
+}
+
+func structuredDiagnosisPreflight(envelope *SafetyEnvelopeV2, revision int64, configurationID string, route DiagnosisRouteSelection) json.RawMessage {
+	probe := map[string]any{"status": "completed", "candidates": []any{map[string]any{"name": "preflight"}}, "governance": map[string]any{"verdict": "accepted"}, "safety_findings": []any{}}
+	decision := EvaluateDiagnosisDecisionV2(envelope, revision, probe)
+	if decision.Outcome == DiagnosisAllowNormal {
+		return nil
+	}
+	payload := map[string]any{
+		"scope": "full_body", "candidates": []any{}, "cross_concern_patterns": []any{},
+		"information_gaps": []any{}, "safety_summary": map[string]any{}, "citations": []any{},
+		"agent_configuration": map[string]any{
+			"id": configurationID, "role": "diagnosis", "decision_policy_revision": DiagnosisDecisionPolicyV2,
+		},
+		"execution_provenance": map[string]any{
+			"status": "bypassed", "runtime": "go",
+		},
+		"evidence_acquisition": map[string]any{
+			"trace_revision":           evidenceAvailabilityTraceV2,
+			"policy_revision":          diagnosisEvidenceAvailabilityV2,
+			"external_evidence_status": externalEvidenceNotRequired,
+			"attempts":                 []any{},
+		},
+		"rollout_provenance": route,
+		"governance": map[string]any{
+			"kind": "diagnosis", "verdict": "rejected", "reasons": decision.Reasons, "issues": []any{},
+		},
+	}
+	if decision.Outcome == DiagnosisAbstain {
+		payload["execution_provenance"].(map[string]any)["reason"] = "structured_safety_coverage_incomplete"
+		payload["governance"].(map[string]any)["verdict"] = "accepted"
+		payload["governance"].(map[string]any)["reasons"] = []string{}
+	} else {
+		payload["execution_provenance"].(map[string]any)["reason"] = decision.Reasons[0]
+	}
+	payload = ApplyDiagnosisDecision(payload, decision)
+	if decision.Outcome == DiagnosisAbstain {
+		payload["summary"] = "结构化安全信息尚未完整采集，请完成安全信号确认后重新分析。"
+	}
+	encoded, _ := json.Marshal(payload)
+	return encoded
 }
 
 func (s *DiagnosisApplicationService) preAgentSafetyBlock(

@@ -112,6 +112,7 @@ def test_intake_candidate_has_stable_capture_id_and_is_unconfirmed() -> None:
     assert first[0]["capture_id"] == second[0]["capture_id"]
     assert len(first[0]["capture_id"]) == 24
     assert first[0]["confirmed"] is False
+    assert "safety_capture_revision" not in first[0]
 
 
 def test_gluteal_pain_without_radiation_still_requests_neurological_screen() -> None:
@@ -124,7 +125,8 @@ def test_gluteal_pain_without_radiation_still_requests_neurological_screen() -> 
     }
     question = build_symptom_intake_question(symptom)
     assert question is not None
-    assert question["fields"][0]["key"] == "neurological_signs"
+    assert question["fields"][0]["key"] == "safety_signals"
+    assert question["fields"][1]["key"] == "neurological_signs"
 
 
 def test_gap_policy_builds_at_most_three_typed_fields_and_preserves_binding() -> None:
@@ -138,7 +140,8 @@ def test_gap_policy_builds_at_most_three_typed_fields_and_preserves_binding() ->
     assert question is not None
     assert question["purpose"] == "symptom_intake"
     assert 1 <= len(question["fields"]) <= 3
-    assert question["fields"][0]["key"] == "neurological_signs"
+    assert question["fields"][0]["key"] == "safety_signals"
+    assert question["fields"][0]["exclusive_options"] == ["以上均无"]
     assert question["state_binding"]["capture_id"] == symptom["capture_id"]
 
 
@@ -155,9 +158,9 @@ def test_structured_answer_merges_into_same_symptom_capture() -> None:
         question,
         {
             "fields": {
+                "safety_signals": ["以上均无"],
                 "neurological_signs": "没有",
                 "duration": "1–4周",
-                "severity": "中度（5–6/10）",
             }
         },
     )
@@ -167,3 +170,55 @@ def test_structured_answer_merges_into_same_symptom_capture() -> None:
     assert completed["neurological_signs"] == "没有"
     assert completed["duration"] == "1–4周"
     assert completed["confirmed"] is True
+    assert completed["safety_capture_revision"] == "body-state-safety-capture-v1"
+    assert {
+        key: completed[key]
+        for key in ("trauma", "radiating_pain", "numbness", "weakness", "dizziness")
+    } == dict.fromkeys(("trauma", "radiating_pain", "numbness", "weakness", "dizziness"), False)
+
+
+def test_safety_checklist_selected_signals_are_exact_and_exhaustive() -> None:
+    question = build_symptom_intake_question(
+        {"capture_id": "0123456789abcdef01234567", "body_part": "右臀", "symptom_type": "疼痛"}
+    )
+    assert question is not None
+    assert question["fields"][0]["options"] == [
+        "外伤或创伤",
+        "放射痛",
+        "麻木",
+        "无力",
+        "头晕",
+        "以上均无",
+    ]
+    completed = apply_structured_intake_answer(
+        question, {"fields": {"safety_signals": ["放射痛", "麻木"]}}
+    )
+    assert completed is not None
+    assert completed["safety_capture_revision"] == "body-state-safety-capture-v1"
+    assert {
+        key: completed[key]
+        for key in ("trauma", "radiating_pain", "numbness", "weakness", "dizziness")
+    } == {
+        "trauma": False,
+        "radiating_pain": True,
+        "numbness": True,
+        "weakness": False,
+        "dizziness": False,
+    }
+
+
+def test_invalid_safety_checklist_never_claims_complete_capture() -> None:
+    question = build_symptom_intake_question(
+        {"capture_id": "0123456789abcdef01234567", "body_part": "右臀", "symptom_type": "疼痛"}
+    )
+    assert question is not None
+    for selection in (["以上均无", "麻木"], ["未知"], None, "麻木", []):
+        completed = apply_structured_intake_answer(
+            question, {"fields": {"safety_signals": selection, "duration": "1–4周"}}
+        )
+        assert completed is not None
+        assert "safety_capture_revision" not in completed
+        assert all(
+            key not in completed
+            for key in ("trauma", "radiating_pain", "numbness", "weakness", "dizziness")
+        )

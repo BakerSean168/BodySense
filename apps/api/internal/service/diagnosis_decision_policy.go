@@ -4,9 +4,153 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const DiagnosisDecisionPolicyV1 = "diagnosis-decision-policy-v1"
+const DiagnosisDecisionPolicyV2 = "diagnosis-decision-policy-v2-structured-safety"
+
+// EvaluateDiagnosisDecisionV2 uses only the frozen structured envelope and typed
+// output fields. Prose and legacy red_flags are never authority inputs.
+func EvaluateDiagnosisDecisionV2(envelope *SafetyEnvelopeV2, bodyStateRevision int64, payload map[string]any) DiagnosisDecision {
+	decision := DiagnosisDecision{PolicyRevision: DiagnosisDecisionPolicyV2, Outcome: DiagnosisBlock, Reasons: []string{"invalid_structured_safety_envelope"}}
+	if envelope == nil || envelope.SchemaRevision != SafetyEnvelopeSchemaV2 || envelope.PolicyRevision != SafetyEnvelopePolicyV1 || envelope.BodyStateRevision != bodyStateRevision || envelope.Coverage.Revision != SafetyCoverageRevisionV1 || envelope.Coverage.CaptureRevision != SafetyCaptureRevisionV1 || len(envelope.Coverage.RequiredConcepts) != len(structuredSafetyDetails) {
+		return decision
+	}
+	for i, field := range structuredSafetyDetails {
+		if envelope.Coverage.RequiredConcepts[i] != field.key {
+			return decision
+		}
+	}
+	if envelope.RequiresReview != (len(envelope.ActiveBlockers) > 0) || envelope.Coverage.Complete != (len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0) {
+		return decision
+	}
+	if envelope.RequiresReview {
+		decision.Reasons = []string{"active_structured_safety_blocker"}
+		return decision
+	}
+	if !envelope.Coverage.Complete {
+		decision.Outcome = DiagnosisAbstain
+		decision.Reasons = []string{"structured_safety_capture_incomplete"}
+		return decision
+	}
+	governance, ok := payload["governance"].(map[string]any)
+	if !ok {
+		decision.Reasons = []string{"malformed_policy_facts"}
+		return decision
+	}
+	verdict, ok := governance["verdict"].(string)
+	if !ok || (verdict != "accepted" && verdict != "degraded" && verdict != "rejected") {
+		decision.Reasons = []string{"malformed_policy_facts"}
+		return decision
+	}
+	if verdict == "rejected" {
+		decision.Reasons = []string{"agent_output_failed_safety_governance"}
+		return decision
+	}
+	status, ok := payload["status"].(string)
+	if !ok || (status != "completed" && status != "partial" && status != "insufficient_information" && status != "safety_blocked") {
+		decision.Reasons = []string{"malformed_policy_facts"}
+		return decision
+	}
+	candidates, ok := payload["candidates"].([]any)
+	if !ok {
+		decision.Reasons = []string{"malformed_policy_facts"}
+		return decision
+	}
+	if findingsRaw, exists := payload["safety_findings"]; exists {
+		findings, valid := findingsRaw.([]any)
+		if !valid {
+			decision.Reasons = []string{"malformed_structured_safety_findings"}
+			return decision
+		}
+		for _, raw := range findings {
+			finding, valid := raw.(map[string]any)
+			if !valid || !validDiagnosisSafetyFinding(finding) {
+				decision.Reasons = []string{"malformed_structured_safety_findings"}
+				return decision
+			}
+		}
+		if len(findings) > 0 {
+			decision.Outcome = DiagnosisEscalate
+			decision.Reasons = []string{"new_structured_runtime_safety_signal"}
+			return decision
+		}
+	} else {
+		decision.Reasons = []string{"malformed_structured_safety_findings"}
+		return decision
+	}
+	if acquisition, exists := payload["evidence_acquisition"]; exists {
+		item, valid := acquisition.(map[string]any)
+		if !valid {
+			decision.Reasons = []string{"malformed_policy_facts"}
+			return decision
+		}
+		gaps, valid := item["unresolved_critical_gaps"].([]any)
+		if !valid {
+			decision.Reasons = []string{"malformed_policy_facts"}
+			return decision
+		}
+		if len(gaps) > 0 {
+			decision.Outcome = DiagnosisAbstain
+			decision.Reasons = []string{"critical_evidence_gap_unresolved"}
+			return decision
+		}
+	}
+	if status == "insufficient_information" {
+		decision.Outcome = DiagnosisAbstain
+		decision.Reasons = []string{"insufficient_information"}
+		return decision
+	}
+	if status == "partial" || verdict == "degraded" {
+		decision.Outcome = DiagnosisAllowDegraded
+		decision.Reasons = []string{"partial_or_degraded_analysis"}
+		return decision
+	}
+	if status == "completed" && verdict == "accepted" && len(candidates) > 0 {
+		decision.Outcome = DiagnosisAllowNormal
+		decision.Reasons = []string{}
+		return decision
+	}
+	decision.Reasons = []string{"unrecognized_or_inconsistent_decision_state"}
+	return decision
+}
+
+func validDiagnosisSafetyFinding(finding map[string]any) bool {
+	concept, ok := finding["concept"].(string)
+	if !ok || !validSafetyConcept(SafetyConceptV1(concept)) || finding["temporality"] != "current" {
+		return false
+	}
+	if finding["polarity"] != "present" && finding["polarity"] != "uncertain" {
+		return false
+	}
+	refs, ok := finding["source_refs"].([]any)
+	if !ok || len(refs) == 0 {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, raw := range refs {
+		ref, ok := raw.(string)
+		if !ok || (!strings.HasPrefix(ref, "body-state:fact:") && !strings.HasPrefix(ref, "body-state:observation:")) || seen[ref] {
+			return false
+		}
+		if _, err := uuid.Parse(ref[strings.LastIndex(ref, ":")+1:]); err != nil {
+			return false
+		}
+		seen[ref] = true
+	}
+	return true
+}
+
+func validSafetyConcept(concept SafetyConceptV1) bool {
+	switch concept {
+	case SafetyTrauma, SafetyRadiatingPain, SafetyNumbness, SafetyWeakness, SafetyDizziness, SafetyGaitInstability, SafetySeverePain, SafetyWorsening, SafetyInfection, SafetySystemic, SafetyUnknownRedFlag:
+		return true
+	default:
+		return false
+	}
+}
 
 type DiagnosisDecisionOutcome string
 

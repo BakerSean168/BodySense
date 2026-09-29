@@ -1,0 +1,830 @@
+{
+  "cases": [
+    {
+      "name": "clear-confirmed-absent",
+      "snapshot": {
+        "current_revision": 12,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 12,
+        "assertions": [
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "separate-sources-positive-wins",
+      "snapshot": {
+        "current_revision": 13,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": false
+            }
+          },
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": true
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 13,
+        "assertions": [
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:22222222-2222-2222-2222-222222222222",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [
+          {
+            "concept": "dizziness",
+            "source_ref": "body-state:fact:22222222-2222-2222-2222-222222222222",
+            "source_kind": "body_state_fact",
+            "reason": "structured_current_signal"
+          }
+        ],
+        "requires_review": true,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "legacy-active-absence-does-not-clear",
+      "snapshot": {
+        "current_revision": 14,
+        "safety_state": {
+          "has_red_flags": true,
+          "status": "requires_review",
+          "flags": [
+            {
+              "category": "trauma"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 14,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "unverified",
+            "source_ref": "body-state:legacy-safety-state",
+            "source_kind": "legacy_safety_state"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [
+          {
+            "concept": "trauma",
+            "source_ref": "body-state:legacy-safety-state",
+            "source_kind": "legacy_safety_state",
+            "reason": "legacy_active_state"
+          }
+        ],
+        "requires_review": true,
+        "legacy_state_present": true,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "resolved-and-historical-nonblocking",
+      "snapshot": {
+        "current_revision": 15,
+        "safety_state": {
+          "has_red_flags": false,
+          "status": "resolved",
+          "flags": []
+        },
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "lifecycle_state": "resolved",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": true
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 15,
+        "assertions": [],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": true,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "malformed-legacy-fails-closed",
+      "snapshot": {
+        "current_revision": 16,
+        "safety_state": {
+          "has_red_flags": "yes",
+          "status": "requires_review"
+        },
+        "facts": []
+      },
+      "error": true
+    },
+    {
+      "name": "legacy-monitoring-preserves-evidence",
+      "snapshot": {
+        "current_revision": 17,
+        "safety_state": {
+          "has_red_flags": true,
+          "status": "monitoring",
+          "flags": [
+            {
+              "category": "trauma"
+            },
+            {
+              "category": "unmapped"
+            }
+          ]
+        },
+        "facts": []
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 17,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "unverified",
+            "source_ref": "body-state:legacy-safety-state",
+            "source_kind": "legacy_safety_state"
+          },
+          {
+            "concept": "unknown_red_flag",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "unverified",
+            "source_ref": "body-state:legacy-safety-state",
+            "source_kind": "legacy_safety_state"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": true,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "non-authority-details-ignored",
+      "snapshot": {
+        "current_revision": 18,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "33333333-3333-3333-3333-333333333333",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "value": "trauma and dizziness",
+            "details": [
+              "not",
+              "an object"
+            ]
+          },
+          {
+            "id": "44444444-4444-4444-4444-444444444444",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": "yes",
+              "trauma": {
+                "free_form": "yes"
+              }
+            }
+          },
+          {
+            "id": "55555555-5555-5555-5555-555555555555",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": true
+            },
+            "excluded_from_reasoning": true
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 18,
+        "assertions": [],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "unverified-positive",
+      "snapshot": {
+        "current_revision": 19,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "66666666-6666-6666-6666-666666666666",
+            "lifecycle_state": "active",
+            "review_state": "unverified",
+            "details": {
+              "dizziness": true
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 19,
+        "assertions": [
+          {
+            "concept": "dizziness",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "unverified",
+            "source_ref": "body-state:fact:66666666-6666-6666-6666-666666666666",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [
+          {
+            "concept": "dizziness",
+            "source_ref": "body-state:fact:66666666-6666-6666-6666-666666666666",
+            "source_kind": "body_state_fact",
+            "reason": "structured_current_signal"
+          }
+        ],
+        "requires_review": true,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "coverage-complete-single-source",
+      "snapshot": {
+        "current_revision": 50,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "00000700-0000-0000-0000-000000000000",
+            "kind": "discomfort",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "safety_capture_revision": "body-state-safety-capture-v1",
+              "trauma": false,
+              "radiating_pain": false,
+              "numbness": false,
+              "weakness": false,
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 50,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [
+            "body-state:fact:00000700-0000-0000-0000-000000000000"
+          ],
+          "incomplete_source_refs": [],
+          "complete": true
+        }
+      }
+    },
+    {
+      "name": "coverage-two-sources-one-incomplete",
+      "snapshot": {
+        "current_revision": 50,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "00000701-0000-0000-0000-000000000000",
+            "kind": "discomfort",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "safety_capture_revision": "body-state-safety-capture-v1",
+              "trauma": false,
+              "radiating_pain": false,
+              "numbness": false,
+              "weakness": false,
+              "dizziness": false
+            }
+          },
+          {
+            "id": "00000702-0000-0000-0000-000000000000",
+            "kind": "discomfort",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 50,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000702-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [
+            "body-state:fact:00000701-0000-0000-0000-000000000000"
+          ],
+          "incomplete_source_refs": [
+            "body-state:fact:00000702-0000-0000-0000-000000000000"
+          ],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "coverage-no-discomfort",
+      "snapshot": {
+        "current_revision": 50,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "00000703-0000-0000-0000-000000000000",
+            "kind": "self_measurement",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "safety_capture_revision": "body-state-safety-capture-v1",
+              "trauma": false,
+              "radiating_pain": false,
+              "numbness": false,
+              "weakness": false,
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 50,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
+    },
+    {
+      "name": "coverage-marker-missing-key",
+      "snapshot": {
+        "current_revision": 50,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "00000704-0000-0000-0000-000000000000",
+            "kind": "discomfort",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "safety_capture_revision": "body-state-safety-capture-v1",
+              "trauma": false,
+              "radiating_pain": false,
+              "numbness": false,
+              "dizziness": false
+            }
+          }
+        ]
+      },
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 50,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
+            "source_kind": "body_state_fact"
+          }
+        ],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [
+            "body-state:fact:00000704-0000-0000-0000-000000000000"
+          ],
+          "complete": false
+        }
+      }
+    }
+  ],
+  "provenance_round_trip": {
+    "schema_revision": "body-state-safety-envelope-v2",
+    "policy_revision": "body-state-safety-policy-v1",
+    "body_state_revision": 12,
+    "assertions": [
+      {
+        "concept": "dizziness",
+        "polarity": "absent",
+        "temporality": "current",
+        "review_state": "confirmed",
+        "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
+        "source_kind": "body_state_fact",
+        "provenance": {
+          "capture_channel": "intake_form",
+          "evidence_version": 1
+        }
+      }
+    ],
+    "active_blockers": [],
+    "requires_review": false,
+    "legacy_state_present": false,
+    "coverage": {
+      "revision": "body-state-safety-coverage-v1",
+      "capture_revision": "body-state-safety-capture-v1",
+      "required_concepts": [
+        "trauma",
+        "radiating_pain",
+        "numbness",
+        "weakness",
+        "dizziness"
+      ],
+      "covered_source_refs": [],
+      "incomplete_source_refs": [],
+      "complete": false
+    }
+  }
+}

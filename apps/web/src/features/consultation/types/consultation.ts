@@ -376,6 +376,7 @@ export interface AskUserField {
   answer_type:
     "text" | "single_choice" | "multi_choice" | "number" | "date" | "scale";
   options?: string[];
+  exclusive_options?: string[];
   required?: boolean;
 }
 

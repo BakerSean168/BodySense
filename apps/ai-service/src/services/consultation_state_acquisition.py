@@ -8,6 +8,15 @@ from typing import Any
 from ..models.consultation_intake import ConsultationIntakeOutput
 
 CAPTURE_ID_LENGTH = 24
+SAFETY_CAPTURE_REVISION = "body-state-safety-capture-v1"
+SAFETY_SIGNAL_OPTIONS = {
+    "外伤或创伤": "trauma",
+    "放射痛": "radiating_pain",
+    "麻木": "numbness",
+    "无力": "weakness",
+    "头晕": "dizziness",
+}
+NO_SAFETY_SIGNALS = "以上均无"
 
 
 def symptom_capture_id(
@@ -69,19 +78,30 @@ def build_symptom_intake_question(symptom: dict[str, Any]) -> dict[str, Any] | N
         label: str,
         answer_type: str,
         options: list[str],
+        exclusive_options: list[str] | None = None,
     ) -> None:
         if len(fields) >= 3:
             return
-        fields.append(
-            {
-                "key": key,
-                "label": label,
-                "answer_type": answer_type,
-                "options": options,
-                "required": True,
-            }
-        )
+        field = {
+            "key": key,
+            "label": label,
+            "answer_type": answer_type,
+            "options": options,
+            "required": True,
+        }
+        if exclusive_options is not None:
+            field["exclusive_options"] = exclusive_options
+        fields.append(field)
         field_map[key] = target
+
+    add_field(
+        "safety_signals",
+        "safety_signals",
+        "请选出目前出现的所有安全信号（可多选）；若五项都没有，请只选“以上均无”。",
+        "multi_choice",
+        [*SAFETY_SIGNAL_OPTIONS, NO_SAFETY_SIGNALS],
+        [NO_SAFETY_SIGNALS],
+    )
 
     symptom_text = symptom_type + str(symptom.get("additional_notes") or "")
     has_neurological_context = bool(str(symptom.get("neurological_signs") or "").strip())
@@ -197,7 +217,28 @@ def apply_structured_intake_answer(
     if isinstance(fields, dict):
         for answer_key, value in fields.items():
             target = field_map.get(answer_key)
+            if target == "safety_signals":
+                continue
             if isinstance(target, str) and target and value not in (None, ""):
                 completed[target] = str(value).strip()
+        selection = (
+            fields.get("safety_signals")
+            if field_map.get("safety_signals") == "safety_signals"
+            else None
+        )
+        if (
+            isinstance(selection, list)
+            and selection
+            and all(isinstance(item, str) for item in selection)
+        ):
+            unique = set(selection)
+            if len(unique) == len(selection) and (
+                unique == {NO_SAFETY_SIGNALS}
+                or (NO_SAFETY_SIGNALS not in unique and unique <= SAFETY_SIGNAL_OPTIONS.keys())
+            ):
+                completed["safety_capture_revision"] = SAFETY_CAPTURE_REVISION
+                completed.update(
+                    {concept: option in unique for option, concept in SAFETY_SIGNAL_OPTIONS.items()}
+                )
     completed["confirmed"] = True
     return completed

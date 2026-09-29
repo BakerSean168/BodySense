@@ -119,7 +119,7 @@ def _normalize_question(question: str) -> str:
     return compact
 
 
-def _normalize_choice_options(options: Any) -> list[str]:
+def _normalize_choice_options(options: Any, *, limit: int = 4) -> list[str]:
     if not isinstance(options, list):
         return []
     normalized: list[str] = []
@@ -129,7 +129,7 @@ def _normalize_choice_options(options: Any) -> list[str]:
         value = option.strip()
         if value and value not in normalized:
             normalized.append(value)
-    return normalized[:4]
+    return normalized[:limit]
 
 
 def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
@@ -155,19 +155,28 @@ def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
         answer_type = item.get("answer_type", "text")
         if answer_type not in valid_types:
             answer_type = "text"
-        options = _normalize_choice_options(item.get("options", []))
+        options = _normalize_choice_options(
+            item.get("options", []), limit=6 if key == "safety_signals" else 4
+        )
         required = item.get("required", True)
         if not isinstance(required, bool):
             required = True
-        fields.append(
-            {
-                "key": key,
-                "label": label,
-                "answer_type": answer_type,
-                "options": options,
-                "required": required,
-            }
-        )
+        field = {
+            "key": key,
+            "label": label,
+            "answer_type": answer_type,
+            "options": options,
+            "required": required,
+        }
+        exclusive_options = item.get("exclusive_options")
+        if (
+            answer_type == "multi_choice"
+            and isinstance(exclusive_options, list)
+            and all(isinstance(value, str) and value in options for value in exclusive_options)
+            and len(exclusive_options) == len(set(exclusive_options))
+        ):
+            field["exclusive_options"] = exclusive_options
+        fields.append(field)
     return fields
 
 
@@ -193,6 +202,7 @@ def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
         "neurological_signs",
         "onset",
         "additional_notes",
+        "safety_signals",
     }
     for key, target in field_map.items():
         source_key = str(key).strip()

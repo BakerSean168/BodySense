@@ -17,10 +17,11 @@ type DiagnosisRequest struct {
 	UserID          string `json:"user_id,omitempty"`
 	ConfigurationID string `json:"configuration_id"`
 	// New ADR 0004 boundary: Diagnosis pins exact durable BodyState input.
-	BodyStateRevision int64           `json:"body_state_revision"`
-	BodyState         json.RawMessage `json:"body_state"`
-	RelevantHistory   json.RawMessage `json:"relevant_history,omitempty"`
-	Profile           json.RawMessage `json:"profile,omitempty"`
+	BodyStateRevision int64             `json:"body_state_revision"`
+	BodyState         json.RawMessage   `json:"body_state"`
+	SafetyEnvelope    *SafetyEnvelopeV2 `json:"safety_envelope,omitempty"`
+	RelevantHistory   json.RawMessage   `json:"relevant_history,omitempty"`
+	Profile           json.RawMessage   `json:"profile,omitempty"`
 }
 
 // TreatmentRecommendationRequest pins exact durable identities and returns a

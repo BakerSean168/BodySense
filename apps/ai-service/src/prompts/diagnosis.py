@@ -2,6 +2,7 @@
 
 DIAGNOSIS_PROMPT_REVISION = "diagnosis-prompt-v3"
 DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION = "diagnosis-prompt-v4-evidence-gap"
+DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION = "diagnosis-prompt-v5-structured-safety"
 
 DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
 你的任务不是做临床确诊，而是基于 BodySense 已持久化的长期身体状态，
@@ -70,12 +71,30 @@ DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT = (
 """
 )
 
+DIAGNOSIS_STRUCTURED_SAFETY_SYSTEM_PROMPT = (
+    DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT
+    + """
+
+## Structured safety v8
+- SafetyEnvelopeV2 is the authoritative durable safety context.
+  Never clear or override its blockers or capture coverage.
+- safety_findings is escalation-only evidence for a NEW current-user safety concern
+  discovered during reasoning. Emit no absent findings.
+- Generic candidate education and typical symptoms are not current-user safety findings.
+- Every finding cites exact durable source_refs from the pinned BodyState:
+  body-state:fact:<ID> or body-state:observation:<ID>.
+- A rationale is audit/presentation text only, never safety authority.
+- Ordinary possible diagnosis is not clinical confirmation.
+"""
+)
+
 
 def get_diagnosis_system_prompt(revision: str) -> str:
     """Resolve an immutable prompt revision used by an Agent configuration."""
     prompts = {
         DIAGNOSIS_PROMPT_REVISION: DIAGNOSIS_SYSTEM_PROMPT,
         DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION: DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT,
+        DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION: DIAGNOSIS_STRUCTURED_SAFETY_SYSTEM_PROMPT,
     }
     try:
         return prompts[revision]
