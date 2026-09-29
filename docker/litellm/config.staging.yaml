@@ -1,12 +1,12 @@
 model_list:
-  # Staging keeps the same logical model groups as production while using the
-  # provider credential that is mandatory and continuously qualified here.
-  # MiMo remains a production profile; staging must not depend on an optional,
-  # potentially empty MIMO_API_KEY just to exercise real Agent paths.
+  # Diagnosis staging temporarily uses a fixed OpenAI-compatible Gemini route
+  # to isolate provider/tool-call reliability from the immutable Agent contract.
+  # The credential and base URL remain host-only runtime secrets.
   - model_name: bodysense-diagnosis
     litellm_params:
-      model: groq/qwen/qwen3.8-27b
-      api_key: os.environ/GROQ_API_KEY
+      model: openai/gemini-3.7-flash
+      api_base: os.environ/STAGING_DIAGNOSIS_BASE_URL
+      api_key: os.environ/STAGING_DIAGNOSIS_API_KEY
       timeout: 45
   - model_name: bodysense-diagnosis-fallback
     litellm_params:

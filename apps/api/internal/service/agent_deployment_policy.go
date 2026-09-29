@@ -216,9 +216,10 @@ var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistra
 	"diagnosis_promotion_v6": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisStructuredSafetyConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
 	// v7 was exercised in staging with the historical outcome-only comparator and
 	// remains immutable evidence even though its first observation exposed a false-positive migration.
-	"diagnosis_promotion_v7": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
-	"diagnosis_promotion_v8": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
-	"diagnosis_promotion_v9": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
+	"diagnosis_promotion_v7":  {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
+	"diagnosis_promotion_v8":  {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
+	"diagnosis_promotion_v9":  {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
+	"diagnosis_promotion_v10": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
 }
 
 type DiagnosisRouteSelection struct {

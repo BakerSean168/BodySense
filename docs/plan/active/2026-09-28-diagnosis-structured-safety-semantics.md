@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator, then its promotion_v8 cohort exposed a separate immutable output-budget limit. v10 now pins a free-tier-safe 960-token generation budget and is ready for a new promotion_v9 shadow cohort. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort then exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis is now being re-qualified on a fixed `gemini-3.7-flash` transport under fresh `diagnosis_promotion_v10`; deterministic readiness is green, but the new 20-sample shadow gate has not started yet. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -288,5 +288,43 @@ Deterministic evidence remains on the unchanged dataset fingerprint
 - `diagnosis_promotion_readiness_v9`: `ready_for_shadow=true`, reasons empty, while
   `interaction_experiment.required=true`.
 
-DGS-SAFE-080 must continue with a fresh promotion_v9 cohort. promotion_v7 and promotion_v8
-remain queryable historical evidence and are never reset to manufacture a clean gate.
+At that checkpoint, DGS-SAFE-080 was authorized to continue with a fresh promotion_v9 cohort.
+promotion_v7 and promotion_v8 remain queryable historical evidence and are never reset to manufacture
+a clean gate. The later provider-transport failure and successor cohort are recorded below.
+
+## Provider-transport cohort reset (2026-09-29)
+
+The promotion_v9 staging cohort then exposed a different runtime failure after four green
+structured-authority comparisons: Groq/Qwen returned HTTP 400 `tool_use_failed` for a malformed
+PydanticAI `final_result` tool call. The failed observation remains immutable promotion_v9 evidence
+and pauses that cohort under `challenger_errors_before_pause=1`.
+
+This is a physical provider/transport change, not a Diagnosis Agent behavior change. Per ADR 0005 and
+the model-gateway ownership contract, physical provider/model placement is intentionally excluded from
+the immutable Diagnosis configuration fingerprint. Therefore the Challenger remains v10
+`diag-config-3f64de162dc937ee`; no synthetic v11 Agent configuration is created merely to represent a
+LiteLLM routing change.
+
+Staging `bodysense-diagnosis` is temporarily routed through a fixed OpenAI-compatible
+`gemini-3.7-flash` endpoint. Production and the other staging logical groups are unchanged. Provider
+credentials remain host-only secrets injected into `litellm-gateway`; `ai-service` still receives only
+the internal LiteLLM URL/key.
+
+Runtime probes through the real staging gateway established the current transport behavior:
+
+- ordinary completion: HTTP 200;
+- function/tool calling: HTTP 200 with a valid tool call;
+- `response_format=json_schema`: HTTP 200 but the upstream compatibility layer returned Markdown,
+  so this endpoint must **not** be treated as native strict JSON-Schema enforcement;
+- tools plus `response_format`: HTTP 200 with a tool call;
+- real PydanticAI Diagnosis v10 `final_result` execution: one direct benign run plus three concurrent
+  benign region variants all completed with Python governance `accepted` (4/4 captured full results),
+  with no provider-level `tool_use_failed` observed.
+
+Because promotion_v9 is already paused, those new provider samples cannot be appended to it to
+manufacture a clean gate. `diagnosis_promotion_v10` therefore registers the same v3 Champion -> v10
+Challenger and the same `diagnosis-rollout-policy-v2-structured-authority`, but creates a distinct
+promotion/cohort identity for provider-transport qualification. Its deterministic readiness is
+`ready_for_shadow=true`, and the rollout-authority policy evidence is now 20/20, including the new
+promotion registry binding. DGS-SAFE-080 must restart shadow at sample zero under promotion_v10 before
+any 5% / 25% / 50% canary progression.
