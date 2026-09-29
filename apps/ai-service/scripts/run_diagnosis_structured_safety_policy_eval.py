@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -21,17 +22,22 @@ REPORT = ROOT / "data/evals/reports/diagnosis_structured_safety_v8.json"
 OUTPUT = ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v1.json"
 
 
-def main(*, context_successor: bool = False) -> int:
-    report_path = (
-        ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
-        if context_successor
-        else REPORT
-    )
-    output_path = (
-        ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v2.json"
-        if context_successor
-        else OUTPUT
-    )
+def _stable_go_test_output(value: str) -> str:
+    return re.sub(r"\t[0-9]+(?:\.[0-9]+)?s(?=\n|$)", "\t<duration>", value)
+
+
+def main(*, context_successor: bool = False, budget_successor: bool = False) -> int:
+    if context_successor and budget_successor:
+        raise ValueError("context_successor and budget_successor are mutually exclusive")
+    if budget_successor:
+        report_path = ROOT / "data/evals/reports/diagnosis_structured_safety_v10.json"
+        output_path = ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v3.json"
+    elif context_successor:
+        report_path = ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
+        output_path = ROOT / "data/evals/reports/diagnosis_structured_safety_policy_v2.json"
+    else:
+        report_path = REPORT
+        output_path = OUTPUT
     qualification = json.loads(report_path.read_text(encoding="utf-8"))
     cases = {case["name"]: case for case in qualification["cases"]}
     contract = json.loads(
@@ -144,7 +150,7 @@ def main(*, context_successor: bool = False) -> int:
         check=False,
     )
     checks["go_producer_capture_and_coverage"] = producer.returncode == 0
-    if context_successor:
+    if context_successor or budget_successor:
         from src.evals.diagnosis_prompt_context_checks import context_checks, context_measurements
         from src.evals.diagnosis_qualification import compare_qualification_summaries
 
@@ -155,10 +161,30 @@ def main(*, context_successor: bool = False) -> int:
         comparison = compare_qualification_summaries(baseline, qualification)
         checks["v3_shared_cases_non_inferior"] = comparison["non_inferior"]
         checks["zero_critical_regressions"] = not comparison["critical_regressions"]
+    if budget_successor:
+        from src.ai.diagnosis_gateway_model import diagnosis_model_settings
+        from src.configuration.diagnosis_agent_config import CONFIG_ROOT, load_manifest
+
+        v9 = load_manifest(CONFIG_ROOT / "diagnosis-v9-structured-safety-context.yaml")
+        v10 = load_manifest(CONFIG_ROOT / "diagnosis-v10-structured-safety-budget.yaml")
+        checks["v9_budget_remains_immutable"] = v9.generation.max_tokens == 2048
+        checks["v10_budget_is_free_tier_safe"] = v10.generation.max_tokens == 960
+        checks["v10_runtime_model_settings_use_960"] = diagnosis_model_settings(v10) == {
+            "temperature": 0.3,
+            "max_tokens": 960,
+        }
+        checks["v10_diff_is_generation_budget_only"] = (
+            v9.model_dump(exclude={"generation"}) == v10.model_dump(exclude={"generation"})
+            and v9.generation.temperature == v10.generation.temperature
+        )
     result = {
-        "name": "diagnosis-structured-safety-policy-v2"
-        if context_successor
-        else "diagnosis-structured-safety-policy-v1",
+        "name": (
+            "diagnosis-structured-safety-policy-v3"
+            if budget_successor
+            else "diagnosis-structured-safety-policy-v2"
+            if context_successor
+            else "diagnosis-structured-safety-policy-v1"
+        ),
         "configuration_id": qualification["configuration_id"],
         "governance_policy_revision": "diagnosis-governance-v8-structured-safety",
         "detector_revision": "none",
@@ -166,16 +192,35 @@ def main(*, context_successor: bool = False) -> int:
         "passed": sum(checks.values()),
         "total": len(checks),
         "checks": checks,
-        "go_test_output": go.stdout
-        + go.stderr
-        + preflight.stdout
-        + preflight.stderr
-        + producer.stdout
-        + producer.stderr,
+        "go_test_output": (
+            _stable_go_test_output(
+                go.stdout
+                + go.stderr
+                + preflight.stdout
+                + preflight.stderr
+                + producer.stdout
+                + producer.stderr
+            )
+            if budget_successor
+            else go.stdout
+            + go.stderr
+            + preflight.stdout
+            + preflight.stderr
+            + producer.stdout
+            + producer.stderr
+        ),
     }
-    if context_successor:
+    if context_successor or budget_successor:
         result["context_measurements"] = context_measurements()
         result["champion_comparison"] = comparison
+    if budget_successor:
+        result["generation_budget"] = {
+            "predecessor_configuration_id": "diag-config-ba10b8e6820c3691",
+            "predecessor_max_tokens": 2048,
+            "configuration_id": qualification["configuration_id"],
+            "max_tokens": 960,
+            "provider_observed_output_limit": 1000,
+        }
     output_path.write_text(
         json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -184,4 +229,9 @@ def main(*, context_successor: bool = False) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(context_successor="--context-successor" in sys.argv))
+    raise SystemExit(
+        main(
+            context_successor="--context-successor" in sys.argv,
+            budget_successor="--budget-successor" in sys.argv,
+        )
+    )

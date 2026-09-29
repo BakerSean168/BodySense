@@ -8,7 +8,11 @@ from src.ai.diagnosis_gateway_model import (
     get_diagnosis_runtime_model,
 )
 from src.ai.gateway import get_gateway_model
-from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
+from src.configuration.diagnosis_agent_config import (
+    CONFIG_ROOT,
+    get_default_diagnosis_configuration,
+    load_manifest,
+)
 
 CONFIG = get_default_diagnosis_configuration()
 ROOT = Path(__file__).resolve().parents[4]
@@ -25,6 +29,11 @@ def test_diagnosis_model_is_logical_gateway_model(monkeypatch) -> None:
     assert model.model_name == DIAGNOSIS_LOGICAL_MODEL
     assert str(model.provider.base_url) == "http://gateway.test:4000/v1/"
     assert diagnosis_model_settings(CONFIG) == {"temperature": 0.3, "max_tokens": 2048}
+
+
+def test_v10_budget_is_applied_to_gateway_model_settings() -> None:
+    v10 = load_manifest(CONFIG_ROOT / "diagnosis-v10-structured-safety-budget.yaml")
+    assert diagnosis_model_settings(v10) == {"temperature": 0.3, "max_tokens": 960}
 
 
 def test_legacy_diagnosis_backend_switch_is_ignored_after_retirement(monkeypatch) -> None:

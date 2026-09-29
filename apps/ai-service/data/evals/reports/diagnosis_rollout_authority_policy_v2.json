@@ -1,0 +1,43 @@
+{
+  "checks": {
+    "authorized_legacy_false_positive_removal": true,
+    "canary_direction_normalized": true,
+    "confirmed_absence_requires_every_covered_source": true,
+    "historical_v1_cohort_isolated": true,
+    "legacy_category_requires_exact_absence_proof": true,
+    "legacy_v1_semantics_preserved": true,
+    "missing_reports_stay_in_v2_cohort": true,
+    "mixed_governance_not_authorized": true,
+    "promotion_cohorts_remain_separate": true,
+    "promotion_registry_binds_v2": true,
+    "qualified_dataset_identity_matches": true,
+    "runtime_authority_evidence_extracted": true,
+    "shadow_errors_stay_in_v2_cohort": true,
+    "stop_rules_remain_fail_closed": true,
+    "unproven_relaxations_fail_closed": true,
+    "v7_historical_policy_remains_implicit_v1": true,
+    "v8_explicitly_binds_structured_authority_policy": true,
+    "v9_explicitly_binds_budget_successor": true
+  },
+  "configuration_id": "diag-config-3f64de162dc937ee",
+  "dataset_fingerprint": "7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876",
+  "go_tests": {
+    "authorized_legacy_false_positive_removal": "TestStructuredAuthorityRolloutAuthorizesProvenLegacyFalsePositiveRemoval",
+    "canary_direction_normalized": "TestStructuredAuthorityClassificationNormalizesCanaryDirection",
+    "confirmed_absence_requires_every_covered_source": "TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage",
+    "historical_v1_cohort_isolated": "TestStructuredAuthorityPolicyKeepsHistoricalV1CohortSeparate",
+    "legacy_category_requires_exact_absence_proof": "TestStructuredAuthorityRolloutRejectsUncoveredLegacyRedFlagCategory",
+    "legacy_v1_semantics_preserved": "TestLegacyRolloutPolicyStillTreatsBlockToAllowAsUnsafe",
+    "missing_reports_stay_in_v2_cohort": "TestStructuredAuthorityMissingReportStaysInV2PromotionCohort",
+    "mixed_governance_not_authorized": "TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues",
+    "promotion_cohorts_remain_separate": "TestStructuredAuthorityPromotionCohortsRemainSeparate",
+    "promotion_registry_binds_v2": "TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor",
+    "runtime_authority_evidence_extracted": "TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive",
+    "shadow_errors_stay_in_v2_cohort": "TestStructuredAuthorityShadowErrorStaysInV2PromotionCohort",
+    "unproven_relaxations_fail_closed": "TestStructuredAuthorityRolloutStillRejectsUnprovenRelaxations"
+  },
+  "name": "diagnosis-rollout-authority-policy-v2",
+  "passed": 18,
+  "rollout_policy_revision": "diagnosis-rollout-policy-v2-structured-authority",
+  "total": 18
+}

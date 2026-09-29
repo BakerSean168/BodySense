@@ -93,3 +93,17 @@ mismatches stay durable even though they do not consume hard/semantic mismatch-r
 budget. Stable assignment, minimum sample counts, forbidden-side-effect gates, identity
 gates, provider-error pause rules, canary steps, and explicit human promotion remain
 unchanged.
+
+### Generation budgets are immutable behavior
+
+Diagnosis `generation.max_tokens` participates in the immutable manifest fingerprint and
+therefore cannot be changed in place to accommodate a provider limit. A runtime provider
+capacity finding must produce a new Agent configuration, while the predecessor remains
+replayable with its original generation settings. The structured-safety context successor
+(v9) remains fixed at 2048 max tokens. Its staging shadow established that the free-tier
+Groq route enforces a 1000 output-tokens-per-minute request ceiling and rejected a request
+whose expected output budget was 1196; the fallback route could not fund a 2048-token
+request. The budget successor (v10) therefore pins 960 max tokens while retaining the same
+prompt, output schema, governance, decision policy, model group, and safety authority.
+This is a configuration change, not a gateway-wide override, so historical configurations
+and unrelated logical model groups do not drift.

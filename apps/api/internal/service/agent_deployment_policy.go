@@ -16,6 +16,7 @@ const (
 	diagnosisNegationBridgeConfigID    = "diag-config-4377355ba2012ce8"
 	diagnosisNegationListConfigID      = "diag-config-4eb948f419994367"
 	diagnosisSafetyContextConfigID     = "diag-config-ba10b8e6820c3691"
+	diagnosisSafetyBudgetConfigID      = "diag-config-3f64de162dc937ee"
 	diagnosisStructuredSafetyConfigID  = "diag-config-62d312942b76a154"
 	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
@@ -185,6 +186,7 @@ var knownKnowledgeSplitterConfigurations = map[string]knowledgeConfigurationRegi
 }
 
 var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration{
+	diagnosisSafetyBudgetConfigID:  {DecisionPolicyRevision: DiagnosisDecisionPolicyV2},
 	diagnosisSafetyContextConfigID: {DecisionPolicyRevision: DiagnosisDecisionPolicyV2},
 	diagnosisDecisionAuthorityConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
@@ -216,6 +218,7 @@ var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistra
 	// remains immutable evidence even though its first observation exposed a false-positive migration.
 	"diagnosis_promotion_v7": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV1},
 	"diagnosis_promotion_v8": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
+	"diagnosis_promotion_v9": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
 }
 
 type DiagnosisRouteSelection struct {
