@@ -257,3 +257,78 @@ func TestDiagnosisReplayExportsQualificationShapedRegressionCaseWithoutRealUserI
 		t.Fatalf("unexpected regression metadata: %#v", metadata)
 	}
 }
+
+func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *testing.T) {
+	input := DiagnosisReplayInput{
+		BodyStateRevision: 3,
+		SafetyEnvelope: &SafetyEnvelopeV2{
+			SchemaRevision:    SafetyEnvelopeSchemaV2,
+			PolicyRevision:    SafetyEnvelopePolicyV1,
+			BodyStateRevision: 3,
+			Coverage: SafetyCoverageV1{
+				Revision:        SafetyCoverageRevisionV1,
+				CaptureRevision: SafetyCaptureRevisionV1,
+				Complete:        true,
+			},
+			ActiveBlockers: []SafetyBlockerV1{},
+			RequiresReview: false,
+		},
+	}
+	baseline := map[string]any{
+		"status": "safety_blocked",
+		"governance": map[string]any{
+			"verdict": "rejected",
+			"issues": []any{
+				map[string]any{"policy": "red_flag_safety"},
+				map[string]any{"policy": "red_flag_safety"},
+			},
+		},
+		"decision_authority": map[string]any{
+			"outcome":         "block",
+			"policy_revision": DiagnosisDecisionPolicyV1,
+			"reasons":         []any{"agent_output_failed_safety_governance"},
+		},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV1},
+	}
+	replayed := map[string]any{
+		"status":              "completed",
+		"governance":          map[string]any{"verdict": "accepted", "issues": []any{}},
+		"decision_authority":  map[string]any{"outcome": "allow-normal", "policy_revision": DiagnosisDecisionPolicyV2, "reasons": []any{}},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV2},
+		"safety_findings":     []any{},
+		"candidates":          []any{map[string]any{"name": "benign"}},
+	}
+
+	evidence := diagnosisReplayAuthorityEvidence(input, baseline, replayed)
+	if !evidence.SafetyEnvelopePresent || !evidence.CoverageComplete || evidence.ActiveBlockerCount != 0 || evidence.RequiresReview {
+		t.Fatalf("structured safety evidence drifted: %#v", evidence)
+	}
+	if !evidence.Baseline.LegacyProseGovernanceOnly || evidence.Baseline.DecisionPolicyRevision != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("legacy false-positive evidence was not recognized: %#v", evidence.Baseline)
+	}
+	if evidence.Replay.DecisionPolicyRevision != DiagnosisDecisionPolicyV2 || evidence.Replay.GovernanceVerdict != "accepted" || evidence.Replay.SafetyFindingCount != 0 {
+		t.Fatalf("structured challenger evidence drifted: %#v", evidence.Replay)
+	}
+}
+
+func TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues(t *testing.T) {
+	payload := map[string]any{
+		"status": "safety_blocked",
+		"governance": map[string]any{
+			"verdict": "rejected",
+			"issues": []any{
+				map[string]any{"policy": "red_flag_safety"},
+				map[string]any{"policy": "forbidden_claim_surface"},
+			},
+		},
+		"decision_authority": map[string]any{
+			"outcome":         "block",
+			"policy_revision": DiagnosisDecisionPolicyV1,
+			"reasons":         []any{"agent_output_failed_safety_governance"},
+		},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV1},
+	}
+	if replayLegacyProseGovernanceOnly(payload) {
+		t.Fatal("mixed governance failures must never be authorized as a prose false-positive migration")
+	}
+}

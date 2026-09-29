@@ -260,6 +260,25 @@ func TestDiagnosisPromotionAdmissionRequiresExactRegisteredPair(t *testing.T) {
 	}
 }
 
+func TestDiagnosisPromotionV8SelectsStructuredAuthorityRolloutPolicy(t *testing.T) {
+	clearAgentDeploymentEnv(t)
+	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisSafetyContextConfigID)
+	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v8")
+
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	route := policy.SelectDiagnosisRoute("user-1")
+	if route.PromotionRecord != "diagnosis_promotion_v8" ||
+		route.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
+		route.ChallengerConfigurationID != diagnosisSafetyContextConfigID {
+		t.Fatalf("unexpected v8 promotion route: %#v", route)
+	}
+}
+
 func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
 	for _, bps := range []int{500, 2500, 5000} {
 		t.Run(fmt.Sprintf("accepts-%d", bps), func(t *testing.T) {

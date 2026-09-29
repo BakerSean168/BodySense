@@ -22,6 +22,8 @@ func main() {
 	stage := flag.String("stage", service.DiagnosisRolloutShadow, "Rollout stage to summarize")
 	canaryBPS := flag.Int("canary-bps", 500, "Canary basis-point step to summarize")
 	limit := flag.Int("limit", 1000, "Maximum recent observations")
+	policyRevision := flag.String("policy-revision", service.DiagnosisRolloutPolicyV1, "Rollout comparison policy revision")
+	promotionRecord := flag.String("promotion-record", "", "Optional promotion record cohort filter")
 	flag.Parse()
 	if *challenger == "" {
 		log.Fatal("-challenger is required; retired configurations are not runtime rollout targets")
@@ -32,7 +34,7 @@ func main() {
 		log.Fatalf("connect database: %v", err)
 	}
 	rollout := service.NewDiagnosisRolloutService(repository.NewDiagnosisRolloutRepository(db))
-	summary, err := rollout.Summary(context.Background(), *champion, *challenger, *stage, *canaryBPS, *limit)
+	summary, err := rollout.SummaryForCohort(context.Background(), *champion, *challenger, *stage, *canaryBPS, *limit, *policyRevision, *promotionRecord)
 	if err != nil {
 		log.Fatalf("summarize Diagnosis rollout: %v", err)
 	}

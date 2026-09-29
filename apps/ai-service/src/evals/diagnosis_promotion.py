@@ -30,6 +30,7 @@ class RequiredPolicyReport(BaseModel):
     expected_configuration_id: str | None = None
     expected_governance_policy_revision: str | None = None
     expected_detector_revision: str | None = None
+    expected_rollout_policy_revision: str | None = None
 
 
 class InteractionExperimentPolicy(BaseModel):
@@ -51,6 +52,7 @@ class StopRules(BaseModel):
 
 class RolloutPolicy(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
+    policy_revision: str | None = Field(default=None, min_length=1)
     shadow_min_samples: int = Field(gt=0)
     canary_steps_bps: list[int] = Field(min_length=1)
     promotion_bps: int
@@ -77,6 +79,12 @@ def load_promotion_policy(path: Path = DEFAULT_POLICY_PATH) -> DiagnosisPromotio
         raise ValueError("canary_steps_bps must be unique ascending values between 1 and 9999")
     if policy.rollout.promotion_bps != 10000:
         raise ValueError("promotion_bps must be exactly 10000")
+    rollout_revision = policy.rollout.policy_revision or "diagnosis-rollout-policy-v1"
+    if rollout_revision not in {
+        "diagnosis-rollout-policy-v1",
+        "diagnosis-rollout-policy-v2-structured-authority",
+    }:
+        raise ValueError(f"unsupported Diagnosis rollout policy revision: {rollout_revision}")
     return policy
 
 
@@ -162,6 +170,7 @@ def evaluate_promotion_readiness(
             ("configuration_id", required.expected_configuration_id),
             ("governance_policy_revision", required.expected_governance_policy_revision),
             ("detector_revision", required.expected_detector_revision),
+            ("rollout_policy_revision", required.expected_rollout_policy_revision),
         ):
             if expected is not None and report.get(field) != expected:
                 reasons.append(f"required policy report {field} mismatch: {required.report}")
@@ -182,6 +191,7 @@ def evaluate_promotion_readiness(
                             required.expected_governance_policy_revision,
                         ),
                         ("detector_revision", required.expected_detector_revision),
+                        ("rollout_policy_revision", required.expected_rollout_policy_revision),
                     )
                     if expected is not None
                 },
@@ -196,7 +206,7 @@ def evaluate_promotion_readiness(
         "qualification_chain": links,
         "required_policy_reports": policy_reports,
         "interaction_experiment": policy.interaction_experiment.model_dump(mode="json"),
-        "rollout": policy.rollout.model_dump(mode="json"),
+        "rollout": policy.rollout.model_dump(mode="json", exclude_none=True),
         "ready_for_shadow": not reasons,
         "reasons": reasons,
     }

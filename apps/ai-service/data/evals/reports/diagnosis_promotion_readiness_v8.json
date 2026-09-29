@@ -1,0 +1,176 @@
+{
+  "challenger_configuration_id": "diag-config-ba10b8e6820c3691",
+  "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+  "dataset_fingerprint": "7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876",
+  "interaction_experiment": {
+    "reason": "The structured-authority rollout comparator must validate the v9 migration in new shadow/canary evidence; diagnosis_promotion_v7 remains retained historical outcome-only evidence.",
+    "required": true
+  },
+  "name": "diagnosis_promotion_v8",
+  "qualification_chain": [
+    {
+      "comparison": null,
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": null,
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_structured_safety_v3.json"
+    },
+    {
+      "comparison": {
+        "candidate_configuration_id": "diag-config-62d312942b76a154",
+        "candidate_only_case_names": [
+          "capture-incomplete",
+          "generic-candidate-education",
+          "invalid-finding-source",
+          "legacy-active-current-absent",
+          "valid-typed-finding"
+        ],
+        "candidate_only_cases": [
+          {
+            "applicability_reason": "v8-only capture coverage abstention; v3 has no structured coverage contract.",
+            "name": "capture-incomplete",
+            "passed": true
+          },
+          {
+            "applicability_reason": "v8-only no-prose-scan rule; v3 intentionally uses its historical prose detector.",
+            "name": "generic-candidate-education",
+            "passed": true
+          },
+          {
+            "applicability_reason": "v8-only source-ref validation for typed findings.",
+            "name": "invalid-finding-source",
+            "passed": true
+          },
+          {
+            "applicability_reason": "v8 cross-layer authority; Python-only v3 harness cannot represent Go v1 final authority faithfully.",
+            "name": "legacy-active-current-absent",
+            "passed": true
+          },
+          {
+            "applicability_reason": "v8-only typed finding validation and escalation contract.",
+            "name": "valid-typed-finding",
+            "passed": true
+          }
+        ],
+        "candidate_pass_rate": 1.0,
+        "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "champion_pass_rate": 1.0,
+        "critical_regressions": [],
+        "improvements": [],
+        "margin": 0.02,
+        "non_inferior": true,
+        "pass_rate_delta": 0.0,
+        "promotion_eligible": true,
+        "regressions": [],
+        "shared_case_count": 5,
+        "shared_case_names": [
+          "active-dizziness",
+          "complete-benign",
+          "historical-resolved-nonblocking",
+          "legacy-monitoring-current-absent",
+          "separate-sources-positive"
+        ],
+        "slice_deltas": {
+          "critical-safety": 0.0,
+          "structured-safety": 0.0
+        },
+        "slice_regressions": []
+      },
+      "configuration_id": "diag-config-62d312942b76a154",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": "diag-config-5a4a13627e14b4cf",
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_structured_safety_v8.json"
+    },
+    {
+      "comparison": {
+        "candidate_configuration_id": "diag-config-ba10b8e6820c3691",
+        "candidate_only_case_names": [],
+        "candidate_only_cases": [],
+        "candidate_pass_rate": 1.0,
+        "champion_configuration_id": "diag-config-62d312942b76a154",
+        "champion_pass_rate": 1.0,
+        "critical_regressions": [],
+        "improvements": [],
+        "margin": 0.02,
+        "non_inferior": true,
+        "pass_rate_delta": 0.0,
+        "promotion_eligible": true,
+        "regressions": [],
+        "shared_case_count": 10,
+        "shared_case_names": [
+          "active-dizziness",
+          "capture-incomplete",
+          "complete-benign",
+          "generic-candidate-education",
+          "historical-resolved-nonblocking",
+          "invalid-finding-source",
+          "legacy-active-current-absent",
+          "legacy-monitoring-current-absent",
+          "separate-sources-positive",
+          "valid-typed-finding"
+        ],
+        "slice_deltas": {
+          "critical-safety": 0.0,
+          "structured-safety": 0.0
+        },
+        "slice_regressions": []
+      },
+      "configuration_id": "diag-config-ba10b8e6820c3691",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": "diag-config-62d312942b76a154",
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_structured_safety_v9.json"
+    }
+  ],
+  "ready_for_shadow": true,
+  "reasons": [],
+  "required_policy_reports": [
+    {
+      "identity": {
+        "configuration_id": "diag-config-ba10b8e6820c3691",
+        "detector_revision": "none",
+        "governance_policy_revision": "diagnosis-governance-v8-structured-safety",
+        "name": "diagnosis-structured-safety-policy-v2"
+      },
+      "minimum_pass_rate": 1.0,
+      "pass_rate": 1.0,
+      "passed": 37,
+      "report": "data/evals/reports/diagnosis_structured_safety_policy_v2.json",
+      "total": 37
+    },
+    {
+      "identity": {
+        "configuration_id": "diag-config-ba10b8e6820c3691",
+        "name": "diagnosis-rollout-authority-policy-v1",
+        "rollout_policy_revision": "diagnosis-rollout-policy-v2-structured-authority"
+      },
+      "minimum_pass_rate": 1.0,
+      "pass_rate": 1.0,
+      "passed": 15,
+      "report": "data/evals/reports/diagnosis_rollout_authority_policy_v1.json",
+      "total": 15
+    }
+  ],
+  "rollout": {
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "policy_revision": "diagnosis-rollout-policy-v2-structured-authority",
+    "promotion_bps": 10000,
+    "shadow_min_samples": 20,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "challenger_errors_before_pause": 1,
+      "configuration_mismatches": 0,
+      "forbidden_side_effects": 0,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25,
+      "rate_gate_min_samples": 20,
+      "unsafe_relaxations": 0
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented on this branch. The repaired evidence permits entry to shadow; DGS-SAFE-080/090 have not been executed. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 has begun in controlled staging: v8 exposed a provider-capacity failure, v9 removed the duplicate context and executed successfully, and the first v9 shadow comparison exposed an outcome-only rollout-comparator mismatch that is now being repaired with a versioned structured-authority policy. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -178,3 +178,71 @@ unchanged. Only v9 uses compact JSON and deduplicates `recent_revisions`; histor
 `source` remains semantic provenance while v9-only row IDs/user IDs are removed.
 Observation/hypothesis/non-fact `details` are explicitly preserved. No staging evidence
 was changed by this repair.
+
+## v9 staging shadow and rollout-authority comparator v2 (2026-09-29)
+
+The first controlled v9 shadow smoke ran on staging revision
+`7c7b6a7d063532f9d3724172489c75fea5c7d583` with v3 served and v9 replayed. The v9
+provider call executed successfully, so the context repair closed the prior v8 7000-ITPM
+request-size failure. The retained source analysis
+`434143fa-ffcb-4b21-8c00-ce3e821bfbfa` showed a different governance boundary:
+Champion v3 executed, then its historical prose `red_flag_safety` detector rejected the
+model output because the output mentioned `放射痛` and `外伤` while explaining that those
+signals were absent. The same frozen replay input had complete SafetyEnvelopeV2 coverage,
+zero active blockers, and `requires_review=false`; v9 completed normally with no
+`safety_findings`, configuration mismatch, forbidden side effect, or shadow error.
+
+`diagnosis_promotion_v7` used the historical outcome-only
+`diagnosis-rollout-policy-v1`, so it correctly recorded the raw `block -> allow-normal`
+change as `unsafe_relaxation=true`. That observation is retained as immutable staging
+evidence and is not deleted, reset, or reinterpreted. DGS-SAFE-080 therefore did not
+advance under v7.
+
+The repair introduces a new immutable promotion record, `diagnosis_promotion_v8`, for
+the same v3 Champion and v9 Challenger. It explicitly binds
+`diagnosis-rollout-policy-v2-structured-authority`. The v2 comparator does not hide the
+raw hard or semantic mismatch. Instead it adds a separate authority classification and
+marks a difference gate-equivalent only when all of the following are proven on the
+exact frozen replay: artifact identity matches; SafetyEnvelopeV2 is present and complete;
+there are zero active blockers and no review requirement; the Champion is decision-policy
+v1 and was blocked only by legacy `red_flag_safety` post-agent governance; the Challenger
+is decision-policy v2, governance accepted, has zero safety findings, and has no forbidden
+side effect. Any missing condition remains `unsafe_authority_relaxation=true` and triggers
+the existing rollback gate. Abstain-to-allow and non-prose governance blocks are never
+authorized by this migration rule.
+
+Rollout evidence is also cohort-bound by both rollout-policy revision and promotion
+record. Historical v7 observations without v2 authority metadata remain in the v1 cohort;
+new v8/v2 shadow errors and missing reports remain in the v8 cohort and pause progression
+instead of disappearing through filtering. Canary comparisons normalize served/shadow
+direction before classifying Champion versus Challenger. Approved authority migrations
+remain visible in raw comparison JSON, increment `authority_migrations`, and are excluded
+only from hard/semantic mismatch rate gates.
+
+Deterministic evidence for the comparator is
+`data/evals/reports/diagnosis_rollout_authority_policy_v1.json`: 15/15 checks pass,
+including fail-closed negative cases, v1 preservation, v7/v8 cohort isolation, shadow
+error retention, missing-report retention, promotion-cohort separation, and canary
+direction normalization. `diagnosis_promotion_readiness_v8.json` requires both the
+structured-safety policy (37/37) and rollout-authority policy (15/15), uses the unchanged
+qualification dataset fingerprint
+`7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876`, and is ready
+for shadow only; `interaction_experiment.required` remains true.
+
+DGS-SAFE-080 acceptance still requires a new `diagnosis_promotion_v8` shadow cohort of
+at least 20 clean observations, followed by the predeclared 5%/25%/50% canary gates. No
+production promotion is authorized by this comparator repair.
+
+### Rollout comparator v2 validation
+
+Before delivery, the comparator repair passed the complete local acceptance set: the new
+rollout-authority policy report is deterministic at 15/15, promotion v8 readiness is
+`ready_for_shadow=true` with both required policy reports at 100%, and a second
+regeneration produced identical policy/readiness hashes. Regenerating historical
+`diagnosis_promotion_v7` readiness is byte-for-byte identical to its committed artifact.
+The AI service passes Ruff, Pyright (0 errors/warnings) and 656/656 pytest cases. The Go
+API passes `go test ./...` and `go vet ./...`, including the rollout status command build.
+Six protected v7/v9 qualification/configuration artifacts byte-compare unchanged against
+`origin/main`; five local links in the changed ADR/plan resolve and `git diff --check`
+passes. These results permit a new v8 shadow experiment only; they do not close
+DGS-SAFE-080 or authorize canary/promotion by themselves.

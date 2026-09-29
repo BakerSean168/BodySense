@@ -61,3 +61,32 @@ an implementation detail:
 The projection is never written back to replay storage and is never substituted for
 the full BodyState/envelope used by post-agent governance. This preserves immutable
 historical identities while giving v9 a separately versioned context contract.
+
+## Rollout authority comparison (v2 clarification)
+
+A structured-safety successor intentionally changes the source of safety authority. An
+outcome-only rollout comparator therefore cannot distinguish a real unsafe relaxation
+from removal of a historical prose-detector false positive. Historical
+`diagnosis-rollout-policy-v1` remains immutable and continues to classify any restrictive
+Champion outcome followed by a Challenger allow outcome as unsafe.
+
+New structured-authority experiments may opt into
+`diagnosis-rollout-policy-v2-structured-authority` through a new immutable promotion
+record. v2 preserves the raw hard, semantic, and presentation comparisons and adds a
+separate, auditable authority classification. A Champion block may be gate-equivalent to
+a Challenger allow only when the frozen SafetyEnvelopeV2 is complete, has no active
+blocker or review requirement, the Champion block is exclusively legacy
+`red_flag_safety` post-agent governance under decision policy v1, and the structured
+Challenger under decision policy v2 is accepted with no safety findings or forbidden
+side effects. Artifact identity must also match. Every omitted or contradictory premise
+fails closed as an unsafe authority relaxation.
+
+Rollout observations are summarized by rollout-policy revision and, for controlled
+experiments, promotion record. This preserves failed/retired experiment evidence rather
+than deleting rows or retroactively changing their meaning. Runtime errors and missing
+comparison reports carry the same cohort identity so filtering cannot make failures
+disappear. Authorized migrations remain countable as `authority_migrations`; their raw
+mismatches stay durable even though they do not consume hard/semantic mismatch-rate
+budget. Stable assignment, minimum sample counts, forbidden-side-effect gates, identity
+gates, provider-error pause rules, canary steps, and explicit human promotion remain
+unchanged.

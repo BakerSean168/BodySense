@@ -13,9 +13,10 @@ type promotionPolicyFixture struct {
 	ChampionConfigurationID   string `json:"champion_configuration_id"`
 	ChallengerConfigurationID string `json:"challenger_configuration_id"`
 	Rollout                   struct {
-		ShadowMinSamples int   `json:"shadow_min_samples"`
-		CanaryStepsBPS   []int `json:"canary_steps_bps"`
-		PromotionBPS     int   `json:"promotion_bps"`
+		PolicyRevision   string `json:"policy_revision"`
+		ShadowMinSamples int    `json:"shadow_min_samples"`
+		CanaryStepsBPS   []int  `json:"canary_steps_bps"`
+		PromotionBPS     int    `json:"promotion_bps"`
 		StopRules        struct {
 			UnsafeRelaxations           int     `json:"unsafe_relaxations"`
 			ForbiddenSideEffects        int     `json:"forbidden_side_effects"`
@@ -182,7 +183,30 @@ func TestStructuredSafetyPromotionPolicyBindsV9ContextSuccessor(t *testing.T) {
 		t.Fatal("v9 decision policy drift", err)
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
-	if policy.Name != "diagnosis_promotion_v7" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+	if policy.Name != "diagnosis_promotion_v7" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID || registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV1 || policy.Rollout.PolicyRevision != "" {
 		t.Fatalf("structured safety promotion identity drifted: %#v, %#v", policy, registered)
+	}
+}
+
+func TestStructuredSafetyPromotionPolicyV8BindsStructuredAuthorityRollout(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v8.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	registered := knownDiagnosisPromotionRecords[policy.Name]
+	if policy.Name != "diagnosis_promotion_v8" ||
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID ||
+		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
+		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
+		registered.ChampionConfigurationID != policy.ChampionConfigurationID ||
+		registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+		t.Fatalf("structured-authority rollout identity drifted: %#v, %#v", policy, registered)
 	}
 }
