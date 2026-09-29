@@ -13,12 +13,12 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o /server ./cmd/server && \
-    CGO_ENABLED=0 go build -o /production-dr-manager ./cmd/production-dr-manager && \
-    CGO_ENABLED=0 go build -o /domain-validator ./cmd/domain-validator && \
-    CGO_ENABLED=0 go build -o /upload-storage-migrator ./cmd/upload-storage-migrator && \
-    CGO_ENABLED=0 go build -o /knowledge-publication-manager ./cmd/knowledge-publication-manager && \
-    CGO_ENABLED=0 go build -o /knowledge-source-manager ./cmd/knowledge-source-manager
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /server ./cmd/server && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /production-dr-manager ./cmd/production-dr-manager && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /domain-validator ./cmd/domain-validator && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /upload-storage-migrator ./cmd/upload-storage-migrator && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /knowledge-publication-manager ./cmd/knowledge-publication-manager && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /knowledge-source-manager ./cmd/knowledge-source-manager
 
 # ── Runtime stage ──────────────────────────────────────
 FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6

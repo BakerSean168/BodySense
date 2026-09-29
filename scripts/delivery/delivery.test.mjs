@@ -638,6 +638,22 @@ test('non-AI candidate Dockerfiles apply revision metadata after filesystem laye
   }
 });
 
+test('API release image strips Go debug and symbol metadata from every shipped binary', () => {
+  const contents = fs.readFileSync('apps/api/Dockerfile', 'utf8');
+  const outputs = [
+    '/server',
+    '/production-dr-manager',
+    '/domain-validator',
+    '/upload-storage-migrator',
+    '/knowledge-publication-manager',
+    '/knowledge-source-manager',
+  ];
+  for (const output of outputs) {
+    const pattern = new RegExp(`go build -trimpath -ldflags="-s -w" -o ${output.replaceAll('/', '\\/')} `);
+    assert.match(contents, pattern, `${output} must use stripped release linker flags`);
+  }
+});
+
 test('AI Dockerfile keeps heavy runtime identity independent from Git release metadata', () => {
   const contents = fs.readFileSync('apps/ai-service/Dockerfile', 'utf8');
   const recipe = extractAiRuntimeBaseRecipe(contents);
