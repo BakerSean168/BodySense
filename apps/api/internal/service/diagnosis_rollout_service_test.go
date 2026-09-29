@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -194,14 +195,16 @@ func structuredAuthorityMigrationReport() *DiagnosisReplayReport {
 			Presentation: DiagnosisReplayLayer{Match: false},
 		},
 		AuthorityEvidence: DiagnosisReplayAuthorityEvidence{
-			SafetyEnvelopePresent: true,
-			CoverageComplete:      true,
-			ActiveBlockerCount:    0,
-			RequiresReview:        false,
+			SafetyEnvelopePresent:   true,
+			CoverageComplete:        true,
+			ActiveBlockerCount:      0,
+			RequiresReview:          false,
+			ConfirmedAbsentConcepts: []string{"radiating_pain", "trauma"},
 			Baseline: DiagnosisReplayAuthorityEndpoint{
-				DecisionPolicyRevision:    DiagnosisDecisionPolicyV1,
-				GovernanceVerdict:         "rejected",
-				LegacyProseGovernanceOnly: true,
+				DecisionPolicyRevision:      DiagnosisDecisionPolicyV1,
+				GovernanceVerdict:           "rejected",
+				LegacyProseGovernanceOnly:   true,
+				LegacyProseSafetyCategories: []string{"radiating_pain", "trauma"},
 			},
 			Replay: DiagnosisReplayAuthorityEndpoint{
 				DecisionPolicyRevision: DiagnosisDecisionPolicyV2,
@@ -261,6 +264,11 @@ func TestStructuredAuthorityRolloutStillRejectsUnprovenRelaxations(t *testing.T)
 		{"active-blocker", func(r *DiagnosisReplayReport) { r.AuthorityEvidence.ActiveBlockerCount = 1 }},
 		{"requires-review", func(r *DiagnosisReplayReport) { r.AuthorityEvidence.RequiresReview = true }},
 		{"champion-not-legacy-prose-only", func(r *DiagnosisReplayReport) { r.AuthorityEvidence.Baseline.LegacyProseGovernanceOnly = false }},
+		{"legacy-category-missing", func(r *DiagnosisReplayReport) { r.AuthorityEvidence.Baseline.LegacyProseSafetyCategories = nil }},
+		{"legacy-category-uncovered", func(r *DiagnosisReplayReport) {
+			r.AuthorityEvidence.Baseline.LegacyProseSafetyCategories = []string{"infection"}
+		}},
+		{"legacy-category-not-confirmed-absent", func(r *DiagnosisReplayReport) { r.AuthorityEvidence.ConfirmedAbsentConcepts = []string{"trauma"} }},
 		{"champion-policy-not-v1", func(r *DiagnosisReplayReport) {
 			r.AuthorityEvidence.Baseline.DecisionPolicyRevision = DiagnosisDecisionPolicyV2
 		}},
@@ -293,6 +301,28 @@ func TestStructuredAuthorityRolloutStillRejectsUnprovenRelaxations(t *testing.T)
 				t.Fatalf("missing fail-closed authority evidence: %#v", comparison.Authority)
 			}
 		})
+	}
+}
+
+func TestStructuredAuthorityRolloutRejectsUncoveredLegacyRedFlagCategory(t *testing.T) {
+	repo := &fakeDiagnosisRolloutRepository{}
+	svc := NewDiagnosisRolloutService(repo)
+	route := structuredAuthorityRoute(diagnosisDecisionAuthorityConfigID, diagnosisSafetyContextConfigID)
+	report := structuredAuthorityMigrationReport()
+	report.AuthorityEvidence.Baseline.LegacyProseSafetyCategories = []string{"infection"}
+
+	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(repo.items) != 1 || !repo.items[0].UnsafeRelaxation {
+		t.Fatalf("uncovered red-flag category must remain unsafe: %#v", repo.items)
+	}
+	var comparison DiagnosisReplayComparison
+	if err := json.Unmarshal(repo.items[0].Comparison, &comparison); err != nil {
+		t.Fatal(err)
+	}
+	if comparison.Authority.GateEquivalent || !slices.Contains(comparison.Authority.ReasonCodes, "legacy_red_flag_category_not_confirmed_absent") {
+		t.Fatalf("uncovered category did not fail closed: %#v", comparison.Authority)
 	}
 }
 

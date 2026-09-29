@@ -205,7 +205,10 @@ raw hard or semantic mismatch. Instead it adds a separate authority classificati
 marks a difference gate-equivalent only when all of the following are proven on the
 exact frozen replay: artifact identity matches; SafetyEnvelopeV2 is present and complete;
 there are zero active blockers and no review requirement; the Champion is decision-policy
-v1 and was blocked only by legacy `red_flag_safety` post-agent governance; the Challenger
+v1 and was blocked only by legacy `red_flag_safety` post-agent governance; every legacy
+red-flag category must exactly match a concept that is `current + confirmed + absent` on
+every covered SafetyEnvelope source (unmapped categories such as `infection`, `systemic`,
+or broad `neurological` remain unsafe); the Challenger
 is decision-policy v2, governance accepted, has zero safety findings, and has no forbidden
 side effect. Any missing condition remains `unsafe_authority_relaxation=true` and triggers
 the existing rollback gate. Abstain-to-allow and non-prose governance blocks are never
@@ -224,7 +227,7 @@ Deterministic evidence for the comparator is
 including fail-closed negative cases, v1 preservation, v7/v8 cohort isolation, shadow
 error retention, missing-report retention, promotion-cohort separation, and canary
 direction normalization. `diagnosis_promotion_readiness_v8.json` requires both the
-structured-safety policy (37/37) and rollout-authority policy (15/15), uses the unchanged
+structured-safety policy (37/37) and rollout-authority policy (17/17), uses the unchanged
 qualification dataset fingerprint
 `7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876`, and is ready
 for shadow only; `interaction_experiment.required` remains true.

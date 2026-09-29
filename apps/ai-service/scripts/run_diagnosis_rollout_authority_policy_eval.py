@@ -37,6 +37,12 @@ GO_TESTS = {
     "mixed_governance_not_authorized": (
         "TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues"
     ),
+    "legacy_category_requires_exact_absence_proof": (
+        "TestStructuredAuthorityRolloutRejectsUncoveredLegacyRedFlagCategory"
+    ),
+    "confirmed_absence_requires_every_covered_source": (
+        "TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage"
+    ),
     "promotion_registry_binds_v2": (
         "TestStructuredSafetyPromotionPolicyV8BindsStructuredAuthorityRollout"
     ),

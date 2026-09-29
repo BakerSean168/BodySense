@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -266,9 +267,15 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 			PolicyRevision:    SafetyEnvelopePolicyV1,
 			BodyStateRevision: 3,
 			Coverage: SafetyCoverageV1{
-				Revision:        SafetyCoverageRevisionV1,
-				CaptureRevision: SafetyCaptureRevisionV1,
-				Complete:        true,
+				Revision:          SafetyCoverageRevisionV1,
+				CaptureRevision:   SafetyCaptureRevisionV1,
+				RequiredConcepts:  []string{"trauma", "radiating_pain", "numbness", "weakness", "dizziness"},
+				CoveredSourceRefs: []string{"body-state:fact:test"},
+				Complete:          true,
+			},
+			Assertions: []SafetyAssertionV1{
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
 			},
 			ActiveBlockers: []SafetyBlockerV1{},
 			RequiresReview: false,
@@ -279,8 +286,8 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 		"governance": map[string]any{
 			"verdict": "rejected",
 			"issues": []any{
-				map[string]any{"policy": "red_flag_safety"},
-				map[string]any{"policy": "red_flag_safety"},
+				map[string]any{"policy": "red_flag_safety", "details": map[string]any{"category": "radiating_pain"}},
+				map[string]any{"policy": "red_flag_safety", "details": map[string]any{"category": "trauma"}},
 			},
 		},
 		"decision_authority": map[string]any{
@@ -303,11 +310,34 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 	if !evidence.SafetyEnvelopePresent || !evidence.CoverageComplete || evidence.ActiveBlockerCount != 0 || evidence.RequiresReview {
 		t.Fatalf("structured safety evidence drifted: %#v", evidence)
 	}
-	if !evidence.Baseline.LegacyProseGovernanceOnly || evidence.Baseline.DecisionPolicyRevision != DiagnosisDecisionPolicyV1 {
+	if !evidence.Baseline.LegacyProseGovernanceOnly || evidence.Baseline.DecisionPolicyRevision != DiagnosisDecisionPolicyV1 ||
+		!slices.Equal(evidence.Baseline.LegacyProseSafetyCategories, []string{"radiating_pain", "trauma"}) ||
+		!slices.Equal(evidence.ConfirmedAbsentConcepts, []string{"radiating_pain", "trauma"}) {
 		t.Fatalf("legacy false-positive evidence was not recognized: %#v", evidence.Baseline)
 	}
 	if evidence.Replay.DecisionPolicyRevision != DiagnosisDecisionPolicyV2 || evidence.Replay.GovernanceVerdict != "accepted" || evidence.Replay.SafetyFindingCount != 0 {
 		t.Fatalf("structured challenger evidence drifted: %#v", evidence.Replay)
+	}
+}
+
+func TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage(t *testing.T) {
+	envelope := &SafetyEnvelopeV2{
+		SchemaRevision: SafetyEnvelopeSchemaV2, PolicyRevision: SafetyEnvelopePolicyV1, BodyStateRevision: 3,
+		Coverage: SafetyCoverageV1{
+			Revision: SafetyCoverageRevisionV1, CaptureRevision: SafetyCaptureRevisionV1, Complete: true,
+			RequiredConcepts:  []string{"trauma", "radiating_pain"},
+			CoveredSourceRefs: []string{"body-state:fact:a", "body-state:fact:b"},
+		},
+		Assertions: []SafetyAssertionV1{
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
+		},
+	}
+	got := replayConfirmedAbsentConcepts(envelope)
+	if !slices.Equal(got, []string{"trauma"}) {
+		t.Fatalf("only concepts confirmed absent across every covered source are authoritative: %#v", got)
 	}
 }
 
@@ -317,7 +347,7 @@ func TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues(t *testing.T) 
 		"governance": map[string]any{
 			"verdict": "rejected",
 			"issues": []any{
-				map[string]any{"policy": "red_flag_safety"},
+				map[string]any{"policy": "red_flag_safety", "details": map[string]any{"category": "trauma"}},
 				map[string]any{"policy": "forbidden_claim_surface"},
 			},
 		},
