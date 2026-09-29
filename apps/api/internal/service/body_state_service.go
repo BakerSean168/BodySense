@@ -836,10 +836,8 @@ func bodyStateBoundSymptomAnswer(
 			symptom[target] = value
 		}
 	}
-	if safetyCapture != nil {
-		for key, value := range safetyCapture {
-			symptom[key] = value
-		}
+	for key, value := range safetyCapture {
+		symptom[key] = value
 	}
 	if bodyStateString(symptom["body_part"]) == "" || bodyStateString(symptom["symptom_type"]) == "" {
 		return nil, captureID, true, errors.New("structured symptom intake binding is missing symptom identity")
