@@ -243,6 +243,8 @@ Use `--dry-run` on either publisher to inspect the immutable object plan without
 ```text
 verified full-main revision
   -> publish/verify atlas + revision-scoped Vite assets
+  -> build Web OCI with BUNDLE_ANATOMY_ATLAS=false
+     (external pinned catalog required; duplicate atlas bytes excluded)
   -> build immutable sha-<revision> Web/API/AI/runtime images once
   -> pull immutable Web image
   -> enumerate its /assets files
@@ -252,6 +254,8 @@ verified full-main revision
 ```
 
 `Release Publish` later reuses those exact image digests; `Deploy Production` only selects an already Published release. This means an `index.html` cannot become staging/release/production-eligible while its hashed CDN dependencies are absent.
+
+The candidate Web coherence gate also asserts that `/usr/share/nginx/html/static/anatomy/vanatome` is absent from the release image. The atlas still has to pass the pinned acquisition/verification and CDN publication steps first; this check only prevents the already-published bytes from being duplicated inside the OCI runtime artifact. Local Docker builds keep the default `BUNDLE_ANATOMY_ATLAS=true` fallback.
 
 ## 11. Staging
 

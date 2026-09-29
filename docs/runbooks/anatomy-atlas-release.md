@@ -167,14 +167,23 @@ A new upstream release requires a separately reviewed new manifest.
 
 ## 5. Docker/release integration
 
-`docker/Dockerfile.web` has an isolated `anatomy-atlas` stage. It fetches and
-verifies the approved version before the Vite build, then copies the verified
-release into `apps/web/public/static/anatomy/vanatome/`. Vite copies that static
-content into `dist`, and the final Nginx image contains it.
+`docker/Dockerfile.web` has an isolated `anatomy-atlas` stage. It always fetches
+and verifies the approved release before the Vite build, but packaging is now
+explicitly split from verification:
 
-The separate stage is intentional: Docker/Buildx can cache the ~92 MiB atlas
-layer across ordinary application code changes as long as the atlas scripts,
-manifest, or selected version do not change.
+- `BUNDLE_ANATOMY_ATLAS=true` (the default) copies the verified release into
+  `apps/web/public/static/anatomy/vanatome/` before Vite builds. This preserves
+  the same-origin/local fallback used by development-style Docker builds.
+- `BUNDLE_ANATOMY_ATLAS=false` requires an explicit
+  `VITE_BODYSENSE_ANATOMY_CATALOG_URL` and does **not** copy the atlas into the
+  Vite public tree. The final Nginx image therefore contains only the HTML shell
+  and ordinary Web assets; the verified atlas is served from the separately
+  published immutable CDN release.
+
+The candidate workflow uses the second mode because it already publishes and
+verifies the same pinned atlas in R2 before building the Web image. This avoids
+re-uploading roughly 92 MiB of duplicate atlas bytes to ACR for every Web
+revision while retaining the same manifest/build-ID verification contract.
 
 Production release workflow pin:
 

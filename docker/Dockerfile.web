@@ -19,6 +19,7 @@ FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd
 ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
 ARG VITE_BODYSENSE_ANATOMY_CATALOG_URL
 ARG VITE_ASSET_BASE
+ARG BUNDLE_ANATOMY_ATLAS=true
 
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
@@ -46,16 +47,35 @@ RUN pnpm install --no-frozen-lockfile
 # Copy full source
 COPY . .
 
-# Add the byte-for-byte verified atlas mirror under a version-scoped,
-# same-origin public path. Generated binaries never enter ordinary Git.
-COPY --from=anatomy-atlas /release/ apps/web/public/static/anatomy/vanatome/
+# Keep the verified atlas available to the builder without forcing it into the
+# runtime image. Local/same-origin builds retain the historical fallback by
+# default; release CDN builds explicitly disable bundling and must provide an
+# external catalog URL.
+COPY --from=anatomy-atlas /release/ /opt/bodysense-anatomy-release/
 
-# Build the web app (outputs to apps/web/dist/)
+# Build the web app (outputs to apps/web/dist/).
 # Frontend uses apiUrl('/api/v1/...') with empty base — nginx proxies /api to Go backend.
-RUN cd apps/web \
-    && VITE_ASSET_BASE="${VITE_ASSET_BASE:-/}" \
-       VITE_BODYSENSE_ANATOMY_CATALOG_URL="${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-/static/anatomy/vanatome/${BODYSENSE_ANATOMY_ATLAS_VERSION}/releases/${BODYSENSE_ANATOMY_ATLAS_VERSION}/catalog.json}" \
-       npx vite build
+RUN set -eux; \
+    case "${BUNDLE_ANATOMY_ATLAS}" in \
+      true) \
+        mkdir -p apps/web/public/static/anatomy/vanatome; \
+        cp -a /opt/bodysense-anatomy-release/. apps/web/public/static/anatomy/vanatome/ \
+        ;; \
+      false) \
+        test -n "${VITE_BODYSENSE_ANATOMY_CATALOG_URL}" || { \
+          echo 'BUNDLE_ANATOMY_ATLAS=false requires VITE_BODYSENSE_ANATOMY_CATALOG_URL' >&2; \
+          exit 1; \
+        } \
+        ;; \
+      *) \
+        echo "BUNDLE_ANATOMY_ATLAS must be true or false, got: ${BUNDLE_ANATOMY_ATLAS}" >&2; \
+        exit 1 \
+        ;; \
+    esac; \
+    cd apps/web; \
+    VITE_ASSET_BASE="${VITE_ASSET_BASE:-/}" \
+    VITE_BODYSENSE_ANATOMY_CATALOG_URL="${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-/static/anatomy/vanatome/${BODYSENSE_ANATOMY_ATLAS_VERSION}/releases/${BODYSENSE_ANATOMY_ATLAS_VERSION}/catalog.json}" \
+    npx vite build
 
 # ── Runtime: nginx serves static files ─────────────────────────────────
 FROM nginx:1.30.5-alpine@sha256:bf3201ab56f23e5954646379c775d511fc466e9f11376d9725361064ad07ed35
