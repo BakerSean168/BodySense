@@ -42,20 +42,22 @@ type DiagnosisReplayLayer struct {
 }
 
 type DiagnosisReplayAuthorityEndpoint struct {
-	DecisionPolicyRevision      string `json:"decision_policy_revision"`
-	GovernanceVerdict           string `json:"governance_verdict"`
-	LegacyProseGovernanceOnly   bool   `json:"legacy_prose_governance_only"`
-	SafetyFindingCount          int    `json:"safety_finding_count"`
-	ForbiddenSideEffectsPresent bool   `json:"forbidden_side_effects_present"`
+	DecisionPolicyRevision      string   `json:"decision_policy_revision"`
+	GovernanceVerdict           string   `json:"governance_verdict"`
+	LegacyProseGovernanceOnly   bool     `json:"legacy_prose_governance_only"`
+	LegacyProseSafetyCategories []string `json:"legacy_prose_safety_categories,omitempty"`
+	SafetyFindingCount          int      `json:"safety_finding_count"`
+	ForbiddenSideEffectsPresent bool     `json:"forbidden_side_effects_present"`
 }
 
 type DiagnosisReplayAuthorityEvidence struct {
-	SafetyEnvelopePresent bool                             `json:"safety_envelope_present"`
-	CoverageComplete      bool                             `json:"coverage_complete"`
-	ActiveBlockerCount    int                              `json:"active_blocker_count"`
-	RequiresReview        bool                             `json:"requires_review"`
-	Baseline              DiagnosisReplayAuthorityEndpoint `json:"baseline"`
-	Replay                DiagnosisReplayAuthorityEndpoint `json:"replay"`
+	SafetyEnvelopePresent   bool                             `json:"safety_envelope_present"`
+	CoverageComplete        bool                             `json:"coverage_complete"`
+	ActiveBlockerCount      int                              `json:"active_blocker_count"`
+	RequiresReview          bool                             `json:"requires_review"`
+	ConfirmedAbsentConcepts []string                         `json:"confirmed_absent_concepts,omitempty"`
+	Baseline                DiagnosisReplayAuthorityEndpoint `json:"baseline"`
+	Replay                  DiagnosisReplayAuthorityEndpoint `json:"replay"`
 }
 
 type DiagnosisReplayAuthorityComparison struct {
@@ -436,18 +438,64 @@ func diagnosisReplayAuthorityEvidence(input DiagnosisReplayInput, baseline, repl
 		evidence.CoverageComplete = input.SafetyEnvelope.Coverage.Complete
 		evidence.ActiveBlockerCount = len(input.SafetyEnvelope.ActiveBlockers)
 		evidence.RequiresReview = input.SafetyEnvelope.RequiresReview
+		evidence.ConfirmedAbsentConcepts = replayConfirmedAbsentConcepts(input.SafetyEnvelope)
 	}
 	return evidence
 }
 
 func diagnosisReplayAuthorityEndpoint(payload map[string]any) DiagnosisReplayAuthorityEndpoint {
+	categories, legacyOnly := replayLegacyProseGovernanceCategories(payload)
 	return DiagnosisReplayAuthorityEndpoint{
 		DecisionPolicyRevision:      replayPayloadDecisionPolicyRevision(payload),
 		GovernanceVerdict:           replayPayloadGovernanceVerdict(payload),
-		LegacyProseGovernanceOnly:   replayLegacyProseGovernanceOnly(payload),
+		LegacyProseGovernanceOnly:   legacyOnly,
+		LegacyProseSafetyCategories: categories,
 		SafetyFindingCount:          replayPayloadSafetyFindingCount(payload),
 		ForbiddenSideEffectsPresent: replayHasForbiddenSideEffects(payload),
 	}
+}
+
+func replayConfirmedAbsentConcepts(envelope *SafetyEnvelopeV2) []string {
+	if envelope == nil || !envelope.Coverage.Complete || len(envelope.Coverage.CoveredSourceRefs) == 0 {
+		return nil
+	}
+	covered := map[string]struct{}{}
+	for _, sourceRef := range envelope.Coverage.CoveredSourceRefs {
+		if value := strings.TrimSpace(sourceRef); value != "" {
+			covered[value] = struct{}{}
+		}
+	}
+	if len(covered) == 0 {
+		return nil
+	}
+	required := map[string]struct{}{}
+	for _, concept := range envelope.Coverage.RequiredConcepts {
+		if value := strings.TrimSpace(concept); value != "" {
+			required[value] = struct{}{}
+		}
+	}
+	absentByConcept := map[string]map[string]struct{}{}
+	for _, assertion := range envelope.Assertions {
+		concept := string(assertion.Concept)
+		if _, ok := required[concept]; !ok || assertion.Polarity != SafetyAbsent || assertion.Temporality != SafetyCurrent || assertion.ReviewState != SafetyConfirmed {
+			continue
+		}
+		if _, ok := covered[assertion.SourceRef]; !ok {
+			continue
+		}
+		if absentByConcept[concept] == nil {
+			absentByConcept[concept] = map[string]struct{}{}
+		}
+		absentByConcept[concept][assertion.SourceRef] = struct{}{}
+	}
+	result := []string{}
+	for concept := range required {
+		if len(absentByConcept[concept]) == len(covered) {
+			result = append(result, concept)
+		}
+	}
+	sort.Strings(result)
+	return result
 }
 
 func replayPayloadDecisionPolicyRevision(payload map[string]any) string {
@@ -476,28 +524,76 @@ func replayPayloadSafetyFindingCount(payload map[string]any) int {
 }
 
 func replayLegacyProseGovernanceOnly(payload map[string]any) bool {
+	_, ok := replayLegacyProseGovernanceCategories(payload)
+	return ok
+}
+
+func replayLegacyProseGovernanceCategories(payload map[string]any) ([]string, bool) {
 	status, _ := payload["status"].(string)
 	if status != "safety_blocked" || replayPayloadDecisionPolicyRevision(payload) != DiagnosisDecisionPolicyV1 {
-		return false
+		return nil, false
 	}
 	authority, _ := payload["decision_authority"].(map[string]any)
 	outcome, _ := authority["outcome"].(string)
-	if outcome != string(DiagnosisBlock) || !replayStringListContains(authority["reasons"], "agent_output_failed_safety_governance") {
-		return false
+	if outcome != string(DiagnosisBlock) || !replayStringListExactly(authority["reasons"], []string{"agent_output_failed_safety_governance"}) {
+		return nil, false
 	}
 	governance, _ := payload["governance"].(map[string]any)
 	verdict, _ := governance["verdict"].(string)
 	issues, _ := governance["issues"].([]any)
 	if verdict != "rejected" || len(issues) == 0 {
-		return false
+		return nil, false
 	}
+	categories := map[string]struct{}{}
 	for _, raw := range issues {
 		issue, ok := raw.(map[string]any)
 		if !ok {
-			return false
+			return nil, false
 		}
 		policy, _ := issue["policy"].(string)
 		if policy != "red_flag_safety" {
+			return nil, false
+		}
+		details, ok := issue["details"].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		category, _ := details["category"].(string)
+		category = strings.TrimSpace(category)
+		if category == "" {
+			return nil, false
+		}
+		categories[category] = struct{}{}
+	}
+	result := make([]string, 0, len(categories))
+	for category := range categories {
+		result = append(result, category)
+	}
+	sort.Strings(result)
+	return result, len(result) > 0
+}
+
+func replayStringListExactly(raw any, want []string) bool {
+	items := []string{}
+	switch values := raw.(type) {
+	case []any:
+		for _, item := range values {
+			value, ok := item.(string)
+			if !ok {
+				return false
+			}
+			items = append(items, value)
+		}
+	case []string:
+		items = append(items, values...)
+	default:
+		return false
+	}
+	if len(items) != len(want) {
+		return false
+	}
+	for i := range want {
+		if items[i] != want[i] {
 			return false
 		}
 	}

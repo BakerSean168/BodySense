@@ -2,7 +2,9 @@
   "checks": {
     "authorized_legacy_false_positive_removal": true,
     "canary_direction_normalized": true,
+    "confirmed_absence_requires_every_covered_source": true,
     "historical_v1_cohort_isolated": true,
+    "legacy_category_requires_exact_absence_proof": true,
     "legacy_v1_semantics_preserved": true,
     "missing_reports_stay_in_v2_cohort": true,
     "mixed_governance_not_authorized": true,
@@ -21,7 +23,9 @@
   "go_tests": {
     "authorized_legacy_false_positive_removal": "TestStructuredAuthorityRolloutAuthorizesProvenLegacyFalsePositiveRemoval",
     "canary_direction_normalized": "TestStructuredAuthorityClassificationNormalizesCanaryDirection",
+    "confirmed_absence_requires_every_covered_source": "TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage",
     "historical_v1_cohort_isolated": "TestStructuredAuthorityPolicyKeepsHistoricalV1CohortSeparate",
+    "legacy_category_requires_exact_absence_proof": "TestStructuredAuthorityRolloutRejectsUncoveredLegacyRedFlagCategory",
     "legacy_v1_semantics_preserved": "TestLegacyRolloutPolicyStillTreatsBlockToAllowAsUnsafe",
     "missing_reports_stay_in_v2_cohort": "TestStructuredAuthorityMissingReportStaysInV2PromotionCohort",
     "mixed_governance_not_authorized": "TestLegacyProseAuthorityEvidenceRejectsMixedGovernanceIssues",
@@ -32,7 +36,7 @@
     "unproven_relaxations_fail_closed": "TestStructuredAuthorityRolloutStillRejectsUnprovenRelaxations"
   },
   "name": "diagnosis-rollout-authority-policy-v1",
-  "passed": 15,
+  "passed": 17,
   "rollout_policy_revision": "diagnosis-rollout-policy-v2-structured-authority",
-  "total": 15
+  "total": 17
 }

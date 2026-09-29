@@ -148,9 +148,9 @@
       },
       "minimum_pass_rate": 1.0,
       "pass_rate": 1.0,
-      "passed": 15,
+      "passed": 17,
       "report": "data/evals/reports/diagnosis_rollout_authority_policy_v1.json",
-      "total": 15
+      "total": 17
     }
   ],
   "rollout": {

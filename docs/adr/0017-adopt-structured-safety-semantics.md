@@ -76,10 +76,13 @@ record. v2 preserves the raw hard, semantic, and presentation comparisons and ad
 separate, auditable authority classification. A Champion block may be gate-equivalent to
 a Challenger allow only when the frozen SafetyEnvelopeV2 is complete, has no active
 blocker or review requirement, the Champion block is exclusively legacy
-`red_flag_safety` post-agent governance under decision policy v1, and the structured
-Challenger under decision policy v2 is accepted with no safety findings or forbidden
-side effects. Artifact identity must also match. Every omitted or contradictory premise
-fails closed as an unsafe authority relaxation.
+`red_flag_safety` post-agent governance under decision policy v1, every red-flag
+category exactly matches a concept proven `current + confirmed + absent` across every
+covered SafetyEnvelope source, and the structured Challenger under decision policy v2 is
+accepted with no safety findings or forbidden side effects. Broad or unmapped legacy
+categories are never inferred from prose and remain unsafe. Artifact identity must also
+match. Every omitted or contradictory premise fails closed as an unsafe authority
+relaxation.
 
 Rollout observations are summarized by rollout-policy revision and, for controlled
 experiments, promotion record. This preserves failed/retired experiment evidence rather

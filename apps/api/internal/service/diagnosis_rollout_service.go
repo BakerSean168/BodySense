@@ -334,6 +334,13 @@ func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *Di
 	if !championEvidence.LegacyProseGovernanceOnly {
 		reasons = append(reasons, "champion_block_not_legacy_prose_governance_only")
 	}
+	if len(championEvidence.LegacyProseSafetyCategories) == 0 {
+		reasons = append(reasons, "legacy_red_flag_category_missing")
+	} else if !diagnosisRolloutCategoriesConfirmedAbsent(
+		championEvidence.LegacyProseSafetyCategories, evidence.ConfirmedAbsentConcepts,
+	) {
+		reasons = append(reasons, "legacy_red_flag_category_not_confirmed_absent")
+	}
 	if challengerEvidence.DecisionPolicyRevision != DiagnosisDecisionPolicyV2 {
 		reasons = append(reasons, "challenger_not_structured_decision_policy")
 	}
@@ -353,6 +360,7 @@ func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *Di
 			"complete_structured_safety_envelope",
 			"no_active_structured_safety_blocker",
 			"legacy_prose_governance_only",
+			"legacy_red_flag_categories_confirmed_absent",
 			"structured_authority_allow",
 		}
 		comparison.Authority = authority
@@ -362,6 +370,28 @@ func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *Di
 	authority.ReasonCodes = reasons
 	comparison.Authority = authority
 	return comparison, true
+}
+
+func diagnosisRolloutCategoriesConfirmedAbsent(categories, confirmedAbsent []string) bool {
+	if len(categories) == 0 || len(confirmedAbsent) == 0 {
+		return false
+	}
+	absent := map[string]struct{}{}
+	for _, concept := range confirmedAbsent {
+		if value := strings.TrimSpace(concept); value != "" {
+			absent[value] = struct{}{}
+		}
+	}
+	for _, category := range categories {
+		value := strings.TrimSpace(category)
+		if value == "" {
+			return false
+		}
+		if _, ok := absent[value]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func diagnosisRolloutOutcomeDirection(route DiagnosisRouteSelection, report *DiagnosisReplayReport) (string, string) {
