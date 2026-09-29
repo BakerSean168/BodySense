@@ -99,3 +99,82 @@ Batch A: all DGS-SAFE-000–050 acceptance cases green; Go targeted/full tests a
 ## Protected contracts and non-goals
 
 Protect exact BodyState revision, durable review authority, Go DecisionAuthority v1 for historical configurations, public OpenAPI, v3–v7 manifests and promotion records, default Champion, and existing RedFlagDetector compatibility paths. Batch A excludes a runtime authority switch, public API change, database migration, new regex, free-text interpretation, deployment, canary, promotion, and PR creation. No staging or production changes belong to this branch repair.
+
+## v9 immutable context repair (2026-09-29)
+
+DGS-SAFE-080 remains incomplete. The retained first v8 staging shadow observation failed
+before comparison: Groq qwen/qwen3.8-27b returned provider capacity/request-size 429
+(7000 ITPM limit, approximately 7434 requested input tokens); OpenRouter fallback
+was unavailable due to insufficient credits. v8 never executed. Champion v3 executed
+(approximately 6428 input tokens), then historical prose governance falsely blocked
+repeated structured concepts (放射痛/头晕/外伤), despite coverage_complete=true and
+zero envelope blockers. This is legacy prose-governance evidence, not a v8 unsafe
+relaxation. The original observation must remain retained without reset or deletion.
+
+Implementation plan: derive pure compact BodyState/history prompt views; filter
+successor-only safety detail metadata for v3–v7 compatibility; preserve v8 prompt
+construction and all historical identities/evidence; add v9 with full separate envelope,
+DecisionPolicyV2 and promotion v7 lineage; qualify on the unchanged dataset; run full
+Python/Go checks and docs links before one commit and branch push.
+
+Frozen replay, governance BodyState/envelope, source IDs and safety decisions remain
+complete and unchanged. v9 removes transport duplication and isolates new rollout
+evidence. No provider spending, deployment, Champion swap or PR is part of this repair.
+After merge, staging must verify actual provider usage, new shadow samples, reviewed
+canary gates and explicit promotion; DGS-SAFE-090 replay/rollback remains outstanding.
+
+### Independent review repair
+
+The first v9 implementation incorrectly applied compact/deduplicated prompt views to
+v3–v7 while retaining their old configuration IDs. Independent review rejected that
+as an immutable-replay violation. The repaired implementation now dispatches three
+explicit context modes: byte-stable legacy v3–v7 plus fact-only forward-compatibility
+sanitation, fully frozen v8, and deduplicated/compact v9. Tests pin legacy and v8
+reference strings byte-for-byte and verify that safety-key filtering never crosses from
+fact payloads into observation/hypothesis/current-context details. The composite
+`current_context.updated` revision is covered explicitly: only `changes.facts[]` payloads
+are sanitized while `changes.observations[]` remains byte/value-identical.
+
+### v9 deterministic qualification outcome
+
+- Configuration: `diag-config-ba10b8e6820c3691`; prompt:
+  `diagnosis-prompt-v6-structured-safety-context`; promotion: `diagnosis_promotion_v7`.
+- Unchanged dataset fingerprint:
+  `7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876`.
+  v9 inherits v8's explicit applicability in the evaluator without editing the corpus.
+- Qualification 10/10; policy 37/37; v3 shared cases 5/5 non-inferior,
+  five candidate-only cases explicit, zero critical regressions. Readiness is true
+  for shadow only; interaction_experiment.required remains true.
+- Representative dynamic JSON (including full envelope): 10,219 → 5,325 characters
+  (47.89% reduction). This is not a provider token estimate.
+- Python: prompt context 19 passed; diagnosis/config/governance/eval selection
+  remains covered by the full suite; full suite 655 passed. Ruff passes; Pyright reports
+  zero errors/warnings. Fresh environment requires both dev and ocr extras for the
+  existing OCR imports; no dependency or lockfile change.
+- Go: config/promotion selection 52 passed; full suite 703 passed and 15 skipped
+  test/subtest events across 16 passing packages (11 packages have no tests);
+  `go vet ./...` passes. Historical configuration/dataset/eval files (68 tracked
+  files) byte-compare unchanged against the base. Five local links in changed
+  documents resolve; `git diff --check` passes.
+
+Reproduce v9 artifacts from `apps/ai-service` (all deterministic):
+
+```bash
+uv run --extra dev --extra ocr python scripts/run_diagnosis_eval.py \
+  --dataset "$PWD/data/evals/diagnosis_structured_safety_qualification.yaml" \
+  --configuration-id diag-config-ba10b8e6820c3691 \
+  --compare-to data/evals/reports/diagnosis_structured_safety_v8.json \
+  --json-output data/evals/reports/diagnosis_structured_safety_v9.json
+uv run --extra dev --extra ocr python scripts/run_diagnosis_structured_safety_policy_eval.py --context-successor
+uv run --extra dev --extra ocr python scripts/run_diagnosis_promotion_eval.py \
+  --policy data/evals/diagnosis_promotion_policy_v7.json \
+  --json-output data/evals/reports/diagnosis_promotion_readiness_v7.json
+```
+
+Historical v3–v7 serialization remains byte-stable for frozen inputs that predate the
+structured-safety detail fields; current inputs receive fact-only compatibility sanitation
+without compaction or history deduplication. Historical v8 serialization remains fully
+unchanged. Only v9 uses compact JSON and deduplicates `recent_revisions`; history
+`source` remains semantic provenance while v9-only row IDs/user IDs are removed.
+Observation/hypothesis/non-fact `details` are explicitly preserved. No staging evidence
+was changed by this repair.

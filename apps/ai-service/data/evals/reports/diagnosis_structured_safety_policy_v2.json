@@ -1,0 +1,114 @@
+{
+  "champion_comparison": {
+    "candidate_configuration_id": "diag-config-ba10b8e6820c3691",
+    "candidate_only_case_names": [
+      "capture-incomplete",
+      "generic-candidate-education",
+      "invalid-finding-source",
+      "legacy-active-current-absent",
+      "valid-typed-finding"
+    ],
+    "candidate_only_cases": [
+      {
+        "applicability_reason": "v8-only capture coverage abstention; v3 has no structured coverage contract.",
+        "name": "capture-incomplete",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only no-prose-scan rule; v3 intentionally uses its historical prose detector.",
+        "name": "generic-candidate-education",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only source-ref validation for typed findings.",
+        "name": "invalid-finding-source",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8 cross-layer authority; Python-only v3 harness cannot represent Go v1 final authority faithfully.",
+        "name": "legacy-active-current-absent",
+        "passed": true
+      },
+      {
+        "applicability_reason": "v8-only typed finding validation and escalation contract.",
+        "name": "valid-typed-finding",
+        "passed": true
+      }
+    ],
+    "candidate_pass_rate": 1.0,
+    "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+    "champion_pass_rate": 1.0,
+    "critical_regressions": [],
+    "improvements": [],
+    "margin": 0.02,
+    "non_inferior": true,
+    "pass_rate_delta": 0.0,
+    "promotion_eligible": true,
+    "regressions": [],
+    "shared_case_count": 5,
+    "shared_case_names": [
+      "active-dizziness",
+      "complete-benign",
+      "historical-resolved-nonblocking",
+      "legacy-monitoring-current-absent",
+      "separate-sources-positive"
+    ],
+    "slice_deltas": {
+      "critical-safety": 0.0,
+      "structured-safety": 0.0
+    },
+    "slice_regressions": []
+  },
+  "checks": {
+    "active_blocker_bypasses_agent": true,
+    "complete_single_source": true,
+    "context_reduction_at_least_25_percent": true,
+    "current_context_fact_payloads_filtered": true,
+    "education_prose_accepted": true,
+    "fact_only_metadata_filter": true,
+    "fixture_complete_single_source": true,
+    "fixture_marker_missing_key_incomplete": true,
+    "fixture_mixed_sources_incomplete": true,
+    "fixture_no_discomfort_incomplete": true,
+    "frozen_input_unchanged": true,
+    "full_envelope_present": true,
+    "go_final_authority_and_shared_contract": true,
+    "go_preflight_consistent_payloads": true,
+    "go_producer_capture_and_coverage": true,
+    "historical_resolved_nonblocking": true,
+    "history_entries_and_fact_values_retained": true,
+    "incomplete_capture_abstains": true,
+    "invalid_finding_source_rejected": true,
+    "legacy_active_retains_blocker": true,
+    "legacy_historical_prompt_byte_stable": true,
+    "legacy_monitoring_can_execute": true,
+    "legacy_no_successor_fact_metadata": true,
+    "legacy_recent_revisions_duplication_preserved": true,
+    "non_fact_details_preserved": true,
+    "producer_checklist_is_first_and_bounded": true,
+    "producer_invalid_does_not_claim_capture": true,
+    "producer_none_captures_five_absences": true,
+    "producer_selected_captures_exact_map": true,
+    "profile_preserved": true,
+    "separate_source_positive_blocks": true,
+    "v3_shared_cases_non_inferior": true,
+    "v8_prompt_byte_stable": true,
+    "v9_no_successor_fact_metadata": true,
+    "v9_recent_revisions_deduplicated": true,
+    "valid_finding_accepted": true,
+    "zero_critical_regressions": true
+  },
+  "configuration_id": "diag-config-ba10b8e6820c3691",
+  "context_measurements": {
+    "new_chars": 5325,
+    "old_chars": 10219,
+    "reduction": 0.47891183090321954
+  },
+  "dataset_fingerprint": "7ff22d4eaa9b1f6e8402f7df5647da9d77315b18da6a8a7809afb44d4e4b3876",
+  "detector_revision": "none",
+  "go_test_output": "ok  \tgithub.com/bodysense/api/internal/service\t0.030s\nok  \tgithub.com/bodysense/api/internal/service\t0.013s\nok  \tgithub.com/bodysense/api/internal/service\t0.030s\n",
+  "governance_policy_revision": "diagnosis-governance-v8-structured-safety",
+  "name": "diagnosis-structured-safety-policy-v2",
+  "passed": 37,
+  "total": 37
+}

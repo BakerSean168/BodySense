@@ -1,5 +1,7 @@
 """System prompt for BodyState-based possible-diagnosis analysis."""
 
+DIAGNOSIS_CONTEXT_PROMPT_REVISION = "diagnosis-prompt-v6-structured-safety-context"
+
 DIAGNOSIS_PROMPT_REVISION = "diagnosis-prompt-v3"
 DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION = "diagnosis-prompt-v4-evidence-gap"
 DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION = "diagnosis-prompt-v5-structured-safety"
@@ -92,6 +94,10 @@ DIAGNOSIS_STRUCTURED_SAFETY_SYSTEM_PROMPT = (
 def get_diagnosis_system_prompt(revision: str) -> str:
     """Resolve an immutable prompt revision used by an Agent configuration."""
     prompts = {
+        DIAGNOSIS_CONTEXT_PROMPT_REVISION: DIAGNOSIS_STRUCTURED_SAFETY_SYSTEM_PROMPT
+        + "\nSafetyEnvelopeV2 is supplied separately as the sole structured safety authority; "
+        "BodyState/history prompt views intentionally omit structured-safety authority "
+        "detail keys and duplicate recent_revisions.\n",
         DIAGNOSIS_PROMPT_REVISION: DIAGNOSIS_SYSTEM_PROMPT,
         DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION: DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT,
         DIAGNOSIS_STRUCTURED_SAFETY_PROMPT_REVISION: DIAGNOSIS_STRUCTURED_SAFETY_SYSTEM_PROMPT,
