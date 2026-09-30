@@ -13,6 +13,50 @@
   "main_revision": "bafad87d3a6d85cfae5de56ff4dfcc294adf0a60",
   "name": "diagnosis-v10-staging-rollback-rehearsal-v1",
   "passed": true,
+  "public_diagnosis_smoke": {
+    "initial_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "analysis_id": "d198ba5c-1d03-4198-b664-23e8dc405d07",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "restored_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "analysis_id": "53ee0f57-c1f9-409e-aacd-9e301bceac31",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "rollback_v3": {
+      "agent_configuration_id": "diag-config-5a4a13627e14b4cf",
+      "analysis_id": "257e7353-36f3-4898-89f4-63d5fefa2508",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "stage": "champion"
+      },
+      "status": "completed"
+    }
+  },
   "recorded_at": "2026-09-30T05:28:30.465617+00:00",
   "restore": {
     "challenger_configuration_id": "",
