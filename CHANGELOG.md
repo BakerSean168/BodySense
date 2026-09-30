@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.14.0](https://github.com/BakerSean168/BodySense/compare/v0.13.1...v0.14.0) (2026-09-30)
+
+
+### Features
+
+* add structured Diagnosis successor ([3989e85](https://github.com/BakerSean168/BodySense/commit/3989e858584dae3c3e7317d1fb0c6c223e795d18))
+* add structured safety envelope foundation ([f95ef60](https://github.com/BakerSean168/BodySense/commit/f95ef60f48326f0765990d734c7c8b275dc8e2fa))
+* **ai:** add diagnosis historical replay rollback audit ([d35cce1](https://github.com/BakerSean168/BodySense/commit/d35cce136c814f40f1cc8f9bab62020eeb6262f1))
+* **ai:** add standalone diagnosis v10 acceptance gate ([4e2d9a5](https://github.com/BakerSean168/BodySense/commit/4e2d9a57d36cf3cf65db98ba626c489a4bbb41b0))
+* **ai:** add standalone Diagnosis v10 acceptance gate ([bafad87](https://github.com/BakerSean168/BodySense/commit/bafad87d3a6d85cfae5de56ff4dfcc294adf0a60))
+* **ai:** complete Diagnosis historical replay rollback audit tooling ([0b38fc9](https://github.com/BakerSean168/BodySense/commit/0b38fc9f31010ff699d462e4f04c94281ad281b1))
+* **ai:** gate production provider qualification ([702bde4](https://github.com/BakerSean168/BodySense/commit/702bde4aced441d14b4c73d3174c7866ce3222c2))
+* **ai:** qualify replacement production Diagnosis provider ([f59fb80](https://github.com/BakerSean168/BodySense/commit/f59fb8069730f4aff74220a3df08e97cc3b0692c))
+* **safety:** adopt structured diagnosis safety semantics ([2fc8ba9](https://github.com/BakerSean168/BodySense/commit/2fc8ba9bd78d029e101f9146efff931d2fee4ae5))
+
+
+### Bug Fixes
+
+* **ai:** add diagnosis v6 negation bridge ([ca52b4b](https://github.com/BakerSean168/BodySense/commit/ca52b4b5581911a9e60aa36fba25f40e4d236d55))
+* **ai:** add Diagnosis v6 negation bridge ([68ca36f](https://github.com/BakerSean168/BodySense/commit/68ca36feec44875dc572209fafd02a217c147b6b))
+* **ai:** add negation-aware diagnosis challenger ([0c9f615](https://github.com/BakerSean168/BodySense/commit/0c9f615f63298e146480280b09b22716c268dcde))
+* **ai:** add negation-aware diagnosis challenger ([e8c06e9](https://github.com/BakerSean168/BodySense/commit/e8c06e9f24914354e941bf6ea97b1ba87d4f76ae))
+* **ai:** cap Diagnosis output budget ([2554316](https://github.com/BakerSean168/BodySense/commit/255431633a09235904ce57754c25a9afc8278a20))
+* **ai:** cap Diagnosis output budget ([5194b18](https://github.com/BakerSean168/BodySense/commit/5194b186b2b669ddfb3bbc5ec01278390f4708e1))
+* **ai:** close diagnosis negation promotion gates ([756f3b0](https://github.com/BakerSean168/BodySense/commit/756f3b0bdd18aaf1d623b63273e5aa20f335ea3a))
+* **ai:** deduplicate Diagnosis safety context ([7c7b6a7](https://github.com/BakerSean168/BodySense/commit/7c7b6a7d063532f9d3724172489c75fea5c7d583))
+* **ai:** deduplicate Diagnosis safety context ([b692862](https://github.com/BakerSean168/BodySense/commit/b6928627b17d1cd6c9a3984e84a67f53772115e9))
+* **ai:** handle coordinated diagnosis negation ([db96579](https://github.com/BakerSean168/BodySense/commit/db965799172cdb53a119526c7474750b69b31afe))
+* **ai:** handle coordinated diagnosis negation ([a4c038e](https://github.com/BakerSean168/BodySense/commit/a4c038e2c57ec67e54b53c9983597c0d21a2a3d5))
+* **ai:** harden staging provider routing ([0924c34](https://github.com/BakerSean168/BodySense/commit/0924c34e22c53a2dc333a53065a668dc935bcd0c))
+* **ai:** harden staging provider routing ([fefad21](https://github.com/BakerSean168/BodySense/commit/fefad214385bfc61529042f70fb1b4ed67993915))
+* **ai:** isolate negation sources in detector ([089dd38](https://github.com/BakerSean168/BodySense/commit/089dd38f434fd5ea1935afb0210f0fd4c935efd3))
+* **ai:** narrow diagnosis governance policy key ([0348cd6](https://github.com/BakerSean168/BodySense/commit/0348cd6631ca4d645818e223444e345e6c04f690))
+* **ai:** normalize v1 diagnosis replay authority ([4e58bcd](https://github.com/BakerSean168/BodySense/commit/4e58bcdb659e67e9c81ae02b99f3ed11a78225e9))
+* **ai:** normalize v1 diagnosis replay authority ([6358ee3](https://github.com/BakerSean168/BodySense/commit/6358ee34964dd73073ba73681bc881f61e3a19bf))
+* **ai:** qualify staging diagnosis on Gemini transport ([6a8382b](https://github.com/BakerSean168/BodySense/commit/6a8382bc8d63927f473a055ac000e3a0de2d71c1))
+* **ai:** reset diagnosis provider qualification cohort ([98a96d0](https://github.com/BakerSean168/BodySense/commit/98a96d0f3adb23b820e7757cac7178a500034dec))
+* **ai:** restore v3 diagnosis champion governance ([13734b0](https://github.com/BakerSean168/BodySense/commit/13734b0d2dd064ea94e6c44da8d3a3b149472258))
+* **ai:** route staging diagnosis through gemini flash ([92079e4](https://github.com/BakerSean168/BodySense/commit/92079e4d652c5c88747e986036aed9ac2bc5c17a))
+* **ai:** separate diagnosis claim surfaces ([edafe0f](https://github.com/BakerSean168/BodySense/commit/edafe0fa703ceb91ae48db7fea4f972a98bd1ac8))
+* **ai:** version pre-agent rollout authority proof ([c9a3f84](https://github.com/BakerSean168/BodySense/commit/c9a3f84e955dcddf05f491d4aeae422e0b9729a0))
+* **ai:** version pre-agent rollout authority proof ([c34608c](https://github.com/BakerSean168/BodySense/commit/c34608c9a5afb1b68573c6a7b8a7806c9ea41def))
+* **api:** classify structured Diagnosis rollout authority ([bf2b2a4](https://github.com/BakerSean168/BodySense/commit/bf2b2a49d32a10c8a20224191d91b3c13c9842ff))
+* **api:** classify structured Diagnosis rollout authority ([b7aa37e](https://github.com/BakerSean168/BodySense/commit/b7aa37eca52dbe505592c6ae2f6c8ba0333d92a5))
+* **api:** enforce diagnosis rollout canary steps ([e81140a](https://github.com/BakerSean168/BodySense/commit/e81140a138db57ec6bfe1ffd43dd2c0dd6d6c227))
+* **api:** enforce diagnosis rollout canary steps ([a2b1de8](https://github.com/BakerSean168/BodySense/commit/a2b1de8d7dfb03a331318906387bf1e6270fa648))
+* **api:** require rollout category proof ([efc595d](https://github.com/BakerSean168/BodySense/commit/efc595db3788099b84aee2c80befe99f8ccfd04e))
+* **api:** require rollout category proof ([b6e7457](https://github.com/BakerSean168/BodySense/commit/b6e7457b55bc0d30b4a8290e42fa275b78817ce1))
+* **api:** satisfy body state lint ([2ee5505](https://github.com/BakerSean168/BodySense/commit/2ee5505a19ce8f7ba7152bbfee351b2df2d70a74))
+* close structured rollout prerequisites ([894a1cd](https://github.com/BakerSean168/BodySense/commit/894a1cd06ce764d21d0276f4b5cb9af16eacd277))
+* complete BS-UPG-100 local convergence ([e7ab625](https://github.com/BakerSean168/BodySense/commit/e7ab6259aa40e6194c4d9926be9d777e5d9df775))
+* **diagnosis:** preserve evidence trace on safety rejection ([f76e8c1](https://github.com/BakerSean168/BodySense/commit/f76e8c13a3df21027287d7789d056175856884d2))
+* **ops:** preserve staging watcher executable bit ([b1253d1](https://github.com/BakerSean168/BodySense/commit/b1253d197f3aee1888d0893e5260130d4f7c2161))
+* **ops:** remount LiteLLM runtime config ([e623eee](https://github.com/BakerSean168/BodySense/commit/e623eeec693e481da9d94bce79f69874799b7925))
+* **ops:** remount LiteLLM runtime config ([6e2a48d](https://github.com/BakerSean168/BodySense/commit/6e2a48d3c6aa94a5c0ab2f6ec3c6bfaaea360ea6))
+* **ops:** retry transient registry operations ([9aabe1d](https://github.com/BakerSean168/BodySense/commit/9aabe1da1cc1ad9b26a150ff28a05728e6f448c8))
+* **ops:** retry transient registry operations ([50ab220](https://github.com/BakerSean168/BodySense/commit/50ab220019e949e2508d4020d05cc65c91114b5b))
+* **ops:** slim API candidate image ([c5ef440](https://github.com/BakerSean168/BodySense/commit/c5ef44008cd0c98a950179d3efe525e316cf6557))
+* **ops:** slim API candidate image ([0ade7cb](https://github.com/BakerSean168/BodySense/commit/0ade7cb4df76964a820ef3fb601287bf596409bf))
+* **ops:** slim Web candidate image ([27bfade](https://github.com/BakerSean168/BodySense/commit/27bfade6a3883f852068787ce2ccabd9cb16d24f))
+* **ops:** slim Web candidate image ([8039327](https://github.com/BakerSean168/BodySense/commit/8039327615e0aeaaf470bce5a0b71dc579f6462f))
+* preserve diagnosis evidence trace on safety rejection ([3b252b1](https://github.com/BakerSean168/BodySense/commit/3b252b1282cddf52276f98f0b196b549372bde86))
+
 ## [0.13.1](https://github.com/BakerSean168/BodySense/compare/v0.13.0...v0.13.1) (2026-09-16)
 
 
