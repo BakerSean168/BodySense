@@ -5,6 +5,8 @@
 - Branch: `docs/document-code-alignment-audit`
 - Baseline: `7139d2f6`
 
+> **2026-09-30 supersession note:** sections that describe Diagnosis v3 (`diag-config-5a4a13627e14b4cf`) as the current/default Champion are retained as the historical result of the 2026-09-01 baseline-promotion audit. ADR 0018 supersedes that serving-state conclusion: Diagnosis v10 (`diag-config-3f64de162dc937ee`) is now the repository and production Champion; v3 is retained only as an immutable rollback/replay identity. Treatment v2 is unchanged.
+
 ## 1. Goal
 
 BodySense accumulated three different kinds of drift while the architecture evolved quickly:

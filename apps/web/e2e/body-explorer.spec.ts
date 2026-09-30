@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { clearStructuredSafetyCapture } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 const publicAssetOrigin = process.env.E2E_PUBLIC_ASSET_ORIGIN?.replace(
@@ -60,6 +61,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
         body_region: "右肩",
         body_region_id: "shoulder.right",
         value: "抬高手臂时右肩疼",
+        details: {
+          ...clearStructuredSafetyCapture,
+        },
         origin: "user_reported",
         review_state: "confirmed",
         lifecycle_state: "active",

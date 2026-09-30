@@ -6,7 +6,7 @@ import pytest
 
 from src.ai import AiRequest, AIService
 from src.ai.types import AiDoneEvent, AiTextDeltaEvent, AiUsageEvent, ChatMessage
-from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
+from src.configuration.diagnosis_agent_config import get_diagnosis_configuration
 from src.configuration.treatment_agent_config import get_default_treatment_configuration
 from src.services.assessment_service import AssessmentService
 from src.services.diagnosis_service import DiagnosisService
@@ -45,7 +45,7 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
     diagnosis = DiagnosisService(model_resolver=lambda _config: deterministic_diagnosis_model())
     diagnosis_result = await diagnosis.generate_diagnosis(
         body_state_revision=1,
-        configuration_id=get_default_diagnosis_configuration().configuration_id,
+        configuration_id=get_diagnosis_configuration("diag-config-5a4a13627e14b4cf").configuration_id,
         body_state={
             "current_revision": 1,
             "facts": [

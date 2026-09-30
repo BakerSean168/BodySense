@@ -28,7 +28,7 @@ def test_diagnosis_model_is_logical_gateway_model(monkeypatch) -> None:
     assert DIAGNOSIS_LOGICAL_MODEL == "bodysense-diagnosis"
     assert model.model_name == DIAGNOSIS_LOGICAL_MODEL
     assert str(model.provider.base_url) == "http://gateway.test:4000/v1/"
-    assert diagnosis_model_settings(CONFIG) == {"temperature": 0.3, "max_tokens": 2048}
+    assert diagnosis_model_settings(CONFIG) == {"temperature": 0.3, "max_tokens": 960}
 
 
 def test_v10_budget_is_applied_to_gateway_model_settings() -> None:

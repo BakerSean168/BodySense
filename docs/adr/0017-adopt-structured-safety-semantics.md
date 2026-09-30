@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for Batch A foundation; runtime authority switch deferred.
+Accepted. The structured-safety runtime authority is now serving through Diagnosis v10; production Champion promotion is recorded by ADR 0018.
 
 ## Date
 

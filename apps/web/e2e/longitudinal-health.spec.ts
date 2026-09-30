@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { clearStructuredSafetyCapture } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -168,7 +169,11 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
           body_region: "颈部",
           body_region_id: "neck",
           value: "久坐后颈肩酸胀",
-          details: { trigger: "久坐", severity: "中度" },
+          details: {
+            trigger: "久坐",
+            severity: "中度",
+            ...clearStructuredSafetyCapture,
+          },
           origin: "user_reported",
           review_state: "confirmed",
           lifecycle_state: "active",
@@ -192,6 +197,9 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
           body_region: "颈部",
           body_region_id: "neck",
           value: "stale concurrent write",
+          details: {
+            ...clearStructuredSafetyCapture,
+          },
           origin: "user_reported",
           review_state: "confirmed",
           lifecycle_state: "active",

@@ -41,7 +41,7 @@ func TestClaimSurfacePromotionPolicyBindsV4Successor(t *testing.T) {
 		t.Fatal(err)
 	}
 	if policy.Name != "diagnosis_promotion_v2" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("claim-surface promotion identity drifted: %#v", policy)
 	}
@@ -73,7 +73,7 @@ func TestNegationAwarePromotionPolicyBindsV5Successor(t *testing.T) {
 		t.Fatal(err)
 	}
 	if policy.Name != "diagnosis_promotion_v3" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisNegationAwareConfigID {
 		t.Fatalf("negation-aware promotion identity drifted: %#v", policy)
 	}
@@ -94,7 +94,7 @@ func TestNegationBridgePromotionPolicyBindsV6Successor(t *testing.T) {
 		t.Fatal(err)
 	}
 	if policy.Name != "diagnosis_promotion_v4" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisNegationBridgeConfigID {
 		t.Fatalf("negation-bridge promotion identity drifted: %#v", policy)
 	}
@@ -104,13 +104,13 @@ func TestNegationBridgePromotionPolicyBindsV6Successor(t *testing.T) {
 }
 
 func TestDiagnosisPromotionRegistryMatchesImmutablePolicies(t *testing.T) {
-	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v2"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v2"]; got.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || got.ChallengerConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("v2 runtime promotion registry drifted: %#v", got)
 	}
-	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v3"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisNegationAwareConfigID {
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v3"]; got.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || got.ChallengerConfigurationID != diagnosisNegationAwareConfigID {
 		t.Fatalf("v3 runtime promotion registry drifted: %#v", got)
 	}
-	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v4"]; got.ChampionConfigurationID != defaultDiagnosisConfigurationID || got.ChallengerConfigurationID != diagnosisNegationBridgeConfigID {
+	if got := knownDiagnosisPromotionRecords["diagnosis_promotion_v4"]; got.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || got.ChallengerConfigurationID != diagnosisNegationBridgeConfigID {
 		t.Fatalf("v4 runtime promotion registry drifted: %#v", got)
 	}
 }
@@ -127,7 +127,7 @@ func TestStructuredSafetyPromotionPolicyBindsV8Successor(t *testing.T) {
 		t.Fatal(err)
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
-	if policy.Name != "diagnosis_promotion_v6" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisStructuredSafetyConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+	if policy.Name != "diagnosis_promotion_v6" || policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || policy.ChallengerConfigurationID != diagnosisStructuredSafetyConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
 		t.Fatalf("structured safety promotion identity drifted: %#v, %#v", policy, registered)
 	}
 }
@@ -183,7 +183,7 @@ func TestStructuredSafetyPromotionPolicyBindsV9ContextSuccessor(t *testing.T) {
 		t.Fatal("v9 decision policy drift", err)
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
-	if policy.Name != "diagnosis_promotion_v7" || policy.ChampionConfigurationID != defaultDiagnosisConfigurationID || policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID || registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV1 || policy.Rollout.PolicyRevision != "" {
+	if policy.Name != "diagnosis_promotion_v7" || policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID || registered.ChampionConfigurationID != policy.ChampionConfigurationID || registered.ChallengerConfigurationID != policy.ChallengerConfigurationID || registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV1 || policy.Rollout.PolicyRevision != "" {
 		t.Fatalf("structured safety promotion identity drifted: %#v, %#v", policy, registered)
 	}
 }
@@ -201,7 +201,7 @@ func TestStructuredSafetyPromotionPolicyV8BindsStructuredAuthorityRollout(t *tes
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
 	if policy.Name != "diagnosis_promotion_v8" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisSafetyContextConfigID ||
 		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
 		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
@@ -231,7 +231,7 @@ func TestStructuredSafetyPromotionPolicyV9BindsBudgetSuccessor(t *testing.T) {
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
 	if policy.Name != "diagnosis_promotion_v9" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
 		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
 		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
@@ -254,7 +254,7 @@ func TestStructuredSafetyPromotionPolicyV10BindsProviderFreshCohort(t *testing.T
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
 	if policy.Name != "diagnosis_promotion_v10" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
 		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
 		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV2StructuredAuthority ||
@@ -277,7 +277,7 @@ func TestStructuredSafetyPromotionPolicyV11BindsPreAgentAuthorityRollout(t *test
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
 	if policy.Name != "diagnosis_promotion_v11" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
 		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
 		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
@@ -300,7 +300,7 @@ func TestStructuredSafetyPromotionPolicyV12BindsReplayNormalizedCohort(t *testin
 	}
 	registered := knownDiagnosisPromotionRecords[policy.Name]
 	if policy.Name != "diagnosis_promotion_v12" ||
-		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID ||
 		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
 		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
 		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||

@@ -177,10 +177,10 @@ func TestNonChampionRolloutRequiresADistinctRepositoryKnownChallenger(t *testing
 }
 
 func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
-	if defaultDiagnosisConfigurationID != "diag-config-5a4a13627e14b4cf" {
+	if defaultDiagnosisConfigurationID != "diag-config-3f64de162dc937ee" {
 		t.Fatalf("Diagnosis Champion identity drifted: %q", defaultDiagnosisConfigurationID)
 	}
-	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(defaultDiagnosisConfigurationID); err != nil || got != DiagnosisDecisionPolicyV1 {
+	if got, err := DiagnosisDecisionPolicyRevisionForConfiguration(defaultDiagnosisConfigurationID); err != nil || got != DiagnosisDecisionPolicyV2 {
 		t.Fatalf("Diagnosis policy=%q err=%v", got, err)
 	}
 	if diagnosisClaimSurfaceConfigID != "diag-config-4a517fea19cb6c49" {
@@ -211,6 +211,7 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 
 func TestDiagnosisClaimSurfaceConfigurationIsAnExplicitDistinctChallenger(t *testing.T) {
 	clearAgentDeploymentEnv(t)
+	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
 	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisClaimSurfaceConfigID)
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")

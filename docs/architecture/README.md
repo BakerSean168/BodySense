@@ -20,6 +20,13 @@
 - 🧱 **[ADR 0016 — AI Runtime Base Identity](../adr/0016-separate-ai-runtime-base-from-release-identity.md)**
   _将 AI 的重依赖/模型 runtime base 与 exact-SHA release identity 解耦：content-derived immutable base + thin application layer + workflow OCI metadata。_
 
+
+- 🛡️ **[ADR 0017 — Structured Safety Semantics](../adr/0017-adopt-structured-safety-semantics.md)**
+  _Diagnosis 使用 versioned SafetyEnvelope + deterministic Go authority 替代 prose red-flag authority；历史 v3-v7 保持 replayable。_
+
+- 🚀 **[ADR 0018 — Diagnosis v10 Serving Champion](../adr/0018-promote-diagnosis-v10-serving-champion.md)**
+  _在 production provider qualification、v0.14.0 coherent release、public smoke 与真实 v10→v3→v10 rollback rehearsal 全部通过后，将 Diagnosis v10 设为 Go/Python/Compose 的 current serving default；v3 仅保留为 immutable rollback/replay identity。_
+
 - 🏷️ **[Release Lifecycle V3](./release-lifecycle-v3.md)**
   _定义版本准备、不可变 Release 发布与生产部署选择之间的权限边界、exact-SHA / digest contract 与 rollback 语义。_
 

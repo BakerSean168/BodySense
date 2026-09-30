@@ -17,9 +17,10 @@ def test_default_diagnosis_configuration_is_repository_versioned_and_stable() ->
     config = get_default_diagnosis_configuration()
     assert config.role == "diagnosis"
     assert config.logical_model == "bodysense-diagnosis"
-    assert config.configuration_id == "diag-config-5a4a13627e14b4cf"
-    assert config.governance_policy_revision == "diagnosis-governance-v3"
-    assert (CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml").exists()
+    assert config.configuration_id == "diag-config-3f64de162dc937ee"
+    assert config.governance_policy_revision == "diagnosis-governance-v8-structured-safety"
+    assert config.decision_policy_revision == "diagnosis-decision-policy-v2-structured-safety"
+    assert (CONFIG_ROOT / "diagnosis-v10-structured-safety-budget.yaml").exists()
     assert get_diagnosis_configuration(config.configuration_id) == config
 
 
@@ -180,5 +181,5 @@ def test_runtime_rejects_manifest_revision_that_is_not_implemented() -> None:
         create_diagnosis_agent(tool_policy_revision="diagnosis-tools-does-not-exist")
     with pytest.raises(ValueError, match="evidence policy revision"):
         create_diagnosis_agent(evidence_policy_revision="diagnosis-evidence-does-not-exist")
-    assert config.configuration_id == "diag-config-5a4a13627e14b4cf"
-    assert config.prompt_revision == "diagnosis-prompt-v4-evidence-gap"
+    assert config.configuration_id == "diag-config-3f64de162dc937ee"
+    assert config.prompt_revision == "diagnosis-prompt-v6-structured-safety-context"

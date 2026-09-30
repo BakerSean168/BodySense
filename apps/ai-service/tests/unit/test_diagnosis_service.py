@@ -3,12 +3,9 @@
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from src.configuration.diagnosis_agent_config import (
-    get_default_diagnosis_configuration,
-)
 from src.services.diagnosis_service import DiagnosisService
 
-CONFIG_ID = get_default_diagnosis_configuration().configuration_id
+CONFIG_ID = "diag-config-5a4a13627e14b4cf"
 V4_CONFIG_ID = "diag-config-4a517fea19cb6c49"
 V5_CONFIG_ID = "diag-config-375187050b203078"
 V6_CONFIG_ID = "diag-config-4377355ba2012ce8"

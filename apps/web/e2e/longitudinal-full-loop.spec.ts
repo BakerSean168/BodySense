@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { clearStructuredSafetyCapture } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -109,6 +110,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
             duration: "2周",
             trigger: "久坐",
             severity: "轻度",
+            ...clearStructuredSafetyCapture,
           },
           origin: "user_reported",
           review_state: "confirmed",
