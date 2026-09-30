@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from ...configuration.diagnosis_agent_config import get_diagnosis_configuration
+from ...models.diagnosis import DIAGNOSIS_OUTPUT_SCHEMA_REVISION_V3
 from ...models.evidence import EvidenceAcquisitionTrace, EvidenceBudget, ExternalEvidenceStatus
 from ...models.safety import SafetyEnvelopeV2
 from ...services.diagnosis_service import get_diagnosis_service
@@ -61,7 +62,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             or primary_observation.get("body_region")
             or "当前关注区域"
         )
-        return {
+        response: dict[str, Any] = {
             "status": "completed",
             "scope": "full_body",
             "summary": "E2E deterministic analysis",
@@ -97,6 +98,12 @@ async def analyze_diagnosis(request: DiagnosisRequest):
                 "issues": [],
             },
         }
+        if config.output_schema_revision == DIAGNOSIS_OUTPUT_SCHEMA_REVISION_V3:
+            # The v3 structured-safety output contract requires the field even
+            # when the deterministic E2E fixture observes no new safety signal.
+            # Go DecisionAuthority intentionally fails closed when it is absent.
+            response["safety_findings"] = []
+        return response
 
     """Generate a typed possible-diagnosis analysis from durable BodyState."""
 

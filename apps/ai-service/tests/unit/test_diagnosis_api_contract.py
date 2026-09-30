@@ -82,6 +82,7 @@ def test_e2e_stub_emits_current_configuration_and_evidence_trace(client, monkeyp
     assert response.status_code == 200
     body = response.json()
     assert body["agent_configuration"] == config.provenance()
+    assert body["safety_findings"] == []
     assert body["evidence_acquisition"] == {
         "trace_revision": "evidence-acquisition-trace-v2",
         "policy_revision": config.evidence_policy_revision,
