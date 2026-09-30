@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/BakerSean168/BodySense/compare/v0.14.0...v0.14.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **ai:** persist diagnosis v10 serving default ([7d0893a](https://github.com/BakerSean168/BodySense/commit/7d0893aea1af2ff9b7c0df37c54ab207f304e032))
+
 ## [0.14.0](https://github.com/BakerSean168/BodySense/compare/v0.13.1...v0.14.0) (2026-09-30)
 
 
