@@ -1,0 +1,173 @@
+{
+  "accepted": true,
+  "configuration_id": "diag-config-3f64de162dc937ee",
+  "final_runtime": {
+    "challenger_configuration_id": null,
+    "champion_configuration_id": "diag-config-3f64de162dc937ee",
+    "promotion_record": null,
+    "rollout_stage": "champion",
+    "services": {
+      "ai-service": {
+        "health": "healthy",
+        "revision": "1f71f76622ce2cb06120ab5f2ecca84d470faa4c"
+      },
+      "api": {
+        "health": "healthy",
+        "revision": "1f71f76622ce2cb06120ab5f2ecca84d470faa4c"
+      },
+      "document-service": {
+        "health": "healthy",
+        "revision": "1f71f76622ce2cb06120ab5f2ecca84d470faa4c"
+      },
+      "web": {
+        "health": "healthy",
+        "revision": "1f71f76622ce2cb06120ab5f2ecca84d470faa4c"
+      }
+    }
+  },
+  "history_immutability": {
+    "protected_analysis_count": 2,
+    "protected_candidate_count": 1,
+    "protected_root_sha256": "355831b2f7ecad395bd0d80e450a0aa0eb93a7c75b01bd308ae5fa10c779ffb1",
+    "restore_verification": {
+      "added_analysis_count": 7,
+      "added_candidate_count": 4,
+      "before_root_sha256": "355831b2f7ecad395bd0d80e450a0aa0eb93a7c75b01bd308ae5fa10c779ffb1",
+      "missing_analysis_ids": null,
+      "missing_candidate_ids": null,
+      "mutated_analysis_ids": null,
+      "mutated_candidate_ids": null,
+      "protected_analysis_count": 2,
+      "protected_candidate_count": 1,
+      "protected_root_sha256": "355831b2f7ecad395bd0d80e450a0aa0eb93a7c75b01bd308ae5fa10c779ffb1",
+      "revision": "diagnosis-history-snapshot-v1",
+      "unchanged": true
+    },
+    "rollback_verification": {
+      "added_analysis_count": 4,
+      "added_candidate_count": 1,
+      "before_root_sha256": "355831b2f7ecad395bd0d80e450a0aa0eb93a7c75b01bd308ae5fa10c779ffb1",
+      "missing_analysis_ids": null,
+      "missing_candidate_ids": null,
+      "mutated_analysis_ids": null,
+      "mutated_candidate_ids": null,
+      "protected_analysis_count": 2,
+      "protected_candidate_count": 1,
+      "protected_root_sha256": "355831b2f7ecad395bd0d80e450a0aa0eb93a7c75b01bd308ae5fa10c779ffb1",
+      "revision": "diagnosis-history-snapshot-v1",
+      "unchanged": true
+    },
+    "snapshot_revision": "diagnosis-history-snapshot-v1"
+  },
+  "invariants": {
+    "final_champion_is_v10": true,
+    "immutable_release_deployed": true,
+    "production_provider_qualified": true,
+    "protected_history_unchanged": true,
+    "public_v10_completed_and_accepted": true,
+    "restore_to_v10_proven": true,
+    "rollback_to_v3_proven": true
+  },
+  "name": "diagnosis-v10-production-promotion-audit-v1",
+  "provider": {
+    "attempted_fallbacks": 0,
+    "gateway_health": "healthy",
+    "gateway_image": "crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/litellm:v1.97.0",
+    "logical_probe_http_status": 200,
+    "physical_model": "openai/gemini-3.7-flash",
+    "readiness_decision": "promote",
+    "ready_for_production": true
+  },
+  "public_smoke": {
+    "pre_promotion_v3": {
+      "agent_configuration_id": "diag-config-5a4a13627e14b4cf",
+      "analysis_id": "3df57f35-258a-4c02-b0c5-7d4946a09b14",
+      "candidate_count": 0,
+      "failure_reason": null,
+      "governance_verdict": "rejected",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "stage": "champion"
+      },
+      "status": "safety_blocked"
+    },
+    "promoted_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "analysis_id": "88d5f53f-f814-45f6-a7b5-4f44e8a45ec9",
+      "candidate_count": 1,
+      "failure_reason": null,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "restored_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "analysis_id": "85664337-d466-494a-b97c-cd09b833636e",
+      "candidate_count": 1,
+      "failure_reason": null,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "rollback_v3": {
+      "agent_configuration_id": "diag-config-5a4a13627e14b4cf",
+      "analysis_id": "a5ccfcb7-2d61-49a9-b5f6-8acbfe439155",
+      "candidate_count": 0,
+      "failure_reason": null,
+      "governance_verdict": "rejected",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "stage": "champion"
+      },
+      "status": "safety_blocked"
+    }
+  },
+  "reasons": [],
+  "release": {
+    "git_sha": "1f71f76622ce2cb06120ab5f2ecca84d470faa4c",
+    "images": {
+      "aiService": {
+        "digest": "sha256:6d0d4deb234bdd4ba378a617482753cca12dd59a1b70263885d3f3a6c998706f",
+        "release_tag": "v0.14.0",
+        "repository": "crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/bodysense-ai-service"
+      },
+      "api": {
+        "digest": "sha256:46288c0a445583b34a6dbedbcfa7513879d99c986304142ce1db36a07cff36d2",
+        "release_tag": "v0.14.0",
+        "repository": "crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/bodysense-api"
+      },
+      "runtime": {
+        "digest": "sha256:24e71fcfe78ee40e285dcefa6965ff037e9f9c00cca6e7577f973203e4e688cb",
+        "release_tag": "v0.14.0",
+        "repository": "crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/bodysense-runtime"
+      },
+      "web": {
+        "digest": "sha256:25a1cf2557df10b4504de406e0d4e722bd89b55d7b8349166b8a78d9178139f6",
+        "release_tag": "v0.14.0",
+        "repository": "crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/bodysense-web"
+      }
+    },
+    "manifest_digest": "sha256:df445aa1845b8dc85356961c4d5bcedfcd7ebdc1158347f8103b658582378f51",
+    "source_ci_run_id": "36706901102",
+    "tag": "v0.14.0"
+  },
+  "rollback_configuration_id": "diag-config-5a4a13627e14b4cf"
+}

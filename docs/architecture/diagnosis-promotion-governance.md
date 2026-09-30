@@ -1,9 +1,6 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
-Status: Current rollout mechanism. Diagnosis v3 remains the repository Champion;
-v4 remains immutable historical qualification evidence, and v5 is the current
-qualified successor Challenger, ready for shadow under `diagnosis_promotion_v3`.
-There is no active Challenger by default and no promotion/deployment has occurred.
+Status: Current rollout mechanism. Diagnosis v10 (`diag-config-3f64de162dc937ee`) is the repository and production Champion. v3-v7 and their promotion records remain immutable historical evidence; v3 is the retained rollback target. There is no active Challenger by default.
 
 ## North-star rule
 
@@ -24,11 +21,7 @@ champion
 any rollout stage -> rollback
 ```
 
-Repository/default production state remains `champion`, with v3 as the current
-Champion. v4 is a distinct qualified Challenger; `shadow/canary/promoted` are only
-meaningful after an explicit rollout selection and matching promotion record. The
-historical v1 -> v3 and v3 -> v4 records remain immutable evidence for their
-transitions. ADR0010 forbids silently treating qualification as promotion.
+Repository/default production state remains `champion`, with v10 as the current Champion and no Challenger. Historical `shadow/canary/promoted` cohorts remain interpretable only through their exact immutable promotion records. The v1 -> v3 and v3 -> successor records remain immutable evidence; ADR 0018 records the completed v10 serving promotion and preserves v3 for rollback/replay.
 
 ## Promotion evidence
 
@@ -70,7 +63,7 @@ must explicitly require the interaction experiment instead of reusing this waive
 Current clean-environment baseline:
 
 ```text
-DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
+DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-3f64de162dc937ee
 DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=
 DIAGNOSIS_ROLLOUT_STAGE=champion
 DIAGNOSIS_CANARY_BPS=500
@@ -81,10 +74,7 @@ The operator canary steps are exactly 500 -> 2500 -> 5000 basis points. A clean
 baseline defaults to the first step, 500 bps. Staging Compose must propagate both
 `DIAGNOSIS_CANARY_BPS` and `DIAGNOSIS_ROLLOUT_SALT` into the API container.
 
-The v3 -> v4 pair and `diagnosis_promotion_v2` remain immutable historical
-qualification evidence. v5 may be selected explicitly as the Challenger for
-`shadow` only with the approved `diagnosis_promotion_v3` record. Qualification
-alone does not promote v5. For every non-Champion Diagnosis stage, Go admits
+The v3 -> v4 pair and later v3-based structured-safety cohorts remain immutable historical qualification and migration evidence. Any future successor to v10 must use a new immutable configuration and an explicitly registered promotion record; qualification alone never changes the serving Champion. For every non-Champion Diagnosis stage, Go admits
 only a repository-known promotion record whose exact Champion -> Challenger
 pair matches the selected immutable IDs; a nonempty label is not sufficient.
 `DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
@@ -116,10 +106,7 @@ knowledge, but it never creates those business artifacts. A target v4 pre-agent
 safety block is recomputed in Go and bypasses the model, preserving Phase-6
 semantics even in shadow.
 
-Historical governance-rejected responses are deliberately not forced into a new
-DiagnosisAnalysis shape. The current v3 Champion can still be paired against v4
-through the frozen counterfactual path so `Champion block -> Challenger allow`
-remains observable as an unsafe relaxation without changing durable semantics.
+Historical governance-rejected responses are deliberately not forced into a new DiagnosisAnalysis shape. Historical v3-based cohorts remain replayable through the frozen counterfactual path so `Champion block -> Challenger allow` evidence remains interpretable without changing durable semantics.
 
 ## Durable rollout observations
 
@@ -184,9 +171,4 @@ returns non-zero when the stop gate says pause/rollback.
 
 ## Hermetic deployment proof
 
-`local-deploy-validate.sh` now runs the disposable production-shaped stack on the
-same baseline as clean environments: Diagnosis v3 serves directly in `champion`
-with no active Challenger. After longitudinal E2E, PostgreSQL must contain v3
-Diagnosis artifacts, zero non-Champion Diagnosis artifacts and zero rollout
-observations. Historical v1 -> v3 and v3 -> v4 mechanics remain covered by
-focused Go tests and the immutable promotion-policy evaluators.
+`local-deploy-validate.sh` runs the disposable production-shaped stack on the same baseline as clean environments: Diagnosis v10 serves directly in `champion` with no active Challenger. After longitudinal E2E, PostgreSQL must contain v10 Diagnosis artifacts, zero non-Champion Diagnosis artifacts and zero rollout observations. Historical v1 -> v3 and v3 -> successor mechanics remain covered by focused Go tests and immutable promotion-policy evaluators.

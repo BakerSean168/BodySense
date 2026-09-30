@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: Current evidence-acquisition contract is implemented by `diagnosis-evidence-gap-v2`. Diagnosis v3 remains the live Champion; v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2` only.
+> Status: Current evidence-acquisition contract is `diagnosis-evidence-gap-v2`. Diagnosis v10 (`diag-config-3f64de162dc937ee`) is the serving Champion; v3-v7 remain immutable historical replay/rollback identities.
 
 ## Ownership
 
@@ -90,15 +90,19 @@ phase. The later DecisionAuthority and claim-surface transitions are recorded by
 their own immutable promotion evidence rather than rewriting this historical
 qualification.
 
-## Current Champion and qualified successor
+## Current Champion and historical lineage
 
-Diagnosis v3 remains the current Champion with immutable identity
-`diag-config-5a4a13627e14b4cf` and `diagnosis-governance-v3`.
+Diagnosis v10 is the current Champion with immutable identity
+`diag-config-3f64de162dc937ee`. Its evidence contract remains
+`diagnosis-evidence-gap-v2` with `diagnosis-evidence-acquisition-tools-v2`;
+the structured-safety successor additionally pins prompt
+`diagnosis-prompt-v6-structured-safety-context`, governance
+`diagnosis-governance-v8-structured-safety`, decision policy
+`diagnosis-decision-policy-v2-structured-safety`, and a 960-token generation budget.
 
-Diagnosis v4 keeps the exact Phase-5 model, prompt, tool, output-schema, and
-`diagnosis-evidence-gap-v2` behavior. It introduces only the
-`diagnosis-governance-v4-claim-surface` revision, whose post-agent scan separates
-current-user claims from generic candidate education. Its immutable configuration
-identity is `diag-config-4a517fea19cb6c49`. It is a qualified Challenger, ready
-for shadow under `diagnosis_promotion_v2`; ADR0010 forbids silently treating
-qualification as promotion.
+Diagnosis v3-v7 remain repository-resolvable historical configurations. In
+particular, v3 (`diag-config-5a4a13627e14b4cf`) is the retained rollback target,
+and v4 keeps the Phase-5 model/prompt/tool/evidence behavior with the historical
+`diagnosis-governance-v4-claim-surface` revision. Their promotion policies and
+qualification reports are immutable evidence; they no longer define the current
+serving default. ADR 0018 records the v10 production promotion.

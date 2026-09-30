@@ -131,8 +131,8 @@ func TestStructuredDiagnosisConfigurationRegistration(t *testing.T) {
 	if err != nil || revision != DiagnosisDecisionPolicyV2 {
 		t.Fatalf("v8 decision policy registration: %q, %v", revision, err)
 	}
-	if defaultDiagnosisConfigurationID != diagnosisDecisionAuthorityConfigID {
-		t.Fatal("default Champion changed")
+	if defaultDiagnosisConfigurationID != diagnosisSafetyBudgetConfigID {
+		t.Fatal("current default Champion must be v10")
 	}
 	record := knownDiagnosisPromotionRecords["diagnosis_promotion_v6"]
 	if record.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID || record.ChallengerConfigurationID != diagnosisStructuredSafetyConfigID {

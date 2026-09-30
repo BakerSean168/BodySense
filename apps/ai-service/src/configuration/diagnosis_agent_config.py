@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = SERVICE_ROOT / "config" / "agents"
-DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "diagnosis-v3-decision-authority.yaml"
+DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "diagnosis-v10-structured-safety-budget.yaml"
 
 
 class GenerationConfig(BaseModel):

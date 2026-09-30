@@ -18,7 +18,9 @@ const (
 	diagnosisSafetyContextConfigID     = "diag-config-ba10b8e6820c3691"
 	diagnosisSafetyBudgetConfigID      = "diag-config-3f64de162dc937ee"
 	diagnosisStructuredSafetyConfigID  = "diag-config-62d312942b76a154"
-	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
+	// v10 is the current serving default after the DGS-SAFE production promotion.
+	// v3 remains registered explicitly as the historical rollback identity.
+	defaultDiagnosisConfigurationID = diagnosisSafetyBudgetConfigID
 
 	DiagnosisRolloutChampion = "champion"
 	DiagnosisRolloutShadow   = "shadow"

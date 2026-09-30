@@ -1,6 +1,6 @@
 # Diagnosis Decision Authority and SafetyEnvelope
 
-> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Diagnosis v3 remains the current repository Champion; v4 is a qualified Challenger, ready for shadow under `diagnosis_promotion_v2` only.
+> Status: Current authority boundary with historical Phase-6 lineage retained. Diagnosis v10 (`diag-config-3f64de162dc937ee`) is the serving Champion; v3 is the retained historical rollback/replay target.
 
 ## Authority boundary
 
@@ -62,16 +62,19 @@ Unknown enum values, contradictory safety state, missing required fields, and un
 
 ## Configuration boundary
 
-The current live path uses the v3 immutable Champion configuration:
+The current live path uses the v10 immutable Champion configuration:
 
 ```text
-diag-config-5a4a13627e14b4cf
-prompt:   diagnosis-prompt-v4-evidence-gap
+diag-config-3f64de162dc937ee
+prompt:   diagnosis-prompt-v6-structured-safety-context
 tools:    diagnosis-evidence-acquisition-tools-v2
 evidence: diagnosis-evidence-gap-v2
-governance: diagnosis-governance-v3
-decision: diagnosis-decision-policy-v1
+governance: diagnosis-governance-v8-structured-safety
+decision: diagnosis-decision-policy-v2-structured-safety
+max_tokens: 960
 ```
+
+Historical v3 (`diag-config-5a4a13627e14b4cf`) remains repository-known with decision policy v1 and is retained as the rollback/replay target. Its manifest and persisted artifacts are not rewritten by the v10 promotion.
 
 The Go control plane accepts only repository-known immutable configuration IDs and
 binds each ID to its expected decision-policy revision. The v4 manifest is also
@@ -82,9 +85,7 @@ diag-config-4a517fea19cb6c49
 governance: diagnosis-governance-v4-claim-surface
 ```
 
-It remains a qualified Challenger, ready for shadow under
-`diagnosis_promotion_v2`; qualification does not change the live v3 default.
-ADR0010 forbids silently treating qualification as promotion.
+It remains immutable historical qualification evidence under `diagnosis_promotion_v2`; it no longer defines the live default. ADR 0018 records the later v10 production promotion.
 
 ### Diagnosis v4 and v5 claim surface
 
@@ -95,8 +96,7 @@ themselves assert that the user has the red flag. Candidate `basis`, `impact`, a
 `reasoning_summary`, the overall summary, and unknown fields remain current-claim
 surface and are scanned fail-closed. The deterministic pre-agent BodyState gate
 and the high-recall literal `RedFlagDetector` revision v1 are unchanged for v3
-and v4. The v3 broad projection is retained exactly for the current Champion,
-historical qualification, and replay.
+and v4. The v3 broad projection is retained exactly for historical qualification, replay, and emergency rollback.
 
 Diagnosis v5 keeps this exact v4 projection and changes only the explicit,
 versioned red-flag interpretation: detector revision v2 suppresses a keyword
@@ -108,14 +108,13 @@ caller and for v3/v4, so v4 was not mutated.
 
 The v5 immutable manifest is `diag-config-375187050b203078` with governance
 revision `diagnosis-governance-v5-negation-aware-claims`. It remains a known
-qualified successor Challenger only; v3 remains Champion/default and v4 remains
-resolvable historical/qualified evidence.
+qualified historical successor only; v3 and v4 remain resolvable historical evidence while v10 is the current default.
 
 ## Qualification evidence
 
 The v4 Agent configuration passes 7/7 on the same Diagnosis qualification dataset
 and is paired non-inferior to v3 with pass-rate delta `+0.000` and zero critical
 regressions. It is qualified and ready for shadow under `diagnosis_promotion_v2`,
-but remains distinct from the current v3 Champion.
+and remains distinct from the current v10 Champion.
 
 The Go policy has a versioned fixture suite covering normal, degraded, insufficient-information, critical-gap, new-red-flag, active-safety, Python-rejection, unknown-governance, and malformed-safety states. The fixture explicitly proves that high candidate confidence cannot override hard blockers.

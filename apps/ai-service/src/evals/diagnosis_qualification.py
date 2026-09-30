@@ -16,10 +16,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from src.agents.diagnosis_agent import diagnosis_tool_names
-from src.configuration.diagnosis_agent_config import (
-    DiagnosisAgentManifest,
-    get_default_diagnosis_configuration,
-)
+from src.configuration.diagnosis_agent_config import DiagnosisAgentManifest
 from src.evals.agent_config_archive import get_diagnosis_evaluation_configuration
 from src.evals.retired_diagnosis_runtime import (
     RETIRED_DIAGNOSIS_TOOL_POLICY_V1,
@@ -38,6 +35,8 @@ DEFAULT_CHAMPION_REPORT_PATH = (
 )
 
 EvalSplit = Literal["development", "holdout", "regression", "challenge"]
+
+DEFAULT_QUALIFICATION_CONFIGURATION_ID = "diag-config-5a4a13627e14b4cf"
 
 DEFAULT_QUALIFICATION_POLICY: dict[str, Any] = {
     "required_splits": ["development", "holdout", "regression", "challenge"],
@@ -363,7 +362,7 @@ def build_deterministic_task(configuration_id: str | None = None) -> Any:
     config = (
         get_diagnosis_evaluation_configuration(configuration_id)
         if configuration_id is not None
-        else get_default_diagnosis_configuration()
+        else get_diagnosis_evaluation_configuration(DEFAULT_QUALIFICATION_CONFIGURATION_ID)
     )
 
     async def task(inputs: DiagnosisEvalInputs) -> DiagnosisEvalExecution:
@@ -412,7 +411,7 @@ def run_diagnosis_qualification(
     config = (
         get_diagnosis_evaluation_configuration(configuration_id)
         if configuration_id is not None
-        else get_default_diagnosis_configuration()
+        else get_diagnosis_evaluation_configuration(DEFAULT_QUALIFICATION_CONFIGURATION_ID)
     )
     document = load_dataset_document(path)
     dataset = load_diagnosis_dataset(path, configuration_id=config.configuration_id)
