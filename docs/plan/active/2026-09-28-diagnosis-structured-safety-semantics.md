@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort then exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis is now being re-qualified on a fixed `gemini-3.7-flash` transport under fresh `diagnosis_promotion_v10`; deterministic readiness is green, but the new 20-sample shadow gate has not started yet. DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis now uses a fixed `gemini-3.7-flash` transport. promotion_v10 then exposed one provider timeout and one previously-unmodeled legacy **pre-agent** prose false positive; under immutable rollout policy v2 that cohort correctly evaluates to rollback and remains historical evidence. rollout policy v3 now adds source-typed pre-agent legacy proof without changing the v10 Agent configuration or any safety stop rule. `diagnosis_promotion_v11` is deterministically ready for a fresh 20-sample shadow cohort (rollout-authority v3: 28/28). DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -322,9 +322,53 @@ Runtime probes through the real staging gateway established the current transpor
   with no provider-level `tool_use_failed` observed.
 
 Because promotion_v9 is already paused, those new provider samples cannot be appended to it to
-manufacture a clean gate. `diagnosis_promotion_v10` therefore registers the same v3 Champion -> v10
-Challenger and the same `diagnosis-rollout-policy-v2-structured-authority`, but creates a distinct
-promotion/cohort identity for provider-transport qualification. Its deterministic readiness is
-`ready_for_shadow=true`, and the rollout-authority policy evidence is now 20/20, including the new
-promotion registry binding. DGS-SAFE-080 must restart shadow at sample zero under promotion_v10 before
-any 5% / 25% / 50% canary progression.
+manufacture a clean gate. `diagnosis_promotion_v10` therefore registered the same v3 Champion -> v10
+Challenger and the same `diagnosis-rollout-policy-v2-structured-authority`, but created a distinct
+promotion/cohort identity for provider-transport qualification. Its deterministic readiness was
+`ready_for_shadow=true`, and rollout-authority v2 evidence reached 20/20.
+
+## Pre-agent legacy proof successor (2026-09-30)
+
+Before promotion_v10 was formally activated from the merged runtime, provider-qualification harness
+runs had already written eight immutable `promotion_v10` shadow observations to staging. The cohort is
+not clean and must not be reset or deleted:
+
+- samples: 8;
+- unsafe relaxations: 1;
+- shadow errors: 1;
+- hard mismatches: 2;
+- semantic mismatches: 2;
+- authorized authority migrations: 2.
+
+The shadow error was a counterfactual replay timeout while awaiting the AI service. The unsafe row was
+more informative: the v3 Champion had status `safety_blocked` and Go decision `block`, but the block
+came from the historical Python **pre-agent** prose safety gate. Its `safety_summary.red_flags`
+contained `radiating_pain` and `trauma` because those words occurred in conversation text, while the
+same frozen BodyState fact carried structured `radiating_pain=false` and `trauma=false` plus complete
+SafetyEnvelope coverage. The v10 Challenger therefore completed normally. rollout policy v2 correctly
+refused to authorize the transition because v2 only modeled legacy post-agent governance issues; the
+stored comparison records `champion_block_not_legacy_prose_governance_only` and
+`legacy_red_flag_category_missing`, so promotion_v10 evaluates to rollback. That historical result is
+retained unchanged.
+
+The comparator successor is versioned rather than silently changing v2 semantics:
+
+- `diagnosis-rollout-policy-v2-structured-authority` remains immutable and continues to authorize only
+  the previously modeled post-agent `red_flag_safety` false-positive source;
+- `diagnosis-rollout-policy-v3-structured-authority` adds a source identity for the legacy pre-agent
+  gate and accepts it only when the baseline is exactly `safety_blocked`, decision policy v1 blocks for
+  the sole reason `agent_output_failed_safety_governance`, execution provenance is exactly
+  `bypassed/python_pre_agent_safety_gate`, red-flag categories are explicit, and every category is
+  `current + confirmed + absent` across every covered source in the frozen SafetyEnvelope;
+- missing provenance, mixed governance, missing categories, incomplete coverage, active blockers,
+  review requirements, unconfirmed categories, Challenger safety findings, forbidden side effects,
+  identity mismatch, or any other block source remains fail-closed;
+- rollout thresholds are unchanged: 20 clean observations per stage, 5% -> 25% -> 50%, zero unsafe
+  relaxations / forbidden side effects / configuration mismatches, and one Challenger error pauses.
+
+`diagnosis_promotion_v11` binds the same v3 Champion and immutable v10 Challenger to rollout policy v3.
+It does not create a synthetic Diagnosis v11 Agent configuration. Historical promotion_v10 remains a
+v2 cohort and cannot contaminate v11 because summaries filter both `policy_revision` and
+`promotion_record`. Deterministic rollout-authority v3 evidence passes 28/28 and
+`diagnosis_promotion_readiness_v11` reports `ready_for_shadow=true`. DGS-SAFE-080 may restart shadow at
+sample zero only under promotion_v11; no 5% / 25% / 50% canary progression is authorized yet.

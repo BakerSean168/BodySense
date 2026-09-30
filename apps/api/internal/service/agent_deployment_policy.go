@@ -220,6 +220,7 @@ var knownDiagnosisPromotionRecords = map[string]diagnosisPromotionRecordRegistra
 	"diagnosis_promotion_v8":  {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyContextConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
 	"diagnosis_promotion_v9":  {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
 	"diagnosis_promotion_v10": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV2StructuredAuthority},
+	"diagnosis_promotion_v11": {ChampionConfigurationID: diagnosisDecisionAuthorityConfigID, ChallengerConfigurationID: diagnosisSafetyBudgetConfigID, RolloutPolicyRevision: DiagnosisRolloutPolicyV3StructuredAuthority},
 }
 
 type DiagnosisRouteSelection struct {

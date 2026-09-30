@@ -204,6 +204,7 @@ func structuredAuthorityMigrationReport() *DiagnosisReplayReport {
 				DecisionPolicyRevision:      DiagnosisDecisionPolicyV1,
 				GovernanceVerdict:           "rejected",
 				LegacyProseGovernanceOnly:   true,
+				LegacyProseSafetySource:     LegacyProseSafetySourcePostAgent,
 				LegacyProseSafetyCategories: []string{"radiating_pain", "trauma"},
 			},
 			Replay: DiagnosisReplayAuthorityEndpoint{
@@ -251,6 +252,81 @@ func TestStructuredAuthorityRolloutAuthorizesProvenLegacyFalsePositiveRemoval(t 
 	}
 	if gate := EvaluateDiagnosisRolloutGate(summary); gate.Action != "continue" {
 		t.Fatalf("authorized migration unexpectedly blocked gate: %#v", gate)
+	}
+}
+
+func legacyPreAgentAuthorityEndpointForTest() DiagnosisReplayAuthorityEndpoint {
+	return diagnosisReplayAuthorityEndpoint(map[string]any{
+		"status":     "safety_blocked",
+		"governance": map[string]any{"verdict": "accepted", "issues": []any{}},
+		"safety_summary": map[string]any{
+			"red_flags": map[string]any{
+				"has_red_flags": true,
+				"flags": []any{
+					map[string]any{"category": "radiating_pain"},
+					map[string]any{"category": "trauma"},
+				},
+			},
+		},
+		"execution_provenance": map[string]any{"status": "bypassed", "reason": "python_pre_agent_safety_gate"},
+		"decision_authority": map[string]any{
+			"outcome":         "block",
+			"policy_revision": DiagnosisDecisionPolicyV1,
+			"reasons":         []any{"agent_output_failed_safety_governance"},
+		},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV1},
+	})
+}
+
+func TestStructuredAuthorityV2RejectsLegacyPreAgentFalsePositiveRemoval(t *testing.T) {
+	repo := &fakeDiagnosisRolloutRepository{}
+	svc := NewDiagnosisRolloutService(repo)
+	route := structuredAuthorityRoute(diagnosisDecisionAuthorityConfigID, diagnosisSafetyBudgetConfigID)
+	route.ChallengerConfigurationID = diagnosisSafetyBudgetConfigID
+	route.PromotionRecord = "diagnosis_promotion_v10"
+	report := structuredAuthorityMigrationReport()
+	report.AuthorityEvidence.Baseline = legacyPreAgentAuthorityEndpointForTest()
+
+	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(repo.items) != 1 || !repo.items[0].UnsafeRelaxation {
+		t.Fatalf("v2 must preserve its historical post-agent-only semantics: %#v", repo.items)
+	}
+	var comparison DiagnosisReplayComparison
+	if err := json.Unmarshal(repo.items[0].Comparison, &comparison); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(comparison.Authority.ReasonCodes, "legacy_prose_source_not_authorized_by_policy") {
+		t.Fatalf("v2 rejection lost explicit source reason: %#v", comparison.Authority)
+	}
+}
+
+func TestStructuredAuthorityRolloutAuthorizesProvenLegacyPreAgentFalsePositiveRemoval(t *testing.T) {
+	repo := &fakeDiagnosisRolloutRepository{}
+	svc := NewDiagnosisRolloutService(repo)
+	route := structuredAuthorityRoute(diagnosisDecisionAuthorityConfigID, diagnosisSafetyBudgetConfigID)
+	route.ChallengerConfigurationID = diagnosisSafetyBudgetConfigID
+	route.PromotionRecord = "diagnosis_promotion_v11"
+	route.RolloutPolicyRevision = DiagnosisRolloutPolicyV3StructuredAuthority
+	report := structuredAuthorityMigrationReport()
+	report.AuthorityEvidence.Baseline = legacyPreAgentAuthorityEndpointForTest()
+
+	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(repo.items) != 1 || repo.items[0].UnsafeRelaxation {
+		t.Fatalf("proven pre-agent prose false positive must be gate-equivalent under v3: %#v", repo.items)
+	}
+	var comparison DiagnosisReplayComparison
+	if err := json.Unmarshal(repo.items[0].Comparison, &comparison); err != nil {
+		t.Fatal(err)
+	}
+	if !comparison.Authority.GateEquivalent ||
+		comparison.Authority.Classification != "authorized_legacy_prose_false_positive_removal" ||
+		comparison.Authority.PolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
+		comparison.Authority.PromotionRecord != "diagnosis_promotion_v11" {
+		t.Fatalf("unexpected pre-agent authority classification: %#v", comparison.Authority)
 	}
 }
 
@@ -493,5 +569,50 @@ func TestStructuredAuthorityPromotionCohortsRemainSeparate(t *testing.T) {
 	}
 	if v8.Samples != 1 || v8.AuthorityMigrations != 1 {
 		t.Fatalf("promotion cohort was contaminated: %#v", v8)
+	}
+}
+
+func TestStructuredAuthorityPolicyV3CohortDoesNotInheritV2Evidence(t *testing.T) {
+	repo := &fakeDiagnosisRolloutRepository{}
+	svc := NewDiagnosisRolloutService(repo)
+
+	v2Route := structuredAuthorityRoute(diagnosisDecisionAuthorityConfigID, diagnosisSafetyBudgetConfigID)
+	v2Route.ChallengerConfigurationID = diagnosisSafetyBudgetConfigID
+	v2Route.PromotionRecord = "diagnosis_promotion_v10"
+	v2Report := structuredAuthorityMigrationReport()
+	v2Report.AuthorityEvidence.Baseline = legacyPreAgentAuthorityEndpointForTest()
+	if err := svc.RecordComparison(context.Background(), v2Route, uuid.New(), v2Report, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	v3Route := v2Route
+	v3Route.PromotionRecord = "diagnosis_promotion_v11"
+	v3Route.RolloutPolicyRevision = DiagnosisRolloutPolicyV3StructuredAuthority
+	v3Report := structuredAuthorityMigrationReport()
+	v3Report.AuthorityEvidence.Baseline = legacyPreAgentAuthorityEndpointForTest()
+	if err := svc.RecordComparison(context.Background(), v3Route, uuid.New(), v3Report, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	v2, err := svc.SummaryForCohort(
+		context.Background(), diagnosisDecisionAuthorityConfigID, diagnosisSafetyBudgetConfigID,
+		DiagnosisRolloutShadow, 0, 100, DiagnosisRolloutPolicyV2StructuredAuthority, "diagnosis_promotion_v10",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.Samples != 1 || v2.UnsafeRelaxations != 1 || EvaluateDiagnosisRolloutGate(v2).Action != "rollback" {
+		t.Fatalf("historical v2 evidence drifted: %#v", v2)
+	}
+
+	v3, err := svc.SummaryForCohort(
+		context.Background(), diagnosisDecisionAuthorityConfigID, diagnosisSafetyBudgetConfigID,
+		DiagnosisRolloutShadow, 0, 100, DiagnosisRolloutPolicyV3StructuredAuthority, "diagnosis_promotion_v11",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v3.Samples != 1 || v3.UnsafeRelaxations != 0 || v3.AuthorityMigrations != 1 || EvaluateDiagnosisRolloutGate(v3).Action != "continue" {
+		t.Fatalf("v3 cohort inherited or misclassified v2 evidence: %#v", v3)
 	}
 }

@@ -94,6 +94,36 @@ budget. Stable assignment, minimum sample counts, forbidden-side-effect gates, i
 gates, provider-error pause rules, canary steps, and explicit human promotion remain
 unchanged.
 
+## Rollout authority comparison (v3 pre-agent source typing)
+
+Staging provider qualification later exposed a second historical prose-detector source:
+the Python pre-agent safety gate can block before the model runs and stores its red-flag
+categories in `safety_summary.red_flags`, while the durable Go decision still records the
+v1 block reason `agent_output_failed_safety_governance`. That source was deliberately not
+authorized by v2, whose contract was post-agent `red_flag_safety` governance only.
+Changing v2 in place would make one rollout-policy revision mean different things across
+repository commits, so v2 remains immutable.
+
+`diagnosis-rollout-policy-v3-structured-authority` extends the evidence model with an
+explicit legacy prose source identity. It preserves the complete v2 path and additionally
+recognizes a pre-agent legacy source only when all of the following are exact: baseline
+status is `safety_blocked`; decision policy is v1; the durable decision outcome is
+`block`; the sole decision reason is `agent_output_failed_safety_governance`; execution
+provenance is `status=bypassed` and `reason=python_pre_agent_safety_gate`; governance is
+otherwise accepted with no issues; `safety_summary.red_flags.has_red_flags=true`; and
+every emitted flag has a non-empty category. The existing structured proof is still
+required afterward: complete frozen SafetyEnvelope coverage, no blockers or review
+requirement, and every legacy category proven `current + confirmed + absent` across every
+covered source. The structured Challenger must still be decision-policy v2, governance
+accepted, free of safety findings, free of forbidden side effects, and artifact-identical.
+Any missing source identity, mixed governance signal, unmapped category, incomplete
+coverage, or contradictory evidence fails closed.
+
+Policy revision and promotion record jointly define the rollout cohort. A failed or paused
+v2 cohort is therefore retained unchanged and cannot be reinterpreted by v3. v3 uses a new
+promotion record even when Champion and Challenger Agent configuration IDs are unchanged.
+All progression thresholds and stop rules remain identical to v2.
+
 ### Generation budgets are immutable behavior
 
 Diagnosis `generation.max_tokens` participates in the immutable manifest fingerprint and

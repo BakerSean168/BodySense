@@ -41,10 +41,16 @@ type DiagnosisReplayLayer struct {
 	Checks []DiagnosisReplayCheck `json:"checks"`
 }
 
+const (
+	LegacyProseSafetySourcePostAgent = "post_agent_red_flag_governance"
+	LegacyProseSafetySourcePreAgent  = "pre_agent_red_flag_gate"
+)
+
 type DiagnosisReplayAuthorityEndpoint struct {
 	DecisionPolicyRevision      string   `json:"decision_policy_revision"`
 	GovernanceVerdict           string   `json:"governance_verdict"`
 	LegacyProseGovernanceOnly   bool     `json:"legacy_prose_governance_only"`
+	LegacyProseSafetySource     string   `json:"legacy_prose_safety_source,omitempty"`
 	LegacyProseSafetyCategories []string `json:"legacy_prose_safety_categories,omitempty"`
 	SafetyFindingCount          int      `json:"safety_finding_count"`
 	ForbiddenSideEffectsPresent bool     `json:"forbidden_side_effects_present"`
@@ -444,11 +450,12 @@ func diagnosisReplayAuthorityEvidence(input DiagnosisReplayInput, baseline, repl
 }
 
 func diagnosisReplayAuthorityEndpoint(payload map[string]any) DiagnosisReplayAuthorityEndpoint {
-	categories, legacyOnly := replayLegacyProseGovernanceCategories(payload)
+	categories, source, legacyOnly := replayLegacyProseGovernanceEvidence(payload)
 	return DiagnosisReplayAuthorityEndpoint{
 		DecisionPolicyRevision:      replayPayloadDecisionPolicyRevision(payload),
 		GovernanceVerdict:           replayPayloadGovernanceVerdict(payload),
 		LegacyProseGovernanceOnly:   legacyOnly,
+		LegacyProseSafetySource:     source,
 		LegacyProseSafetyCategories: categories,
 		SafetyFindingCount:          replayPayloadSafetyFindingCount(payload),
 		ForbiddenSideEffectsPresent: replayHasForbiddenSideEffects(payload),
@@ -524,20 +531,35 @@ func replayPayloadSafetyFindingCount(payload map[string]any) int {
 }
 
 func replayLegacyProseGovernanceOnly(payload map[string]any) bool {
-	_, ok := replayLegacyProseGovernanceCategories(payload)
+	_, _, ok := replayLegacyProseGovernanceEvidence(payload)
 	return ok
 }
 
 func replayLegacyProseGovernanceCategories(payload map[string]any) ([]string, bool) {
+	categories, _, ok := replayLegacyProseGovernanceEvidence(payload)
+	return categories, ok
+}
+
+func replayLegacyProseGovernanceEvidence(payload map[string]any) ([]string, string, bool) {
 	status, _ := payload["status"].(string)
 	if status != "safety_blocked" || replayPayloadDecisionPolicyRevision(payload) != DiagnosisDecisionPolicyV1 {
-		return nil, false
+		return nil, "", false
 	}
 	authority, _ := payload["decision_authority"].(map[string]any)
 	outcome, _ := authority["outcome"].(string)
 	if outcome != string(DiagnosisBlock) || !replayStringListExactly(authority["reasons"], []string{"agent_output_failed_safety_governance"}) {
-		return nil, false
+		return nil, "", false
 	}
+	if categories, ok := replayLegacyPostAgentGovernanceCategories(payload); ok {
+		return categories, LegacyProseSafetySourcePostAgent, true
+	}
+	if categories, ok := replayLegacyPreAgentSafetyCategories(payload); ok {
+		return categories, LegacyProseSafetySourcePreAgent, true
+	}
+	return nil, "", false
+}
+
+func replayLegacyPostAgentGovernanceCategories(payload map[string]any) ([]string, bool) {
 	governance, _ := payload["governance"].(map[string]any)
 	verdict, _ := governance["verdict"].(string)
 	issues, _ := governance["issues"].([]any)
@@ -565,6 +587,46 @@ func replayLegacyProseGovernanceCategories(payload map[string]any) ([]string, bo
 		}
 		categories[category] = struct{}{}
 	}
+	return sortedLegacySafetyCategories(categories)
+}
+
+func replayLegacyPreAgentSafetyCategories(payload map[string]any) ([]string, bool) {
+	provenance, _ := payload["execution_provenance"].(map[string]any)
+	status, _ := provenance["status"].(string)
+	reason, _ := provenance["reason"].(string)
+	if status != "bypassed" || reason != "python_pre_agent_safety_gate" {
+		return nil, false
+	}
+	governance, _ := payload["governance"].(map[string]any)
+	verdict, _ := governance["verdict"].(string)
+	issues, _ := governance["issues"].([]any)
+	if verdict != "accepted" || len(issues) != 0 {
+		return nil, false
+	}
+	safetySummary, _ := payload["safety_summary"].(map[string]any)
+	redFlags, _ := safetySummary["red_flags"].(map[string]any)
+	hasRedFlags, _ := redFlags["has_red_flags"].(bool)
+	flags, _ := redFlags["flags"].([]any)
+	if !hasRedFlags || len(flags) == 0 {
+		return nil, false
+	}
+	categories := map[string]struct{}{}
+	for _, raw := range flags {
+		flag, ok := raw.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		category, _ := flag["category"].(string)
+		category = strings.TrimSpace(category)
+		if category == "" {
+			return nil, false
+		}
+		categories[category] = struct{}{}
+	}
+	return sortedLegacySafetyCategories(categories)
+}
+
+func sortedLegacySafetyCategories(categories map[string]struct{}) ([]string, bool) {
 	result := make([]string, 0, len(categories))
 	for category := range categories {
 		result = append(result, category)
