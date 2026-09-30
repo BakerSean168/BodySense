@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis now uses a fixed `gemini-3.7-flash` transport. promotion_v10 then exposed one provider timeout and one previously-unmodeled legacy **pre-agent** prose false positive; under immutable rollout policy v2 that cohort correctly evaluates to rollback and remains historical evidence. rollout policy v3 added source-typed pre-agent legacy proof without changing the v10 Agent configuration or any safety stop rule. promotion_v11 then passed a fresh 20/20 shadow gate with zero stop-rule signals, but its first 5% canary observation exposed a v1 counterfactual replay normalization bug and immediately rolled back. The replay engine now JSON-normalizes v1 decisions exactly like v2; `diagnosis_promotion_v12` retains the same v3 Champion, immutable v10 Challenger, and rollout policy v3, and is deterministically ready for a fresh cohort (rollout-authority v3: 32/32). DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 has moved from legacy-equivalence rollout to standalone v10 final acceptance: immutable v10 remains `diag-config-3f64de162dc937ee`, deterministic evidence is 51/51, and the paced staging `gemini-3.7-flash` provider gate is 20/20 with zero errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-rollout-policy-v3-structured-authority` and promotion_v9-v12 are frozen as advisory migration evidence rather than a ground-truth gate. DGS-SAFE-080 still requires the final staging Champion switch plus explicit v10→v3→v10 rollback rehearsal before closure; DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -394,5 +394,39 @@ normalization, source-typed proof, cohort isolation, and the unchanged fail-clos
 `diagnosis_promotion_v12` registers the same v3 Champion -> immutable v10 Challenger and the same
 `diagnosis-rollout-policy-v3-structured-authority`, but uses a new promotion identity so the failed v11
 canary observation cannot be reinterpreted or erased. `diagnosis_promotion_readiness_v12` reports
-`ready_for_shadow=true`. DGS-SAFE-080 must restart from shadow sample zero under promotion_v12 before
-any canary progression is authorized.
+`ready_for_shadow=true`.
+
+## DGS-SAFE-080 final acceptance boundary
+
+promotion_v12 is the final legacy-equivalence cohort for this work item. Its later shadow run again
+surfaced a broader v3 prose-detector taxonomy category (`neurological`) that is not exactly equivalent
+to the five-concept SafetyEnvelope v1 vocabulary. The comparator correctly failed closed because it
+cannot infer `neurological=absent` from a subset of typed concepts. That result is retained as useful
+migration evidence, but it demonstrates that continuing to mint promotion_v13/v14 cohorts would turn
+v3's historical prose behavior into an accidental ground truth for the structured architecture.
+
+DGS-SAFE-080 therefore closes through a standalone v10 acceptance contract instead of further legacy
+promotion cohorts. The new gate is `data/evals/diagnosis_v10_final_acceptance_policy.json` and requires:
+
+1. v10 deterministic qualification 10/10;
+2. structured-safety policy v3 41/41, for at least 51 deterministic hard checks in total;
+3. the pinned staging `bodysense-diagnosis -> openai/gemini-3.7-flash` LiteLLM route;
+4. 20 paced real-provider v10 executions with 100% success and zero transport, contract, governance,
+   configuration-identity, or forbidden-side-effect failures;
+5. provider hard-gate cases restricted to complete, nonblocking, `legacy_state_present=false`
+   structured captures. Legacy migration remains deterministic/advisory evidence rather than a
+   physical-provider reliability oracle.
+
+The first broad provider probe is preserved as
+`diagnosis_v10_provider_acceptance_probe_initial.json`: it intentionally included a legacy monitoring
+case and ran without an explicit provider RPM governor. It produced 14/20 successful executions, four
+429s after exceeding the temporary endpoint's 15-RPM limit, and two safe governance rejections because
+Gemini re-emitted an unverified legacy `dizziness` assertion as a new `safety_finding` with the invalid
+source `body-state:legacy-safety-state`. Governance correctly rejected those outputs. The final provider
+corpus therefore targets the new structured-capture population and the harness enforces a >=5s global
+request-start interval; the legacy case remains in deterministic qualification instead of being erased.
+
+No staging default switch is authorized until the standalone final-acceptance report is green. After a
+green report, staging may set v10 directly as Champion, perform an explicit v10 -> v3 -> v10 rollback
+rehearsal, and then close DGS-SAFE-080. DGS-SAFE-090 remains responsible for the broader replay/rollback
+operational contract.

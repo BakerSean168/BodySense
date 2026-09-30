@@ -1,0 +1,49 @@
+{
+  "accepted": true,
+  "configuration_id": "diag-config-3f64de162dc937ee",
+  "deterministic": {
+    "minimum_required": 50,
+    "passed": 51,
+    "policy_reports": [
+      {
+        "minimum_pass_rate": 1.0,
+        "name": "diagnosis-structured-safety-policy-v3",
+        "pass_rate": 1.0,
+        "passed": 41,
+        "report": "data/evals/reports/diagnosis_structured_safety_policy_v3.json",
+        "total": 41
+      }
+    ],
+    "qualification": {
+      "passed": 10,
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_structured_safety_v10.json",
+      "total": 10
+    },
+    "total": 51
+  },
+  "legacy_rollout": {
+    "frozen_policy_revision": "diagnosis-rollout-policy-v3-structured-authority",
+    "last_cohort": "diagnosis_promotion_v12",
+    "mode": "advisory_only",
+    "reason": "Legacy v3 comparison is retained as behavioral evidence but is not a ground-truth gate for structured-safety v10 acceptance."
+  },
+  "name": "diagnosis-v10-final-acceptance-v1",
+  "provider": {
+    "configuration_mismatches": 0,
+    "contract_failures": 0,
+    "errors": 0,
+    "governance_rejections": 0,
+    "report": "data/evals/reports/diagnosis_v10_provider_acceptance.json",
+    "scope": "structured_capture_only",
+    "success_rate": 1.0,
+    "successes": 20,
+    "total": 20
+  },
+  "reasons": [],
+  "staging_route": {
+    "expected_model": "openai/gemini-3.7-flash",
+    "logical_model": "bodysense-diagnosis",
+    "matches": true
+  }
+}
