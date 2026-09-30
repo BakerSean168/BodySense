@@ -3,6 +3,7 @@
 The coordinated pre-user vNext engineering reset completed through Phase 11 and passed fresh PostgreSQL 18 production-shaped whole-system validation. Its master plan is archived and no longer owns current implementation work.
 
 - [`../archive/2026-09-13-bodysense-vnext-engineering-reset.md`](../archive/2026-09-13-bodysense-vnext-engineering-reset.md) — **COMPLETE / ARCHIVED**; records the cross-language contract/state/runtime/schema reset on `refactor/bodysense-vnext`, including Phase 11 final simplification and `LOCAL_DEPLOY_VALIDATION=PASS`.
+- [`../archive/2026-09-28-diagnosis-structured-safety-semantics.md`](../archive/2026-09-28-diagnosis-structured-safety-semantics.md) — **COMPLETE / ARCHIVED**; closes DGS-SAFE-000 through DGS-SAFE-090 with Diagnosis v10 accepted as staging Champion, v3-v7 historical identity/replay preserved, merged-image v10→v3→v10 rollback plus protected-history immutability proven, and production promotion intentionally held pending production-provider qualification.
 
 Current active plans keep their own product/operations acceptance owners:
 

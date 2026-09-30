@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. **DGS-SAFE-080 is accepted in staging.** Immutable v10 remains `diag-config-3f64de162dc937ee`; standalone final acceptance is 51/51 deterministic plus 20/20 paced `gemini-3.7-flash` provider executions with zero errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-rollout-policy-v3-structured-authority` and promotion_v9-v12 are frozen as advisory migration evidence rather than a ground-truth gate. Staging serves v10 directly as Champion and the explicit v10→v3→v10 public-route rehearsal passed. **DGS-SAFE-090 implementation is now in operational validation:** v3–v7 identity audit is 5/5, historical database replay and immutable history snapshot/verification are exposed through `domain-validator`, and the production promotion evaluator correctly remains HOLD while production still uses unqualified `mimo-v2.5-pro`. The final merged-image rollback/immutability rehearsal is still required before 090 closes. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: **Complete / archived. DGS-SAFE-000 through DGS-SAFE-090 are accepted.** Immutable v10 remains `diag-config-3f64de162dc937ee`; standalone final acceptance is 51/51 deterministic plus 20/20 paced `gemini-3.7-flash` provider executions with zero errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-rollout-policy-v3-structured-authority` and promotion_v9-v12 are frozen as advisory migration evidence rather than a ground-truth gate. Staging serves v10 directly as Champion. Final DGS-SAFE-090 evidence on merged runtime revision `0b38fc9f31010ff699d462e4f04c94281ad281b1` proves v3-v7 identity 5/5, historical database replay 51/51, real public v10→v3→v10 serving-pointer rehearsal, and unchanged protected history across 57 DiagnosisAnalysis / 34 DiagnosisCandidate rows. Production promotion is intentionally **HOLD**, not a 090 failure, because production still routes `bodysense-diagnosis` to unqualified `openai/mimo-v2.5-pro` while staging acceptance covers `openai/gemini-3.7-flash`. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -465,19 +465,10 @@ historical path.
 - `diagnosis-history-verify` accepts the pre-rollback snapshot and fails if any protected Analysis/Candidate is
   missing or mutated while allowing newly created smoke analyses.
 
-A pre-merge staging probe found 50 replayable v3 analyses and reproduced 50/50 with zero failures. Staging currently
-has no v4-v7 database rows; those identities remain covered by the 5/5 manifest audit plus synthetic historical
-replay regression rather than fabricating runtime history. The snapshot/verify algorithm also reproduced an
-unchanged root over the current staging dataset before any serving-pointer mutation.
+The final merged-image audit ran on coherent staging revision `0b38fc9f31010ff699d462e4f04c94281ad281b1` using the validator shipped inside the deployed API image. Historical replay found 51 replayable v3 analyses and reproduced 51/51 with zero failures. Staging has no v4-v7 database rows; those identities remain covered by the 5/5 manifest audit plus synthetic historical replay regression rather than fabricating runtime history.
 
-The canonical operator procedure is
-[`docs/runbooks/diagnosis-replay-rollback.md`](../../runbooks/diagnosis-replay-rollback.md). The final 090 acceptance
-rehearsal must run **after this implementation is merged and deployed**, capture one pre-rollback immutable-history
-snapshot, prove v10→v3→v10 through real public Diagnosis requests, verify the same protected root after both rollback
-and restore, and finish at Champion v10 with no Challenger or promotion record.
+The pre-rollback immutable-history snapshot protected 57 `DiagnosisAnalysis` rows and 34 `DiagnosisCandidate` rows with root `f350651e352f02b828c83d99444582936bf605ecfafb9822d761746f8f242a42`. A real public Diagnosis request first proved v10 serving, the API Champion pointer was then changed to v3 without changing the deployed image, and a second public request proved `served_configuration_id=diag-config-5a4a13627e14b4cf`. History verification after rollback preserved the exact protected root. The pointer was then restored to v10, a third public request proved `served_configuration_id=diag-config-3f64de162dc937ee`, and the protected root remained identical again. Newly created smoke analyses/candidates were allowed; no protected row was missing or mutated. Final state is Champion v10 with no Challenger or promotion record.
 
-Production promotion remains a separate explicit decision. `diagnosis-v10-production-promotion-readiness-v1`
-compares staging/production physical model routes and fails closed. Current result is HOLD because staging acceptance
-covers `openai/gemini-3.7-flash` while production is configured for `openai/mimo-v2.5-pro`, and no 20/20
-production-candidate MiMo provider report exists. DGS-SAFE-090 may close with that documented HOLD; it must not use
-staging Gemini evidence to authorize an unqualified production provider.
+The canonical operator procedure is [`docs/runbooks/diagnosis-replay-rollback.md`](../../runbooks/diagnosis-replay-rollback.md), and the merged-image evidence is retained in `data/evals/reports/diagnosis_dgs_safe_090_operational_audit.json`. DGS-SAFE-090 is therefore accepted.
+
+Production promotion remains a separate explicit decision. `diagnosis-v10-production-promotion-readiness-v1` compares staging/production physical model routes and currently returns **HOLD** because staging acceptance covers `openai/gemini-3.7-flash` while production is configured for `openai/mimo-v2.5-pro`, and no 20/20 production-candidate MiMo provider report exists. That HOLD is fail-closed production governance, not unfinished DGS-SAFE-090 work.

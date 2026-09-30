@@ -4,14 +4,13 @@
   "evidence": {
     "final_acceptance": true,
     "historical_identity": true,
-    "operational_audit": false,
+    "operational_audit": true,
     "production_provider_acceptance_present": false
   },
   "name": "diagnosis-v10-production-promotion-readiness-v1",
   "production_provider_summary": {},
   "ready_for_production": false,
   "reasons": [
-    "DGS-SAFE-090 operational audit is not green",
     "production Diagnosis provider differs from the staging-accepted provider and has no production provider acceptance report"
   ],
   "routes": {
