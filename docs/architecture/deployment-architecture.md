@@ -367,7 +367,7 @@ See [docs/security/offhost-backup-restore-runbook.md](../security/offhost-backup
 
 `docker/docker-compose.prod.yml` preserves the North-Star model boundary: AI Service receives only `LITELLM_BASE_URL` / `LITELLM_API_KEY`; physical provider credentials are injected only into the standalone LiteLLM gateway.
 
-The CI/CD repair does **not** reintroduce direct provider routing. The production reconciliation is limited to real infrastructure facts (PostgreSQL 18, Alibaba ACR mirrors) and the safer deploy watcher. `LITELLM_MASTER_KEY` is an internal gateway credential stored only in `.env.production.local`; `MIMO_API_KEY` may be empty while an available OpenRouter fallback is configured.
+The CI/CD repair does **not** reintroduce direct provider routing. The production reconciliation is limited to real infrastructure facts (PostgreSQL 18, Alibaba ACR mirrors) and the safer deploy watcher. `LITELLM_MASTER_KEY` is an internal gateway credential stored only in `.env.production.local`; the primary non-vision provider is configured through generic `PRIMARY_LLM_BASE_URL` / `PRIMARY_LLM_API_KEY`, while OpenRouter remains a separately credentialed fallback.
 
 ## Secret boundaries
 

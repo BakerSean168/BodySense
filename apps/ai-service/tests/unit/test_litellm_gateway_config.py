@@ -46,9 +46,15 @@ def test_gateway_exposes_all_business_logical_groups_with_central_fallbacks() ->
 def test_gateway_owns_llm_physical_provider_credentials() -> None:
     config = _load(CONFIG)
     groups = {item["model_name"]: item["litellm_params"] for item in config["model_list"]}
-    assert groups["bodysense-diagnosis"]["model"] == "openai/mimo-v2.5-pro"
-    assert groups["bodysense-diagnosis"]["api_base"] == "os.environ/MIMO_BASE_URL"
-    assert groups["bodysense-diagnosis"]["api_key"] == "os.environ/MIMO_API_KEY"
+    for logical_model in (
+        "bodysense-diagnosis",
+        "bodysense-consultation",
+        "bodysense-structured",
+        "bodysense-text",
+    ):
+        assert groups[logical_model]["model"] == "openai/gemini-3.7-flash"
+        assert groups[logical_model]["api_base"] == "os.environ/PRIMARY_LLM_BASE_URL"
+        assert groups[logical_model]["api_key"] == "os.environ/PRIMARY_LLM_API_KEY"
     assert groups["bodysense-general-fallback"]["model"] == (
         "openrouter/deepseek/deepseek-chat"
     )

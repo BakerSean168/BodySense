@@ -184,20 +184,21 @@ Promotion requires all of:
 - provider sample count and pass rate satisfy the production-promotion policy;
 - provider errors, contract failures, governance rejections, and configuration mismatches are zero.
 
-A staging provider acceptance does not automatically authorize a different production provider.
+A staging provider acceptance does not automatically authorize a different production provider. The production-only preflight and isolated 20-sample workflow are defined in [`diagnosis-production-provider-qualification.md`](./diagnosis-production-provider-qualification.md).
 
 ## Current production decision
 
-At the completion of the DGS-SAFE-090 staging rehearsal:
+DGS-SAFE-090 closed while production still used a now-retired MiMo route. The follow-on provider migration aligns the tracked production Diagnosis route with the staging-accepted physical model:
 
 ```text
-staging physical model    = openai/gemini-3.7-flash
-production physical model = openai/mimo-v2.5-pro
+staging target           = openai/gemini-3.7-flash
+production target        = openai/gemini-3.7-flash
+credential boundary      = PRIMARY_LLM_BASE_URL / PRIMARY_LLM_API_KEY
 ```
 
-Therefore production promotion remains **HOLD** until `mimo-v2.5-pro` receives an equivalent production-candidate provider acceptance report.
+Production promotion remains **HOLD** until the updated production runtime is deployed, its logical route probe attests `openai/gemini-3.7-flash` with zero fallback, and the isolated 20-sample production-candidate provider acceptance succeeds. The pre-migration production probe found the retired MiMo credential missing and the OpenRouter fallback credential expired; that evidence is historical and must not be treated as the current route after migration.
 
-This HOLD is not a failure of DGS-SAFE-090. It is the intended fail-closed production promotion decision.
+This HOLD is not a failure of DGS-SAFE-090 or Diagnosis v10. It is the intended fail-closed production promotion decision until the replacement production provider route is qualified.
 
 ## Evidence artifacts
 

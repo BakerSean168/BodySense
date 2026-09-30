@@ -5,17 +5,21 @@
     "final_acceptance": true,
     "historical_identity": true,
     "operational_audit": true,
-    "production_provider_acceptance_present": false
+    "production_provider_acceptance_present": false,
+    "production_provider_preflight_present": false,
+    "production_provider_preflight_ready": false
   },
   "name": "diagnosis-v10-production-promotion-readiness-v1",
+  "production_provider_preflight": {},
   "production_provider_summary": {},
   "ready_for_production": false,
   "reasons": [
-    "production Diagnosis provider differs from the staging-accepted provider and has no production provider acceptance report"
+    "production provider runtime preflight report is missing",
+    "production provider acceptance report is missing"
   ],
   "routes": {
-    "physical_model_drift": true,
-    "production_model": "openai/mimo-v2.5-pro",
+    "physical_model_drift": false,
+    "production_model": "openai/gemini-3.7-flash",
     "staging_model": "openai/gemini-3.7-flash"
   }
 }

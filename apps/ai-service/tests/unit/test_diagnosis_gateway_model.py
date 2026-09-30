@@ -67,7 +67,7 @@ def test_diagnosis_source_cannot_reintroduce_legacy_provider_routing() -> None:
         "ModelRouter",
         "AIService",
         "llm.json",
-        "MIMO_API_KEY",
+        "PRIMARY_LLM_API_KEY",
         "OPENROUTER_API_KEY",
     ):
         assert forbidden not in source

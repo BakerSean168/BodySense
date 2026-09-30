@@ -37,8 +37,6 @@ services:
     command: ['--config', '/app/config.yaml', '--port', '4000']
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
-      MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
-      MIMO_API_KEY: ${MIMO_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY}
       STAGING_DIAGNOSIS_BASE_URL: ${STAGING_DIAGNOSIS_BASE_URL:-https://api.ark717.com/v1}

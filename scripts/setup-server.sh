@@ -84,7 +84,7 @@ JWT_SECRET_KEY=$JWT_SECRET_KEY
 OPENROUTER_API_KEY=
 EMBEDDING_API_KEY=
 LITELLM_MASTER_KEY=$LITELLM_MASTER_KEY
-MIMO_API_KEY=
+PRIMARY_LLM_API_KEY=
 
 # Private upload OSS cutover is explicit. Leave blank until the bucket and ECS
 # RAM role have been provisioned and validated.

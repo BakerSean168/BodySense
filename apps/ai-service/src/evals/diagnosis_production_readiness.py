@@ -28,6 +28,7 @@ class DiagnosisProductionPromotionPolicy(BaseModel):
     final_acceptance_report: str
     historical_identity_report: str
     operational_audit_report: str
+    production_provider_preflight_report: str
     production_provider_acceptance_report: str
     minimum_provider_samples: int = Field(gt=0)
     minimum_provider_success_rate: float = Field(ge=0.0, le=1.0)
@@ -68,6 +69,7 @@ def evaluate_production_promotion_readiness(
     acceptance = _read_optional_report(policy.final_acceptance_report)
     identity = _read_optional_report(policy.historical_identity_report)
     operational = _read_optional_report(policy.operational_audit_report)
+    preflight = _read_optional_report(policy.production_provider_preflight_report)
     provider = _read_optional_report(policy.production_provider_acceptance_report)
 
     if acceptance is None or acceptance.get("accepted") is not True:
@@ -87,6 +89,35 @@ def evaluate_production_promotion_readiness(
     production_model = str(production_route.get("model") or "")
 
     route_drift = staging_model != production_model
+
+    if preflight is None:
+        reasons.append("production provider runtime preflight report is missing")
+        preflight_ready = False
+    else:
+        preflight_ready = preflight.get("ready_for_primary_qualification") is True
+        if preflight.get("environment") != "production":
+            reasons.append("production provider preflight environment mismatch")
+        if preflight.get("configured_primary_model") != production_model:
+            reasons.append("production provider preflight model mismatch")
+        if preflight.get("gateway_healthy") is not True:
+            reasons.append("production LiteLLM gateway is not healthy")
+        if preflight.get("primary_credential_present") is not True:
+            reasons.append("production primary provider credential is missing")
+        preflight_reasons = set(preflight.get("reasons") or [])
+        if "fallback_credential_expired" in preflight_reasons:
+            reasons.append("production Diagnosis fallback credential is expired")
+        probe = preflight.get("logical_probe") or {}
+        if probe.get("http_status") != 200:
+            reasons.append("production Diagnosis logical route probe failed")
+        if probe.get("actual_model") != production_model:
+            reasons.append(
+                "production Diagnosis logical route did not use the configured primary model"
+            )
+        if int(probe.get("attempted_fallbacks") or 0) != 0:
+            reasons.append("production Diagnosis logical route used a fallback")
+        if not preflight_ready:
+            reasons.append("production provider runtime preflight is not ready")
+
     if provider is None:
         if route_drift:
             reasons.append(
@@ -104,6 +135,17 @@ def evaluate_production_promotion_readiness(
             reasons.append("provider report is not production-candidate evidence")
         if provider.get("physical_model") != production_model:
             reasons.append("provider report physical model does not match production route")
+        route_attestation = provider.get("route_attestation") or {}
+        for phase in ("before", "after"):
+            attested = route_attestation.get(phase) or {}
+            if attested.get("http_status") != 200:
+                reasons.append(f"provider route attestation {phase} probe failed")
+            if attested.get("actual_model") != production_model:
+                reasons.append(
+                    f"provider route attestation {phase} did not use the production model"
+                )
+            if int(attested.get("attempted_fallbacks") or 0) != 0:
+                reasons.append(f"provider route attestation {phase} used a fallback")
         total = int(provider_summary.get("total") or 0)
         successes = int(provider_summary.get("successes") or 0)
         success_rate = successes / total if total else 0.0
@@ -130,6 +172,8 @@ def evaluate_production_promotion_readiness(
             "final_acceptance": acceptance is not None and acceptance.get("accepted") is True,
             "historical_identity": identity is not None and identity.get("accepted") is True,
             "operational_audit": operational is not None and operational.get("accepted") is True,
+            "production_provider_preflight_present": preflight is not None,
+            "production_provider_preflight_ready": preflight_ready,
             "production_provider_acceptance_present": provider is not None,
         },
         "routes": {
@@ -137,6 +181,7 @@ def evaluate_production_promotion_readiness(
             "production_model": production_model,
             "physical_model_drift": route_drift,
         },
+        "production_provider_preflight": preflight or {},
         "production_provider_summary": provider_summary,
     }
 
