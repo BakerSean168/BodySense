@@ -179,3 +179,21 @@ def test_provider_fresh_promotion_v10_is_ready_for_shadow() -> None:
     assert report["ready_for_shadow"] is True
     assert report["reasons"] == []
     assert report["interaction_experiment"]["required"] is True
+
+
+def test_preagent_authority_promotion_v11_is_ready_for_shadow() -> None:
+    policy_path = (
+        Path(__file__).resolve().parents[2] / "data/evals/diagnosis_promotion_policy_v11.json"
+    )
+    policy = load_promotion_policy(policy_path)
+    report = evaluate_promotion_readiness(policy)
+
+    assert policy.name == "diagnosis_promotion_v11"
+    assert policy.champion_configuration_id == "diag-config-5a4a13627e14b4cf"
+    assert policy.challenger_configuration_id == "diag-config-3f64de162dc937ee"
+    assert policy.rollout.policy_revision == "diagnosis-rollout-policy-v3-structured-authority"
+    assert report["ready_for_shadow"] is True
+    assert report["reasons"] == []
+    assert report["interaction_experiment"]["required"] is True
+    assert report["required_policy_reports"][1]["passed"] == 28
+    assert report["required_policy_reports"][1]["total"] == 28

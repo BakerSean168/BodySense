@@ -263,3 +263,26 @@ func TestStructuredSafetyPromotionPolicyV10BindsProviderFreshCohort(t *testing.T
 		t.Fatalf("provider-fresh rollout identity drifted: %#v, %#v", policy, registered)
 	}
 }
+
+func TestStructuredSafetyPromotionPolicyV11BindsPreAgentAuthorityRollout(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(current), "../../../.."))
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "apps/ai-service/data/evals/diagnosis_promotion_policy_v11.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var policy promotionPolicyFixture
+	if err := json.Unmarshal(raw, &policy); err != nil {
+		t.Fatal(err)
+	}
+	registered := knownDiagnosisPromotionRecords[policy.Name]
+	if policy.Name != "diagnosis_promotion_v11" ||
+		policy.ChampionConfigurationID != defaultDiagnosisConfigurationID ||
+		policy.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID ||
+		policy.Rollout.PolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
+		registered.RolloutPolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
+		registered.ChampionConfigurationID != policy.ChampionConfigurationID ||
+		registered.ChallengerConfigurationID != policy.ChallengerConfigurationID {
+		t.Fatalf("pre-agent authority rollout identity drifted: %#v, %#v", policy, registered)
+	}
+}

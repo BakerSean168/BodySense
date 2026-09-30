@@ -83,6 +83,7 @@ def load_promotion_policy(path: Path = DEFAULT_POLICY_PATH) -> DiagnosisPromotio
     if rollout_revision not in {
         "diagnosis-rollout-policy-v1",
         "diagnosis-rollout-policy-v2-structured-authority",
+        "diagnosis-rollout-policy-v3-structured-authority",
     }:
         raise ValueError(f"unsupported Diagnosis rollout policy revision: {rollout_revision}")
     return policy

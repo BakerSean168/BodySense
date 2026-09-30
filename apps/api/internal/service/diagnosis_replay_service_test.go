@@ -311,12 +311,121 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 		t.Fatalf("structured safety evidence drifted: %#v", evidence)
 	}
 	if !evidence.Baseline.LegacyProseGovernanceOnly || evidence.Baseline.DecisionPolicyRevision != DiagnosisDecisionPolicyV1 ||
+		evidence.Baseline.LegacyProseSafetySource != LegacyProseSafetySourcePostAgent ||
 		!slices.Equal(evidence.Baseline.LegacyProseSafetyCategories, []string{"radiating_pain", "trauma"}) ||
 		!slices.Equal(evidence.ConfirmedAbsentConcepts, []string{"radiating_pain", "trauma"}) {
 		t.Fatalf("legacy false-positive evidence was not recognized: %#v", evidence.Baseline)
 	}
 	if evidence.Replay.DecisionPolicyRevision != DiagnosisDecisionPolicyV2 || evidence.Replay.GovernanceVerdict != "accepted" || evidence.Replay.SafetyFindingCount != 0 {
 		t.Fatalf("structured challenger evidence drifted: %#v", evidence.Replay)
+	}
+}
+
+func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyPreAgentSafetyFalsePositive(t *testing.T) {
+	input := DiagnosisReplayInput{
+		BodyStateRevision: 5,
+		SafetyEnvelope: &SafetyEnvelopeV2{
+			SchemaRevision:    SafetyEnvelopeSchemaV2,
+			PolicyRevision:    SafetyEnvelopePolicyV1,
+			BodyStateRevision: 5,
+			Coverage: SafetyCoverageV1{
+				Revision:          SafetyCoverageRevisionV1,
+				CaptureRevision:   SafetyCaptureRevisionV1,
+				RequiredConcepts:  []string{"trauma", "radiating_pain", "numbness", "weakness", "dizziness"},
+				CoveredSourceRefs: []string{"body-state:fact:test"},
+				Complete:          true,
+			},
+			Assertions: []SafetyAssertionV1{
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+			},
+			ActiveBlockers: []SafetyBlockerV1{},
+			RequiresReview: false,
+		},
+	}
+	baseline := map[string]any{
+		"status":     "safety_blocked",
+		"governance": map[string]any{"verdict": "accepted", "issues": []any{}},
+		"safety_summary": map[string]any{
+			"red_flags": map[string]any{
+				"has_red_flags": true,
+				"flags": []any{
+					map[string]any{"source": "conversation", "category": "radiating_pain", "matched_text": "放射痛"},
+					map[string]any{"source": "conversation", "category": "trauma", "matched_text": "外伤"},
+				},
+			},
+		},
+		"execution_provenance": map[string]any{"status": "bypassed", "reason": "python_pre_agent_safety_gate"},
+		"decision_authority": map[string]any{
+			"outcome":         "block",
+			"policy_revision": DiagnosisDecisionPolicyV1,
+			"reasons":         []any{"agent_output_failed_safety_governance"},
+		},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV1},
+	}
+	replayed := map[string]any{
+		"status":              "completed",
+		"governance":          map[string]any{"verdict": "accepted", "issues": []any{}},
+		"decision_authority":  map[string]any{"outcome": "allow-normal", "policy_revision": DiagnosisDecisionPolicyV2, "reasons": []any{}},
+		"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV2},
+		"safety_findings":     []any{},
+		"candidates":          []any{map[string]any{"name": "benign"}},
+	}
+
+	evidence := diagnosisReplayAuthorityEvidence(input, baseline, replayed)
+	if !evidence.Baseline.LegacyProseGovernanceOnly ||
+		evidence.Baseline.LegacyProseSafetySource != LegacyProseSafetySourcePreAgent ||
+		!slices.Equal(evidence.Baseline.LegacyProseSafetyCategories, []string{"radiating_pain", "trauma"}) ||
+		!slices.Equal(evidence.ConfirmedAbsentConcepts, []string{"radiating_pain", "trauma"}) {
+		t.Fatalf("legacy pre-agent false-positive evidence was not recognized: %#v", evidence)
+	}
+}
+
+func TestLegacyPreAgentSafetyEvidenceFailsClosedWithoutExactProof(t *testing.T) {
+	base := func() map[string]any {
+		return map[string]any{
+			"status":     "safety_blocked",
+			"governance": map[string]any{"verdict": "accepted", "issues": []any{}},
+			"safety_summary": map[string]any{
+				"red_flags": map[string]any{
+					"has_red_flags": true,
+					"flags":         []any{map[string]any{"category": "trauma"}},
+				},
+			},
+			"execution_provenance": map[string]any{"status": "bypassed", "reason": "python_pre_agent_safety_gate"},
+			"decision_authority": map[string]any{
+				"outcome":         "block",
+				"policy_revision": DiagnosisDecisionPolicyV1,
+				"reasons":         []any{"agent_output_failed_safety_governance"},
+			},
+			"agent_configuration": map[string]any{"decision_policy_revision": DiagnosisDecisionPolicyV1},
+		}
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{"wrong-provenance-reason", func(p map[string]any) { p["execution_provenance"].(map[string]any)["reason"] = "other" }},
+		{"agent-not-bypassed", func(p map[string]any) { p["execution_provenance"].(map[string]any)["status"] = "executed" }},
+		{"red-flags-not-asserted", func(p map[string]any) {
+			p["safety_summary"].(map[string]any)["red_flags"].(map[string]any)["has_red_flags"] = false
+		}},
+		{"missing-category", func(p map[string]any) {
+			p["safety_summary"].(map[string]any)["red_flags"].(map[string]any)["flags"] = []any{map[string]any{"matched_text": "外伤"}}
+		}},
+		{"governance-not-accepted", func(p map[string]any) { p["governance"].(map[string]any)["verdict"] = "rejected" }},
+		{"mixed-governance-issue", func(p map[string]any) {
+			p["governance"].(map[string]any)["issues"] = []any{map[string]any{"policy": "other"}}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := base()
+			tc.mutate(payload)
+			if replayLegacyProseGovernanceOnly(payload) {
+				t.Fatalf("unproven pre-agent block must fail closed: %#v", payload)
+			}
+		})
 	}
 }
 

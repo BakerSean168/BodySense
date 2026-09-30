@@ -15,6 +15,7 @@ import (
 const (
 	DiagnosisRolloutPolicyV1                    = "diagnosis-rollout-policy-v1"
 	DiagnosisRolloutPolicyV2StructuredAuthority = "diagnosis-rollout-policy-v2-structured-authority"
+	DiagnosisRolloutPolicyV3StructuredAuthority = "diagnosis-rollout-policy-v3-structured-authority"
 	// DiagnosisRolloutPolicyRevision is retained as the historical/default policy alias.
 	DiagnosisRolloutPolicyRevision = DiagnosisRolloutPolicyV1
 )
@@ -104,7 +105,7 @@ func (s *DiagnosisRolloutService) RecordComparison(
 	encoded, _ := json.Marshal(comparison)
 	observation.Comparison = datatypes.JSON(encoded)
 	observation.UnsafeRelaxation = unsafeRelaxation
-	if route.RolloutPolicyRevision == DiagnosisRolloutPolicyV2StructuredAuthority {
+	if diagnosisStructuredAuthorityPolicy(route.RolloutPolicyRevision) {
 		_, challenger := diagnosisRolloutAuthorityDirection(route, report)
 		observation.ForbiddenSideEffect = challenger.ForbiddenSideEffectsPresent
 	} else {
@@ -273,11 +274,15 @@ func diagnosisRolloutPolicyRevision(route DiagnosisRouteSelection) string {
 
 func validDiagnosisRolloutPolicyRevision(revision string) bool {
 	switch revision {
-	case DiagnosisRolloutPolicyV1, DiagnosisRolloutPolicyV2StructuredAuthority:
+	case DiagnosisRolloutPolicyV1, DiagnosisRolloutPolicyV2StructuredAuthority, DiagnosisRolloutPolicyV3StructuredAuthority:
 		return true
 	default:
 		return false
 	}
+}
+
+func diagnosisStructuredAuthorityPolicy(revision string) bool {
+	return revision == DiagnosisRolloutPolicyV2StructuredAuthority || revision == DiagnosisRolloutPolicyV3StructuredAuthority
 }
 
 func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *DiagnosisReplayReport) (DiagnosisReplayComparison, bool) {
@@ -301,7 +306,7 @@ func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *Di
 		comparison.Authority = authority
 		return comparison, false
 	}
-	if policyRevision != DiagnosisRolloutPolicyV2StructuredAuthority {
+	if !diagnosisStructuredAuthorityPolicy(policyRevision) {
 		authority.Classification = "unsafe_authority_relaxation"
 		authority.ReasonCodes = []string{"legacy_outcome_only_comparator"}
 		comparison.Authority = authority
@@ -333,6 +338,14 @@ func diagnosisRolloutClassifyAuthority(route DiagnosisRouteSelection, report *Di
 	}
 	if !championEvidence.LegacyProseGovernanceOnly {
 		reasons = append(reasons, "champion_block_not_legacy_prose_governance_only")
+	}
+	if policyRevision == DiagnosisRolloutPolicyV2StructuredAuthority && championEvidence.LegacyProseSafetySource != LegacyProseSafetySourcePostAgent {
+		reasons = append(reasons, "legacy_prose_source_not_authorized_by_policy")
+	}
+	if policyRevision == DiagnosisRolloutPolicyV3StructuredAuthority &&
+		championEvidence.LegacyProseSafetySource != LegacyProseSafetySourcePostAgent &&
+		championEvidence.LegacyProseSafetySource != LegacyProseSafetySourcePreAgent {
+		reasons = append(reasons, "legacy_prose_source_not_authorized_by_policy")
 	}
 	if len(championEvidence.LegacyProseSafetyCategories) == 0 {
 		reasons = append(reasons, "legacy_red_flag_category_missing")
