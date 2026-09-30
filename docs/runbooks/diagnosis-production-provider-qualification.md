@@ -143,13 +143,31 @@ bodysense-text
 
 The OpenRouter fallback remains logically separate and should also receive a valid credential, but fallback health does not substitute for primary qualification.
 
+## Current qualification result
+
+The isolated production-candidate qualification has completed successfully against the merged production LiteLLM configuration and immutable AI image from `f59fb8069730f4aff74220a3df08e97cc3b0692c`:
+
+```text
+physical model                 openai/gemini-3.7-flash
+route attestation before       HTTP 200 / fallback=0
+route attestation after        HTTP 200 / fallback=0
+provider samples               20/20
+errors                         0
+contract failures              0
+governance rejections          0
+configuration mismatches       0
+```
+
+The acceptance artifact is `apps/ai-service/data/evals/reports/diagnosis_v10_production_provider_acceptance.json`.
+
+Production readiness remains **HOLD** only because the real production LiteLLM runtime has not yet completed its current provider preflight with a non-empty `PRIMARY_LLM_API_KEY`. This separates provider/configuration qualification from live production secret/runtime activation.
+
 ## Required operational order
 
-1. Merge and publish the MiMo-retirement runtime configuration.
-2. Configure `PRIMARY_LLM_API_KEY` on the production host; configure `PRIMARY_LLM_BASE_URL` only if it differs from the tracked default.
-3. Refresh the OpenRouter fallback credential separately.
-4. Reconcile/recreate only LiteLLM when applying provider env changes.
-5. Run preflight until the logical probe proves `openai/gemini-3.7-flash` with zero fallback.
-6. Run the isolated 20-sample production provider qualification.
-7. Recompute production readiness.
-8. Promote the production Diagnosis Champion only as a separate explicit release operation after readiness becomes PROMOTE.
+1. Configure the already-qualified provider key as `PRIMARY_LLM_API_KEY` on the production host; configure `PRIMARY_LLM_BASE_URL` only if it differs from the tracked default.
+2. Refresh the OpenRouter fallback credential separately.
+3. Deploy/reconcile the merged production LiteLLM configuration and recreate only LiteLLM when applying provider env changes.
+4. Run preflight until the real production logical route proves `openai/gemini-3.7-flash` with zero fallback.
+5. Copy the resulting `diagnosis_production_provider_preflight.json` back into the evidence set.
+6. Recompute production readiness; the existing 20/20 provider acceptance does not need to be repeated unless the physical route/configuration changes.
+7. Promote the production Diagnosis Champion only as a separate explicit release operation after readiness becomes PROMOTE.
