@@ -1,0 +1,33 @@
+{
+  "acceptance_configuration_id": "diag-config-3f64de162dc937ee",
+  "acceptance_report": "data/evals/reports/diagnosis_v10_final_acceptance.json",
+  "final_api_health": {
+    "db": "ok",
+    "redis": "ok",
+    "service": "bodysense-api",
+    "status": "ok"
+  },
+  "final_configuration_id": "diag-config-3f64de162dc937ee",
+  "final_stage": "champion",
+  "initial_configuration_id": "diag-config-3f64de162dc937ee",
+  "main_revision": "bafad87d3a6d85cfae5de56ff4dfcc294adf0a60",
+  "name": "diagnosis-v10-staging-rollback-rehearsal-v1",
+  "passed": true,
+  "recorded_at": "2026-09-30T05:28:30.465617+00:00",
+  "restore": {
+    "challenger_configuration_id": "",
+    "configuration_id": "diag-config-3f64de162dc937ee",
+    "container_health": "healthy",
+    "promotion_record": "",
+    "revision": "bafad87d3a6d85cfae5de56ff4dfcc294adf0a60",
+    "stage": "champion"
+  },
+  "rollback": {
+    "challenger_configuration_id": "",
+    "configuration_id": "diag-config-5a4a13627e14b4cf",
+    "container_health": "healthy",
+    "promotion_record": "",
+    "revision": "bafad87d3a6d85cfae5de56ff4dfcc294adf0a60",
+    "stage": "champion"
+  }
+}
