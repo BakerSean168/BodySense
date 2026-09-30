@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 LOGICAL_MODEL = "bodysense-diagnosis"
-PRIMARY_CREDENTIAL = "MIMO_API_KEY"
+PRIMARY_CREDENTIAL = "PRIMARY_LLM_API_KEY"
 FALLBACK_CREDENTIAL = "OPENROUTER_API_KEY"
 
 

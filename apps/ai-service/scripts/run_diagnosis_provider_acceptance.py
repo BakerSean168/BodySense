@@ -248,7 +248,7 @@ def main() -> int:
     if args.concurrency < 1:
         raise SystemExit("--concurrency must be positive")
     if args.min_start_interval_seconds < 4.0:
-        raise SystemExit("--min-start-interval-seconds must be >= 4 for the staging provider")
+        raise SystemExit("--min-start-interval-seconds must be >= 4 for the qualified provider")
 
     report = asyncio.run(
         _run(

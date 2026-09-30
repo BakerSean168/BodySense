@@ -31,7 +31,6 @@ EMBEDDING_PROVIDER=hashing
 # Real provider credentials for non-stub staging inference.
 # GROQ_API_KEY is required because bodysense-structured uses Groq in staging.
 GROQ_API_KEY=
-MIMO_API_KEY=
 OPENROUTER_API_KEY=
 ENV
   echo "created gitignored staging env: $ENV_FILE"

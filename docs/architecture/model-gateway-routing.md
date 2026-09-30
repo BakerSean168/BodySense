@@ -141,8 +141,8 @@ LITELLM_BASE_URL
 LITELLM_API_KEY
 ```
 
-for LLM traffic. `MIMO_API_KEY`, `MIMO_BASE_URL`, and `OPENROUTER_API_KEY` are injected into
-`litellm-gateway`, not into `ai-service`.
+for LLM traffic. `PRIMARY_LLM_API_KEY`, `PRIMARY_LLM_BASE_URL`, and `OPENROUTER_API_KEY` are injected into
+`litellm-gateway`, not into `ai-service`. The generic `PRIMARY_LLM_*` boundary deliberately avoids coupling runtime configuration to a retired provider name.
 
 Embedding and ASR credentials are separate non-LLM subsystems and are not covered by the LLM routing
 boundary (`EMBEDDING_*`, `ASR_*`).

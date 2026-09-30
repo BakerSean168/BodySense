@@ -38,7 +38,7 @@ def test_business_routes_resolve_only_to_gateway_logical_models() -> None:
 def test_gateway_pydantic_model_uses_internal_gateway_only(monkeypatch) -> None:
     monkeypatch.setenv("LITELLM_BASE_URL", "http://gateway.internal:4000/v1")
     monkeypatch.setenv("LITELLM_API_KEY", "gateway-only-secret")
-    monkeypatch.setenv("MIMO_API_KEY", "must-not-be-read-by-ai-service")
+    monkeypatch.setenv("PRIMARY_LLM_API_KEY", "must-not-be-read-by-ai-service")
     monkeypatch.setenv("OPENROUTER_API_KEY", "must-not-be-read-by-ai-service")
     get_gateway_pydantic_model.cache_clear()
 
@@ -71,8 +71,8 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         "LLM_MODEL",
         "LLM_BASE_URL",
         "OPENROUTER_API_KEY",
-        "MIMO_API_KEY",
-        "MIMO_BASE_URL",
+        "PRIMARY_LLM_API_KEY",
+        "PRIMARY_LLM_BASE_URL",
         "GROQ_API_KEY",
     }
     for relative in (
@@ -85,7 +85,7 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         assert "LITELLM_BASE_URL" in ai_env
         assert "LITELLM_API_KEY" in ai_env
         assert retired_llm_env.isdisjoint(ai_env)
-        assert "MIMO_API_KEY" in gateway_env
+        assert "PRIMARY_LLM_API_KEY" in gateway_env
         assert "OPENROUTER_API_KEY" in gateway_env
 
     staging = yaml.safe_load(

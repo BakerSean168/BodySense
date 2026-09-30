@@ -29,30 +29,30 @@ def _green_reports() -> dict[str, dict]:
         "ops.json": {"accepted": True},
         "preflight.json": {
             "environment": "production",
-            "configured_primary_model": "openai/mimo-v2.5-pro",
+            "configured_primary_model": "openai/gemini-3.7-flash",
             "gateway_healthy": True,
             "primary_credential_present": True,
             "fallback_credential_present": True,
             "ready_for_primary_qualification": True,
             "logical_probe": {
                 "http_status": 200,
-                "actual_model": "openai/mimo-v2.5-pro",
+                "actual_model": "openai/gemini-3.7-flash",
                 "attempted_fallbacks": 0,
             },
         },
         "provider.json": {
             "configuration_id": "diag-config-3f64de162dc937ee",
             "environment": "production-candidate",
-            "physical_model": "openai/mimo-v2.5-pro",
+            "physical_model": "openai/gemini-3.7-flash",
             "route_attestation": {
                 "before": {
                     "http_status": 200,
-                    "actual_model": "openai/mimo-v2.5-pro",
+                    "actual_model": "openai/gemini-3.7-flash",
                     "attempted_fallbacks": 0,
                 },
                 "after": {
                     "http_status": 200,
-                    "actual_model": "openai/mimo-v2.5-pro",
+                    "actual_model": "openai/gemini-3.7-flash",
                     "attempted_fallbacks": 0,
                 },
             },
@@ -83,7 +83,7 @@ def test_production_readiness_holds_when_provider_evidence_is_missing(monkeypatc
             "model": (
                 "openai/gemini-3.7-flash"
                 if path == readiness.STAGING_LITELLM_CONFIG
-                else "openai/mimo-v2.5-pro"
+                else "openai/gemini-3.7-flash"
             )
         },
     )
@@ -92,8 +92,8 @@ def test_production_readiness_holds_when_provider_evidence_is_missing(monkeypatc
 
     assert report["decision"] == "hold"
     assert report["ready_for_production"] is False
-    assert report["routes"]["physical_model_drift"] is True
-    assert any("no production provider acceptance report" in reason for reason in report["reasons"])
+    assert report["routes"]["physical_model_drift"] is False
+    assert "production provider acceptance report is missing" in report["reasons"]
 
 
 def test_production_readiness_promotes_only_with_matching_production_evidence(
@@ -112,7 +112,7 @@ def test_production_readiness_promotes_only_with_matching_production_evidence(
             "model": (
                 "openai/gemini-3.7-flash"
                 if path == readiness.STAGING_LITELLM_CONFIG
-                else "openai/mimo-v2.5-pro"
+                else "openai/gemini-3.7-flash"
             )
         },
     )
@@ -126,7 +126,7 @@ def test_production_readiness_promotes_only_with_matching_production_evidence(
 
 def test_production_readiness_rejects_wrong_provider_identity(monkeypatch) -> None:
     reports = _green_reports()
-    reports["provider.json"]["physical_model"] = "openai/gemini-3.7-flash"
+    reports["provider.json"]["physical_model"] = "openrouter/deepseek/deepseek-chat"
     monkeypatch.setattr(
         readiness,
         "_read_optional_report",
@@ -139,7 +139,7 @@ def test_production_readiness_rejects_wrong_provider_identity(monkeypatch) -> No
             "model": (
                 "openai/gemini-3.7-flash"
                 if path == readiness.STAGING_LITELLM_CONFIG
-                else "openai/mimo-v2.5-pro"
+                else "openai/gemini-3.7-flash"
             )
         },
     )
@@ -172,7 +172,7 @@ def test_production_readiness_holds_when_primary_credential_is_missing(monkeypat
             "model": (
                 "openai/gemini-3.7-flash"
                 if path == readiness.STAGING_LITELLM_CONFIG
-                else "openai/mimo-v2.5-pro"
+                else "openai/gemini-3.7-flash"
             )
         },
     )
@@ -201,7 +201,7 @@ def test_production_readiness_rejects_attested_fallback(monkeypatch) -> None:
             "model": (
                 "openai/gemini-3.7-flash"
                 if path == readiness.STAGING_LITELLM_CONFIG
-                else "openai/mimo-v2.5-pro"
+                else "openai/gemini-3.7-flash"
             )
         },
     )

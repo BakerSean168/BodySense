@@ -4,26 +4,28 @@ Status: Active production-promotion gate.
 
 ## Purpose
 
-This runbook qualifies the physical provider behind the production logical model `bodysense-diagnosis` without changing the production Champion or sending public user traffic through a new Diagnosis configuration.
+This runbook qualifies the physical provider behind production `bodysense-diagnosis` without changing the production Diagnosis Champion and without sending public user traffic through an unqualified configuration.
 
-Current contract:
+MiMo is retired from the current non-vision LLM route. The target production contract is now:
 
 ```text
 Diagnosis Agent configuration = diag-config-3f64de162dc937ee  # immutable v10
 staging physical model        = openai/gemini-3.7-flash
-production physical model     = openai/mimo-v2.5-pro
+production physical model     = openai/gemini-3.7-flash
+primary credential boundary   = PRIMARY_LLM_BASE_URL / PRIMARY_LLM_API_KEY
 ```
 
-Staging provider acceptance cannot authorize a different production provider. Production requires its own runtime preflight, route attestation, and 20/20 v10 provider acceptance.
+The production configuration intentionally uses generic `PRIMARY_LLM_*` names so another provider migration does not require renaming the runtime contract.
 
 ## Safety boundary
 
 - Do not change the production Diagnosis Champion during provider qualification.
-- Do not use `prod-latest` or another mutable image for qualification. Use an immutable `repository@sha256:digest` AI image that contains the accepted v10 runtime and qualification corpus.
-- The one-off qualification container connects only to the existing internal LiteLLM gateway.
-- The qualification script does not call the public API and does not write Diagnosis analyses to PostgreSQL.
-- Provider credentials remain inside the production host/runtime. Reports contain only credential-presence booleans and non-sensitive route metadata.
-- A successful fallback must not count as primary-provider acceptance.
+- Do not use a mutable AI image. Use an immutable `repository@sha256:digest` containing the accepted v10 runtime and qualification corpus.
+- The one-off qualification container connects only to the internal production LiteLLM gateway.
+- It does not call the public API and does not persist Diagnosis analyses.
+- Provider credentials stay on the production host. Reports contain only credential-presence booleans and non-sensitive route metadata.
+- A successful fallback does **not** count as primary-provider acceptance.
+- The physical route must be attested from LiteLLM response headers before and after the 20-sample run.
 
 ## 1. Runtime preflight
 
@@ -39,14 +41,15 @@ python3 scripts/diagnosis-production-provider-preflight.py \
 The report verifies:
 
 - LiteLLM gateway health;
-- `MIMO_API_KEY` is non-empty without exposing its value;
+- `PRIMARY_LLM_API_KEY` is non-empty without exposing its value;
 - fallback credential presence;
 - configured primary/fallback model identities;
 - a real `bodysense-diagnosis` gateway probe;
-- `x-litellm-model-name` equals `openai/mimo-v2.5-pro`;
+- `x-litellm-model-name=openai/gemini-3.7-flash`;
+- `x-litellm-model-group=bodysense-diagnosis`;
 - `x-litellm-attempted-fallbacks=0`.
 
-To fail closed when the primary route is not ready:
+Fail closed when the primary route is not ready:
 
 ```bash
 python3 scripts/diagnosis-production-provider-preflight.py \
@@ -54,17 +57,17 @@ python3 scripts/diagnosis-production-provider-preflight.py \
   --require-ready
 ```
 
-No 20-sample qualification should start unless this passes.
+No 20-sample qualification may start unless this passes.
 
-## 2. Run the isolated 20-sample qualification
+## 2. Isolated 20-sample qualification
 
-Resolve the immutable accepted AI image digest first. The value must look like:
+Resolve the immutable accepted AI image digest:
 
 ```text
 crpi-.../bodysense/bodysense-ai-service@sha256:<digest>
 ```
 
-Then on the production host:
+Then run:
 
 ```bash
 cd /opt/bodysense
@@ -74,14 +77,15 @@ AI_IMAGE='<immutable repository@sha256:digest>' \
 
 The orchestrator:
 
-1. runs the production provider preflight with `--require-ready`;
+1. runs production provider preflight with `--require-ready`;
 2. creates a temporary mode-600 env file containing only the internal LiteLLM URL/key;
-3. starts a one-off accepted v10 AI image on the existing production Docker network;
+3. starts the accepted v10 AI image on the production Docker network;
 4. runs 20 paced `structured_capture_only` Diagnosis executions;
-5. requires 100% success with zero provider errors, contract failures, governance rejections, and configuration mismatches;
-6. reruns the route preflight after the sample;
-7. writes before/after route attestation into the acceptance report;
-8. rejects the report if either attestation used a fallback.
+5. requires 100% success;
+6. requires zero provider errors, contract failures, governance rejections, and configuration mismatches;
+7. reruns route preflight;
+8. writes before/after route attestation into the acceptance artifact;
+9. rejects the result if either attestation used a fallback or a different physical model.
 
 Required artifact:
 
@@ -89,16 +93,14 @@ Required artifact:
 apps/ai-service/data/evals/reports/diagnosis_v10_production_provider_acceptance.json
 ```
 
-## 3. Recompute production promotion readiness
-
-After copying the production-candidate evidence back into the repository:
+## 3. Recompute production readiness
 
 ```bash
 cd apps/ai-service
 uv run --extra dev python scripts/run_diagnosis_production_promotion_readiness.py
 ```
 
-A promotion-ready result requires:
+Promotion-ready requires:
 
 ```text
 decision = PROMOTE
@@ -108,41 +110,46 @@ ready_for_production = true
 The evaluator independently requires:
 
 - v10 final acceptance;
-- DGS-SAFE-090 historical/replay/rollback acceptance;
+- DGS-SAFE-090 identity/replay/rollback acceptance;
 - production runtime preflight ready;
-- production-candidate report for the exact configured production model;
-- before/after route attestation proving the primary model and zero fallback;
+- a production-candidate report for the exact configured production model;
+- before/after route attestation proving the primary physical model with zero fallback;
 - at least 20 samples and 100% success.
 
-## Current observed production state
+## Migration from retired MiMo route
 
-The production runtime preflight performed after DGS-SAFE-090 found:
+The production runtime observed before this migration still used the old tracked route:
 
 ```text
-LiteLLM gateway                  healthy
 configured primary              openai/mimo-v2.5-pro
 MIMO_API_KEY                     missing
 configured fallback             openrouter/deepseek/deepseek-chat
 fallback credential             present but expired
 bodysense-diagnosis probe        HTTP 500
-ready_for_primary_qualification false
 ```
 
-The gateway error path is:
+That observation is retained only as historical migration evidence.
+
+The current target route removes MiMo entirely:
 
 ```text
-MiMo primary -> authentication unavailable
-OpenRouter fallback -> 401 API key expired
+bodysense-diagnosis
+bodysense-consultation
+bodysense-structured
+bodysense-text
+    -> openai/gemini-3.7-flash
+    -> PRIMARY_LLM_BASE_URL / PRIMARY_LLM_API_KEY
 ```
 
-Therefore production promotion remains HOLD. This is a provider-credential/runtime blocker, not a Diagnosis v10 correctness regression.
+The OpenRouter fallback remains logically separate and should also receive a valid credential, but fallback health does not substitute for primary qualification.
 
-## Recovery order
+## Required operational order
 
-1. Configure a valid `MIMO_API_KEY` in the production host secret environment.
-2. Preferably refresh the expired OpenRouter fallback credential as a separate resilience repair.
-3. Recreate only the LiteLLM gateway if needed for new environment values.
-4. Run the runtime preflight until the logical probe proves MiMo with zero fallback.
-5. Run the isolated 20-sample production provider qualification.
-6. Recompute production promotion readiness.
-7. Make the production Champion promotion as a separate explicit release decision only after readiness becomes PROMOTE.
+1. Merge and publish the MiMo-retirement runtime configuration.
+2. Configure `PRIMARY_LLM_API_KEY` on the production host; configure `PRIMARY_LLM_BASE_URL` only if it differs from the tracked default.
+3. Refresh the OpenRouter fallback credential separately.
+4. Reconcile/recreate only LiteLLM when applying provider env changes.
+5. Run preflight until the logical probe proves `openai/gemini-3.7-flash` with zero fallback.
+6. Run the isolated 20-sample production provider qualification.
+7. Recompute production readiness.
+8. Promote the production Diagnosis Champion only as a separate explicit release operation after readiness becomes PROMOTE.
