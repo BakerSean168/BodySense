@@ -1,0 +1,10 @@
+{
+  "name": "diagnosis-v10-production-promotion-readiness-v1",
+  "configuration_id": "diag-config-3f64de162dc937ee",
+  "final_acceptance_report": "data/evals/reports/diagnosis_v10_final_acceptance.json",
+  "historical_identity_report": "data/evals/reports/diagnosis_historical_identity_audit.json",
+  "operational_audit_report": "data/evals/reports/diagnosis_dgs_safe_090_operational_audit.json",
+  "production_provider_acceptance_report": "data/evals/reports/diagnosis_v10_production_provider_acceptance.json",
+  "minimum_provider_samples": 20,
+  "minimum_provider_success_rate": 1.0
+}

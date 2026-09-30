@@ -1,0 +1,67 @@
+{
+  "accepted": true,
+  "configurations": [
+    {
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "fingerprint": "5a4a13627e14b4cfdd74160612f0459e6a1b7821070ade3e239b9ec7a7459d69",
+      "governance_policy_revision": "diagnosis-governance-v3",
+      "manifest": "config/agents/diagnosis-v3-decision-authority.yaml",
+      "passed": true,
+      "reasons": [],
+      "version": "v3"
+    },
+    {
+      "configuration_id": "diag-config-4a517fea19cb6c49",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "fingerprint": "4a517fea19cb6c49006df060183112cf9d4ff65540b2192512d94139805e667a",
+      "governance_policy_revision": "diagnosis-governance-v4-claim-surface",
+      "manifest": "config/agents/diagnosis-v4-claim-surface.yaml",
+      "passed": true,
+      "reasons": [],
+      "version": "v4"
+    },
+    {
+      "configuration_id": "diag-config-375187050b203078",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "fingerprint": "375187050b20307849aedd3d470c7c09fcf5b5fed9cca80291da88254d9126af",
+      "governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims",
+      "manifest": "config/agents/diagnosis-v5-negation-aware.yaml",
+      "passed": true,
+      "reasons": [],
+      "version": "v5"
+    },
+    {
+      "configuration_id": "diag-config-4377355ba2012ce8",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "fingerprint": "4377355ba2012ce83ae450f1630fd79c6071e31e3091412c451ad766195467cc",
+      "governance_policy_revision": "diagnosis-governance-v6-negation-bridge-claims",
+      "manifest": "config/agents/diagnosis-v6-negation-bridge.yaml",
+      "passed": true,
+      "reasons": [],
+      "version": "v6"
+    },
+    {
+      "configuration_id": "diag-config-4eb948f419994367",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "fingerprint": "4eb948f41999436739507a0c58de359e1d0f3e568eb9e37e7f18ad13af59a827",
+      "governance_policy_revision": "diagnosis-governance-v7-negation-list-claims",
+      "manifest": "config/agents/diagnosis-v7-negation-list.yaml",
+      "passed": true,
+      "reasons": [],
+      "version": "v7"
+    }
+  ],
+  "name": "diagnosis-historical-identity-audit-v1",
+  "passed": 5,
+  "reasons": [],
+  "shared_contract": {
+    "evidence_policy_revision": "diagnosis-evidence-gap-v2",
+    "logical_model": "bodysense-diagnosis",
+    "model_group_revision": "diagnosis-model-group-v1",
+    "output_schema_revision": "diagnosis-output-v2",
+    "prompt_revision": "diagnosis-prompt-v4-evidence-gap",
+    "tool_policy_revision": "diagnosis-evidence-acquisition-tools-v2"
+  },
+  "total": 5
+}

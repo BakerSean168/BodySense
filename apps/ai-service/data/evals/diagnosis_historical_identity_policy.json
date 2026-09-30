@@ -1,0 +1,48 @@
+{
+  "name": "diagnosis-historical-identity-audit-v1",
+  "configurations": [
+    {
+      "version": "v3",
+      "manifest": "config/agents/diagnosis-v3-decision-authority.yaml",
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "governance_policy_revision": "diagnosis-governance-v3"
+    },
+    {
+      "version": "v4",
+      "manifest": "config/agents/diagnosis-v4-claim-surface.yaml",
+      "configuration_id": "diag-config-4a517fea19cb6c49",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "governance_policy_revision": "diagnosis-governance-v4-claim-surface"
+    },
+    {
+      "version": "v5",
+      "manifest": "config/agents/diagnosis-v5-negation-aware.yaml",
+      "configuration_id": "diag-config-375187050b203078",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "governance_policy_revision": "diagnosis-governance-v5-negation-aware-claims"
+    },
+    {
+      "version": "v6",
+      "manifest": "config/agents/diagnosis-v6-negation-bridge.yaml",
+      "configuration_id": "diag-config-4377355ba2012ce8",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "governance_policy_revision": "diagnosis-governance-v6-negation-bridge-claims"
+    },
+    {
+      "version": "v7",
+      "manifest": "config/agents/diagnosis-v7-negation-list.yaml",
+      "configuration_id": "diag-config-4eb948f419994367",
+      "decision_policy_revision": "diagnosis-decision-policy-v1",
+      "governance_policy_revision": "diagnosis-governance-v7-negation-list-claims"
+    }
+  ],
+  "shared_contract": {
+    "logical_model": "bodysense-diagnosis",
+    "model_group_revision": "diagnosis-model-group-v1",
+    "prompt_revision": "diagnosis-prompt-v4-evidence-gap",
+    "output_schema_revision": "diagnosis-output-v2",
+    "tool_policy_revision": "diagnosis-evidence-acquisition-tools-v2",
+    "evidence_policy_revision": "diagnosis-evidence-gap-v2"
+  }
+}

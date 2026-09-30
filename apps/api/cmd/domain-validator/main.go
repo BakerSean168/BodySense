@@ -33,17 +33,39 @@ type validator struct {
 
 func main() {
 	databaseURL := flag.String("database-url", os.Getenv("DATABASE_URL"), "PostgreSQL connection URL")
+	mode := flag.String("mode", "domain-semantics", "Validation mode: domain-semantics, diagnosis-replay-audit, diagnosis-history-snapshot, or diagnosis-history-verify")
+	snapshotFile := flag.String("snapshot-file", "", "History snapshot path for diagnosis-history-verify; use - for stdin")
+	replayLimit := flag.Int("replay-limit-per-configuration", 1000, "Maximum replayable historical analyses per v3-v7 configuration")
 	flag.Parse()
-	if *databaseURL == "" {
-		log.Fatal("database-url is required")
-	}
 
-	db, err := gorm.Open(postgres.Open(*databaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
+	var db *gorm.DB
+	var err error
+	if *databaseURL != "" {
+		db, err = gorm.Open(postgres.Open(*databaseURL), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
+		})
+	} else {
+		db, err = database.Connect(database.ConfigFromEnv())
+	}
 	if err != nil {
 		log.Fatalf("connect domain validator database: %v", err)
 	}
+	if *mode != "domain-semantics" {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		switch *mode {
+		case "diagnosis-replay-audit":
+			runDiagnosisReplayAudit(ctx, db, *replayLimit)
+		case "diagnosis-history-snapshot":
+			runDiagnosisHistorySnapshot(ctx, db)
+		case "diagnosis-history-verify":
+			runDiagnosisHistoryVerify(ctx, db, *snapshotFile)
+		default:
+			log.Fatalf("unknown validation mode %q", *mode)
+		}
+		return
+	}
+
 	v := newValidator(db)
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()

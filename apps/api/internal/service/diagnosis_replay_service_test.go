@@ -106,7 +106,7 @@ func replayTestRaw(configurationID, decisionRevision, concernKey string) json.Ra
 			"reasons":         []any{},
 		}
 	}
-	if configurationID == defaultDiagnosisConfigurationID || configurationID == diagnosisClaimSurfaceConfigID {
+	if configurationID == defaultDiagnosisConfigurationID || configurationID == diagnosisClaimSurfaceConfigID || configurationID == diagnosisNegationAwareConfigID || configurationID == diagnosisNegationBridgeConfigID {
 		payload["evidence_acquisition"] = map[string]any{
 			"trace_revision":           evidenceAvailabilityTraceV2,
 			"policy_revision":          "diagnosis-evidence-gap-v2",
