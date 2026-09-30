@@ -1,0 +1,136 @@
+{
+  "accepted": true,
+  "final_champion_configuration_id": "diag-config-3f64de162dc937ee",
+  "historical_identity": {
+    "accepted": true,
+    "passed": 5,
+    "total": 5
+  },
+  "historical_replay": {
+    "accepted": true,
+    "configurations": [
+      {
+        "configuration_id": "diag-config-5a4a13627e14b4cf",
+        "database_samples": 51,
+        "evidence": "database_replay",
+        "failed": 0,
+        "failures": null,
+        "passed": 51,
+        "version": "v3"
+      },
+      {
+        "configuration_id": "diag-config-4a517fea19cb6c49",
+        "database_samples": 0,
+        "evidence": "identity_and_synthetic_regression_only",
+        "failed": 0,
+        "failures": null,
+        "passed": 0,
+        "version": "v4"
+      },
+      {
+        "configuration_id": "diag-config-375187050b203078",
+        "database_samples": 0,
+        "evidence": "identity_and_synthetic_regression_only",
+        "failed": 0,
+        "failures": null,
+        "passed": 0,
+        "version": "v5"
+      },
+      {
+        "configuration_id": "diag-config-4377355ba2012ce8",
+        "database_samples": 0,
+        "evidence": "identity_and_synthetic_regression_only",
+        "failed": 0,
+        "failures": null,
+        "passed": 0,
+        "version": "v6"
+      },
+      {
+        "configuration_id": "diag-config-4eb948f419994367",
+        "database_samples": 0,
+        "evidence": "identity_and_synthetic_regression_only",
+        "failed": 0,
+        "failures": null,
+        "passed": 0,
+        "version": "v7"
+      }
+    ],
+    "failed": 0,
+    "passed": 51,
+    "total_samples": 51
+  },
+  "immutability": {
+    "restore": {
+      "added_analysis_count": 4,
+      "added_candidate_count": 4,
+      "before_root_sha256": "f350651e352f02b828c83d99444582936bf605ecfafb9822d761746f8f242a42",
+      "missing_analysis_ids": null,
+      "missing_candidate_ids": null,
+      "mutated_analysis_ids": null,
+      "mutated_candidate_ids": null,
+      "protected_analysis_count": 57,
+      "protected_candidate_count": 34,
+      "protected_root_sha256": "f350651e352f02b828c83d99444582936bf605ecfafb9822d761746f8f242a42",
+      "revision": "diagnosis-history-snapshot-v1",
+      "unchanged": true
+    },
+    "rollback": {
+      "added_analysis_count": 3,
+      "added_candidate_count": 3,
+      "before_root_sha256": "f350651e352f02b828c83d99444582936bf605ecfafb9822d761746f8f242a42",
+      "missing_analysis_ids": null,
+      "missing_candidate_ids": null,
+      "mutated_analysis_ids": null,
+      "mutated_candidate_ids": null,
+      "protected_analysis_count": 57,
+      "protected_candidate_count": 34,
+      "protected_root_sha256": "f350651e352f02b828c83d99444582936bf605ecfafb9822d761746f8f242a42",
+      "revision": "diagnosis-history-snapshot-v1",
+      "unchanged": true
+    }
+  },
+  "name": "diagnosis-dgs-safe-090-operational-audit-v1",
+  "public_diagnosis_smoke": {
+    "initial_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "restored_v10": {
+      "agent_configuration_id": "diag-config-3f64de162dc937ee",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-3f64de162dc937ee",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-3f64de162dc937ee",
+        "stage": "champion"
+      },
+      "status": "completed"
+    },
+    "rollback_v3": {
+      "agent_configuration_id": "diag-config-5a4a13627e14b4cf",
+      "candidate_count": 1,
+      "governance_verdict": "accepted",
+      "rollout": {
+        "challenger_configuration_id": null,
+        "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "promotion_record": null,
+        "served_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "stage": "champion"
+      },
+      "status": "completed"
+    }
+  },
+  "reasons": [],
+  "runtime_revision": "0b38fc9f31010ff699d462e4f04c94281ad281b1"
+}
