@@ -160,6 +160,7 @@ func (s *DiagnosisReplayService) HistoricalReplay(
 	if policyRevision == DiagnosisDecisionPolicyV1 {
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), recomputed)
 		recomputed = ApplyDiagnosisDecision(recomputed, decision)
+		recomputed = normalizedDiagnosisReplayPayload(recomputed)
 	} else if policyRevision == DiagnosisDecisionPolicyV2 {
 		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, recomputed)
 		recomputed = ApplyDiagnosisDecision(recomputed, decision)
@@ -270,6 +271,7 @@ func (s *DiagnosisReplayService) counterfactualCompare(
 	if policyRevision == DiagnosisDecisionPolicyV1 {
 		decision := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), replayed)
 		replayed = ApplyDiagnosisDecision(replayed, decision)
+		replayed = normalizedDiagnosisReplayPayload(replayed)
 		result, _ = json.Marshal(replayed)
 	} else if policyRevision == DiagnosisDecisionPolicyV2 {
 		decision := EvaluateDiagnosisDecisionV2(input.SafetyEnvelope, input.BodyStateRevision, replayed)

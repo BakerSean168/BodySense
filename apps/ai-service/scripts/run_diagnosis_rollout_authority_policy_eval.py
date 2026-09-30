@@ -16,6 +16,7 @@ PROMOTION_V8 = ROOT / "data/evals/diagnosis_promotion_policy_v8.json"
 PROMOTION_V9 = ROOT / "data/evals/diagnosis_promotion_policy_v9.json"
 PROMOTION_V10 = ROOT / "data/evals/diagnosis_promotion_policy_v10.json"
 PROMOTION_V11 = ROOT / "data/evals/diagnosis_promotion_policy_v11.json"
+PROMOTION_V12 = ROOT / "data/evals/diagnosis_promotion_policy_v12.json"
 QUALIFICATION_V9 = ROOT / "data/evals/reports/diagnosis_structured_safety_v9.json"
 QUALIFICATION_V10 = ROOT / "data/evals/reports/diagnosis_structured_safety_v10.json"
 
@@ -107,6 +108,12 @@ def main(*, budget_successor: bool = False, preagent_successor: bool = False) ->
                 "v3_cohort_isolated_from_v2_evidence": (
                     "TestStructuredAuthorityPolicyV3CohortDoesNotInheritV2Evidence"
                 ),
+                "v1_counterfactual_replay_normalized": (
+                    "TestCounterfactualV1ReplayNormalizesDecisionAuthorityForLegacyProof"
+                ),
+                "replay_normalized_promotion_registry_binds_v3": (
+                    "TestStructuredSafetyPromotionPolicyV12BindsReplayNormalizedCohort"
+                ),
             }
         )
     for check, test_name in go_tests.items():
@@ -117,7 +124,8 @@ def main(*, budget_successor: bool = False, preagent_successor: bool = False) ->
     v9 = json.loads(PROMOTION_V9.read_text(encoding="utf-8"))
     v10 = json.loads(PROMOTION_V10.read_text(encoding="utf-8"))
     v11 = json.loads(PROMOTION_V11.read_text(encoding="utf-8"))
-    current = v11 if preagent_successor else (v10 if budget_successor else v8)
+    v12 = json.loads(PROMOTION_V12.read_text(encoding="utf-8"))
+    current = v12 if preagent_successor else (v10 if budget_successor else v8)
     configuration_id = V10_CONFIGURATION_ID if budget_successor else V9_CONFIGURATION_ID
     rollout_policy = ROLLOUT_POLICY_V3 if preagent_successor else ROLLOUT_POLICY_V2
     qualification = json.loads(
@@ -153,8 +161,17 @@ def main(*, budget_successor: bool = False, preagent_successor: bool = False) ->
             and v11["challenger_configuration_id"] == V10_CONFIGURATION_ID
             and v11["rollout"].get("policy_revision") == ROLLOUT_POLICY_V3
         )
+        checks["v12_explicitly_binds_replay_normalized_cohort"] = (
+            v12["name"] == "diagnosis_promotion_v12"
+            and v12["champion_configuration_id"] == "diag-config-5a4a13627e14b4cf"
+            and v12["challenger_configuration_id"] == V10_CONFIGURATION_ID
+            and v12["rollout"].get("policy_revision") == ROLLOUT_POLICY_V3
+        )
         checks["historical_v10_policy_remains_v2"] = (
             v10["rollout"].get("policy_revision") == ROLLOUT_POLICY_V2
+        )
+        checks["historical_v11_policy_remains_v3"] = (
+            v11["rollout"].get("policy_revision") == ROLLOUT_POLICY_V3
         )
     checks["stop_rules_remain_fail_closed"] = current["rollout"].get("stop_rules") == {
         "unsafe_relaxations": 0,

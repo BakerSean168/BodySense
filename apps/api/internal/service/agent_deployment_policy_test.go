@@ -336,6 +336,25 @@ func TestDiagnosisPromotionV11SelectsPreAgentAuthorityCohort(t *testing.T) {
 	}
 }
 
+func TestDiagnosisPromotionV12SelectsReplayNormalizedCohort(t *testing.T) {
+	clearAgentDeploymentEnv(t)
+	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisSafetyBudgetConfigID)
+	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v12")
+
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	route := policy.SelectDiagnosisRoute("user-1")
+	if route.PromotionRecord != "diagnosis_promotion_v12" ||
+		route.RolloutPolicyRevision != DiagnosisRolloutPolicyV3StructuredAuthority ||
+		route.ChallengerConfigurationID != diagnosisSafetyBudgetConfigID {
+		t.Fatalf("unexpected v12 promotion route: %#v", route)
+	}
+}
+
 func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
 	for _, bps := range []int{500, 2500, 5000} {
 		t.Run(fmt.Sprintf("accepts-%d", bps), func(t *testing.T) {

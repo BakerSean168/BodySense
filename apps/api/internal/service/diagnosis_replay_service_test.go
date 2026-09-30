@@ -228,6 +228,71 @@ func TestCounterfactualDiagnosisReplayUsesFrozenInputAndSelectedConfigurationWit
 	}
 }
 
+func TestCounterfactualV1ReplayNormalizesDecisionAuthorityForLegacyProof(t *testing.T) {
+	diagnosis, _, userID, analysisID := persistReplayTestAnalysis(
+		t, diagnosisClaimSurfaceConfigID, DiagnosisDecisionPolicyV1, "region:neck",
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/diagnosis/analyze" {
+			http.NotFound(w, r)
+			return
+		}
+		var request DiagnosisRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Fatalf("decode replay request: %v", err)
+		}
+		if request.ConfigurationID != diagnosisDecisionAuthorityConfigID {
+			t.Fatalf("unexpected target configuration: %s", request.ConfigurationID)
+		}
+		var payload map[string]any
+		_ = json.Unmarshal(replayTestRaw(diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck"), &payload)
+		delete(payload, "status")
+		delete(payload, "decision_authority")
+		payload["governance"] = map[string]any{
+			"kind":    "diagnosis",
+			"verdict": "rejected",
+			"reasons": []any{"legacy prose red flag"},
+			"issues": []any{
+				map[string]any{
+					"policy": "red_flag_safety",
+					"details": map[string]any{
+						"category":     "radiating_pain",
+						"matched_text": "放射痛",
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(payload)
+	}))
+	defer server.Close()
+	t.Setenv("AI_SERVICE_URL", server.URL)
+
+	report, err := NewDiagnosisReplayService(diagnosis, NewAIClient()).CounterfactualReplay(
+		context.Background(), userID, analysisID, diagnosisDecisionAuthorityConfigID,
+	)
+	if err != nil {
+		t.Fatalf("CounterfactualReplay: %v", err)
+	}
+	if report.Replay.Status != "safety_blocked" || report.Replay.DecisionOutcome != string(DiagnosisBlock) {
+		t.Fatalf("v1 rejected replay was not normalized to a block: %#v", report.Replay)
+	}
+	evidence := report.AuthorityEvidence.Replay
+	if !evidence.LegacyProseGovernanceOnly ||
+		evidence.LegacyProseSafetySource != LegacyProseSafetySourcePostAgent ||
+		!slices.Equal(evidence.LegacyProseSafetyCategories, []string{"radiating_pain"}) {
+		t.Fatalf("normalized v1 replay lost legacy red-flag proof: %#v", evidence)
+	}
+	var output map[string]any
+	if err := json.Unmarshal(report.Output, &output); err != nil {
+		t.Fatalf("decode normalized replay output: %v", err)
+	}
+	authority, ok := output["decision_authority"].(map[string]any)
+	if !ok || authority["outcome"] != string(DiagnosisBlock) {
+		t.Fatalf("decision authority was not JSON-normalized: %#v", output["decision_authority"])
+	}
+}
+
 func TestDiagnosisReplayExportsQualificationShapedRegressionCaseWithoutRealUserID(t *testing.T) {
 	diagnosis, _, userID, analysisID := persistReplayTestAnalysis(
 		t, diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck",

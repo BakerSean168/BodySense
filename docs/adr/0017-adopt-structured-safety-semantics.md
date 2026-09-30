@@ -124,6 +124,15 @@ v2 cohort is therefore retained unchanged and cannot be reinterpreted by v3. v3 
 promotion record even when Champion and Challenger Agent configuration IDs are unchanged.
 All progression thresholds and stop rules remain identical to v2.
 
+Replay serialization is part of the rollout evidence contract even when it is not part of the Agent
+configuration fingerprint. `ApplyDiagnosisDecision` returns a typed Go `DiagnosisDecision` inside a
+`map[string]any`; before replay evidence extraction, both v1 and v2 paths MUST JSON-normalize that
+payload so `decision_authority` has the same object shape as persisted/runtime JSON. A replay transport
+fix that changes only this serialization behavior does not create a new Agent configuration or rollout
+policy revision, but it MUST use a new promotion record after any failed cohort. promotion_v11 remains
+immutable evidence of the canary failure that exposed the missing v1 normalization; promotion_v12 is
+the fresh cohort for the corrected replay transport under the unchanged rollout policy v3.
+
 ### Generation budgets are immutable behavior
 
 Diagnosis `generation.max_tokens` participates in the immutable manifest fingerprint and
