@@ -435,6 +435,13 @@ its direct Champion pointer to v10 with no Challenger/promotion record active.
 The required rollback rehearsal also passed and is retained in
 `data/evals/reports/diagnosis_v10_staging_rollback_rehearsal.json`: the API started healthy with v10,
 was recreated with v3 (`diag-config-5a4a13627e14b4cf`) and reached Docker health `healthy`, then was recreated back to
-v10 and reached Docker health `healthy` again. The final unauthenticated `/api/health` probe returned `status=ok`, `db=ok`, and `redis=ok`. The rehearsal itself ran against coherent application revision `bafad87d3a6d85cfae5de56ff4dfcc294adf0a60`. Final rollout state is `stage=champion`, Champion v10, no Challenger, and all staging services healthy. Later coherent docs/evidence revisions may advance the image revision without changing that host-level rollout selection.
+v10 and reached Docker health `healthy` again. The same synthetic staging subject then exercised the real public
+Diagnosis endpoint at all three points. The initial v10 request, v3 rollback request, and restored v10 request all
+returned `completed`, governance `accepted`, one candidate, and `decision_trace.rollout_provenance` proving that the
+served/Champion configuration matched the intended pointer for that phase. The final unauthenticated `/api/health`
+probe returned `status=ok`, `db=ok`, and `redis=ok`. The rehearsal itself ran against coherent application revision
+`bafad87d3a6d85cfae5de56ff4dfcc294adf0a60`. Final rollout state is `stage=champion`, Champion v10, no Challenger,
+and all staging services healthy. Later coherent docs/evidence revisions may advance the image revision without
+changing that host-level rollout selection.
 DGS-SAFE-080 is therefore accepted in staging. DGS-SAFE-090 remains responsible for the broader
 replay/rollback operational contract and any later production promotion decision.
