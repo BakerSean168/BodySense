@@ -160,7 +160,9 @@ configuration mismatches       0
 
 The acceptance artifact is `apps/ai-service/data/evals/reports/diagnosis_v10_production_provider_acceptance.json`.
 
-Production readiness remains **HOLD** only because the real production LiteLLM runtime has not yet completed its current provider preflight with a non-empty `PRIMARY_LLM_API_KEY`. This separates provider/configuration qualification from live production secret/runtime activation.
+Production runtime activation is now complete. The real production LiteLLM gateway is healthy, `PRIMARY_LLM_API_KEY` is present, and its logical route probe returns `openai/gemini-3.7-flash` with zero retry/fallback. A second 20-sample v10 qualification executed directly against that production gateway also passed 20/20 with zero provider errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-v10-production-promotion-readiness-v1` therefore evaluates to **PROMOTE** with no remaining evidence blockers.
+
+`PROMOTE` means the provider/runtime safety gate authorizes a production release. It does not itself mutate the production Diagnosis Champion. Production application images must first be deployed as one coherent immutable release; only then may the serving pointer move from v3 to v10.
 
 ## Required operational order
 

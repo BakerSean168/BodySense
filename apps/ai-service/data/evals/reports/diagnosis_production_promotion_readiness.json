@@ -1,16 +1,36 @@
 {
   "configuration_id": "diag-config-3f64de162dc937ee",
-  "decision": "hold",
+  "decision": "promote",
   "evidence": {
     "final_acceptance": true,
     "historical_identity": true,
     "operational_audit": true,
     "production_provider_acceptance_present": true,
-    "production_provider_preflight_present": false,
-    "production_provider_preflight_ready": false
+    "production_provider_preflight_present": true,
+    "production_provider_preflight_ready": true
   },
   "name": "diagnosis-v10-production-promotion-readiness-v1",
-  "production_provider_preflight": {},
+  "production_provider_preflight": {
+    "configured_fallback_model": "openrouter/deepseek/deepseek-chat",
+    "configured_primary_model": "openai/gemini-3.7-flash",
+    "environment": "production",
+    "fallback_credential_present": true,
+    "gateway_healthy": true,
+    "logical_model": "bodysense-diagnosis",
+    "logical_probe": {
+      "actual_model": "openai/gemini-3.7-flash",
+      "attempted_fallbacks": 0,
+      "attempted_retries": 0,
+      "fallback_auth_expired": false,
+      "http_status": 200,
+      "model_group": "bodysense-diagnosis",
+      "primary_auth_missing": false
+    },
+    "name": "diagnosis-production-provider-preflight-v1",
+    "primary_credential_present": true,
+    "ready_for_primary_qualification": true,
+    "reasons": []
+  },
   "production_provider_summary": {
     "configuration_mismatches": 0,
     "contract_failures": 0,
@@ -25,10 +45,8 @@
     "successes": 20,
     "total": 20
   },
-  "ready_for_production": false,
-  "reasons": [
-    "production provider runtime preflight report is missing"
-  ],
+  "ready_for_production": true,
+  "reasons": [],
   "routes": {
     "physical_model_drift": false,
     "production_model": "openai/gemini-3.7-flash",

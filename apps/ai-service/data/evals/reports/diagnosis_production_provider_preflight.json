@@ -1,0 +1,21 @@
+{
+  "configured_fallback_model": "openrouter/deepseek/deepseek-chat",
+  "configured_primary_model": "openai/gemini-3.7-flash",
+  "environment": "production",
+  "fallback_credential_present": true,
+  "gateway_healthy": true,
+  "logical_model": "bodysense-diagnosis",
+  "logical_probe": {
+    "actual_model": "openai/gemini-3.7-flash",
+    "attempted_fallbacks": 0,
+    "attempted_retries": 0,
+    "fallback_auth_expired": false,
+    "http_status": 200,
+    "model_group": "bodysense-diagnosis",
+    "primary_auth_missing": false
+  },
+  "name": "diagnosis-production-provider-preflight-v1",
+  "primary_credential_present": true,
+  "ready_for_primary_qualification": true,
+  "reasons": []
+}
