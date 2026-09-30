@@ -196,9 +196,9 @@ production target        = openai/gemini-3.7-flash
 credential boundary      = PRIMARY_LLM_BASE_URL / PRIMARY_LLM_API_KEY
 ```
 
-Production promotion remains **HOLD** until the updated production runtime is deployed, its logical route probe attests `openai/gemini-3.7-flash` with zero fallback, and the isolated 20-sample production-candidate provider acceptance succeeds. The pre-migration production probe found the retired MiMo credential missing and the OpenRouter fallback credential expired; that evidence is historical and must not be treated as the current route after migration.
+The replacement production provider route is now qualified. The real production LiteLLM runtime attests `openai/gemini-3.7-flash` with zero fallback, the production-candidate provider acceptance is 20/20, and a second 20/20 run against the real production gateway is also green. Production readiness therefore evaluates to **PROMOTE** with no remaining provider/runtime evidence blockers.
 
-This HOLD is not a failure of DGS-SAFE-090 or Diagnosis v10. It is the intended fail-closed production promotion decision until the replacement production provider route is qualified.
+The historical MiMo/OpenRouter failure evidence remains preserved as migration history. `PROMOTE` is an authorization to proceed with an immutable production release; it does not itself rewrite the production Champion. The application release must be deployed coherently before the final v3→v10 serving-pointer change and smoke/rollback verification.
 
 ## Evidence artifacts
 
