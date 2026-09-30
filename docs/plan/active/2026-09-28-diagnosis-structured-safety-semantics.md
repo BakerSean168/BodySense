@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis now uses a fixed `gemini-3.7-flash` transport. promotion_v10 then exposed one provider timeout and one previously-unmodeled legacy **pre-agent** prose false positive; under immutable rollout policy v2 that cohort correctly evaluates to rollback and remains historical evidence. rollout policy v3 now adds source-typed pre-agent legacy proof without changing the v10 Agent configuration or any safety stop rule. `diagnosis_promotion_v11` is deterministically ready for a fresh 20-sample shadow cohort (rollout-authority v3: 28/28). DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 is in controlled staging. v8 exposed the input-token capacity problem; v9 fixed duplicate prompt context and proved the structured-authority comparator; v10 capped the immutable output budget at 960 tokens. The promotion_v9 cohort exposed a Groq/Qwen `final_result` tool-call serialization failure and is permanently paused. Staging Diagnosis now uses a fixed `gemini-3.7-flash` transport. promotion_v10 then exposed one provider timeout and one previously-unmodeled legacy **pre-agent** prose false positive; under immutable rollout policy v2 that cohort correctly evaluates to rollback and remains historical evidence. rollout policy v3 added source-typed pre-agent legacy proof without changing the v10 Agent configuration or any safety stop rule. promotion_v11 then passed a fresh 20/20 shadow gate with zero stop-rule signals, but its first 5% canary observation exposed a v1 counterfactual replay normalization bug and immediately rolled back. The replay engine now JSON-normalizes v1 decisions exactly like v2; `diagnosis_promotion_v12` retains the same v3 Champion, immutable v10 Challenger, and rollout policy v3, and is deterministically ready for a fresh cohort (rollout-authority v3: 32/32). DGS-SAFE-080 is not yet accepted and DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -369,6 +369,30 @@ The comparator successor is versioned rather than silently changing v2 semantics
 `diagnosis_promotion_v11` binds the same v3 Champion and immutable v10 Challenger to rollout policy v3.
 It does not create a synthetic Diagnosis v11 Agent configuration. Historical promotion_v10 remains a
 v2 cohort and cannot contaminate v11 because summaries filter both `policy_revision` and
-`promotion_record`. Deterministic rollout-authority v3 evidence passes 28/28 and
-`diagnosis_promotion_readiness_v11` reports `ready_for_shadow=true`. DGS-SAFE-080 may restart shadow at
-sample zero only under promotion_v11; no 5% / 25% / 50% canary progression is authorized yet.
+`promotion_record`. The merged v11 runtime then completed a fresh 20-sample shadow cohort with zero
+unsafe relaxations, forbidden side effects, configuration mismatches, shadow errors, hard mismatches,
+or semantic mismatches; three samples were explicit gate-equivalent legacy authority migrations. The
+official progression evaluator authorized 5% canary.
+
+The first 5% canary observation immediately triggered the fail-closed stop rule. In canary direction,
+v10 was the served baseline and v3 the counterfactual shadow. The v3 AI replay correctly returned a
+post-agent `red_flag_safety` rejection for `radiating_pain`, while the frozen SafetyEnvelope proved that
+same category `current + confirmed + absent`. However, v1 `ApplyDiagnosisDecision` stored the typed Go
+`DiagnosisDecision` struct directly inside `map[string]any`; unlike the v2 path, v1 replay did not
+JSON-normalize the result before authority evidence extraction. The extractor therefore could not read
+`decision_authority` as a JSON object and the otherwise valid legacy category proof disappeared. The
+stored promotion_v11 canary row is retained as `unsafe_authority_relaxation`, and staging was restored
+to Champion immediately.
+
+The replay fix does not change rollout-policy-v3 semantics. Both historical and counterfactual v1 replay
+now pass the post-decision payload through the same JSON normalization step already used by v2. A
+focused regression proves that a rejected v1 counterfactual output becomes `safety_blocked`, preserves
+its post-agent `red_flag_safety` category, and exposes a JSON-shaped decision authority. The v3
+rollout-authority evidence suite now passes 32/32, including canary direction normalization, v1 replay
+normalization, source-typed proof, cohort isolation, and the unchanged fail-closed category checks.
+
+`diagnosis_promotion_v12` registers the same v3 Champion -> immutable v10 Challenger and the same
+`diagnosis-rollout-policy-v3-structured-authority`, but uses a new promotion identity so the failed v11
+canary observation cannot be reinterpreted or erased. `diagnosis_promotion_readiness_v12` reports
+`ready_for_shadow=true`. DGS-SAFE-080 must restart from shadow sample zero under promotion_v12 before
+any canary progression is authorized.

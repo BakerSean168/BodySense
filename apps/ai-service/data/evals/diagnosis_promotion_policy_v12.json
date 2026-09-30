@@ -1,0 +1,68 @@
+{
+  "name": "diagnosis_promotion_v12",
+  "champion_configuration_id": "diag-config-5a4a13627e14b4cf",
+  "challenger_configuration_id": "diag-config-3f64de162dc937ee",
+  "qualification_chain": [
+    {
+      "report": "data/evals/reports/diagnosis_structured_safety_v3.json",
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "predecessor_configuration_id": null
+    },
+    {
+      "report": "data/evals/reports/diagnosis_structured_safety_v8.json",
+      "configuration_id": "diag-config-62d312942b76a154",
+      "predecessor_configuration_id": "diag-config-5a4a13627e14b4cf"
+    },
+    {
+      "report": "data/evals/reports/diagnosis_structured_safety_v9.json",
+      "configuration_id": "diag-config-ba10b8e6820c3691",
+      "predecessor_configuration_id": "diag-config-62d312942b76a154"
+    },
+    {
+      "report": "data/evals/reports/diagnosis_structured_safety_v10.json",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "predecessor_configuration_id": "diag-config-ba10b8e6820c3691"
+    }
+  ],
+  "required_policy_reports": [
+    {
+      "report": "data/evals/reports/diagnosis_structured_safety_policy_v3.json",
+      "minimum_pass_rate": 1.0,
+      "expected_name": "diagnosis-structured-safety-policy-v3",
+      "expected_configuration_id": "diag-config-3f64de162dc937ee",
+      "expected_governance_policy_revision": "diagnosis-governance-v8-structured-safety",
+      "expected_detector_revision": "none"
+    },
+    {
+      "report": "data/evals/reports/diagnosis_rollout_authority_policy_v3.json",
+      "minimum_pass_rate": 1.0,
+      "expected_name": "diagnosis-rollout-authority-policy-v3",
+      "expected_configuration_id": "diag-config-3f64de162dc937ee",
+      "expected_rollout_policy_revision": "diagnosis-rollout-policy-v3-structured-authority"
+    }
+  ],
+  "interaction_experiment": {
+    "required": true,
+    "reason": "The v10 Agent configuration and rollout policy v3 remain unchanged. promotion_v11 passed its fresh 20-sample shadow gate, then its first 5% canary observation exposed a v1 counterfactual replay normalization bug: ApplyDiagnosisDecision left decision_authority as a Go struct, so legacy post-agent red-flag category proof was not visible to the JSON evidence extractor. The replay engine now normalizes v1 decisions exactly like v2. promotion_v12 must re-qualify the corrected replay transport in a fresh cohort without rewriting promotion_v11 evidence."
+  },
+  "rollout": {
+    "policy_revision": "diagnosis-rollout-policy-v3-structured-authority",
+    "shadow_min_samples": 20,
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "promotion_bps": 10000,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "unsafe_relaxations": 0,
+      "forbidden_side_effects": 0,
+      "configuration_mismatches": 0,
+      "challenger_errors_before_pause": 1,
+      "rate_gate_min_samples": 20,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25
+    }
+  }
+}
