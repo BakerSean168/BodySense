@@ -1,0 +1,27 @@
+{
+  "configured_fallback_model": "openrouter/deepseek/deepseek-chat",
+  "configured_primary_model": "openai/mimo-v2.5-pro",
+  "environment": "production",
+  "fallback_credential_present": true,
+  "gateway_healthy": true,
+  "logical_model": "bodysense-diagnosis",
+  "logical_probe": {
+    "actual_model": null,
+    "attempted_fallbacks": null,
+    "attempted_retries": null,
+    "fallback_auth_expired": true,
+    "http_status": 500,
+    "model_group": null,
+    "primary_auth_missing": true
+  },
+  "name": "diagnosis-production-provider-preflight-v1",
+  "primary_credential_present": false,
+  "ready_for_primary_qualification": false,
+  "reasons": [
+    "primary_credential_missing",
+    "logical_probe_failed",
+    "logical_probe_not_primary_model",
+    "primary_authentication_unavailable",
+    "fallback_credential_expired"
+  ]
+}

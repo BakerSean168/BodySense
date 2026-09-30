@@ -5,12 +5,46 @@
     "final_acceptance": true,
     "historical_identity": true,
     "operational_audit": true,
-    "production_provider_acceptance_present": false
+    "production_provider_acceptance_present": false,
+    "production_provider_preflight_present": true,
+    "production_provider_preflight_ready": false
   },
   "name": "diagnosis-v10-production-promotion-readiness-v1",
+  "production_provider_preflight": {
+    "configured_fallback_model": "openrouter/deepseek/deepseek-chat",
+    "configured_primary_model": "openai/mimo-v2.5-pro",
+    "environment": "production",
+    "fallback_credential_present": true,
+    "gateway_healthy": true,
+    "logical_model": "bodysense-diagnosis",
+    "logical_probe": {
+      "actual_model": null,
+      "attempted_fallbacks": null,
+      "attempted_retries": null,
+      "fallback_auth_expired": true,
+      "http_status": 500,
+      "model_group": null,
+      "primary_auth_missing": true
+    },
+    "name": "diagnosis-production-provider-preflight-v1",
+    "primary_credential_present": false,
+    "ready_for_primary_qualification": false,
+    "reasons": [
+      "primary_credential_missing",
+      "logical_probe_failed",
+      "logical_probe_not_primary_model",
+      "primary_authentication_unavailable",
+      "fallback_credential_expired"
+    ]
+  },
   "production_provider_summary": {},
   "ready_for_production": false,
   "reasons": [
+    "production primary provider credential is missing",
+    "production Diagnosis fallback credential is expired",
+    "production Diagnosis logical route probe failed",
+    "production Diagnosis logical route did not use the configured primary model",
+    "production provider runtime preflight is not ready",
     "production Diagnosis provider differs from the staging-accepted provider and has no production provider acceptance report"
   ],
   "routes": {

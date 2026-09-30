@@ -184,7 +184,7 @@ Promotion requires all of:
 - provider sample count and pass rate satisfy the production-promotion policy;
 - provider errors, contract failures, governance rejections, and configuration mismatches are zero.
 
-A staging provider acceptance does not automatically authorize a different production provider.
+A staging provider acceptance does not automatically authorize a different production provider. The production-only preflight and isolated 20-sample workflow are defined in [`diagnosis-production-provider-qualification.md`](./diagnosis-production-provider-qualification.md).
 
 ## Current production decision
 
@@ -195,9 +195,9 @@ staging physical model    = openai/gemini-3.7-flash
 production physical model = openai/mimo-v2.5-pro
 ```
 
-Therefore production promotion remains **HOLD** until `mimo-v2.5-pro` receives an equivalent production-candidate provider acceptance report.
+Therefore production promotion remains **HOLD** until `mimo-v2.5-pro` receives an equivalent production-candidate provider acceptance report. The latest production runtime preflight additionally found that the MiMo primary credential is missing and the configured OpenRouter fallback credential is expired, so the current logical Diagnosis route returns HTTP 500 and is not eligible for qualification.
 
-This HOLD is not a failure of DGS-SAFE-090. It is the intended fail-closed production promotion decision.
+This HOLD is not a failure of DGS-SAFE-090 or Diagnosis v10. It is the intended fail-closed production promotion decision for an unqualified provider/runtime route.
 
 ## Evidence artifacts
 
