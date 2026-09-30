@@ -1,111 +1,110 @@
-# Diagnosis Historical Replay and Rollback Runbook
+# Diagnosis replay, rollback, and production-promotion runbook
 
-> Owner: Diagnosis release governance  
-> Scope: DGS-SAFE-090  
-> Safety rule: rollback changes the future serving pointer only. It must never rewrite historical `diagnosis_analyses`, `diagnosis_candidates`, replay inputs, raw outputs, DecisionTrace, or execution provenance.
+Status: Active operational contract for DGS-SAFE-090.
 
-## 1. Canonical identities
+## Purpose
 
-Current structured-safety Champion:
+This runbook governs Diagnosis historical replay, serving-pointer rollback, immutable-history verification, and the later production-promotion decision.
 
-```text
-Diagnosis v10
-diag-config-3f64de162dc937ee
-```
+The rollback contract changes **future serving only**. It must never rewrite an existing `diagnosis_analyses` or `diagnosis_candidates` row, replay input, raw output, decision trace, execution provenance, or Agent configuration provenance.
 
-Historical rollback Champion:
+Current staging Champion after DGS-SAFE-080:
 
 ```text
-Diagnosis v3
-diag-config-5a4a13627e14b4cf
+diag-config-3f64de162dc937ee  # immutable Diagnosis v10
 ```
 
-Historical replay identities retained by contract:
-
-| Version | Configuration ID |
-| --- | --- |
-| v3 | `diag-config-5a4a13627e14b4cf` |
-| v4 | `diag-config-4a517fea19cb6c49` |
-| v5 | `diag-config-375187050b203078` |
-| v6 | `diag-config-4377355ba2012ce8` |
-| v7 | `diag-config-4eb948f419994367` |
-
-These identities remain audit/replay artifacts after they leave the serving set. Do not mutate or delete their manifests as runtime cleanup.
-
-## 2. Required invariants
+Historical rollback target retained for operational recovery:
 
 ```text
-historical v3-v7 manifests resolve to their original IDs
-old replay JSON without SafetyEnvelope remains decodable
-historical replay uses frozen input and does not persist a replacement analysis
-pre-existing DiagnosisAnalysis rows remain unchanged
-pre-existing DiagnosisCandidate rows remain unchanged
-new requests use the selected Champion after pointer movement
-final state restores v10 Champion with no Challenger/promotion record
+diag-config-5a4a13627e14b4cf  # Diagnosis v3
 ```
 
-## 3. Historical identity audit
+Historical v3-v7 identities remain immutable replay identities even when they are no longer normal serving targets.
 
-Repository/CI audit:
+## Safety rules
+
+- Acquire the staging/production deployment lock before changing a serving pointer.
+- Change only rollout/serving configuration. Do not update historical Diagnosis rows.
+- Clear Challenger and promotion identity during an emergency Champion rollback unless a separately qualified rollout explicitly requires them.
+- Keep the application image/revision fixed during a serving-pointer rehearsal. Rollback is not a code rollback.
+- Use the public Diagnosis endpoint after each pointer change and verify `decision_trace.rollout_provenance.served_configuration_id`.
+- Capture a Diagnosis history snapshot **before** rollback and verify it after rollback and after restore.
+- Do not treat a missing historical SafetyEnvelope as `absent` safety evidence. Old replay input remains old replay input.
+- A production provider that differs from the staging-accepted physical provider requires its own provider acceptance evidence before promotion.
+
+## 1. Historical identity audit
+
+From `apps/ai-service`:
 
 ```bash
-cd apps/ai-service
 uv run --extra dev python scripts/run_diagnosis_historical_identity_audit.py
 ```
 
-Required result: 5/5 v3-v7 identities accepted. The committed report is `apps/ai-service/data/evals/reports/diagnosis_historical_identity_audit.json`.
-
-## 4. Historical database replay audit
-
-`domain-validator` is already included in the API runtime image. DGS-SAFE-090 adds a read-only historical replay mode:
-
-```bash
-docker exec bodysense-staging-api-1 \
-  /app/domain-validator \
-  -mode diagnosis-replay-audit \
-  -replay-limit-per-configuration 1000 \
-  > /tmp/diagnosis-replay-audit.json
-```
-
-The audit considers v3-v7 only, reads analyses that contain frozen replay input, calls `HistoricalReplay` with no AI client, requires artifact/hard/semantic/presentation replay invariants to match, and never persists a replacement analysis.
-
-A historical version with no database rows is not fabricated. Its identity and replay reachability remain covered by repository fixtures plus the v3-v7 identity audit.
-
-## 5. Capture the immutable history boundary
-
-Before rollback pointer movement, capture a host-side snapshot:
-
-```bash
-docker exec bodysense-staging-api-1 \
-  /app/domain-validator \
-  -mode diagnosis-history-snapshot \
-  > /tmp/diagnosis-history-before.json
-```
-
-The snapshot contains only analysis/candidate UUIDs, SHA-256 hashes, counts, and an aggregate root. It does not export health text, replay input, raw output, or profile data.
-
-Keep the snapshot on the operator host. Do not store it only inside the API container because that container is recreated during rollback.
-
-## 6. Acquire the deployment lock
-
-```bash
-LOCK=/home/dev/.local/state/bodysense/staging-deploy.lock
-exec 9>"$LOCK"
-flock -w 60 9
-```
-
-Expected normal state:
+Required result:
 
 ```text
-DIAGNOSIS_ROLLOUT_STAGE=champion
-DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-3f64de162dc937ee
-DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=
-DIAGNOSIS_PROMOTION_RECORD=
+Diagnosis historical identity audit: ACCEPTED
+identities: 5/5
 ```
 
-## 7. Roll back the serving pointer to v3
+The audit pins v3-v7 manifest fingerprints, configuration IDs, decision-policy revisions, governance-policy revisions, and the shared Diagnosis v1 manifest contract.
 
-Change only these Diagnosis rollout keys:
+## 2. Historical database replay audit
+
+The API image contains `/app/domain-validator`.
+
+Inside the API runtime:
+
+```bash
+/app/domain-validator -mode diagnosis-replay-audit
+```
+
+The audit performs model-free historical replay for every replayable v3-v7 database analysis, up to the configured per-configuration limit. A configuration with no database samples is reported as:
+
+```text
+identity_and_synthetic_regression_only
+```
+
+and remains covered by repository regression tests plus the historical identity audit.
+
+Required result:
+
+```text
+DIAGNOSIS_HISTORICAL_REPLAY_AUDIT=PASS
+```
+
+Any database replay failure blocks DGS-SAFE-090.
+
+## 3. Capture immutable history before rollback
+
+Inside the API runtime:
+
+```bash
+/app/domain-validator -mode diagnosis-history-snapshot > /tmp/diagnosis-history-before.json
+```
+
+The snapshot contains only opaque row IDs plus SHA-256 hashes. It does not export Diagnosis prose or other raw health content.
+
+Persist the snapshot outside the API container before recreating the API container.
+
+A baseline self-check may be performed with:
+
+```bash
+/app/domain-validator \
+  -mode diagnosis-history-verify \
+  -snapshot-file /tmp/diagnosis-history-before.json
+```
+
+Required:
+
+```text
+DIAGNOSIS_HISTORY_IMMUTABILITY=PASS
+```
+
+## 4. Serving-pointer rollback
+
+For an emergency rollback from v10 to v3, set:
 
 ```text
 DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
@@ -114,49 +113,32 @@ DIAGNOSIS_ROLLOUT_STAGE=champion
 DIAGNOSIS_PROMOTION_RECORD=
 ```
 
-Do not change provider credentials, database state, release tags, or historical manifests. Recreate only API using the already deployed immutable API image; do not rebuild source or move the coherent release pointer.
+Recreate **only the API service** with the already deployed API image. Do not rebuild images and do not restart PostgreSQL.
 
-## 8. Public Diagnosis smoke after rollback
+Wait for API health to become `healthy`.
 
-Use the dedicated synthetic staging subject through the normal authenticated public API. Required evidence:
+Then issue a real public Diagnosis request using a synthetic/operator test subject and require:
 
 ```text
 status = completed
-governance.verdict = accepted
+governance = accepted
 decision_trace.rollout_provenance.stage = champion
-agent_configuration_id = diag-config-5a4a13627e14b4cf
-served_configuration_id = diag-config-5a4a13627e14b4cf
-champion_configuration_id = diag-config-5a4a13627e14b4cf
+decision_trace.rollout_provenance.served_configuration_id = diag-config-5a4a13627e14b4cf
 ```
 
-An env-only check is not sufficient; a public Diagnosis request must prove routing changed.
-
-## 9. Verify historical immutability while v3 serves
+Copy the pre-rollback history snapshot into the recreated API container and verify it:
 
 ```bash
-cat /tmp/diagnosis-history-before.json | \
-docker exec -i bodysense-staging-api-1 \
-  /app/domain-validator \
+/app/domain-validator \
   -mode diagnosis-history-verify \
-  -snapshot-file - \
-  > /tmp/diagnosis-history-verify-v3.json
+  -snapshot-file /tmp/diagnosis-history-before.json
 ```
 
-Required result:
+New analyses created by the rollback smoke are allowed. Any missing or mutated protected row is a rollback failure.
 
-```text
-unchanged = true
-missing_analysis_ids = []
-mutated_analysis_ids = []
-missing_candidate_ids = []
-mutated_candidate_ids = []
-```
+## 5. Restore v10
 
-`added_analysis_count` and `added_candidate_count` may be positive because the smoke creates a new immutable analysis. Any missing or mutated protected row is an immediate failure.
-
-## 10. Restore v10
-
-Restore only the pointer:
+Restore:
 
 ```text
 DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-3f64de162dc937ee
@@ -165,79 +147,63 @@ DIAGNOSIS_ROLLOUT_STAGE=champion
 DIAGNOSIS_PROMOTION_RECORD=
 ```
 
-Recreate only API with the same coherent release image, wait for health, then repeat the public Diagnosis smoke. The served and Champion IDs must both be v10.
+Again recreate only the API service with the same deployed image.
 
-Run history verification again against the same pre-rollback snapshot. All protected rows must remain unchanged.
-
-## 11. Final expected state
+Repeat the public Diagnosis smoke and require:
 
 ```text
-stage = champion
-Champion = diag-config-3f64de162dc937ee
-Challenger = empty
-PromotionRecord = empty
-API = healthy
-AI service = healthy
-LiteLLM gateway = healthy
+served_configuration_id = diag-config-3f64de162dc937ee
 ```
 
-The pre-rollback root and protected post-restore root must match.
+Run the history verification again. The protected pre-rollback root must still equal the baseline root.
 
-## 12. Production promotion is a separate decision
+## 6. Production-promotion readiness
 
-DGS-SAFE-090 does not automatically move production to v10.
+From `apps/ai-service`:
 
 ```bash
-cd apps/ai-service
 uv run --extra dev python scripts/run_diagnosis_production_promotion_readiness.py
 ```
 
-At the time of DGS-SAFE-090:
+This command is a decision report. It may validly return `HOLD`.
 
-```text
-staging bodysense-diagnosis -> openai/gemini-3.7-flash
-production bodysense-diagnosis -> openai/mimo-v2.5-pro
-```
-
-Staging Gemini acceptance cannot be silently reused as MiMo production evidence. Before production can become PROMOTE, produce paced production-candidate evidence:
+To make a CI/operator gate fail when production is not ready:
 
 ```bash
-python scripts/run_diagnosis_provider_acceptance.py \
-  --samples 20 \
-  --min-start-interval-seconds 5 \
-  --environment production-candidate \
-  --physical-model openai/mimo-v2.5-pro \
-  --json-output data/evals/reports/diagnosis_v10_production_provider_acceptance.json
+uv run --extra dev python \
+  scripts/run_diagnosis_production_promotion_readiness.py \
+  --require-ready
 ```
 
-The production readiness gate requires v10 final acceptance, historical identity audit, DGS-SAFE-090 operational audit, 20/20 production-provider execution, zero provider/contract/governance/configuration failures, and a physical model matching `docker/litellm/config.yaml`.
+Promotion requires all of:
 
-Until that evidence exists, the correct production decision is HOLD.
+- Diagnosis v10 final acceptance is green.
+- v3-v7 historical identity audit is green.
+- DGS-SAFE-090 operational audit is green.
+- a production-candidate provider report exists for the exact production physical model;
+- provider sample count and pass rate satisfy the production-promotion policy;
+- provider errors, contract failures, governance rejections, and configuration mismatches are zero.
 
-## 13. Forbidden operations
+A staging provider acceptance does not automatically authorize a different production provider.
 
-Never use rollback to:
+## Current production decision
 
-- update `agent_configuration_id` on old analyses;
-- regenerate or overwrite `raw_output`;
-- backfill missing historical SafetyEnvelope assertions;
-- rewrite `replay_input`;
-- delete failed rollout observations;
-- mutate v3-v7 manifests while retaining their IDs;
-- move production pointers merely because staging is green;
-- bypass the coherent release watcher;
-- rebuild an image during rollback.
-
-Rollback is pointer movement plus verification, not historical migration.
-
-## 14. Required DGS-SAFE-090 evidence
-
-The work item closes only when the repository retains:
+At the completion of the DGS-SAFE-090 staging rehearsal:
 
 ```text
-diagnosis_historical_identity_audit.json
-diagnosis_dgs_safe_090_operational_audit.json
-diagnosis_production_promotion_readiness.json
+staging physical model    = openai/gemini-3.7-flash
+production physical model = openai/mimo-v2.5-pro
 ```
 
-The operational report must record only non-sensitive operational evidence: historical replay counts, failures, protected counts/root hash, public v10/v3/v10 smokes, immutability checks after rollback and restore, final Champion identity, and coherent runtime revision.
+Therefore production promotion remains **HOLD** until `mimo-v2.5-pro` receives an equivalent production-candidate provider acceptance report.
+
+This HOLD is not a failure of DGS-SAFE-090. It is the intended fail-closed production promotion decision.
+
+## Evidence artifacts
+
+- `apps/ai-service/data/evals/reports/diagnosis_historical_identity_audit.json`
+- `apps/ai-service/data/evals/reports/diagnosis_dgs_safe_090_operational_audit.json`
+- `apps/ai-service/data/evals/reports/diagnosis_production_promotion_readiness.json`
+- `apps/ai-service/data/evals/reports/diagnosis_v10_final_acceptance.json`
+
+Operational reports are evidence, not mutable control-plane state.
