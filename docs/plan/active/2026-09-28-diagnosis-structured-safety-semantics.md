@@ -1,6 +1,6 @@
 # Diagnosis structured safety semantics
 
-Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. DGS-SAFE-080 has moved from legacy-equivalence rollout to standalone v10 final acceptance: immutable v10 remains `diag-config-3f64de162dc937ee`, deterministic evidence is 51/51, and the paced staging `gemini-3.7-flash` provider gate is 20/20 with zero errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-rollout-policy-v3-structured-authority` and promotion_v9-v12 are frozen as advisory migration evidence rather than a ground-truth gate. DGS-SAFE-080 still requires the final staging Champion switch plus explicit v10→v3→v10 rollback rehearsal before closure; DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
+Status: Active. Batch A foundation and Batch B DGS-SAFE-060/070 successor evidence are implemented. **DGS-SAFE-080 is accepted in staging.** Immutable v10 remains `diag-config-3f64de162dc937ee`; standalone final acceptance is 51/51 deterministic plus 20/20 paced `gemini-3.7-flash` provider executions with zero errors, contract failures, governance rejections, or configuration mismatches. `diagnosis-rollout-policy-v3-structured-authority` and promotion_v9-v12 are frozen as advisory migration evidence rather than a ground-truth gate. Staging now serves v10 directly as Champion on main revision `bafad87d3a6d85cfae5de56ff4dfcc294adf0a60`, and the explicit v10→v3→v10 rollback rehearsal passed with healthy API state at both rollback and restore. DGS-SAFE-090 remains outstanding. Decision: [ADR 0017](../../adr/0017-adopt-structured-safety-semantics.md).
 
 ## Batch B checkpoint — DGS-SAFE-060/070
 
@@ -426,7 +426,15 @@ source `body-state:legacy-safety-state`. Governance correctly rejected those out
 corpus therefore targets the new structured-capture population and the harness enforces a >=5s global
 request-start interval; the legacy case remains in deterministic qualification instead of being erased.
 
-No staging default switch is authorized until the standalone final-acceptance report is green. After a
-green report, staging may set v10 directly as Champion, perform an explicit v10 -> v3 -> v10 rollback
-rehearsal, and then close DGS-SAFE-080. DGS-SAFE-090 remains responsible for the broader replay/rollback
-operational contract.
+The standalone final-acceptance report is green: 51/51 deterministic checks and 20/20 paced real-provider
+executions passed, with the staging route pinned to `openai/gemini-3.7-flash`. Main revision
+`bafad87d3a6d85cfae5de56ff4dfcc294adf0a60` passed CI and Publish Main Candidate, and the
+staging watcher reported `STAGING_DEPLOY=PASS` for the same coherent revision. Staging then switched
+its direct Champion pointer to v10 with no Challenger/promotion record active.
+
+The required rollback rehearsal also passed and is retained in
+`data/evals/reports/diagnosis_v10_staging_rollback_rehearsal.json`: the API started healthy with v10,
+was recreated with v3 (`diag-config-5a4a13627e14b4cf`) and reached Docker health `healthy`, then was recreated back to
+v10 and reached Docker health `healthy` again. The final unauthenticated `/api/health` probe returned `status=ok`, `db=ok`, and `redis=ok`. The rehearsal itself ran against coherent application revision `bafad87d3a6d85cfae5de56ff4dfcc294adf0a60`. Final rollout state is `stage=champion`, Champion v10, no Challenger, and all staging services healthy. Later coherent docs/evidence revisions may advance the image revision without changing that host-level rollout selection.
+DGS-SAFE-080 is therefore accepted in staging. DGS-SAFE-090 remains responsible for the broader
+replay/rollback operational contract and any later production promotion decision.
