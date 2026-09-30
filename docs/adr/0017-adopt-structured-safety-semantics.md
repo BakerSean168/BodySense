@@ -133,6 +133,26 @@ policy revision, but it MUST use a new promotion record after any failed cohort.
 immutable evidence of the canary failure that exposed the missing v1 normalization; promotion_v12 is
 the fresh cohort for the corrected replay transport under the unchanged rollout policy v3.
 
+## Historical replay and rollback boundary
+
+Historical v3-v7 Diagnosis configurations are release-governance artifacts, not dead code. Their manifests and
+configuration IDs remain immutable after v10 becomes Champion because persisted analyses must still resolve the
+policy identity that originally produced them. Historical replay may recompute deterministic Go authority from the
+frozen input, but it MUST NOT invent a modern SafetyEnvelope for old JSON, call a model merely to prove readability,
+or persist a replacement analysis.
+
+Rollback is defined as future-serving pointer movement only. A rollback may select a retained historical Champion for
+new requests, but it MUST NOT rewrite existing `diagnosis_analyses`, candidates, replay input, raw output, execution
+provenance, or DecisionTrace. DGS-SAFE-090 therefore protects the pre-rollback dataset with opaque row hashes and
+requires the same protected root after both rollback and restore. New smoke analyses are allowed and remain immutable
+records of the configuration that actually served them.
+
+Production promotion is deliberately separate from staging acceptance. A provider-qualified staging route does not
+qualify a different physical production route. If the production `bodysense-diagnosis` model differs from the model
+used for final staging acceptance, the production gate remains HOLD until equivalent production-candidate provider
+evidence exists. This provider boundary does not change the immutable Agent configuration fingerprint; it is a release
+readiness requirement owned by the LiteLLM deployment plane.
+
 ## Final v10 acceptance boundary
 
 The legacy v3 Champion is not a semantic ground truth for structured-safety Diagnosis. The v3/v10

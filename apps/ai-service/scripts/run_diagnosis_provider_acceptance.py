@@ -137,6 +137,8 @@ async def _run(
     concurrency: int,
     min_start_interval_seconds: float,
     cases_path: Path,
+    environment: str,
+    physical_model: str,
 ) -> dict[str, Any]:
     document = json.loads(cases_path.read_text(encoding="utf-8"))
     source_cases = document.get("cases") or []
@@ -189,6 +191,8 @@ async def _run(
         "name": "diagnosis-v10-provider-acceptance-v1",
         "configuration_id": CONFIGURATION_ID,
         "logical_model": "bodysense-diagnosis",
+        "environment": environment,
+        "physical_model": physical_model,
         "dataset": {
             "path": str(cases_path.relative_to(ROOT)),
             "scope": document.get("scope"),
@@ -235,6 +239,8 @@ def main() -> int:
     parser.add_argument("--concurrency", type=int, default=3)
     parser.add_argument("--min-start-interval-seconds", type=float, default=5.0)
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
+    parser.add_argument("--environment", default="staging")
+    parser.add_argument("--physical-model", default="openai/gemini-3.7-flash")
     parser.add_argument("--json-output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     if args.samples < 1:
@@ -250,6 +256,8 @@ def main() -> int:
             args.concurrency,
             args.min_start_interval_seconds,
             args.cases,
+            args.environment,
+            args.physical_model,
         )
     )
     args.json_output.parent.mkdir(parents=True, exist_ok=True)

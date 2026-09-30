@@ -67,6 +67,28 @@ type diagnosisConfigurationRegistration struct {
 	DecisionPolicyRevision string
 }
 
+// DiagnosisHistoricalConfiguration is the immutable replay identity retained for
+// one historical v3-v7 Diagnosis configuration. These identities remain readable
+// after they leave the serving set so historical analyses can be audited without
+// rewriting their provenance.
+type DiagnosisHistoricalConfiguration struct {
+	Version                string `json:"version"`
+	ConfigurationID        string `json:"configuration_id"`
+	DecisionPolicyRevision string `json:"decision_policy_revision"`
+}
+
+// DiagnosisHistoricalReplayConfigurations returns a defensive copy of the v3-v7
+// identities that DGS-SAFE-090 requires to remain replayable.
+func DiagnosisHistoricalReplayConfigurations() []DiagnosisHistoricalConfiguration {
+	return []DiagnosisHistoricalConfiguration{
+		{Version: "v3", ConfigurationID: diagnosisDecisionAuthorityConfigID, DecisionPolicyRevision: DiagnosisDecisionPolicyV1},
+		{Version: "v4", ConfigurationID: diagnosisClaimSurfaceConfigID, DecisionPolicyRevision: DiagnosisDecisionPolicyV1},
+		{Version: "v5", ConfigurationID: diagnosisNegationAwareConfigID, DecisionPolicyRevision: DiagnosisDecisionPolicyV1},
+		{Version: "v6", ConfigurationID: diagnosisNegationBridgeConfigID, DecisionPolicyRevision: DiagnosisDecisionPolicyV1},
+		{Version: "v7", ConfigurationID: diagnosisNegationListConfigID, DecisionPolicyRevision: DiagnosisDecisionPolicyV1},
+	}
+}
+
 type diagnosisPromotionRecordRegistration struct {
 	ChampionConfigurationID   string
 	ChallengerConfigurationID string
