@@ -1,0 +1,294 @@
+{
+  "cases": [
+    {
+      "expected_status": "completed",
+      "inputs": {
+        "body_state": {
+          "current_revision": 201,
+          "facts": [
+            {
+              "body_region": "颈肩",
+              "details": {
+                "dizziness": false,
+                "numbness": false,
+                "radiating_pain": false,
+                "safety_capture_revision": "body-state-safety-capture-v1",
+                "trauma": false,
+                "weakness": false
+              },
+              "id": "00000021-0000-0000-0000-000000000000",
+              "kind": "discomfort",
+              "lifecycle_state": "active",
+              "review_state": "confirmed",
+              "value": "久坐后颈肩酸胀"
+            }
+          ],
+          "observations": [],
+          "safety_state": {}
+        },
+        "body_state_revision": 201,
+        "safety_envelope": {
+          "active_blockers": [],
+          "assertions": [
+            {
+              "concept": "trauma",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000021-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "radiating_pain",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000021-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "numbness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000021-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "weakness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000021-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "dizziness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000021-0000-0000-0000-000000000000",
+              "temporality": "current"
+            }
+          ],
+          "body_state_revision": 201,
+          "coverage": {
+            "capture_revision": "body-state-safety-capture-v1",
+            "complete": true,
+            "covered_source_refs": [
+              "body-state:fact:00000021-0000-0000-0000-000000000000"
+            ],
+            "incomplete_source_refs": [],
+            "required_concepts": [
+              "trauma",
+              "radiating_pain",
+              "numbness",
+              "weakness",
+              "dizziness"
+            ],
+            "revision": "body-state-safety-coverage-v1"
+          },
+          "legacy_state_present": false,
+          "policy_revision": "body-state-safety-policy-v1",
+          "requires_review": false,
+          "schema_revision": "body-state-safety-envelope-v2"
+        }
+      },
+      "name": "complete-benign-neck"
+    },
+    {
+      "expected_status": "completed",
+      "inputs": {
+        "body_state": {
+          "current_revision": 202,
+          "facts": [
+            {
+              "body_region": "右髋",
+              "details": {
+                "dizziness": false,
+                "numbness": false,
+                "radiating_pain": false,
+                "safety_capture_revision": "body-state-safety-capture-v1",
+                "trauma": false,
+                "weakness": false
+              },
+              "id": "00000022-0000-0000-0000-000000000000",
+              "kind": "discomfort",
+              "lifecycle_state": "active",
+              "review_state": "confirmed",
+              "value": "久坐后右髋轻度紧张"
+            }
+          ],
+          "observations": [],
+          "safety_state": {}
+        },
+        "body_state_revision": 202,
+        "safety_envelope": {
+          "active_blockers": [],
+          "assertions": [
+            {
+              "concept": "trauma",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000022-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "radiating_pain",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000022-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "numbness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000022-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "weakness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000022-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "dizziness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000022-0000-0000-0000-000000000000",
+              "temporality": "current"
+            }
+          ],
+          "body_state_revision": 202,
+          "coverage": {
+            "capture_revision": "body-state-safety-capture-v1",
+            "complete": true,
+            "covered_source_refs": [
+              "body-state:fact:00000022-0000-0000-0000-000000000000"
+            ],
+            "incomplete_source_refs": [],
+            "required_concepts": [
+              "trauma",
+              "radiating_pain",
+              "numbness",
+              "weakness",
+              "dizziness"
+            ],
+            "revision": "body-state-safety-coverage-v1"
+          },
+          "legacy_state_present": false,
+          "policy_revision": "body-state-safety-policy-v1",
+          "requires_review": false,
+          "schema_revision": "body-state-safety-envelope-v2"
+        }
+      },
+      "name": "complete-benign-hip"
+    },
+    {
+      "expected_status": "completed",
+      "inputs": {
+        "body_state": {
+          "current_revision": 203,
+          "facts": [
+            {
+              "body_region": "右腕",
+              "details": {
+                "dizziness": false,
+                "numbness": false,
+                "radiating_pain": false,
+                "safety_capture_revision": "body-state-safety-capture-v1",
+                "trauma": false,
+                "weakness": false
+              },
+              "id": "00000023-0000-0000-0000-000000000000",
+              "kind": "discomfort",
+              "lifecycle_state": "active",
+              "review_state": "confirmed",
+              "value": "长时间使用鼠标后腕部轻度酸胀"
+            }
+          ],
+          "observations": [],
+          "safety_state": {}
+        },
+        "body_state_revision": 203,
+        "safety_envelope": {
+          "active_blockers": [],
+          "assertions": [
+            {
+              "concept": "trauma",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000023-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "radiating_pain",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000023-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "numbness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000023-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "weakness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000023-0000-0000-0000-000000000000",
+              "temporality": "current"
+            },
+            {
+              "concept": "dizziness",
+              "polarity": "absent",
+              "review_state": "confirmed",
+              "source_kind": "body_state_fact",
+              "source_ref": "body-state:fact:00000023-0000-0000-0000-000000000000",
+              "temporality": "current"
+            }
+          ],
+          "body_state_revision": 203,
+          "coverage": {
+            "capture_revision": "body-state-safety-capture-v1",
+            "complete": true,
+            "covered_source_refs": [
+              "body-state:fact:00000023-0000-0000-0000-000000000000"
+            ],
+            "incomplete_source_refs": [],
+            "required_concepts": [
+              "trauma",
+              "radiating_pain",
+              "numbness",
+              "weakness",
+              "dizziness"
+            ],
+            "revision": "body-state-safety-coverage-v1"
+          },
+          "legacy_state_present": false,
+          "policy_revision": "body-state-safety-policy-v1",
+          "requires_review": false,
+          "schema_revision": "body-state-safety-envelope-v2"
+        }
+      },
+      "name": "complete-benign-wrist"
+    }
+  ],
+  "name": "diagnosis-v10-provider-acceptance-cases-v1",
+  "scope": "structured_capture_only"
+}

@@ -133,6 +133,39 @@ policy revision, but it MUST use a new promotion record after any failed cohort.
 immutable evidence of the canary failure that exposed the missing v1 normalization; promotion_v12 is
 the fresh cohort for the corrected replay transport under the unchanged rollout policy v3.
 
+## Final v10 acceptance boundary
+
+The legacy v3 Champion is not a semantic ground truth for structured-safety Diagnosis. The v3/v10
+rollout comparator remains useful for migration analysis, replay regression, and discovery of taxonomy
+coverage gaps, but a random or broader legacy prose-detector block MUST NOT indefinitely veto a v10
+configuration that satisfies its own typed safety contract. `diagnosis-rollout-policy-v3-structured-authority`
+is therefore frozen as the final legacy-equivalence comparator revision for DGS-SAFE-080. Existing
+promotion_v9 through promotion_v12 observations remain immutable historical evidence. No promotion_v13
+is created merely to chase another legacy prose category.
+
+Final staging acceptance of immutable Diagnosis v10 (`diag-config-3f64de162dc937ee`) is governed by a
+separate `diagnosis-v10-final-acceptance-v1` contract. The hard gate is intentionally independent of a
+Champion/Challenger chain and requires all of the following:
+
+- the committed v10 deterministic qualification remains 10/10 and qualified;
+- the structured-safety policy report remains 41/41, producing at least 51 deterministic hard checks
+  across qualification and policy evidence;
+- the staging physical route remains the pinned OpenAI-compatible `gemini-3.7-flash` route through the
+  internal LiteLLM boundary; provider credentials remain runtime-only secrets;
+- at least 20 paced real-provider executions of v10 pass the production-shaped output contract with no
+  transport errors, governance rejections, configuration mismatches, forbidden side effects, or
+  candidate/status contract failures;
+- real-provider hard-gate samples are scoped to complete, nonblocking, non-legacy structured captures.
+  Legacy-state migration cases remain covered by deterministic regression and by the frozen rollout
+  evidence, but are not used as a physical-provider reliability oracle.
+
+This split does not relax any safety authority. Incomplete coverage, active blockers, typed safety
+findings, final Go decision authority, and fail-closed governance remain deterministic v10 contracts.
+It only stops treating historical v3 prose behavior as the definition of correctness for the new
+structured architecture. Any future behavior change to the v10 prompt, output schema, governance,
+decision policy, generation budget, or typed safety contract still requires a new immutable Agent
+configuration rather than mutation of v10.
+
 ### Generation budgets are immutable behavior
 
 Diagnosis `generation.max_tokens` participates in the immutable manifest fingerprint and

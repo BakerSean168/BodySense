@@ -1,0 +1,330 @@
+{
+  "configuration_id": "diag-config-3f64de162dc937ee",
+  "dataset": {
+    "case_names": [
+      "complete-benign",
+      "legacy-monitoring-current-absent",
+      "historical-resolved-nonblocking"
+    ],
+    "path": "data/evals/diagnosis_v10_provider_acceptance_cases.json"
+  },
+  "disposition": "historical_probe_not_final_gate",
+  "execution": {
+    "concurrency": 2,
+    "samples": 20
+  },
+  "logical_model": "bodysense-diagnosis",
+  "name": "diagnosis-v10-provider-acceptance-initial-probe",
+  "notes": [
+    "Included a legacy monitoring migration case and intentionally exposed a model-invalid legacy safety finding source_ref.",
+    "The last four transport errors were caused by exceeding the temporary staging provider 15 RPM limit; final acceptance uses explicit pacing."
+  ],
+  "samples": [
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 99125,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 1,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 0,
+      "case": "legacy-monitoring-current-absent",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 56018,
+      "failures": [
+        "status_not_completed",
+        "governance_rejected",
+        "candidate_contract_failed"
+      ],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "rejected",
+      "input_tokens": 2984,
+      "ordinal": 2,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "safety_blocked",
+      "success": false
+    },
+    {
+      "candidate_count": 1,
+      "case": "historical-resolved-nonblocking",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 63545,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 3272,
+      "ordinal": 3,
+      "output_tokens": 262,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 114743,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 4,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "legacy-monitoring-current-absent",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 103764,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2984,
+      "ordinal": 5,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "historical-resolved-nonblocking",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 108279,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2916,
+      "ordinal": 6,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 113042,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 7,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "legacy-monitoring-current-absent",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 118164,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2984,
+      "ordinal": 8,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "historical-resolved-nonblocking",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 119533,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2916,
+      "ordinal": 9,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 122572,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 10,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "legacy-monitoring-current-absent",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 124594,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2984,
+      "ordinal": 11,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "historical-resolved-nonblocking",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 128293,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2916,
+      "ordinal": 12,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 128453,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 13,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 0,
+      "case": "legacy-monitoring-current-absent",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 132785,
+      "failures": [
+        "status_not_completed",
+        "governance_rejected",
+        "candidate_contract_failed"
+      ],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "rejected",
+      "input_tokens": 2984,
+      "ordinal": 14,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "safety_blocked",
+      "success": false
+    },
+    {
+      "candidate_count": 1,
+      "case": "historical-resolved-nonblocking",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 132383,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2916,
+      "ordinal": 15,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "candidate_count": 1,
+      "case": "complete-benign",
+      "configuration_id": "diag-config-3f64de162dc937ee",
+      "duration_ms": 136061,
+      "failures": [],
+      "gateway_reported_model": "bodysense-diagnosis",
+      "governance_verdict": "accepted",
+      "input_tokens": 2903,
+      "ordinal": 16,
+      "output_tokens": 0,
+      "provider_adapter": "openai",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "case": "legacy-monitoring-current-absent",
+      "duration_ms": 144111,
+      "error": "status_code: 429, model_name: bodysense-diagnosis, body: {'message': 'litellm.RateLimitError: RateLimitError: OpenAIException - 您已达到请求数限制：1分钟内最多请求15次 (request id: 202609300442306714845028268d9d62Jcvkcib). Received Model Group=bodysense-diagnosis\\nAvailable Model Group Fallbacks=[\\'bodysense-diagnosis-fallback\\']\\nError doing the fallback: litellm.APIError: APIError: OpenrouterException - {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 960 tokens, but can only afford 919. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"limit_source\":\"openrouter_credits\",\"remedy_hint\":\"Add credits at https://openrouter.ai/settings/credits, or lower max_tokens / prompt size to fit your remaining balance.\",\"provider_name\":null,\"previous_errors\":[{\"code\":402,\"message\":\"Prompt tokens limit exceeded: 3092 > 2956. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid acco",
+      "error_type": "ModelHTTPError",
+      "failures": [
+        "provider_error"
+      ],
+      "ordinal": 17,
+      "success": false
+    },
+    {
+      "case": "historical-resolved-nonblocking",
+      "duration_ms": 147021,
+      "error": "status_code: 429, model_name: bodysense-diagnosis, body: {'message': 'litellm.RateLimitError: RateLimitError: OpenAIException - 您已达到请求数限制：1分钟内最多请求15次 (request id: 202609300442335835572728268d9d6524F06le). Received Model Group=bodysense-diagnosis\\nAvailable Model Group Fallbacks=[\\'bodysense-diagnosis-fallback\\']\\nError doing the fallback: litellm.APIError: APIError: OpenrouterException - {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 960 tokens, but can only afford 919. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"limit_source\":\"openrouter_credits\",\"remedy_hint\":\"Add credits at https://openrouter.ai/settings/credits, or lower max_tokens / prompt size to fit your remaining balance.\",\"provider_name\":null,\"previous_errors\":[{\"code\":402,\"message\":\"Prompt tokens limit exceeded: 3029 > 2956. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid acco",
+      "error_type": "ModelHTTPError",
+      "failures": [
+        "provider_error"
+      ],
+      "ordinal": 18,
+      "success": false
+    },
+    {
+      "case": "complete-benign",
+      "duration_ms": 155039,
+      "error": "status_code: 429, model_name: bodysense-diagnosis, body: {'message': 'litellm.RateLimitError: RateLimitError: OpenAIException - 您已达到请求数限制：1分钟内最多请求15次 (request id: 202609300442411367427568268d9d6reNYbvhf). Received Model Group=bodysense-diagnosis\\nAvailable Model Group Fallbacks=[\\'bodysense-diagnosis-fallback\\']\\nError doing the fallback: litellm.APIError: APIError: OpenrouterException - {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 960 tokens, but can only afford 919. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"limit_source\":\"openrouter_credits\",\"remedy_hint\":\"Add credits at https://openrouter.ai/settings/credits, or lower max_tokens / prompt size to fit your remaining balance.\",\"provider_name\":null,\"previous_errors\":[{\"code\":402,\"message\":\"Prompt tokens limit exceeded: 3019 > 2956. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid acco",
+      "error_type": "ModelHTTPError",
+      "failures": [
+        "provider_error"
+      ],
+      "ordinal": 19,
+      "success": false
+    },
+    {
+      "case": "legacy-monitoring-current-absent",
+      "duration_ms": 158623,
+      "error": "status_code: 429, model_name: bodysense-diagnosis, body: {'message': 'litellm.RateLimitError: RateLimitError: OpenAIException - 您已达到请求数限制：1分钟内最多请求15次 (request id: 202609300442449327033818268d9d6Vg41c4rw). Received Model Group=bodysense-diagnosis\\nAvailable Model Group Fallbacks=[\\'bodysense-diagnosis-fallback\\']\\nError doing the fallback: litellm.APIError: APIError: OpenrouterException - {\"error\":{\"message\":\"Prompt tokens limit exceeded: 3092 > 2956. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"limit_source\":\"openrouter_credits\",\"remedy_hint\":\"Add credits at https://openrouter.ai/settings/credits, or lower max_tokens / prompt size to fit your remaining balance.\",\"provider_name\":null,\"previous_errors\":[{\"code\":402,\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 960 tokens, but can only afford 919. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid acco",
+      "error_type": "ModelHTTPError",
+      "failures": [
+        "provider_error"
+      ],
+      "ordinal": 20,
+      "success": false
+    }
+  ],
+  "summary": {
+    "configuration_mismatches": 0,
+    "contract_failures": 4,
+    "duration_ms": {
+      "max": 158623,
+      "mean": 120307,
+      "min": 56018
+    },
+    "errors": 4,
+    "governance_rejections": 2,
+    "success_rate": 0.7,
+    "successes": 14,
+    "total": 20
+  }
+}
