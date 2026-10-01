@@ -81,6 +81,13 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   });
   expect(fact.ok(), await fact.text()).toBeTruthy();
 
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+
   const coldStart = Date.now();
   await page.goto("/consultation?view=state");
   await expect(
@@ -313,6 +320,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     page.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
   await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
+  expect(consoleErrors).toEqual([]);
 });
 
 test("3D Body Explorer falls back when atlas metadata is unavailable", async ({

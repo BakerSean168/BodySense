@@ -10,19 +10,26 @@ import { AppShellSkeleton } from "./components/layout/AppShellSkeleton";
 import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { queryClient } from "./lib/queryClient";
+import { retryDynamicImport } from "./lib/retryDynamicImport";
 
 const OnboardingPage = lazy(() =>
-  import("./features/profile/pages/OnboardingPage").then((module) => ({
+  retryDynamicImport(
+    () => import("./features/profile/pages/OnboardingPage"),
+  ).then((module) => ({
     default: module.OnboardingPage,
   })),
 );
 const loadConsultationPage = () =>
-  import("./features/consultation/pages/ConsultationPage").then((module) => ({
+  retryDynamicImport(
+    () => import("./features/consultation/pages/ConsultationPage"),
+  ).then((module) => ({
     default: module.ConsultationPage,
   }));
 const ConsultationPage = lazy(loadConsultationPage);
 const SharePage = lazy(() =>
-  import("./features/consultation/components/SharePage").then((module) => ({
+  retryDynamicImport(
+    () => import("./features/consultation/components/SharePage"),
+  ).then((module) => ({
     default: module.SharePage,
   })),
 );
@@ -58,7 +65,7 @@ function WorkbenchRouteElement() {
   // auth/profile bootstrap is still running so high-latency tailnet access does
   // not turn auth -> profile -> route into a serial download waterfall.
   useEffect(() => {
-    void loadConsultationPage();
+    void loadConsultationPage().catch(() => undefined);
   }, []);
 
   return (
