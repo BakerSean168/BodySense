@@ -25,6 +25,7 @@ import { ConsultationWorkbenchShell } from "../components/workbench/Consultation
 import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
 import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
 import { useWorkbenchPreferencesStore } from "../model/workbenchPreferencesStore";
+import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
 import {
@@ -40,19 +41,25 @@ import {
 } from "@/features/body-explorer";
 
 const loadAssistantChatPanel = () =>
-  import("../components/AssistantChatPanel").then((module) => ({
-    default: module.AssistantChatPanel,
-  }));
+  retryDynamicImport(() => import("../components/AssistantChatPanel")).then(
+    (module) => ({
+      default: module.AssistantChatPanel,
+    }),
+  );
 const AssistantChatPanel = lazy(loadAssistantChatPanel);
 const DiagnosisPanel = lazy(() =>
-  import("../components/DiagnosisPanel").then((module) => ({
-    default: module.DiagnosisPanel,
-  })),
+  retryDynamicImport(() => import("../components/DiagnosisPanel")).then(
+    (module) => ({
+      default: module.DiagnosisPanel,
+    }),
+  ),
 );
 const DiagnosisHistoryPanel = lazy(() =>
-  import("../components/DiagnosisHistoryPanel").then((module) => ({
-    default: module.DiagnosisHistoryPanel,
-  })),
+  retryDynamicImport(() => import("../components/DiagnosisHistoryPanel")).then(
+    (module) => ({
+      default: module.DiagnosisHistoryPanel,
+    }),
+  ),
 );
 
 export function ConsultationPage() {
@@ -73,7 +80,7 @@ export function ConsultationPage() {
   // Chat is a persistent primary surface. Discover its lazy chunk immediately
   // instead of waiting for the thread query to settle before starting download.
   useEffect(() => {
-    void loadAssistantChatPanel();
+    void loadAssistantChatPanel().catch(() => undefined);
   }, []);
 
   // --- Derived identity: URL is the single source of truth for "which conversation" ---

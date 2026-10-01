@@ -15,6 +15,7 @@ import {
   createClientDiagnosticId,
   reportClientDiagnostic,
 } from "@/lib/clientDiagnostics";
+import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import type {
   AnatomyStructureId,
   AnatomyViewerErrorState,
@@ -22,7 +23,9 @@ import type {
 import { BodyExplorerFallback2D } from "./BodyExplorerFallback2D";
 import { BodyExplorerLoadingState } from "./BodyExplorerLoadingState";
 
-const LazyBodyExplorer3D = lazy(() => import("./BodyExplorer3D"));
+const LazyBodyExplorer3D = lazy(() =>
+  retryDynamicImport(() => import("./BodyExplorer3D")),
+);
 
 export interface BodyExplorerSemanticBridge {
   selectedAnatomyId?: AnatomyStructureId | null;
@@ -57,7 +60,7 @@ export function BodyExplorer({
   );
   const [failure, setFailure] = useState<AnatomyViewerErrorState | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const automaticWebGLRetryRef = useRef(0);
+  const automaticRetryRef = useRef({ webgl: 0, model: 0 });
   const diagnosticSessionIdRef = useRef(createClientDiagnosticId("body3d"));
   const attemptId = `${diagnosticSessionIdRef.current}-attempt-${retryKey + 1}`;
   const [internalSelectedId, setInternalSelectedId] =
@@ -124,15 +127,17 @@ export function BodyExplorer({
         attemptId,
       });
 
+      const retryKind =
+        error.kind === "webgl" || error.kind === "model" ? error.kind : null;
       if (
-        error.kind === "webgl" &&
+        retryKind &&
         error.retryable &&
-        automaticWebGLRetryRef.current < 1
+        automaticRetryRef.current[retryKind] < 1
       ) {
-        automaticWebGLRetryRef.current += 1;
+        automaticRetryRef.current[retryKind] += 1;
         reportClientDiagnostic({
           category: "body3d.viewer",
-          event: "webgl_auto_retry",
+          event: `${retryKind}_auto_retry`,
           severity: "warn",
           code: error.kind,
           message: error.message,
@@ -160,7 +165,7 @@ export function BodyExplorer({
       diagnosticSessionId: diagnosticSessionIdRef.current,
       attemptId,
     });
-    automaticWebGLRetryRef.current = 0;
+    automaticRetryRef.current = { webgl: 0, model: 0 };
     setFailure(null);
     setWebgl("checking");
     setRetryKey((key) => key + 1);
