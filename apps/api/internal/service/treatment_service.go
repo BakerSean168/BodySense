@@ -275,6 +275,9 @@ func (s *TreatmentService) GenerateProposal(
 	if err := validateTreatmentAgentIdentity(payload, configurationID); err != nil {
 		return nil, err
 	}
+	if treatmentGovernanceRejected(payload.Governance) {
+		return nil, fmt.Errorf("%w: agent output rejected by governance", ErrTreatmentSafetyBlocked)
+	}
 	if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, payload.EvidenceAcquisition); err != nil {
 		return nil, err
 	}
@@ -747,6 +750,9 @@ func normalizeTreatmentAgentPayload(raw json.RawMessage) (*treatmentAgentPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, fmt.Errorf("decode treatment recommendation: %w", err)
 	}
+	if treatmentGovernanceRejected(payload.Governance) {
+		return &payload, nil
+	}
 	if payload.Status == "" {
 		return nil, errors.New("treatment status is required")
 	}
@@ -754,6 +760,18 @@ func normalizeTreatmentAgentPayload(raw json.RawMessage) (*treatmentAgentPayload
 		return nil, fmt.Errorf("unexpected treatment status %q", payload.Status)
 	}
 	return &payload, nil
+}
+
+func treatmentGovernanceRejected(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var governance map[string]any
+	if json.Unmarshal(raw, &governance) != nil {
+		return false
+	}
+	verdict, _ := governance["verdict"].(string)
+	return verdict == "rejected"
 }
 
 func validateTreatmentAgentIdentity(payload *treatmentAgentPayload, expectedConfigurationID string) error {
