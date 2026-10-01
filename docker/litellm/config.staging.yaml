@@ -22,11 +22,14 @@ model_list:
       timeout: 45
 
   # Structured typed-Agent / knowledge JSON generation.
-  # Staging uses Groq Qwen because it provides strict JSON-schema output on the free tier.
+  # Staging uses the same qualified OpenAI-compatible Gemini provider as
+  # Diagnosis so PydanticAI tool-output calls do not depend on Groq's
+  # provider-specific function-call serialization.
   - model_name: bodysense-structured
     litellm_params:
-      model: groq/qwen/qwen3.8-27b
-      api_key: os.environ/GROQ_API_KEY
+      model: openai/gemini-3.7-flash
+      api_base: os.environ/STAGING_DIAGNOSIS_BASE_URL
+      api_key: os.environ/STAGING_DIAGNOSIS_API_KEY
       timeout: 45
 
   # Small text generation such as conversation titles.

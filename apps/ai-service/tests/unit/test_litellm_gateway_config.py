@@ -84,9 +84,13 @@ def test_staging_diagnosis_uses_fixed_gemini_provider_profile() -> None:
     assert diagnosis["api_base"] == "os.environ/STAGING_DIAGNOSIS_BASE_URL"
     assert diagnosis["api_key"] == "os.environ/STAGING_DIAGNOSIS_API_KEY"
 
+    structured = staging_groups["bodysense-structured"]
+    assert structured["model"] == "openai/gemini-3.7-flash"
+    assert structured["api_base"] == "os.environ/STAGING_DIAGNOSIS_BASE_URL"
+    assert structured["api_key"] == "os.environ/STAGING_DIAGNOSIS_API_KEY"
+
     for logical_model in (
         "bodysense-consultation",
-        "bodysense-structured",
         "bodysense-text",
     ):
         assert staging_groups[logical_model]["model"] == "groq/qwen/qwen3.8-27b"
