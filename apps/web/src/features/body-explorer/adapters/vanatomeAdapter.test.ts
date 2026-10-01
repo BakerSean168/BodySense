@@ -10,6 +10,7 @@ import {
   VANATOME_ATLAS_RELEASE,
   VanatomeAdapter,
   normalizeVanatomeError,
+  prefetchVanatomeModel,
   resolveVanatomeCatalogUrl,
   type VanatomeAdapterBridge,
 } from "./vanatomeAdapter";
@@ -18,7 +19,10 @@ function createBridge() {
   const state: {
     selectedId: string | null;
     hoveredId: string | null;
-    isolation: { id: string; mode: "selected" | "parent" | "parent-context" } | null;
+    isolation: {
+      id: string;
+      mode: "selected" | "parent" | "parent-context";
+    } | null;
     visibleLayers: readonly string[];
     displayMode: "normal" | "xray" | "ghost";
     loadState: "idle" | "loading" | "ready" | "error";
@@ -121,8 +125,63 @@ describe("Vanatome integration contract", () => {
   it("pins the official immutable atlas release used by the loader", () => {
     expect(VANATOME_ATLAS_RELEASE).toBe("1.4.0");
     expect(VANATOME_ATLAS_BUILD_ID).toBe("994e6cc8ffbb212e");
-    expect(VANATOME_ATLAS_CATALOG_URL).toContain("/releases/1.4.0/catalog.json");
+    expect(VANATOME_ATLAS_CATALOG_URL).toContain(
+      "/releases/1.4.0/catalog.json",
+    );
     expect(resolveVanatomeCatalogUrl()).toBe(VANATOME_ATLAS_CATALOG_URL);
+  });
+
+  it("prefetches the complete model and retries a truncated transfer once", async () => {
+    const firstArrayBuffer = vi
+      .fn<() => Promise<ArrayBuffer>>()
+      .mockRejectedValue(new TypeError("network transfer terminated"));
+    const secondArrayBuffer = vi
+      .fn<() => Promise<ArrayBuffer>>()
+      .mockResolvedValue(new ArrayBuffer(8));
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: firstArrayBuffer,
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: secondArrayBuffer,
+      } as unknown as Response);
+
+    await expect(
+      prefetchVanatomeModel("https://assets.example/model.glb", {
+        attempts: 2,
+        retryDelayMs: 0,
+        fetchImpl,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "https://assets.example/model.glb",
+      expect.objectContaining({ cache: "force-cache" }),
+    );
+    expect(firstArrayBuffer).toHaveBeenCalledOnce();
+    expect(secondArrayBuffer).toHaveBeenCalledOnce();
+  });
+
+  it("surfaces a persistent model prefetch failure after the bounded retry", async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new TypeError("network unavailable"));
+
+    await expect(
+      prefetchVanatomeModel("https://assets.example/model.glb", {
+        attempts: 2,
+        retryDelayMs: 0,
+        fetchImpl,
+      }),
+    ).rejects.toThrow("network unavailable");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it("normalizes atlas and WebGL failures into product-safe error states", () => {

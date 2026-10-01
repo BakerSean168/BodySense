@@ -28,8 +28,11 @@ export const VANATOME_ATLAS_BUILD_ID = "994e6cc8ffbb212e" as const;
 export const VANATOME_ATLAS_CATALOG_URL = OFFICIAL_HUMAN_ATLAS.catalogUrl;
 export const VANATOME_INITIAL_SYSTEM_ID = "regional-anatomy" as const;
 
+const VANATOME_MODEL_PREFETCH_ATTEMPTS = 2;
+const VANATOME_MODEL_PREFETCH_RETRY_DELAY_MS = 250;
+
 export interface LoadedVanatomeAtlas {
-  /** Atlases already prepared for composition. Models remain lazy in VanatomeViewer. */
+  /** Atlases prepared for composition after model bytes pass bounded network prefetch. */
   atlases: readonly VanatomeViewerAtlas[];
   catalog: AtlasCatalog;
   catalogUrl: string;
@@ -71,6 +74,9 @@ export async function loadPinnedVanatomeAtlas(options?: {
   const initialBundle = await loader.loadSystem(VANATOME_INITIAL_SYSTEM_ID, {
     signal: options?.signal,
   });
+  await prefetchVanatomeModel(initialBundle.atlas.modelUrl, {
+    signal: options?.signal,
+  });
 
   return {
     atlases: [initialBundle.atlas],
@@ -87,7 +93,65 @@ async function loadPinnedSystem(
   options?: { signal?: AbortSignal },
 ): Promise<VanatomeViewerAtlas> {
   const bundle = await loader.loadSystem(systemId, options);
+  await prefetchVanatomeModel(bundle.atlas.modelUrl, {
+    signal: options?.signal,
+  });
   return bundle.atlas;
+}
+
+export async function prefetchVanatomeModel(
+  modelUrl: string,
+  options: {
+    signal?: AbortSignal;
+    attempts?: number;
+    retryDelayMs?: number;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<void> {
+  const attempts = options.attempts ?? VANATOME_MODEL_PREFETCH_ATTEMPTS;
+  const retryDelayMs =
+    options.retryDelayMs ?? VANATOME_MODEL_PREFETCH_RETRY_DELAY_MS;
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error(
+      `Vanatome model prefetch attempts must be >= 1: ${attempts}`,
+    );
+  }
+  if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
+    throw new Error(
+      `Vanatome model prefetch retryDelayMs must be >= 0: ${retryDelayMs}`,
+    );
+  }
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetchImpl(modelUrl, {
+        signal: options.signal,
+        cache: "force-cache",
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Vanatome model prefetch failed with HTTP ${response.status}: ${modelUrl}`,
+        );
+      }
+
+      // Consume the complete response before the atlas is exposed to useGLTF.
+      // This catches truncated transfers at the network boundary and seeds the
+      // browser HTTP cache for the render-time loader.
+      await response.arrayBuffer();
+      return;
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      lastError = error;
+      if (attempt < attempts && retryDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export function normalizeVanatomeError(
