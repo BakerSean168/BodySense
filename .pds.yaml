@@ -1,0 +1,14 @@
+apiVersion: pds/v1alpha1
+kind: Component
+metadata:
+  id: bodysense
+  name: BodySense
+spec:
+  type: health-workspace
+  domain: products
+  lifecycle: active
+  repository:
+    url: https://github.com/BakerSean168/BodySense.git
+    visibility: public
+  provides:
+    - pds://products/app/bodysense
