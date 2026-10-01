@@ -1326,6 +1326,10 @@ Remote-dev performance:
 
 ## BS-UPG-110 — Canonical staging qualification
 
+**Status:** CLOSED — 2026-10-01
+
+**Qualified exact SHA:** `1484604e28ed6a792d7b2c2e661049f9cfdb708d`
+
 **Goal:** validate the exact integrated candidate in production-shaped staging.
 
 **Checks:**
@@ -1343,6 +1347,67 @@ Remote-dev performance:
 11. staging rollback drill for infrastructure-image failures.
 
 **Acceptance:** zero blocker regression and explicit staging evidence.
+
+### Closure evidence — 2026-10-01
+
+The canonical GCP staging runtime converged coherently to
+`1484604e28ed6a792d7b2c2e661049f9cfdb708d` through the normal
+`main -> Publish Main Candidate -> staging-latest -> staging deploy watcher`
+lifecycle. Main push CI run `36836256480` completed successfully and exact-SHA
+candidate run `36837085439` completed successfully before staging deployment.
+The watcher recorded `STAGING_DEPLOY=PASS`; Web, API, AI Service, and Document
+Service all reported the exact OCI revision, while PostgreSQL 18, Redis 8.10.2,
+and the pinned LiteLLM `v1.102.1` runtime remained healthy.
+
+The eleven acceptance checks closed as follows:
+
+1. **Exact-SHA deploy:** canonical staging state file, Web, API, AI Service, and
+   Document Service all converged to `1484604e28ed6a792d7b2c2e661049f9cfdb708d`.
+2. **Runtime health:** DB, Redis, LiteLLM, API, AI Service, Document Service, and
+   Web were healthy after deployment and after every qualification drill.
+3. **Authentication session lifecycle:** the final live longitudinal smoke
+   registered a fresh user and refreshed browser access credentials successfully.
+4. **Onboarding/profile:** the same live smoke persisted the required profile
+   before the clinical workflow.
+5. **Consultation streaming:** the live consultation completed with
+   `event: stream.done`.
+6. **Diagnosis/Treatment smoke:** the final live staging smoke completed
+   registration -> profile -> consultation -> BodyState -> Diagnosis ->
+   candidate assessment -> Treatment proposal in **22.5 s**. Diagnosis returned
+   a fresh analysis and Treatment returned a `proposed` proposal. The final
+   repair pinned Treatment to PydanticAI `ToolOutput(final_result)`, matching
+   the already-qualified Diagnosis transport and preventing provider-profile
+   drift into native JSON-schema output.
+7. **Health-document OCR:** the staging qualification lane reported
+   `HEALTH_DOCUMENT_STAGING_QUALIFICATION=PASS` for the exact SHA using
+   `hdex-config-f2495c95b6ed9de2`, then restored the Champion and returned API
+   health to green.
+8. **3D Explorer:** the exact-SHA Playwright lane passed **2/2** in **4.6 min**,
+   including real WebGL pointer -> raycast -> anatomy selection, representative
+   region switching, and intentional Atlas-metadata fallback.
+9. **Static CDN / asset timing:** the same 3D lane loaded the pinned Vanatome
+   Atlas through the immutable CDN path and completed its resource/timing gates.
+   The final Web repair performs bounded full-response GLB prefetch before
+   `useGLTF`, so truncated transfers are retried before render-time failure.
+10. **Browser error audit:** the final 3D lane passed with its explicit
+    `pageerror` and `console.error` gates clean. Lazy application chunks use a
+    bounded retry helper; persistent failures still surface through the existing
+    error boundary.
+11. **Infrastructure-image rollback drill:** staging intentionally replaced
+    LiteLLM with an incompatible image, observed
+    `starting -> unhealthy`, restored pinned `v1.102.1`, then verified
+    Web/API/AI/Document healthy, ingress `/api/health` green, and managed
+    revision unchanged at `1484604e28ed6a792d7b2c2e661049f9cfdb708d`.
+
+Closeout repairs were merged through PRs #229-#234. In addition to the delivery
+and 3D resilience work, they preserve Diagnosis and Treatment tool-output
+transport, map Treatment governance rejection to the existing safety-block
+contract without persisting rejected proposals, and route structured staging
+agents through the qualified Gemini-compatible provider.
+
+**Production boundary:** BS-UPG-120 was not started as part of this
+qualification. No production deployment or release promotion is authorized by
+this closeout.
 
 ---
 
