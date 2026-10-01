@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, ToolOutput
 from pydantic_ai.models import Model
 
 from ..models.evidence import EvidenceGap
@@ -63,7 +63,10 @@ def create_treatment_agent(
     agent = Agent(
         model,
         deps_type=TreatmentDependencies,
-        output_type=get_treatment_output_type(output_schema_revision),
+        # Keep Treatment on the same provider-agnostic final_result tool
+        # transport as Diagnosis. OpenAI-compatible staging providers may
+        # advertise native JSON-schema output without reliably enforcing it.
+        output_type=ToolOutput(get_treatment_output_type(output_schema_revision)),
         system_prompt=get_treatment_system_prompt(prompt_revision),
         name="bodysense_treatment",
         retries=2,
