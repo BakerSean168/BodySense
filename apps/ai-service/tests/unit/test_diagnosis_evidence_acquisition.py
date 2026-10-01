@@ -176,6 +176,43 @@ async def test_v2_agent_exposes_only_gap_aware_acquisition_tool() -> None:
 
 
 @pytest.mark.asyncio
+async def test_diagnosis_output_transport_stays_on_final_result_tool_when_profile_prefers_native(
+) -> None:
+    config = _v2_config()
+    model = TestModel(
+        call_tools=[],
+        custom_output_args=_completed_output(),
+        profile={
+            "supports_json_schema_output": True,
+            "default_structured_output_mode": "native",
+        },
+    )
+    agent = create_diagnosis_agent(
+        model,
+        prompt_revision=config.prompt_revision,
+        output_schema_revision=config.output_schema_revision,
+        tool_policy_revision=config.tool_policy_revision,
+        evidence_policy_revision=config.evidence_policy_revision,
+    )
+    deps = DiagnosisDependencies(
+        body_state_revision=1,
+        body_state={"current_revision": 1, "facts": []},
+        evidence_acquirer=DiagnosisEvidenceAcquirer(
+            searcher=None,
+            budget=EvidenceBudget(),
+        ),
+    )
+
+    await agent.run("Analyze.", deps=deps)
+
+    parameters = model.last_model_request_parameters
+    assert parameters is not None
+    assert parameters.output_mode == "tool"
+    assert [tool.name for tool in parameters.output_tools] == ["final_result"]
+    assert parameters.output_object is None
+
+
+@pytest.mark.asyncio
 async def test_service_preserves_critical_third_gap_after_two_search_budget_is_exhausted() -> None:
     config = _v2_config()
     searcher = FakeEvidenceSearcher()
