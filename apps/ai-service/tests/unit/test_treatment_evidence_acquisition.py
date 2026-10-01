@@ -150,6 +150,46 @@ async def test_treatment_v2_exposes_only_gap_aware_tool() -> None:
 
 
 @pytest.mark.asyncio
+async def test_treatment_output_transport_stays_on_final_result_tool_when_profile_prefers_native(
+) -> None:
+    config = _v2_config()
+    model = TestModel(
+        call_tools=[],
+        custom_output_args=_proposal_output(),
+        profile={
+            "supports_json_schema_output": True,
+            "default_structured_output_mode": "native",
+        },
+    )
+    agent = create_treatment_agent(
+        model,
+        prompt_revision=config.prompt_revision,
+        output_schema_revision=config.output_schema_revision,
+        tool_policy_revision=config.tool_policy_revision,
+        evidence_policy_revision=config.evidence_policy_revision,
+    )
+    deps = TreatmentDependencies(
+        user_id="user-1",
+        body_state_revision=1,
+        body_state={"current_revision": 1},
+        diagnosis_analysis={"analysis_id": "analysis-1"},
+        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        evidence_acquirer=TreatmentEvidenceAcquirer(
+            searcher=None,
+            budget=EvidenceBudget(),
+        ),
+    )
+
+    await agent.run("Propose.", deps=deps)
+
+    parameters = model.last_model_request_parameters
+    assert parameters is not None
+    assert parameters.output_mode == "tool"
+    assert [tool.name for tool in parameters.output_tools] == ["final_result"]
+    assert parameters.output_object is None
+
+
+@pytest.mark.asyncio
 async def test_treatment_service_records_budget_exhaustion_trace() -> None:
     config = _v2_config()
     searcher = FakeEvidenceSearcher()
