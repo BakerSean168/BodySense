@@ -29,7 +29,7 @@ JWT_SECRET_KEY=$(openssl rand -hex 32)
 LITELLM_MASTER_KEY=sk-$(openssl rand -hex 24)
 EMBEDDING_PROVIDER=hashing
 # Real provider credentials for non-stub staging inference.
-# GROQ_API_KEY is required because bodysense-structured uses Groq in staging.
+# GROQ_API_KEY remains required because consultation/text use Groq in staging.
 GROQ_API_KEY=
 OPENROUTER_API_KEY=
 ENV
