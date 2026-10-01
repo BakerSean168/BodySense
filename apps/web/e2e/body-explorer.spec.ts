@@ -21,6 +21,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   const email = `body3d-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
   const atlasRequests: string[] = [];
+  const atlasRequestFailures: Array<{ url: string; errorText: string }> = [];
   const bodyExplorerChunkRequests: string[] = [];
 
   page.on("request", (req) => {
@@ -31,6 +32,13 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     if (/\/assets\/BodyExplorer3D-[^/]+\.js(?:$|\?)/.test(url)) {
       bodyExplorerChunkRequests.push(url);
     }
+  });
+  page.on("requestfailed", (req) => {
+    if (!isPinnedAtlasRequest(req.url())) return;
+    atlasRequestFailures.push({
+      url: req.url(),
+      errorText: req.failure()?.errorText ?? "unknown",
+    });
   });
 
   await page.goto("/register");
@@ -78,9 +86,19 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await expect(
     page.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
-  await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible({
-    timeout: 75_000,
-  });
+  await expect
+    .poll(
+      async () => {
+        if (await page.getByText("3D 身体视图暂时不可用").isVisible()) {
+          throw new Error(
+            `3D atlas failed before readiness: ${JSON.stringify(atlasRequestFailures)}`,
+          );
+        }
+        return page.getByText("Atlas 1.4.0", { exact: true }).isVisible();
+      },
+      { timeout: 75_000 },
+    )
+    .toBe(true);
   await expect(page.getByTestId("body-explorer-3d")).toHaveAttribute(
     "data-viewer-state",
     "ready",
@@ -95,6 +113,62 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   const regionSelect = page.getByRole("combobox", { name: "选择身体区域" });
   const pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
+
+  // The regional shell is intentionally non-selectable. Load the muscular
+  // atlas through the normal semantic-region path, then clear the semantic
+  // selection while retaining that atlas. A subsequent canvas click must
+  // therefore create a fresh anatomy selection through Vanatome raycasting.
+  await regionSelect.selectOption("shoulder.right");
+  await expect(page.getByTestId("body-explorer-3d")).toHaveAttribute(
+    "data-loaded-systems",
+    /muscular/,
+    { timeout: 75_000 },
+  );
+  await regionSelect.selectOption("");
+  await expect(regionSelect).toHaveValue("");
+
+  const canvas = page.locator("canvas").first();
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  const focusButton = page.getByRole("button", { name: "聚焦" });
+  await expect(focusButton).toBeDisabled();
+  let pointerHit = false;
+  if (canvasBox) {
+    const hitPoints = [
+      [0.5, 0.34],
+      [0.46, 0.3],
+      [0.54, 0.3],
+      [0.5, 0.42],
+      [0.5, 0.5],
+      [0.42, 0.42],
+      [0.58, 0.42],
+      [0.46, 0.58],
+      [0.54, 0.58],
+    ] as const;
+    for (const [xRatio, yRatio] of hitPoints) {
+      await page.mouse.move(
+        canvasBox.x + canvasBox.width * xRatio,
+        canvasBox.y + canvasBox.height * yRatio,
+      );
+      await page.waitForTimeout(120);
+      await page.mouse.click(
+        canvasBox.x + canvasBox.width * xRatio,
+        canvasBox.y + canvasBox.height * yRatio,
+      );
+      if (await focusButton.isEnabled()) {
+        pointerHit = true;
+        break;
+      }
+    }
+  }
+  expect(pointerHit).toBe(true);
+  await expect(page.getByRole("button", { name: "隔离" })).toBeEnabled();
+  await page.screenshot({
+    path: testInfo.outputPath("body-explorer-pointer-hit.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "返回全身" }).click();
+  await expect(focusButton).toBeDisabled();
 
   const canonicalRegionIds = await regionSelect
     .locator("option")
@@ -148,23 +222,6 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await page.getByRole("button", { name: "返回区域" }).click();
 
   await regionSelect.selectOption("");
-  const canvas = page.locator("canvas").first();
-  const canvasBox = await canvas.boundingBox();
-  if (canvasBox) {
-    const centerY = canvasBox.y + canvasBox.height / 2;
-    await page.mouse.move(canvasBox.x + canvasBox.width * 0.75, centerY);
-    await page.mouse.down();
-    await page.mouse.move(canvasBox.x + canvasBox.width * 0.2, centerY, {
-      steps: 20,
-    });
-    await page.mouse.up();
-    await page.waitForTimeout(500);
-    await page.screenshot({
-      path: testInfo.outputPath("body-explorer-full-body-back.png"),
-      fullPage: true,
-    });
-  }
-
   await regionSelect.selectOption("shoulder.right");
   const heapBeforeTabs = await readUsedJsHeap(page);
   for (let index = 0; index < 5; index += 1) {

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, ToolOutput
 from pydantic_ai.models import Model
 
 from ..agents.evidence import DIAGNOSIS_EVIDENCE_POLICY_V2
@@ -67,7 +67,11 @@ def create_diagnosis_agent(
     agent = Agent(
         model,
         deps_type=DiagnosisDependencies,
-        output_type=get_diagnosis_output_type(output_schema_revision),
+        # The staging OpenAI-compatible provider reliably supports tool calls but
+        # does not enforce native response_format=json_schema. Pin Diagnosis to the
+        # final_result tool transport so PydanticAI cannot auto-select a native
+        # structured-output path from a provider/model profile.
+        output_type=ToolOutput(get_diagnosis_output_type(output_schema_revision)),
         system_prompt=get_diagnosis_system_prompt(prompt_revision),
         name="bodysense_diagnosis",
         retries=2,

@@ -289,8 +289,19 @@ export async function uploadJsonObject({
 export async function verifyPublicUrls(
   baseUrl,
   paths,
-  { concurrency = 8 } = {},
+  { concurrency = 8, attempts = 5, retryDelayMs = 750, fetchImpl = fetch } = {},
 ) {
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error(
+      `public CDN verification attempts must be >= 1: ${attempts}`,
+    );
+  }
+  if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
+    throw new Error(
+      `public CDN verification retryDelayMs must be >= 0: ${retryDelayMs}`,
+    );
+  }
+
   const base = normalizePublicBase(baseUrl);
   const queue = [...paths];
   const failures = [];
@@ -301,16 +312,29 @@ export async function verifyPublicUrls(
         const relative = queue.shift();
         if (!relative) continue;
         const url = `${base}/${relative.replace(/^\/+/, "")}`;
-        try {
-          const response = await fetch(url, {
-            method: "HEAD",
-            redirect: "follow",
-          });
-          if (!response.ok) failures.push(`${response.status} ${url}`);
-        } catch (error) {
-          failures.push(
-            `${url}: ${error instanceof Error ? error.message : String(error)}`,
-          );
+        let lastFailure = null;
+        for (let attempt = 1; attempt <= attempts; attempt += 1) {
+          try {
+            const response = await fetchImpl(url, {
+              method: "HEAD",
+              redirect: "follow",
+            });
+            if (response.ok) {
+              lastFailure = null;
+              break;
+            }
+            lastFailure = `${response.status} ${url}`;
+          } catch (error) {
+            lastFailure = `${url}: ${error instanceof Error ? error.message : String(error)}`;
+          }
+
+          if (attempt < attempts && retryDelayMs > 0) {
+            const delayMs = retryDelayMs * 2 ** (attempt - 1);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+        }
+        if (lastFailure) {
+          failures.push(`${lastFailure} (after ${attempts} attempts)`);
         }
       }
     },

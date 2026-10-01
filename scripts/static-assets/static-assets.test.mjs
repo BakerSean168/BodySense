@@ -10,6 +10,7 @@ import {
   contentTypeFor,
   normalizeAssetBase,
   normalizePublicBase,
+  verifyPublicUrls,
 } from "./lib.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -33,6 +34,44 @@ test("normalizes only https public asset bases", () => {
 test("requires full immutable Git revisions", () => {
   assert.equal(assertGitRevision(revision), revision);
   assert.throws(() => assertGitRevision("abc123"), /40-character Git revision/);
+});
+
+test("public CDN verification retries transient HEAD failures", async () => {
+  let requestCount = 0;
+  await verifyPublicUrls(
+    "https://assets.example.com",
+    ["release-manifest.json"],
+    {
+      attempts: 3,
+      retryDelayMs: 0,
+      fetchImpl: async () => {
+        requestCount += 1;
+        return new Response(null, { status: requestCount < 3 ? 503 : 200 });
+      },
+    },
+  );
+  assert.equal(requestCount, 3);
+});
+
+test("public CDN verification remains fail-closed after bounded retries", async () => {
+  let requestCount = 0;
+  await assert.rejects(
+    () =>
+      verifyPublicUrls(
+        "https://assets.example.com",
+        ["release-manifest.json"],
+        {
+          attempts: 2,
+          retryDelayMs: 0,
+          fetchImpl: async () => {
+            requestCount += 1;
+            throw new Error("network unavailable");
+          },
+        },
+      ),
+    /network unavailable \(after 2 attempts\)/,
+  );
+  assert.equal(requestCount, 2);
 });
 
 test("maps release asset content types", () => {
