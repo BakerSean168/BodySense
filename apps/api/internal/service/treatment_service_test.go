@@ -355,6 +355,52 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	}
 }
 
+func TestTreatmentGenerationMapsGovernanceRejectionToSafetyBlock(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	}
+	repo := &fakeTreatmentRepo{}
+	svc := NewTreatmentService(
+		repo,
+		&fakeTreatmentDiagnosis{
+			analysis: analysis,
+			assessments: []model.DiagnosisCandidateAssessment{{
+				CandidateID: analysis.Candidates[0].ID,
+				State:       "confirmed",
+			}},
+		},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{
+			UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`),
+		}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
+		nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"governance":{
+				"verdict":"rejected",
+				"kind":"treatment",
+				"reasons":["unsafe current-user claim"],
+				"issues":[]
+			},
+			"safety_fallback":"safe fallback"
+		}`)},
+		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
+	)
+
+	if _, err := svc.GenerateProposal(
+		context.Background(),
+		userID,
+		TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID},
+	); !errors.Is(err, ErrTreatmentSafetyBlocked) {
+		t.Fatalf("governance rejection must surface as Treatment safety block: %v", err)
+	}
+	if repo.proposal != nil {
+		t.Fatal("governance-rejected output must not persist a Treatment proposal")
+	}
+}
+
 func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
