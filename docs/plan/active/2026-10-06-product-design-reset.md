@@ -106,6 +106,8 @@ Acceptance:
 
 Status: **WORKING / NOT FROZEN**
 
+The constrained AI handoff is now explicit in both `docs/design/ai-product-design-brief.md` and Penpot board `Prototype V2d / 30 · Semantic + Foundation Brief`.
+
 Continue the existing Adaptive Body Canvas hypothesis:
 
 - Body Home — Body Atlas;

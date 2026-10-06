@@ -64,7 +64,11 @@ Browser visual QA against approved design
 
 This is the same reusable pattern established during the DigitalBiome redesign, adapted for Penpot and for BodySense's richer longitudinal health domain.
 
-## 3. Gate model
+## 3. AI design handoff
+
+After Product Definition, UX Semantics and Foundations are established, AI exploration must use the constrained [AI Product Design Brief](./ai-product-design-brief.md). The brief permits spatial/visual experimentation while freezing product authority and epistemic/safety invariants.
+
+## 4. Gate model
 
 ### G0 — Domain is coherent
 
@@ -94,7 +98,7 @@ The user explicitly accepts the visual and interaction direction. Machine checks
 
 Implementation is reviewed against the approved Penpot baseline, not against memory or screenshots from an earlier implementation.
 
-## 4. Existing evidence and its role
+## 5. Existing evidence and its role
 
 BodySense already has substantial design work. It is retained rather than discarded:
 
@@ -106,10 +110,10 @@ BodySense already has substantial design work. It is retained rather than discar
 
 The important change is governance: these artifacts now have explicit upstream Product Definition and Foundations.
 
-## 5. Penpot structure
+## 6. Penpot structure
 
 See [Penpot Design Program](./penpot-program.md) for exact page ownership and lifecycle rules.
 
-## 6. Implementation rule
+## 7. Implementation rule
 
 Do not resume a broad React visual rewrite while the current V2d direction is not human-approved. Small correctness fixes may continue, but a design migration must begin from an immutable approved Penpot candidate.

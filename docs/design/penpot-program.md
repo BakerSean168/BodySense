@@ -73,7 +73,7 @@ Current product-design exploration. Its working hypothesis is **Adaptive Body Ca
 - Training → Focus mode;
 - Assistant → contextual capability.
 
-V2d is not approved merely because it exists.
+V2d is not approved merely because it exists. `Prototype V2d / 30 · Semantic + Foundation Brief` is the formal handoff from the new upstream Product Definition/Foundations into the existing V2d exploration.
 
 ## 3. Lifecycle
 
