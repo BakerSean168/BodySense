@@ -72,6 +72,8 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
   _把业务语义映射为 One Body Home + Concern Canvas + contextual capabilities 的 IA 假设、关键任务流与响应式语义。_
 - 🎨 **[Design Foundations](../design/foundations.md)**
   _定义 token 分层、视觉角色、epistemic/safety 语义、排版、间距、surface、motion、responsive 与 accessibility。_
+- 🤖 **[AI Product Design Brief](../design/ai-product-design-brief.md)**
+  _在语义与 Foundations 固定后，约束 AI 继续探索 V2d：允许重构空间与页面，不允许破坏业务 authority。_
 - 🧩 **[Penpot Design Program](../design/penpot-program.md)**
   _定义 Product Definition / Foundations / Design System / Exploration / Candidate / Approved / Code 的 Penpot 生命周期。_
 
