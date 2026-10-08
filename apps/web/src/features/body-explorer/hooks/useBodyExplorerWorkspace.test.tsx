@@ -49,6 +49,32 @@ describe("useBodyExplorerWorkspace", () => {
     });
   });
 
+  it("keeps full-body reset distinct from returning to the selected region", () => {
+    const { result } = renderHook(() => useBodyExplorerWorkspace(null));
+    const expected = getPreferredAnatomyIdForRegion("shoulder.right");
+
+    act(() => result.current.selectRegion("shoulder.right"));
+    act(() => result.current.semanticBridge.onAnatomySelectionChange?.(null));
+    act(() => result.current.semanticBridge.onModeChange?.("region"));
+
+    expect(useBodyExplorerStore.getState()).toMatchObject({
+      selectedRegionId: "shoulder.right",
+      selectedAnatomyId: null,
+      mode: "region",
+    });
+
+    act(() => result.current.semanticBridge.onRegionModeRequested?.());
+    expect(useBodyExplorerStore.getState()).toMatchObject({
+      selectedRegionId: "shoulder.right",
+      selectedAnatomyId: expected,
+      mode: "region",
+    });
+    expect(useBodyExplorerStore.getState().cameraIntent).toMatchObject({
+      kind: "focus",
+      anatomyId: expected,
+    });
+  });
+
   it("builds removable chat context from the selected BodyRegion", () => {
     const onAskContext = vi.fn();
     const { result } = renderHook(() =>

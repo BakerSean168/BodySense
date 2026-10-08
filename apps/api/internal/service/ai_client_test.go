@@ -78,8 +78,12 @@ func TestChatStreamSendsProtoCommandAndParsesProtoRuntimeEvent(t *testing.T) {
 				SpatialContext: &ConsultationSpatialContext{
 					BodyRegionID:    "shoulder.right",
 					BodyRegionLabel: "右肩",
+					BodyRegionIDs:   []string{"shoulder.right", "scapular.right"},
 					AnatomyID:       "appendicular-skeleton-clavicle-right",
 					AnatomyName:     "Right clavicle",
+					ReferenceMotion: &ConsultationReferenceMotion{
+						ID: "arm_raise", Label: "抬臂观察", Phase: 0.375, Paused: true, Source: "reference_animation",
+					},
 				},
 			},
 		},
@@ -113,6 +117,14 @@ func TestChatStreamSendsProtoCommandAndParsesProtoRuntimeEvent(t *testing.T) {
 	spatialContext, ok := businessContext["spatial_context"].(map[string]any)
 	if !ok || spatialContext["body_region_id"] != "shoulder.right" || spatialContext["anatomy_id"] != "appendicular-skeleton-clavicle-right" {
 		t.Fatalf("unexpected spatial_context payload: %#v", businessContext["spatial_context"])
+	}
+	regionIDs, ok := spatialContext["body_region_ids"].([]any)
+	if !ok || len(regionIDs) != 2 || regionIDs[1] != "scapular.right" {
+		t.Fatalf("unexpected body_region_ids payload: %#v", spatialContext["body_region_ids"])
+	}
+	motion, ok := spatialContext["reference_motion"].(map[string]any)
+	if !ok || motion["id"] != "arm_raise" || motion["source"] != "reference_animation" || motion["paused"] != true {
+		t.Fatalf("unexpected reference_motion payload: %#v", spatialContext["reference_motion"])
 	}
 }
 

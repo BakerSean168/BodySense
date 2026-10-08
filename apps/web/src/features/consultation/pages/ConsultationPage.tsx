@@ -21,8 +21,8 @@ import {
 } from "../runtime/threadMessageMapping";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ConsultationWorkbenchShell } from "../components/workbench/ConsultationWorkbenchShell";
-import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
+import { BodyCanvasWorkspace } from "@/features/body-canvas/components/BodyCanvasWorkspace";
+import { demonstrationForTitle, type MotionId } from "@/features/body-canvas/model/bodyCanvas";
 import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
 import { useWorkbenchPreferencesStore } from "../model/workbenchPreferencesStore";
 import { retryDynamicImport } from "@/lib/retryDynamicImport";
@@ -70,6 +70,7 @@ export function ConsultationPage() {
   const [chatSpatialContext, setChatSpatialContext] =
     useState<ConsultationSpatialContext | null>(null);
   const [composerFocusKey, setComposerFocusKey] = useState(0);
+  const chatOpen = useWorkbenchPreferencesStore((state) => state.chatOpen);
   const setChatOpen = useWorkbenchPreferencesStore(
     (state) => state.setChatOpen,
   );
@@ -77,8 +78,9 @@ export function ConsultationPage() {
     (state) => state.setMobileSurface,
   );
 
-  // Chat is a persistent primary surface. Discover its lazy chunk immediately
-  // instead of waiting for the thread query to settle before starting download.
+  // Chat is a persistent contextual surface even though V3 is body-first.
+  // Discover its lazy chunk early so opening the assistant does not wait on the
+  // thread query before beginning the download.
   useEffect(() => {
     void loadAssistantChatPanel().catch(() => undefined);
   }, []);
@@ -217,8 +219,28 @@ export function ConsultationPage() {
     pendingTerminalRemountId,
   ]);
 
-  // Client-only presentation state. The active workspace mode is URL-addressable.
-  const workspaceView = parseWorkspaceView(searchParams.get("view"));
+  // Client-only presentation state. A bare consultation route stays body-first,
+  // while an explicit ?view= deep link opens the corresponding inventory panel.
+  const requestedWorkspaceView = searchParams.get("view");
+  const workspaceView = parseWorkspaceView(requestedWorkspaceView);
+  const isExplicitWorkspaceView =
+    requestedWorkspaceView === "state" ||
+    requestedWorkspaceView === "diagnosis" ||
+    requestedWorkspaceView === "treatment" ||
+    requestedWorkspaceView === "progress";
+  const [workspacePanelOpen, setWorkspacePanelOpen] = useState(
+    isExplicitWorkspaceView,
+  );
+  const previousRequestedWorkspaceViewRef = useRef(requestedWorkspaceView);
+  useEffect(() => {
+    if (previousRequestedWorkspaceViewRef.current === requestedWorkspaceView) return;
+    previousRequestedWorkspaceViewRef.current = requestedWorkspaceView;
+    if (isExplicitWorkspaceView) setWorkspacePanelOpen(true);
+  }, [isExplicitWorkspaceView, requestedWorkspaceView]);
+  const [demonstrationRequest, setDemonstrationRequest] = useState<{
+    motion: MotionId;
+    revision: number;
+  } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleWorkspaceViewChange = useCallback(
@@ -226,6 +248,7 @@ export function ConsultationPage() {
       const next = new URLSearchParams(searchParams);
       next.set("view", view);
       setSearchParams(next, { replace: true });
+      setWorkspacePanelOpen(true);
     },
     [searchParams, setSearchParams],
   );
@@ -449,12 +472,27 @@ export function ConsultationPage() {
     </div>
   );
 
+  const handleDemonstrateExercise = useCallback((title: string) => {
+    const motion = demonstrationForTitle(title);
+    if (!motion) return false;
+    setWorkspacePanelOpen(false);
+    setChatOpen(false);
+    setDemonstrationRequest((current) => ({
+      motion,
+      revision: (current?.revision ?? 0) + 1,
+    }));
+    return true;
+  }, [setChatOpen]);
+
   const treatmentWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="当前方案暂时无法同步，请稍后重试。" />
   ) : workspaceQuery.isPending && !workspace ? (
     <InfoPanelSkeleton />
   ) : workspace ? (
-    <TreatmentPanel workspace={workspace} />
+    <TreatmentPanel
+      workspace={workspace}
+      onDemonstrateExercise={handleDemonstrateExercise}
+    />
   ) : (
     <WorkspaceEmptyState
       title="尚无当前方案"
@@ -479,32 +517,35 @@ export function ConsultationPage() {
     />
   );
 
-  const workspacePanel = (
-    <WorkspaceViewport
-      view={workspaceView}
-      bodyState={bodyState}
-      state={stateWorkspace}
-      diagnosis={diagnosisWorkspace}
-      treatment={treatmentWorkspace}
-      progress={progressWorkspace}
-      overlay={
-        isThreadSwitching ? (
-          <PanelTransitionOverlay label="身体信息正在更新" />
-        ) : null
-      }
-      bodyExplorerBridge={bodyExplorer.semanticBridge}
-    />
-  );
-
   return (
-    <div className="h-dvh overflow-hidden bg-[#242624] text-foreground">
-      <ConsultationWorkbenchShell
-        title="BodySense"
+    <div className="h-dvh overflow-hidden text-foreground">
+      <BodyCanvasWorkspace
+        bodyState={bodyState}
+        workspace={workspace}
+        bodyExplorer={bodyExplorer}
         workspaceView={workspaceView}
+        workspacePanelOpen={workspacePanelOpen}
         onWorkspaceViewChange={handleWorkspaceViewChange}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onCloseWorkspace={() => setWorkspacePanelOpen(false)}
+        panels={{
+          state: stateWorkspace,
+          diagnosis: diagnosisWorkspace,
+          treatment: treatmentWorkspace,
+          progress: progressWorkspace,
+        }}
         chat={chatPanel}
-        workspace={workspacePanel}
+        chatOpen={chatOpen}
+        onChatOpenChange={setChatOpen}
+        onAskContext={handleAskSpatialContext}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        profileOpen={isProfileOpen}
+        demonstrationRequest={demonstrationRequest}
+        loading={workspaceQuery.isFetching || isThreadSwitching}
+        error={workspaceUnavailable || hasThreadSwitchError}
+        onRetry={() => {
+          void workspaceQuery.refetch();
+          threadActions.retryThread();
+        }}
       />
       <ProfileDrawer open={isProfileOpen} onOpenChange={setIsProfileOpen} />
     </div>

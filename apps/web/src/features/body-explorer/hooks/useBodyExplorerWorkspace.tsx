@@ -5,6 +5,7 @@ import type {
 } from "@/features/consultation/types/consultation";
 import type { BodyExplorerSemanticBridge } from "../components/BodyExplorer";
 import { BodyRegionNavigator } from "../components/BodyRegionNavigator";
+import { BodyRegionStatusSummary } from "../components/BodyRegionStatusSummary";
 import {
   getBodyRegionForAnatomy,
   getPreferredAnatomyIdForRegion,
@@ -76,12 +77,11 @@ export function useBodyExplorerWorkspace(
   );
 
   const handleRegionModeRequested = useCallback(() => {
-    setMode("region");
     if (!selectedRegionId) return;
     const focusAnatomyId = getPreferredAnatomyIdForRegion(selectedRegionId);
     selectAnatomy(focusAnatomyId, selectedRegionId);
     requestFocus(focusAnatomyId);
-  }, [requestFocus, selectAnatomy, selectedRegionId, setMode]);
+  }, [requestFocus, selectAnatomy, selectedRegionId]);
 
   const handleAskContext = useCallback(
     (context: {
@@ -107,11 +107,17 @@ export function useBodyExplorerWorkspace(
 
   const semanticRegionTree = useMemo(
     () => (
-      <BodyRegionNavigator
-        snapshot={snapshot}
-        selectedRegionId={selectedRegionId}
-        onSelectRegion={selectRegion}
-      />
+      <>
+        <BodyRegionNavigator
+          snapshot={snapshot}
+          selectedRegionId={selectedRegionId}
+          onSelectRegion={selectRegion}
+        />
+        <BodyRegionStatusSummary
+          snapshot={snapshot}
+          regionId={selectedRegionId}
+        />
+      </>
     ),
     [selectRegion, selectedRegionId, snapshot],
   );

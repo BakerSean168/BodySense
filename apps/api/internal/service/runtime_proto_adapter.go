@@ -142,6 +142,17 @@ func consultationBusinessContextToProto(input ConsultationBusinessContext) (*run
 		if input.SpatialContext.AnatomyName != "" {
 			spatial.AnatomyName = &input.SpatialContext.AnatomyName
 		}
+		spatial.BodyRegionIds = append([]string(nil), input.SpatialContext.BodyRegionIDs...)
+		if input.SpatialContext.ReferenceMotion != nil {
+			motion := input.SpatialContext.ReferenceMotion
+			spatial.ReferenceMotion = &runtimev1.ConsultationReferenceMotion{
+				Id:     motion.ID,
+				Label:  motion.Label,
+				Phase:  motion.Phase,
+				Paused: motion.Paused,
+				Source: motion.Source,
+			}
+		}
 		output.SpatialContext = spatial
 	}
 	return output, nil

@@ -62,7 +62,22 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - 🧾 **[Health Document Ingestion Feature Spec](../feature_spec_health_document_ingestion.md)** — _Target_
   _定义用户上传体检/病例资料、待确认指标、来源页/区域高亮、确认/纠正/拒绝以及 Assessment authority 边界。_
 
-如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准。
+#### Product Design Authority
+
+- 🎯 **[Product Design Program](../design/README.md)** ⭐
+  _定义 BodySense 的产品语义优先设计流程、authority ladder 与设计 Gate。_
+- 🧭 **[Product Definition](../design/product-definition.md)** ⭐
+  _定义用户心智模型、核心对象、用户任务、体验原则、非目标与不可破坏的产品 invariant。_
+- 🗺️ **[Product UX Semantics](../design/product-ux-semantics.md)**
+  _把业务语义映射为 One Body Home + Concern Canvas + contextual capabilities 的 IA 假设、关键任务流与响应式语义。_
+- 🎨 **[Design Foundations](../design/foundations.md)**
+  _定义 token 分层、视觉角色、epistemic/safety 语义、排版、间距、surface、motion、responsive 与 accessibility。_
+- 🤖 **[AI Product Design Brief](../design/ai-product-design-brief.md)**
+  _在语义与 Foundations 固定后，约束 AI 继续探索 V2d：允许重构空间与页面，不允许破坏业务 authority。_
+- 🧩 **[Penpot Design Program](../design/penpot-program.md)**
+  _定义 Product Definition / Foundations / Design System / Exploration / Candidate / Approved / Code 的 Penpot 生命周期。_
+
+如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准；如果产品 UI/IA 文档与 Product Design Authority 冲突，以 ADR 0019 + `docs/design/` 为准。
 
 ### 2.2 工程化架构设计文档
 
@@ -124,6 +139,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - **[ADR 0013: Adopt a versioned Health Document Evidence Pipeline with benchmark-gated OCR selection](../adr/0013-adopt-versioned-health-document-evidence-pipeline.md)** — _Proposed_
   _先固定原始文档、native-text-first、可插拔 OCR/PDF/layout/parser、source-grounded evidence、append-only review/replay 的目标契约；RapidOCR + PP-OCRv6 small 为 leading candidate，但必须经 BodySense 健康文档 benchmark 后才能成为 Champion。_
+
+- **[ADR 0019: Adopt a Product-Semantic-First Design Workflow with Penpot](../adr/0019-adopt-product-semantic-first-design-workflow.md)** ⭐
+  _确立 Domain → Product Definition → UX Semantics → Foundations → Penpot → Approved Candidate → Implementation 的设计 authority；技术验证不替代人工视觉/交互审批。_
 
 ---
 

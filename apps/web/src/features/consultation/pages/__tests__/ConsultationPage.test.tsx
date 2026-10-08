@@ -141,7 +141,7 @@ describe("ConsultationPage", () => {
     });
   });
 
-  it("keeps the workbench shell visible while the target thread is loading", () => {
+  it("keeps the body canvas visible while the target thread is loading", () => {
     mockUseConversationsQuery.mockReturnValue({
       data: [makeConversation()],
       isPending: false,
@@ -155,10 +155,12 @@ describe("ConsultationPage", () => {
 
     renderConsultationPage();
 
+    expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
     expect(screen.getByText("BodySense")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "我的身体" })).toBeInTheDocument();
+    expect(screen.getByLabelText("身体上下文助手")).not.toBeVisible();
     expect(screen.getByTestId("chat-panel-skeleton")).toBeInTheDocument();
     expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
-    expect(screen.getAllByText("还没有身体记录").length).toBeGreaterThan(0);
     expect(
       screen.queryByText("正在建立 AI 问诊连接..."),
     ).not.toBeInTheDocument();
@@ -178,12 +180,17 @@ describe("ConsultationPage", () => {
     mockUseHealthWorkspaceQuery.mockReturnValue({
       data: undefined,
       isPending: true,
+      isFetching: true,
       isError: false,
     });
 
-    renderConsultationPage();
+    renderConsultationPage("/consultation/conv-1?view=state");
 
+    expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "我的身体状态" })).toBeInTheDocument();
     expect(screen.getByTestId("info-panel-skeleton")).toBeInTheDocument();
+    expect(screen.getByText("正在同步身体记录")).toBeInTheDocument();
     expect(await screen.findByTestId("assistant-chat-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
   });
@@ -207,12 +214,12 @@ describe("ConsultationPage", () => {
 
     renderConsultationPage("/consultation/conv-2");
 
+    expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
     expect(await screen.findByTestId("assistant-chat-panel")).toHaveTextContent(
       "conv-1",
     );
-    expect(screen.getByText("身体区域状态")).toBeInTheDocument();
-    expect(screen.getAllByText("正在同步 BodySense")).toHaveLength(2);
-    expect(screen.getAllByText("身体信息正在更新")).toHaveLength(2);
+    expect(screen.getByText("正在同步身体记录")).toBeInTheDocument();
+    expect(screen.getByText("身体信息正在更新")).toBeInTheDocument();
     expect(screen.queryByText("目标会话")).not.toBeInTheDocument();
     expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
     expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();

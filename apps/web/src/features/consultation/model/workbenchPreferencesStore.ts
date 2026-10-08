@@ -21,7 +21,7 @@ export function clampChatSize(size: number): number {
 export const useWorkbenchPreferencesStore = create<WorkbenchPreferencesState>()(
   persist(
     (set) => ({
-      chatOpen: true,
+      chatOpen: false,
       chatSize: 38,
       mobileSurface: "chat",
       setChatOpen: (chatOpen) => set({ chatOpen }),
@@ -31,6 +31,15 @@ export const useWorkbenchPreferencesStore = create<WorkbenchPreferencesState>()(
     }),
     {
       name: "bodysense-workbench-preferences",
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<WorkbenchPreferencesState> | undefined;
+        return {
+          ...state,
+          // V3 is body-first: start from the full canvas once after the layout migration.
+          chatOpen: false,
+        } as WorkbenchPreferencesState;
+      },
       partialize: ({ chatOpen, chatSize, mobileSurface }) => ({
         chatOpen,
         chatSize,

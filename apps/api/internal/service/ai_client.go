@@ -91,11 +91,21 @@ type ConsultationRuntimeState struct {
 	ExtractedInfo json.RawMessage `json:"extracted_info"`
 }
 
+type ConsultationReferenceMotion struct {
+	ID     string  `json:"id"`
+	Label  string  `json:"label"`
+	Phase  float64 `json:"phase"`
+	Paused bool    `json:"paused"`
+	Source string  `json:"source"`
+}
+
 type ConsultationSpatialContext struct {
-	BodyRegionID    string `json:"body_region_id,omitempty"`
-	BodyRegionLabel string `json:"body_region_label,omitempty"`
-	AnatomyID       string `json:"anatomy_id,omitempty"`
-	AnatomyName     string `json:"anatomy_name,omitempty"`
+	BodyRegionID    string                       `json:"body_region_id,omitempty"`
+	BodyRegionLabel string                       `json:"body_region_label,omitempty"`
+	BodyRegionIDs   []string                     `json:"body_region_ids,omitempty"`
+	AnatomyID       string                       `json:"anatomy_id,omitempty"`
+	AnatomyName     string                       `json:"anatomy_name,omitempty"`
+	ReferenceMotion *ConsultationReferenceMotion `json:"reference_motion,omitempty"`
 }
 
 type ConsultationBusinessContext struct {
