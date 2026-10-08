@@ -1,6 +1,5 @@
 import {
   AtlasLoaderError,
-  OFFICIAL_HUMAN_ATLAS,
   createOfficialHumanAtlas,
   type AtlasCatalog,
   type AtlasLoaderWithProfiles,
@@ -22,11 +21,20 @@ import {
   type AnatomyViewerSnapshot,
   type AnatomyWebGLState,
 } from "./anatomyViewerPort";
+import {
+  VANATOME_ATLAS_BUILD_ID,
+  VANATOME_ATLAS_RELEASE,
+  VANATOME_INITIAL_SYSTEM_ID,
+  resolveVanatomeCatalogUrl,
+} from "../model/vanatomePin";
 
-export const VANATOME_ATLAS_RELEASE = "1.4.0" as const;
-export const VANATOME_ATLAS_BUILD_ID = "994e6cc8ffbb212e" as const;
-export const VANATOME_ATLAS_CATALOG_URL = OFFICIAL_HUMAN_ATLAS.catalogUrl;
-export const VANATOME_INITIAL_SYSTEM_ID = "regional-anatomy" as const;
+export {
+  VANATOME_ATLAS_BUILD_ID,
+  VANATOME_ATLAS_CATALOG_URL,
+  VANATOME_ATLAS_RELEASE,
+  VANATOME_INITIAL_SYSTEM_ID,
+  resolveVanatomeCatalogUrl,
+} from "../model/vanatomePin";
 
 const VANATOME_MODEL_PREFETCH_ATTEMPTS = 2;
 const VANATOME_MODEL_PREFETCH_RETRY_DELAY_MS = 250;
@@ -40,13 +48,6 @@ export interface LoadedVanatomeAtlas {
     systemId: string,
     options?: { signal?: AbortSignal },
   ) => Promise<VanatomeViewerAtlas>;
-}
-
-export function resolveVanatomeCatalogUrl(override?: string): string {
-  const configured =
-    override?.trim() ||
-    import.meta.env.VITE_BODYSENSE_ANATOMY_CATALOG_URL?.trim();
-  return configured || VANATOME_ATLAS_CATALOG_URL;
 }
 
 export async function loadPinnedVanatomeAtlas(options?: {

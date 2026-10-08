@@ -25,6 +25,45 @@ def test_spatial_context_is_explicitly_navigation_only() -> None:
     assert "BodyState" in rendered
 
 
+def test_spatial_context_formats_multi_region_reference_motion_without_promoting_it_to_evidence() -> None:
+    rendered = _format_spatial_context(
+        {
+            "body_region_id": "shoulder.right",
+            "body_region_label": "右肩",
+            "body_region_ids": ["shoulder.right", "scapular.right"],
+            "reference_motion": {
+                "id": "arm_raise",
+                "label": "客户端伪标签",
+                "phase": 0.375,
+                "paused": True,
+                "source": "reference_animation",
+            },
+        }
+    )
+    assert "shoulder.right、scapular.right" in rendered
+    assert "抬臂观察" in rendered
+    assert "客户端伪标签" not in rendered
+    assert "reference_animation" in rendered
+    assert "不是用户实际动作视频" in rendered
+    assert "不得因为用户选中了它们或播放了参考动作" in rendered
+
+
+def test_spatial_context_can_be_motion_only_navigation_context() -> None:
+    rendered = _format_spatial_context(
+        {
+            "reference_motion": {
+                "id": "stand",
+                "label": "站立",
+                "phase": 0.0,
+                "paused": True,
+                "source": "reference_animation",
+            }
+        }
+    )
+    assert "站立" in rendered
+    assert "教学层" in rendered
+
+
 def test_spatial_context_omits_empty_navigation_context() -> None:
     assert _format_spatial_context({}) == ""
     assert _format_spatial_context({"body_region_label": "右肩"}) == ""

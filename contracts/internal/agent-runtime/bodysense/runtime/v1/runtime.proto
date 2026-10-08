@@ -52,11 +52,21 @@ message ConsultationRuntimeState {
   repeated google.protobuf.Struct extracted_info = 2;
 }
 
+message ConsultationReferenceMotion {
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  string label = 2 [(buf.validate.field).string.min_len = 1];
+  double phase = 3 [(buf.validate.field).double = {gte: 0, lte: 1}];
+  bool paused = 4;
+  string source = 5 [(buf.validate.field).string.const = "reference_animation"];
+}
+
 message ConsultationSpatialContext {
   optional string body_region_id = 1 [(buf.validate.field).string.min_len = 1];
   optional string body_region_label = 2 [(buf.validate.field).string.min_len = 1];
   optional string anatomy_id = 3 [(buf.validate.field).string.min_len = 1];
   optional string anatomy_name = 4 [(buf.validate.field).string.min_len = 1];
+  repeated string body_region_ids = 5 [(buf.validate.field).repeated = {max_items: 35, unique: true, items: {string: {min_len: 1}}}];
+  optional ConsultationReferenceMotion reference_motion = 6;
 }
 
 // Complex durable business projections remain opaque at this transport IDL.

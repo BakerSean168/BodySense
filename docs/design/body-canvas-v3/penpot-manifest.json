@@ -1,0 +1,221 @@
+{
+  "file": "24d9d841-759d-81bc-8008-b6423250c2b8",
+  "page": "536d2a99-67da-80a5-8008-c113cf18702a",
+  "version": "3.0",
+  "status": "IMPLEMENTED / BROWSER VERIFIED / PR READY",
+  "boards": [
+    {
+      "key": "D01",
+      "id": "536d2a99-67da-80a5-8008-c113cf2fd302",
+      "name": "V3 / D01 · Body Home · Desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D02",
+      "id": "536d2a99-67da-80a5-8008-c113d13ca49c",
+      "name": "V3 / D02 · Region · Current state",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D03",
+      "id": "536d2a99-67da-80a5-8008-c113d40cb4af",
+      "name": "V3 / D03 · Brush · Multiple regions",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D04",
+      "id": "536d2a99-67da-80a5-8008-c113d76a1b4e",
+      "name": "V3 / D04 · Motion · Frozen reference frame",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D05",
+      "id": "536d2a99-67da-80a5-8008-c113dbcad47f",
+      "name": "V3 / D05 · Assessment · Evidence not certainty",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D06",
+      "id": "536d2a99-67da-80a5-8008-c113e0c1b04a",
+      "name": "V3 / D06 · Training inventory · Accepted",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D07",
+      "id": "536d2a99-67da-80a5-8008-c113e803e826",
+      "name": "V3 / D07 · Training focus · Demonstration",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D08",
+      "id": "536d2a99-67da-80a5-8008-c113eb4d63af",
+      "name": "V3 / D08 · Body state · Real records",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D09",
+      "id": "536d2a99-67da-80a5-8008-c113f27a856e",
+      "name": "V3 / D09 · Equipment · Available resources",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D10",
+      "id": "536d2a99-67da-80a5-8008-c113f95762fd",
+      "name": "V3 / D10 · Outcome · Change without causal claim",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D11",
+      "id": "536d2a99-67da-80a5-8008-c1140180431a",
+      "name": "V3 / D11 · Assistant · Selected context retained",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D12",
+      "id": "536d2a99-67da-80a5-8008-c1140a2dc39e",
+      "name": "V3 / D12 · Keyboard & accessible controls",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D13",
+      "id": "536d2a99-67da-80a5-8008-c1141416bca6",
+      "name": "V3 / D13 · History · A continuous body story",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D14",
+      "id": "536d2a99-67da-80a5-8008-c1141f43ec43",
+      "name": "V3 / D14 · Plan proposal · Acceptance boundary",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D15",
+      "id": "536d2a99-67da-80a5-8008-c114294c6fc3",
+      "name": "V3 / D15 · Empty · New body",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D16",
+      "id": "536d2a99-67da-80a5-8008-c11432370c58",
+      "name": "V3 / D16 · Loading · Honest progress",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D17",
+      "id": "536d2a99-67da-80a5-8008-c1143b85ae9f",
+      "name": "V3 / D17 · Error · Text alternative",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D18",
+      "id": "536d2a99-67da-80a5-8008-c11445947688",
+      "name": "V3 / D18 · Safety · Global interruption",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D19",
+      "id": "536d2a99-67da-80a5-8008-c1144fdd1aec",
+      "name": "V3 / D19 · Insufficient evidence",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D20",
+      "id": "536d2a99-67da-80a5-8008-c1145a8a5be0",
+      "name": "V3 / D20 · Correction vs temporal change",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D21",
+      "id": "536d2a99-67da-80a5-8008-c11466fe4b4c",
+      "name": "V3 / D21 · Dark canvas",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "D22",
+      "id": "536d2a99-67da-80a5-8008-c1146d282f77",
+      "name": "V3 / D22 · Anatomy & text navigation",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "M01",
+      "id": "536d2a99-67da-80a5-8008-c1148071c1f3",
+      "name": "V3 / M01 · Mobile · Body Home",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M02",
+      "id": "536d2a99-67da-80a5-8008-c11486bd9b04",
+      "name": "V3 / M02 · Mobile · Region sheet",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M03",
+      "id": "536d2a99-67da-80a5-8008-c1148f633c88",
+      "name": "V3 / M03 · Mobile · Contextual assistant",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M04",
+      "id": "536d2a99-67da-80a5-8008-c11495ccadbb",
+      "name": "V3 / M04 · Mobile · Training inventory",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M05",
+      "id": "536d2a99-67da-80a5-8008-c114a0c62988",
+      "name": "V3 / M05 · Mobile · Evidence review",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M06",
+      "id": "536d2a99-67da-80a5-8008-c114ab23c4c9",
+      "name": "V3 / M06 · Mobile · Body state",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M07",
+      "id": "536d2a99-67da-80a5-8008-c114b5dfe983",
+      "name": "V3 / M07 · Mobile · Motion focus",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "key": "M08",
+      "id": "536d2a99-67da-80a5-8008-c114bef4179c",
+      "name": "V3 / M08 · Mobile · Tools and more",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "hotspots": 495,
+  "foundationPage": "536d2a99-67da-80a5-8008-c112dce0b60c",
+  "componentPage": "536d2a99-67da-80a5-8008-c1132f6f6c7c"
+}

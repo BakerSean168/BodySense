@@ -247,6 +247,15 @@ export interface BodyStateSnapshot extends BodyStateProjection {
 }
 
 export interface ConsultationSpatialContext {
+  /** Multiple selected canonical regions; selection is navigation, not evidence. */
+  body_region_ids?: string[];
+  reference_motion?: {
+    id: string;
+    label: string;
+    phase: number;
+    paused: boolean;
+    source: "reference_animation";
+  };
   body_region_id?: string;
   body_region_label?: string;
   anatomy_id?: string;

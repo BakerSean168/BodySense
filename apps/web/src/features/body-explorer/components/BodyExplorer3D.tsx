@@ -60,6 +60,7 @@ export interface BodyExplorer3DProps {
   onSelectedAnatomyIdChange: (id: AnatomyStructureId | null) => void;
   mode: "region" | "anatomy";
   onModeChange: (mode: "region" | "anatomy") => void;
+  onRegionModeRequested?: () => void;
   selectedRegionLabel?: string | null;
   focusRequest?: { id: AnatomyStructureId; key: string | number } | null;
   resetRequestKey?: string | number;
@@ -78,6 +79,7 @@ export default function BodyExplorer3D({
   onSelectedAnatomyIdChange,
   mode,
   onModeChange,
+  onRegionModeRequested,
   selectedRegionLabel,
   focusRequest,
   resetRequestKey,
@@ -851,7 +853,10 @@ export default function BodyExplorer3D({
               breadcrumb={breadcrumb}
               regionLabel={selectedRegionLabel}
               onEnterAnatomy={() => onModeChange("anatomy")}
-              onReturnToRegion={() => onModeChange("region")}
+              onReturnToRegion={() => {
+                onModeChange("region");
+                onRegionModeRequested?.();
+              }}
               onAsk={
                 onAskContext
                   ? () =>
