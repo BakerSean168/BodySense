@@ -4,7 +4,7 @@
 <linearGradient id="wallStroke" gradientUnits="userSpaceOnUse" x1="512" y1="104" x2="512" y2="928"><stop offset="0" stop-color="#F2FFFB"/><stop offset=".55" stop-color="#86EED6"/><stop offset="1" stop-color="#3FC3A8"/></linearGradient>
 <linearGradient id="tint" gradientUnits="userSpaceOnUse" x1="512" y1="104" x2="512" y2="928"><stop offset="0" stop-color="#5BE3C5" stop-opacity=".26"/><stop offset="1" stop-color="#5BE3C5" stop-opacity=".08"/></linearGradient>
 </defs>
-<g id="bg"><rect id="bg-base" width="1024" height="1024" rx="230" fill="url(#bgGrad)"/><rect id="bg-edge" x="1.5" y="1.5" width="1021" height="1021" rx="228.5" fill="none" stroke="#5BE3C5" stroke-opacity=".12" stroke-width="3"/></g>
+
 <g id="body-eyes" stroke-linejoin="round">
 <path id="body-eye-0-lens" d="M512 304A360.3 360.3 0 0 1 512 928A360.3 360.3 0 0 1 512 304Z" fill="url(#tint)" stroke="url(#wallStroke)" stroke-width="20"/>
 <circle id="body-eye-0-iris" cx="512" cy="616" r="180.1" fill="none" stroke="#8FF0D8" stroke-opacity=".5" stroke-width="4"/>
