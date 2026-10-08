@@ -367,8 +367,9 @@ def _format_spatial_context(spatial_context: dict[str, Any]) -> str:
             f"标准化阶段 {phase}，{'已暂停' if paused else '播放中'}。"
         )
         lines.append(
-            "- 该动作来自 BodySense 的 reference_animation 教学层，只用于让用户描述“在什么动作/阶段”。"
-            "它不是用户实际动作视频、姿态测量、组织受力数据或生物力学证据。"
+            "- 该动作来自 BodySense 的 reference_animation 教学层，只用于让用户描述"
+            "“在什么动作/阶段”。它不是用户实际动作视频、姿态测量、组织受力数据或"
+            "生物力学证据。"
         )
     lines.append(
         "- 身体选择只是用户在 3D Body Canvas 中主动指定的界面上下文，"

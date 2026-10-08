@@ -25,7 +25,8 @@ def test_spatial_context_is_explicitly_navigation_only() -> None:
     assert "BodyState" in rendered
 
 
-def test_spatial_context_formats_multi_region_reference_motion_without_promoting_it_to_evidence() -> None:
+def test_spatial_context_formats_multi_region_reference_motion_without_promoting_it_to_evidence(
+) -> None:
     rendered = _format_spatial_context(
         {
             "body_region_id": "shoulder.right",
