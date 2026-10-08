@@ -391,4 +391,3 @@ export async function loadPinnedReferenceAtlasSurface(options: {
     dispose: () => disposeReferenceAtlasSurface(group),
   };
 }
-
