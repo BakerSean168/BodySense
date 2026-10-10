@@ -105,7 +105,7 @@ jobs:
             echo "atlas_catalog_url=${root}/anatomy/vanatome/${ATLAS_VERSION}/releases/${ATLAS_VERSION}/catalog.json"
           } >> "$GITHUB_OUTPUT"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -360,7 +360,7 @@ jobs:
             --arg revision "$REVISION" \
             '{component:$component,repository:$repository,tag:$tag,digest:$digest,revision:$revision}' \
             > "reports/candidate/components/${COMPONENT}.json"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: candidate-component-${{ matrix.component }}
           path: reports/candidate/components/${{ matrix.component }}.json
@@ -466,7 +466,7 @@ jobs:
             --arg revision "$REVISION" \
             '{component:$component,repository:$repository,tag:$tag,digest:$digest,revision:$revision}' \
             > reports/candidate/components/aiService.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: candidate-component-aiService
           path: reports/candidate/components/aiService.json
@@ -524,14 +524,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.resolve.outputs.revision }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: delivery-manifest-v1
           path: reports/candidate/source-ci
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.resolve.outputs.ci_run_id }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: candidate-component-*
           path: reports/candidate/components
@@ -567,7 +567,7 @@ jobs:
             --input reports/candidate/candidate-input.json \
             --output reports/candidate/candidate-set-v1.json
           node scripts/delivery/candidate-manifest.mjs --validate reports/candidate/candidate-set-v1.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: candidate-set-${{ needs.resolve.outputs.revision }}
           path: reports/candidate/candidate-set-v1.json
