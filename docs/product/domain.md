@@ -14,9 +14,8 @@ User
 │  ├─ ConcernGroups          由相关信息形成的组织范围
 │  ├─ SafetyState
 │  └─ BodyStateRevision[]
-├─ Diagnosis (1)              当前综合诊断
+├─ Diagnosis (1)              当前已确认病情的综合诊断
 │  ├─ ConditionEntry[]        稳定身份，支持多项局部更新
-│  ├─ UnresolvedConcern[]     缺乏足够证据的问题
 │  ├─ SafetySummary
 │  └─ DiagnosisRevision[]
 └─ TrainingPlan (0..N)
@@ -95,7 +94,6 @@ type Diagnosis = {
   userId: string;                      // 每位用户唯一
   currentRevision: number;             // 仅内部使用
   conditionEntries: ConditionEntry[];
-  unresolvedConcerns: UnresolvedConcern[];
   crossConditionNotes: string[];
   safetySummary: SafetySummary;
   updatedAt: string;
@@ -107,8 +105,21 @@ type ConditionEntry = {
   certainty:
     | "clinically_documented"
     | "user_reported_clinical_diagnosis"
-    | "ai_supported_possibility"
-    | "unresolved";
+    | "user_confirmed_agent_analysis";
+  causeAnalysis: {
+    summary: string;                  // 明确的原因解释，注明证据边界
+    supportingEvidenceIds: string[];
+  };
+  handlingPlan: {
+    summary: string;                  // 该病情的处理方向，不等于训练动作清单
+    actions: string[];
+    cautionNotes: string[];
+  };
+  confirmation: {
+    confirmationToolCallId: string;   // Chat 交互工具的确认记录
+    confirmedAt: string;
+    confirmedScope: "name_cause_handling";
+  };
   lifecycle: "active" | "monitoring" | "resolved";
   relatedConcernIds: string[];
   relatedBodyRegionIds: string[];
@@ -125,9 +136,13 @@ type ConditionEntry = {
 
 ### 3.1 正式诊断的授权与审查
 
-正式持久化的 Diagnosis 创建、更新由用户的明确请求/授权触发。Agent 在聊天中给出的初步分析不自动发布为正式 Diagnosis。用户说「重新分析右肩」本身就是请求，不要求重复点选按钮。
+正式持久化的 Diagnosis 创建、更新由用户的明确请求/授权触发。Agent 在聊天中给出的初步分析不自动发布为正式 Diagnosis。用户说「重新分析右肩」本身就授权启动分析，不必重复确认开始分析的意图；但正式采纳分析结果仍必须核对病名、原因和处理方案。
 
-提交前必须经过来源验证、证据检查、临床确定性语义和安全策略校验。证据不足时可不产生 ConditionEntry，并记录待明确的问题。
+用户请求分析只代表允许开展分析，并不等于自动接受 Agent 产生的病名、原因和处理方案。Agent 先形成分析提案，在 Chat 中使用结构化 **病情确认工具**，完整呈现「明确病情名称、原因分析、处理方案及证据/确定性边界」；用户核对并明确确认后，才调用正式写入工具，原子更新对应 ConditionEntry。已有条目发生实质变化也应让用户核对变更内容。
+
+提交前必须经过来源验证、证据检查、临床确定性语义、用户确认记录和安全策略校验。证据不足时**不创建正式 ConditionEntry**：未明确的症状、可能病因及待核实问题保留在 BodyState、Agent 分析提案或 Chat 的待澄清区，不能混在当前已确认病情列表里。
+
+「用户确认了 Agent 的分析」表示用户认可将其纳入个人管理记录，**不等于医生已作出临床确诊**；只有对应的医疗材料或可靠来源才能标为临床确诊。
 
 ### 3.2 局部更新、整体修订
 
@@ -168,7 +183,19 @@ type TrainingPlan = {
   currentAcceptedRevisionId: string;
   currentContent: {
     sessions: TrainingSession[];
-    exercises: ExercisePrescription[];
+    // 一个 Plan 是完整方案；每个 Session 按顺序组织动作，不把单个部位模块当作 Plan
+    exerciseStages: {
+      phase: "warmup" | "main" | "cooldown";
+      exercises: {
+        exerciseId: string;
+        name: string;
+        sets: number;
+        repetitions?: number;
+        durationSeconds?: number;
+        restSeconds?: number;
+      }[];
+    }[];
+    frequency: { sessionsPerWeek?: number; description?: string };
     constraints: string[];
   };
 };
@@ -186,6 +213,8 @@ type PlanChangeProposal = {
 ~~~
 
 - 一位用户有多份 Plan，彼此独立修订；每个动作与训练记录关联明确的 planId。
+- 每份 TrainingPlan 是完整的训练处方，不能把若干「肩胛模块」「臀腿模块」卡片替代动作清单。用户必须能直接查看已接受的**热身 → 正式训练 → 必要的放松**，逐个动作名称、组数、次数/时长、必要休息及训练频率。热身和放松的具体内容需按实际需求制定，不把示例动作当作所有人的默认处方。
+
 - 同一份计划的动作/组次/频率/排程具有一个当前有效权威副本，避免重复来源产生冲突。
 - **用户明确请求**的、范围清晰的修改可以直接提交，保留该请求的授权来源；范围不清或影响重大的修改需要先澄清。
 - **Agent 建议**仅创建 Proposal；接受时检查对应方案、用户身份、底版修订和决定状态，才允许提交。
