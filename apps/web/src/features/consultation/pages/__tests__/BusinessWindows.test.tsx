@@ -577,4 +577,22 @@ describe("body-first business windows", () => {
     renderPage("/consultation/conv-1?view=training");
     expect(await screen.findByTestId("training-window")).toBeInTheDocument();
   });
+
+  it("resolves legacy ?view= aliases to the same business object", async () => {
+    // `state` and `treatment` were the pre-window panel names; existing links
+    // must not silently fall back to the bare body stage.
+    renderPage("/consultation/conv-1?view=state");
+    expect(await screen.findByTestId("person-window")).toBeInTheDocument();
+    expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();
+  });
+
+  it("surfaces the Chat window when a question is asked from a canvas surface", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    // Ask from the region card: the canvas sets spatial context and must also
+    // open Chat, otherwise the question has nowhere to go.
+    await user.click(screen.getByRole("button", { name: "开始一次提问" }));
+    expect(await screen.findByTestId("assistant-chat-panel")).toBeVisible();
+    expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();
+  });
 });
