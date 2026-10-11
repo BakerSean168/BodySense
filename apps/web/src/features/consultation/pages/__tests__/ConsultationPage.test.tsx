@@ -24,12 +24,6 @@ vi.mock("../../components/AssistantChatPanel", () => ({
   ),
 }));
 
-vi.mock("../../components/DiagnosisPanel", () => ({
-  DiagnosisPanel: () => (
-    <div data-testid="diagnosis-panel">diagnosis-panel</div>
-  ),
-}));
-
 vi.mock("../../hooks/useConversationsQuery", () => ({
   useConversationsQuery: () => mockUseConversationsQuery(),
 }));
@@ -39,33 +33,9 @@ vi.mock("../../hooks/useConsultationThreadQuery", () => ({
     mockUseConsultationThreadQuery(conversationId),
 }));
 
-vi.mock("../../services/consultationService", () => ({
-  consultationApi: {
-    listDiagnosisHistory: vi.fn().mockResolvedValue({ analyses: [] }),
-    getInteractionMetrics: vi.fn().mockResolvedValue({
-      total: 0,
-      answered: 0,
-      expired: 0,
-      pending: 0,
-      answer_rate: 0,
-      expire_rate: 0,
-      avg_wait_seconds: 0,
-    }),
-  },
-}));
-
 vi.mock("@/features/workspace", () => ({
   useHealthWorkspaceQuery: () => mockUseHealthWorkspaceQuery(),
   workspaceKeys: { all: ["workspace"] },
-  BodyStateWorkbench: () => (
-    <div data-testid="body-state-workbench">body-state-workbench</div>
-  ),
-  TreatmentPanel: () => (
-    <div data-testid="treatment-panel">treatment-panel</div>
-  ),
-  OutcomeTrendsPanel: () => (
-    <div data-testid="outcome-trends-panel">outcomes</div>
-  ),
 }));
 
 function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
@@ -86,11 +56,8 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
   };
 }
 
-function makeThread(
-  overrides: Partial<ConsultationThread> = {},
-): ConsultationThread {
+function makeThread(overrides: Partial<ConsultationThread> = {}): ConsultationThread {
   const conversation = makeConversation(overrides.conversation);
-
   return {
     conversation,
     conversation_id: conversation.id,
@@ -110,13 +77,8 @@ function makeThread(
 
 function renderConsultationPage(path = "/consultation/conv-1") {
   const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
+    defaultOptions: { queries: { retry: false } },
   });
-
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
@@ -158,15 +120,15 @@ describe("ConsultationPage", () => {
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
     expect(screen.getByText("BodySense")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "我的身体" })).toBeInTheDocument();
-    expect(screen.getByLabelText("身体上下文助手")).not.toBeVisible();
-    expect(screen.getByTestId("chat-panel-skeleton")).toBeInTheDocument();
-    expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
+    // Body-first: a loading thread must not force a business window open.
+    expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();
     expect(
       screen.queryByText("正在建立 AI 问诊连接..."),
     ).not.toBeInTheDocument();
   });
 
-  it("shows a business skeleton only while the workspace read model is pending", async () => {
+  it("opens the deep-linked business window from ?view=", () => {
     mockUseConversationsQuery.mockReturnValue({
       data: [makeConversation()],
       isPending: false,
@@ -177,25 +139,33 @@ describe("ConsultationPage", () => {
       isFetching: false,
       isError: false,
     });
-    mockUseHealthWorkspaceQuery.mockReturnValue({
-      data: undefined,
-      isPending: true,
-      isFetching: true,
+
+    renderConsultationPage("/consultation/conv-1?view=diagnosis");
+
+    expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
+    expect(screen.getByTestId("diagnosis-window")).toBeInTheDocument();
+  });
+
+  it("ignores an unknown ?view= value and stays body-first", () => {
+    mockUseConversationsQuery.mockReturnValue({
+      data: [makeConversation()],
+      isPending: false,
+    });
+    mockUseConsultationThreadQuery.mockReturnValue({
+      data: makeThread(),
+      isPending: false,
+      isFetching: false,
       isError: false,
     });
 
-    renderConsultationPage("/consultation/conv-1?view=state");
+    renderConsultationPage("/consultation/conv-1?view=unknown-surface");
 
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "我的身体状态" })).toBeInTheDocument();
-    expect(screen.getByTestId("info-panel-skeleton")).toBeInTheDocument();
-    expect(screen.getByText("正在同步身体记录")).toBeInTheDocument();
-    expect(await screen.findByTestId("assistant-chat-panel")).toBeInTheDocument();
-    expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();
   });
 
-  it("keeps the previous thread mounted and shows panel overlays while switching conversations", async () => {
+  it("keeps the previous thread mounted while switching conversations", async () => {
     mockUseConversationsQuery.mockReturnValue({
       data: [
         makeConversation({ id: "conv-1", title: "旧会话" }),
@@ -215,13 +185,9 @@ describe("ConsultationPage", () => {
     renderConsultationPage("/consultation/conv-2");
 
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
-    expect(await screen.findByTestId("assistant-chat-panel")).toHaveTextContent(
-      "conv-1",
-    );
-    expect(screen.getByText("正在同步身体记录")).toBeInTheDocument();
-    expect(screen.getByText("身体信息正在更新")).toBeInTheDocument();
     expect(screen.queryByText("目标会话")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
+    // A route change alone must not force a business window open; the body stage
+    // stays in charge of which surface is shown.
+    expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
   });
 });
