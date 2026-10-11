@@ -48,6 +48,12 @@ export interface BodyCanvasWorkspaceProps {
   /** Deep link (?view=…) opens the matching business window once. */
   initialWindow?: BusinessWindowId | null;
   onWindowChange?: (window: BusinessWindowId | null) => void;
+  /**
+   * Requests a business window from outside the canvas (for example the anatomy
+   * overlay's "ask" action). The revision counter makes repeated requests for the
+   * same window observable without re-opening on unrelated re-renders.
+   */
+  windowRequest?: { window: BusinessWindowId; revision: number } | null;
   demonstrationRequest?: { motion: MotionId; revision: number } | null;
   loading?: boolean;
   error?: boolean;
@@ -201,6 +207,17 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     appliedInitialRef.current = initialWindow;
     openWindow(initialWindow);
   }, [initialWindow, openWindow]);
+
+  // An external request (e.g. asking a question from the anatomy overlay) must
+  // both open the target window and dismiss the modal that triggered it, so the
+  // user never ends up with a covered window behind a dialog.
+  const windowRequest = props.windowRequest ?? null;
+  const windowRequestRevision = windowRequest?.revision;
+  useEffect(() => {
+    if (!windowRequest) return;
+    setCanvasOverlay(null);
+    openWindow(windowRequest.window);
+  }, [windowRequest, windowRequestRevision, openWindow]);
 
   const select = useCallback((regions: BodyRegionId[], append = false) => {
     const next = selectionReducer(selection, { type: "select", regions, append });

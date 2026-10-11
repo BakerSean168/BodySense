@@ -44,6 +44,8 @@
   height: 100dvh;
   overflow: hidden;
   background: var(--bc-canvas);
+  /* Vertical space kept clear below a floating business window for the Dock. */
+  --bc-dock-clearance: 96px;
 }
 .bc-workspace button,
 .bc-inventory-dialog button {
@@ -1121,10 +1123,31 @@
 .bc-business-layer > * { pointer-events: auto; }
 .bc-business-window {
   position: absolute;
-  left: var(--bc-window-left, 430px);
+  /*
+   * Horizontal placement adapts to the real stage. The Penpot prototype froze
+   * x=430/440 so its own 878px Viewer had no clipping; production must instead
+   * keep the preferred offset while guaranteeing the window never runs off the
+   * stage or covers the Dock. clamp() falls back to the 12px minimum when the
+   * preferred offset plus the window width no longer fit.
+   */
+  left: clamp(
+    12px,
+    var(--bc-window-left, 430px),
+    calc(100% - var(--bc-window-width, 420px) - 12px)
+  );
   top: var(--bc-window-top, 18px);
   width: min(var(--bc-window-width, 420px), calc(100% - 24px));
-  height: min(var(--bc-window-height, 574px), calc(100% - 24px), var(--bc-window-max-height, 640px));
+  /*
+   * Height is bounded by the Penpot window size, the preferred maximum and the
+   * space the stage actually has. The reserved bottom band keeps the Dock and
+   * the minimized-window tray reachable on short stages, so a tall window can
+   * never cover the control the user needs to switch or close windows.
+   */
+  height: min(
+    var(--bc-window-height, 574px),
+    var(--bc-window-max-height, 640px),
+    calc(100% - var(--bc-window-top, 18px) - var(--bc-dock-clearance, 96px))
+  );
   display: flex;
   flex-direction: column;
   overflow: hidden;

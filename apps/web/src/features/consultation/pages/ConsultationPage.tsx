@@ -31,6 +31,7 @@ import {
   type BusinessWindowId,
 } from "@/features/body-canvas/model/businessWindows";
 import { useProfileStore } from "@/stores/profileStore";
+import { useAuthStore } from "@/stores/authStore";
 
 const loadAssistantChatPanel = () =>
   retryDynamicImport(() => import("../components/AssistantChatPanel")).then(
@@ -49,6 +50,12 @@ export function ConsultationPage() {
   const [chatSpatialContext, setChatSpatialContext] =
     useState<ConsultationSpatialContext | null>(null);
   const [composerFocusKey, setComposerFocusKey] = useState(0);
+  // Asking a question from any canvas surface must surface the Chat window; the
+  // revision counter keeps repeat requests observable.
+  const [windowRequest, setWindowRequest] = useState<{
+    window: BusinessWindowId;
+    revision: number;
+  } | null>(null);
 
   // Chat is a persistent contextual surface even though V3 is body-first.
   // Discover its lazy chunk early so opening the assistant does not wait on the
@@ -110,7 +117,10 @@ export function ConsultationPage() {
     (context: ConsultationSpatialContext) => {
       setChatSpatialContext(context);
       setComposerFocusKey((key) => key + 1);
-      // The canvas opens the Chat window itself, so no preference write is needed.
+      setWindowRequest((current) => ({
+        window: "chat",
+        revision: (current?.revision ?? 0) + 1,
+      }));
     },
     [],
   );
@@ -196,14 +206,16 @@ export function ConsultationPage() {
   const demonstrationRequest: { motion: MotionId; revision: number } | null = null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profile = useProfileStore((state) => state.profile);
-  // The compact identity popover reads the same authoritative profile store.
+  const accountName = useAuthStore((state) => state.user?.email ?? "");
+  // The identity header shows the real account name so it is never a fabricated
+  // label; missing values stay blank rather than being invented.
   const personIdentity = useMemo(
     () => ({
-      nickname: profile?.user_id ? "我的档案" : "",
+      nickname: accountName,
       birth_date: profile?.birth_date,
       gender: profile?.gender,
     }),
-    [profile?.birth_date, profile?.gender, profile?.user_id],
+    [accountName, profile?.birth_date, profile?.gender],
   );
   const handleWindowChange = useCallback(
     (window: BusinessWindowId | null) => {
@@ -355,6 +367,7 @@ export function ConsultationPage() {
         identity={personIdentity}
         initialWindow={initialWindow}
         onWindowChange={handleWindowChange}
+        windowRequest={windowRequest}
         demonstrationRequest={demonstrationRequest}
         loading={workspaceQuery.isFetching || isThreadSwitching}
         error={workspaceUnavailable || hasThreadSwitchError}
