@@ -1,119 +1,38 @@
-# BodySense Product Design Program
+# BodySense · 产品设计
 
-> Status: Active design authority
-> Updated: 2026-10-06
-> Decision: [ADR 0019](../adr/0019-adopt-product-semantic-first-design-workflow.md)
+产品交互由业务领域语义和可编辑 Penpot 设计共同约束。界面必须让用户容易理解**现在身体怎样、当前综合判断是什么、正在执行哪个训练计划，以及如何通过 Agent 继续操作**。
 
-BodySense uses a **product-semantic-first** design workflow. UI is not allowed to define the product by accident. Business truth and user-facing semantics are fixed first; visual exploration is then performed in Penpot against those constraints.
+## 产品语义
 
-## 1. Authority ladder
+- [产品需求](../product/requirements.md)
+- [领域契约](../product/domain.md)
+- [Agent 交互](../product/agent-workflows.md)
+- [UI 交互规格](../product/interface.md)
+- [验收矩阵](../product/acceptance.md)
+- [视觉 Foundations](./foundations.md)
 
-When sources disagree, use this order:
+## 设计文件
 
-1. **Business domain authority**
-   - [ADR 0004](../adr/0004-adopt-longitudinal-body-state-model.md)
-   - [Longitudinal BodyState Domain Model](../architecture/longitudinal-body-state-domain.md)
-2. **Product design semantics**
-   - [Product Definition](./product-definition.md)
-   - [Product UX Semantics](./product-ux-semantics.md)
-3. **Design foundations**
-   - [Design Foundations](./foundations.md)
-4. **Penpot design artifacts**
-   - Product Definition / Foundations pages
-   - Design System
-   - Exploration
-   - approved product candidate
-5. **Implementation**
-   - React code, CSS/Tailwind tokens, component APIs and route composition
+Penpot：**BodySense · Product Design**
 
-Code is evidence of the current product, not authority for future product semantics.
+文件 ID：24d9d841-759d-81bc-8008-b6423250c2b8
 
-## 2. Design workflow
+| Page | 用途 |
+| --- | --- |
+| Foundations | 字体、色彩、尺寸、响应式、交互规则 |
+| Components | 可复用按钮、窗体、状态、工具、人体控件 |
+| Product | 桌面和移动端人体场景、业务窗口及交互状态 |
 
-```text
-Business truth
-    ↓
-Product Definition
-    ↓
-User mental model + product vocabulary
-    ↓
-User jobs + capability map
-    ↓
-Information architecture + task flows
-    ↓
-Design Foundations
-    ↓
-Components / patterns
-    ↓
-Current UI capture and legacy evidence
-    ↓
-Penpot Exploration
-    ↓
-Candidate product direction
-    ↓
-Responsive + state + interaction validation
-    ↓
-Human visual / interaction sign-off
-    ↓
-Approved design baseline
-    ↓
-React implementation
-    ↓
-Browser visual QA against approved design
-```
+[桌面 Viewer](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) ·
+[移动 Viewer](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=0)
 
-This is the same reusable pattern established during the DigitalBiome redesign, adapted for Penpot and for BodySense's richer longitudinal health domain.
+## 交互约束
 
-## 3. AI design handoff
-
-After Product Definition, UX Semantics and Foundations are established, AI exploration must use the constrained [AI Product Design Brief](./ai-product-design-brief.md). The brief permits spatial/visual experimentation while freezing product authority and epistemic/safety invariants.
-
-## 4. Gate model
-
-### G0 — Domain is coherent
-
-BodyState, Concern, Fact, Observation, Hypothesis, Evidence, Safety, Diagnosis, Treatment and Outcome semantics are stable enough to design against.
-
-### G1 — Product semantics are coherent
-
-The user mental model, jobs, vocabulary, product boundaries and authority rules are explicit. Internal service/module names must not leak into the IA by default.
-
-### G2 — Foundations are coherent
-
-Color roles, typography roles, spacing, radius, surfaces, epistemic status, safety status, responsive modes, motion and accessibility rules are documented independently of individual screens.
-
-### G3 — Product exploration is coherent
-
-A candidate must prove core jobs with realistic content and states. It must not merely restyle the current React shell.
-
-### G4 — Responsive and state coverage is coherent
-
-Desktop, narrow desktop and mobile preserve the same mental model. Empty, loading, error, insufficient-information, safety, correction/change and review states are represented.
-
-### G5 — Human design sign-off
-
-The user explicitly accepts the visual and interaction direction. Machine checks or model screenshot review do not satisfy this gate.
-
-### G6 — Implementation parity
-
-Implementation is reviewed against the approved Penpot baseline, not against memory or screenshots from an earlier implementation.
-
-## 5. Existing evidence and its role
-
-BodySense already has substantial design work. It is retained rather than discarded:
-
-- **Current UI** — evidence of the current implementation.
-- **Prototype V1** — validated prior interaction/state coverage.
-- **Exploration V2b/V2c** — task, responsive and technical evidence.
-- **V2c technical freeze candidate** — machine-verifiable interaction/responsive baseline, not a final visual freeze.
-- **Prototype V2d** — current visual/product-shell exploration, including the Adaptive Body Canvas hypothesis.
-
-The important change is governance: these artifacts now have explicit upstream Product Definition and Foundations.
-
-## 6. Penpot structure
-
-See [Penpot Design Program](./penpot-program.md) for exact page ownership and lifecycle rules.
-
-## 7. Implementation rule
-
-Do not resume a broad React visual rewrite while the current V2d direction is not human-approved. Small correctness fixes may continue, but a design migration must begin from an immutable approved Penpot candidate.
+1. 3D 人体 Canvas 持续作为底层桌面；业务窗口位于其上，可以打开、拖动、收起和恢复。
+2. Chat 负责表达、追问、诊断请求及训练变更授权，不预设常驻固定侧栏。
+3. Person 使用当前原型的 Profile / Records / Equipment / Media / Reports / Habits 分类；真实数据替换演示内容。
+4. Diagnosis 以单一当前综合结果展示可独立展开的病情；TrainingPlan 显示目标计划当前有效内容。
+5. 关键澄清和 Agent 建议通过交互工具处理；所有接受、拒绝、取消、错误都有清晰反馈。
+6. 部位选择或参考动画只是交互上下文，不自动变为健康事实。
+7. 桌面、窄屏与移动端保持相同业务语义；确保可访问性、操作焦点、状态恢复及安全提示。
+8. 对照实际 Penpot 组件和流程验证 UI，不仅依赖静态截图。

@@ -44,12 +44,14 @@ Repository documentation owns product semantics and invariants.
 
 The primary product-design documents are:
 
-- `docs/design/product-definition.md`;
-- `docs/design/product-ux-semantics.md`;
-- `docs/design/foundations.md`;
-- `docs/design/penpot-program.md`.
+- `docs/product/requirements.md`;
+- `docs/product/domain.md`;
+- `docs/product/agent-workflows.md`;
+- `docs/product/interface.md`;
+- `docs/design/README.md`;
+- `docs/design/foundations.md`.
 
-They remain downstream of ADR 0004 and the Longitudinal BodyState Domain Model.
+Product meaning and business invariants are defined in the product documents; Penpot owns visual interaction design and code owns implementation state.
 
 ### Visual/interaction authority
 

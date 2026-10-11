@@ -1,16 +1,14 @@
-# Historical Health Journey Workflow Redirect
+# BodySense · 用户健康交互路径
 
-> **Historical / superseded.** The linear Journey state machine was removed. See [Current Longitudinal System](./current-longitudinal-system.md).
+用户可直接从问知识、描述身体变化、查看当前状态、请求综合诊断或执行训练开始，无必须完成的全局线性向导。
 
+- 清晰的本人身体陈述 → 自动保存 BodyState。
+- 有关键歧义 → Agent 发起针对性澄清。
+- 用户明确请求正式分析 → 更新唯一综合 Diagnosis 的相应病情条目。
+- 用户要求修改计划 → 更新对应 TrainingPlan。
+- Agent 发现计划风险 → 提议调整，用户决定是否应用。
+- 训练反馈与身体变化 → 进入 BodyState 及后续分析上下文。
 
-> Status: Superseded on 2026-08-15  
-> Superseded by: [Longitudinal Health Loop](./longitudinal-health-loop.md)  
-> Domain source: [Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)
+每一步均可能单独结束或在另一日继续；安全规则始终优先于普通训练执行。
 
-The previous linear `profile -> consultation -> diagnosis -> plan -> training -> completed` journey model no longer represents the target BodySense business model.
-
-The historical v1 document is preserved at:
-
-- [`docs/plan/archive/health-journey-workflow-v1.md`](../plan/archive/health-journey-workflow-v1.md)
-
-Do not use this file as the active architecture source.
+详细路径见 [业务事件流](./longitudinal-health-loop.md) 与 [Agent 工作流](../product/agent-workflows.md)。

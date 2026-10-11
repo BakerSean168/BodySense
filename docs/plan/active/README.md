@@ -13,7 +13,7 @@ Current active plans keep their own product/operations acceptance owners:
 - [`2026-08-27-vanatome-3d-body-explorer.md`](./2026-08-27-vanatome-3d-body-explorer.md) — IMPLEMENTED / staging validated / final anatomy-boundary visual audit pending.
 - [`2026-08-27-static-asset-cdn.md`](./2026-08-27-static-asset-cdn.md) — STAGING + CLOUDFLARE EDGE COMPLETE / production release validation pending.
 - [`2026-08-27-observability-foundation.md`](./2026-08-27-observability-foundation.md) — ACTIVE; converge application/browser diagnostics on structured privacy-bounded logging and an OpenTelemetry-compatible observability path.
-- [`2026-08-26-workbench-ui-v2.md`](./2026-08-26-workbench-ui-v2.md) — ACTIVE / visual acceptance; single continuous Chat + Workbench shell, graphite visual system, progressive-disclosure content cleanup, and visual-density refinement.
+- [BodySense product specification](../../product/README.md) — the current business requirements, Agent interactions, UI behavior and acceptance criteria for product implementation.
 - [`data-durability-backup-2026-08-25.md`](./data-durability-backup-2026-08-25.md) — ACTIVE / PARKED BY OWNER; real off-host PostgreSQL backup + restore drill and durable private user-upload object storage. Repository implementations are preserved, but cloud provisioning/cutover is intentionally postponed.
 
 The broad post-`v0.5.2` production security/runtime/Knowledge closeout has been archived after the 2026-08-25 owner-approved scope split:
