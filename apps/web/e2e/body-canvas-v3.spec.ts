@@ -136,7 +136,8 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await trainingWindow.getByRole("button", { name: "关闭训练计划" }).click();
   await expect(trainingWindow).toBeHidden();
 
-  // Equipment lives in the Person window; the empty state offers one clear CTA.
+  // Equipment lives in the Person window; the empty state offers one clear CTA
+  // that opens a real persisting form.
   await page.locator(".bc-dock").getByRole("button", { name: "个人档案", exact: true }).click();
   const personWindow = page.locator('.bc-business-window[data-window="person"]');
   await expect(personWindow).toBeVisible();
@@ -144,11 +145,15 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(
     personWindow.getByText("添加个人器材，帮助 AI 更好规划训练项目"),
   ).toBeVisible();
-  await expect(
-    personWindow.getByRole("button", { name: /添加个人器材/ }),
-  ).toBeVisible();
   // No fixed slot ceiling is shown anywhere.
   await expect(personWindow.getByText(/\/\s*12/)).toBeHidden();
+
+  await personWindow.getByRole("button", { name: /添加个人器材/ }).click();
+  await personWindow.getByLabel("设备名称").fill("弹力带");
+  await personWindow.getByLabel("规格或备注").fill("中等阻力");
+  await personWindow.getByRole("button", { name: "添加设备" }).click();
+  await expect(personWindow.getByText("弹力带", { exact: true })).toBeVisible();
+  await expect(personWindow.getByText("当前可用")).toBeVisible();
 
   const equipmentStateResponse = await request.get(
     `${apiBase}/api/v1/body-state`,
@@ -180,9 +185,10 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
+  // The persistent body stage survives the window close above; motion mode is
+  // still active from the earlier demonstration steps.
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  // The body stage and its selection survive the window close above.
-  await expect(page.getByRole("heading", { name: "我的身体" })).toBeVisible();
+  await expect(page.getByText("MOTION STUDIO")).toBeVisible();
   await page
     .getByRole("toolbar", { name: "身体画布工具" })
     .getByRole("button", { name: "按名称选择区域" })

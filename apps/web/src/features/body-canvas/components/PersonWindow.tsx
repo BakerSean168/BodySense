@@ -21,6 +21,7 @@ import {
   formatOcrStatus,
   getProfileCategoryMeta,
   PROFILE_CATEGORIES,
+  AVAILABLE_EQUIPMENT_KIND,
   selectAvailableEquipment,
   selectUploadsByCategory,
   type ProfileCategoryId,
@@ -230,6 +231,12 @@ function EmptyState({
   );
 }
 
+/**
+ * Equipment is a real, user-owned inventory stored as confirmed BodyState facts
+ * of kind `equipment.available`. The category has no fixed slot ceiling: cards
+ * grow with the data (4 columns desktop / 2 columns mobile). The list never
+ * asserts that an item is suitable for the user's current condition.
+ */
 function EquipmentCategory({
   bodyState,
   canEdit,
@@ -237,7 +244,7 @@ function EquipmentCategory({
 }: {
   bodyState: BodyStateProjection | null;
   canEdit: boolean;
-  /** Opens the inline equipment form; there is no separate selector route yet. */
+  /** Opens the inline add form; there is no separate selector route yet. */
   onAddEquipment?: () => void;
 }) {
   const equipment = selectAvailableEquipment(bodyState);
@@ -245,6 +252,8 @@ function EquipmentCategory({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
 
   const remove = async (fact: BodyStateFact) => {
     if (!bodyState || !canEdit || command.isPending) return;
@@ -266,6 +275,100 @@ function EquipmentCategory({
       setBusyId(null);
     }
   };
+
+  const add = async () => {
+    const trimmed = name.trim();
+    if (!bodyState || !canEdit || !trimmed || command.isPending) return;
+    setError(null);
+    if (
+      equipment.some(
+        (fact) => fact.value.trim().toLocaleLowerCase() === trimmed.toLocaleLowerCase(),
+      )
+    ) {
+      setError("这件器材已经在当前清单中。");
+      return;
+    }
+    try {
+      await command.mutateAsync({
+        type: "addFact",
+        expectedRevision: bodyState.current_revision,
+        fact: {
+          concern_key: "resources:equipment",
+          kind: AVAILABLE_EQUIPMENT_KIND,
+          value: trimmed,
+          details: { notes: notes.trim(), source: "user_inventory" },
+          origin: "user_reported",
+          // The user is stating their own inventory, so it is durable evidence
+          // immediately rather than a pending candidate.
+          review_state: "confirmed",
+          lifecycle_state: "active",
+          trend: "unknown",
+          observed_at: new Date().toISOString(),
+        },
+      });
+      setName("");
+      setNotes("");
+      setAdding(false);
+    } catch (cause) {
+      setError(errorMessage(cause, "器材没有保存，请重试。"));
+    }
+  };
+
+  const addForm = (
+    <form
+      className="bc-equipment-form bc-person-equipment-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void add();
+      }}
+    >
+      <label>
+        设备名称
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={80}
+          placeholder="例如：弹力带"
+          disabled={!canEdit || command.isPending}
+          autoFocus
+        />
+      </label>
+      <label>
+        规格或备注<span className="bc-optional">可选</span>
+        <input
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          maxLength={240}
+          placeholder="阻力、重量或使用限制"
+          disabled={!canEdit || command.isPending}
+        />
+      </label>
+      <button
+        type="submit"
+        className="bc-button bc-primary"
+        disabled={!canEdit || command.isPending || !name.trim()}
+      >
+        {command.isPending ? (
+          <LoaderCircle size={17} className="animate-spin" />
+        ) : (
+          <Plus size={17} />
+        )}
+        添加设备
+      </button>
+      <button
+        type="button"
+        className="bc-button"
+        disabled={command.isPending}
+        onClick={() => {
+          setAdding(false);
+          setName("");
+          setNotes("");
+        }}
+      >
+        取消
+      </button>
+    </form>
+  );
 
   if (equipment.length === 0 && !adding) {
     return (
@@ -291,68 +394,41 @@ function EquipmentCategory({
 
   return (
     <div className="bc-person-category">
-      <p className="bc-person-count">已确认 {equipment.length} 件器材</p>
       {equipment.length === 0 ? null : (
-      <ul className="bc-person-equipment">
-        {equipment.map((fact) => (
-          <li key={fact.id}>
-            <span className="bc-person-equipment-symbol" aria-hidden="true">
-              <Backpack size={20} />
-            </span>
-            <strong>{fact.value}</strong>
-            {typeof fact.details?.notes === "string" && fact.details.notes ? (
-              <p>{fact.details.notes}</p>
-            ) : null}
-            <span className="bc-status">
-              <Check size={13} />
-              当前可用
-            </span>
-            <button
-              type="button"
-              className="bc-text-button"
-              disabled={!canEdit || command.isPending || busyId === fact.id}
-              onClick={() => void remove(fact)}
-            >
-              {busyId === fact.id ? (
-                <LoaderCircle size={14} className="animate-spin" />
-              ) : null}
-              暂不可用
-            </button>
-          </li>
-        ))}
-      </ul>
+        <>
+          <p className="bc-person-count">已确认 {equipment.length} 件器材</p>
+          <ul className="bc-person-equipment">
+            {equipment.map((fact) => (
+              <li key={fact.id}>
+                <span className="bc-person-equipment-symbol" aria-hidden="true">
+                  <Backpack size={20} />
+                </span>
+                <strong>{fact.value}</strong>
+                {typeof fact.details?.notes === "string" && fact.details.notes ? (
+                  <p>{fact.details.notes}</p>
+                ) : null}
+                <span className="bc-status">
+                  <Check size={13} />
+                  当前可用
+                </span>
+                <button
+                  type="button"
+                  className="bc-text-button"
+                  disabled={!canEdit || command.isPending || busyId === fact.id}
+                  onClick={() => void remove(fact)}
+                >
+                  {busyId === fact.id ? (
+                    <LoaderCircle size={14} className="animate-spin" />
+                  ) : null}
+                  暂不可用
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {adding ? (
-        <form
-          className="bc-person-equipment-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setAdding(false);
-          }}
-        >
-          <label>
-            器材名称
-            <input
-              name="equipmentName"
-              maxLength={80}
-              placeholder="例如：弹力带"
-              disabled={!canEdit || command.isPending}
-              autoFocus
-            />
-          </label>
-          <p className="bc-person-hint">
-            器材清单会随数量自然变化，不设固定槽位；它不会自动改变已接受的训练计划。
-          </p>
-          <div className="bc-person-equipment-actions">
-            <button
-              type="submit"
-              className="bc-button"
-              disabled={command.isPending}
-            >
-              取消
-            </button>
-          </div>
-        </form>
+        addForm
       ) : (
         <button
           type="button"

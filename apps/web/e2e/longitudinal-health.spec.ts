@@ -68,7 +68,9 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await expect(page).toHaveURL(/view=chat/);
   await page.reload();
   await expect(page).toHaveURL(/view=chat/);
-  await expect(page.getByRole("dialog", { name: "对话" })).toBeVisible();
+  await expect(
+    page.locator('.bc-business-window[data-window="chat"]'),
+  ).toBeVisible();
   await page
     .locator('.bc-business-window[data-window="chat"]')
     .getByRole("button", { name: "关闭对话" })
