@@ -6,7 +6,6 @@ import {
   Images,
   LoaderCircle,
   Plus,
-  Sparkles,
 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type {
@@ -14,6 +13,8 @@ import type {
   BodyStateProjection,
 } from "@/features/consultation/types/consultation";
 import { useBodyStateCommand } from "@/features/workspace/hooks/useBodyStateCommand";
+import { BodyStateWorkbench } from "@/features/workspace/components/BodyStateWorkbench";
+import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { errorMessage } from "@/lib/api-client";
 import {
   formatFileSize,
@@ -21,7 +22,6 @@ import {
   getProfileCategoryMeta,
   PROFILE_CATEGORIES,
   selectAvailableEquipment,
-  selectProfileRecords,
   selectUploadsByCategory,
   type ProfileCategoryId,
   type ProfileUploadLike,
@@ -61,14 +61,17 @@ export interface PersonWindowProps {
   /** Popover state is owned by the header that renders the identity trigger. */
   identityInfoOpen: boolean;
   onIdentityInfoOpenChange: (open: boolean) => void;
+  /**
+   * Records is the authoritative body-state surface, so the window embeds the
+   * existing workbench instead of reimplementing record management. Selecting a
+   * region only produces context; it never asserts that a problem exists.
+   */
+  selectedRegionId?: BodyRegionId | null;
+  onSelectRegion?: (regionId: BodyRegionId | null) => void;
+  onAskRegion?: (regionId: BodyRegionId) => void;
 }
 
-/**
- * The avatar + nickname trigger rendered into the shared window header. It is
- * exported separately because the host owns the header chrome (title/Close) so
- * the window cannot end up with two Close buttons or a repeated title.
- */
-export /** Avatar glyph is derived from the nickname only; never invented. */
+/** Avatar glyph is derived from the nickname only; never invented. */
 function identityInitial(nickname: string): string {
   const trimmed = nickname.trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : "·";
@@ -180,6 +183,18 @@ function CompactIdentityPopover({
     </div>
   );
 }
+
+/** Stable empty snapshot so the workbench can render its own empty state. */
+const EMPTY_BODY_STATE: BodyStateProjection = {
+  current_revision: 0,
+  safety_state: {},
+  facts: [],
+  observations: [],
+  pending_facts: [],
+  pending_observations: [],
+  hypotheses: [],
+  recent_revisions: [],
+};
 
 function EmptyState({
   icon,
@@ -413,49 +428,6 @@ function HabitsCategory({ habits }: { habits: PersonHabitRow[] }) {
   );
 }
 
-function RecordsCategory({ bodyState }: { bodyState: BodyStateProjection | null }) {
-  const records = selectProfileRecords(bodyState);
-  if (records.length === 0) {
-    return (
-      <EmptyState
-        icon={<Sparkles size={30} />}
-        message="还没有身体记录。继续对话后，确认过的信息会出现在这里。"
-      />
-    );
-  }
-  /** Records group by their concern key; the key is data, not a second title. */
-  const groups = new Map<string, BodyStateFact[]>();
-  for (const record of records) {
-    const key = record.concern_key || "general";
-    groups.set(key, [...(groups.get(key) ?? []), record]);
-  }
-  return (
-    <div className="bc-person-category">
-      <p className="bc-person-count">当前 {records.length} 条身体记录</p>
-      {[...groups.entries()].map(([key, items]) => (
-        <section key={key} className="bc-person-record-group">
-          {groups.size > 1 ? (
-            <h3 className="bc-person-group-title">{key === "general" ? "综合" : key}</h3>
-          ) : null}
-          <ul>
-            {items.map((record) => (
-              <li key={record.id}>
-                <strong>{record.value}</strong>
-                <span>
-                  {record.review_state === "confirmed" ? "已确认" : "待核实"}
-                  {record.observed_at
-                    ? ` · ${new Date(record.observed_at).toLocaleDateString("zh-CN")}`
-                    : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
-}
-
 export function PersonWindow({
   identity,
   bodyState,
@@ -463,6 +435,9 @@ export function PersonWindow({
   onEditProfile,
   identityInfoOpen: infoOpen,
   onIdentityInfoOpenChange,
+  onSelectRegion,
+  selectedRegionId,
+  onAskRegion,
 }: PersonWindowProps) {
   const mobile = useMediaQuery("(max-width: 760px)");
   const [category, setCategory] = useState<ProfileCategoryId>("records");
@@ -523,7 +498,13 @@ export function PersonWindow({
             正在读取档案
           </p>
         ) : category === "records" ? (
-          <RecordsCategory bodyState={bodyState} />
+          <BodyStateWorkbench
+            hideHeading
+            snapshot={{ ...(bodyState ?? EMPTY_BODY_STATE), hypotheses: bodyState?.hypotheses ?? [] }}
+            selectedRegionId={selectedRegionId ?? null}
+            onSelectRegion={onSelectRegion ?? (() => undefined)}
+            onAskRegion={onAskRegion}
+          />
         ) : category === "equipment" ? (
           <EquipmentCategory
             bodyState={bodyState}

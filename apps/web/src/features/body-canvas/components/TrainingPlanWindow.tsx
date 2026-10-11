@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -30,6 +30,11 @@ import {
 
 export interface TrainingPlanWindowProps {
   projected: ProjectedTrainingPlans;
+  /**
+   * Pending plan-change proposals with their accept/reject authorization. The
+   * window never mutates plan content itself.
+   */
+  proposals?: ReactNode;
   onSelectPlan: (planId: string) => void;
   loading?: boolean;
   error?: string | null;
@@ -140,6 +145,7 @@ function PlanPicker({
 
 export function TrainingPlanWindow({
   projected,
+  proposals,
   onSelectPlan,
   loading = false,
   error = null,
@@ -235,6 +241,7 @@ export function TrainingPlanWindow({
                 阶段按已接受动作的类型归类；后端暂未提供逐计划的热身/放松分段。
               </p>
             ) : null}
+            {proposals}
           </>
         ) : null}
       </div>
