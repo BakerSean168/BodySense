@@ -15,7 +15,12 @@
  * 4. `active` is the most recently opened/restored/focused window.
  */
 
-export type BusinessWindowId = "chat" | "person" | "diagnosis" | "training";
+export type BusinessWindowId =
+  | "chat"
+  | "person"
+  | "diagnosis"
+  | "training"
+  | "trainer";
 
 export interface BusinessWindowMeta {
   id: BusinessWindowId;
@@ -58,6 +63,13 @@ export const BUSINESS_WINDOWS: readonly BusinessWindowMeta[] = [
     dockLabel: "训练",
     key: "P",
   },
+  {
+    id: "trainer",
+    title: "训练执行",
+    description: "执行当前计划、记录完成情况与身体变化。",
+    dockLabel: "执行",
+    key: "T",
+  },
 ] as const;
 
 export const BUSINESS_WINDOW_IDS: readonly BusinessWindowId[] =
@@ -67,8 +79,8 @@ export function getBusinessWindowMeta(id: BusinessWindowId): BusinessWindowMeta 
   return BUSINESS_WINDOWS.find((window) => window.id === id) ?? BUSINESS_WINDOWS[0];
 }
 
-export function isBusinessWindowId(value: string): value is BusinessWindowId {
-  return (BUSINESS_WINDOW_IDS as readonly string[]).includes(value);
+export function isBusinessWindowId(value: string | null | undefined): value is BusinessWindowId {
+  return typeof value === "string" && (BUSINESS_WINDOW_IDS as readonly string[]).includes(value);
 }
 
 /**
@@ -242,6 +254,11 @@ export const BUSINESS_WINDOW_LAYOUT: Record<BusinessWindowId, BusinessWindowLayo
     desktop: { width: 420, height: 615 },
     mobile: { width: 390, height: 650 },
     maxHeight: 640,
+  },
+  trainer: {
+    desktop: { width: 460, height: 620 },
+    mobile: { width: 390, height: 650 },
+    maxHeight: 660,
   },
 };
 

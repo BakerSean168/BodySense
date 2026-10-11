@@ -39,7 +39,7 @@ import type {
  *   `stageStructureUnavailable` marks the gap for the UI.
  */
 
-export type TrainingStagePhase = "mobility" | "main" | "self_check";
+export type TrainingStagePhase = "warmup" | "main" | "self_check";
 
 export interface TrainingStageMeta {
   phase: TrainingStagePhase;
@@ -47,18 +47,19 @@ export interface TrainingStageMeta {
 }
 
 /**
- * Ordered presentation of the real intervention kinds. This is intentionally
- * NOT a warm-up/main/cool-down prescription: mobility work is not automatically
- * a warm-up and the backend never states that it is.
+ * Stage labels follow the design's 热身 / 正式训练 / 放松 ordering, but each
+ * stage is populated from a real accepted intervention kind. The backend has no
+ * warm-up/cool-down phase field, so `stageStructureUnavailable` marks that the
+ * grouping is derived from intervention kind rather than authored as a phase.
  */
 export const TRAINING_STAGES: readonly TrainingStageMeta[] = [
-  { phase: "mobility", label: "活动度与放松练习" },
-  { phase: "main", label: "训练动作" },
+  { phase: "warmup", label: "热身与活动度" },
+  { phase: "main", label: "正式训练" },
   { phase: "self_check", label: "自测与观察" },
 ] as const;
 
 const KIND_TO_STAGE: Record<string, TrainingStagePhase> = {
-  mobility: "mobility",
+  mobility: "warmup",
   exercise: "main",
   self_test: "self_check",
 };
@@ -98,7 +99,11 @@ export interface TrainingPlanView {
   durationWeeks: number | null;
   frequency: string | null;
   stages: TrainingStage[];
-  /** No server-provided stage structure; stages reflect intervention kinds. */
+  /**
+   * True when the backend supplied no phase structure and stages were grouped by
+   * intervention kind. The window states this instead of implying the backend
+   * prescribed a warm-up/cool-down split.
+   */
   stageStructureUnavailable: boolean;
   isAccepted: boolean;
   exerciseCount: number;
@@ -312,7 +317,7 @@ export function projectTrainingPlans(
         stages.length > 0
           ? stages
           : exercises.length > 0
-            ? [{ phase: "main", label: "训练动作", exercises }]
+            ? [{ phase: "main" as const, label: "正式训练", exercises }]
             : [],
       // The public contract has no phase field, so kind-based grouping is a
       // deliberate, visible compromise rather than a fabricated prescription.

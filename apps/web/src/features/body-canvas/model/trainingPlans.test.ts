@@ -142,7 +142,7 @@ describe("training plan projection uses real plan identity", () => {
     const result = projectTrainingPlans(workspace, plans, null)!;
     const selected = result.selected!;
     expect(selected.stages.map((stage) => stage.phase)).toEqual([
-      "mobility",
+      "warmup",
       "main",
       "self_check",
     ]);
