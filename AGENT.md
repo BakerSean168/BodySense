@@ -6,7 +6,7 @@
 
 1. 当前代码、配置和测试
 2. 根配置与项目配置：`pnpm-workspace.yaml`、`package.json`、`tsconfig.json`、`go.mod`、`pyproject.toml`
-3. `docs/` 下的正式文档（PRD、技术方案、原型）
+3. `docs/product/` 的正式产品规格与 `docs/architecture/` 的技术架构
 4. 历史说明、背景材料和归档计划
 
 文档与代码冲突时，以当前代码、配置和测试为准，然后回收或修正文档。
@@ -116,10 +116,10 @@ tests/
 
 ```
 docs/
-  PRD-体态健康AI助手.md
-  technical-approach.md
-  ai-development-workflow.md
-  prototype.jsx
+  product/             ← 当前产品业务规格（需求、领域、Agent、UI、验收）
+  design/              ← 当前设计体系及 Penpot 交互约束
+  architecture/        ← 技术与运行架构
+  adr/                 ← 架构决策记录
   plan/
     active/            ← 进行中的 task spec
     archive/           ← 完成的 plan 归档

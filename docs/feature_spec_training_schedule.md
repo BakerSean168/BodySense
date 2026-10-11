@@ -1,187 +1,30 @@
-# Feature Spec: Training Execution and Outcome Feedback
+# BodySense · 训练计划、执行与反馈
 
-> Status: Current implemented feature contract
-> Updated: 2026-09-01
-> Historical schedule/adaptation design: [`docs/plan/archive/architecture-snapshots/2026-09-01/feature_spec_training_schedule.md`](./plan/archive/architecture-snapshots/2026-09-01/feature_spec_training_schedule.md)
-> Domain anchor: [Longitudinal Health Loop](./architecture/longitudinal-health-loop.md)
+训练计划是用户管理运动与改善目标的独立业务对象。详细领域契约见 [TrainingPlan](./product/domain.md)，Agent 权限见 [Agent 工作流](./product/agent-workflows.md)。
 
-## 1. Product role
+## 1. 多计划
 
-Training is the execution projection of an **accepted TreatmentRevision**. It is not an independent AI-owned plan authority.
+- 用户可以同时拥有多份训练计划，每份具有独立 planId、目标、动作、组次、频率和当前有效内容。
+- 计划包含自己的执行状态、训练日志、相关身体问题和内部修订；某份计划更改不影响其他计划。
+- 计划接受或创建后成为可执行的当前内容；提案不替代当前有效计划。
 
-```text
-DiagnosisAnalysis
-  -> Treatment proposal/revision
-  -> user/domain acceptance
-  -> TrainingPlan execution projection
-  -> daily TrainingLog / check-in / feedback
-  -> Outcome
-  -> Treatment review/reassessment
-  -> optional new TreatmentRevision
-```
+## 2. 创建与修改
 
-The accepted Treatment revision remains the source of truth for what has been authorized. `training_plans` and `training_logs` exist to make that accepted plan executable and observable.
+用户明确请求创建或修改某项计划时，Agent 明确计划身份与修改范围，检查当前安全条件后提交相应内容。清晰的修改请求不要求重复进行形式化批准。
 
-## 2. Activation boundary
+Agent 发现身体变化可能影响训练时，执行只读影响检查，展示受影响计划、理由和拟修改内容；用户明确接受后才修改。未接受、拒绝、取消或超时均不改变训练内容。
 
-A TrainingPlan is created only from an accepted Treatment revision.
+安全规则可以中止不适当的执行，不得暗中修改动作、组次、强度或排程。
 
-```text
-Accept TreatmentRevision
-  + EnsurePlanForTreatment
-  -> one database transaction
-```
+## 3. 训练执行
 
-If creation of the execution projection fails, acceptance and plan creation roll back together. Repeating the operation is idempotent by `treatment_revision_id`.
+- 打开指定计划的 Trainer，显示当前动作、组次、计时、完成/跳过与恢复状态。
+- 训练记录按计划、日期和动作定位，反映真实完成情况，不根据点击展示推断完成。
+- 用户主动报告训练后的不适或改善时，按 BodyState 的时间、来源和主体规则保存。
+- 时间上先训练后症状变化只说明相关性，不自动证明因果。
 
-An older active TrainingPlan is superseded when a newly accepted revision becomes the current executable plan.
+## 4. 反馈与分析
 
-## 3. Current plan model
+训练日志可成为 Diagnosis 分析的证据输入，也可触发计划影响提醒，但不自动产生新的正式 Diagnosis 或训练计划内容修订。
 
-`TrainingPlan` contains:
-
-```text
-id
-user_id
-consultation_id?
-treatment_id?
-treatment_revision_id?
-status
-goal
-duration_weeks
-current_week
-phases
-created_at
-```
-
-The current projection builds its exercise list from accepted Treatment interventions whose kinds are executable (`exercise`, `mobility`, `self_test`).
-
-The current feature does **not** implement a user-level `schedule_mode` switch. Historical `fixed_calendar` / `auto_shift` Profile settings were removed from the stable Profile contract and must not be treated as a current requirement.
-
-## 4. Daily execution
-
-Current routes:
-
-```text
-GET  /api/v1/training
-GET  /api/v1/training/:id
-GET  /api/v1/training/:id/today
-POST /api/v1/training/:id/checkin
-PUT  /api/v1/training/:id/log
-GET  /api/v1/training/:id/progress
-POST /api/v1/training/:id/reassess
-```
-
-The Web provides:
-
-- current plan/focus display;
-- today-task checklist;
-- immersive exercise/set/rest-timer interaction;
-- check-in;
-- notes and structured reassessment feedback;
-- progress summary.
-
-A plan must be `active` before today-task/check-in operations are accepted.
-
-## 5. TrainingLog and Outcome
-
-A daily `TrainingLog` records:
-
-```text
-plan_id
-user_id
-treatment_revision_id?
-intervention_id?
-date
-exercises
-notes?
-is_checked_in
-outcome_recorded_at?
-```
-
-Check-in is not just UI progress. When the plan is linked to a TreatmentRevision, the service records a durable Outcome:
-
-```text
-kind = training_adherence
-causality_level = association_only
-```
-
-Free-text/structured feedback is also converted into a durable Outcome such as:
-
-```text
-training_feedback
-symptom_change
-```
-
-The system explicitly records temporal association without claiming that the intervention caused the observed change.
-
-## 6. Reassessment and plan changes
-
-Training feedback does **not** allow an LLM to silently replace exercises in the active plan.
-
-```text
-feedback
-  -> durable Outcome
-  -> current Treatment state/review policy
-  -> review_recommended / paused / requires_new_diagnosis
-  -> when allowed, GenerateProposal creates a new TreatmentRevision proposal
-  -> user/domain acceptance required
-  -> new TrainingPlan projection
-```
-
-This preserves the Treatment authority boundary:
-
-```text
-AI may propose
-!= proposal accepted
-!= active plan mutated
-```
-
-If the source Diagnosis is stale, the next action is a new Diagnosis rather than an automatic training mutation. If safety policy pauses Treatment, training feedback remains stored but no automatic replacement is activated.
-
-## 7. Recovery/idempotency
-
-The execution projection is recoverable:
-
-- `EnsurePlanForTreatment` is idempotent for one accepted TreatmentRevision;
-- `EnsureCurrentPlan` can rebuild a missing projection after a response/partial-path failure;
-- feedback uses content-derived source identity to avoid duplicate Outcome creation for the same submitted payload;
-- check-in has a stable per-log Outcome source key.
-
-## 8. Progress semantics
-
-Current progress exposes:
-
-```text
-consecutive_days
-total_checkins
-current_week
-total_weeks
-treatment_revision_id
-plan_status
-```
-
-These are execution/adherence signals, not proof of clinical efficacy.
-
-## 9. Explicitly retired assumptions
-
-The archived feature design contained ideas that are no longer part of the current product contract:
-
-- Profile-level `schedule_mode` with `fixed_calendar` / `auto_shift`;
-- an asynchronous “log AI” that directly writes exercise substitutions into the active plan;
-- arbitrary replacement-count heuristics outside Treatment review/acceptance;
-- treating TrainingPlan as a second source of truth independent of TreatmentRevision.
-
-If one of these capabilities is desired again, it requires a new product/domain decision and should be expressed through the current Treatment/Outcome authority model rather than revived from the archived document.
-
-## 10. Acceptance criteria
-
-- accepting a TreatmentRevision atomically creates/reuses the corresponding TrainingPlan;
-- only accepted/current Treatment content becomes executable;
-- a second request does not create a duplicate plan for the same revision;
-- check-in records execution progress and one durable association-only Outcome;
-- structured feedback records an Outcome before any reassessment proposal;
-- review/safety/staleness can block automatic continuation;
-- a generated replacement remains a proposal until accepted;
-- current UI/API can reload the plan/log/progress after process or page restart;
-- longitudinal E2E proves Treatment acceptance -> TrainingPlan -> feedback/check-in -> Outcome -> review loop.
+完整验收案例见 [验收矩阵](./product/acceptance.md)。

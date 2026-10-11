@@ -1,6 +1,6 @@
 # 体悟 BodySense
 
-> **AI 原生长期身体健康工作区** —— 把持续对话、长期身体状态、循证诊断、干预方案与训练反馈连接成一个可追踪闭环。
+> **Agent 驱动的个人身体状态应用** —— 长期记录身体变化、维护一份当前综合诊断、管理多份独立训练计划。
 
 <p align="left">
   <strong>语言：</strong> <a href="../../README.md">英文</a> · 简体中文
@@ -9,35 +9,26 @@
 <p align="left">
   <a href="https://body.bakersean.top"><strong>在线产品</strong></a> ·
   <a href="https://bakersean168.github.io/BodySense/"><strong>项目介绍</strong></a> ·
-  <a href="../feature_spec_longitudinal_body_health.md"><strong>产品规格</strong></a> ·
-  <a href="../architecture/deployment-architecture.md"><strong>系统架构</strong></a>
+  <a href="../product/README.md"><strong>产品规格</strong></a> ·
+  <a href="../architecture/README.md"><strong>系统架构</strong></a>
 </p>
 
-BodySense 不是一次性生成报告的 AI 问诊演示。它围绕一个长期存在的健康工作区设计：用户可以持续描述身体变化、补充观察、纠正事实、查看分析如何演进，并把干预与训练结果重新写回后续判断。
+BodySense 将用户的身体信息保存为有来源、具有时间语义的长期状态。用户清楚描述本人的情况时自动记录；主体、时间或部位有关键歧义时，通过交互工具追问。用户可以按需请求分析单个或多个病情，形成一份当前综合 Diagnosis；可独立管理多个训练计划。正式 Diagnosis 的发布需要用户请求或授权，训练内容变更必须来自明确请求或已接受的 Agent 建议。
+
+界面以持续存在的 3D 人体为底层桌面，Chat、Person、Diagnosis、TrainingPlan 和 Trainer 是可移动、可收起的浮动窗口。用户日常只需查看当前信息，不必管理技术版本。
 
 > [!IMPORTANT]
-> BodySense 是个人健康信息与体态分析辅助项目，不是医疗器械，也不能替代医生、物理治疗师或其他专业人员的诊断与治疗。
+> BodySense 用于个人健康信息整理与有证据边界的辅助解释，并非医疗器械，不能替代专业医疗诊断和治疗。
 
-## 产品闭环
+## 核心业务
 
-```mermaid
-flowchart LR
-    A[长期健康对话] --> B[持久身体状态]
-    B --> C[诊断分析]
-    C --> D[干预 / 训练]
-    D --> E[反馈与结果]
-    E --> B
-    B --> F[趋势与安全状态]
-    F --> A
-```
+- **BodyState**：一个用户一份，明确的本人身体陈述自动保存，真实病程与记录更正分开处理。
+- **Diagnosis**：一个用户一份当前综合结果，内部病情可以单独更新，同次变更构成一次整体修订。
+- **TrainingPlan**：允许多个独立计划，只有明确的用户请求或接受建议才能更改训练内容。
+- **Agent**：自然交流、针对性证据采集、澄清、诊断分析与训练影响检查。
+- **3D 工作空间**：始终存在的人体 Canvas、上下文工具和浮动业务窗口，支持桌面与移动端。
 
-核心体验由五部分组成：
-
-- **长期对话** —— 用户不需要为每一个身体问题反复创建新的问诊记录。
-- **实时身体状态** —— 结构化事实、观察、变化、AI 假设与安全状态持续演进，并允许用户直接纠正。
-- **循证诊断** —— 诊断绑定精确的身体状态版本、时间上下文、观察和检索证据，而不是只依赖聊天记录。
-- **版本化干预方案** —— 当前方案拥有明确版本与复审生命周期，不会因为一条新消息被静默覆盖。
-- **闭环反馈** —— 训练执行、依从性、症状变化和自测结果重新进入长期状态与后续复审。
+详情见 [产品业务规格](../product/README.md)。
 
 ## 工程价值
 
@@ -181,12 +172,14 @@ pnpm postman:validate-native   # 可选：使用已安装的 Postman CLI 做原�
 
 ## 文档
 
-如果希望先理解产品而不是直接阅读代码，可以从这里开始：
-
-- [`长期身体健康工作区`](../feature_spec_longitudinal_body_health.md) —— 当前产品模型与用户体验。
-- [`部署架构`](../architecture/deployment-architecture.md) —— 当前生产拓扑与发布流程。
-- [`AGENT.md`](../../AGENT.md) —— 仓库约定与 AI 辅助工程工作流。
-- [`docs/`](../) —— 架构、ADR、产品规格、评估与实施历史。
+- [产品文档导航](../product/README.md)
+- [产品需求](../product/requirements.md)
+- [领域契约](../product/domain.md)
+- [Agent 工作流](../product/agent-workflows.md)
+- [UI 与交互](../product/interface.md)
+- [验收标准](../product/acceptance.md)
+- [系统架构](../architecture/README.md)
+- [仓库协作规范](../../AGENT.md)
 
 ## 仓库状态与许可
 
