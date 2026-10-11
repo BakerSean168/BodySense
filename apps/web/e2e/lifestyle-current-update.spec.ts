@@ -69,7 +69,9 @@ test("lifestyle update preserves the previous fact and promotes the new current 
   const previousFactId = initialLifestyle.activity.fact_id;
   expect(previousFactId).toBeTruthy();
 
+  // `?view=state` is a legacy alias that still resolves to the Person window.
   await page.goto("/consultation?view=state");
+  await expect(page.getByTestId("person-window")).toBeVisible();
   await expect(page.getByText(previousSummary, { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "更新现状", exact: true }),

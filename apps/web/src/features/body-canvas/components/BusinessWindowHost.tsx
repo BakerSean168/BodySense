@@ -84,8 +84,13 @@ export function BusinessWindowHost({
       data-active={isActive ? "true" : "false"}
       data-minimized={minimized ? "true" : "false"}
       hidden={minimized}
-      role="dialog"
-      aria-modal="false"
+      /*
+       * A non-modal, persistent floating window is a landmark rather than a
+       * dialog: several can be open, they never trap focus and they stay
+       * mounted while folded. Using role="region" also keeps genuine modal
+       * overlays (anatomy, shortcuts) unambiguous for assistive technology.
+       */
+      role="region"
       aria-labelledby={headingId}
       onPointerDown={handlePointerDown}
       style={

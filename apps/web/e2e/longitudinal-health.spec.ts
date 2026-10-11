@@ -60,23 +60,33 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
 
   await page.goto(`/consultation/${conversationData.conversations[0].id}`);
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await expect(page.getByLabel("身体上下文助手")).toBeHidden();
+  // Body-first: no business window is open until the user opens one, and that
+  // choice is mirrored into the route.
+  await expect(page.getByTestId("diagnosis-window")).toBeHidden();
 
-  await page.getByRole("button", { name: "打开身体助手" }).click();
-  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
+  await page.locator(".bc-dock").getByRole("button", { name: "对话", exact: true }).click();
+  await expect(page).toHaveURL(/view=chat/);
   await page.reload();
-  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
-  await page.getByRole("button", { name: "收起助手" }).click();
+  await expect(page).toHaveURL(/view=chat/);
+  await expect(page.getByRole("dialog", { name: "对话" })).toBeVisible();
+  await page
+    .locator('.bc-business-window[data-window="chat"]')
+    .getByRole("button", { name: "关闭对话" })
+    .click();
 
-  await page.getByRole("button", { name: "评估与依据" }).click();
+  await page.locator(".bc-dock").getByRole("button", { name: "综合诊断", exact: true }).click();
   await expect(page).toHaveURL(/view=diagnosis/);
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "评估与依据" })).toBeVisible();
-  await expect(page.getByText("还没有分析结果")).toBeVisible();
+  await expect(page.getByTestId("diagnosis-window")).toBeVisible();
+  // The design allows exactly one level-1 title per window and no subtitle.
+  await expect(
+    page.getByRole("heading", { name: "综合诊断", level: 2 }),
+  ).toBeVisible();
+  await expect(page.getByText("还没有已确认的病情")).toBeVisible();
 
-  await page.getByRole("dialog").getByRole("button", { name: "身体" }).click();
-  await expect(page).toHaveURL(/view=state/);
-  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
+  await page.locator(".bc-dock").getByRole("button", { name: "个人档案", exact: true }).click();
+  await expect(page).toHaveURL(/view=person/);
+  // The tab is the only place the category name appears.
+  await expect(page.getByRole("heading", { name: "身体记录" })).toBeHidden();
 
   await page.getByRole("button", { name: "添加记录" }).click();
   await page.getByPlaceholder("身体区域，例如：颈部、左肩、右肩").fill("颈部");
@@ -101,8 +111,8 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   );
 
   await page.reload();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
+  // The deep link reopens the same business window after a full reload.
+  await expect(page.getByTestId("person-window")).toBeVisible();
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 });
 

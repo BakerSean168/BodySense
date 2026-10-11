@@ -79,6 +79,26 @@ export const BUSINESS_WINDOWS: readonly BusinessWindowMeta[] = [
 export const BUSINESS_WINDOW_IDS: readonly BusinessWindowId[] =
   BUSINESS_WINDOWS.map((window) => window.id);
 
+/**
+ * Legacy deep-link aliases. The previous surface exposed `?view=state|treatment`
+ * and those URLs must keep resolving to the same business object after the
+ * window refactor, so old links are not silently broken.
+ */
+const LEGACY_WINDOW_ALIASES: Record<string, BusinessWindowId> = {
+  state: "person",
+  treatment: "training",
+  progress: "person",
+};
+
+/** Resolve a `?view=` value to a business window, including legacy aliases. */
+export function resolveWindowFromView(
+  value: string | null | undefined,
+): BusinessWindowId | null {
+  if (!value) return null;
+  if (isBusinessWindowId(value)) return value;
+  return LEGACY_WINDOW_ALIASES[value] ?? null;
+}
+
 export function getBusinessWindowMeta(id: BusinessWindowId): BusinessWindowMeta {
   return BUSINESS_WINDOWS.find((window) => window.id === id) ?? BUSINESS_WINDOWS[0];
 }

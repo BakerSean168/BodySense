@@ -27,7 +27,7 @@ import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDraw
 import { useHealthWorkspaceQuery } from "@/features/workspace";
 import { useBodyExplorerWorkspace } from "@/features/body-explorer";
 import {
-  isBusinessWindowId,
+  resolveWindowFromView,
   type BusinessWindowId,
 } from "@/features/body-canvas/model/businessWindows";
 import { useProfileStore } from "@/stores/profileStore";
@@ -191,9 +191,8 @@ export function ConsultationPage() {
   // route mirror afterwards is a consequence of the user's window choice, not a
   // second source of truth for which window is open.
   const requestedWindow = searchParams.get("view");
-  const initialWindow: BusinessWindowId | null = isBusinessWindowId(requestedWindow)
-    ? requestedWindow
-    : null;
+  const initialWindow: BusinessWindowId | null =
+    resolveWindowFromView(requestedWindow);
   const demonstrationRequest: { motion: MotionId; revision: number } | null = null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profile = useProfileStore((state) => state.profile);
