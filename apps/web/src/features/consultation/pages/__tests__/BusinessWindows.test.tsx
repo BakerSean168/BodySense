@@ -3,7 +3,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 
 vi.mock("@/lib/clientDiagnostics", () => ({
   createClientDiagnosticId: () => "consultation-test-session",
@@ -493,14 +492,33 @@ describe("body-first business windows", () => {
     expect(screen.getByTestId("assistant-chat-panel")).not.toBeVisible();
   });
 
-  it("minimizes and restores a window without losing its identity", async () => {
+  it("folds and restores a window without losing its identity", async () => {
     renderPage();
     await openDock("综合诊断");
     await screen.findByTestId("diagnosis-window");
     await userEvent.click(screen.getByRole("button", { name: "最小化综合诊断" }));
-    expect(screen.queryByTestId("diagnosis-window")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "恢复窗口" }));
+    // Folded away but still open and recoverable.
+    expect(screen.getByTestId("diagnosis-window")).not.toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "恢复综合诊断" }));
     expect(screen.getByTestId("diagnosis-window")).toBeVisible();
+    // Exactly one window identity survived the round trip.
+    expect(screen.getAllByTestId("diagnosis-window")).toHaveLength(1);
+  });
+
+  it("keeps at most one business window visible when several are opened", async () => {
+    renderPage();
+    await openDock("综合诊断");
+    await openDock("训练计划");
+    await openDock("对话");
+    // Dock/Open/Active are mutually exclusive: the previously visible windows are
+    // folded, not destroyed, so they cannot overlap or steal focus.
+    expect(screen.getByTestId("training-window")).not.toBeVisible();
+    expect(screen.getByTestId("diagnosis-window")).not.toBeVisible();
+    expect(screen.getByTestId("assistant-chat-panel")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "恢复综合诊断" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "恢复训练计划" })).toBeInTheDocument();
   });
 
   it("opens the Person window with five categories and a compact identity popover", async () => {

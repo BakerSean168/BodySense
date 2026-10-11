@@ -30,7 +30,6 @@ import {
 
 export interface TrainingPlanWindowProps {
   projected: ProjectedTrainingPlans;
-  selectedPlanId: string | null;
   onSelectPlan: (planId: string) => void;
   loading?: boolean;
   error?: string | null;
@@ -141,7 +140,6 @@ function PlanPicker({
 
 export function TrainingPlanWindow({
   projected,
-  selectedPlanId,
   onSelectPlan,
   loading = false,
   error = null,

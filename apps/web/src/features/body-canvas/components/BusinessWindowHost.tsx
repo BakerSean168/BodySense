@@ -38,6 +38,13 @@ export interface BusinessWindowHostProps {
   onMinimize?: () => void;
   onFocus?: () => void;
   isActive?: boolean;
+  /**
+   * Replaces the level-1 title on the left of the header. Person uses this for
+   * its avatar + nickname trigger; every other window keeps the plain title.
+   */
+  headerLeft?: ReactNode;
+  /** The custom headerLeft already conveys identity, so no title is repeated. */
+  hideTitle?: boolean;
   children: ReactNode;
 }
 
@@ -49,6 +56,8 @@ export function BusinessWindowHost({
   onMinimize,
   onFocus,
   isActive = false,
+  headerLeft,
+  hideTitle = false,
   children,
 }: BusinessWindowHostProps) {
   const meta = getBusinessWindowMeta(windowId);
@@ -91,9 +100,16 @@ export function BusinessWindowHost({
     >
       <header className="bc-business-window-header">
         <span className="bc-sheet-handle" aria-hidden="true" />
-        <h2 id={headingId} className="bc-business-window-title">
-          {meta.title}
-        </h2>
+        {headerLeft ?? (
+          <h2 id={headingId} className="bc-business-window-title">
+            {meta.title}
+          </h2>
+        )}
+        {hideTitle ? (
+          <span id={headingId} className="sr-only">
+            {meta.title}
+          </span>
+        ) : null}
         <div className="bc-business-window-controls">
           {onMinimize ? (
             <button
@@ -129,6 +145,8 @@ export function BusinessSheetHost({
   windowId,
   hidden = false,
   onClose,
+  headerLeft,
+  hideTitle = false,
   children,
   footer,
 }: {
@@ -136,6 +154,8 @@ export function BusinessSheetHost({
   /** Kept mounted but off-screen so closing a sheet preserves its task state. */
   hidden?: boolean;
   onClose: () => void;
+  headerLeft?: ReactNode;
+  hideTitle?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -153,9 +173,16 @@ export function BusinessSheetHost({
     >
       <header className="bc-business-window-header">
         <span className="bc-sheet-handle" aria-hidden="true" />
-        <h2 id={headingId} className="bc-business-window-title">
-          {meta.title}
-        </h2>
+        {headerLeft ?? (
+          <h2 id={headingId} className="bc-business-window-title">
+            {meta.title}
+          </h2>
+        )}
+        {hideTitle ? (
+          <span id={headingId} className="sr-only">
+            {meta.title}
+          </span>
+        ) : null}
         <div className="bc-business-window-controls">
           <button
             type="button"

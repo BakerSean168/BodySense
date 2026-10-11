@@ -37,29 +37,46 @@ describe("business window lifecycle", () => {
     expect(state.order).toHaveLength(1);
   });
 
-  it("closes the Training window when another business window opens on demand", () => {
+  it("never shows two windows at once when another opens on demand (V5.5 Dock exclusion)", () => {
     let state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
       type: "open",
       window: "training",
     });
     state = businessWindowReducer(state, { type: "open", window: "diagnosis" });
-    // Both may be visible, but the design contract requires an exclusive
-    // single active business window on the shared stage.
-    expect(visibleBusinessWindows(state)).toEqual(["training", "diagnosis"]);
-    state = businessWindowReducer(state, { type: "close", window: "training" });
-    expect(state.order).toEqual(["diagnosis"]);
-    expect(isBusinessWindowOpen(state, "training")).toBe(false);
+    // Dock/Open/Active are mutually exclusive: the previous window is folded
+    // away, not destroyed, so no two windows can overlap or steal each other's
+    // controls.
+    expect(visibleBusinessWindows(state)).toEqual(["diagnosis"]);
+    expect(activeBusinessWindow(state)).toBe("diagnosis");
+    expect(isBusinessWindowOpen(state, "training")).toBe(true);
+    expect(minimizedBusinessWindows(state)).toEqual(["training"]);
   });
 
-  it("toggles a window off and on without duplicating identity", () => {
+  it("restores the folded window instead of reopening it twice", () => {
+    let state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
+      type: "open",
+      window: "training",
+    });
+    state = businessWindowReducer(state, { type: "open", window: "diagnosis" });
+    state = businessWindowReducer(state, { type: "restore", window: "training" });
+    expect(state.order).toEqual(["diagnosis", "training"]);
+    expect(visibleBusinessWindows(state)).toEqual(["training"]);
+    expect(state.order).toHaveLength(2);
+  });
+
+  it("toggles a window away without destroying its identity", () => {
     let state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
       type: "toggle",
       window: "chat",
     });
     expect(isBusinessWindowVisible(state, "chat")).toBe(true);
     state = businessWindowReducer(state, { type: "toggle", window: "chat" });
-    expect(state.order).toEqual([]);
+    // Folded away but still recoverable, so closing the Dock toggle never
+    // discards an in-flight conversation.
+    expect(isBusinessWindowVisible(state, "chat")).toBe(false);
+    expect(isBusinessWindowOpen(state, "chat")).toBe(true);
     state = businessWindowReducer(state, { type: "toggle", window: "chat" });
+    expect(isBusinessWindowVisible(state, "chat")).toBe(true);
     expect(state.order).toEqual(["chat"]);
   });
 
@@ -68,16 +85,15 @@ describe("business window lifecycle", () => {
       type: "open",
       window: "training",
     });
-    state = businessWindowReducer(state, { type: "open", window: "chat" });
     state = businessWindowReducer(state, { type: "minimize", window: "training" });
     expect(isBusinessWindowOpen(state, "training")).toBe(true);
     expect(isBusinessWindowVisible(state, "training")).toBe(false);
     expect(minimizedBusinessWindows(state)).toEqual(["training"]);
-    expect(activeBusinessWindow(state)).toBe("chat");
+    expect(activeBusinessWindow(state)).toBeNull();
     state = businessWindowReducer(state, { type: "restore", window: "training" });
     expect(isBusinessWindowVisible(state, "training")).toBe(true);
     expect(activeBusinessWindow(state)).toBe("training");
-    expect(state.order).toEqual(["chat", "training"]);
+    expect(state.order).toEqual(["training"]);
   });
 
   it("restoring a closed window opens it exactly once", () => {
@@ -87,6 +103,19 @@ describe("business window lifecycle", () => {
     });
     expect(state.order).toEqual(["person"]);
     expect(state.minimized).toEqual([]);
+  });
+
+  it("does not duplicate minimized entries when a window is folded repeatedly", () => {
+    let state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
+      type: "open",
+      window: "training",
+    });
+    state = businessWindowReducer(state, { type: "open", window: "diagnosis" });
+    state = businessWindowReducer(state, { type: "open", window: "training" });
+    state = businessWindowReducer(state, { type: "open", window: "diagnosis" });
+    expect(state.minimized).toEqual(["training"]);
+    expect(new Set(state.minimized).size).toBe(state.minimized.length);
+    expect(visibleBusinessWindows(state)).toEqual(["diagnosis"]);
   });
 
   it("closing clears minimized state for that window", () => {
@@ -122,13 +151,17 @@ describe("business window lifecycle", () => {
     expect(activeBusinessWindow(state)).toBeNull();
   });
 
-  it("reports stack index and is stable for unknown windows", () => {
-    const state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
+  it("places only the visible window at the base position", () => {
+    let state = businessWindowReducer(EMPTY_BUSINESS_WINDOWS, {
       type: "open",
       window: "diagnosis",
     });
     expect(businessWindowStackIndex(state, "diagnosis")).toBe(0);
     expect(businessWindowStackIndex(state, "chat")).toBe(-1);
+    state = businessWindowReducer(state, { type: "open", window: "chat" });
+    // The folded window is not placed on the stage at all.
+    expect(businessWindowStackIndex(state, "chat")).toBe(0);
+    expect(businessWindowStackIndex(state, "diagnosis")).toBe(-1);
   });
 });
 

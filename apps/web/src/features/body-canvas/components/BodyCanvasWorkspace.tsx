@@ -14,10 +14,10 @@ import { buildCanvasContext, canvasShortcut, EMPTY_SELECTION, getReferenceMotion
 import {
   activeBusinessWindow,
   businessWindowReducer,
+  businessWindowStackIndex,
   EMPTY_BUSINESS_WINDOWS,
   getBusinessWindowMeta,
   isBusinessWindowVisible,
-  minimizedBusinessWindows,
   type BusinessWindowId,
 } from "../model/businessWindows";
 import { projectDiagnosisView } from "../model/confirmedConditions";
@@ -25,7 +25,11 @@ import { projectTrainingPlans, readSelectedPlanId, resolveSelectedPlanId, writeS
 import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
 import { BusinessWindowHost, BusinessSheetHost } from "./BusinessWindowHost";
 import { DiagnosisWindow } from "./DiagnosisWindow";
-import { PersonWindow, type PersonProfileIdentity } from "./PersonWindow";
+import {
+  PersonIdentityTrigger,
+  PersonWindow,
+  type PersonProfileIdentity,
+} from "./PersonWindow";
 import { TrainingPlanWindow } from "./TrainingPlanWindow";
 import "../body-canvas.css";
 
@@ -95,17 +99,28 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   // closing, minimizing or switching never discards the conversation, a pending
   // interaction, scroll position or unsaved composer input.
   const [mountedWindows, setMountedWindows] = useState<readonly BusinessWindowId[]>([]);
+  // Declarative mount tracking: any window that the reducer has ever opened stays
+  // mounted for the rest of the session, so no open path (Dock toggle, shortcut,
+  // deep link or programmatic open) can accidentally unmount a live task. Closing
+  // a window hides it; it does not destroy the conversation or a pending form.
+  useEffect(() => {
+    setMountedWindows((current) => {
+      const missing = windows.order.filter((window) => !current.includes(window));
+      return missing.length === 0 ? current : [...current, ...missing];
+    });
+  }, [windows.order]);
+  // The Person identity popover is anchored in the shared header, so its open
+  // state lives with the header owner rather than inside the body.
+  const [personInfoOpen, setPersonInfoOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => readSelectedPlanId());
   const sceneRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const activeWindow = activeBusinessWindow(windows);
-  const chatOpen = isBusinessWindowVisible(windows, "chat");
-  const personOpen = isBusinessWindowVisible(windows, "person");
-  const diagnosisOpen = isBusinessWindowVisible(windows, "diagnosis");
-  const trainingOpen = isBusinessWindowVisible(windows, "training");
-  const trainerOpen = isBusinessWindowVisible(windows, "trainer");
-  const minimized = minimizedBusinessWindows(windows);
-  const data = useTrainingWindowData(trainingOpen || trainerOpen);
+  const trainingOpen = isBusinessWindowVisible(windows, "training") || isBusinessWindowVisible(windows, "trainer");
+  // Windows that are open but not on the stage. Because Dock/Open/Active are
+  // mutually exclusive this is exactly "every open window except the active one".
+  const foldedWindows = windows.order.filter((window) => window !== activeWindow);
+  const data = useTrainingWindowData(trainingOpen);
 
   const definition = getReferenceMotion(motion);
   const primary = selection.regions[0] ?? null;
@@ -128,7 +143,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
 
   const openWindow = useCallback((window: BusinessWindowId) => {
     dispatchWindow({ type: "open", window });
-    setMountedWindows((current) => (current.includes(window) ? current : [...current, window]));
     setRegionListOpen(false);
   }, []);
   const closeWindow = useCallback((window: BusinessWindowId) => {
@@ -273,10 +287,11 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "person":
         return <PersonWindow
           identity={identity}
+          identityInfoOpen={personInfoOpen}
+          onIdentityInfoOpenChange={setPersonInfoOpen}
           bodyState={props.bodyState}
           canEdit={props.workspace?.capabilities.can_edit_body_state === true}
           onEditProfile={props.onOpenProfile}
-          onClose={() => closeWindow("person")}
         />;
       case "diagnosis":
         return <DiagnosisWindow
@@ -290,7 +305,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "training":
         return <TrainingPlanWindow
           projected={projected}
-          selectedPlanId={selectedPlanId}
           onSelectPlan={(planId) => { setSelectedPlanId(planId); writeSelectedPlanId(planId); }}
           loading={data.loading}
           error={data.error}
@@ -378,12 +392,22 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           <BusinessWindowHost
             key={window}
             windowId={window}
-            minimized={!isBusinessWindowVisible(windows, window)}
-            stackIndex={windows.order.indexOf(window)}
+            minimized={activeWindow !== window}
+            stackIndex={businessWindowStackIndex(windows, window)}
             isActive={activeWindow === window}
             onFocus={() => openWindow(window)}
             onMinimize={() => minimizeWindow(window)}
             onClose={() => closeWindow(window)}
+            headerLeft={
+              window === "person" ? (
+                <PersonIdentityTrigger
+                  identity={identity}
+                  open={personInfoOpen}
+                  onToggle={() => setPersonInfoOpen((open) => !open)}
+                />
+              ) : undefined
+            }
+            hideTitle={window === "person"}
           >
             {renderWindowBody(window)}
           </BusinessWindowHost>
@@ -394,14 +418,42 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             windowId={window}
             hidden={activeWindow !== window}
             onClose={() => closeWindow(window)}
+            headerLeft={
+              window === "person" ? (
+                <PersonIdentityTrigger
+                  identity={identity}
+                  open={personInfoOpen}
+                  onToggle={() => setPersonInfoOpen((open) => !open)}
+                />
+              ) : undefined
+            }
+            hideTitle={window === "person"}
           >
             {renderWindowBody(window)}
           </BusinessSheetHost>
         ))}
       </div>
 
-      {!mobile && minimized.length > 0 && <div className="bc-minimized-tray" role="status" aria-label="已最小化的窗口">
-        {minimized.map((window) => <button key={window} className="bc-button bc-minimized-chip" onClick={() => restoreWindow(window)}>恢复窗口</button>)}
+      {!mobile && foldedWindows.length > 0 && <div className="bc-minimized-tray" aria-label="已收起的业务窗口">
+        {foldedWindows.map((window) => (
+          <span key={window} className="bc-minimized-chip">
+            <button
+              type="button"
+              className="bc-minimized-restore"
+              onClick={() => restoreWindow(window)}
+            >
+              恢复{getBusinessWindowMeta(window).title}
+            </button>
+            <button
+              type="button"
+              className="bc-minimized-dismiss"
+              aria-label={`关闭${getBusinessWindowMeta(window).title}`}
+              onClick={() => closeWindow(window)}
+            >
+              <X size={14} />
+            </button>
+          </span>
+        ))}
       </div>}
 
       <div className="bc-attribution"><span>参考人体 · 非个人扫描</span><span>Vanatome / Z-Anatomy · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a></span><span>拖动旋转 · 滚轮缩放 · 点击选区</span></div>

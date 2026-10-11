@@ -6,7 +6,6 @@ import {
   useCallback,
   useMemo,
   useRef,
-  type ReactNode,
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
@@ -21,7 +20,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BodyCanvasWorkspace } from "@/features/body-canvas/components/BodyCanvasWorkspace";
-import { demonstrationForTitle, type MotionId } from "@/features/body-canvas/model/bodyCanvas";
+import type { MotionId } from "@/features/body-canvas/model/bodyCanvas";
 import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
@@ -195,10 +194,7 @@ export function ConsultationPage() {
   const initialWindow: BusinessWindowId | null = isBusinessWindowId(requestedWindow)
     ? requestedWindow
     : null;
-  const [demonstrationRequest, setDemonstrationRequest] = useState<{
-    motion: MotionId;
-    revision: number;
-  } | null>(null);
+  const demonstrationRequest: { motion: MotionId; revision: number } | null = null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   // The compact identity popover reads the same authoritative profile store.
@@ -212,12 +208,19 @@ export function ConsultationPage() {
   );
   const handleWindowChange = useCallback(
     (window: BusinessWindowId | null) => {
-      const next = new URLSearchParams(searchParams);
-      if (window) next.set("view", window);
-      else next.delete("view");
-      setSearchParams(next, { replace: true });
+      // Functional update avoids mirroring a stale query string when the route
+      // changes in the same batch as the window action.
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (window) next.set("view", window);
+          else next.delete("view");
+          return next;
+        },
+        { replace: true },
+      );
     },
-    [searchParams, setSearchParams],
+    [setSearchParams],
   );
 
   // Server-state actions are isolated in feature hooks; this page composes them.
@@ -382,30 +385,3 @@ function PanelTransitionOverlay({ label }: { label: string }) {
   );
 }
 
-function WorkspaceEmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-muted-foreground">
-        {description}
-      </p>
-      {action ? <div className="mt-5">{action}</div> : null}
-    </div>
-  );
-}
-
-function WorkspaceError({ message }: { message: string }) {
-  return (
-    <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-4 text-sm text-destructive">
-      {message}
-    </div>
-  );
-}

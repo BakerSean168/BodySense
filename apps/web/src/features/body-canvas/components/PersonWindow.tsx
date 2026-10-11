@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Backpack,
   Check,
@@ -58,16 +58,28 @@ export interface PersonWindowProps {
   bodyState: BodyStateProjection | null;
   canEdit: boolean;
   onEditProfile: () => void;
-  onClose: () => void;
+  /** Popover state is owned by the header that renders the identity trigger. */
+  identityInfoOpen: boolean;
+  onIdentityInfoOpenChange: (open: boolean) => void;
 }
 
-/** Avatar glyph is derived from the nickname only; never invented. */
+/**
+ * The avatar + nickname trigger rendered into the shared window header. It is
+ * exported separately because the host owns the header chrome (title/Close) so
+ * the window cannot end up with two Close buttons or a repeated title.
+ */
+export /** Avatar glyph is derived from the nickname only; never invented. */
 function identityInitial(nickname: string): string {
   const trimmed = nickname.trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : "·";
 }
 
-function ProfileIdentityTrigger({
+/**
+ * Avatar + nickname header trigger. Exported because the shared window host owns
+ * the header chrome, and the design puts this trigger *instead of* a repeated
+ * business title.
+ */
+export function PersonIdentityTrigger({
   identity,
   open,
   onToggle,
@@ -449,11 +461,12 @@ export function PersonWindow({
   bodyState,
   canEdit,
   onEditProfile,
-  onClose,
+  identityInfoOpen: infoOpen,
+  onIdentityInfoOpenChange,
 }: PersonWindowProps) {
   const mobile = useMediaQuery("(max-width: 760px)");
   const [category, setCategory] = useState<ProfileCategoryId>("records");
-  const [infoOpen, setInfoOpen] = useState(false);
+  const setInfoOpen = onIdentityInfoOpenChange;
   // The window owns its own reads: nothing loads until the window is open, and
   // a failure is surfaced instead of substituted with placeholder values.
   const data = usePersonWindowData();
@@ -472,22 +485,6 @@ export function PersonWindow({
       data-testid="person-window"
       data-mobile={mobile ? "true" : "false"}
     >
-      <header className="bc-person-header">
-        <ProfileIdentityTrigger
-          identity={identity}
-          open={infoOpen}
-          onToggle={() => setInfoOpen((open) => !open)}
-        />
-        <button
-          type="button"
-          className="bc-icon-button"
-          aria-label="关闭个人档案"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-      </header>
-
       {infoOpen ? (
         <CompactIdentityPopover
           identity={identity}

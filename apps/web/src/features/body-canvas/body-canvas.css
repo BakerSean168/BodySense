@@ -1112,7 +1112,9 @@
    ========================================================================== */
 .bc-business-layer {
   position: absolute;
-  inset: 64px 0 0;
+  /* The layer lives inside .bc-stage, which already starts below the topbar.
+     Adding the topbar height again here would double-offset every window. */
+  inset: 0;
   z-index: 36;
   pointer-events: none;
 }
@@ -1228,29 +1230,14 @@
 
 /* Person window ---------------------------------------------------------- */
 .bc-person {
-  position: absolute;
-  left: var(--bc-window-left, 430px);
-  top: var(--bc-window-top, 18px);
-  width: min(var(--bc-window-width, 1060px), calc(100% - 24px));
-  height: min(var(--bc-window-height, 720px), calc(100% - 24px), var(--bc-window-max-height, 780px));
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--bc-line);
-  border-radius: 20px;
   background: var(--bc-paper);
   color: var(--bc-ink);
-  box-shadow: var(--bc-shadow);
-}
-.bc-person-header {
-  position: relative;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 63px;
-  padding: 0 12px 0 20px;
-  border-bottom: 1px solid var(--bc-line);
 }
 .bc-person-identity {
   display: inline-flex;
@@ -1609,17 +1596,6 @@
     border-radius: 999px;
     background: color-mix(in srgb, var(--bc-muted) 45%, transparent);
   }
-  .bc-person {
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    border-radius: 0;
-    border-left: 0;
-    border-right: 0;
-  }
-  .bc-person-header { min-height: 74px; }
   .bc-person-popover { left: 18px; right: 18px; width: auto; }
   .bc-person-tabs { justify-content: center; gap: 9px; padding: 0 8px; }
   .bc-person-tabs button { min-width: 66px; font-size: 11px; }
@@ -1627,4 +1603,53 @@
   .bc-person-body { padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); }
   .bc-person-equipment { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bc-person-habits > div { grid-template-columns: 1fr; gap: 3px; }
+}
+
+/* Minimized business windows stay recoverable without covering the body. */
+.bc-minimized-tray {
+  position: absolute;
+  z-index: 34;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+}
+.bc-minimized-chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 4px;
+  border: 1px solid var(--bc-line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bc-paper) 94%, transparent);
+  box-shadow: 0 8px 26px rgba(33, 49, 38, .12);
+  backdrop-filter: blur(16px);
+}
+.bc-minimized-restore {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 9px;
+  color: var(--bc-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.bc-minimized-restore:hover { background: var(--bc-subtle); }
+.bc-minimized-dismiss {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--bc-muted);
+}
+.bc-minimized-dismiss:hover { background: var(--bc-subtle); color: var(--bc-ink); }
+@media (max-width: 760px) {
+  .bc-minimized-tray { bottom: 76px; }
 }

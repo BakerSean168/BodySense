@@ -13,6 +13,10 @@
  *    selectable plan is separate state, not a second window.
  * 3. `minimized` is always a subset of `order`; closing a window clears it.
  * 4. `active` is the most recently opened/restored/focused window.
+ * 5. At most one business window is *visible* at a time. Dock/Open/Active are
+ *    mutually exclusive: opening or restoring a window minimizes the others
+ *    instead of destroying them, so two windows can never overlap and steal each
+ *    other's controls while the other keeps its task state for restore.
  */
 
 export type BusinessWindowId =
@@ -125,21 +129,15 @@ export function businessWindowReducer(
   action: BusinessWindowAction,
 ): BusinessWindowState {
   switch (action.type) {
-    case "open": {
-      const order = toFront(state.order, action.window);
-      const minimized = without(state.minimized, action.window);
-      return { order, minimized };
-    }
+    case "open":
     case "restore": {
-      // Restoring an unopened window is an open; restoring a visible window just
-      // focuses it. Both keep exactly one entry per identity.
-      if (!state.order.includes(action.window)) {
-        return { order: toFront(state.order, action.window), minimized: state.minimized };
-      }
-      return {
-        order: toFront(state.order, action.window),
-        minimized: without(state.minimized, action.window),
-      };
+      // Opening an unopened window and restoring a minimized one are the same
+      // operation: focus it and fold every other visible window away.
+      const order = toFront(state.order, action.window);
+      const minimized = [
+        ...new Set([...without(state.minimized, action.window), ...without(state.order, action.window)]),
+      ];
+      return { order, minimized };
     }
     case "minimize": {
       if (!state.order.includes(action.window) || state.minimized.includes(action.window)) {
@@ -156,7 +154,9 @@ export function businessWindowReducer(
     }
     case "toggle": {
       if (isBusinessWindowVisible(state, action.window)) {
-        return businessWindowReducer(state, { type: "close", window: action.window });
+        // Toggling away the active window reveals the body but keeps the window
+        // mounted and recoverable rather than discarding its task state.
+        return businessWindowReducer(state, { type: "minimize", window: action.window });
       }
       return businessWindowReducer(state, { type: "open", window: action.window });
     }
@@ -268,13 +268,18 @@ export const DESKTOP_WINDOW_STACK_STEP = 26;
 const DESKTOP_WINDOW_MAX_STACK = 3;
 
 /**
- * Cascade offset so several windows stay distinguishable while the body stays
- * visible. Deliberately not a fixed absolute position: the consuming CSS clamps
- * the result against the current stage width.
+ * Placement offset for a business window. Because Dock/Open/Active are mutually
+ * exclusive there is exactly one visible window, so the offset stays at the
+ * Penpot base position and no window can cover another's header. The step value
+ * is retained for a future deliberate side-by-side layout, but is clamped so a
+ * window can never walk off the stage.
+ *
+ * This is deliberately not the prototype's fixed x=430/440 absolute position:
+ * the consuming CSS clamps the result against the real stage width.
  */
-export function desktopWindowOffset(openIndex: number): { left: number; top: number } {
-  const bounded = Number.isFinite(openIndex)
-    ? Math.max(0, Math.min(Math.floor(openIndex), DESKTOP_WINDOW_MAX_STACK))
+export function desktopWindowOffset(visibleIndex: number): { left: number; top: number } {
+  const bounded = Number.isFinite(visibleIndex)
+    ? Math.max(0, Math.min(Math.floor(visibleIndex), DESKTOP_WINDOW_MAX_STACK))
     : 0;
   return {
     left: DESKTOP_WINDOW_BASE_LEFT + bounded * DESKTOP_WINDOW_STACK_STEP,
@@ -282,12 +287,15 @@ export function desktopWindowOffset(openIndex: number): { left: number; top: num
   };
 }
 
-/** Index of a window inside the open stack; -1 when it is not open. */
+/**
+ * Placement index of a window. With mutual exclusion only the visible window
+ * matters, so this is always 0 for the active window and -1 when hidden.
+ */
 export function businessWindowStackIndex(
   state: BusinessWindowState,
   id: BusinessWindowId,
 ): number {
-  return state.order.indexOf(id);
+  return isBusinessWindowVisible(state, id) ? 0 : -1;
 }
 
 /** Body metrics are user-entered values; BMI is only derived when both exist. */
