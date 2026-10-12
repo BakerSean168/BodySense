@@ -16,7 +16,14 @@
 
 ~~~text
 User
-├─ Profile                    基础资料：身份与偏好（在 Person 中展示）
+├─ Profile (0..1)              基础身份与显示偏好（Person 标题区）
+├─ EquipmentAsset[]           可使用器材，与使用习惯 BodyFact 分开
+├─ UserAsset[]                Media/Reports 共享同一文件身份
+│  └─ ExtractionRun[]         解析、候选与准入各自独立
+├─ Conversation (1)           唯一持续 Chat（原始消息按游标滚动清理）
+│  ├─ Message[]               近期消息 + 必要短期上下文
+│  ├─ AgentRun[]              串行活动 Run、Ask User 待回复交互
+│  └─ ChatRetentionCursor     已处理 / 上下文 / 已清理边界
 ├─ BodyState (1)              当前身体事实及真实病程
 │  ├─ BodyFact[]              用户自述、行为和生活习惯（含明确训练反馈）
 │  ├─ SymptomEpisode[]        有事实依据的症状经历、关联与推导状态
@@ -41,14 +48,15 @@ User
 ~~~
 
 - 一项具名医学诊断可以引用多条 Fact/Observation/Episode 等证据；一条事实也可以被多个医学诊断引用，证据关联本身不建立因果。SymptomEpisode 只组织有来源的症状经历；DerivedConcernGroup 是派生显示，不作为 Diagnosis 的必需身份，也不创建 BodyConcern。
-- Conversation 记录对话和工具活动；当前身体事实的权威来源是 BodyState（G-02）。
-- Profile 保存相对稳定的身份信息；测量值、生活习惯和伤病状态属于具有时间语义的 BodyState。
+- 每用户只有一个持续 Conversation；它仅保存近期 Chat 和可恢复的工具状态。消息原文在必要领域来源片段持久化后按游标安全清理；长时健康事实始终由 BodyState 等所属领域持有（G-02，PC-D4/D6/D9）。
+- Profile 保存极简可选身份信息和偏好；测量值、生活习惯和伤病状态属于有时间语义的 BodyState。Equipment 是可使用器材资产；UserAsset 是 Media/Reports 共用的唯一文件身份。
+- 原件被移除但保留历史 Observation 时，保留既有准入等级但标注原件不可用；需要可复核原件的业务操作不可借历史数据绕过。真正数据擦除必须处理衍生证据、Checkpoint、缓存与安全复核（PC-D7、CD-D4）。
 
 ## 5. 一致性、审计与权限
 
 - Go 业务服务持有持久化状态和授权判定；Python Agent 提供结构化输入、推理与工具调用；Web 显示当前状态并提交用户动作。
 - 每项写操作绑定 userId、sourceId、idempotencyKey、expectedRevision（适用时）与业务权限。
-- 工具执行需要报告成功/失败，不允许前端在事务未提交时宣称已保存。
+- 工具执行需要报告成功/失败，只有权威领域的真实持久化回执（DomainCommitReceipt 或等价结果）才能让前端宣称已保存；跨域局部成功必须准确报告。
 - 异步事件重复、乱序或网络重试不造成重复数据或重复修订；并发提交使用乐观锁或等效机制避免丢失修改。
 - 训练提案的授权必须对应**准确的提案身份及内容**，不能重用对其他计划的授权；病情确认记录同样绑定准确的提案身份和内容。
 - 病程与业务修订可检索，但不把内部编号或版本管理列为普通页面的默认入口。
@@ -57,7 +65,7 @@ User
 
 | ID | 不变量 |
 | --- | --- |
-| INV-01 | 每用户各有一份权威 BodyState、Diagnosis；每份 TrainingPlan 有独立拥有者；Diagnosis 引用 BodyState 而不复制身体事实 |
+| INV-01 | 每用户各有一份权威 BodyState、Diagnosis、Conversation；每份 TrainingPlan 有独立拥有者；Diagnosis 引用 BodyState 而不复制身体事实 |
 | INV-02 | 用户自述不会被模型转化为临床确诊；Observation / Hypothesis 与 Fact 不混同；AI 假设不写入 BodyState |
 | INV-03 | Correction 与 TemporalChange 是不同业务操作 |
 | INV-04 | Diagnosis 局部 patch 不删除、不重建无关医学诊断条目；实质不同医学诊断使用不同 conditionId，同一概念的名称规范化可以保留 ID |
@@ -80,18 +88,17 @@ User
 | INV-21 | 提案 create/update/set_disposition/update_relation 的目标内容（包括状态目标、停用原因及关系）绑定内容指纹与用户 accept 决定；不得将对一项医学诊断的授权复用于另一内容 |
 | INV-22 | 回放 Run/Proposal 基础记录、Decision 与有序事件应重建 Run outcome、hypotheses、证据、提案、待决/取代/过期状态及决定有效性；AI 运行时假设以 hypothesis_added 追加 |
 | INV-23 | 以 `safety_blocked` 终结的 ConditionAnalysisRun 绝不产生 DiagnosisRevision：未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效；终结后该运行的补丁、提交与任何事件由 Go 后端拒绝；每个运行只有一个终结事件（先写入者胜出），重复的 `safety_blocked` 幂等 |
-
 | INV-24 | 文件/图片提取的 BodyObservation 只有在对应证据候选按既有管线准入后才可形成；OCR 未准入候选不能直接成为可信观察或 Diagnosis；来源明确的用户自报/自测可以作为该来源等级的 Observation，但不得冒充临床核实结果 |
 | INV-25 | DerivedConcernGroup 是组织投影，不得成为第二份身体事实的独立权威，重分组不制造事实 |
 | INV-26 | TrainingSessionLog 的 completed / skipped 必须来自明确操作或陈述；播放演示、导航下一项和退出不能批量制造完成记录 |
 | INV-27 | TrainingSessionLog.date 按用户时区定义并关联执行时的 planRevisionId/templateId；服务器日期不能代替用户训练日 |
 | INV-28 | Person 是组合视图，不能持有另一份 BodyState、Diagnosis 或 Conversation 的权威状态 |
-| INV-29 | 关闭或收起 Chat 不自动接受/拒绝待决定业务操作；pending 交互有稳定身份、可恢复或明确失效 |
+| INV-29 | Chat 关闭/收起不自动接受或拒绝；用户只有一个持续 Conversation，普通 Chat Run 串行，Ask User 占用并替换普通输入区，pending 交互有稳定身份、可恢复或明确失效 |
 | INV-30 | BodyFact 的陈述记录状态 asserted/superseded/withdrawn 与真实身体变化、症状经历状态、历史时间独立；不能由时间经过自行宣称症状结束 |
 | INV-31 | SymptomEpisode 的 ongoing/ended/unknown 由有效 Fact、关联和领域事件可重建；High 可自动关联，关键历史更正及 Episode 合并拆分需要具体用户授权，旧身份与引用可追溯 |
 | INV-32 | 症状经历的实质冲突由 Agent 优先 Ask User；未完成交互属 Chat 状态，不是 Episode 状态；只有状态确实受冲突影响才保守降为 unknown，安全风险不等待关联完成 |
 | INV-33 | 用户自述观察、自测/设备观察与文件候选准入各留来源等级；记录状态、文件准入与医学证据权威不混用；AI 假设不写入用户 BodyHypothesis |
-| INV-34 | Person 的 Records/Habits 只是各领域真值的视图或入口；事实更正、陈述撤回与健康数据隐私删除不可混用，删除清除与衍生证据处理须另有明确契约（DC-033/035） |
+| INV-34 | Person Records/Habits 仅为权威数据视图或入口；事实更正、陈述撤回、移除文件原件与健康数据真正擦除是不同操作。后两者的来源资格、衍生证据及安全复核按 PC-D7、CD-D4 分别处理 |
 | INV-35 | ConditionEntry 必须是具名医学疾病或综合征而非纯症状标题；无足够病名证据时保留 BodyState/Run，不编造正式 Diagnosis 条目 |
 | INV-36 | BodyState 与 Diagnosis 按证据 ID/版本形成多对多关系，supporting/counter/context 区分，SymptomEpisode 和其 Fact 不得重复计权或暗示未经证实的因果 |
 | INV-37 | Agent 评估仅 suspected/likely 两个定性等级；临床声明可以不带 AI assessment，必须原样表示“考虑”等医学不确定性 |
@@ -103,6 +110,14 @@ User
 | INV-43 | PlanProposal 的接受校验身份、内容指纹、底版、7 天期限与关联安全上下文；并发/新证据失效重新授权；安全阻断不等于计划内容修订 |
 | INV-44 | SafetyState 的 advisory/restricted/urgent 门禁独立于计划状态，重叠限制以最严格有效限制为准；解除一条不能放行仍被另一条限制覆盖的动作 |
 | INV-45 | urgent 风险可终止运行中的 Trainer 并按既有 Diagnosis safety_blocked 语义处理；restricted 命中执行暂停；风险事件绝不伪造完成/跳过或改写计划历史 |
+| INV-46 | 每用户只有一份持续 Conversation；不能因刷新、切换窗口、模型截断或每次 AgentRun 新建会话，普通聊天 Run 同时至多一个；多端由后端串行仲裁 |
+| INV-47 | Ask User 出现时取代普通输入区域，回答仅属于准确的 interactionId/runId/toolCallId；关闭窗口不视作决定；过期或旧内容版本不能复用授权 |
+| INV-48 | Chat 的 processedThroughSeq、contextStartSeq、prunedThroughSeq 区分语义完成、LLM 上下文、物理清理；仅在必要领域提交和原话片段转存、无活动依赖且 Message/Checkpoint/缓存清理核验后推进删除边界 |
+| INV-49 | Profile 不复制时间性身体事实，Equipment 与有时间语义的器材使用事实分离；一个 UserAsset 可以同时显示于 Media/Reports 而只有一份存储与删除身份 |
+| INV-50 | 文件资产可用性、ExtractionRun 处理状态和 EvidenceCandidate 准入资格分离；移除原件而保留健康数据时历史准入不自动撤销，但必须标记原件不可用，不能冒充可核验原件或无条件满足专业放行 |
+| INV-51 | 真正删除关联健康数据时先阻止被删除来源的新使用，可靠处理原始/派生/缓存/索引/快照、最小脱敏审计与依赖复核；不误删独立来源、不静默改写 Diagnosis 或解除 SafetyRestriction |
+| INV-52 | 领域内原子提交、跨域可靠幂等事件与明确局部成功/失败；ToolCall 成功不等于业务提交；每次业务写入带准确目标、来源、版本、授权和实际提交回执 |
+| INV-53 | 目标产品不提供公开健康对话分享；旧 ConversationShare 令牌和快照在迁移时必须审计、撤销及纳入适用隐私清理，不得假定它们已经停用 |
 
 ## 7. 状态索引与领域权威
 
@@ -118,8 +133,12 @@ User
 | TrainingSessionLog | in_progress / paused / ended；pauseReason 与 endedReason 独立 | [Trainer](./training.md) |
 | PlanProposal（create/update） | pending / accepted / rejected / expired；7 天未决定则过期 | [TrainingPlan](./training.md) |
 | SafetyRestriction | advisory/restricted/urgent；由作用范围、有效期和解除依据推导门禁，无独立 status 枚举 | [SafetyState](./safety.md) |
-| 文档证据候选 | admissible / needs_review / rejected | [Person / Chat](./person-chat.md) |
-| Chat 待回复交互 | pending；accept / reject / resume / expire / stale 等语义操作 | [Person / Chat](./person-chat.md) |
+| UserAsset | available / deleting / deleted；Media/Reports 可为同一资产的双视图 | [Person / Chat](./person-chat.md) |
+| ExtractionRun | queued / processing / succeeded / failed，与原文件和证据准入状态独立 | [Person / Chat](./person-chat.md) |
+| 文档证据候选 | admissible / needs_review / rejected；历史准入与原件是否现时可用独立 | [Person / Chat](./person-chat.md) |
+| Conversation / AgentRun | 每用户唯一持续 Conversation；一个活动 Chat Run，Ask User 阻断普通输入 | [Person / Chat](./person-chat.md) |
+| ChatRetentionCursor | processedThroughSeq / contextStartSeq / prunedThroughSeq；完成核验才能前移物理清理边界 | [Person / Chat](./person-chat.md) |
+| Chat 待回复交互 | pending / answered / cancelled / expired / stale；具稳定原 Run 和工具身份 | [Person / Chat](./person-chat.md) |
 
 **完整领域契约须同时提供字段、状态、触发、授权、写入副作用、历史/回放及验收。** 已确定的规则保持唯一权威，未决字段和状态转移见 [domain-decisions.md](../domain-decisions.md)，不允许仅据 UI 名称补全领域语义。
 
@@ -129,10 +148,10 @@ User
 
 | 领域 | 现已明确 | 尚待业务决策 | 已有实现差异 |
 | --- | --- | --- | --- |
-| BodyState | BS-D1～D10 已确认：五类事实、症状 Episode、记录/病程独立、主动冲突澄清、来源分级、隐私删除边界 | 旧模型迁移及精确物理 Schema DC-025～030、DC-032；删除传播 DC-033/035；安全详见 Safety 领域 | IG-05；新增模型仍待实施 |
+| BodyState | BS-D1～D10 已确认：五类事实、症状 Episode、记录/病程独立、主动冲突澄清、来源分级；隐私删除按 PC-D6/D7、CD-D4 产品语义收敛 | 旧模型迁移与精确物理 Schema DC-025～030、DC-032；擦除传播与安全验证仍需工程实现 | IG-05/09；新增模型仍待实施 |
 | Diagnosis | ConditionEntry 四维状态、Run/Proposal/Decision 事件回放与原子提交 | DC-021/024、DC-047～051、DC-066～070（复发、重新采纳与历史） | IG-05 与旧 Diagnosis 迁移 |
 | TrainingPlan/Trainer | TP-D1～D12：计划、课模板、稳定动作身份、草案/建议、修订、排期、训练日、逐组真实执行、反馈和跨域授权已决定 | PlanPatch 物理 DTO、旧 Treatment/CheckIn 迁移、离线计时精度与动作库资源映射仍需工程方案 DC-052～061 | IG-01/02/03；新目标模型未实施 |
 | SafetyState | SAFE-D1～D8：三级产品风险、全局/计划/动作门禁、最严格优先、解除依据、分析与执行安全终止、并发原则已决定 | 临床安全规则/阈值及专业审查、旧安全 JSON 迁移与后端条件更新仍需工程验证 DC-062～065 | IG-04；旧自由文本解除不能视为合规 |
-| Person/Chat | Person 五标签是组合视图；Habits/Records 自动记录与权威边界已按 BS-D8 定稿；Conversation 不是身体事实真值，交互身份可恢复 | DC-009、DC-015～017、DC-023、DC-034～046（身份、隐私、会话） | IG-06/07 |
+| Person/Chat | **PC-D1～D9、CD-D1～D4 已定**：极简 Profile、单会话、Ask User 串行替换输入、滚动历史安全清理、统一资产、原件移除/数据擦除、证据历史资格、跨域权限/提交 | 已无阶段三核心产品选择；旧多会话/Share/原文/资产迁移、物理清理与跨域可靠事件工程验收待实施；Q-17/Q-19 属 Diagnosis 独立后续问题 | IG-06/07/11～14 |
 
 **完整性判定**：每个对象最终都需要字段表（含来源、默认/可空、单位与精度）、状态枚举和非法组合、合法转换表（触发/授权/事务/审计）、数据迁移规则以及 UI 对照和可执行验收。当前遗漏项按决策登记，业务规则已定不等于物理 Schema 可直接迁移；必须先完成映射和验证。

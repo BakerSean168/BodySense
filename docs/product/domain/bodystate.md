@@ -75,7 +75,7 @@ type BodyFact = {
 - `superseded` 表示旧陈述被纠正后的新陈述代替；`withdrawn` 表示用户明确撤回其陈述。二者有审计链，不能伪造症状缓解。
 - **历史**由发生时间、结束时间和事件关联表达；不再有 BodyFact 的统一 `active / resolved / historical` 生命周期（BS-D1）。
 - 一条「昨天头痛」不能推出今天依旧头痛或已经康复；「今天没有头痛」是有效的阴性陈述，不能自动终结所有相关 Episode。
-- **隐私删除不是 withdrawn**：需要另行清除/脱敏来源及其衍生证据，确切清除和留存规则见未决 DC-033/035。
+- **隐私删除不是 withdrawn**：PC-D6/D7 已明确结构化事实与必要原话片段、原件移除与健康衍生数据擦除的区别；源真正擦除按 [Person/Chat §3](./person-chat.md) 先阻止使用再清理/脱敏并复核。DC-033/035 的物理传播、备份及合规执行仍待工程验收。
 
 ### 2.3 五种 BodyFact 的差异化字段和状态（BS-D2）
 
@@ -215,7 +215,7 @@ type DerivedConcernGroup = {
 | `EpisodeCreated / EpisodeFactLinked` | 创建经历或 High 关联 | Go 校验候选、证据及用户归属 |
 | `EpisodeFactUnlinked / EpisodesMerged / EpisodeSplit / EpisodeBoundaryCorrected` | 修正关系或时间边界 | 关键历史修改需具体用户授权；旧 ID 与跨域引用可追踪 |
 | `EvidenceInvalidated` | 来源撤销/更正后移除不再适用的证据资格 | 重新计算受影响投影；不静默修改 Diagnosis 或降低 Safety 限制 |
-| `PrivacyErasureRequested` | 用户请求清除个人健康信息 | 与撤回陈述分离；清除、脱敏、衍生材料处理的可执行规则待 DC-033/035，不得以软删除声称完成 |
+| `PrivacyErasureRequested` | 用户请求清除个人健康信息 | 与撤回陈述和仅移除原始文件分离；按 PC-D7、CD-D4 先阻断已删除来源，再清理/脱敏受影响的来源及衍生信息，可靠复核；软删除不等于擦除完成 |
 
 **一次语义事务只增加一次 BodyStateRevision**，即便包含多条 Fact 与 Episode 变更。逻辑修订对象至少包含 §revision§、§userId§、§sourceId§、§actor: user/agent/system§、§recordedAt§、§idempotencyKey§、§changes[]§（每项含类型、目标身份与变更依据）、§authorizationId?§；已提交审计不可静默篡改。网络重试不得生成重复修订，并发更正必须校验预期修订或同等事务锁。隐私删除的实际擦除/脱敏规则优先于「永久保留明文审计」的实现习惯。
 
@@ -253,5 +253,5 @@ type DerivedConcernGroup = {
 | Observation | 自报/设备/文件来源区分、原始值/单位、文件准入独立于记录状态 | 具体数值标准化、方法目录、纠错与资格重评协议 DC-027/028 |
 | Hypothesis | 用户本人假设，更正/撤回与保留证据关联 | 旧 AI 假设记录迁移 DC-029 |
 | ConcernGroup | 派生组织视图，不复制事实 | 组键、分合与展示顺序 DC-032 |
-| 隐私清除 | 纠错、撤回陈述、删除个人数据明确分离 | 删除源消息/报告后源与派生数据的清除范围、脱敏、传播与证明 DC-033/035 |
+| 隐私清除 | 纠错、撤回、仅移除原件、清除个人健康数据均已区分（PC-D6/D7、CD-D4） | 真实清除/脱敏/缓存/审计、下游传播和完成回执的实现与合规核验 DC-033/035 |
 | Safety | 安全状态属于 BodyState，不能自行解除 | 风险等级、限制范围、解除依据的细节由 safety.md / DC-001～006 定义 |

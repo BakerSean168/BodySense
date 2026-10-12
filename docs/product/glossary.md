@@ -24,8 +24,12 @@
 | **TrainingSessionLog** / 训练记录 | 唯一 sessionLogId 的一次实际执行，绑定执行时计划修订、模板、用户时区训练日，逐组记录明确完成/跳过、撤销更正及反馈 | [requirements R-EX-05～08](./requirements.md#25-训练执行与反馈) · [domain §4](./domain/training.md#4-trainingplan) | TrainingLog（旧代码名）、计划模板、将打卡布尔值当作全组完成 |
 | **Person** / 个人档案 | 展示个人资料与身体记录、器材、资料等的窗口与业务范围；五个分类 Records / Equipment / Media / Reports / Habits，身份在标题区与 Identity Popover | [requirements §2.6](./requirements.md#26-person-个人档案与当前状态) · [interface §3](./interface.md#3-person-个人档案) | Profile 窗口（设计稿旧名） |
 | **Profile** / 基础资料 | Person 中相对稳定的身份与偏好数据（领域对象），显示在 Person 标题区与 Identity Popover；不含有时间语义的测量与习惯 | [domain §1](./domain/README.md#1-聚合关系) · [R-PS-04](./requirements.md#26-person-个人档案与当前状态) | 用 Profile 指整个 Person 窗口；把 Profile 当作第六个分类标签页 |
-| **Chat** | 自然表达、提问、发起分析与授权计划修改的对话窗口，承载交互工具 | [interface §2](./interface.md#2-业务窗口) | Assistant（设计稿旧名）、Consultation / 问诊会话 |
-| **Conversation** / 对话 | Chat 中的交流与工具活动记录；不是身体事实的权威存储 | [domain §1](./domain/README.md#1-聚合关系) | Consultation Session（旧实现） |
+| **Chat** | 自然表达与业务操作的唯一持续对话窗口；正常是近期滚动消息输入，Ask User 时由专属回答控件替换普通输入；串行 AgentRun | [Person/Chat](./domain/person-chat.md) · [interface §2](./interface.md#2-业务窗口) | Assistant（设计稿旧名）、多会话咨询管理 |
+| **Conversation** / 对话 | 每用户唯一且身份稳定的 Chat 交互通道；原始消息滚动清理，长期身体事实在 BodyState 等权威领域 | [Person/Chat](./domain/person-chat.md) | 多个 Consultation Session、永久保存全量历史 |
+| **EquipmentAsset** / 器材资产 | 用户拥有、借用或可使用的器材及其可用性；使用频率等习惯在 BodyState | [Person/Chat §1.2](./domain/person-chat.md) | 将训练习惯误当器材属性或直接修改处方 |
+| **UserAsset** / 文件资产 | 单一上传文件身份；Media/Reports 双视图共用；原件删除与健康衍生数据擦除不同 | [Person/Chat §1.3/3](./domain/person-chat.md) | 两份文件副本、上传即诊断 |
+| **ChatRetentionCursor** / 聊天保留游标 | 区分已完成语义处理、模型上下文起点及已安全清理的旧消息位置 | [Person/Chat §2.3](./domain/person-chat.md) | 只截断模型输入就认为数据库已擦除 |
+| **历史准入 / 原件可用性** | 删除原始报告但保留已采纳结构化健康数据时，历史 admissible 不自动丧失，须标注原件不可用；需要可复核原件的操作仍须重新核验 | [Person/Chat §3.2](./domain/person-chat.md) | 原件已删却声称可核验、自动专业放行 |
 | **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（全训练/计划/动作）、有效期、解除策略（`liftPolicy`：到期自动解除 / 用户复核 / 专业人员放行）与解除条件，Trainer 据此把关；产品等级 advisory/restricted/urgent，重叠按最严生效；不等于修改计划内容或状态 | [requirements R-SAFE-03](./requirements.md#27-安全) · [SafetyState](./domain/safety.md#23-safetystate-与执行限制) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
 
 ## 2. 来源、医学判断与采纳用语

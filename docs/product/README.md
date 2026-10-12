@@ -23,7 +23,7 @@ BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然
 
 文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。Diagnosis V2 的新医学身份和确认语义取代原 V1 规则；Training V2 与 Safety 的批量业务决策也已登记。历史决策仍留存但不作为新实现依据。
 
-**并行评审（未批准，不属于领域真值）：** [Person / Chat + 跨领域契约评审稿（2026-10-13）](./reviews/person-chat-cross-domain-review-20261013.md)。本文只提出候选字段、生命周期、隐私删除和跨领域关联规则；决策确认后再回填对应权威规格与验收。
+**阶段三产品领域评审已通过：** [Person / Chat + 跨领域最终评审记录（2026-10-13）](./reviews/person-chat-cross-domain-review-20261013.md)。**权威业务规则**已回填 [domain/person-chat.md](./domain/person-chat.md)、需求、工作流、UI、验收和决策登记；该评审记录仅用于追溯，不作为另一份冲突来源。代码、数据迁移、历史消息清理、隐私擦除和旧分享退役仍待实现及验证。
 
 ## 核心对象一览
 
@@ -31,6 +31,8 @@ BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然
 - **Diagnosis V2 综合诊断**：每位用户一份；当前显示经用户采纳的具名医学疾病/综合征诊断（ConditionEntry），停用历史保留。AI suspected/likely 证据评估、医生原始声明、多来源、BodyState 多对多证据及用户 adopted/inactive 分离；逐项确认、一次原子修订（R-DX-01～17、DX-D5～D15）。
 - **TrainingPlan / Trainer（TP-D1～D12）**：多份独立完整处方；Draft 是尚未采纳的计划预览，接受后才生效。PlanProposal 统一创建/调整建议，计划修订与真实执行日志分离；每组完成或跳过须有明确用户行为；默认频率而非自动日历排期（R-TP-01～10、R-EX-01～08）。
 - **SafetyState（SAFE-D1～D8）**：BodyState 内唯一风险权威；advisory/restricted/urgent 分级与范围匹配，Trainer 严格执行门禁，专业放行和复核解除按来源校验，不改写计划内容或状态（R-SAFE-01～08）。
+- **Person / Chat（PC-D1～D9）**：极简 Profile、Equipment 可使用资产、Media/Reports 共享 UserAsset；每用户唯一持续 Conversation，Ask User 替换普通输入区并串行处理；消息近期滚动清理，长期事实与必要原话在所属领域；公开健康对话分享不纳入目标产品。
+- **跨领域契约（CD-D1～D4）**：稳定来源/证据版本、精确授权、权威提交回执与可靠事件；文件原件移除和健康数据擦除分离，保留的历史准入不能冒充现时可核验的原件或自动专业放行。
 - **交互空间**：3D 人体持续作为底层桌面，Chat、Person、Diagnosis、TrainingPlan、Trainer 为浮动窗口（[interface](./interface.md)）。
 
 ## 设计参照

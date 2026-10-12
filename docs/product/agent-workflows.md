@@ -43,7 +43,7 @@ Agent 负责解析用户意图，选择合适的证据采集和业务工具，�
 | 逻辑工具 | 允许的结果 | 关键防护 | 规则 |
 | --- | --- | --- | --- |
 | record_body_state | 自动提交明确本人事实与其症状关联、真实时间变化、用户本人提出的假设（BodyHypothesis） | 身份、来源、时间、幂等与冲突检查；Episode 状态只能由证据重建；不写入 AI 假设 | R-BS-01～10 |
-| ask_user | 主动追问影响病程/历史判断的实质冲突，允许结构化选项和自由文本解释 | 绑定冲突 Fact/Episode、目标修订与待回答字段；用户明确回答可授权对应准确更正；未答时保持可恢复身份，不伪造状态 | R-BS-03、R-BS-10、INV-32 |
+| ask_user | 当前 Chat Run 中串行追问关键歧义，提供选项和可选自由解释；工具出现时直接替换普通聊天输入区 | 锚定原 interactionId/runId/toolCallId、目标修订和字段；用户只能向该工具答复，刷新/断线恢复原交互，不允许并行普通消息；明确答复可授权准确更正 | R-BS-03/10、R-CHAT-02/03、INV-47 |
 | inspect_evidence | 获取和审阅照片、资料、自测与知识证据 | 不能推定没有证据支持的医学事实 | R-DX-08 |
 | analyze_conditions | 用户明确请求时创建正式 ConditionAnalysisRun，依据 BodyState/证据形成具名医学诊断候选及 create/update/set_disposition/update_relation 提案；运行中新 AI 假设只写 hypothesis_added | 固定有来源版本的证据基线；证据不足不制造医学病名；未经请求不启动正式 Run；严重风险可安全阻断；不写 BodyHypothesis | R-DX-02/07/10/11、INV-02/23 |
 | confirm_condition | 在 Chat 中逐项展示准确的医学诊断提案及来源、证据、确定性和处理建议；用户决定 accept/reject 或继续补充 | 授权绑定 proposalId、内容指纹和证据版本；采纳不改变 AI suspected/likely，不制造临床来源；拒绝已有条目更新不撤回旧诊断；此工具只留决定不直接写 Diagnosis | R-DX-03～05/08/12、INV-06/18 |
@@ -118,9 +118,18 @@ Agent 负责解析用户意图，选择合适的证据采集和业务工具，�
 5. 用户说「症状已经好了」时，按 §3.1 写入 BodyState 并按真实证据更新 Episode，而不是借 Diagnosis 的旧 mark_resolved 路径变更。
 6. Agent 如果根据新证据认为医学结论应改变，只能建议用户正式重新分析，不能伪造直接编辑请求。并发直接编辑与正式 Run 必须核验 Diagnosis 基线版本。
 
+### 3.6 单会话历史清理与文件资产生命周期
+
+1. 用户始终使用同一 Conversation；每次请求开启新的 AgentRun，当前 Run 未结束或 Ask User 待答时普通输入被后端串行门禁保护。Ask User 以同一工具 UI 接收选项和需要的补充解释，不能开启并行独立聊天（PC-D4/D5）。
+2. 普通 Chat 过程及时识别本人明确事实；Go 领域服务提交、返回真实修订/结果后，将必要用户原话证据最小化地持久化到事实来源权威。知识问答/无价值消息可标明无需持久化，不能把全量聊天摘要当作第二个 BodyState。
+3. 只有当一段完整对话/工具交互均完成处理、所需领域提交成功、当前 Run/待确认提案不再依赖它，才可推进上下文和物理清理边界。物理清理须验证 Go Message、LangGraph Checkpoint、缓存、搜索索引和受控快照的目标副本；失败保持游标并重试（PC-D6/D9）。
+4. 用户在 Person 上传文件，产生唯一 UserAsset 与各自版本化 ExtractionRun/准入记录。同一文件可在 Media 和 Reports 双视图出现，但健康解析仍通过证据管线；原文件移除仅改变 sourceAvailability、保留允许的历史准入和最小结构化证据（PC-D3、CD-D4）。
+5. 用户明确选择删除文件及关联健康数据时，先拒绝来源的新用途，再可靠地处理源对象、派生证据、缓存/快照，按权威领域重新计算相关资格、通知 Diagnosis 复核和 SafetyState 保守检查；不能自动撤销诊断或解除限制（PC-D7、CD-D4）。
+6. 涉及多个领域的命令分别由 Go 权威事务提交并返回真实结果；跨域影响使用持久、幂等的事件传播。失败必须展示部分成功/可重试状态，不能把 Agent ToolCall 成功当业务提交（CD-D1～D3）。
+
 ## 4. 交互工具状态
 
-每次待回答问题或待授权提案必须有稳定交互 ID、关联用户、关联消息、关联业务对象、过期/恢复语义。系统需支持：
+每次待回答问题或待授权提案必须有稳定交互 ID、关联用户、原始 Run、工具调用、必要来源与具体业务对象/版本、过期/恢复语义。**一个 Conversation 同时只有一个活动的普通 Chat Run；Ask User 在底部直接替换普通输入区并独占答案通道**。一个 Diagnosis Run 可以有多个顺序处理的 ProposalDecision，不代表允许并行开启多个聊天 Run。系统需支持：
 
 - accept：应用准确的授权目标；
 - reject：用户明确拒绝（「不是这个」「暂不修改」），保留原业务内容并记录决定；
@@ -143,4 +152,4 @@ Agent 负责解析用户意图，选择合适的证据采集和业务工具，�
 
 BodyState 的事实必须由 Go 校验入库；报告候选只在准入后变为可信 Observation；AI 假设仅属于 ConditionAnalysisRun。Diagnosis 的 Run/Proposal/Decision 具有稳定身份和原子提交边界；收起/关闭窗口不等于业务决定。TrainingPlan、Trainer 日志和 SafetyState 独立拥有状态，不能混用。Person 是组合视图，Conversation 只是交互通道。
 
-pending 时必须支持具有正确上下文的「继续补充」操作；是否允许普通输入框并行消息及如何绑定仍待 DC-017。详细状态见 [domain](./domain/README.md)，其他未决项见 [domain-decisions](./domain-decisions.md)。
+pending 时的「继续补充」由**当前 Ask User 的专属选项/解释控件**向原 interactionId/runId 回答，不开放普通聊天输入并行发送；此决策已按 PC-D5 关闭 DC-017 的产品问题。单会话的结构化长期记忆、滚动游标、文件删除双语义及历史准入边界按 [Person/Chat 领域契约](./domain/person-chat.md) 执行；其他独立待决问题见 [domain-decisions](./domain-decisions.md)。

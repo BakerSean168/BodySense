@@ -23,7 +23,7 @@
 
 | 窗口（Penpot 旧名） | 默认内容 | 主要动作 |
 | --- | --- | --- |
-| Chat（Assistant） | 对话、简短的已保存反馈、追问、建议和批准控件 | 描述身体、提问、发起正式分析、请求计划调整 |
+| Chat（Assistant） | 每用户唯一持续对话的近期滚动消息、当前 Run、已保存反馈和阻断式 Ask User | 描述身体、提问、发起正式分析、请求计划调整；不提供会话列表或新建会话 |
 | Person（Profile） | 当前基础资料、身体记录、器材和相关个人资产 | 查看、纠正、补充、管理个人资料 |
 | Diagnosis（Assessment） | 唯一当前综合诊断，按病情独立展开 | 查看依据、补充信息、从 Chat 请求局部重新分析 |
 | TrainingPlan（Training） | 该计划当前已接受的动作/强度/频率/安排 | 查看、请求局部修改、接受或暂不采纳建议 |
@@ -31,13 +31,23 @@
 
 组件的布局、间距、动效和层级与 Penpot 的实际可编辑组件保持一致。本文件定义数据与交互语义，不规定另一套视觉样式。
 
+### 2.1 Chat 单会话与 Ask User 输入区（PC-D4/D5/D9）
+
+- 每用户唯一 Conversation；切换窗口、刷新或换设备返回同一条 Chat 时间线。只展示近期滚动历史，超出安全窗口且持久化完成的旧消息逐步退出 UI；不出现多会话列表、新建、标题、归档或置顶控件。
+- 普通情况下，底部为文字/允许附件的常规输入区，显示当前 AgentRun 的流式进度。一个 Chat 同时至多一个活动普通 Run；正在运行时重复发送和跨设备并发应由后端拒绝或定位回同一活动任务。
+- Agent 调用 Ask User 时，**底部普通输入区整体替换为本工具的选项及允许的自定义解释输入**。不再在选项卡旁同时暴露普通聊天框，也不将自由补充变成另一个 Chat Run。选择绑定准确 interactionId/runId/toolCallId；重复答复幂等，过期或底版变化时清晰提示并重新核验。
+- 关闭、移动或收起窗口不会自动接受或拒绝。刷新/断线后恢复原待答工具及此前合法决定；医学多提案依次确认、一次整体提交，已答但未写入 Diagnosis 时不能显示为「已保存」。
+- 从窗口消失的旧消息可能仍有经许可的结构化长期事实和必要原话证据；UI 不把历史截断宣传为隐私数据擦除。用户不需要看到处理/删除的内部游标。
+
 ## 3. Person 个人档案
 
 参考 Penpot 的 Profile 原型，保留其既定的五个分类标签页：**Records、Equipment、Media、Reports、Habits**（R-PS-04）。身份等基础资料（Profile 领域对象）显示在窗口标题区，点击后以 Identity Popover 查看和编辑，不作为第六个标签页。
 
 - Records 展示当前可用的身体记录；缺数据时使用明确的空状态，可继续补充。
-- Equipment 展示已添加器材，数量按数据自然变化。
-- Media / Reports 保留资料、来源、处理与核实状态。用户上传的照片、报告等资料归入这里；基于资料的分析在 Chat 中发起（Penpot 中 Workflow/Assessment 的「上传 → 证据 → 结果」流程为旧流程，不再采用）。识别值区分已采纳、待用户核实、未采纳三种状态（对应证据管线的 admissible / needs_review / rejected），待核实值需展示来源位置供用户核对、更正或否定；未采纳的值不显示为可信证据（R-PS-03）。
+- Equipment 展示当前可使用器材及拥有/借用/场所使用关系、可用性；「每周用几次」等习惯属于 BodyState 的 Habits/Records。器材不可用只提示训练计划影响复核，不自动修改处方（PC-D2）。
+- Media / Reports 展示统一 UserAsset 的不同分类：同一报告图片只保留一份文件身份。界面分别显示文件可用/删除状态、OCR/解析排队/进行/成功/失败、证据 admissible/needs_review/rejected；核实需展示原件页/位置及必要来源；未准入候选不显示为可信医学证据。基于资料的分析仍由 Chat 发起，不采用旧「上传 → 证据 → 结果」流程（R-PS-03/08）。
+- 文件管理应提供清晰不同的「移除原始文件」与「删除文件及关联健康数据」，展示各自保留/擦除范围与进行中/失败/完成反馈。原文件移除后历史结构化观察可保留原准入资格，但须明确显示「原件已移除、当前不可复核」，需要可核验原件的专业放行操作不得将其当作现有临床证明（PC-D7、CD-D4）。
+- 标题区 Identity Popover 的极简 Profile 可选编辑；用户时区/单位偏好修改不重写历史事实、原始单位或训练日期（PC-D1）。
 - Habits 提供具有时间语义的生活习惯信息。
 - 基础资料与身体状态由各自权威数据源提供，不采用演示值作为真实资料。
 - Person 不是内部修订管理器，不展示 BodyState 技术修订号（R-PS-02）。
@@ -118,8 +128,8 @@ Penpot 项目：**BodySense · Product Design**，文件 ID `24d9d841-759d-81bc-
 
 | 窗口 | 必须区分的业务和 UI 状态 | 归属与未决 |
 | --- | --- | --- |
-| Chat | loading/error、pending、已决定未提交、继续补充、恢复、expired、stale、安全阻断 | [Person/Chat](./domain/person-chat.md)；DC-017、Q-19 |
-| Person | 五标签各自 empty/loading/populated/error；报告候选 admissible/needs_review/rejected；身份弹层 | [Person/Chat](./domain/person-chat.md)；DC-007/008/015 |
+| Chat | 唯一滚动历史窗口；idle/running/waiting_for_user、Ask User 替换底部输入、恢复、已决定未提交、expired、stale、safety_blocked；用户不见清理游标 | [Person/Chat](./domain/person-chat.md)；PC-D4/D5/D9，医学卡片视觉 Q-19 |
+| Person | 五分类 empty/loading/populated/error；统一 UserAsset 的文件/处理/证据三状态，原件不可用的历史准入提示；两类删除与身份弹层 | [Person/Chat](./domain/person-chat.md)；PC-D1/D2/D3/D7，CD-D4 |
 | Diagnosis | 四个独立状态维度，提案确认、证据变化、历史、安全终结 | [Diagnosis](./domain/diagnosis.md)；DC-021/024 |
 | TrainingPlan | 计划 active/paused/completed，Draft/Proposal pending/accepted/rejected/expired，频率或显式日历、独立安全限制 | [Training](./domain/training.md)；TP-D1～D6 |
 | Trainer | in_progress/paused/ended、逐组完成/跳过、更正、正常/提前/安全结束、受限范围与复核；Draft 不属于 Trainer | [Training](./domain/training.md)、[Safety](./domain/safety.md)；TP-D7～D12、SAFE-D1～D8 |
