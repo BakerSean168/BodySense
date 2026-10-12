@@ -2,6 +2,23 @@
 
 **本文件记录已由产品负责人（Arlon）决定的问题。** 决定的内容已写入对应规格文件，规则以规格文件为准；本表只说明决定了什么、为什么、写在哪里。尚未决定的问题见 [开放问题](./open-questions.md)。
 
+## 2026-10-12 · BodyState 业务模型评审（BS-D1～D10）
+
+本轮为**业务逻辑契约确认**，并不代表 Go/API、数据迁移、证据删除机制已经实现。BS-D7 来自用户对实时主动澄清的明确要求；BS-D8～D10 已确认其原则，其中具体的数据擦除范围与技术流程继续由 DC-033/035 决定。
+
+| ID | 已确认的业务原则 | 影响范围 |
+| --- | --- | --- |
+| BS-D1 | 历史时间、真实身体变化与记录更正分离；BodyFact 不使用 active/resolved/historical 混合生命周期 | R-BS-04/07，domain/bodystate §2.2 |
+| BS-D2 | BodyFact 保留 symptom、health_history、activity、lifestyle、training_feedback 五类，按类别分别定义细节和适用时间 | R-BS-08，domain/bodystate §2.3 |
+| BS-D3 | 用户陈述是 BodyFact；同一段症状经历由 SymptomEpisode 组织，复发关联但不复制旧事实 | R-BS-07，domain/bodystate §2.4 |
+| BS-D4 | 症状结束/复发以有依据的时间与语义为准；固定天数及沉默不构成自动结束或拆分 | R-BS-07，domain/bodystate §2.4 |
+| BS-D5 | High 自动关联；Medium/Low 保留事实、按需澄清；Episode 关键更正、合并、拆分要求明确授权 | R-BS-07，INV-31 |
+| BS-D6 | Episode 状态由有效 Fact、关联与领域事件推导，可缓存但不能脱离来源任意写状态 | domain/bodystate §2.4，INV-31 |
+| BS-D7 | 存在关键冲突时 Agent 在实时 Chat 优先 Ask User 并给选项与自由说明；未完成且影响状态时 unknown 兜底，保留冲突依据 | R-BS-10，INV-32 |
+| BS-D8 | Habits/Records 中明确的本人陈述按权威领域规则自动入库；Person 只是视图及编辑入口 | R-BS-08、R-PS-05，domain/person-chat |
+| BS-D9 | Observation 分离自报、自测、设备与文件证据来源；OCR 候选须准入，自报不冒充临床测量，证据资格与陈述状态不同 | R-BS-09，INV-24/33 |
+| BS-D10 | 事实纠错、撤回陈述与删除健康数据分离；必须真正处理来源与衍生数据，删除的具体范围和传播机制仍开放 | R-BS-10，INV-34；DC-033/035 |
+
 ## 2026-10-12 · 开放问题 Q-01～Q-14 评审
 
 | ID | 决定 | 原因 | 写入位置 |

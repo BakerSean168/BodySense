@@ -2,122 +2,256 @@
 
 ## 2. BodyState
 
+**性质：目标业务逻辑模型（BS-D1～D10 已确认的原则）；不代表当前 Go 数据库/API 已实现。** 业务规则见 [requirements `2.2](../requirements.md#22-bodystate-身体状态)，运行时不变量见 [domain/README](./README.md#6-运行时不变量)，具体证据采纳见 [健康文件证据管线](../../architecture/health-document-evidence-pipeline.md)。
+
+BodyState 每位用户恰有一份，持有**用户本人真实陈述、可追溯观察、用户提出的假设、症状经历关系及安全状态**。它不是 Diagnosis，也不是 Conversation、Person 的第二份身体事实存储。
+
 ~~~ts
 type BodyState = {
   userId: string;
-  currentRevision: number;       // 内部字段
+  currentRevision: number;            // 领域事务修订，普通 UI 不展示
   currentFacts: BodyFact[];
+  symptomEpisodes: SymptomEpisode[];  // 稳定身份与关联；state 为派生投影
   observations: BodyObservation[];
   hypotheses: BodyHypothesis[];
-  concernGroups: DerivedConcernGroup[];  // 组织投影，不单独持有身体事实
-  safetyState: SafetyState;
-};
-
-type BodyFact = {
-  id: string;
-  statement: string;
-  bodyRegionIds: string[];
-  subject: "self";
-  kind: "symptom" | "health_history" | "activity" | "lifestyle" | "training_feedback";
-  source: { kind: "user_message" | "direct_edit" | "structured_answer"; id: string };
-  validFrom?: string;
-  validTo?: string;
-  observedAt?: string;
-  recordedAt: string;
-  timePrecision: "exact" | "day" | "range" | "approximate" | "unknown";
-  lifecycle: "active" | "resolved" | "historical";
-  correctedFactId?: string;
-  supersedesFactId?: string;
-};
-
-type BodyHypothesis = {          // 只保存用户本人提出的怀疑（R-BS-06）
-  id: string;
-  statement: string;             // 如「我怀疑是偏头痛」
-  source: { kind: "user"; messageId: string };
-  relatedFactIds: string[];
-  bodyRegionIds: string[];
-  recordedAt: string;
+  concernGroups: DerivedConcernGroup[]; // 只读组织投影
+  safetyState: SafetyState;            // 详细限制契约由 safety.md 定义
 };
 ~~~
 
-> SafetyState 是 BodyState 的组成部分，完整限制与解除契约见 [safety.md](./safety.md)。
+### 2.1 证据归属与自动写入
 
-### 2.1 写入语义与证据分类
-
-满足 R-BS-02 的用户自述，经过结构验证后直接保存，无需事前人工批准。系统必须核查来源消息、用户身份、主体归属、时间语义、字段可解释性及幂等标识。
-
-| 分类 | 含义 | 权威边界 |
+| 对象 | 权威内容 | 不得混入 |
 | --- | --- | --- |
-| 用户自述（BodyFact） | 用户明确报告的现象、健康史或生活习惯 | 自动记录不等于临床客观核实 |
-| Observation | 有方法及来源的检查、自测、测量或报告观察；报告识别值只有按 [证据管线](../../architecture/health-document-evidence-pipeline.md) 规则采纳后才形成 Observation（R-PS-03） | 可查看方法与来源；未核实 / 低于阈值的值不是可信临床证据 |
-| Hypothesis（BodyHypothesis） | 用户本人提出的病因怀疑或可能疾病，`source = user`，自动记录 | 不具备确诊权威；AI 提出的假设只存在于 ConditionAnalysisRun / ConditionProposal 审计，不写入 BodyState |
-| Evidence | 支持或反驳假设的文献、报告、测量等 | 必须有可追溯来源 |
+| BodyFact | 用户明确陈述的症状、健康史、活动、习惯和训练反馈；表示「用户报告如此」，非医学客观证实 | AI 对病因的解释、他人的健康情况、知识问答 |
+| BodyObservation | 有方法、来源及时间的测量或观察（含用户自报测量、自测、设备及经过准入的文件观察） | 未准入 OCR 候选、未经证实的临床结论 |
+| BodyHypothesis | 用户本人明确提出的病因猜测或可能疾病 | Agent 自己提出的假设；后者只进入 ConditionAnalysisRun / 提案审计 |
+| SymptomEpisode | 同一段症状经历的事实关联、时间边界和推导状态 | 独立且未经来源支持的身体症状、医学病名 |
+| DerivedConcernGroup | 相关 Episode、Fact、Observation、Hypothesis 的组织视图 | 第二份身体事实、独立诊断 |
+| SafetyState | 当前有效的风险限制及来源 | TrainingPlan.status 或 Diagnosis 生命周期 |
 
-存在不可消除的关键歧义时，只对相关字段创建 Clarification；同一条消息的其他明确内容可以先提交（R-BS-03）。
+明确本人陈述经 Agent 提取、Go 验证后直接保存，不逐项请求批准（R-BS-01～03）。同一消息中的明确内容可先保存，关键歧义进入 Ask User；**事实自动入库与自动认可医学结论是两回事**。Person 的 Records/Habits 是权威聚合的视图/编辑入口，不复制身体真值；是否写入由事实类型与来源规则决定，不由所在 UI 标签页决定。
 
-### 2.2 时间与更正操作
+### 2.2 公共来源、时间与记录状态
 
-| 操作 | 当前投影 | 审计和时间线 |
+~~~ts
+type BodyFactKind =
+  | "symptom" | "health_history" | "activity"
+  | "lifestyle" | "training_feedback";
+
+type UserStatementSource = {
+  kind: "user_message" | "direct_edit" | "structured_answer";
+  id: string;                         // 稳定来源引用
+};
+
+type TemporalValue = {
+  start?: string;                      // 用户陈述支持的真实发生/生效时间
+  end?: string;
+  precision: "exact" | "day" | "range" | "approximate" | "unknown";
+  originalExpression?: string;        // 「大约上周」「很久以前」等
+  timezone?: string;                   // 相对时间解释采用当时用户时区
+};
+
+type AssertionStatus = "asserted" | "superseded" | "withdrawn";
+
+type BodyFact = {
+  id: string;
+  userId: string;
+  subject: "self";
+  kind: BodyFactKind;
+  statement: string;                   // 用户原意，不把 Agent 推断伪装成用户话语
+  bodyRegionIds: string[];             // 非局部事实可为空
+  source: UserStatementSource;
+  temporal: TemporalValue;
+  observedAt?: string;                 // 用户/系统观察时间（有依据时）
+  recordedAt: string;                  // 系统保存时间，不能代替发生时间
+  assertionStatus: AssertionStatus;
+  supersedesFactId?: string;           // 仅纠错继承；真实变化不是事实纠错
+  details: FactDetails;                // 依 kind 分型，见 `2.3
+};
+~~~
+
+- `2.2 的 `asserted` 表示该**用户陈述记录**仍有效，不表示症状仍持续，更不表示医学已确诊。
+- `superseded` 表示旧陈述被纠正后的新陈述代替；`withdrawn` 表示用户明确撤回其陈述。二者有审计链，不能伪造症状缓解。
+- **历史**由发生时间、结束时间和事件关联表达；不再有 BodyFact 的统一 `active / resolved / historical` 生命周期（BS-D1）。
+- 一条「昨天头痛」不能推出今天依旧头痛或已经康复；「今天没有头痛」是有效的阴性陈述，不能自动终结所有相关 Episode。
+- **隐私删除不是 withdrawn**：需要另行清除/脱敏来源及其衍生证据，确切清除和留存规则见未决 DC-033/035。
+
+### 2.3 五种 BodyFact 的差异化字段和状态（BS-D2）
+
+| kind | `details` 最小业务内容（逻辑字段，允许未提供） | 状态/归属 |
 | --- | --- | --- |
-| Add | 新增事实 | 记录来源与适用时间 |
-| TemporalChange | 更新有效状态 | 保留旧状态的真实时间区间 |
-| Correct | 更正错误记录 | 保留纠错痕迹，错误数据不当病程 |
-| Duplicate | 无实质改变或增加证据 | 不能制造多份相同事件 |
-| Clarify | 暂不写入模糊字段 | 记录待回答的问题、目标和来源 |
+| `symptom` | `symptomType`、`presence: present/absent`、`laterality`、`severity`（原始量表/单位）、`pattern: continuous/intermittent/unknown`、`triggers`、`relievingFactors`、`occurrenceContext` | 用户每次明确描述均为事实；持续、缓解、复发由 Episode 推导 |
+| `health_history` | `historyKind`、事件描述、所述发生时间/结果、来源上下文 | 既往损伤、手术、用户转述医生诊断等历史陈述；通常是事件，不强制状态机 |
+| `activity` | `activityType`、持续时间/运动量/强度（有依据时） | 某次具体活动事件；长期习惯归 lifestyle |
+| `lifestyle` | `habitType`、频率/规律/典型时长、适用时期 | 事实有效时间段表达习惯调整、停止与未知；不覆盖旧时期 |
+| `training_feedback` | `sessionLogId`、`exerciseId`（可选）、反馈类别与原文 | 一次用户主观反馈；正式完成/跳过仍由 Trainer 的 TrainingSessionLog 权威持有 |
 
-- 至少区分身体状态有效时间、观察时间、记录时间、原始证据形成时间。描述「最近」「去年」「一周前」时保留原始精度并使用用户时区；不能为了填充字段而编造日期（R-BS-05）。
-- 一个语义完整的事务可以增删改多个 BodyFact，但只形成一次 BodyStateRevision。
+字段不由 Agent 依据习惯擅自填满；无来源则保留未提供。症状的同一次/多次发作，不由部位和固定天数判断；同一句训练反馈若明确包含身体症状，可同时形成来源共享但职责不同的 symptom Fact，且避免复制 Trainer 已有的完成记录。
 
-### 2.3 属性完整性、来源和未决字段
+### 2.4 SymptomEpisode：身份、关联及状态（BS-D3～D7）
 
-| 对象 | 已定义的属性与保证 | 仍缺少的正式逻辑 Schema |
+~~~ts
+type EpisodeState = "unknown" | "ongoing" | "ended";
+
+type SymptomEpisode = {
+  id: string;
+  userId: string;
+  symptomType: string;                // 分组特征；并非医学病因
+  bodyRegionIds: string[];
+  laterality: "left" | "right" | "bilateral" | "not_applicable" | "unknown";
+  createdAt: string;
+  identityStatus: "current" | "superseded" | "invalidated"; // 组织身份，不是病程状态
+  projection: {
+    state: EpisodeState;
+    stateAsOf?: string;                // 最近支持该结论的业务时间
+    onset: TemporalValue;
+    end?: TemporalValue;
+    reason: "explicit_current_report" | "explicit_resolution"
+      | "insufficient_evidence" | "conflicting_evidence";
+    basisFactIds: string[];
+    basedOnRevision: number;
+  };
+};
+
+type EpisodeFactLink = {
+  episodeId: string;
+  factId: string;
+  role: "onset" | "observation" | "change" | "resolution";
+  associationMethod: "explicit" | "inferred" | "user_corrected";
+  basisSourceIds: string[];
+};
+
+type EpisodeRelation = {
+  fromEpisodeId: string;
+  toEpisodeId: string;
+  kind: "recurrence_reported" | "similar_symptom"
+    | "merge_replacement" | "split_replacement";
+  basisFactIds: string[];
+  authorizationId?: string;          // 合并/拆分必须绑定准确授权
+};
+~~~
+
+链接是独立、可审计的关联；Episode **不持有症状正文、疼痛程度或独立的医学结论**。用户未明确提到的 onset/end 不能补造。一个症状 Fact 至多属于一段互斥经历的**主关联**；与其他经历或 Concern 的关联须另行标明，不能偷偷复制事实。
+
+| 依据 | Episode 结果 | 必须遵守 |
 | --- | --- | --- |
-| BodyState | userId / currentRevision / currentFacts / observations / hypotheses / concernGroups / safetyState | 单次事务的 BodyStateRevision DTO |
-| BodyFact | id、statement、bodyRegionIds、subject、kind、source、validFrom/validTo、observedAt、recordedAt、timePrecision、lifecycle、纠错关系 ID | historical 与 resolved 的严格转换边界（DC-019） |
-| BodyHypothesis | id、statement、source=user、relatedFactIds、bodyRegionIds、recordedAt | 纠正、反证、撤回和历史状态（DC-020） |
-| BodyObservation | 有来源、方法、形成/观察时间、可追溯的证据准入依据；OCR 未准入候选不能作为可信观察 | 原始值/单位与规范化结构、审计 DTO 尚未定稿；不得直接复制旧 Assessment Schema |
-| DerivedConcernGroup | 派生关联事实和观察的组织视图，不独立存储身体真值 | 身份、合并/拆分规则及缓存失效方式 |
+| 明确仍持续 | `ongoing` | 是「截至该陈述时间持续」，不是保证查询当下仍持续 |
+| 明确本次症状完全结束 | `ended` | 必须引用具体有效结束依据；改善、短暂不疼不等于结束 |
+| 不知目前是否持续 | `unknown` | 不靠无新消息、固定时间跨度自动结束 |
+| 已结束后明确再次发作 | **新 Episode**，关联旧经历 | 不修改旧 Episode 的结束事实；关联不证明同一医学病因 |
+| 原结束依据被用户明确纠错 | 原 Episode 重算 | 不伪造一次结束后复发 |
+| 直接影响状态的未解决实质冲突 | `unknown` + `conflicting_evidence` | 保留冲突依据及上次有支持的状态；局部历史冲突不必降级整段 |
+| 唯一支持事实被撤回 | 重算；无有效症状依据时组织身份 invalidated 并退出当前投影 | invalidated 不等于病程结束；不继续保留无依据的 ended/ongoing |
 
-上述未定义类型并非伪装成已经可编译的完整契约。实现前需先确定字段所有权，避免事实在 Person、Chat 与 BodyState 多处写入。
+Episode 当前投影只能由有效 BodyFact、可追溯链接与领域变更事件**确定性重建**；允许保存缓存供读，但不允许直接写 `state = ended` 而不提供依据。重建按**业务时间与精度**组织，按**修订顺序**回放当时已知事实；补录过去的事实不能倒改历史修订当时的知识。
 
-### 2.4 已定状态转移、触发与权限
+#### 关联与授权
 
-| 状态/操作 | 触发与合法变化 | 授权、审计、副作用 |
+- **High**：用户明确指代、时间/症状特征兼容、无竞争候选，可自动关联或创建明确的新经历；`High` 是依据强度而非医疗诊断概率。
+- **Medium / Low**：明确的 BodyFact 照常写入；不强行关联，只有关系歧义会实质影响病程才发起 Ask User。未关联 Fact 仍有完整来源，且参与安全识别。
+- **关键冲突**：实时会话中由 Agent 优先调用 Ask User，给出「旧记录说错 / 新表述说错 / 确实结束后再发生 / 条件不同 / 自行补充 / 暂不确定」等与上下文匹配的选项。用户回答构成对**精确更正目标和内容**的授权，无需同一动作再次重复确认。
+- **交互未完成**：网络中断、取消、无回答等由 Chat/PendingInteraction 持有独立待决身份；冲突直接影响 Episode 状态时才暂时推导为 unknown，并保留冲突依据。恢复时按目标修订重新核验；`pending` 不是 Episode 的病程状态。
+- **合并/拆分/关键边界更正**：要求用户对准确范围显式授权；原组织 ID/Fact 不删除，合并或拆分可创建新 Episode 身份并保留旧→新沿革、引用映射和修订审计；各新 Episode 独立重算，不复制旧状态。若 Diagnosis 已引用旧 ID，仅提示/标记受影响分析复核，不静默改写已确认的 ConditionEntry。
+- 来源冲突需比较主体、症状类型、部位、侧别、有效时间与触发/观察条件；时间条件不同或主观症状与客观观察不同不必然冲突。出现紧急风险时，不得等候关联澄清而跳过 Safety 判断。
+
+### 2.5 BodyObservation、BodyHypothesis、ConcernGroup 与证据分级（BS-D9）
+
+~~~ts
+type BodyObservation = {
+  id: string;
+  userId: string;
+  kind: string;
+  statement?: string;                 // 非数值观察
+  rawValue?: string;
+  rawUnit?: string;
+  normalizedValue?: number;
+  normalizedUnit?: string;
+  method?: string;
+  measurementContext?: string;
+  source: { kind: "user_report" | "self_test" | "device" | "document" | "structured_observation"; id: string; version?: string };
+  observedAt?: TemporalValue;
+  recordedAt: string;
+  assertionStatus: AssertionStatus;
+  supersedesObservationId?: string;
+  evidenceRefId?: string;             // 文件/设备证据，视来源可选
+};
+
+type BodyHypothesis = {
+  id: string;
+  userId: string;
+  statement: string;
+  source: { actor: "user"; reference: UserStatementSource }; // 用户消息/直接编辑/结构化回答；排除 AI 假设
+  relatedFactIds: string[];
+  relatedObservationIds: string[];
+  bodyRegionIds: string[];
+  assertionStatus: AssertionStatus;
+  supersedesHypothesisId?: string;
+  recordedAt: string;
+};
+
+type DerivedConcernGroup = {
+  id?: string;                        // 派生展示标识，不是独立权威
+  relatedFactIds: string[];
+  relatedEpisodeIds: string[];
+  relatedObservationIds: string[];
+  relatedHypothesisIds: string[];
+  displayTitle?: string;
+};
+~~~
+
+- 用户明确自报「我体重 67 公斤」可形成带 `source=user_report` 的个人测量观察，**不等于有医疗机构、设备或检验报告支持**；有来源的方法与时间应保留，缺失方法不编造。
+- 文档/图片 OCR 提取的值，只有按 [证据管线](../../architecture/health-document-evidence-pipeline.md) 准入后才成为相应的 BodyObservation；未准入候选留在来源资料处理记录，不伪装成可信观察。文件候选的 `admissible/needs_review/rejected` 与 Observation 的记录状态、来源等级是**不同维度**；自报测量不因没有 OCR 流程而被误标为可信临床证据。
+- Hypothesis 的纠正与撤回使用与 BodyFact 一致的陈述记录机制，原事实和观察不会因用户撤回猜测而被删除；AI 提出的病因推测只存于 ConditionAnalysisRun 的审计事件。
+- ConcernGroup 只组织相关事实、经历、观察及用户猜测；不独立得出结论。分组键稳定策略、自动重组和可见顺序仍属于 DC-032 的实现/产品细节。
+
+### 2.6 事务、审计与跨领域边界（BS-D1～D10）
+
+| 业务操作 | 目标及效果 | 授权与历史 |
 | --- | --- | --- |
-| 新建 BodyFact | 明确描述自己的现象/习惯或历史 | Agent 提取后由 Go 校验主体、时间、来源与幂等；无须事前逐条确认 |
-| active → resolved | 用户表述同一真实病程已经缓解 | TemporalChange；保留历史区间，不当作纠错 |
-| 事实纠错 | 用户澄清此前录入有误（含左右侧） | Correct；记录纠错关系，禁止伪造曾真实发生的症状转移 |
-| historical | 已有 lifecycle 枚举 | 与 resolved/active 的转换尚未定稿（DC-019），不能凭代码习惯猜测 |
-| 新建 BodyHypothesis | 用户本人明确提出怀疑 | source=user；AI 自己提出的假设只能存于分析审计 |
-| BodyHypothesis 撤回 | 用户撤回自己的猜测 | 生命周期待决 DC-020；不可删除来源和审计 |
-| 证据候选 → BodyObservation | 证据管线自动准入或用户核实并满足准入门槛 | 未准入值留在报告候选；不能写为医生诊断 |
-| ConcernGroups 变化 | 相关事实、观察变化 | 仅重算组织投影，不制造新事实 |
+| `FactRecorded / ObservationRecorded / HypothesisRecorded` | 保存明确的新陈述、测量或用户猜测 | 有来源、主体、时间、幂等校验；普通本人陈述不逐项确认 |
+| `FactCorrected / FactWithdrawn` | 旧陈述 superseded/withdrawn；更正可创建新 Fact | 用户明确更正/撤回；不制造真实病程变化 |
+| `TemporalChangeRecorded` | 追加真正发生的变化事实，触发 Episode 重算 | 与更正分离，旧事实依旧能说明过去 |
+| `EpisodeCreated / EpisodeFactLinked` | 创建经历或 High 关联 | Go 校验候选、证据及用户归属 |
+| `EpisodeFactUnlinked / EpisodesMerged / EpisodeSplit / EpisodeBoundaryCorrected` | 修正关系或时间边界 | 关键历史修改需具体用户授权；旧 ID 与跨域引用可追踪 |
+| `EvidenceInvalidated` | 来源撤销/更正后移除不再适用的证据资格 | 重新计算受影响投影；不静默修改 Diagnosis 或降低 Safety 限制 |
+| `PrivacyErasureRequested` | 用户请求清除个人健康信息 | 与撤回陈述分离；清除、脱敏、衍生材料处理的可执行规则待 DC-033/035，不得以软删除声称完成 |
 
-有效时间、观察时间、记录时间、证据产生时间应分别保留；描述模糊时仅阻断歧义字段，其他明确项可同事务写入。一个完整的语义事务只产生一个 BodyState 修订。
+**一次语义事务只增加一次 BodyStateRevision**，即便包含多条 Fact 与 Episode 变更。逻辑修订对象至少包含 §revision§、§userId§、§sourceId§、§actor: user/agent/system§、§recordedAt§、§idempotencyKey§、§changes[]§（每项含类型、目标身份与变更依据）、§authorizationId?§；已提交审计不可静默篡改。网络重试不得生成重复修订，并发更正必须校验预期修订或同等事务锁。隐私删除的实际擦除/脱敏规则优先于「永久保留明文审计」的实现习惯。
 
-### 2.5 UI 状态和验收
+| 交界对象 | 唯一权威及传播规则 |
+| --- | --- |
+| Person / Habits / Records | Person 提供视图和经授权的录入、更正入口；实际身体陈述/观察写回 BodyState，病情条目仍归 Diagnosis |
+| Chat / Ask User | Chat 持有会话、问答及待回复工具的状态；BodyState 只持有事实、冲突依据和完成澄清后的领域更改 |
+| TrainingPlan / Trainer | 已执行组次、完成/跳过由 TrainingSessionLog 持有；BodyFact 只保留训练主观反馈或明确的身体变化，并引用训练记录 |
+| Diagnosis | 依据受影响 BodyStateRevision / Fact / Observation / Episode，必要时复核；不能因为 BodyState 关系变动自动修改用户已确认病情 |
+| SafetyState | BodyState 持有风险约束；具体限制范围与解除由 [safety.md](./safety.md) 定义；来源更正不自动放宽限制 |
 
-记录应支持：当前/已缓解/历史、用户提出的怀疑、事实更正、待澄清、来源证据可追溯、OCR 待核实、保存成功和保存失败。产品默认不展示内部修订号。验收沿用 BS-01～11，新增 BS-12～15；对于 DC-019/020 未定转换不写伪造的通过条件。
+### 2.7 UI 派生状态与验收
 
-### 2.6 当前 Go 实现映射（As-Is，不是新规格）
+必须能够区分用户陈述与测量来源、目前已知/不明的症状经历、结束的依据、过去曾有的症状、被更正或撤回的陈述、未完成 Ask User、保存成功/失败、报告待核实以及跨领域复核需要。普通用户默认不见内部 revision；`ongoing` 应显示为「截至某次报告仍有」，而非把陈旧记录说成现在已复核。
+
+验收包括 [acceptance.md](../acceptance.md) 中 BS-01～15 及本轮补充的 BS-16～32。现有实现的兼容、Schema 迁移和缺陷修复不属于本次文档评审。
+
+### 2.8 当前 Go 实现映射（As-Is，不是新规格）
 
 | 旧持久对象 | 已存在的字段/状态 | 新契约迁移注意 |
 | --- | --- | --- |
-| [BodyState](../../../apps/api/internal/model/body_state.go) | UserID、CurrentRevision、SafetyState(JSON)、CreatedAt/UpdatedAt；Facts/Observations/Hypotheses 为读取投影 | 新规格的 `concernGroups` 是派生视图，不能为了匹配旧 JSON 再建第二套事实 |
-| [BodyStateFact](../../../apps/api/internal/model/body_state.go) | ID、UserID、ConcernKey、Kind、BodyRegion/ID、Value、Details、Origin、ReviewState、LifecycleState、Trend、SourceKey、Provenance、ObservedAt、ValidFrom/Until、SupersedesFactID、ExcludedFromReasoning、Created/UpdatedRevision 与时间 | 旧 `ReviewState`、`Trend` 等不是新 BodyFact 的既定字段；需决定保留、映射或退役（DC-025/026） |
-| [BodyStateObservation](../../../apps/api/internal/model/body_state.go) | Kind、Method、Value(JSON)、Condition、SourceKey、Provenance、ObservedAt、ReviewState、LifecycleState、SupersedesObservationID、ExcludedFromReasoning、修订和时间 | 旧 `unverified/confirmed/rejected` 是 Observation 的 review_state，不等于文档证据的 admissible/needs_review/rejected（DC-027/028） |
-| [BodyStateHypothesis](../../../apps/api/internal/model/body_state_reasoning.go) | `active/strengthened/weakened/unsupported/retired`，Confidence、SupportingFact/Observation/Evidence IDs、CounterevidenceIDs、SourceAnalysisID、Provenance | 旧注释和写入路径面向 AI 推测；与新用户假设的来源/生命周期冲突（DC-020/029），严禁直接照搬 |
-| [BodyStateRevision](../../../apps/api/internal/model/body_state.go) | ID、UserID、Revision、ChangeType、Source、Changes(JSON)、CreatedAt | 旧变更流是可靠的迁移依据，但 JSON 事件结构不等于新领域的最终逻辑契约（DC-030） |
+| [BodyState](../../../apps/api/internal/model/body_state.go) | UserID、CurrentRevision、SafetyState(JSON)、CreatedAt/UpdatedAt；Facts/Observations/Hypotheses 为读取投影 | 当前没有 SymptomEpisode 的完整目标关联与推导契约；不能因旧 JSON 设计将 Concern 变为第二份真值 |
+| [BodyStateFact](../../../apps/api/internal/model/body_state.go) | ID、UserID、ConcernKey、Kind、BodyRegion/ID、Value、Details、Origin、ReviewState、LifecycleState、Trend、SourceKey、Provenance、ObservedAt、ValidFrom/Until、SupersedesFactID、ExcludedFromReasoning、Created/UpdatedRevision 与时间 | 旧 ReviewState/LifecycleState/Trend 不等于本轮 assertionStatus + 独立时间/episode 状态；兼容映射待 DC-025/026 |
+| [BodyStateObservation](../../../apps/api/internal/model/body_state.go) | Kind、Method、Value(JSON)、Condition、SourceKey、Provenance、ObservedAt、ReviewState、LifecycleState、SupersedesObservationID、ExcludedFromReasoning、修订和时间 | 旧 unverified/confirmed/rejected 与来源文件准入、临床可信等级不是同一维度（DC-027/028） |
+| [BodyStateHypothesis](../../../apps/api/internal/model/body_state_reasoning.go) | active/strengthened/weakened/unsupported/retired、Confidence、SupportingFact/Observation/Evidence IDs、CounterevidenceIDs、SourceAnalysisID、Provenance | 旧实现面向 AI 假设；不得直接转成用户自述的 Hypothesis，历史迁移待 DC-029 |
+| [BodyStateRevision](../../../apps/api/internal/model/body_state.go) | ID、UserID、Revision、ChangeType、Source、Changes(JSON)、CreatedAt | 有修订基线，但目标的结构化关联/授权/回放协议需独立验证（DC-030） |
 
-以上证据也能在 [数据库基线迁移](../../../apps/api/migrations/000001_vnext_baseline.up.sql) 中核对。**As-Is 只描述当前实现，不授权用旧字段覆盖新产品规则。**
+以上是静态实现对照，不代表代码已经满足新产品规则；见 [数据库基线迁移](../../../apps/api/migrations/000001_vnext_baseline.up.sql) 与 [实施差异](../implementation-gaps.md)。
 
-### 2.7 领域转换审查表（未定项必须保持开放）
+### 2.9 仍未完全批准或尚待工程契约的内容
 
-| 操作 | 当前结果是否已定义 | 未定项 |
+| 范围 | 本轮已确定 | 仍然开放 |
 | --- | --- | --- |
-| 新增、重复写入、纠错、真实病程变化 | 已批准 Add/Duplicate/Correct/TemporalChange；由 Go 校验事务 | 证据身份、并发重试行为见 INV-03/09 |
-| 观察候选自动准入 | 证据管线已定义可自动或人工准入 | 方法、单位、置信度、版本和更正后的重新准入（DC-027/028） |
-| `historical` 恢复到 active | **未定** | DC-019/031 |
-| 用户假设撤回或改为更谨慎的判断 | **未定** | DC-020/029 |
-| 多 Fact 组成 ConcernGroup、Concern 合并/拆分 | 分组仅为派生投影；身份规则 **未定** | DC-032 |
-| 源消息删除、敏感信息撤回后如何保持审计来源 | **未定** | DC-033 |
+| 事实分类、历史与 Episode | 五类事实、独立陈述状态、病程推导、High 关联/按需 Ask User、合并拆分授权 | 旧 ReviewState/Trend/Kind 迁移 DC-025/026；Episode 完整物理 Schema、身份映射与重放实现 DC-030/032 |
+| Observation | 自报/设备/文件来源区分、原始值/单位、文件准入独立于记录状态 | 具体数值标准化、方法目录、纠错与资格重评协议 DC-027/028 |
+| Hypothesis | 用户本人假设，更正/撤回与保留证据关联 | 旧 AI 假设记录迁移 DC-029 |
+| ConcernGroup | 派生组织视图，不复制事实 | 组键、分合与展示顺序 DC-032 |
+| 隐私清除 | 纠错、撤回陈述、删除个人数据明确分离 | 删除源消息/报告后源与派生数据的清除范围、脱敏、传播与证明 DC-033/035 |
+| Safety | 安全状态属于 BodyState，不能自行解除 | 风险等级、限制范围、解除依据的细节由 safety.md / DC-001～006 定义 |

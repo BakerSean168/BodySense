@@ -7,8 +7,9 @@
 | 标准术语（英文 / 中文） | 定义 | 规则所在 | 避免使用 |
 | --- | --- | --- | --- |
 | **BodyState** / 身体状态 | 每位用户唯一、持续更新的身体事实、观察、假设与真实病程集合；明确的本人陈述自动写入 | [requirements §2.2](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain/bodystate.md#2-bodystate) | 身体档案（指数据对象时）、问诊记录、会话状态 |
-| **BodyFact** / 身体事实 | BodyState 中由用户自述、直接编辑或结构化回答形成的本人事实 | [domain §2](./domain/bodystate.md#2-bodystate) | 症状记录（泛称时可用，但不作对象名） |
-| **BodyObservation** / 观察 | 有方法与来源的测量、自测、检查或报告观察 | [domain §2.1](./domain/bodystate.md#21-写入语义与证据分类) | — |
+| **BodyFact** / 身体事实 | 用户明确陈述的五类事实；独立保存时间、来源和记录状态 asserted/superseded/withdrawn，不再使用 active/resolved/historical 的通用生命周期 | [domain §2](./domain/bodystate.md#2-bodystate) | 用事实记录状态表示真实病程状态 |
+| **SymptomEpisode** / 症状经历 | 以稳定身份组织同一段症状经历的 BodyFact，unknown/ongoing/ended 为依据事实及关联事件重建的状态投影；复发建立可关联的新 Episode，不代表相同病因 | [domain §2.4](./domain/bodystate.md#24-symptomepisode身份关联及状态bs-d3d7) | 用 Diagnosis/Concern 代替一次症状经历 |
+| **BodyObservation** / 观察 | 有来源的测量、自测、设备/报告观察；自报数据不等于临床核实，文件 OCR 结果须经证据管线准入 | [domain §2.5](./domain/bodystate.md#25-bodyobservationbodyhypothesisconcerngroup-与证据分级bs-d9) | 未核实 OCR 候选、AI 推测 |
 | **BodyHypothesis** / 用户假设 | 用户本人提出的病因怀疑或可能疾病（`source = user`），自动记录；不具备确诊权威。AI 提出的假设不属于 BodyState，只在 ConditionAnalysisRun 中 | [requirements R-BS-06](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain/bodystate.md#2-bodystate) | 候选诊断（DiagnosisAnalysis candidates，旧实现）；用「假设」指 AI 推测的持久记录 |
 | **Diagnosis** / 综合诊断 | 每位用户唯一的当前综合结果，只由用户确认过的 ConditionEntry 组成 | [requirements §2.3](./requirements.md#23-diagnosis-综合诊断) · [domain §3](./domain/diagnosis.md#3-diagnosis) | 综合分析、评估、评估报告、Assessment、问诊诊断、诊断报告 |
 | **ConditionEntry** / 病情条目 | Diagnosis 内具有稳定身份的单个病情：名称、原因分析、处理方案、来源（`source`）、结论状态（`conclusionStatus`）、确认记录（`confirmation`）、病程（`lifecycle`）与采纳状态（`disposition`） | [domain §3](./domain/diagnosis.md#3-diagnosis) | 候选病情、诊断候选、局部诊断报告；`certainty`（已拆分的旧字段） |

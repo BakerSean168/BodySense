@@ -4,7 +4,7 @@
 
 | 领域 | 权威文档 |
 | --- | --- |
-| BodyState、BodyFact、BodyObservation、BodyHypothesis | [bodystate.md](./bodystate.md) |
+| BodyState、BodyFact、SymptomEpisode、BodyObservation、BodyHypothesis | [bodystate.md](./bodystate.md) |
 | Diagnosis、ConditionEntry、分析与提案审计 | [diagnosis.md](./diagnosis.md) |
 | TrainingPlan、Trainer、TrainingSessionLog | [training.md](./training.md) |
 | SafetyState、SafetyRestriction | [safety.md](./safety.md) |
@@ -18,7 +18,8 @@
 User
 ├─ Profile                    基础资料：身份与偏好（在 Person 中展示）
 ├─ BodyState (1)              当前身体事实及真实病程
-│  ├─ BodyFact[]              用户自述、行为和生活习惯
+│  ├─ BodyFact[]              用户自述、行为和生活习惯（含明确训练反馈）
+│  ├─ SymptomEpisode[]        有事实依据的症状经历、关联与推导状态
 │  ├─ BodyObservation[]       测量、自测和有来源的观察
 │  ├─ BodyHypothesis[]        用户本人提出的怀疑（source = user）；AI 假设不进入 BodyState
 │  ├─ ConcernGroups           由相关信息形成的组织范围
@@ -39,7 +40,7 @@ User
    └─ TrainingSessionLog[]    实际执行的训练记录（区别于计划中的 PlanSessionTemplate）
 ~~~
 
-- 一个病情可以关联多个 Concern，一个 Concern 可关联多种候选解释。Concern 是便于组织事实的派生分组，不是另一份身体真值，不要求用户创建或管理独立问题实体与报告。
+- 一个病情可以关联多个 Concern，一个 Concern 可关联多种候选解释。SymptomEpisode 是有稳定身份、可追溯关联的症状经历，其状态由有效事实/事件推导；Concern 是便于组织事实的派生分组，不是另一份身体真值，不要求用户创建或管理独立问题实体与报告。
 - Conversation 记录对话和工具活动；当前身体事实的权威来源是 BodyState（G-02）。
 - Profile 保存相对稳定的身份信息；测量值、生活习惯和伤病状态属于具有时间语义的 BodyState。
 
@@ -80,17 +81,24 @@ User
 | INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、`hypotheses`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件；运行开始后形成的 AI 假设以 `hypothesis_added` 追加，不改写创建时快照 |
 | INV-23 | 以 `safety_blocked` 终结的 ConditionAnalysisRun 绝不产生 DiagnosisRevision：未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效；终结后该运行的补丁、提交与任何事件由 Go 后端拒绝；每个运行只有一个终结事件（先写入者胜出），重复的 `safety_blocked` 幂等 |
 
-| INV-24 | BodyObservation 只有在可信证据准入后才可形成；OCR 未准入候选不能直接成为可信观察或 Diagnosis |
+| INV-24 | 文件/图片提取的 BodyObservation 只有在对应证据候选按既有管线准入后才可形成；OCR 未准入候选不能直接成为可信观察或 Diagnosis；来源明确的用户自报/自测可以作为该来源等级的 Observation，但不得冒充临床核实结果 |
 | INV-25 | DerivedConcernGroup 是组织投影，不得成为第二份身体事实的独立权威，重分组不制造事实 |
 | INV-26 | TrainingSessionLog 的 completed / skipped 必须来自明确操作或陈述；播放演示、导航下一项和退出不能批量制造完成记录 |
 | INV-27 | TrainingSessionLog.date 按用户时区定义并关联执行时的 planRevisionId/templateId；服务器日期不能代替用户训练日 |
 | INV-28 | Person 是组合视图，不能持有另一份 BodyState、Diagnosis 或 Conversation 的权威状态 |
 | INV-29 | 关闭或收起 Chat 不自动接受/拒绝待决定业务操作；pending 交互有稳定身份、可恢复或明确失效 |
+| INV-30 | BodyFact 的陈述记录状态 asserted/superseded/withdrawn 与真实身体变化、症状经历状态、历史时间独立；不能由时间经过自行宣称症状结束 |
+| INV-31 | SymptomEpisode 的 ongoing/ended/unknown 由有效 Fact、关联和领域事件可重建；High 可自动关联，关键历史更正及 Episode 合并拆分需要具体用户授权，旧身份与引用可追溯 |
+| INV-32 | 症状经历的实质冲突由 Agent 优先 Ask User；未完成交互属 Chat 状态，不是 Episode 状态；只有状态确实受冲突影响才保守降为 unknown，安全风险不等待关联完成 |
+| INV-33 | 用户自述观察、自测/设备观察与文件候选准入各留来源等级；记录状态、文件准入与医学证据权威不混用；AI 假设不写入用户 BodyHypothesis |
+| INV-34 | Person 的 Records/Habits 只是各领域真值的视图或入口；事实更正、陈述撤回与健康数据隐私删除不可混用，删除清除与衍生证据处理须另有明确契约（DC-033/035） |
 ## 7. 状态索引与领域权威
 
 | 对象 | 已定义状态/维度 | 详细转换与规则 |
 | --- | --- | --- |
-| BodyFact | lifecycle: active / resolved / historical | [BodyState](./bodystate.md) |
+| BodyFact | assertionStatus: asserted / superseded / withdrawn；实际时间单独建模 | [BodyState](./bodystate.md) |
+| SymptomEpisode | 由证据推导 unknown / ongoing / ended；身份 current / superseded | [BodyState](./bodystate.md) |
+| BodyObservation / BodyHypothesis | 来源分级与各自的 assertionStatus；文件准入独立 | [BodyState](./bodystate.md) |
 | ConditionEntry | source / conclusionStatus / lifecycle / disposition 四个独立维度 | [Diagnosis](./diagnosis.md) |
 | ConditionAnalysisRun | open / committed / closed_without_change 与 outcome | [Diagnosis](./diagnosis.md) |
 | ConditionProposal | pending / decided / superseded / expired | [Diagnosis](./diagnosis.md) |
@@ -109,10 +117,10 @@ User
 
 | 领域 | 现已明确 | 尚待业务决策 | 已有实现差异 |
 | --- | --- | --- | --- |
-| BodyState | 用户事实与观察/假设的认识论边界、主要来源、时间与更正原则、修订不变量 | DC-019/020、DC-025～033（Observation 完整逻辑字段和 Hypothesis 生命周期仍未定） | IG-05 |
+| BodyState | BS-D1～D10 已确认：五类事实、症状 Episode、记录/病程独立、主动冲突澄清、来源分级、隐私删除边界 | 旧模型迁移及精确物理 Schema DC-025～030、DC-032；删除传播 DC-033/035；安全详见 Safety 领域 | IG-05；新增模型仍待实施 |
 | Diagnosis | ConditionEntry 四维状态、Run/Proposal/Decision 事件回放与原子提交 | DC-021/024、DC-047～051、DC-066～070（复发、重新采纳与历史） | IG-05 与旧 Diagnosis 迁移 |
 | TrainingPlan/Trainer | 计划/日志/提案分开持有状态、基本动作/组次、授权与安全门禁 | DC-010～014、DC-052～061（排期、修订、跳过及结束语义） | IG-01/02/03 |
 | SafetyState | 三类 liftPolicy、生效范围、何时阻断与不可绕过原则 | DC-001～006、DC-062～065（风险等级、范围重叠、解除证据） | IG-04 |
-| Person/Chat | Person 五标签是组合视图，Conversation 不是身体事实真值，交互身份可恢复 | DC-007～009、DC-015～017、DC-023、DC-034～046（身份、隐私、会话） | IG-06/07 |
+| Person/Chat | Person 五标签是组合视图；Habits/Records 自动记录与权威边界已按 BS-D8 定稿；Conversation 不是身体事实真值，交互身份可恢复 | DC-009、DC-015～017、DC-023、DC-034～046（身份、隐私、会话） | IG-06/07 |
 
 **完整性判定**：每个对象最终都需要字段表（含来源、默认/可空、单位与精度）、状态枚举和非法组合、合法转换表（触发/授权/事务/审计）、数据迁移规则以及 UI 对照和可执行验收。当前遗漏项按决策登记，尚不能把这些文件视为完整可迁移的最终 Schema。
