@@ -1,7 +1,7 @@
 # 功能设计文档：AI Consultation → Diagnosis → Medical Record（MVP）
 
 > **HISTORICAL / SUPERSEDED — 2026-08-15**  
-> Superseded by [`feature_spec_longitudinal_body_health.md`](../../archive/product-legacy/feature_spec_longitudinal_body_health.md) and [ADR 0004](../../adr/0004-adopt-longitudinal-body-state-model.md).  
+> Superseded by [`feature_spec_longitudinal_body_health.md`](../../archive/product-legacy/feature_spec_longitudinal_body_health.md) and [ADR 0004](../../adr/0004-adopt-longitudinal-body-state-model.md).\
 > Original 更新时间：2026-08-14  
 > 说明：本文保留旧 `Consultation -> MedicalRecord` 产品模型的设计历史，不再作为当前正式业务主线。
 
