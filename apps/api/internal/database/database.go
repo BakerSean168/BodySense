@@ -51,7 +51,7 @@ func Connect(cfg Config) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(databaseLogLevel()),
+		Logger: newDatabaseLogger(log.New(os.Stdout, "\r\n", log.LstdFlags)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -79,6 +79,18 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+// Filtering bound parameters is required at every log level: Warn still logs
+// slow/failed SQL and therefore does not by itself protect health statements.
+func newDatabaseLogger(writer logger.Writer) logger.Interface {
+	return logger.New(writer, logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  databaseLogLevel(),
+		IgnoreRecordNotFoundError: true,
+		ParameterizedQueries:      true,
+		Colorful:                  false,
+	})
+}
+
 func databaseLogLevel() logger.LogLevel {
 	if configured := strings.ToLower(strings.TrimSpace(os.Getenv("DB_LOG_LEVEL"))); configured != "" {
 		switch configured {
@@ -95,9 +107,8 @@ func databaseLogLevel() logger.LogLevel {
 
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV"))) {
 	case "staging", "production":
-		// Avoid writing consultation/body-state payloads through GORM's SQL
-		// interpolation in shared environments. Structured domain diagnostics
-		// remain available separately.
+		// Reduce shared-environment verbosity. Parameter filtering is enforced
+		// independently by newDatabaseLogger, including slow/error queries.
 		return logger.Warn
 	default:
 		return logger.Info

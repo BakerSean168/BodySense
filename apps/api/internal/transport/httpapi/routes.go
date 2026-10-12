@@ -78,7 +78,11 @@ func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInt
 }
 
 func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
-	// Longitudinal BodyState (ADR 0004).
+	// Approved assertion ledger, protected by the same authenticated owner boundary.
+	protected.POST("/body-state/records", wrapper.RecordBodyFacts)
+	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
+
+	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
 	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
 	protected.GET("/body-state", wrapper.GetBodyState)
 	protected.POST("/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)

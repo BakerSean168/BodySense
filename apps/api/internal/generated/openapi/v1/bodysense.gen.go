@@ -25,6 +25,57 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActivityBodyFactRecordAssertionStatus.
+const (
+	ActivityBodyFactRecordAssertionStatusAsserted   ActivityBodyFactRecordAssertionStatus = "asserted"
+	ActivityBodyFactRecordAssertionStatusSuperseded ActivityBodyFactRecordAssertionStatus = "superseded"
+	ActivityBodyFactRecordAssertionStatusWithdrawn  ActivityBodyFactRecordAssertionStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the ActivityBodyFactRecordAssertionStatus enum.
+func (e ActivityBodyFactRecordAssertionStatus) Valid() bool {
+	switch e {
+	case ActivityBodyFactRecordAssertionStatusAsserted:
+		return true
+	case ActivityBodyFactRecordAssertionStatusSuperseded:
+		return true
+	case ActivityBodyFactRecordAssertionStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityBodyFactRecordKind.
+const (
+	ActivityBodyFactRecordKindActivity ActivityBodyFactRecordKind = "activity"
+)
+
+// Valid indicates whether the value is a known member of the ActivityBodyFactRecordKind enum.
+func (e ActivityBodyFactRecordKind) Valid() bool {
+	switch e {
+	case ActivityBodyFactRecordKindActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityBodyFactRecordSubject.
+const (
+	ActivityBodyFactRecordSubjectSelf ActivityBodyFactRecordSubject = "self"
+)
+
+// Valid indicates whether the value is a known member of the ActivityBodyFactRecordSubject enum.
+func (e ActivityBodyFactRecordSubject) Valid() bool {
+	switch e {
+	case ActivityBodyFactRecordSubjectSelf:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentInteractionStatus.
 const (
 	AgentInteractionStatusAnswered  AgentInteractionStatus = "answered"
@@ -313,6 +364,99 @@ func (e AssessmentReportV2Status) Valid() bool {
 	case AssessmentReportV2StatusCompleted:
 		return true
 	case AssessmentReportV2StatusInsufficientInformation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyFactSymptomDetailsLaterality.
+const (
+	BodyFactSymptomDetailsLateralityBilateral     BodyFactSymptomDetailsLaterality = "bilateral"
+	BodyFactSymptomDetailsLateralityLeft          BodyFactSymptomDetailsLaterality = "left"
+	BodyFactSymptomDetailsLateralityNotApplicable BodyFactSymptomDetailsLaterality = "not_applicable"
+	BodyFactSymptomDetailsLateralityRight         BodyFactSymptomDetailsLaterality = "right"
+	BodyFactSymptomDetailsLateralityUnknown       BodyFactSymptomDetailsLaterality = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the BodyFactSymptomDetailsLaterality enum.
+func (e BodyFactSymptomDetailsLaterality) Valid() bool {
+	switch e {
+	case BodyFactSymptomDetailsLateralityBilateral:
+		return true
+	case BodyFactSymptomDetailsLateralityLeft:
+		return true
+	case BodyFactSymptomDetailsLateralityNotApplicable:
+		return true
+	case BodyFactSymptomDetailsLateralityRight:
+		return true
+	case BodyFactSymptomDetailsLateralityUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyFactSymptomDetailsPattern.
+const (
+	BodyFactSymptomDetailsPatternContinuous   BodyFactSymptomDetailsPattern = "continuous"
+	BodyFactSymptomDetailsPatternIntermittent BodyFactSymptomDetailsPattern = "intermittent"
+	BodyFactSymptomDetailsPatternUnknown      BodyFactSymptomDetailsPattern = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the BodyFactSymptomDetailsPattern enum.
+func (e BodyFactSymptomDetailsPattern) Valid() bool {
+	switch e {
+	case BodyFactSymptomDetailsPatternContinuous:
+		return true
+	case BodyFactSymptomDetailsPatternIntermittent:
+		return true
+	case BodyFactSymptomDetailsPatternUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyFactSymptomDetailsPresence.
+const (
+	Absent  BodyFactSymptomDetailsPresence = "absent"
+	Present BodyFactSymptomDetailsPresence = "present"
+)
+
+// Valid indicates whether the value is a known member of the BodyFactSymptomDetailsPresence enum.
+func (e BodyFactSymptomDetailsPresence) Valid() bool {
+	switch e {
+	case Absent:
+		return true
+	case Present:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyFactTemporalPrecision.
+const (
+	BodyFactTemporalPrecisionApproximate BodyFactTemporalPrecision = "approximate"
+	BodyFactTemporalPrecisionDay         BodyFactTemporalPrecision = "day"
+	BodyFactTemporalPrecisionExact       BodyFactTemporalPrecision = "exact"
+	BodyFactTemporalPrecisionRange       BodyFactTemporalPrecision = "range"
+	BodyFactTemporalPrecisionUnknown     BodyFactTemporalPrecision = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the BodyFactTemporalPrecision enum.
+func (e BodyFactTemporalPrecision) Valid() bool {
+	switch e {
+	case BodyFactTemporalPrecisionApproximate:
+		return true
+	case BodyFactTemporalPrecisionDay:
+		return true
+	case BodyFactTemporalPrecisionExact:
+		return true
+	case BodyFactTemporalPrecisionRange:
+		return true
+	case BodyFactTemporalPrecisionUnknown:
 		return true
 	default:
 		return false
@@ -940,6 +1084,57 @@ func (e DocumentIndicatorReviewRecordAction) Valid() bool {
 	}
 }
 
+// Defines values for HealthHistoryBodyFactRecordAssertionStatus.
+const (
+	HealthHistoryBodyFactRecordAssertionStatusAsserted   HealthHistoryBodyFactRecordAssertionStatus = "asserted"
+	HealthHistoryBodyFactRecordAssertionStatusSuperseded HealthHistoryBodyFactRecordAssertionStatus = "superseded"
+	HealthHistoryBodyFactRecordAssertionStatusWithdrawn  HealthHistoryBodyFactRecordAssertionStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the HealthHistoryBodyFactRecordAssertionStatus enum.
+func (e HealthHistoryBodyFactRecordAssertionStatus) Valid() bool {
+	switch e {
+	case HealthHistoryBodyFactRecordAssertionStatusAsserted:
+		return true
+	case HealthHistoryBodyFactRecordAssertionStatusSuperseded:
+		return true
+	case HealthHistoryBodyFactRecordAssertionStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthHistoryBodyFactRecordKind.
+const (
+	HealthHistoryBodyFactRecordKindHealthHistory HealthHistoryBodyFactRecordKind = "health_history"
+)
+
+// Valid indicates whether the value is a known member of the HealthHistoryBodyFactRecordKind enum.
+func (e HealthHistoryBodyFactRecordKind) Valid() bool {
+	switch e {
+	case HealthHistoryBodyFactRecordKindHealthHistory:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthHistoryBodyFactRecordSubject.
+const (
+	HealthHistoryBodyFactRecordSubjectSelf HealthHistoryBodyFactRecordSubject = "self"
+)
+
+// Valid indicates whether the value is a known member of the HealthHistoryBodyFactRecordSubject enum.
+func (e HealthHistoryBodyFactRecordSubject) Valid() bool {
+	switch e {
+	case HealthHistoryBodyFactRecordSubjectSelf:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for KnowledgeVideoIngestionRequestSplitterProvider.
 const (
 	Heuristic KnowledgeVideoIngestionRequestSplitterProvider = "heuristic"
@@ -952,6 +1147,57 @@ func (e KnowledgeVideoIngestionRequestSplitterProvider) Valid() bool {
 	case Heuristic:
 		return true
 	case Llm:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LifestyleBodyFactRecordAssertionStatus.
+const (
+	LifestyleBodyFactRecordAssertionStatusAsserted   LifestyleBodyFactRecordAssertionStatus = "asserted"
+	LifestyleBodyFactRecordAssertionStatusSuperseded LifestyleBodyFactRecordAssertionStatus = "superseded"
+	LifestyleBodyFactRecordAssertionStatusWithdrawn  LifestyleBodyFactRecordAssertionStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the LifestyleBodyFactRecordAssertionStatus enum.
+func (e LifestyleBodyFactRecordAssertionStatus) Valid() bool {
+	switch e {
+	case LifestyleBodyFactRecordAssertionStatusAsserted:
+		return true
+	case LifestyleBodyFactRecordAssertionStatusSuperseded:
+		return true
+	case LifestyleBodyFactRecordAssertionStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LifestyleBodyFactRecordKind.
+const (
+	LifestyleBodyFactRecordKindLifestyle LifestyleBodyFactRecordKind = "lifestyle"
+)
+
+// Valid indicates whether the value is a known member of the LifestyleBodyFactRecordKind enum.
+func (e LifestyleBodyFactRecordKind) Valid() bool {
+	switch e {
+	case LifestyleBodyFactRecordKindLifestyle:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LifestyleBodyFactRecordSubject.
+const (
+	LifestyleBodyFactRecordSubjectSelf LifestyleBodyFactRecordSubject = "self"
+)
+
+// Valid indicates whether the value is a known member of the LifestyleBodyFactRecordSubject enum.
+func (e LifestyleBodyFactRecordSubject) Valid() bool {
+	switch e {
+	case LifestyleBodyFactRecordSubjectSelf:
 		return true
 	default:
 		return false
@@ -1195,6 +1441,51 @@ func (e ProjectedToolCallStatus) Valid() bool {
 	}
 }
 
+// Defines values for RecordActivityFactInputKind.
+const (
+	RecordActivityFactInputKindActivity RecordActivityFactInputKind = "activity"
+)
+
+// Valid indicates whether the value is a known member of the RecordActivityFactInputKind enum.
+func (e RecordActivityFactInputKind) Valid() bool {
+	switch e {
+	case RecordActivityFactInputKindActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordHealthHistoryFactInputKind.
+const (
+	RecordHealthHistoryFactInputKindHealthHistory RecordHealthHistoryFactInputKind = "health_history"
+)
+
+// Valid indicates whether the value is a known member of the RecordHealthHistoryFactInputKind enum.
+func (e RecordHealthHistoryFactInputKind) Valid() bool {
+	switch e {
+	case RecordHealthHistoryFactInputKindHealthHistory:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordLifestyleFactInputKind.
+const (
+	RecordLifestyleFactInputKindLifestyle RecordLifestyleFactInputKind = "lifestyle"
+)
+
+// Valid indicates whether the value is a known member of the RecordLifestyleFactInputKind enum.
+func (e RecordLifestyleFactInputKind) Valid() bool {
+	switch e {
+	case RecordLifestyleFactInputKindLifestyle:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordOutcomeRequestCausalityLevel.
 const (
 	RecordOutcomeRequestCausalityLevelAssociationOnly     RecordOutcomeRequestCausalityLevel = "association_only"
@@ -1210,6 +1501,36 @@ func (e RecordOutcomeRequestCausalityLevel) Valid() bool {
 	case RecordOutcomeRequestCausalityLevelClinicianAttributed:
 		return true
 	case RecordOutcomeRequestCausalityLevelUserAttributed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordSymptomFactInputKind.
+const (
+	RecordSymptomFactInputKindSymptom RecordSymptomFactInputKind = "symptom"
+)
+
+// Valid indicates whether the value is a known member of the RecordSymptomFactInputKind enum.
+func (e RecordSymptomFactInputKind) Valid() bool {
+	switch e {
+	case RecordSymptomFactInputKindSymptom:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTrainingFeedbackFactInputKind.
+const (
+	RecordTrainingFeedbackFactInputKindTrainingFeedback RecordTrainingFeedbackFactInputKind = "training_feedback"
+)
+
+// Valid indicates whether the value is a known member of the RecordTrainingFeedbackFactInputKind enum.
+func (e RecordTrainingFeedbackFactInputKind) Valid() bool {
+	switch e {
+	case RecordTrainingFeedbackFactInputKindTrainingFeedback:
 		return true
 	default:
 		return false
@@ -1312,6 +1633,108 @@ const (
 func (e RuntimeEventVersion) Valid() bool {
 	switch e {
 	case RuntimeEventVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SymptomBodyFactRecordAssertionStatus.
+const (
+	SymptomBodyFactRecordAssertionStatusAsserted   SymptomBodyFactRecordAssertionStatus = "asserted"
+	SymptomBodyFactRecordAssertionStatusSuperseded SymptomBodyFactRecordAssertionStatus = "superseded"
+	SymptomBodyFactRecordAssertionStatusWithdrawn  SymptomBodyFactRecordAssertionStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SymptomBodyFactRecordAssertionStatus enum.
+func (e SymptomBodyFactRecordAssertionStatus) Valid() bool {
+	switch e {
+	case SymptomBodyFactRecordAssertionStatusAsserted:
+		return true
+	case SymptomBodyFactRecordAssertionStatusSuperseded:
+		return true
+	case SymptomBodyFactRecordAssertionStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SymptomBodyFactRecordKind.
+const (
+	SymptomBodyFactRecordKindSymptom SymptomBodyFactRecordKind = "symptom"
+)
+
+// Valid indicates whether the value is a known member of the SymptomBodyFactRecordKind enum.
+func (e SymptomBodyFactRecordKind) Valid() bool {
+	switch e {
+	case SymptomBodyFactRecordKindSymptom:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SymptomBodyFactRecordSubject.
+const (
+	SymptomBodyFactRecordSubjectSelf SymptomBodyFactRecordSubject = "self"
+)
+
+// Valid indicates whether the value is a known member of the SymptomBodyFactRecordSubject enum.
+func (e SymptomBodyFactRecordSubject) Valid() bool {
+	switch e {
+	case SymptomBodyFactRecordSubjectSelf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrainingFeedbackBodyFactRecordAssertionStatus.
+const (
+	TrainingFeedbackBodyFactRecordAssertionStatusAsserted   TrainingFeedbackBodyFactRecordAssertionStatus = "asserted"
+	TrainingFeedbackBodyFactRecordAssertionStatusSuperseded TrainingFeedbackBodyFactRecordAssertionStatus = "superseded"
+	TrainingFeedbackBodyFactRecordAssertionStatusWithdrawn  TrainingFeedbackBodyFactRecordAssertionStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the TrainingFeedbackBodyFactRecordAssertionStatus enum.
+func (e TrainingFeedbackBodyFactRecordAssertionStatus) Valid() bool {
+	switch e {
+	case TrainingFeedbackBodyFactRecordAssertionStatusAsserted:
+		return true
+	case TrainingFeedbackBodyFactRecordAssertionStatusSuperseded:
+		return true
+	case TrainingFeedbackBodyFactRecordAssertionStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrainingFeedbackBodyFactRecordKind.
+const (
+	TrainingFeedbackBodyFactRecordKindTrainingFeedback TrainingFeedbackBodyFactRecordKind = "training_feedback"
+)
+
+// Valid indicates whether the value is a known member of the TrainingFeedbackBodyFactRecordKind enum.
+func (e TrainingFeedbackBodyFactRecordKind) Valid() bool {
+	switch e {
+	case TrainingFeedbackBodyFactRecordKindTrainingFeedback:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrainingFeedbackBodyFactRecordSubject.
+const (
+	TrainingFeedbackBodyFactRecordSubjectSelf TrainingFeedbackBodyFactRecordSubject = "self"
+)
+
+// Valid indicates whether the value is a known member of the TrainingFeedbackBodyFactRecordSubject enum.
+func (e TrainingFeedbackBodyFactRecordSubject) Valid() bool {
+	switch e {
+	case TrainingFeedbackBodyFactRecordSubjectSelf:
 		return true
 	default:
 		return false
@@ -1584,6 +2007,31 @@ type AcceptTreatmentRevisionResponse struct {
 	Treatment    Treatment    `json:"treatment"`
 }
 
+// ActivityBodyFactRecord defines model for ActivityBodyFactRecord.
+type ActivityBodyFactRecord struct {
+	AssertionStatus  ActivityBodyFactRecordAssertionStatus `json:"assertion_status"`
+	BodyRegionIds    []string                              `json:"body_region_ids"`
+	CreatedRevision  int64                                 `json:"created_revision"`
+	Details          BodyFactActivityDetails               `json:"details"`
+	Id               openapi_types.UUID                    `json:"id"`
+	Kind             ActivityBodyFactRecordKind            `json:"kind"`
+	RecordedAt       time.Time                             `json:"recorded_at"`
+	SourceEvidenceId openapi_types.UUID                    `json:"source_evidence_id"`
+	Statement        string                                `json:"statement"`
+	Subject          ActivityBodyFactRecordSubject         `json:"subject"`
+	Temporal         BodyFactTemporal                      `json:"temporal"`
+	UserId           openapi_types.UUID                    `json:"user_id"`
+}
+
+// ActivityBodyFactRecordAssertionStatus defines model for ActivityBodyFactRecord.AssertionStatus.
+type ActivityBodyFactRecordAssertionStatus string
+
+// ActivityBodyFactRecordKind defines model for ActivityBodyFactRecord.Kind.
+type ActivityBodyFactRecordKind string
+
+// ActivityBodyFactRecordSubject defines model for ActivityBodyFactRecord.Subject.
+type ActivityBodyFactRecordSubject string
+
 // AgentInteraction defines model for AgentInteraction.
 type AgentInteraction struct {
 	Answer         *JsonValue             `json:"answer,omitempty"`
@@ -1830,6 +2278,100 @@ type AuthRegisterRequest struct {
 type AuthSession struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int    `json:"expires_in"`
+}
+
+// BodyFactActivityDetails defines model for BodyFactActivityDetails.
+type BodyFactActivityDetails struct {
+	ActivityType *string `json:"activity_type,omitempty"`
+	Duration     *string `json:"duration,omitempty"`
+	Intensity    *string `json:"intensity,omitempty"`
+	Volume       *string `json:"volume,omitempty"`
+}
+
+// BodyFactCommit defines model for BodyFactCommit.
+type BodyFactCommit struct {
+	CommittedAt time.Time            `json:"committed_at"`
+	EventId     openapi_types.UUID   `json:"event_id"`
+	FactIds     []openapi_types.UUID `json:"fact_ids"`
+	Id          openapi_types.UUID   `json:"id"`
+	Revision    int64                `json:"revision"`
+	RevisionId  openapi_types.UUID   `json:"revision_id"`
+	UserId      openapi_types.UUID   `json:"user_id"`
+}
+
+// BodyFactHealthHistoryDetails defines model for BodyFactHealthHistoryDetails.
+type BodyFactHealthHistoryDetails struct {
+	EventDescription *string `json:"event_description,omitempty"`
+	HistoryKind      *string `json:"history_kind,omitempty"`
+	Outcome          *string `json:"outcome,omitempty"`
+	SourceContext    *string `json:"source_context,omitempty"`
+}
+
+// BodyFactLifestyleDetails defines model for BodyFactLifestyleDetails.
+type BodyFactLifestyleDetails struct {
+	Frequency       *string `json:"frequency,omitempty"`
+	HabitType       *string `json:"habit_type,omitempty"`
+	Pattern         *string `json:"pattern,omitempty"`
+	TypicalDuration *string `json:"typical_duration,omitempty"`
+}
+
+// BodyFactRecord defines model for BodyFactRecord.
+type BodyFactRecord struct {
+	union json.RawMessage
+}
+
+// BodyFactRecordPage defines model for BodyFactRecordPage.
+type BodyFactRecordPage struct {
+	CurrentRevision    int64              `json:"current_revision"`
+	Facts              []BodyFactRecord   `json:"facts"`
+	HasMore            bool               `json:"has_more"`
+	NextBeforeRevision *int64             `json:"next_before_revision,omitempty"`
+	UserId             openapi_types.UUID `json:"user_id"`
+}
+
+// BodyFactSeverity defines model for BodyFactSeverity.
+type BodyFactSeverity struct {
+	RawValue string  `json:"raw_value"`
+	Scale    *string `json:"scale,omitempty"`
+	Unit     *string `json:"unit,omitempty"`
+}
+
+// BodyFactSymptomDetails defines model for BodyFactSymptomDetails.
+type BodyFactSymptomDetails struct {
+	Laterality        *BodyFactSymptomDetailsLaterality `json:"laterality,omitempty"`
+	OccurrenceContext *string                           `json:"occurrence_context,omitempty"`
+	Pattern           *BodyFactSymptomDetailsPattern    `json:"pattern,omitempty"`
+	Presence          *BodyFactSymptomDetailsPresence   `json:"presence,omitempty"`
+	RelievingFactors  *[]string                         `json:"relieving_factors,omitempty"`
+	Severity          *BodyFactSeverity                 `json:"severity,omitempty"`
+	SymptomType       *string                           `json:"symptom_type,omitempty"`
+	Triggers          *[]string                         `json:"triggers,omitempty"`
+}
+
+// BodyFactSymptomDetailsLaterality defines model for BodyFactSymptomDetails.Laterality.
+type BodyFactSymptomDetailsLaterality string
+
+// BodyFactSymptomDetailsPattern defines model for BodyFactSymptomDetails.Pattern.
+type BodyFactSymptomDetailsPattern string
+
+// BodyFactSymptomDetailsPresence defines model for BodyFactSymptomDetails.Presence.
+type BodyFactSymptomDetailsPresence string
+
+// BodyFactTemporal defines model for BodyFactTemporal.
+type BodyFactTemporal struct {
+	End                *string                   `json:"end,omitempty"`
+	OriginalExpression *string                   `json:"original_expression,omitempty"`
+	Precision          BodyFactTemporalPrecision `json:"precision"`
+	Start              *string                   `json:"start,omitempty"`
+	Timezone           *string                   `json:"timezone,omitempty"`
+}
+
+// BodyFactTemporalPrecision defines model for BodyFactTemporal.Precision.
+type BodyFactTemporalPrecision string
+
+// BodyFactTrainingFeedbackDetails defines model for BodyFactTrainingFeedbackDetails.
+type BodyFactTrainingFeedbackDetails struct {
+	FeedbackKind *string `json:"feedback_kind,omitempty"`
 }
 
 // BodyMetricValue defines model for BodyMetricValue.
@@ -2590,6 +3132,31 @@ type HealthDocumentReviewListResponse struct {
 	ReviewCandidates []DocumentIndicatorReviewProjection `json:"review_candidates"`
 }
 
+// HealthHistoryBodyFactRecord defines model for HealthHistoryBodyFactRecord.
+type HealthHistoryBodyFactRecord struct {
+	AssertionStatus  HealthHistoryBodyFactRecordAssertionStatus `json:"assertion_status"`
+	BodyRegionIds    []string                                   `json:"body_region_ids"`
+	CreatedRevision  int64                                      `json:"created_revision"`
+	Details          BodyFactHealthHistoryDetails               `json:"details"`
+	Id               openapi_types.UUID                         `json:"id"`
+	Kind             HealthHistoryBodyFactRecordKind            `json:"kind"`
+	RecordedAt       time.Time                                  `json:"recorded_at"`
+	SourceEvidenceId openapi_types.UUID                         `json:"source_evidence_id"`
+	Statement        string                                     `json:"statement"`
+	Subject          HealthHistoryBodyFactRecordSubject         `json:"subject"`
+	Temporal         BodyFactTemporal                           `json:"temporal"`
+	UserId           openapi_types.UUID                         `json:"user_id"`
+}
+
+// HealthHistoryBodyFactRecordAssertionStatus defines model for HealthHistoryBodyFactRecord.AssertionStatus.
+type HealthHistoryBodyFactRecordAssertionStatus string
+
+// HealthHistoryBodyFactRecordKind defines model for HealthHistoryBodyFactRecord.Kind.
+type HealthHistoryBodyFactRecordKind string
+
+// HealthHistoryBodyFactRecordSubject defines model for HealthHistoryBodyFactRecord.Subject.
+type HealthHistoryBodyFactRecordSubject string
+
 // HealthWorkspace defines model for HealthWorkspace.
 type HealthWorkspace struct {
 	Actions            []WorkspaceAction             `json:"actions"`
@@ -2774,6 +3341,31 @@ type KnowledgeVideoIngestionRequest struct {
 
 // KnowledgeVideoIngestionRequestSplitterProvider defines model for KnowledgeVideoIngestionRequest.SplitterProvider.
 type KnowledgeVideoIngestionRequestSplitterProvider string
+
+// LifestyleBodyFactRecord defines model for LifestyleBodyFactRecord.
+type LifestyleBodyFactRecord struct {
+	AssertionStatus  LifestyleBodyFactRecordAssertionStatus `json:"assertion_status"`
+	BodyRegionIds    []string                               `json:"body_region_ids"`
+	CreatedRevision  int64                                  `json:"created_revision"`
+	Details          BodyFactLifestyleDetails               `json:"details"`
+	Id               openapi_types.UUID                     `json:"id"`
+	Kind             LifestyleBodyFactRecordKind            `json:"kind"`
+	RecordedAt       time.Time                              `json:"recorded_at"`
+	SourceEvidenceId openapi_types.UUID                     `json:"source_evidence_id"`
+	Statement        string                                 `json:"statement"`
+	Subject          LifestyleBodyFactRecordSubject         `json:"subject"`
+	Temporal         BodyFactTemporal                       `json:"temporal"`
+	UserId           openapi_types.UUID                     `json:"user_id"`
+}
+
+// LifestyleBodyFactRecordAssertionStatus defines model for LifestyleBodyFactRecord.AssertionStatus.
+type LifestyleBodyFactRecordAssertionStatus string
+
+// LifestyleBodyFactRecordKind defines model for LifestyleBodyFactRecord.Kind.
+type LifestyleBodyFactRecordKind string
+
+// LifestyleBodyFactRecordSubject defines model for LifestyleBodyFactRecord.Subject.
+type LifestyleBodyFactRecordSubject string
 
 // LifestyleCandidate defines model for LifestyleCandidate.
 type LifestyleCandidate struct {
@@ -3049,6 +3641,54 @@ type ProjectedToolCall struct {
 // ProjectedToolCallStatus defines model for ProjectedToolCall.Status.
 type ProjectedToolCallStatus string
 
+// RecordActivityFactInput defines model for RecordActivityFactInput.
+type RecordActivityFactInput struct {
+	BodyRegionIds []string                    `json:"body_region_ids"`
+	Details       BodyFactActivityDetails     `json:"details"`
+	Kind          RecordActivityFactInputKind `json:"kind"`
+	Statement     string                      `json:"statement"`
+	Temporal      BodyFactTemporal            `json:"temporal"`
+}
+
+// RecordActivityFactInputKind defines model for RecordActivityFactInput.Kind.
+type RecordActivityFactInputKind string
+
+// RecordBodyFactInput defines model for RecordBodyFactInput.
+type RecordBodyFactInput struct {
+	union json.RawMessage
+}
+
+// RecordBodyFactsRequest defines model for RecordBodyFactsRequest.
+type RecordBodyFactsRequest struct {
+	ExpectedRevision int64                 `json:"expected_revision"`
+	Facts            []RecordBodyFactInput `json:"facts"`
+	IdempotencyKey   string                `json:"idempotency_key"`
+}
+
+// RecordHealthHistoryFactInput defines model for RecordHealthHistoryFactInput.
+type RecordHealthHistoryFactInput struct {
+	BodyRegionIds []string                         `json:"body_region_ids"`
+	Details       BodyFactHealthHistoryDetails     `json:"details"`
+	Kind          RecordHealthHistoryFactInputKind `json:"kind"`
+	Statement     string                           `json:"statement"`
+	Temporal      BodyFactTemporal                 `json:"temporal"`
+}
+
+// RecordHealthHistoryFactInputKind defines model for RecordHealthHistoryFactInput.Kind.
+type RecordHealthHistoryFactInputKind string
+
+// RecordLifestyleFactInput defines model for RecordLifestyleFactInput.
+type RecordLifestyleFactInput struct {
+	BodyRegionIds []string                     `json:"body_region_ids"`
+	Details       BodyFactLifestyleDetails     `json:"details"`
+	Kind          RecordLifestyleFactInputKind `json:"kind"`
+	Statement     string                       `json:"statement"`
+	Temporal      BodyFactTemporal             `json:"temporal"`
+}
+
+// RecordLifestyleFactInputKind defines model for RecordLifestyleFactInput.Kind.
+type RecordLifestyleFactInputKind string
+
 // RecordOutcomeRequest defines model for RecordOutcomeRequest.
 type RecordOutcomeRequest struct {
 	AssociationStatement *string                             `json:"association_statement,omitempty"`
@@ -3069,6 +3709,30 @@ type RecordOutcomeRequest struct {
 
 // RecordOutcomeRequestCausalityLevel defines model for RecordOutcomeRequest.CausalityLevel.
 type RecordOutcomeRequestCausalityLevel string
+
+// RecordSymptomFactInput defines model for RecordSymptomFactInput.
+type RecordSymptomFactInput struct {
+	BodyRegionIds []string                   `json:"body_region_ids"`
+	Details       BodyFactSymptomDetails     `json:"details"`
+	Kind          RecordSymptomFactInputKind `json:"kind"`
+	Statement     string                     `json:"statement"`
+	Temporal      BodyFactTemporal           `json:"temporal"`
+}
+
+// RecordSymptomFactInputKind defines model for RecordSymptomFactInput.Kind.
+type RecordSymptomFactInputKind string
+
+// RecordTrainingFeedbackFactInput defines model for RecordTrainingFeedbackFactInput.
+type RecordTrainingFeedbackFactInput struct {
+	BodyRegionIds []string                            `json:"body_region_ids"`
+	Details       BodyFactTrainingFeedbackDetails     `json:"details"`
+	Kind          RecordTrainingFeedbackFactInputKind `json:"kind"`
+	Statement     string                              `json:"statement"`
+	Temporal      BodyFactTemporal                    `json:"temporal"`
+}
+
+// RecordTrainingFeedbackFactInputKind defines model for RecordTrainingFeedbackFactInput.Kind.
+type RecordTrainingFeedbackFactInputKind string
 
 // RegisterKnowledgeSourceRequest defines model for RegisterKnowledgeSourceRequest.
 type RegisterKnowledgeSourceRequest struct {
@@ -3174,6 +3838,31 @@ type StartConsultationRunRequest struct {
 // StringArray defines model for StringArray.
 type StringArray = []string
 
+// SymptomBodyFactRecord defines model for SymptomBodyFactRecord.
+type SymptomBodyFactRecord struct {
+	AssertionStatus  SymptomBodyFactRecordAssertionStatus `json:"assertion_status"`
+	BodyRegionIds    []string                             `json:"body_region_ids"`
+	CreatedRevision  int64                                `json:"created_revision"`
+	Details          BodyFactSymptomDetails               `json:"details"`
+	Id               openapi_types.UUID                   `json:"id"`
+	Kind             SymptomBodyFactRecordKind            `json:"kind"`
+	RecordedAt       time.Time                            `json:"recorded_at"`
+	SourceEvidenceId openapi_types.UUID                   `json:"source_evidence_id"`
+	Statement        string                               `json:"statement"`
+	Subject          SymptomBodyFactRecordSubject         `json:"subject"`
+	Temporal         BodyFactTemporal                     `json:"temporal"`
+	UserId           openapi_types.UUID                   `json:"user_id"`
+}
+
+// SymptomBodyFactRecordAssertionStatus defines model for SymptomBodyFactRecord.AssertionStatus.
+type SymptomBodyFactRecordAssertionStatus string
+
+// SymptomBodyFactRecordKind defines model for SymptomBodyFactRecord.Kind.
+type SymptomBodyFactRecordKind string
+
+// SymptomBodyFactRecordSubject defines model for SymptomBodyFactRecord.Subject.
+type SymptomBodyFactRecordSubject string
+
 // TrainingCheckInResponse defines model for TrainingCheckInResponse.
 type TrainingCheckInResponse struct {
 	Message string `json:"message"`
@@ -3195,6 +3884,31 @@ type TrainingExerciseLogInput struct {
 	InterventionId *openapi_types.UUID `json:"intervention_id,omitempty"`
 	Name           string              `json:"name"`
 }
+
+// TrainingFeedbackBodyFactRecord defines model for TrainingFeedbackBodyFactRecord.
+type TrainingFeedbackBodyFactRecord struct {
+	AssertionStatus  TrainingFeedbackBodyFactRecordAssertionStatus `json:"assertion_status"`
+	BodyRegionIds    []string                                      `json:"body_region_ids"`
+	CreatedRevision  int64                                         `json:"created_revision"`
+	Details          BodyFactTrainingFeedbackDetails               `json:"details"`
+	Id               openapi_types.UUID                            `json:"id"`
+	Kind             TrainingFeedbackBodyFactRecordKind            `json:"kind"`
+	RecordedAt       time.Time                                     `json:"recorded_at"`
+	SourceEvidenceId openapi_types.UUID                            `json:"source_evidence_id"`
+	Statement        string                                        `json:"statement"`
+	Subject          TrainingFeedbackBodyFactRecordSubject         `json:"subject"`
+	Temporal         BodyFactTemporal                              `json:"temporal"`
+	UserId           openapi_types.UUID                            `json:"user_id"`
+}
+
+// TrainingFeedbackBodyFactRecordAssertionStatus defines model for TrainingFeedbackBodyFactRecord.AssertionStatus.
+type TrainingFeedbackBodyFactRecordAssertionStatus string
+
+// TrainingFeedbackBodyFactRecordKind defines model for TrainingFeedbackBodyFactRecord.Kind.
+type TrainingFeedbackBodyFactRecordKind string
+
+// TrainingFeedbackBodyFactRecordSubject defines model for TrainingFeedbackBodyFactRecord.Subject.
+type TrainingFeedbackBodyFactRecordSubject string
 
 // TrainingFeedbackInput defines model for TrainingFeedbackInput.
 type TrainingFeedbackInput struct {
@@ -3679,6 +4393,11 @@ type ListAssessmentsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListBodyFactRecordsParams defines parameters for ListBodyFactRecords.
+type ListBodyFactRecordsParams struct {
+	BeforeRevision *int64 `form:"before_revision,omitempty" json:"before_revision,omitempty"`
+}
+
 // ListConversationsParams defines parameters for ListConversations.
 type ListConversationsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -3743,6 +4462,9 @@ type AddBodyStateObservationJSONRequestBody = BodyStateObservationInput
 
 // ReviewBodyStateObservationJSONRequestBody defines body for ReviewBodyStateObservation for application/json ContentType.
 type ReviewBodyStateObservationJSONRequestBody = ReviewBodyStateObservationRequest
+
+// RecordBodyFactsJSONRequestBody defines body for RecordBodyFacts for application/json ContentType.
+type RecordBodyFactsJSONRequestBody = RecordBodyFactsRequest
 
 // ResolveBodyStateSafetyJSONRequestBody defines body for ResolveBodyStateSafety for application/json ContentType.
 type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
@@ -3830,6 +4552,215 @@ type CreateUploadMultipartRequestBody = CreateUploadRequest
 
 // AppendHealthDocumentReviewJSONRequestBody defines body for AppendHealthDocumentReview for application/json ContentType.
 type AppendHealthDocumentReviewJSONRequestBody = AppendHealthDocumentReviewRequest
+
+// AsSymptomBodyFactRecord returns the union data inside the BodyFactRecord as a SymptomBodyFactRecord
+func (t BodyFactRecord) AsSymptomBodyFactRecord() (SymptomBodyFactRecord, error) {
+	var body SymptomBodyFactRecord
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSymptomBodyFactRecord overwrites any union data inside the BodyFactRecord as the provided SymptomBodyFactRecord
+func (t *BodyFactRecord) FromSymptomBodyFactRecord(v SymptomBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"symptom"}`))
+	t.union = b
+	return err
+}
+
+// MergeSymptomBodyFactRecord performs a merge with any union data inside the BodyFactRecord, using the provided SymptomBodyFactRecord
+func (t *BodyFactRecord) MergeSymptomBodyFactRecord(v SymptomBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"symptom"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsHealthHistoryBodyFactRecord returns the union data inside the BodyFactRecord as a HealthHistoryBodyFactRecord
+func (t BodyFactRecord) AsHealthHistoryBodyFactRecord() (HealthHistoryBodyFactRecord, error) {
+	var body HealthHistoryBodyFactRecord
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromHealthHistoryBodyFactRecord overwrites any union data inside the BodyFactRecord as the provided HealthHistoryBodyFactRecord
+func (t *BodyFactRecord) FromHealthHistoryBodyFactRecord(v HealthHistoryBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"health_history"}`))
+	t.union = b
+	return err
+}
+
+// MergeHealthHistoryBodyFactRecord performs a merge with any union data inside the BodyFactRecord, using the provided HealthHistoryBodyFactRecord
+func (t *BodyFactRecord) MergeHealthHistoryBodyFactRecord(v HealthHistoryBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"health_history"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsActivityBodyFactRecord returns the union data inside the BodyFactRecord as a ActivityBodyFactRecord
+func (t BodyFactRecord) AsActivityBodyFactRecord() (ActivityBodyFactRecord, error) {
+	var body ActivityBodyFactRecord
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromActivityBodyFactRecord overwrites any union data inside the BodyFactRecord as the provided ActivityBodyFactRecord
+func (t *BodyFactRecord) FromActivityBodyFactRecord(v ActivityBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"activity"}`))
+	t.union = b
+	return err
+}
+
+// MergeActivityBodyFactRecord performs a merge with any union data inside the BodyFactRecord, using the provided ActivityBodyFactRecord
+func (t *BodyFactRecord) MergeActivityBodyFactRecord(v ActivityBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"activity"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsLifestyleBodyFactRecord returns the union data inside the BodyFactRecord as a LifestyleBodyFactRecord
+func (t BodyFactRecord) AsLifestyleBodyFactRecord() (LifestyleBodyFactRecord, error) {
+	var body LifestyleBodyFactRecord
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromLifestyleBodyFactRecord overwrites any union data inside the BodyFactRecord as the provided LifestyleBodyFactRecord
+func (t *BodyFactRecord) FromLifestyleBodyFactRecord(v LifestyleBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"lifestyle"}`))
+	t.union = b
+	return err
+}
+
+// MergeLifestyleBodyFactRecord performs a merge with any union data inside the BodyFactRecord, using the provided LifestyleBodyFactRecord
+func (t *BodyFactRecord) MergeLifestyleBodyFactRecord(v LifestyleBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"lifestyle"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTrainingFeedbackBodyFactRecord returns the union data inside the BodyFactRecord as a TrainingFeedbackBodyFactRecord
+func (t BodyFactRecord) AsTrainingFeedbackBodyFactRecord() (TrainingFeedbackBodyFactRecord, error) {
+	var body TrainingFeedbackBodyFactRecord
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrainingFeedbackBodyFactRecord overwrites any union data inside the BodyFactRecord as the provided TrainingFeedbackBodyFactRecord
+func (t *BodyFactRecord) FromTrainingFeedbackBodyFactRecord(v TrainingFeedbackBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"training_feedback"}`))
+	t.union = b
+	return err
+}
+
+// MergeTrainingFeedbackBodyFactRecord performs a merge with any union data inside the BodyFactRecord, using the provided TrainingFeedbackBodyFactRecord
+func (t *BodyFactRecord) MergeTrainingFeedbackBodyFactRecord(v TrainingFeedbackBodyFactRecord) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"training_feedback"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t BodyFactRecord) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t BodyFactRecord) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "activity":
+		return t.AsActivityBodyFactRecord()
+	case "health_history":
+		return t.AsHealthHistoryBodyFactRecord()
+	case "lifestyle":
+		return t.AsLifestyleBodyFactRecord()
+	case "symptom":
+		return t.AsSymptomBodyFactRecord()
+	case "training_feedback":
+		return t.AsTrainingFeedbackBodyFactRecord()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t BodyFactRecord) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *BodyFactRecord) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsClientDiagnosticAttributes0 returns the union data inside the ClientDiagnostic_Attributes_AdditionalProperties as a ClientDiagnosticAttributes0
 func (t ClientDiagnostic_Attributes_AdditionalProperties) AsClientDiagnosticAttributes0() (ClientDiagnosticAttributes0, error) {
@@ -4265,6 +5196,215 @@ func (t *MessagePart) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsRecordSymptomFactInput returns the union data inside the RecordBodyFactInput as a RecordSymptomFactInput
+func (t RecordBodyFactInput) AsRecordSymptomFactInput() (RecordSymptomFactInput, error) {
+	var body RecordSymptomFactInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordSymptomFactInput overwrites any union data inside the RecordBodyFactInput as the provided RecordSymptomFactInput
+func (t *RecordBodyFactInput) FromRecordSymptomFactInput(v RecordSymptomFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"symptom"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecordSymptomFactInput performs a merge with any union data inside the RecordBodyFactInput, using the provided RecordSymptomFactInput
+func (t *RecordBodyFactInput) MergeRecordSymptomFactInput(v RecordSymptomFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"symptom"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRecordHealthHistoryFactInput returns the union data inside the RecordBodyFactInput as a RecordHealthHistoryFactInput
+func (t RecordBodyFactInput) AsRecordHealthHistoryFactInput() (RecordHealthHistoryFactInput, error) {
+	var body RecordHealthHistoryFactInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordHealthHistoryFactInput overwrites any union data inside the RecordBodyFactInput as the provided RecordHealthHistoryFactInput
+func (t *RecordBodyFactInput) FromRecordHealthHistoryFactInput(v RecordHealthHistoryFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"health_history"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecordHealthHistoryFactInput performs a merge with any union data inside the RecordBodyFactInput, using the provided RecordHealthHistoryFactInput
+func (t *RecordBodyFactInput) MergeRecordHealthHistoryFactInput(v RecordHealthHistoryFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"health_history"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRecordActivityFactInput returns the union data inside the RecordBodyFactInput as a RecordActivityFactInput
+func (t RecordBodyFactInput) AsRecordActivityFactInput() (RecordActivityFactInput, error) {
+	var body RecordActivityFactInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordActivityFactInput overwrites any union data inside the RecordBodyFactInput as the provided RecordActivityFactInput
+func (t *RecordBodyFactInput) FromRecordActivityFactInput(v RecordActivityFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"activity"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecordActivityFactInput performs a merge with any union data inside the RecordBodyFactInput, using the provided RecordActivityFactInput
+func (t *RecordBodyFactInput) MergeRecordActivityFactInput(v RecordActivityFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"activity"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRecordLifestyleFactInput returns the union data inside the RecordBodyFactInput as a RecordLifestyleFactInput
+func (t RecordBodyFactInput) AsRecordLifestyleFactInput() (RecordLifestyleFactInput, error) {
+	var body RecordLifestyleFactInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordLifestyleFactInput overwrites any union data inside the RecordBodyFactInput as the provided RecordLifestyleFactInput
+func (t *RecordBodyFactInput) FromRecordLifestyleFactInput(v RecordLifestyleFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"lifestyle"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecordLifestyleFactInput performs a merge with any union data inside the RecordBodyFactInput, using the provided RecordLifestyleFactInput
+func (t *RecordBodyFactInput) MergeRecordLifestyleFactInput(v RecordLifestyleFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"lifestyle"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRecordTrainingFeedbackFactInput returns the union data inside the RecordBodyFactInput as a RecordTrainingFeedbackFactInput
+func (t RecordBodyFactInput) AsRecordTrainingFeedbackFactInput() (RecordTrainingFeedbackFactInput, error) {
+	var body RecordTrainingFeedbackFactInput
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecordTrainingFeedbackFactInput overwrites any union data inside the RecordBodyFactInput as the provided RecordTrainingFeedbackFactInput
+func (t *RecordBodyFactInput) FromRecordTrainingFeedbackFactInput(v RecordTrainingFeedbackFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"training_feedback"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecordTrainingFeedbackFactInput performs a merge with any union data inside the RecordBodyFactInput, using the provided RecordTrainingFeedbackFactInput
+func (t *RecordBodyFactInput) MergeRecordTrainingFeedbackFactInput(v RecordTrainingFeedbackFactInput) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"training_feedback"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RecordBodyFactInput) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RecordBodyFactInput) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "activity":
+		return t.AsRecordActivityFactInput()
+	case "health_history":
+		return t.AsRecordHealthHistoryFactInput()
+	case "lifestyle":
+		return t.AsRecordLifestyleFactInput()
+	case "symptom":
+		return t.AsRecordSymptomFactInput()
+	case "training_feedback":
+		return t.AsRecordTrainingFeedbackFactInput()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RecordBodyFactInput) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RecordBodyFactInput) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListAssessments List immutable assessment reports for the authenticated user.
@@ -4330,6 +5470,12 @@ type ServerInterface interface {
 	// ReviewBodyStateObservation Review a BodyState observation.
 	// (PATCH /api/v1/body-state/observations/{id}/review)
 	ReviewBodyStateObservation(c *gin.Context, id openapi_types.UUID)
+	// ListBodyFactRecords Read bounded, whole-revision pages from the new assertion ledger.
+	// (GET /api/v1/body-state/records)
+	ListBodyFactRecords(c *gin.Context, params ListBodyFactRecordsParams)
+	// RecordBodyFacts Atomically record explicit direct-user statements and return the original durable commit receipt on retry.
+	// (POST /api/v1/body-state/records)
+	RecordBodyFacts(c *gin.Context)
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(c *gin.Context)
@@ -4952,6 +6098,46 @@ func (siw *ServerInterfaceWrapper) ReviewBodyStateObservation(c *gin.Context) {
 	}
 
 	siw.Handler.ReviewBodyStateObservation(c, id)
+}
+
+// ListBodyFactRecords operation middleware
+func (siw *ServerInterfaceWrapper) ListBodyFactRecords(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBodyFactRecordsParams
+
+	// ------------- Optional query parameter "before_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before_revision", c.Request.URL.Query(), &params.BeforeRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter before_revision: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListBodyFactRecords(c, params)
+}
+
+// RecordBodyFacts operation middleware
+func (siw *ServerInterfaceWrapper) RecordBodyFacts(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecordBodyFacts(c)
 }
 
 // ResolveBodyStateSafety operation middleware
@@ -6587,6 +7773,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.GET(options.BaseURL+"/api/v1/body-state/records", wrapper.ListBodyFactRecords)
+	router.POST(options.BaseURL+"/api/v1/body-state/records", wrapper.RecordBodyFacts)
 	router.POST(options.BaseURL+"/api/v1/body-state/facts", wrapper.AddBodyStateFact)
 	router.GET(options.BaseURL+"/api/v1/health-workspace", wrapper.GetHealthWorkspace)
 	router.GET(options.BaseURL+"/api/v1/body-state", wrapper.GetBodyState)
@@ -8743,6 +9931,194 @@ type ReviewBodyStateObservation503JSONResponse struct {
 }
 
 func (response ReviewBodyStateObservation503JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecordsRequestObject struct {
+	Params ListBodyFactRecordsParams
+}
+
+type ListBodyFactRecordsResponseObject interface {
+	VisitListBodyFactRecordsResponse(w http.ResponseWriter) error
+}
+
+type ListBodyFactRecords200JSONResponse BodyFactRecordPage
+
+func (response ListBodyFactRecords200JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecords400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListBodyFactRecords400JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecords401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBodyFactRecords401JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecords409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response ListBodyFactRecords409JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecords500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListBodyFactRecords500JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyFactRecords503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response ListBodyFactRecords503JSONResponse) VisitListBodyFactRecordsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFactsRequestObject struct {
+	Body *RecordBodyFactsJSONRequestBody
+}
+
+type RecordBodyFactsResponseObject interface {
+	VisitRecordBodyFactsResponse(w http.ResponseWriter) error
+}
+
+type RecordBodyFacts200JSONResponse BodyFactCommit
+
+func (response RecordBodyFacts200JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFacts400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RecordBodyFacts400JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFacts401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordBodyFacts401JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFacts409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response RecordBodyFacts409JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFacts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordBodyFacts500JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordBodyFacts503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response RecordBodyFacts503JSONResponse) VisitRecordBodyFactsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -14771,6 +16147,12 @@ type StrictServerInterface interface {
 	// ReviewBodyStateObservation Review a BodyState observation.
 	// (PATCH /api/v1/body-state/observations/{id}/review)
 	ReviewBodyStateObservation(ctx context.Context, request ReviewBodyStateObservationRequestObject) (ReviewBodyStateObservationResponseObject, error)
+	// ListBodyFactRecords Read bounded, whole-revision pages from the new assertion ledger.
+	// (GET /api/v1/body-state/records)
+	ListBodyFactRecords(ctx context.Context, request ListBodyFactRecordsRequestObject) (ListBodyFactRecordsResponseObject, error)
+	// RecordBodyFacts Atomically record explicit direct-user statements and return the original durable commit receipt on retry.
+	// (POST /api/v1/body-state/records)
+	RecordBodyFacts(ctx context.Context, request RecordBodyFactsRequestObject) (RecordBodyFactsResponseObject, error)
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(ctx context.Context, request ResolveBodyStateSafetyRequestObject) (ResolveBodyStateSafetyResponseObject, error)
@@ -15651,6 +17033,63 @@ func (sh *strictHandler) ReviewBodyStateObservation(ctx *gin.Context, id openapi
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(ReviewBodyStateObservationResponseObject); ok {
 		if err := validResponse.VisitReviewBodyStateObservationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBodyFactRecords operation middleware
+func (sh *strictHandler) ListBodyFactRecords(ctx *gin.Context, params ListBodyFactRecordsParams) {
+	var request ListBodyFactRecordsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBodyFactRecords(ctx, request.(ListBodyFactRecordsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBodyFactRecords")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListBodyFactRecordsResponseObject); ok {
+		if err := validResponse.VisitListBodyFactRecordsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordBodyFacts operation middleware
+func (sh *strictHandler) RecordBodyFacts(ctx *gin.Context) {
+	var request RecordBodyFactsRequestObject
+
+	var body RecordBodyFactsJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordBodyFacts(ctx, request.(RecordBodyFactsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordBodyFacts")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RecordBodyFactsResponseObject); ok {
+		if err := validResponse.VisitRecordBodyFactsResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -17748,298 +19187,328 @@ func (sh *strictHandler) GetHealthDocumentReviewContext(ctx *gin.Context, id ope
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"0+f/FQAA//8=",
+	"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",
+	"/ZkijZpLcV1J88m3k/PJ3ee7/xYAAP//",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

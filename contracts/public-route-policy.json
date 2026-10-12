@@ -8,5 +8,16 @@
     }
   ],
   "retiredBaselineRoutes": [],
-  "approvedNewRoutes": []
+  "approvedNewRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/body-state/records",
+      "reason": "SF-11 approved BodyFact assertion ledger, direct-user command/receipt and bounded tenant-owned read projection."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/records",
+      "reason": "SF-11 approved BodyFact assertion ledger, direct-user command/receipt and bounded tenant-owned read projection."
+    }
+  ]
 }

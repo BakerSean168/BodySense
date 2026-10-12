@@ -12,6 +12,8 @@ import {
   AssessmentReplayReport,
   AssessmentReportV2,
   AuthSession,
+  BodyFactCommit,
+  BodyFactRecordPage,
   BodyMetricsSnapshot,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
@@ -86,6 +88,8 @@ import type {
   AuthLoginRequest,
   AuthRegisterRequest,
   AuthSessionOutput,
+  BodyFactCommitOutput,
+  BodyFactRecordPageOutput,
   BodyMetricsSnapshotOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
@@ -136,6 +140,7 @@ import type {
   KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListBodyFactRecordsParams,
   ListConversationsParams,
   ListDiagnosisAnalysesParams,
   ListOutcomesParams,
@@ -151,6 +156,7 @@ import type {
   PrivacyErasureAcceptedOutput,
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
+  RecordBodyFactsRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
@@ -189,6 +195,107 @@ import type {
   UserProfileResponseOutput,
   UserUploadOutput
 } from './model';
+
+export const getRecordBodyFactsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/records`
+}
+
+/**
+ * New approved assertion ledger. Authenticated owner and direct-edit provenance are assigned server-side. This does not accept diagnoses, arbitrary source identities, training-log bindings or correction authorization.
+ * @summary Atomically record explicit direct-user statements and return the original durable commit receipt on retry.
+ */
+export const recordBodyFacts = async (recordBodyFactsRequest: RecordBodyFactsRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyFactsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyFactsRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyFactRecordsUrl = (params?: ListBodyFactRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/records?${stringifiedParams}` : `/api/v1/body-state/records`
+}
+
+/**
+ * This projection contains migrated/new BodyFact records only, not the still-unconverted legacy BodyState snapshot. Sources blocked from new use are excluded.
+ * @summary Read bounded, whole-revision pages from the new assertion ledger.
+ */
+export const listBodyFactRecords = async (params?: ListBodyFactRecordsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactRecordPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyFactRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactRecordPage, status?: number} = new globalThis.Error();
+    const data : BodyFactRecordPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
 
 export const getAddBodyStateFactUrl = () => {
 
