@@ -5,7 +5,7 @@ Status: IMPLEMENTED / staging validated / final anatomy-boundary visual audit pe
 Owner scope: BodySense Web + additive BodyState region contract + anatomy static assets
 Decision: ADR 0006
 Architecture: `../../architecture/body-explorer-3d-anatomy.md`
-Feature spec: `../../feature_spec_3d_body_explorer.md`
+Feature spec: `../../archive/product-legacy/feature_spec_3d_body_explorer.md`（已归档，现行规格见 `../../product/interface.md`）
 Ontology: `../../architecture/body-region-ontology.md`
 Asset governance: `../../architecture/anatomy-asset-governance.md`
 
