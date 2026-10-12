@@ -21,7 +21,7 @@ User
 │  ├─ SafetySummary
 │  ├─ ConditionDirectEdit[]   用户直接更正 / 撤回 / 标记缓解的决定审计（§3.5）
 │  └─ DiagnosisRevision[]
-├─ ConditionAnalysisRun[]     正式分析执行审计（审计事件只追加；运行状态为投影），含 AI 假设与证据引用
+├─ ConditionAnalysisRun[]     正式分析执行审计（审计事件只追加；运行状态为投影），含 AI 假设（创建时快照 + 追加事件）与证据引用
 │  ├─ ConditionProposal[]     本次分析提出的条目新增/变更
 │  └─ ConditionProposalDecision[]  用户对每个提案的决定（审计）
 └─ TrainingPlan (0..N)
@@ -235,12 +235,14 @@ type ConditionAnalysisRun = {          // 一次正式分析执行 = 基础记�
   basedOnBodyStateRevision: number;
   basedOnDiagnosisRevision: number;
   inputEvidenceIds: string[];          // 运行开始时的输入证据
-  agentHypotheses: { statement: string; evidenceIds: string[] }[];  // 创建时的 AI 假设快照；AI 假设只存在这里
+  agentHypotheses: { statement: string; evidenceIds: string[] }[];  // 创建时的 AI 假设快照；之后形成的假设由 hypothesis_added 追加
   startedAt: string;
 
   // —— 投影：完全由事件推导（映射见下文「投影字段来源」） ——
   evidenceIds: string[];               // inputEvidenceIds + 各 evidence_added
-  outcome?: "proposals_created" | "insufficient_evidence" | "safety_blocked";  // 结算前且尚无提案时为空
+  hypotheses: { statement: string; evidenceIds: string[]; addedAt: string }[];
+                                       // agentHypotheses 快照（addedAt = startedAt）+ 各 hypothesis_added；AI 假设只存在于此（及提案审计）
+  outcome?: "proposals_created" | "insufficient_evidence" | "safety_blocked";  // 结算前且尚无提案时为空；安全阻断可在已有提案后发生（§3.3）
   proposalIds: string[];
   state: "open" | "committed" | "closed_without_change";
   committedDiagnosisRevision?: number;
@@ -269,7 +271,7 @@ type ConditionProposal = {             // 基础记录 + 投影
 
   // —— 投影：完全由事件推导 ——
   state: "pending" | "decided" | "superseded" | "expired";
-  expiredReason?: "timeout" | "base_revision_changed" | "run_closed";
+  expiredReason?: "timeout" | "base_revision_changed" | "run_closed" | "safety_blocked";
   supersededReason?: "revised_after_supplement" | "evidence_changed";  // 见 §3.3
   supersededByProposalId?: string;
 };
@@ -294,13 +296,14 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
   event:
     | { kind: "run_started" }            // 运行基础记录已写入；state → open
     | { kind: "evidence_added"; evidenceIds: string[]; sourceMessageId: string }
+    | { kind: "hypothesis_added"; statement: string; evidenceIds: string[] }  // 运行开始后形成的 AI 假设；时间即 at
     | { kind: "insufficient_evidence"; summary: string }  // 无提案结束：证据不足（R-DX-10）
-    | { kind: "safety_blocked"; summary: string }         // 无提案结束：安全阻断（R-DX-10）
+    | { kind: "safety_blocked"; summary: string }         // 终结：需停止分析的严重风险（R-DX-10，§3.3）；可在已有提案后写入
     | { kind: "proposal_created"; proposalId: string; supersedesProposalId?: string }
     | { kind: "proposal_superseded"; proposalId: string; byProposalId: string;
         reason: "revised_after_supplement" | "evidence_changed" }
     | { kind: "proposal_expired"; proposalId: string;
-        reason: "timeout" | "base_revision_changed" | "run_closed" }
+        reason: "timeout" | "base_revision_changed" | "run_closed" | "safety_blocked" }
     | { kind: "decision_recorded"; decisionId: string; proposalId: string }
     | { kind: "decision_rechecked"; decisionId: string; proposalId: string;
         checkedEvidenceIds: string[]; result: "unaffected" | "affected" }  // §3.3
@@ -311,7 +314,8 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 
 - 「继续补充」不是决定，不产生 ConditionProposalDecision；提案保持 `pending`。
 - **结束提案必须写明结束目标**：`changeKind = end` 时 `targetConditionId` 必填，`content.endTarget` 与 `content.endReason` 必填，`content` 其余字段为目标条目的当前内容（供用户核对）；`endTarget = mark_resolved` 时 `content.lifecycle = resolved`，`endTarget = mark_no_longer_applicable` 时 `content.lifecycle` 保持目标条目当前值（INV-14）。`endTarget` 计入 `contentFingerprint`，同一条目上仅 `endTarget` 不同的两个结束提案指纹不同、语义也不同。
-- **不重复提议**：存在 `rejected` 决定时，Agent 不得再次提出相同 `contentFingerprint`（或同一目标条目上语义相同）的提案，除非本次运行引用了该决定 `evidenceIds` 之外、且与该提案相关的新证据 ID。仅 BodyState 修订号变化不算新证据。
+- **不重复提议**：存在 `rejected` 决定时，Agent 不得再次提出相同 `contentFingerprint`（或同一目标条目上语义相同）的提案，除非本次运行引用了该决定 `evidenceIds` 之外、且与该提案相关的新证据 ID。仅 BodyState 修订号变化不算新证据。以 `safety_blocked` 终结的运行中的决定只留档、不生效（INV-23），不作为本规则的依据。
+- **AI 假设只追加、无权威**：运行开始后 Agent 新形成的假设（如因 `evidence_added` 引出）以 `hypothesis_added` 事件追加记录内容、证据 ID 与时间（`at`），不修改基础记录中的 `agentHypotheses` 快照；其 `evidenceIds` 须属于写入时该运行的 `evidenceIds`。AI 假设任何时候都不写入 BodyState（INV-02），也不直接进入 Diagnosis——只有经用户决定并提交的提案才改变 Diagnosis。
 - **不可变的是基础记录与审计事件**（INV-16）：
   - ConditionAnalysisRun 基础记录：`runId`、`userId`、`requestMessageId`、`trigger`、`scope`、`basedOnBodyStateRevision`、`basedOnDiagnosisRevision`、`inputEvidenceIds`、`agentHypotheses` 快照、`startedAt`，创建运行时写入；
   - ConditionProposal 基础记录：`proposalId`、`runId`、`targetConditionId`、`changeKind`、`content`（含 `endTarget`、`endReason`）、`contentFingerprint`、`evidenceIds`、`counterEvidenceIds`、`supersedesProposalId`、`createdAt`，创建提案时写入；修订提案内容即创建新提案并取代旧提案；
@@ -322,18 +326,25 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
   | 投影字段 | 推导来源 |
   | --- | --- |
   | Run `state` | `run_started` → `open`；`committed` → `committed`；`closed_without_change`、`insufficient_evidence`、`safety_blocked` → `closed_without_change` |
-  | Run `outcome` | 有 `proposal_created` → `proposals_created`；`insufficient_evidence` / `safety_blocked` → 同名结果；两者皆无时为空 |
+  | Run `outcome` | 有 `safety_blocked` → `safety_blocked`（无论此前是否有提案）；有 `insufficient_evidence` → `insufficient_evidence`；否则有 `proposal_created` → `proposals_created`；皆无时为空 |
   | Run `evidenceIds` | `inputEvidenceIds` ∪ 各 `evidence_added.evidenceIds` |
+  | Run `hypotheses` | `agentHypotheses` 快照（`addedAt = startedAt`），再按事件顺序追加各 `hypothesis_added`（`addedAt = at`） |
   | Run `proposalIds` | 各 `proposal_created.proposalId` |
   | Run `committedDiagnosisRevision` | `committed.diagnosisRevision` |
   | Run `settledAt` | 终结事件（`committed`、`closed_without_change`、`insufficient_evidence`、`safety_blocked`）的 `at` |
   | Proposal `state` | `proposal_created` → `pending`；`decision_recorded` → `decided`；`proposal_superseded` → `superseded`；`proposal_expired` → `expired` |
   | Proposal `expiredReason` | `proposal_expired.reason` |
   | Proposal `supersededReason`、`supersededByProposalId` | `proposal_superseded.reason`、`.byProposalId` |
-  | 决定是否仍生效 | `decision_recorded` 后生效；对应 `decision_rechecked.result = affected` 后失效（§3.3） |
+  | 决定是否仍生效 | `decision_recorded` 后生效；对应 `decision_rechecked.result = affected` 后失效（§3.3）；运行以 `safety_blocked` 终结时，该运行全部决定失效（INV-23） |
 
-- **事件顺序约束**：`run_started` 是运行的第一个事件；终结事件只能有一个，之后不再追加该运行的事件；`insufficient_evidence` / `safety_blocked` 只能在运行尚未产生任何 `proposal_created` 时写入，表示本次运行不创建提案即结束。
-- **可回放**：按 `at`（同一时刻按写入顺序）依次回放基础记录与 ConditionAnalysisEvent，必须重现每个 Run / Proposal 的全部投影字段与决定是否仍生效；不存在只能由投影本身保存、无法从事件推导的状态（INV-22）。
+- **事件顺序约束**（由 Go 后端强制，不依赖 Agent 提示）：
+  - `run_started` 是运行的第一个事件；
+  - 终结事件（`committed`、`closed_without_change`、`insufficient_evidence`、`safety_blocked`）只能有一个；终结后该运行的任何事件（含决定、复核、`hypothesis_added`）与补丁 / 提交请求一律被拒绝；
+  - `insufficient_evidence` 只能在运行尚未产生任何 `proposal_created` 时写入；
+  - `safety_blocked` 可在运行 `open` 期间任何时刻写入，包括已有提案、部分或全部已决定但尚未提交时。已有提案时，在同一原子事务中先为每个 `pending` 提案写入 `proposal_expired`（`safety_blocked`），再写入 `safety_blocked`；已决定提案保持 `decided`，决定留档但不生效；不写入 `committed`，不产生 DiagnosisRevision（§3.3「运行中安全阻断」、INV-23）；
+  - **终结竞争**：同一运行的终结写入串行化（如对运行事件序号使用乐观锁），先写入的终结事件胜出，另一个被拒绝：`safety_blocked` 先写入时提交被拒、不产生修订；`committed` 先写入时 `safety_blocked` 被拒，已提交的修订保留，安全提示仍按 [Agent 工作流 §5](./agent-workflows.md#5-安全处理) 照常展示；
+  - **重复阻断幂等**：运行已以 `safety_blocked` 终结时，重复的 `safety_blocked` 请求（网络重试或 Agent 重复调用）返回已有结果，不追加事件。
+- **可回放**：按 `at`（同一时刻按写入顺序）依次回放基础记录与 ConditionAnalysisEvent，必须重现每个 Run / Proposal 的全部投影字段（含 `hypotheses`）与决定是否仍生效；不存在只能由投影本身保存、无法从事件推导的状态（INV-22）。
 - 当前 Diagnosis 是单一对外聚合视图。
 
 ### 3.2 用户选择与数据映射
@@ -361,7 +372,7 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 
 一次 ConditionAnalysisRun 可以产生多个 ConditionProposal，每个提案独立决定，最终**一次性**提交（R-DX-12）：
 
-- **提交时机**：运行中所有提案都已结算（`decided`、`superseded` 或 `expired`），且每个已决定提案都已完成下文的新证据复核时，把全部会改变 Diagnosis 的决定（`likely` / `keep_as_suspected` / `include_clinical`，以及结束提案上的 `accept_end`；`rejected` 不改变 Diagnosis）合成**一个**原子补丁，只产生一次 DiagnosisRevision；没有任何改变时运行记为 `closed_without_change`，不产生修订。
+- **提交时机**：运行仍为 `open`（未被安全阻断或以其他方式终结），运行中所有提案都已结算（`decided`、`superseded` 或 `expired`），且每个已决定提案都已完成下文的新证据复核时，把全部会改变 Diagnosis 的决定（`likely` / `keep_as_suspected` / `include_clinical`，以及结束提案上的 `accept_end`；`rejected` 不改变 Diagnosis）合成**一个**原子补丁，只产生一次 DiagnosisRevision；没有任何改变时运行记为 `closed_without_change`，不产生修订。
 - **提交前**：已作出的决定保存在 ConditionProposalDecision 中，不会丢失，但 Diagnosis 不变。
 - **关闭界面 / 离开对话 / 再次进入**：运行保持 `open`，未决定提案保持 `pending` 并可在同一运行中恢复；已决定的不需要重新选择。
 - **继续补充**：被补充的提案不作决定；新信息按 R-BS-01 写入 BodyState，并作为新证据加入本运行（`evidence_added`）。Agent 若据此修订该提案，旧提案记为 `superseded`（`revised_after_supplement`），新提案在同一运行内等待决定。其他提案的已有决定按下条复核。
@@ -372,6 +383,12 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 - **超时**：运行的未决定提案记为 `expired`（`timeout`），随后按上述规则提交已作出的决定。超时时长见 [Q-17](./open-questions.md)。
 - **用户结束本次确认**（如「其余先不处理」）：未决定提案记为 `expired`（`run_closed`），已作出的决定照常提交。
 - **底版变化**：提交时 Diagnosis 当前修订与 `basedOnDiagnosisRevision` 不一致，补丁被拒绝；受影响提案记为 `expired`（`base_revision_changed`），Agent 重新核验后再展示，不静默合并。
+- **运行中安全阻断**（R-DX-10、R-SAFE-01）：
+  - 只有需要停止分析的严重风险（警示 / 需尽快就医类，即红旗信号）才中断运行：立即展示医学安全提示，停止该运行的后续确认（不再展示或记录后续提案的决定）。只影响训练执行的普通限制（SafetyState 中仅由 Trainer 把关的限制）不中断正式分析。
+  - 已有提案的运行同样以 `safety_blocked` 终结：未决定提案记为 `expired`（`safety_blocked`）；已决定提案与决定留档供审计，但永不生效。
+  - Diagnosis 不变：该运行不产生 DiagnosisRevision，也没有部分提交。
+  - 风险得到适当处理后，由用户重新发起正式分析（新的 ConditionAnalysisRun）；被阻断的运行不自动恢复，其提案与决定不被新运行继承，新运行的提案须用户重新决定。
+  - 由 Go 后端强制：对投影 `outcome = safety_blocked` 的运行，任何补丁 / 提交以及终结事件之后的任何事件都被拒绝；提交与阻断的竞争、重复阻断按 §3.1「事件顺序约束」处理（INV-23）。
 
 ### 3.4 局部更新、整体修订
 
@@ -532,7 +549,7 @@ type PlanChangeProposal = {
 | INV-09 | 工具、事件和网络重试具备幂等、错误提示和可恢复性 |
 | INV-10 | 当前页面不暴露技术修订号、历史版本管理或后端运行编号 |
 | INV-11 | `ConditionEntry.source` 只由证据来源决定，用户确认不能把条目变为 `clinical_document`；`clinical_diagnosis` 只与临床来源同时出现 |
-| INV-12 | 一次 ConditionAnalysisRun 的全部生效决定在一个原子补丁中提交；提交前 Diagnosis 不变，已作出的决定不丢失 |
+| INV-12 | 一次 ConditionAnalysisRun 的全部生效决定在一个原子补丁中提交；提交前 Diagnosis 不变，已作出的决定不丢失（以 `safety_blocked` 终结的运行不提交，见 INV-23） |
 | INV-13 | 已被用户拒绝的提案指纹，无相关新证据 ID 时不得再次提出 |
 | INV-14 | 撤回 / 不再适用只改变 `disposition`，条目与历史保留，`lifecycle` 与 BodyState 事实不被改写 |
 | INV-15 | 只有明确记载临床医生诊断的已采纳文件证据才能支持 `source = clinical_document` + `conclusionStatus = clinical_diagnosis`；化验 / 影像等数值只作为 `agent_analysis` 提案的证据，不升级来源或结论 |
@@ -542,4 +559,5 @@ type PlanChangeProposal = {
 | INV-19 | 直接编辑路径只能由用户的明确请求触发，Agent 不得用它做自己的修改；每次直接编辑留下用户决定审计（谁、什么、何时、原因），并产生一次 Diagnosis 修订 |
 | INV-20 | 安全限制只按其 `liftPolicy` 解除：只有 `on_expiry` 到期自动解除；其他策略到期只触发复核、限制继续生效；每次解除记录与策略一致的依据；Agent 不能自行解除或放宽策略 |
 | INV-21 | `changeKind = end` 的提案必须写明 `endTarget`（`mark_resolved` / `mark_no_longer_applicable`）并计入内容指纹；提交只应用 `accept_end` 决定所针对的那个 `endTarget`；`disposition = no_longer_applicable` 只来自被接受的 `mark_no_longer_applicable` 结束提案 |
-| INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件 |
+| INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、`hypotheses`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件；运行开始后形成的 AI 假设以 `hypothesis_added` 追加，不改写创建时快照 |
+| INV-23 | 以 `safety_blocked` 终结的 ConditionAnalysisRun 绝不产生 DiagnosisRevision：未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效；终结后该运行的补丁、提交与任何事件由 Go 后端拒绝；每个运行只有一个终结事件（先写入者胜出），重复的 `safety_blocked` 幂等 |
