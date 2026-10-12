@@ -12,9 +12,10 @@
 | **BodyHypothesis** / 用户假设 | 用户本人提出的病因怀疑或可能疾病（`source = user`），自动记录；不具备确诊权威。AI 提出的假设不属于 BodyState，只在 ConditionAnalysisRun 中 | [requirements R-BS-06](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain.md#2-bodystate) | 候选诊断（DiagnosisAnalysis candidates，旧实现）；用「假设」指 AI 推测的持久记录 |
 | **Diagnosis** / 综合诊断 | 每位用户唯一的当前综合结果，只由用户确认过的 ConditionEntry 组成 | [requirements §2.3](./requirements.md#23-diagnosis-综合诊断) · [domain §3](./domain.md#3-diagnosis) | 综合分析、评估、评估报告、Assessment、问诊诊断、诊断报告 |
 | **ConditionEntry** / 病情条目 | Diagnosis 内具有稳定身份的单个病情：名称、原因分析、处理方案、来源（`source`）、结论状态（`conclusionStatus`）、确认记录（`confirmation`）、病程（`lifecycle`）与采纳状态（`disposition`） | [domain §3](./domain.md#3-diagnosis) | 候选病情、诊断候选、局部诊断报告；`certainty`（已拆分的旧字段） |
-| **ConditionAnalysisRun** / 正式分析运行 | 一次正式分析的不可变审计：请求、范围、底版修订、证据、AI 假设、产生的提案 | [domain §3.1](./domain.md#31-正式分析审计对象) | DiagnosisAnalysis（新规格中不再使用此名） |
+| **ConditionAnalysisRun** / 正式分析运行 | 一次正式分析的追加式审计：请求、范围、底版修订、证据、AI 假设、产生的提案。审计事件不可变；当前状态（open / committed / closed_without_change）是由事件推导的投影 | [domain §3.1](./domain.md#31-正式分析审计对象) | DiagnosisAnalysis（新规格中不再使用此名） |
 | **ConditionProposal** / 病情提案 | 一次运行提出的单个条目新增/更新/结束，带内容指纹与证据 ID，尚待用户在 Chat 中决定 | [domain §3.1](./domain.md#31-正式分析审计对象) · [agent-workflows §3.2](./agent-workflows.md#32-diagnosis-正式分析与病情确认) | 已确认诊断、初步诊断（当作已写入时） |
 | **ConditionProposalDecision** / 用户决定记录 | 用户对某个提案的决定（含拒绝）的追加式审计；用于「不重复提议」判定 | [domain §3.1](./domain.md#31-正式分析审计对象) | 「否定记录」（未定义存储时的旧说法） |
+| **ConditionDirectEdit** / 直接编辑记录 | 用户明确要求更正、撤回或标记缓解某个条目时，经轻量确认写入的用户决定审计（谁、什么、何时、原因）；不经正式分析 | [requirements R-DX-13](./requirements.md#23-diagnosis-综合诊断) · [domain §3.5](./domain.md#35-用户直接更正撤回与标记缓解) | 用「撤回提案」指直接编辑 |
 | **TrainingPlan** / 训练计划 | 一份完整训练处方（热身 → 正式训练 → 必要放松，含组数、次数/时长、频率）；每位用户可有多份 | [requirements §2.4](./requirements.md#24-trainingplan-训练计划) · [domain §4](./domain.md#4-trainingplan) | Treatment、治疗方案、训练模块、部位模块 |
 | **PlanChangeProposal** / 计划调整提案 | Agent 主动提出的某份计划的具体修改，用户「接受调整 / 暂不修改」前不生效 | [domain §4](./domain.md#4-trainingplan) | Treatment revision、方案修订（指提案时） |
 | **Trainer** / 训练执行 | 打开某份 TrainingPlan 进行训练、计时与反馈的执行窗口 | [requirements §2.5](./requirements.md#25-训练执行与反馈) · [interface §2](./interface.md#2-业务窗口) | 训练流程（Workflow/Training，设计稿旧名） |
@@ -24,7 +25,7 @@
 | **Profile** / 基础资料 | Person 中相对稳定的身份与偏好数据（领域对象），显示在 Person 标题区与 Identity Popover；不含有时间语义的测量与习惯 | [domain §1](./domain.md#1-聚合关系) · [R-PS-04](./requirements.md#26-person-个人档案与当前状态) | 用 Profile 指整个 Person 窗口；把 Profile 当作第六个分类标签页 |
 | **Chat** | 自然表达、提问、发起分析与授权计划修改的对话窗口，承载交互工具 | [interface §2](./interface.md#2-业务窗口) | Assistant（设计稿旧名）、Consultation / 问诊会话 |
 | **Conversation** / 对话 | Chat 中的交流与工具活动记录；不是身体事实的权威存储 | [domain §1](./domain.md#1-聚合关系) | Consultation Session（旧实现） |
-| **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（计划/动作）、有效期与解除条件，Trainer 据此把关；界面显示「暂不宜执行」；不等于修改计划内容 | [requirements R-SAFE-03](./requirements.md#27-安全) · [domain §2](./domain.md#2-bodystate) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
+| **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（计划/动作）、有效期、解除策略（`liftPolicy`：到期自动解除 / 用户复核 / 专业人员放行）与解除条件，Trainer 据此把关；界面显示「暂不宜执行」；不等于修改计划内容 | [requirements R-SAFE-03](./requirements.md#27-安全) · [domain §2](./domain.md#2-bodystate) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
 
 ## 2. 来源、结论与确认用语
 
@@ -35,9 +36,10 @@ ConditionEntry 把旧 `certainty` 拆成独立维度（[domain §3](./domain.md#
 | 大概率是 | 用户在确认工具中选择「大概率是这个」：接受把这一可能性记为「大概率」，**不是临床诊断** | `conclusionStatus = likely`，`confirmation.decision = likely` |
 | 疑似 · 你选择保留 | 用户选择「可能是，但不确定，先保留」；仍属于用户确认过的状态 | `conclusionStatus = suspected`，`confirmation.decision = keep_as_suspected` |
 | 纳入我的病情管理 | 临床来源病情经用户同意纳入个人管理；不是对医生诊断的再判断 | `conclusionStatus = clinical_diagnosis`，`confirmation.decision = include_clinical` |
-| 不是 | 用户选择「不是这个」：不采纳该解释，**不等于医学上已排除**；已有条目记为撤回 | `ConditionProposalDecision.decision = rejected`；已有条目 `disposition = withdrawn_by_user` |
-| 继续补充 | 用户暂不决定，补充信息；Diagnosis 不变，提案保持待定 | 无决定记录 |
-| 临床文件记载 | 有经证据管线采纳的医疗文件 | `source = clinical_document` |
+| 不是 | 用户选择「不是这个」：不采纳本次提案，**不等于医学上已排除**；针对已有条目时只拒绝这次变更，条目不变 | `ConditionProposalDecision.decision = rejected` |
+| 撤回 | 用户明确要求把某个条目从当前诊断中去掉，经轻量确认生效；条目与历史保留 | ConditionDirectEdit（`withdraw`）→ `disposition = withdrawn_by_user` |
+| 继续补充 | 用户暂不决定，补充信息；Diagnosis 不变，提案保持待定；新信息作为本运行新证据，提交前复核已决定的提案 | 无决定记录 |
+| 临床文件记载 | 有经证据管线采纳、明确记载临床医生诊断的医疗文件；只含化验 / 影像数值的文件是分析证据，不算临床文件记载 | `source = clinical_document` |
 | 用户转述的临床诊断 | 用户说「医生告诉我……」，无文件支持 | `source = user_reported_clinical` |
 | Agent 分析 | Agent 在正式分析中得出 | `source = agent_analysis` |
 | 用户的怀疑 | 源自用户本人提出的假设 | `source = user_suspicion` |
