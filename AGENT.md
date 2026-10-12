@@ -4,12 +4,17 @@
 
 ## 真值顺序
 
-1. 当前代码、配置和测试
-2. 根配置与项目配置：`pnpm-workspace.yaml`、`package.json`、`tsconfig.json`、`go.mod`、`pyproject.toml`
-3. `docs/product/` 的正式产品规格与 `docs/architecture/` 的技术架构
-4. 历史说明、背景材料和归档计划
+按问题类型区分权威来源：
 
-文档与代码冲突时，以当前代码、配置和测试为准，然后回收或修正文档。
+- **业务目标与业务规则**（做什么、为什么、用户可见行为、数据语义与授权规则）：以 [`docs/product/`](docs/product/README.md) 为唯一来源。
+- **当前技术实现**（代码实际怎么做、接口、配置、部署）：以当前代码、配置和测试为准，其次是根配置与项目配置（`pnpm-workspace.yaml`、`package.json`、`tsconfig.json`、`go.mod`、`pyproject.toml`），再次是 `docs/architecture/` 的技术架构。
+- 历史说明、背景材料和归档计划优先级最低。
+
+冲突处理：
+
+- 旧代码不能否决尚未实现的业务规则。代码与 `docs/product/` 不一致时，说明实现尚未跟上规格（或规格需要由产品负责人修改），不得据代码改写业务规则。
+- 技术事实类文档与代码冲突时，以当前代码、配置和测试为准，然后回收或修正文档。
+- `docs/product/` 内部未决的问题列在 [`docs/product/open-questions.md`](docs/product/open-questions.md)，实现方不得自行补全为新规则。
 
 ## 技术栈
 
