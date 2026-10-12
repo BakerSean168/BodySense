@@ -28,3 +28,16 @@
 | GAP-A | 旧 `certainty` 拆为 `source`（clinical_document / user_reported_clinical / agent_analysis / user_suspicion）、`conclusionStatus`（likely / suspected / clinical_diagnosis）与 `confirmation`（likely / keep_as_suspected / include_clinical、toolCallId、时间、范围）。保留三选一确认（大概率是 / 可能是先保留 / 不是 + 继续补充）；「大概率是」= 用户接受记录一个大概率的可能性，不是临床诊断；来源升级路径可描述 | 一个字段混了来源、强度和用户决定三个维度 | requirements R-DX-04、R-DX-08 · domain §3、§3.2 · glossary §2 · acceptance DX-07、DX-10 |
 | GAP-B | 一次正式分析可产生多个提案，各自独立决定；全部结算（或运行结束）后，所有生效决定在一个原子补丁中提交，只产生一次 Diagnosis 修订；定义超时、部分决定、继续补充、重新进入对话、底版变化的行为；提交前 Diagnosis 不变，已作出的决定不丢失 | 多病情确认的原子性此前未定义 | requirements R-DX-12 · domain §3.3、INV-12 · agent-workflows §3.2 · interface §4 · acceptance DX-03～03f |
 | GAP-C | 三要素不强迫编造：名称可为描述性健康问题；原因可写「原因不明 / 证据不足」；处理方案可为观察、进一步检查、就医，不一定是训练处方 | 避免为凑齐三要素制造病名或病因 | requirements R-DX-11 · domain §3 · interface §4 · acceptance DX-11 |
+
+## 2026-10-12 · PR #245 评审
+
+原因列为摘要。
+
+| ID | 决定 | 原因（摘要） | 写入位置 |
+| --- | --- | --- | --- |
+| Q-16 | 针对已有条目的提案，用户选「不是这个」= 只拒绝这次变更；原条目内容与 `disposition` 不变，决定照常留档。只有用户明确要求撤回（见 Q-20）才改变 `disposition` | 拒绝一次修改不等于否定原来已确认的病情 | requirements R-DX-04 · domain §3.2、§3.3、INV-18 · glossary §2 · acceptance DX-07d、DX-07g |
+| Q-18（部分） | SafetyRestriction 增加 `liftPolicy`（`on_expiry` / `user_reverification` / `professional_clearance`）。只有 `on_expiry` 到期自动解除；其他策略到期只触发复核提示，限制继续生效，直到用户经复核重新确认症状，或记录专业人员放行及来源。警示 / 建议就医类默认 `professional_clearance`。Agent 不能自行解除限制。`riskLevel` 取值与其余风险的策略映射仍开放 | 到期不代表风险已消除 | requirements R-SAFE-04 · domain §2、INV-20 · agent-workflows §5 · interface §5 · glossary §1 · acceptance TP-06～06f |
+| Q-20 | 用户明确要求更正、撤回或标记缓解某个条目时，不需要完整 AI 分析；走独立、可审计的直接编辑路径：轻量确认准确变更（如「确认撤回 X？」），记录为用户决定审计（谁、什么、何时、原因），产生一次 Diagnosis 修订。Agent 不得用此路径做自己的修改 | 用户对自己记录的明确指令不应被迫走分析流程，但仍需留痕 | requirements R-DX-13 · domain §1、§3、§3.5、INV-06、INV-19 · agent-workflows §1、§3、§3.5 · interface §4 · glossary §1、§2 · acceptance DX-14～14e |
+| Q-21 | 运行中继续补充或出现新证据后，提交前必须按证据 ID 用新证据复核每个已决定提案：不受影响的决定照常生效；受影响的提案记为 superseded（`evidence_changed`），须重新提出并重新决定；受影响的决定绝不未经复核提交 | 已作出的决定可能依据已过时的证据 | requirements R-DX-12 · domain §3.1、§3.3、INV-17 · agent-workflows §3.2、§4 · glossary §2 · acceptance DX-03d、DX-03g、DX-03h |
+| GAP-D | 临床文件证据 ≠ 临床诊断：只有明确记载临床医生诊断的已采纳文件才能支持 `clinical_document` + `clinical_diagnosis`；化验 / 影像数值只作为 `agent_analysis` 提案的证据，不升级来源或结论 | 避免把支持性数值当作医生诊断 | requirements R-DX-08 · domain §3、§3.2、INV-15 · glossary §2 · acceptance DX-10、DX-12 |
+| GAP-E | ConditionAnalysisRun 的「不可变」指追加写入的审计事件（运行开始、证据加入、提案创建/取代/过期、决定、提交/关闭）；运行与提案的当前状态是由事件推导的投影，可以更新；提案内容与决定记录写入后不变 | 消除「不可变」与状态会变化之间的歧义 | domain §1、§3.1、INV-16 · glossary §1 · acceptance DX-13 |
