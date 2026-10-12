@@ -50,3 +50,12 @@
 | --- | --- | --- | --- |
 | GAP-F | `changeKind = end` 的提案必须在内容中写明 `endTarget`（`mark_resolved` → `lifecycle = resolved`；`mark_no_longer_applicable` → `disposition = no_longer_applicable`）与 `endReason`，`endTarget` 计入内容指纹。新增决定值 `accept_end`（只用于结束提案）；「不是这个 / 不同意」= `rejected`，条目不变；继续补充照常。提交只应用被批准的 `endTarget`。不再适用只来自被接受的结束提案；标记缓解还可经用户直接编辑（R-DX-13） | 结束提案原先没有明确的结束结果，也没有对应的「同意」决定值，用户批准的内容与提交结果可能不一致 | requirements R-DX-04 · domain §3、§3.1、§3.2、§3.3、INV-21 · agent-workflows §3、§3.2 · interface §4 · glossary §1、§2 · acceptance DX-07g～07j |
 | GAP-G | 明确事件回放契约：ConditionAnalysisRun 基础记录（请求、`trigger`、范围、底版修订、输入证据 ID、`agentHypotheses` 快照）与 ConditionProposal 基础记录（内容含 `endTarget`、指纹、证据 / 反证 ID、取代关系）创建时写入且不变；运行与提案的状态字段全部由事件推导，并给出逐字段来源。新增终结事件 `insufficient_evidence`、`safety_blocked`（无提案结束运行），`decision_recorded` 带 `proposalId`；按顺序回放基础记录与事件必须重现当前状态 | 原契约未区分不变的基础数据与派生状态，且证据不足 / 安全阻断结束的运行没有对应事件，投影无法完全回放 | domain §3.1、INV-16、INV-22 · agent-workflows §3.2 · glossary §1 · acceptance DX-04、DX-13b |
+
+## 2026-10-12 · 运行中安全阻断与 AI 假设审计
+
+原因列为摘要。
+
+| ID | 决定 | 原因（摘要） | 写入位置 |
+| --- | --- | --- | --- |
+| GAP-H | 只有需要停止分析的严重风险（警示 / 需尽快就医类）中断正式分析：立即展示医学安全提示，停止该运行后续确认；只影响 Trainer 的普通训练限制不中断。已有提案的运行也可以 `safety_blocked` 终结：未决定提案 `expired`（`safety_blocked`），已作出的决定留档但永不生效；不产生 DiagnosisRevision、无部分提交；风险处理后由用户重新发起分析，不自动恢复。Go 后端强制：拒绝已阻断运行的补丁 / 提交及终结后的任何事件；提交与阻断竞争时先写入的终结事件胜出；重复阻断幂等 | 原规则只允许在产生提案前阻断，确认中途出现的严重风险无处理路径；安全不能只依赖 Agent 提示 | requirements R-DX-10 · domain §3.1、§3.3、INV-12、INV-23 · agent-workflows §3、§3.2、§5 · interface §4 · glossary §2 · acceptance DX-04～04g、DX-13b |
+| GAP-I | 运行开始后形成的 AI 假设以追加事件 `hypothesis_added`（内容、证据 ID、时间）记录；创建时的 `agentHypotheses` 快照保留为基础记录不变；投影 `hypotheses` = 快照 + 追加事件，可回放。AI 假设始终无权威，不写入 BodyState，也不直接进入 Diagnosis | 假设常在补充证据后才出现，只有创建时快照会让后来的假设无审计 | domain §1、§3.1、INV-22 · agent-workflows §3、§3.2 · glossary §1 · acceptance DX-13b、DX-13c |
