@@ -46,7 +46,7 @@ Product 页仍使用部分旧窗口名，阅读时按下表换算（完整对照
 
 1. 3D 人体 Canvas 持续作为底层桌面；业务窗口位于其上，可以打开、拖动、收起和恢复。
 2. Chat 负责表达、追问、分析请求、病情确认及训练变更授权，不预设常驻固定侧栏。
-3. Person 使用当前原型的 Profile / Records / Equipment / Media / Reports / Habits 分类；真实数据替换演示内容（分类边界见 [开放问题 Q-14](../product/open-questions.md)）。
+3. Person 使用当前原型的五个分类标签页 Records / Equipment / Media / Reports / Habits；身份（Profile）显示在窗口标题区与 Identity Popover，不是分类标签页（[R-PS-04](../product/requirements.md#26-person-个人档案与当前状态)）；真实数据替换演示内容。
 4. Diagnosis 以单一当前综合诊断展示可独立展开的病情，只显示用户确认过的条目；TrainingPlan 显示目标计划当前有效内容。
 5. 关键澄清和 Agent 建议通过交互工具处理；所有接受、拒绝、取消、错误都有清晰反馈。
 6. 部位选择或参考动画只是交互上下文，不自动变为健康事实。
