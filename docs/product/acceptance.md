@@ -28,7 +28,13 @@
 | DX-03f | 提交前 Diagnosis 已被另一事务修改 | 补丁被拒；受影响提案 expired 并重新核验展示，不静默覆盖 | R-DX-12、INV-09 |
 | DX-03g | 接 DX-03d，但补充的新信息与已决定的 A 相关（如构成 A 的反证） | A 复核为 affected，记为 superseded（`evidence_changed`），原决定留档但不生效；同一运行重新提出 A 并引用新证据；用户重新决定前不提交；最终仍一次提交 | R-DX-12、INV-12、INV-17 |
 | DX-03h | 提交时某个已决定提案缺少对其决定之后新证据 ID 的复核记录 | 补丁被拒，不产生 Diagnosis 修订，直到复核完成 | R-DX-12、INV-17 |
-| DX-04 | 正式分析证据不足或有安全阻断 | 不制造确定性诊断，返回不足/阻断结果；不创建提案，运行以 `insufficient_evidence` / `safety_blocked` 事件结束（`state = closed_without_change`），不产生 Diagnosis 修订 | R-DX-10、INV-22 |
+| DX-04 | 正式分析证据不足，或在产生提案前识别到需停止分析的严重风险 | 不制造确定性诊断，返回不足/阻断结果；不创建提案，运行以 `insufficient_evidence` / `safety_blocked` 事件结束（`state = closed_without_change`），不产生 Diagnosis 修订 | R-DX-10、INV-22 |
+| DX-04b | 运行中 A 已决定、B 未决定时，识别到警示 / 需尽快就医类风险 | 立即显示医学安全提示，停止后续确认；B `expired`（`safety_blocked`）；A 的决定留档但不生效；`outcome = safety_blocked`、`state = closed_without_change`；无 DiagnosisRevision；运行不自动恢复，用户之后重新发起分析时创建新运行、提案须重新决定 | R-DX-10、R-SAFE-01、INV-23 |
+| DX-04c | 运行中全部提案已决定（复核完成）但尚未提交时被安全阻断 | 不提交、无部分提交，Diagnosis 不变；全部决定留档但不生效；`outcome = safety_blocked` | R-DX-10、R-DX-12、INV-23 |
+| DX-04d | 同一运行重复请求 `safety_blocked`（网络重试或 Agent 重复调用） | 只有一个 `safety_blocked` 事件，重复请求返回相同结果；不追加事件、不产生修订 | INV-09、INV-23 |
+| DX-04e | 同一运行的提交与 `safety_blocked` 并发 | 只写入一个终结事件；阻断先写入时提交被拒、无 DiagnosisRevision；提交先写入时阻断被拒、修订保留，安全提示照常展示 | INV-05、INV-09、INV-23 |
+| DX-04f | 运行已被安全阻断后，Agent 或客户端仍调用 apply_diagnosis_patch、记录决定或追加事件 | Go 后端拒绝，Diagnosis 不变，不依赖 Agent 提示是否遵守 | INV-23 |
+| DX-04g | 分析进行中出现只影响训练执行的普通 SafetyState 限制 | 不中断正式分析，确认与提交照常；限制只由 Trainer 把关 | R-DX-10、R-SAFE-03、INV-08 |
 | DX-05 | 页面查看当前诊断 | 只显示用户选择过的病情（大概率是 / 疑似保留），每条有完整名称/原因/处理方案和可读的状态标签；疑似条目列出待明确信息；不出现修订号/版本切换器 | R-DX-05、R-DX-09 |
 | DX-06 | AI 分析出可能病情，用户尚未选择 | 只保留在 Chat 的病情提案中；不得混进 Diagnosis 列表 | R-DX-05 |
 | DX-07 | 用户在确认工具中选「大概率是」 | 条目 `source = agent_analysis`、`conclusionStatus = likely`、`confirmation.decision = likely`；界面不称其为临床诊断 | R-DX-04、R-DX-08 |
@@ -47,7 +53,8 @@
 | DX-11 | 证据只能描述现象、原因不明、只建议观察或就医 | 允许描述性名称、「原因不明 / 证据不足」与观察/检查/就医的处理方案；不编造病名、病因或训练处方 | R-DX-11 |
 | DX-12 | 已采纳的化验 / 影像数值（如血尿酸升高、影像测量值）支持某个病情假设，文件本身未写明医生诊断 | 提案 `source = agent_analysis`，只能决定为 `likely` / `keep_as_suspected`；不得出现 `clinical_document` 或 `clinical_diagnosis`；数值列为提案证据 | R-DX-08、INV-11、INV-15 |
 | DX-13 | 运行从 `open` 变为 `committed` / `closed_without_change`，或其中提案被取代、过期 | 运行与提案的当前状态随之更新；已写入的审计事件、提案内容与决定记录不被修改或删除，可完整回放 | INV-16 |
-| DX-13b | 丢弃 Run / Proposal 的投影，仅按顺序回放基础记录、决定记录与事件（覆盖：提交、无变更关闭、证据不足、安全阻断、取代、过期、复核为 affected 的运行） | 重建出的 `state`、`outcome`、`evidenceIds`、`proposalIds`、`committedDiagnosisRevision`、`settledAt`、提案 `state` / 过期与取代原因、决定是否生效与原投影完全一致 | INV-16、INV-22 |
+| DX-13b | 丢弃 Run / Proposal 的投影，仅按顺序回放基础记录、决定记录与事件（覆盖：提交、无变更关闭、证据不足、提案前与提案后的安全阻断、取代、过期、复核为 affected、含 `hypothesis_added` 的运行） | 重建出的 `state`、`outcome`、`evidenceIds`、`hypotheses`、`proposalIds`、`committedDiagnosisRevision`、`settledAt`、提案 `state` / 过期与取代原因、决定是否生效与原投影完全一致 | INV-16、INV-22 |
+| DX-13c | 运行开始后，Agent 因新证据形成新的 AI 假设 | 追加 `hypothesis_added`（内容、证据 ID、时间）；`agentHypotheses` 快照不变；投影 `hypotheses` = 快照 + 追加事件，回放可重现；假设不写入 BodyState，也不直接进入 Diagnosis | INV-02、INV-16、INV-22 |
 | DX-14 | 「把肩峰撞击从诊断里去掉」，用户在轻量确认中选确认 | 不创建 ConditionAnalysisRun；条目 `disposition = withdrawn_by_user`，`decisionId` 指向 ConditionDirectEdit（谁、什么、何时、原因）；条目与历史保留；一次 Diagnosis 修订；当前列表不再显示 | R-DX-13、INV-14、INV-19 |
 | DX-14b | 「右肩已经好了」，用户确认 | 不创建分析运行；条目 `lifecycle = resolved`，`disposition` 不变；BodyState 记录该身体事实；一次 Diagnosis 修订 | R-DX-13、R-BS-01、INV-19 |
 | DX-14c | 用户在轻量确认中取消或关闭 | 无 Diagnosis 修订 | R-DX-13 |
@@ -85,7 +92,7 @@
 
 | 阶段 | 交付物 | 验收重点 |
 | --- | --- | --- |
-| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型 | 类型、权限、INV-01～22 的契约测试 |
+| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型 | 类型、权限、INV-01～23 的契约测试 |
 | P2 自述记录 | Agent 提取 → Go 校验提交 → 自动反馈、澄清恢复；上传资料的证据采纳 | BS-01～11（含 BS-04b） |
 | P3 Diagnosis | 用户请求触发分析；ConditionAnalysisRun / Proposal / Decision 审计；Chat 病情确认工具；ConditionEntry 原子补丁 | DX-01～14 |
 | P4 TrainingPlan | 每份计划的课模板与阶段化动作、组次/频率、只读影响检查、用户授权、Trainer 执行记录与安全门禁 | TP-01～11 |
