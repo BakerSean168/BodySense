@@ -3,7 +3,7 @@
 > 已归档（2026-10-12）：被 docs/product/requirements.md（R-TP、R-EX）与 docs/product/interface.md §5 取代；仍有效的 Trainer 规则已并入 docs/product/requirements.md R-EX-03～04 与 interface.md §5.1（docs/product/decisions.md Q-07）。
 
 
-训练计划是用户管理运动与改善目标的独立业务对象。详细领域契约见 [TrainingPlan](../../product/domain.md)，Agent 权限见 [Agent 工作流](../../product/agent-workflows.md)。
+训练计划是用户管理运动与改善目标的独立业务对象。详细领域契约见 [TrainingPlan](../../product/domain/README.md)，Agent 权限见 [Agent 工作流](../../product/agent-workflows.md)。
 
 ## 1. 多计划
 

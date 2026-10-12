@@ -35,7 +35,7 @@ Product 页仍使用部分旧窗口名，阅读时按下表换算（完整对照
 ## 产品语义
 
 - [产品需求](../product/requirements.md)
-- [领域契约](../product/domain.md)
+- [领域契约](../product/domain/README.md)
 - [Agent 交互](../product/agent-workflows.md)
 - [UI 交互规格](../product/interface.md)
 - [验收矩阵](../product/acceptance.md)

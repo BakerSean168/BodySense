@@ -6,7 +6,7 @@
 个人身体状态、综合诊断和训练计划共同组成 BodySense 的持续业务模型。
 
 - [完整产品需求](../../product/requirements.md)
-- [领域模型与数据契约](../../product/domain.md)
+- [领域模型与数据契约](../../product/domain/README.md)
 - [Agent 工作流](../../product/agent-workflows.md)
 - [界面与交互](../../product/interface.md)
 - [验收标准](../../product/acceptance.md)

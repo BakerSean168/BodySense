@@ -26,12 +26,14 @@ docs/
 ├── product/                     ★ 现行产品业务规格（业务规则唯一来源）
 │   ├── README.md                总览与文档分工
 │   ├── requirements.md          业务规则 R-* / G-* 与场景
-│   ├── domain.md                数据契约与不变量 INV-*
+│   ├── domain/                  领域属性、状态和不变量 INV-*
 │   ├── agent-workflows.md       Agent 流程与工具
 │   ├── interface.md             窗口与交互
 │   ├── acceptance.md            测试矩阵（引用规则编号）与实施顺序
 │   ├── glossary.md              术语表与 Penpot / 旧代码名称对照
-│   ├── open-questions.md        开放问题与规格矛盾
+│   ├── domain-decisions.md      独立重建的 70 项待决（原 83 项未获得）
+│   ├── implementation-gaps.md   目标规格与当前代码差异
+│   ├── open-questions.md        Q-* 开放问题
 │   └── decisions.md             已决定问题的决策记录
 ├── design/                      设计说明：当前 Penpot 文件/页面、Foundations
 ├── architecture/                技术与运行架构（34 篇）
@@ -58,7 +60,7 @@ docs/
 
 ### product/（现行业务规格）
 
-五份规格各管一类内容，规则用编号互相引用，详见 [product/README.md](./product/README.md)。核心对象：BodyState 身体状态（一人一份，明确陈述自动记录）、Diagnosis 综合诊断（一人一份，只含用户确认的病情条目）、TrainingPlan 训练计划（多份完整处方，Agent 建议需用户接受）、Person 个人档案、Trainer 训练执行、Chat。
+规格按需求、领域、工作流、界面与验收分工，领域文件在 domain/，规则用编号互相引用，详见 [product/README.md](./product/README.md)。核心对象：BodyState 身体状态（一人一份，明确陈述自动记录）、Diagnosis 综合诊断（一人一份，只含用户确认的病情条目）、TrainingPlan 训练计划（多份完整处方，Agent 建议需用户接受）、Person 个人档案、Trainer 训练执行、Chat。
 
 ### design/（视觉基准）
 

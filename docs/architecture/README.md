@@ -4,7 +4,7 @@
 
 **产品业务规范以 [docs/product](../product/README.md) 为准。** 它定义 BodyState、Diagnosis、TrainingPlan、Agent 操作权限、当前界面和验收标准。
 
-- [领域模型](../product/domain.md)
+- [领域模型](../product/domain/README.md)
 - [Agent 工作流](../product/agent-workflows.md)
 - [UI 与交互](../product/interface.md)
 - [领域状态实现边界](./longitudinal-body-state-domain.md)

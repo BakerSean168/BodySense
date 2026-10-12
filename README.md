@@ -175,7 +175,7 @@ See [`docs/architecture/deployment-architecture.md`](./docs/architecture/deploym
 - [Documentation index (Chinese)](./docs/README.md) — what is current, where each topic lives, what is archived
 - [Product overview](./docs/product/README.md)
 - [Product requirements](./docs/product/requirements.md)
-- [Domain contracts](./docs/product/domain.md)
+- [Domain contracts](./docs/product/domain/README.md)
 - [Agent interactions](./docs/product/agent-workflows.md)
 - [UI behavior](./docs/product/interface.md)
 - [Acceptance](./docs/product/acceptance.md)
