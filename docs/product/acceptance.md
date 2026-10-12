@@ -28,7 +28,7 @@
 | DX-03f | 提交前 Diagnosis 已被另一事务修改 | 补丁被拒；受影响提案 expired 并重新核验展示，不静默覆盖 | R-DX-12、INV-09 |
 | DX-03g | 接 DX-03d，但补充的新信息与已决定的 A 相关（如构成 A 的反证） | A 复核为 affected，记为 superseded（`evidence_changed`），原决定留档但不生效；同一运行重新提出 A 并引用新证据；用户重新决定前不提交；最终仍一次提交 | R-DX-12、INV-12、INV-17 |
 | DX-03h | 提交时某个已决定提案缺少对其决定之后新证据 ID 的复核记录 | 补丁被拒，不产生 Diagnosis 修订，直到复核完成 | R-DX-12、INV-17 |
-| DX-04 | 正式分析证据不足或有安全阻断 | 不制造确定性诊断，返回不足/阻断结果 | R-DX-10 |
+| DX-04 | 正式分析证据不足或有安全阻断 | 不制造确定性诊断，返回不足/阻断结果；不创建提案，运行以 `insufficient_evidence` / `safety_blocked` 事件结束（`state = closed_without_change`），不产生 Diagnosis 修订 | R-DX-10、INV-22 |
 | DX-05 | 页面查看当前诊断 | 只显示用户选择过的病情（大概率是 / 疑似保留），每条有完整名称/原因/处理方案和可读的状态标签；疑似条目列出待明确信息；不出现修订号/版本切换器 | R-DX-05、R-DX-09 |
 | DX-06 | AI 分析出可能病情，用户尚未选择 | 只保留在 Chat 的病情提案中；不得混进 Diagnosis 列表 | R-DX-05 |
 | DX-07 | 用户在确认工具中选「大概率是」 | 条目 `source = agent_analysis`、`conclusionStatus = likely`、`confirmation.decision = likely`；界面不称其为临床诊断 | R-DX-04、R-DX-08 |
@@ -37,13 +37,17 @@
 | DX-07d | 用户对已有条目的更新提案选「不是这个」 | 只拒绝本次变更：条目内容、结论、`lifecycle`、`disposition` 均不变，仍在当前列表；决定留档；该决定本身不产生 Diagnosis 修订 | R-DX-04、INV-18 |
 | DX-07e | 拒绝后再次分析，无相关新证据 ID（仅 BodyState 修订号变化） | 不再提出相同指纹的提案 | R-DX-04、INV-13 |
 | DX-07f | 拒绝后出现与该提案相关的新证据 ID | 可再次提出，提案引用该新证据 | R-DX-04、INV-13 |
-| DX-07g | 用户对已有条目的结束提案（`changeKind = end`）选「不是这个」 | `lifecycle` 与 `disposition` 均不变；决定留档 | R-DX-04、INV-18 |
+| DX-07g | 用户对已有条目的结束提案（`changeKind = end`，任一 `endTarget`）选「不是这个 / 不同意」 | 决定为 `rejected`；条目内容、`lifecycle` 与 `disposition` 均不变，仍在当前列表；决定留档 | R-DX-04、INV-18 |
+| DX-07h | 结束提案 `endTarget = mark_resolved`，用户选「同意」 | 决定为 `accept_end`；提交后 `lifecycle = resolved`，`disposition`、`conclusionStatus`、`confirmation` 不变；一次 Diagnosis 修订 | R-DX-01、R-DX-12、INV-21 |
+| DX-07i | 结束提案 `endTarget = mark_no_longer_applicable`，用户选「同意」 | 决定为 `accept_end`；提交后 `disposition.state = no_longer_applicable`，`reason` 为提案 `endReason`，`decisionId` 指向该决定；`lifecycle` 不变；条目与历史保留，不作为当前病情显示 | R-DX-01、INV-14、INV-21 |
+| DX-07j | 同一条目上只有 `endTarget` 不同的两个结束提案；或对结束提案提交 `likely` 等非 `accept_end` 决定 | 两个提案 `contentFingerprint` 不同，对其一的决定不能用于另一个，提交只应用被批准的 `endTarget`；对结束提案的非 `accept_end` / `rejected` 决定被后端拒绝 | INV-13、INV-21 |
 | DX-08 | 单个提案的运行中，用户选择继续补充或关闭界面 | Diagnosis 无内容修订；提案保持 pending；相关 BodyState 事实不丢失 | R-DX-04、INV-06 |
 | DX-09 | 用户转述医生诊断的病情提案，用户选「纳入我的病情管理」 | `conclusionStatus = clinical_diagnosis`，`source` 仍为 `user_reported_clinical`；不变为 `clinical_document` | R-DX-08、INV-11 |
 | DX-10 | 疑似条目后来有经管线采纳、明确记载该诊断的临床文件支持 | 新提案把同一 conditionId 升级为 `clinical_document`，用户选择 `include_clinical` 后生效；旧来源可追溯 | R-DX-08 |
 | DX-11 | 证据只能描述现象、原因不明、只建议观察或就医 | 允许描述性名称、「原因不明 / 证据不足」与观察/检查/就医的处理方案；不编造病名、病因或训练处方 | R-DX-11 |
 | DX-12 | 已采纳的化验 / 影像数值（如血尿酸升高、影像测量值）支持某个病情假设，文件本身未写明医生诊断 | 提案 `source = agent_analysis`，只能决定为 `likely` / `keep_as_suspected`；不得出现 `clinical_document` 或 `clinical_diagnosis`；数值列为提案证据 | R-DX-08、INV-11、INV-15 |
 | DX-13 | 运行从 `open` 变为 `committed` / `closed_without_change`，或其中提案被取代、过期 | 运行与提案的当前状态随之更新；已写入的审计事件、提案内容与决定记录不被修改或删除，可完整回放 | INV-16 |
+| DX-13b | 丢弃 Run / Proposal 的投影，仅按顺序回放基础记录、决定记录与事件（覆盖：提交、无变更关闭、证据不足、安全阻断、取代、过期、复核为 affected 的运行） | 重建出的 `state`、`outcome`、`evidenceIds`、`proposalIds`、`committedDiagnosisRevision`、`settledAt`、提案 `state` / 过期与取代原因、决定是否生效与原投影完全一致 | INV-16、INV-22 |
 | DX-14 | 「把肩峰撞击从诊断里去掉」，用户在轻量确认中选确认 | 不创建 ConditionAnalysisRun；条目 `disposition = withdrawn_by_user`，`decisionId` 指向 ConditionDirectEdit（谁、什么、何时、原因）；条目与历史保留；一次 Diagnosis 修订；当前列表不再显示 | R-DX-13、INV-14、INV-19 |
 | DX-14b | 「右肩已经好了」，用户确认 | 不创建分析运行；条目 `lifecycle = resolved`，`disposition` 不变；BodyState 记录该身体事实；一次 Diagnosis 修订 | R-DX-13、R-BS-01、INV-19 |
 | DX-14c | 用户在轻量确认中取消或关闭 | 无 Diagnosis 修订 | R-DX-13 |
@@ -81,7 +85,7 @@
 
 | 阶段 | 交付物 | 验收重点 |
 | --- | --- | --- |
-| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型 | 类型、权限、INV-01～20 的契约测试 |
+| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型 | 类型、权限、INV-01～22 的契约测试 |
 | P2 自述记录 | Agent 提取 → Go 校验提交 → 自动反馈、澄清恢复；上传资料的证据采纳 | BS-01～11（含 BS-04b） |
 | P3 Diagnosis | 用户请求触发分析；ConditionAnalysisRun / Proposal / Decision 审计；Chat 病情确认工具；ConditionEntry 原子补丁 | DX-01～14 |
 | P4 TrainingPlan | 每份计划的课模板与阶段化动作、组次/频率、只读影响检查、用户授权、Trainer 执行记录与安全门禁 | TP-01～11 |
