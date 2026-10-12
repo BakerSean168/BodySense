@@ -172,12 +172,14 @@ pnpm postman:validate-native   # 可选：使用已安装的 Postman CLI 做原�
 
 ## 文档
 
+- [文档总索引](../README.md)：现行文档、主题位置与归档说明
 - [产品文档导航](../product/README.md)
 - [产品需求](../product/requirements.md)
 - [领域契约](../product/domain.md)
 - [Agent 工作流](../product/agent-workflows.md)
 - [UI 与交互](../product/interface.md)
 - [验收标准](../product/acceptance.md)
+- [术语表与 Penpot 名称对照](../product/glossary.md)
 - [系统架构](../architecture/README.md)
 - [仓库协作规范](../../AGENT.md)
 
