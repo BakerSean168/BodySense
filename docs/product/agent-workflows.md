@@ -44,9 +44,9 @@ Agent 负责解析用户意图，选择合适的证据采集和业务工具，�
 | record_body_state | 自动提交明确的本人事实、时间变更与用户本人提出的假设（BodyHypothesis） | 身份、来源、时间、幂等与冲突检查；不写入 AI 假设 | R-BS-01～06 |
 | ask_user | 追问具体歧义并等待回答 | 必须绑定待回答字段和目标事实 | R-BS-03 |
 | inspect_evidence | 获取和审阅照片、资料、自测与知识证据 | 不能推定没有证据支持的医学事实 | R-DX-08 |
-| analyze_conditions | 在用户授权的范围内分析病情，创建 ConditionAnalysisRun 与若干 ConditionProposal | 使用固定 BodyState 快照、给出不确定性；不重复已拒绝的提案指纹（INV-13） | R-DX-02、R-DX-10、R-DX-11 |
+| analyze_conditions | 在用户授权的范围内分析病情，创建 ConditionAnalysisRun 与若干 ConditionProposal；记录运行中新形成的 AI 假设（`hypothesis_added`）；以证据不足或安全阻断结束运行 | 使用固定 BodyState 快照、给出不确定性；不重复已拒绝的提案指纹（INV-13）；AI 假设不写入 BodyState（INV-02）；安全阻断由 Go 写入终结事件并幂等处理（INV-23） | R-DX-02、R-DX-10、R-DX-11 |
 | confirm_condition | 在 Chat 中逐个展示病情提案，记录用户决定（ConditionProposalDecision：`likely` / `keep_as_suspected` / `include_clinical` / `accept_end` / `rejected`）或继续补充；结束提案的卡片写明拟定的结束目标（标记为已缓解 / 不再适用）与原因 | 决定绑定准确的 proposalId 与内容指纹（含 `endTarget`）；决定值须与提案类型匹配（`accept_end` 只用于结束提案）；本身不写入 Diagnosis | R-DX-03～05、R-DX-08、INV-21 |
-| apply_diagnosis_patch | 运行内提案全部结算后，把所有生效决定作为一个原子补丁提交 | 正式分析授权、决定记录、来源/结论组合约束、证据/安全门禁、底版修订校验；结束提案只应用被批准的 `endTarget` | R-DX-01、R-DX-12、INV-04～06、INV-11～12、INV-21 |
+| apply_diagnosis_patch | 运行内提案全部结算后，把所有生效决定作为一个原子补丁提交 | 正式分析授权、决定记录、来源/结论组合约束、证据/安全门禁、底版修订校验；结束提案只应用被批准的 `endTarget`；运行已终结（含 `safety_blocked`）时后端拒绝 | R-DX-01、R-DX-12、INV-04～06、INV-11～12、INV-21、INV-23 |
 | edit_condition_entry | 按用户的明确请求更正、撤回某个病情条目或标记缓解，先做轻量确认 | 只能由用户请求触发，Agent 不得自行使用；确认绑定准确条目与变更；更正不改变来源与结论 | R-DX-13、INV-18～19 |
 | inspect_plan_impact | 检查新情况对所有相关计划的影响 | 只读，不修改训练内容 | R-TP-05 |
 | propose_plan_change | 生成受影响计划、理由和具体差异 | Agent 建议保持 pending | R-TP-04 |
@@ -66,13 +66,14 @@ Agent 负责解析用户意图，选择合适的证据采集和业务工具，�
 ### 3.2 Diagnosis 正式分析与病情确认
 
 1. 用户明确提出新分析、局部更新或综合重新分析（R-DX-02）；analyze_conditions 创建 ConditionAnalysisRun，固定 BodyState 与 Diagnosis 底版修订。
-2. Agent 确定受影响的病情范围和所需证据，必要时使用工具补充信息；文件类证据只使用按 [证据管线](../architecture/health-document-evidence-pipeline.md) 规则采纳的结果（R-PS-03）。
-3. 为每个需要新增、更新或结束的病情形成一个**病情提案**（ConditionProposal）：名称、原因分析、处理方案，以及来源、反证、确定性局限；三要素按 R-DX-11 如实填写，不为凑齐而编造。证据不足或安全阻断时如实返回，不创建提案，运行以 `insufficient_evidence` / `safety_blocked` 事件结束（R-DX-10，见 [domain §3.1](./domain.md#31-正式分析审计对象)）。已被用户拒绝、且没有相关新证据 ID 的提案指纹不得再次提出（INV-13）。
+2. Agent 确定受影响的病情范围和所需证据，必要时使用工具补充信息；文件类证据只使用按 [证据管线](../architecture/health-document-evidence-pipeline.md) 规则采纳的结果（R-PS-03）。运行开始后新形成的 AI 假设以 `hypothesis_added` 追加记录（内容、证据 ID、时间），不改写创建时的假设快照，也不写入 BodyState（见 [domain §3.1](./domain.md#31-正式分析审计对象)）。
+3. 为每个需要新增、更新或结束的病情形成一个**病情提案**（ConditionProposal）：名称、原因分析、处理方案，以及来源、反证、确定性局限；三要素按 R-DX-11 如实填写，不为凑齐而编造。证据不足时如实返回，不创建提案，运行以 `insufficient_evidence` 事件结束；尚未创建提案时识别到需停止分析的严重风险，运行以 `safety_blocked` 事件结束（R-DX-10，见 [domain §3.1](./domain.md#31-正式分析审计对象)）。已被用户拒绝、且没有相关新证据 ID 的提案指纹不得再次提出（INV-13）。
 4. 对每个提案调用 confirm_condition，在 Chat 中展示完整内容并记录用户决定：
    - Agent 分析 / 用户怀疑来源：「大概率是这个」「可能是，先保留」「不是这个」或继续补充（R-DX-04）；
    - 临床来源（临床文件 / 用户转述医生诊断）：「纳入我的病情管理」「不纳入」或继续补充；确认不改变来源（R-DX-08）；
    - 结束提案（`changeKind = end`，任意来源）：卡片写明拟定的结束目标——「标记为已缓解」（`mark_resolved`）或「不再适用」（`mark_no_longer_applicable`）——及原因；选项为「同意」（`accept_end`）、「不是这个 / 不同意」（`rejected`，条目不变，INV-18）或继续补充（具体文案待 Penpot 核对，见 [Q-19](./open-questions.md)）。
-5. 运行内提案全部结算、且已决定提案都完成新证据复核后（含关闭、超时、底版变化与复核的处理，见 [domain §3.3](./domain.md#33-多提案确认与原子提交)），Go 业务规则执行医学安全、证据、来源/结论组合约束、决定记录与并发审查。
+   - **确认过程中出现严重风险**：在步骤 4～6 任何时刻（含部分或全部提案已决定、尚未提交时）识别到需要停止分析的警示 / 需尽快就医类风险，立即展示医学安全提示（§5），停止后续确认并请求阻断本运行；Go 写入 `safety_blocked`，未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效，不产生 Diagnosis 修订，之后的提交被后端拒绝（见 [domain §3.3](./domain.md#33-多提案确认与原子提交)、INV-23）。只影响训练执行的普通限制不中断确认。风险得到适当处理后由用户重新发起分析，不自动恢复被阻断的运行。
+5. 运行未被安全阻断、运行内提案全部结算、且已决定提案都完成新证据复核后（含关闭、超时、底版变化与复核的处理，见 [domain §3.3](./domain.md#33-多提案确认与原子提交)），Go 业务规则执行医学安全、证据、来源/结论组合约束、决定记录与并发审查；提交与安全阻断竞争时先写入的终结事件胜出。
 6. 验证通过后由 apply_diagnosis_patch 按 [domain §3.2](./domain.md#32-用户选择与数据映射) 的映射，把所有生效决定作为一个原子补丁写入，只产生一次整体修订；没有生效决定时不产生修订。
 7. 返回完整当前 Diagnosis，不用局部结果覆盖整份聚合。
 
@@ -125,4 +126,4 @@ Agent 自己判断某个条目应更正、撤回或结束时，不得使用本�
 
 ## 5. 安全处理
 
-识别到需要就医检查的风险信号时，立即提供适当、安全的下一步；如有必要，在 BodyState SafetyState 中发布带风险等级、范围、有效期、解除策略与解除条件的执行限制，由 Trainer 执行门禁（R-SAFE-01、R-SAFE-03）。需要就医检查的警示类限制默认设为专业人员放行；到达复核时点时，Agent 向用户发起复核提示，但不能自行解除限制，只能记录用户完成的复核或用户提供的专业放行及来源（R-SAFE-04，规则见 [domain §2](./domain.md#2-bodystate)）。不能把模型建议伪装成临床诊断，也不能将症状与训练时间相邻误写为已证明的因果关系（R-EX-02）。安全执行门禁与训练计划授权保持独立（R-SAFE-02）。
+识别到需要就医检查的风险信号时，立即提供适当、安全的下一步；如有必要，在 BodyState SafetyState 中发布带风险等级、范围、有效期、解除策略与解除条件的执行限制，由 Trainer 执行门禁（R-SAFE-01、R-SAFE-03）。需要就医检查的警示类限制默认设为专业人员放行；到达复核时点时，Agent 向用户发起复核提示，但不能自行解除限制，只能记录用户完成的复核或用户提供的专业放行及来源（R-SAFE-04，规则见 [domain §2](./domain.md#2-bodystate)）。不能把模型建议伪装成临床诊断，也不能将症状与训练时间相邻误写为已证明的因果关系（R-EX-02）。安全执行门禁与训练计划授权保持独立（R-SAFE-02）。正式分析进行中出现需要停止分析的严重风险时，按 §3.2 中断该运行（`safety_blocked`）；只影响训练执行的普通限制只由 Trainer 把关，不中断分析（R-DX-10）。
