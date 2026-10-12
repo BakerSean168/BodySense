@@ -195,7 +195,7 @@ type ConditionEntry = {
     state: "adopted" | "withdrawn_by_user" | "no_longer_applicable";
     reason?: string;                   // 撤回 / 不再适用时必填
     changedAt: string;
-    decisionId?: string;               // 对应的用户决定：撤回 → ConditionDirectEdit（§3.5）；不再适用 → `end` 提案的 ConditionProposalDecision
+    decisionId?: string;               // 对应的用户决定：撤回 → ConditionDirectEdit（§3.5）；不再适用 → `endTarget = mark_no_longer_applicable` 的 `end` 提案上的 `accept_end` 决定（ConditionProposalDecision）
   };
 
   relatedConcernIds: string[];
@@ -225,34 +225,49 @@ type ConditionEntry = {
 旧代码中的 DiagnosisAnalysis（按问诊生成的候选诊断）名称保留给旧实现；新规格拆为三个对象（术语对照见 [术语表 §3](./glossary.md#3-penpot--旧代码名称对照)），审计事件由 ConditionAnalysisEvent 追加记录：
 
 ~~~ts
-type ConditionAnalysisRun = {          // 一次正式分析执行；由 ConditionAnalysisEvent 推导的当前视图
+type ConditionAnalysisRun = {          // 一次正式分析执行 = 基础记录 + 由 ConditionAnalysisEvent 推导的投影
+  // —— 基础记录：创建运行时写入一次，之后不修改 ——
   runId: string;
   userId: string;
   requestMessageId: string;            // 授权分析的用户请求（R-DX-02）
+  trigger: "new_analysis" | "partial_update" | "full_reanalysis";  // 用户请求的分析类型（R-DX-02）
   scope: { conditionIds: string[]; concernIds: string[]; description: string };
   basedOnBodyStateRevision: number;
   basedOnDiagnosisRevision: number;
-  evidenceIds: string[];               // 开始时的证据 + 运行中加入的证据（evidence_added）
-  agentHypotheses: { statement: string; evidenceIds: string[] }[];  // AI 假设只存在这里
-  outcome: "proposals_created" | "insufficient_evidence" | "safety_blocked";
-  proposalIds: string[];
-  state: "open" | "committed" | "closed_without_change";  // 当前状态（投影），随事件更新
-  committedDiagnosisRevision?: number;
+  inputEvidenceIds: string[];          // 运行开始时的输入证据
+  agentHypotheses: { statement: string; evidenceIds: string[] }[];  // 创建时的 AI 假设快照；AI 假设只存在这里
   startedAt: string;
+
+  // —— 投影：完全由事件推导（映射见下文「投影字段来源」） ——
+  evidenceIds: string[];               // inputEvidenceIds + 各 evidence_added
+  outcome?: "proposals_created" | "insufficient_evidence" | "safety_blocked";  // 结算前且尚无提案时为空
+  proposalIds: string[];
+  state: "open" | "committed" | "closed_without_change";
+  committedDiagnosisRevision?: number;
   settledAt?: string;
 };
 
-type ConditionProposal = {             // 内容创建后不变；state 为投影
+type ConditionProposal = {             // 基础记录 + 投影
+  // —— 基础记录：创建提案时写入一次，之后不修改 ——
   proposalId: string;
   runId: string;
   targetConditionId?: string;          // 为空表示新增条目
-  changeKind: "create" | "update" | "end";   // end：标记缓解或不再适用
+  changeKind: "create" | "update" | "end";   // end：结束已有条目，结束结果由 content.endTarget 明确指定
   content: Pick<ConditionEntry,
     "name" | "source" | "sourceRefs" | "conclusionStatus" | "causeAnalysis"
-    | "handlingPlan" | "lifecycle" | "informationGaps">;
-  contentFingerprint: string;          // 对规范化内容计算；算法由实现决定
+    | "handlingPlan" | "lifecycle" | "informationGaps"> & {
+    endTarget?: "mark_resolved"                  // → lifecycle = resolved
+              | "mark_no_longer_applicable";     // → disposition.state = no_longer_applicable
+                                         // changeKind = end 时必填；create / update 时必须为空
+    endReason?: string;                  // changeKind = end 时必填：为什么建议结束
+  };
+  contentFingerprint: string;          // 对规范化内容（含 endTarget）计算；算法由实现决定
   evidenceIds: string[];               // 本提案引用的证据
   counterEvidenceIds: string[];
+  supersedesProposalId?: string;       // 本提案取代的旧提案
+  createdAt: string;
+
+  // —— 投影：完全由事件推导 ——
   state: "pending" | "decided" | "superseded" | "expired";
   expiredReason?: "timeout" | "base_revision_changed" | "run_closed";
   supersededReason?: "revised_after_supplement" | "evidence_changed";  // 见 §3.3
@@ -265,7 +280,9 @@ type ConditionProposalDecision = {     // 用户决定的独立审计记录（�
   runId: string;
   contentFingerprint: string;          // 决定针对的准确内容
   evidenceIds: string[];               // 决定时提案引用的证据
-  decision: "likely" | "keep_as_suspected" | "include_clinical" | "rejected";
+  decision: "likely" | "keep_as_suspected" | "include_clinical"   // 仅用于 create / update 提案
+    | "accept_end"                     // 仅用于 end 提案：同意提案写明的 endTarget
+    | "rejected";                      // 任意提案
   toolCallId: string;
   decidedAt: string;
 };
@@ -275,15 +292,16 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
   runId: string;
   at: string;
   event:
-    | { kind: "run_started"; requestMessageId: string; basedOnBodyStateRevision: number;
-        basedOnDiagnosisRevision: number; evidenceIds: string[] }
+    | { kind: "run_started" }            // 运行基础记录已写入；state → open
     | { kind: "evidence_added"; evidenceIds: string[]; sourceMessageId: string }
+    | { kind: "insufficient_evidence"; summary: string }  // 无提案结束：证据不足（R-DX-10）
+    | { kind: "safety_blocked"; summary: string }         // 无提案结束：安全阻断（R-DX-10）
     | { kind: "proposal_created"; proposalId: string; supersedesProposalId?: string }
     | { kind: "proposal_superseded"; proposalId: string; byProposalId: string;
         reason: "revised_after_supplement" | "evidence_changed" }
     | { kind: "proposal_expired"; proposalId: string;
         reason: "timeout" | "base_revision_changed" | "run_closed" }
-    | { kind: "decision_recorded"; decisionId: string }
+    | { kind: "decision_recorded"; decisionId: string; proposalId: string }
     | { kind: "decision_rechecked"; decisionId: string; proposalId: string;
         checkedEvidenceIds: string[]; result: "unaffected" | "affected" }  // §3.3
     | { kind: "committed"; diagnosisRevision: number }
@@ -292,9 +310,30 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 ~~~
 
 - 「继续补充」不是决定，不产生 ConditionProposalDecision；提案保持 `pending`。
+- **结束提案必须写明结束目标**：`changeKind = end` 时 `targetConditionId` 必填，`content.endTarget` 与 `content.endReason` 必填，`content` 其余字段为目标条目的当前内容（供用户核对）；`endTarget = mark_resolved` 时 `content.lifecycle = resolved`，`endTarget = mark_no_longer_applicable` 时 `content.lifecycle` 保持目标条目当前值（INV-14）。`endTarget` 计入 `contentFingerprint`，同一条目上仅 `endTarget` 不同的两个结束提案指纹不同、语义也不同。
 - **不重复提议**：存在 `rejected` 决定时，Agent 不得再次提出相同 `contentFingerprint`（或同一目标条目上语义相同）的提案，除非本次运行引用了该决定 `evidenceIds` 之外、且与该提案相关的新证据 ID。仅 BodyState 修订号变化不算新证据。
-- **不可变的是审计事件**：ConditionAnalysisEvent、ConditionProposal 的内容（`content`、`contentFingerprint`、`evidenceIds`、`counterEvidenceIds`）与 ConditionProposalDecision 写入后不修改、不删除；修订提案内容即创建新提案并取代旧提案（INV-16）。
-- **状态是投影**：`ConditionAnalysisRun` 的 `state`、`outcome`、`proposalIds`、`evidenceIds`、`settledAt`、`committedDiagnosisRevision`，`ConditionProposal` 的 `state`、`expiredReason`、`supersededReason`、`supersededByProposalId`，以及某个决定是否仍生效（复核为 `affected` 后失效，见 §3.3），都由事件推导，可随新事件更新；更新投影不改写已写入的事件。
+- **不可变的是基础记录与审计事件**（INV-16）：
+  - ConditionAnalysisRun 基础记录：`runId`、`userId`、`requestMessageId`、`trigger`、`scope`、`basedOnBodyStateRevision`、`basedOnDiagnosisRevision`、`inputEvidenceIds`、`agentHypotheses` 快照、`startedAt`，创建运行时写入；
+  - ConditionProposal 基础记录：`proposalId`、`runId`、`targetConditionId`、`changeKind`、`content`（含 `endTarget`、`endReason`）、`contentFingerprint`、`evidenceIds`、`counterEvidenceIds`、`supersedesProposalId`、`createdAt`，创建提案时写入；修订提案内容即创建新提案并取代旧提案；
+  - ConditionProposalDecision 整条记录，以及每个 ConditionAnalysisEvent。
+  以上写入后不修改、不删除。
+- **状态是投影**：投影字段只由基础记录与事件推导，可随新事件更新；更新投影不改写已写入的记录或事件。投影字段来源：
+
+  | 投影字段 | 推导来源 |
+  | --- | --- |
+  | Run `state` | `run_started` → `open`；`committed` → `committed`；`closed_without_change`、`insufficient_evidence`、`safety_blocked` → `closed_without_change` |
+  | Run `outcome` | 有 `proposal_created` → `proposals_created`；`insufficient_evidence` / `safety_blocked` → 同名结果；两者皆无时为空 |
+  | Run `evidenceIds` | `inputEvidenceIds` ∪ 各 `evidence_added.evidenceIds` |
+  | Run `proposalIds` | 各 `proposal_created.proposalId` |
+  | Run `committedDiagnosisRevision` | `committed.diagnosisRevision` |
+  | Run `settledAt` | 终结事件（`committed`、`closed_without_change`、`insufficient_evidence`、`safety_blocked`）的 `at` |
+  | Proposal `state` | `proposal_created` → `pending`；`decision_recorded` → `decided`；`proposal_superseded` → `superseded`；`proposal_expired` → `expired` |
+  | Proposal `expiredReason` | `proposal_expired.reason` |
+  | Proposal `supersededReason`、`supersededByProposalId` | `proposal_superseded.reason`、`.byProposalId` |
+  | 决定是否仍生效 | `decision_recorded` 后生效；对应 `decision_rechecked.result = affected` 后失效（§3.3） |
+
+- **事件顺序约束**：`run_started` 是运行的第一个事件；终结事件只能有一个，之后不再追加该运行的事件；`insufficient_evidence` / `safety_blocked` 只能在运行尚未产生任何 `proposal_created` 时写入，表示本次运行不创建提案即结束。
+- **可回放**：按 `at`（同一时刻按写入顺序）依次回放基础记录与 ConditionAnalysisEvent，必须重现每个 Run / Proposal 的全部投影字段与决定是否仍生效；不存在只能由投影本身保存、无法从事件推导的状态（INV-22）。
 - 当前 Diagnosis 是单一对外聚合视图。
 
 ### 3.2 用户选择与数据映射
@@ -308,9 +347,12 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 | `clinical_document` / `user_reported_clinical` | 纳入我的病情管理 | `include_clinical` | `conclusionStatus = clinical_diagnosis`，`source` 保持原来源 |
 | 任意，新增提案 | 不是这个 / 不纳入 | `rejected` | 不创建条目；只记录决定 |
 | 任意，针对已有条目（`update` / `end`） | 不是这个 / 不纳入 | `rejected` | 只拒绝本次变更：条目内容、`conclusionStatus`、`lifecycle`、`disposition` 均不变；决定照常留档（用于不重复提议） |
-| `changeKind = end` | 用户同意 | 按提案内容 | `lifecycle = resolved` 或 `disposition = no_longer_applicable` |
+| 任意，`changeKind = end`，`endTarget = mark_resolved` | 同意结束（标记为已缓解） | `accept_end` | `lifecycle = resolved`；`disposition`、`conclusionStatus`、`confirmation` 及其他内容不变 |
+| 任意，`changeKind = end`，`endTarget = mark_no_longer_applicable` | 同意结束（不再适用） | `accept_end` | `disposition.state = no_longer_applicable`，`reason = content.endReason`，`changedAt` 为提交时间，`decisionId` 指向该决定；`lifecycle` 及其他内容不变（INV-14） |
 | 任意 | 继续补充 / 关闭界面 | — | 不写入；提案保持 `pending`，可恢复 |
 
+- **结束提案只应用被批准的结束目标**：提交时按决定所针对内容（`contentFingerprint`）中的 `endTarget` 写入，不得改为另一种结束结果，也不得同时改写其他字段；`accept_end` 只对 `end` 提案有效，`likely` / `keep_as_suspected` / `include_clinical` 不能用于 `end` 提案（INV-21）。
+- **不再适用**（`disposition = no_longer_applicable`）只来自被 `accept_end` 的 `mark_no_longer_applicable` 结束提案；**标记缓解**（`lifecycle = resolved`）可来自被 `accept_end` 的 `mark_resolved` 结束提案，也可来自用户明确请求的直接编辑（[§3.5](#35-用户直接更正撤回与标记缓解) `mark_resolved`）。
 - **撤回整条条目**（`disposition = withdrawn_by_user`）只来自用户的明确请求，经 [§3.5](#35-用户直接更正撤回与标记缓解) 直接编辑路径；对提案选「不是这个」不会撤回已有条目（INV-18）。
 - **升级路径**：疑似条目可在后续正式分析中经同一确认工具改为 `likely`；`user_suspicion` / `agent_analysis` / `user_reported_clinical` 条目在出现经管线采纳、且明确记载该诊断的临床文件后，可经新提案把同一 `conditionId` 的 `source` 改为 `clinical_document`、`conclusionStatus` 改为 `clinical_diagnosis`，用户选择 `include_clinical` 后生效；旧来源与旧结论在修订历史中保留。
 - 用户选择「大概率是」只表示用户接受把这一可能性记为「大概率」，不是临床诊断（R-DX-04）。
@@ -319,7 +361,7 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
 
 一次 ConditionAnalysisRun 可以产生多个 ConditionProposal，每个提案独立决定，最终**一次性**提交（R-DX-12）：
 
-- **提交时机**：运行中所有提案都已结算（`decided`、`superseded` 或 `expired`），且每个已决定提案都已完成下文的新证据复核时，把全部会改变 Diagnosis 的决定（`likely` / `keep_as_suspected` / `include_clinical`，以及用户同意的 `end`；`rejected` 不改变 Diagnosis）合成**一个**原子补丁，只产生一次 DiagnosisRevision；没有任何改变时运行记为 `closed_without_change`，不产生修订。
+- **提交时机**：运行中所有提案都已结算（`decided`、`superseded` 或 `expired`），且每个已决定提案都已完成下文的新证据复核时，把全部会改变 Diagnosis 的决定（`likely` / `keep_as_suspected` / `include_clinical`，以及结束提案上的 `accept_end`；`rejected` 不改变 Diagnosis）合成**一个**原子补丁，只产生一次 DiagnosisRevision；没有任何改变时运行记为 `closed_without_change`，不产生修订。
 - **提交前**：已作出的决定保存在 ConditionProposalDecision 中，不会丢失，但 Diagnosis 不变。
 - **关闭界面 / 离开对话 / 再次进入**：运行保持 `open`，未决定提案保持 `pending` 并可在同一运行中恢复；已决定的不需要重新选择。
 - **继续补充**：被补充的提案不作决定；新信息按 R-BS-01 写入 BodyState，并作为新证据加入本运行（`evidence_added`）。Agent 若据此修订该提案，旧提案记为 `superseded`（`revised_after_supplement`），新提案在同一运行内等待决定。其他提案的已有决定按下条复核。
@@ -499,3 +541,5 @@ type PlanChangeProposal = {
 | INV-18 | 对已有条目提案的 `rejected` 不改变该条目；`withdrawn_by_user` 只来自用户明确请求并经确认的直接编辑 |
 | INV-19 | 直接编辑路径只能由用户的明确请求触发，Agent 不得用它做自己的修改；每次直接编辑留下用户决定审计（谁、什么、何时、原因），并产生一次 Diagnosis 修订 |
 | INV-20 | 安全限制只按其 `liftPolicy` 解除：只有 `on_expiry` 到期自动解除；其他策略到期只触发复核、限制继续生效；每次解除记录与策略一致的依据；Agent 不能自行解除或放宽策略 |
+| INV-21 | `changeKind = end` 的提案必须写明 `endTarget`（`mark_resolved` / `mark_no_longer_applicable`）并计入内容指纹；提交只应用 `accept_end` 决定所针对的那个 `endTarget`；`disposition = no_longer_applicable` 只来自被接受的 `mark_no_longer_applicable` 结束提案 |
+| INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件 |
