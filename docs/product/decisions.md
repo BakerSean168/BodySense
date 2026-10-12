@@ -41,3 +41,12 @@
 | Q-21 | 运行中继续补充或出现新证据后，提交前必须按证据 ID 用新证据复核每个已决定提案：不受影响的决定照常生效；受影响的提案记为 superseded（`evidence_changed`），须重新提出并重新决定；受影响的决定绝不未经复核提交 | 已作出的决定可能依据已过时的证据 | requirements R-DX-12 · domain §3.1、§3.3、INV-17 · agent-workflows §3.2、§4 · glossary §2 · acceptance DX-03d、DX-03g、DX-03h |
 | GAP-D | 临床文件证据 ≠ 临床诊断：只有明确记载临床医生诊断的已采纳文件才能支持 `clinical_document` + `clinical_diagnosis`；化验 / 影像数值只作为 `agent_analysis` 提案的证据，不升级来源或结论 | 避免把支持性数值当作医生诊断 | requirements R-DX-08 · domain §3、§3.2、INV-15 · glossary §2 · acceptance DX-10、DX-12 |
 | GAP-E | ConditionAnalysisRun 的「不可变」指追加写入的审计事件（运行开始、证据加入、提案创建/取代/过期、决定、提交/关闭）；运行与提案的当前状态是由事件推导的投影，可以更新；提案内容与决定记录写入后不变 | 消除「不可变」与状态会变化之间的歧义 | domain §1、§3.1、INV-16 · glossary §1 · acceptance DX-13 |
+
+## 2026-10-12 · 结束提案与事件回放补充
+
+原因列为摘要。
+
+| ID | 决定 | 原因（摘要） | 写入位置 |
+| --- | --- | --- | --- |
+| GAP-F | `changeKind = end` 的提案必须在内容中写明 `endTarget`（`mark_resolved` → `lifecycle = resolved`；`mark_no_longer_applicable` → `disposition = no_longer_applicable`）与 `endReason`，`endTarget` 计入内容指纹。新增决定值 `accept_end`（只用于结束提案）；「不是这个 / 不同意」= `rejected`，条目不变；继续补充照常。提交只应用被批准的 `endTarget`。不再适用只来自被接受的结束提案；标记缓解还可经用户直接编辑（R-DX-13） | 结束提案原先没有明确的结束结果，也没有对应的「同意」决定值，用户批准的内容与提交结果可能不一致 | requirements R-DX-04 · domain §3、§3.1、§3.2、§3.3、INV-21 · agent-workflows §3、§3.2 · interface §4 · glossary §1、§2 · acceptance DX-07g～07j |
+| GAP-G | 明确事件回放契约：ConditionAnalysisRun 基础记录（请求、`trigger`、范围、底版修订、输入证据 ID、`agentHypotheses` 快照）与 ConditionProposal 基础记录（内容含 `endTarget`、指纹、证据 / 反证 ID、取代关系）创建时写入且不变；运行与提案的状态字段全部由事件推导，并给出逐字段来源。新增终结事件 `insufficient_evidence`、`safety_blocked`（无提案结束运行），`decision_recorded` 带 `proposalId`；按顺序回放基础记录与事件必须重现当前状态 | 原契约未区分不变的基础数据与派生状态，且证据不足 / 安全阻断结束的运行没有对应事件，投影无法完全回放 | domain §3.1、INV-16、INV-22 · agent-workflows §3.2 · glossary §1 · acceptance DX-04、DX-13b |
