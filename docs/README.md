@@ -9,6 +9,7 @@
 | 业务规则（BodyState / Diagnosis / TrainingPlan / Agent / UI / 验收） | [product/](./product/README.md) | **业务规则唯一来源** |
 | 术语与 Penpot 旧名对照 | [product/glossary.md](./product/glossary.md) | 现行 |
 | 规格中尚未决定的问题 | [product/open-questions.md](./product/open-questions.md) | 现行 |
+| 已决定问题的决策记录 | [product/decisions.md](./product/decisions.md) | 现行 |
 | 视觉与交互基准 | [design/](./design/README.md) → Penpot「BodySense · Product Design」Product 页 | 视觉基准 |
 | 当前代码的技术架构 | [architecture/](./architecture/README.md) | 技术现状（见 §3 说明） |
 | 架构决策 | [adr/](#adr架构决策记录) | 历史决策记录 |
@@ -30,7 +31,8 @@ docs/
 │   ├── interface.md             窗口与交互
 │   ├── acceptance.md            测试矩阵（引用规则编号）与实施顺序
 │   ├── glossary.md              术语表与 Penpot / 旧代码名称对照
-│   └── open-questions.md        开放问题与规格矛盾
+│   ├── open-questions.md        开放问题与规格矛盾
+│   └── decisions.md             已决定问题的决策记录
 ├── design/                      设计说明：当前 Penpot 文件/页面、Foundations
 ├── architecture/                技术与运行架构（34 篇）
 ├── adr/                         架构决策记录 0001–0019
@@ -67,8 +69,8 @@ docs/
 
 [architecture/README.md](./architecture/README.md) 是索引。注意：
 
-- `longitudinal-body-state-domain.md`、`longitudinal-health-loop.md`、`health-journey-workflow.md`、`web-desktop-workbench-ui-ux.md` 已按新规格改写，但前三篇尚未写入病情确认步骤（[Q-11](./product/open-questions.md)）。
-- `current-longitudinal-system.md`、`technical-approach.md`、`agent-platform-role-governance.md`、`diagnosis-*`、`treatment-*`、`consultation-eval-harness.md` 等描述**当前代码**（问诊会话、Treatment、Assessment），作为工程事实保留；业务规则不以它们为准（[Q-12](./product/open-questions.md)）。
+- `longitudinal-body-state-domain.md`、`longitudinal-health-loop.md`、`health-journey-workflow.md`、`web-desktop-workbench-ui-ux.md` 已按新规格改写；前三篇的病情确认步骤链接到 product/agent-workflows（[决策 Q-11](./product/decisions.md)）。
+- `current-longitudinal-system.md`、`technical-approach.md`、`agent-platform-role-governance.md`、`diagnosis-*`、`treatment-*`、`consultation-eval-harness.md` 等描述**当前代码**（问诊会话、Treatment、Assessment），作为工程事实保留，开头注明描述的是重构前实现；业务规则不以它们为准（[决策 Q-12](./product/decisions.md)）。
 - `context-engineering-architecture.md`、`system-engineering-refactor-plan.md` 是指向历史快照的重定向页。
 - 部署与交付：`deployment-architecture.md`、`delivery-platform-v3.md`、`release-lifecycle-v3.md`、`model-gateway-routing.md`。
 
@@ -97,7 +99,7 @@ Anatomy atlas 发布、Delivery Platform V3 上线、Diagnosis 生产资格与�
 
 | 位置 | 内容 | 原因 |
 | --- | --- | --- |
-| [archive/product-legacy/](./archive/product-legacy/) | `PRD-体态健康AI助手.md`、`feature_spec_3d_body_explorer.md`、`feature_spec_health_document_ingestion.md`、`feature_spec_longitudinal_body_health.md`、`feature_spec_training_schedule.md` | 被 `product/` 取代；其中健康文件录入规格仍以 Assessment 为中心，Trainer 细节尚未并入新规格（[Q-07](./product/open-questions.md)、[Q-08](./product/open-questions.md)） |
+| [archive/product-legacy/](./archive/product-legacy/) | `PRD-体态健康AI助手.md`、`feature_spec_3d_body_explorer.md`、`feature_spec_health_document_ingestion.md`、`feature_spec_longitudinal_body_health.md`、`feature_spec_training_schedule.md` | 被 `product/` 取代；Trainer 仍有效的规则已并入 requirements R-EX / interface §5.1，上传资料规则见 requirements R-PS-03（[决策 Q-07、Q-08](./product/decisions.md)） |
 | [archive/design/body-canvas-v3/](./archive/design/body-canvas-v3/README.md) | V3 交接 README、`penpot-manifest.json`、`penpot-home.png`、`plan-2026-10-08-body-canvas-v3.md` | 基于旧 Treatment / Assessment 架构，引用已失效的 Penpot 页面 `536d2a99…` |
 | [archive/reviews/](./archive/reviews/project-review-2026-07-10.md) | `project-review-2026-07-10.md` | 针对重构前实现的历史审查快照 |
 | [archive/deployment/digitalocean/](./archive/deployment/digitalocean/README.md) | `cloud-native-migration-plan.md`、`digitalocean-practice-environment.md`（原 `cloud-native-practice/`） | DigitalOcean 练习环境已于 2026-08-22 退役 |
