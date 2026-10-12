@@ -9,32 +9,42 @@
 | **BodyState** / 身体状态 | 每位用户唯一、持续更新的身体事实、观察、假设与真实病程集合；明确的本人陈述自动写入 | [requirements §2.2](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain.md#2-bodystate) | 身体档案（指数据对象时）、问诊记录、会话状态 |
 | **BodyFact** / 身体事实 | BodyState 中由用户自述、直接编辑或结构化回答形成的本人事实 | [domain §2](./domain.md#2-bodystate) | 症状记录（泛称时可用，但不作对象名） |
 | **BodyObservation** / 观察 | 有方法与来源的测量、自测、检查或报告观察 | [domain §2.1](./domain.md#21-写入语义与证据分类) | — |
-| **BodyHypothesis** / 假设 | AI 或用户提出的病因解释或可能疾病；不具备确诊权威 | [domain §2.1](./domain.md#21-写入语义与证据分类) | 候选诊断（DiagnosisAnalysis candidates，旧实现） |
+| **BodyHypothesis** / 用户假设 | 用户本人提出的病因怀疑或可能疾病（`source = user`），自动记录；不具备确诊权威。AI 提出的假设不属于 BodyState，只在 ConditionAnalysisRun 中 | [requirements R-BS-06](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain.md#2-bodystate) | 候选诊断（DiagnosisAnalysis candidates，旧实现）；用「假设」指 AI 推测的持久记录 |
 | **Diagnosis** / 综合诊断 | 每位用户唯一的当前综合结果，只由用户确认过的 ConditionEntry 组成 | [requirements §2.3](./requirements.md#23-diagnosis-综合诊断) · [domain §3](./domain.md#3-diagnosis) | 综合分析、评估、评估报告、Assessment、问诊诊断、诊断报告 |
-| **ConditionEntry** / 病情条目 | Diagnosis 内具有稳定身份的单个病情：名称、原因分析、处理方案、确定性与确认记录 | [domain §3](./domain.md#3-diagnosis) | 候选病情、诊断候选、局部诊断报告 |
-| **病情提案**（confirm_condition 的内容） | Agent 分析得出、尚待用户在 Chat 中选择的病名/原因/处理方案 | [agent-workflows §3.2](./agent-workflows.md#32-diagnosis-正式分析与病情确认) | 已确认诊断、初步诊断（当作已写入时） |
+| **ConditionEntry** / 病情条目 | Diagnosis 内具有稳定身份的单个病情：名称、原因分析、处理方案、来源（`source`）、结论状态（`conclusionStatus`）、确认记录（`confirmation`）、病程（`lifecycle`）与采纳状态（`disposition`） | [domain §3](./domain.md#3-diagnosis) | 候选病情、诊断候选、局部诊断报告；`certainty`（已拆分的旧字段） |
+| **ConditionAnalysisRun** / 正式分析运行 | 一次正式分析的不可变审计：请求、范围、底版修订、证据、AI 假设、产生的提案 | [domain §3.1](./domain.md#31-正式分析审计对象) | DiagnosisAnalysis（新规格中不再使用此名） |
+| **ConditionProposal** / 病情提案 | 一次运行提出的单个条目新增/更新/结束，带内容指纹与证据 ID，尚待用户在 Chat 中决定 | [domain §3.1](./domain.md#31-正式分析审计对象) · [agent-workflows §3.2](./agent-workflows.md#32-diagnosis-正式分析与病情确认) | 已确认诊断、初步诊断（当作已写入时） |
+| **ConditionProposalDecision** / 用户决定记录 | 用户对某个提案的决定（含拒绝）的追加式审计；用于「不重复提议」判定 | [domain §3.1](./domain.md#31-正式分析审计对象) | 「否定记录」（未定义存储时的旧说法） |
 | **TrainingPlan** / 训练计划 | 一份完整训练处方（热身 → 正式训练 → 必要放松，含组数、次数/时长、频率）；每位用户可有多份 | [requirements §2.4](./requirements.md#24-trainingplan-训练计划) · [domain §4](./domain.md#4-trainingplan) | Treatment、治疗方案、训练模块、部位模块 |
 | **PlanChangeProposal** / 计划调整提案 | Agent 主动提出的某份计划的具体修改，用户「接受调整 / 暂不修改」前不生效 | [domain §4](./domain.md#4-trainingplan) | Treatment revision、方案修订（指提案时） |
 | **Trainer** / 训练执行 | 打开某份 TrainingPlan 进行训练、计时与反馈的执行窗口 | [requirements §2.5](./requirements.md#25-训练执行与反馈) · [interface §2](./interface.md#2-业务窗口) | 训练流程（Workflow/Training，设计稿旧名） |
-| **TrainingLog** / 训练记录 | 按计划、日期与动作记录的真实完成情况与主观反馈 | [domain §4](./domain.md#4-trainingplan) | — |
-| **Person** / 个人档案 | 展示个人资料与身体记录、器材、资料等的窗口与业务范围；分类 Records / Equipment / Media / Reports / Habits | [requirements §2.6](./requirements.md#26-person-个人档案与当前状态) · [interface §3](./interface.md#3-person-个人档案) | Profile 窗口（设计稿旧名） |
-| **Profile** / 基础资料 | Person 中相对稳定的身份与偏好数据（领域对象）；不含有时间语义的测量与习惯 | [domain §1](./domain.md#1-聚合关系) | 用 Profile 指整个 Person 窗口 |
+| **PlanSessionTemplate** / 课模板 | 计划内容中「一次课」的模板，含热身/正式/放松阶段；单课计划只有一个 | [domain §4](./domain.md#4-trainingplan) | TrainingSession（指计划内容时）、exerciseStages（已移入模板） |
+| **TrainingSessionLog** / 训练记录 | 一次实际执行：按计划、日期与动作记录用户明确完成/跳过的情况与主观反馈 | [requirements R-EX-04](./requirements.md#25-训练执行与反馈) · [domain §4](./domain.md#4-trainingplan) | TrainingLog（旧代码名）；把课模板与训练记录混称 |
+| **Person** / 个人档案 | 展示个人资料与身体记录、器材、资料等的窗口与业务范围；五个分类 Records / Equipment / Media / Reports / Habits，身份在标题区与 Identity Popover | [requirements §2.6](./requirements.md#26-person-个人档案与当前状态) · [interface §3](./interface.md#3-person-个人档案) | Profile 窗口（设计稿旧名） |
+| **Profile** / 基础资料 | Person 中相对稳定的身份与偏好数据（领域对象），显示在 Person 标题区与 Identity Popover；不含有时间语义的测量与习惯 | [domain §1](./domain.md#1-聚合关系) · [R-PS-04](./requirements.md#26-person-个人档案与当前状态) | 用 Profile 指整个 Person 窗口；把 Profile 当作第六个分类标签页 |
 | **Chat** | 自然表达、提问、发起分析与授权计划修改的对话窗口，承载交互工具 | [interface §2](./interface.md#2-业务窗口) | Assistant（设计稿旧名）、Consultation / 问诊会话 |
 | **Conversation** / 对话 | Chat 中的交流与工具活动记录；不是身体事实的权威存储 | [domain §1](./domain.md#1-聚合关系) | Consultation Session（旧实现） |
-| **SafetyState / 安全阻断** | 对不适当训练执行的独立限制与就医提示；不等于修改计划内容 | [requirements §2.7](./requirements.md#27-安全) | 安全修订（不存在此概念） |
+| **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（计划/动作）、有效期与解除条件，Trainer 据此把关；界面显示「暂不宜执行」；不等于修改计划内容 | [requirements R-SAFE-03](./requirements.md#27-安全) · [domain §2](./domain.md#2-bodystate) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
 
-## 2. 确定性与确认用语
+## 2. 来源、结论与确认用语
+
+ConditionEntry 把旧 `certainty` 拆成独立维度（[domain §3](./domain.md#3-diagnosis)）：
 
 | 标准用语 | 含义 | 对应字段 |
 | --- | --- | --- |
-| 大概率是 | 用户在病情确认工具中选择「大概率是这个」 | `certainty = user_confirmed_agent_analysis`，`confirmation.decision = likely` |
-| 疑似 · 你选择保留 | 用户选择「可能是，但不确定，先保留」；仍属于用户确认过的状态 | `certainty = user_kept_as_suspected`，`confirmation.decision = keep_as_suspected` |
-| 不是 | 用户选择「不是这个，不用保留」；不入库，记录否定 | 无 ConditionEntry |
-| 继续补充 | 用户暂不选择，补充信息；Diagnosis 不变 | — |
-| 用户转述的临床诊断 | 用户说「医生告诉我……」 | `user_reported_clinical_diagnosis` |
-| 临床文件记载 | 有对应医疗材料或可靠来源 | `clinically_documented` |
+| 大概率是 | 用户在确认工具中选择「大概率是这个」：接受把这一可能性记为「大概率」，**不是临床诊断** | `conclusionStatus = likely`，`confirmation.decision = likely` |
+| 疑似 · 你选择保留 | 用户选择「可能是，但不确定，先保留」；仍属于用户确认过的状态 | `conclusionStatus = suspected`，`confirmation.decision = keep_as_suspected` |
+| 纳入我的病情管理 | 临床来源病情经用户同意纳入个人管理；不是对医生诊断的再判断 | `conclusionStatus = clinical_diagnosis`，`confirmation.decision = include_clinical` |
+| 不是 | 用户选择「不是这个」：不采纳该解释，**不等于医学上已排除**；已有条目记为撤回 | `ConditionProposalDecision.decision = rejected`；已有条目 `disposition = withdrawn_by_user` |
+| 继续补充 | 用户暂不决定，补充信息；Diagnosis 不变，提案保持待定 | 无决定记录 |
+| 临床文件记载 | 有经证据管线采纳的医疗文件 | `source = clinical_document` |
+| 用户转述的临床诊断 | 用户说「医生告诉我……」，无文件支持 | `source = user_reported_clinical` |
+| Agent 分析 | Agent 在正式分析中得出 | `source = agent_analysis` |
+| 用户的怀疑 | 源自用户本人提出的假设 | `source = user_suspicion` |
+| 病程 | 病情的真实发展：进行中 / 观察中 / 已缓解 | `lifecycle = active / monitoring / resolved` |
+| 采纳状态 | 该解释是否仍被采纳：采纳 / 用户撤回 / 不再适用 | `disposition.state = adopted / withdrawn_by_user / no_longer_applicable` |
 | 用户认可 Agent 分析 | 用户同意纳入个人管理记录，**不等于临床确诊** | — |
-| 正式分析 | 用户请求/授权后进行、可能写入 Diagnosis 的分析 | `analyze_conditions` |
+| 正式分析 | 用户请求/授权后进行、可能写入 Diagnosis 的分析 | `analyze_conditions` → ConditionAnalysisRun |
 | 初步解释 | 普通 Chat 中对可能方向的讨论，不写入 Diagnosis | — |
 
 「评估」只用于描述医生或专业人员的线下诊治（如「建议就医进行专业检查」），不得用于指代 Diagnosis 或 Agent 的分析。
@@ -49,10 +59,12 @@ Penpot 文件 **BodySense · Product Design**（`24d9d841-759d-81bc-8008-b642325
 | Assessment（Window/Assessment、Second condition、Collapsed） | Diagnosis | 「Assessment」在设计稿与旧代码中即 Diagnosis |
 | Workflow/Assessment Input / Evidence / Evidence Empty / Upload Error / Result | —（旧流程） | 「上传 → 证据 → 结果」流程已废弃：上传资料归 Person 的 Media / Reports，分析在 Chat 中发起 |
 | Workflow/Assessment Safety Hold | 安全阻断状态 | **保留**，表达安全阻断与就医提示 |
-| Profile（Window/Profile、Profile/Category *、Workflow/Profile *） | Person | 分类 Equipment / Media / Reports / Habits 沿用 |
+| Profile（Window/Profile、Profile/Category *、Workflow/Profile *） | Person | 五个分类 Records / Equipment / Media / Reports / Habits 沿用；身份信息在标题区与 Identity Popover |
 | Training（Window/Training、Plan Legs / Functional / Picker） | TrainingPlan | 多份计划与计划选择器 |
-| Workflow/Training Today / Draft / Move / Feedback / Paused / Completed | Trainer | 训练执行各状态 |
+| Workflow/Training Today / Draft / Move / Feedback / Paused / Completed | Trainer | 训练执行各状态（[interface §5.1](./interface.md#51-trainer-训练执行)）；Draft 保留，含义待 Penpot 核对（[Q-15](./open-questions.md)） |
+| TrainingLog（旧代码） | TrainingSessionLog | 新规格以课模板与执行记录区分 |
 | Treatment（旧代码，单一方案 + revisions） | TrainingPlan + PlanChangeProposal | 新规格为多份计划、提案需用户接受 |
 | Consultation / Consultation Session（旧代码） | Chat / Conversation | 不再以问诊会话为业务中心 |
-| DiagnosisAnalysis candidates（旧代码，按问诊生成） | 病情提案 → ConditionEntry | 新规格中 DiagnosisAnalysis 仅指内部不可变的分析审计记录 |
+| DiagnosisAnalysis / candidates（旧代码，按问诊生成） | ConditionAnalysisRun + ConditionProposal + ConditionProposalDecision → ConditionEntry | DiagnosisAnalysis 这个名字只保留给旧代码，新规格不再使用 |
+| `certainty`（旧规格字段） | `source` + `conclusionStatus` + `confirmation` | `user_confirmed_agent_analysis` → `agent_analysis` + `likely`；`user_kept_as_suspected` → `conclusionStatus = suspected`；`clinically_documented` → `source = clinical_document`；`user_reported_clinical_diagnosis` → `source = user_reported_clinical` |
 | Assessment report（旧代码） | Diagnosis | 不再生成按次的评估报告 |
