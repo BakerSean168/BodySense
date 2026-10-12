@@ -35,7 +35,7 @@ docker/         ← Docker Compose 编排
 tools/
   agent-skills/ ← 项目专属 Agent Skills
 scripts/        ← 开发辅助脚本
-docs/           ← 项目文档（PRD、技术方案、原型）
+docs/           ← 项目文档（索引见 docs/README.md；业务规格 docs/product/、设计 docs/design/、架构 docs/architecture/）
 ```
 
 根配置文件：`pnpm-workspace.yaml`、`nx.json`、`tsconfig.base.json`、`project.json`、`package.json`
@@ -116,13 +116,15 @@ tests/
 
 ```
 docs/
-  product/             ← 当前产品业务规格（需求、领域、Agent、UI、验收）
+  README.md            ← 文档总索引（现行 / 归档说明）
+  product/             ← 当前产品业务规格（需求、领域、Agent、UI、验收、术语表、开放问题）
   design/              ← 当前设计体系及 Penpot 交互约束
   architecture/        ← 技术与运行架构
   adr/                 ← 架构决策记录
   plan/
     active/            ← 进行中的 task spec
     archive/           ← 完成的 plan 归档
+  archive/             ← 被 docs/product 取代或已退役的文档（文件开头注明取代者）
 ```
 
 ### Import 路径规范
