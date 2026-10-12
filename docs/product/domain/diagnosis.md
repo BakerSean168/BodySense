@@ -328,3 +328,23 @@ type ConditionDirectEdit = {           // 用户决定审计事件：追加写�
 直接更正/撤回/缓解只在用户明确请求后以轻量确认提交，记录 ConditionDirectEdit；不能用 Agent 推测调用该路径。临床诊断与普通 AI 分析来源及用户接受行为彼此独立，安全阻断或证据不足必须如实展示。
 
 **UI 状态**：来源、结论强度、当前病程、解释是否采纳、提案等待决定/已决定未提交/过时、分析无结果/安全阻断、当前条目与历史。验收沿用 DX-01～14，新增 DX-15/16；复发与重新采纳用例待 DC-021/024 决策。
+
+### 3.8 新诊断契约与旧运行时对照（As-Is）
+
+- [DiagnosisAnalysisRecord](../../../apps/api/internal/model/diagnosis_analysis.go) 是基于一份 BodyState 修订的历史分析工件，拥有 Status、Scope、Citations、DecisionTrace、Candidates；当前并非新目标的「每用户一份 Diagnosis + 多 ConditionEntry」聚合。
+- [DiagnosisCandidateRecord](../../../apps/api/internal/model/diagnosis_analysis.go) 持有候选 Name/Confidence/Basis、证据和缺口等字段；不能把 `candidate.assessment.state` 直接当作新 `ConditionProposalDecision`。
+- 新 `ConditionAnalysisRun / ConditionProposal / ConditionProposalDecision / ConditionAnalysisEvent` 具有提案-决定-事件回放的明确权限边界。具体持久化表/API/Event DTO 仍需单独迁移；不得因为旧 `diagnosis_analyses` 表存在就宣称已通过 INV-12/16/22。
+- 旧服务 [DiagnosisApplicationService.commitHypotheses](../../../apps/api/internal/service/diagnosis_application_service.go) 将分析候选放入 BodyStateHypothesis，与新规格用户假设模型冲突，已登记 IG-05。
+
+### 3.9 历史、时间与唯一身份的待决转换
+
+| 情形 | 当前已批准保证 | 后续需要的业务决定 |
+| --- | --- | --- |
+| 同一健康问题跨月/跨年复发 | BodyFact 的时段可继续记录、原 Diagnosis 历史不能抹去 | ConditionEntry 是否持有多 Episode、边界是什么（DC-021/066） |
+| 多个病名可能描述同一问题 | 一个 ConditionEntry 有稳定身份，局部 patch 不影响无关条目 | 条目合并/拆分时的来源与历史 ID、用户确认（DC-047/067） |
+| 已撤回结论再次获得证据 | 原决定和反证审计必须保留，不能偷偷恢复 adopted | 重新采纳与旧提案指纹/来源的关联（DC-024/068） |
+| 已确诊条目后来被新临床文件纠正 | 临床来源只由证据决定，用户保留采纳决定 | 冲突的临床来源如何并存、历史结论如何展示（DC-069） |
+| 同一分析过程中直接更正事实 | 真实事实可通过 BodyState 原子更新，分析底版失效须复核 | 直接更正和 DiagnosisRevision 同步/补偿（DC-049） |
+| 已决定但尚未提交，另一设备修改 Diagnosis | 不允许丢失修改或自动静默合并 | 重审提示、竞态顺序与新 Run 是否重启（DC-070） |
+
+**UI 要能够回放：** 当前病情、历史 Episode（待决是否引入）、用户撤回或不再适用、旧临床来源、被新证据取代的提案、不生效的决定以及安全中断。这里的 `Episode` 仅为候选设计名，尚未获批准，不能将其当作已存在的领域实体。

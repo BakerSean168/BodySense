@@ -60,3 +60,20 @@ SafetyRestriction 没有获批准的独立持久化 status 字段，限制是否
 UI 必须能够区分：当前可执行、存在匹配限制而暂不宜执行、已到复核时点但限制尚未解除、专业人员放行待核实、已解除/历史以及紧急就医警示。以上是**展示投影**，不新增持久化枚举。
 
 解除/复核事件必须关联 restrictionId、用户、源证据及策略相匹配的 liftBasis；Go 后端应控制权限，Agent 不得降低风险级别或放宽解除策略。验收沿用 TP-06～06f，增加 SAFE-01～03；Q-18 未决内容不伪造为已通过验收。
+
+## 2.6 当前代码与目标安全策略的差异（As-Is）
+
+- [BodyStateService.ResolveSafetyState](../../../apps/api/internal/service/body_state_service.go) 接受 `resolved / cleared_by_review / monitoring` 加自由文本 note，拼出 `safety_state` JSON；该函数本身不要求 `liftPolicy`、`restrictionId` 或 `liftBasis`。
+- [body_state_routes.go](../../../apps/api/internal/transport/httpapi/body_state_routes.go) 当前会将请求的 resolution/note 传给服务；仅见到用户身份与 revision 参数，并不足以证明已实现目标的专业放行证据核验。
+- [BodyStateRepository.SetSafetyState](../../../apps/api/internal/repository/body_state_repository.go) 使用整块 JSON 更新，写入 `safety.updated` 修订；目标逻辑将是针对单条 SafetyRestriction 的授权变更，不能让晚到的解除覆盖并发新增风险（INV-09、DC-064）。
+- 这些是**代码层静态证据**，不能推断有多少线上用户受到影响；不因发现差异就在文档 PR 中改变高风险业务行为。
+
+## 2.7 生效、复核与竞争条件矩阵
+
+| 场景 | 已有原则 | 未定决策 |
+| --- | --- | --- |
+| 非同类限制并存 / 作用范围重叠 | 同时存在的有效限制均不可绕过 | 范围重叠时提示、聚合与优先级（DC-062） |
+| 自动解除与新增风险并发 | 不得清除不相关新限制，按修订和证据校验 | 逐 restriction 事件与服务端 CAS 契约（DC-064） |
+| 来源证据被更正或撤回 | 原限制不应由 Agent 静默降低或解除 | 复评触发、证据更正与解除联动（DC-063） |
+| 需要专业放行，但用户只给出模糊陈述 | 有来源和条件才可解除 | 来源可信度、过期/冲突及数据最小化（DC-065） |
+| 新风险在 TrainingSession 运行中生效 | 继续执行前必须查门禁 | 停止粒度与历史事实记录（DC-006） |

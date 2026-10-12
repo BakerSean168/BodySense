@@ -60,3 +60,32 @@
 - Habits/Records：自动记录与人工审核的边界（DC-007/008）。
 
 这些对象的完整字段表和状态机应在对应决策通过后补入此文档，再新增可执行契约测试；不能从旧代码或 Penpot 名称直接推断。
+
+## 6. 当前 Person / Chat 数据结构对照（As-Is）
+
+| Go 对象 | 已有字段和运行状态 | 与新产品契约的关系 |
+| --- | --- | --- |
+| [UserProfile](../../../apps/api/internal/model/user_profile.go) | ID、UserID、Gender?、BirthDate?、AgeYears 派生、CreatedAt/UpdatedAt | 这是现有最小身份资料，不代表身份字段范围已经获得批准（DC-015）；测量/习惯仍应属于 BodyState |
+| [UserUpload](../../../apps/api/internal/model/user_upload.go) | 文件名、类型、MIME、大小、存储 Key、OCR 状态 `pending/processing/completed/failed`、姿态分析状态 `none/pending/processing/completed/failed` 与结果 | 这两组是**处理任务状态**，不是文件证据 `admissible/needs_review/rejected` 准入状态，也不等于文件删除/保留生命周期（DC-034/035） |
+| [Conversation](../../../apps/api/internal/model/conversation.go) | ID、UserID、Title、TitleStatus、Status、Pinned、Provider/Model、ActiveRunID、ActiveStreamID、Summary、LastMessageAt、DeletedAt | 旧代码已有多会话与软删除形态，但产品是否接受多会话、归档、保留期限尚待 DC-016/036 |
+| [Message](../../../apps/api/internal/model/message.go) | ID、ConversationID、TurnID、RunID?、ParentMessageID、Role、Status、Seq、Parts、ContentText、Model/Provider、Tokens、Error、Metadata、时间 | 持久消息状态、流式失败/重试与一次业务确认不是同一状态机（DC-037） |
+| [AgentInteraction](../../../apps/api/internal/model/agent_interaction.go) | ID、RunID、ConversationID、ToolCallID、ToolName、Question、Answer；`pending/answered/cancelled/expired` | Go 的人机交互状态独立于 ConditionProposal 的 `decided/superseded`；底版过时、授权和继续补充不能仅依赖 `answered`（DC-017/038） |
+| [AgentToolCall](../../../apps/api/internal/model/agent_tool_call.go) | `running/succeeded/failed`、Arguments、Result、Error、RunID、ConversationID、MessageID、时间 | ToolCall 运行成功不等于已经提交 Domain 写操作；需要回传提交的授权与修订 |
+| [ConversationShare](../../../apps/api/internal/model/conversation_share.go) | ConversationID、ShareToken、SnapshotMessages、SnapshotTitle、CreatedAt | 旧分享代码允许公开链接读取健康对话快照，新产品尚无隐私与撤回契约（DC-026/039），不能默认视作已批准 |
+
+## 7. 必须分离的三类 Chat 状态与恢复契约
+
+| 维度 | 示例状态 | 权威来源 / 转换规则 |
+| --- | --- | --- |
+| UI/Composer | loading、focus、collapsed、composer_locked、uploading、error | React 表示层；隐藏/收起不改变业务决定 |
+| Agent 运行 | streaming、interrupted、finished、failed；当前代码的 ToolCall running/succeeded/failed | 运行时持久日志和重放；中断后可根据原 RunId/InteractionId 关联 |
+| 领域待决定 | ConditionProposal pending/decided、PlanChangeProposal pending/accepted/rejected/expired | 各自领域服务；用户选择必须绑定精确提案内容和修订，不能只写一条聊天文本 |
+
+**继续补充是既有产品语义，不等于必须开放所有自由输入。** 已有 [activeTurnSelectors](../../../apps/web/src/features/consultation/runtime/activeTurnSelectors.ts) 对 `interrupted` 锁 Composer；实际允许的补充消息方式及其 Run/Proposal 归属待 DC-017。关闭、刷新、恢复前务必保留可辨认的待回复交互身份（INV-29）。
+
+## 8. 文件、会话与隐私边界
+
+- 上传完成只是文件存在；OCR 完成不是测量值准入，更不是用户确认临床诊断。报告候选必须具有来源页/框或等效证据定位。
+- 展示层的删除、业务数据修订、存储清理及审计保留不是同一操作；上传文件删除后如何追溯被采纳证据有待 DC-035。
+- Conversation 的软删除与对外分享快照是两个独立生命周期，不能只删会话列表项而留下无法撤销的公开可读健康对话（DC-026/039）。
+- Profile 中的姓名、身份偏好、生日/性别以及用户时区，哪些可选、哪些属于敏感资料，由 DC-015/040 明确，不能照搬旧表作为完整字段列表。

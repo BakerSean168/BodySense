@@ -31,7 +31,7 @@ docs/
 │   ├── interface.md             窗口与交互
 │   ├── acceptance.md            测试矩阵（引用规则编号）与实施顺序
 │   ├── glossary.md              术语表与 Penpot / 旧代码名称对照
-│   ├── domain-decisions.md      已核实的待决子集（原 83 项待合流）
+│   ├── domain-decisions.md      独立重建的 70 项待决（原 83 项未获得）
 │   ├── implementation-gaps.md   目标规格与当前代码差异
 │   ├── open-questions.md        Q-* 开放问题
 │   └── decisions.md             已决定问题的决策记录

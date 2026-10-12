@@ -1,8 +1,8 @@
-# BodySense · 领域契约待决登记（恢复工作分支）
+# BodySense · 领域契约独立重建决策登记
 
-**状态：部分恢复，尚非完整决策登记表。** Hark 的五份 domain-drafts 分析和原先的 83 项去重清单未推送、当前不可访问。下表仅覆盖已知且可由现行规格或明确交接信息支持的问题，不能宣称等同于其 21 项 P0 或全部 83 项。临时编号 DC-* 用于避免与 Hark 草稿 D-0xx 重号；获得原清单后统一映射、去重和编号，不凭空补齐条目。
+**状态：独立重建，待产品评审，未与 Hark 原草稿核对。** GitHub 未保存 Hark 所述的 `ec817b8` 和五份 `work/domain-drafts/`；此表依据已合并的产品规格、当前 Go/React/SQL 源码重新梳理决策问题。条目与 Hark 所说的 83 项、21 项 P0 **没有逐条对应关系**，不得把独立重建的数量作为原草稿恢复率。DC-* 是本轮独立编号，后续如找到原文件再以语义、来源和影响范围去重映射。
 
-**决策规则**：只有产品负责人确定后，才能修改相关 `domain/*.md` 的规范性状态/字段，并同步需求、流程、验收；`pending` 不是系统运行状态，不得交给实现者猜测。已经批准的语义继续以各领域契约为准。
+**决策归属**：P0 均为需要产品负责人拍板的业务或隐私约束。P1/P2 混合业务语义与工程迁移问题：例如 DC-028/029/030/038/044/046/052/053/064/070 可以先由工程方提供实现方案和验证，但不得突破已获批准的不变量；涉及用户可见行为或权限改变时仍需产品批准。任何未决定的业务语义都不能写成正式默认值。`pending` 在本表中表示决策尚未结案，而非产品的业务状态。
 
 | ID | 优先级 | 待决定事项（不预设答案） | 决策将影响 | 原有问题 |
 | --- | --- | --- | --- | --- |
@@ -31,6 +31,81 @@
 | DC-023 | P1 | 资料、报告、器材的完整字段、删除/停用和历史保留 | Person 资产 | 新 |
 | DC-024 | P1 | 已撤回或不再适用的病情，未来重新采纳的条件及审计方式 | ConditionEntry.disposition | 新 |
 
+| DC-025 | P1 | 旧 `BodyStateFact.ReviewState` 和 `Trend` 是否进入新 BodyFact，还是只作为兼容投影 | BodyFact / 历史迁移 | [BodyState As-Is](./domain/bodystate.md#26-当前-go-实现映射as-is不是新规格) |
+| DC-026 | P1 | 旧 `Kind` 类目（`lifestyle.*`、`history.*`、`equipment.available`）如何对齐新 `symptom/activity/lifestyle` 并保持检索稳定 | BodyFact 类目与旧数据 | 同上 |
+| DC-027 | P1 | BodyObservation 的值、单位、检测方法、检测条件、有效区间及纠错链的最终字段是什么 | BodyObservation 逻辑 Schema | [BodyState](./domain/bodystate.md) |
+| DC-028 | P1 | 旧 Observation `unverified/confirmed/rejected` 与证据 `admissible/needs_review/rejected` 如何解耦及映射 | 证据准入与推理资格 | [证据管线](../architecture/health-document-evidence-pipeline.md) |
+| DC-029 | P1 | 旧 AI Hypothesis 历史记录如何迁移到分析审计；用户假设如何保留可撤回的证据关联 | BodyHypothesis 与 Run 迁移 | IG-05 |
+| DC-030 | P1 | BodyStateRevision 的结构化变更操作、不可变依据、关联 sourceId 和重放保留策略 | BodyStateRevision | [旧模型](../../apps/api/internal/model/body_state.go) |
+| DC-031 | P1 | BodyFact `historical` 的初始条件、恢复/复发时与真实 TemporalChange 的区别 | BodyFact 生命周期 | DC-019 延伸 |
+| DC-032 | P2 | ConcernGroup 的稳定分组键、合并/拆分、派生更新及展示顺序应如何定义 | DerivedConcernGroup | INV-25 |
+| DC-033 | P1 | 用户删除或撤回原始消息后，事实来源和审计如何最小化保留与脱敏 | BodyFact provenance / 隐私 | G-04 |
+| DC-034 | P1 | Media/Reports 在上传、OCR 处理中、分析失败与重试时展示何种状态，如何区别证据准入状态 | Person 资产 UI | UserUpload |
+| DC-035 | P0 | 删除医疗报告/源图像时，已采纳的衍生证据与原始资料如何清除、撤回或继续受控留档 | Person 隐私与证据完整性 | R-PS-03 / G-04 |
+| DC-036 | P1 | 归档、删除 Conversation 后 pending 互动、运行恢复、证据消息关联与历史如何处理 | Conversation 生命周期 | [Person/Chat](./domain/person-chat.md) |
+| DC-037 | P1 | Message 的草稿、流式、失败、重试、撤回是否需要持久状态，以及与 Run 状态如何隔离 | Message 状态机 | 同上 |
+| DC-038 | P1 | AgentInteraction 的 answered/cancelled/expired 如何映射被底版取代的业务提案、重试和跨设备恢复 | 互动状态机 | 同上 |
+| DC-039 | P0 | 旧 ConversationShare 公开链接是否继续保留；若保留，需怎样的显式授权、敏感内容处理、撤回和过期机制 | 健康对话隐私 / 分享 | IG-06 |
+| DC-040 | P1 | 用户时区、语言、单位制等偏好属于 Profile 还是独立 Preferences；变更何时对旧记录生效 | Person / 时间语义 | DC-015/022 |
+| DC-041 | P1 | 器材可用性（是否拥有/可借用/停用）与训练计划选动作的关系，以及默认可见性 | Equipment / TrainingPlan | DC-023 |
+| DC-042 | P1 | 同一上传文件同时是 Media 和 Report 时，是一个资源多视图还是复制两条记录 | Person 资产身份 | DC-023 |
+| DC-043 | P2 | Conversation 标题生成失败、重算、用户手动改名、置顶的状态与来源如何展示 | Conversation 元数据 | [旧模型](../../apps/api/internal/model/conversation.go) |
+| DC-044 | P1 | Agent ToolCall succeeded 是否必须附带业务写入 commitId/revision 才能向用户报告“已保存” | Agent 工具与领域授权 | INV-09 |
+| DC-045 | P1 | 同一 Run 有多个 pending 工具确认时的顺序、去重及互相失效策略 | PendingInteraction | DC-017 |
+| DC-046 | P1 | 用户与 Agent 同时编辑不同 Conversation 时，何种运行锁和用户可见的冲突反馈 | Conversation / Run | G-04 |
+| DC-047 | P1 | 同一病情的名称同义、不同部位、多种病因假设如何匹配现有 conditionId，避免错误合并 | Diagnosis 身份 | DC-021 |
+| DC-048 | P1 | 医疗证据更新或撤销后，诊断结论来源升级/降级如何保留关联和历史版本 | ConditionEntry 来源链 | INV-11/15 |
+| DC-049 | P1 | 用户一次直接更正同时影响 BodyState 和 Diagnosis，跨聚合提交如何界定原子性/部分失败补偿 | ConditionDirectEdit | INV-19 |
+| DC-050 | P1 | 新证据改变已确认提案后，新/旧内容指纹及交互卡怎样衔接而不重复索取授权 | ConditionProposal | INV-17 |
+| DC-051 | P1 | ConditionAnalysisRun 基础修订过期后，是结束旧 Run 还是创建新 Run，如何展示已决但未生效的记录 | Diagnosis 运行恢复 | INV-12/16 |
+| DC-052 | P1 | PlanPatch 各操作（添加/移除/改组次/改频率/排期）逻辑类型、路径和冲突边界 | PlanPatch | R-TP-03/04 |
+| DC-053 | P1 | TrainingPlanRevision 的 ID、父修订、精确 diff、授权记录和历史回放契约 | TrainingPlanRevision | INV-07/09 |
+| DC-054 | P1 | 旧打卡布尔值 `is_checked_in`、旧日粒度 `Exercises` 如何转为组级完成事实，历史不可推断部分如何展示 | TrainingSessionLog 迁移 | IG-01 |
+| DC-055 | P1 | 旧 Treatment 的 `review_recommended` 和 `paused` 如何映射到新“复核建议”与独立 SafetyState，而不篡改 Plan.status | 训练计划迁移 | IG-03 |
+| DC-056 | P1 | 同一用户同一计划/模板一天能否多次训练或多设备并行训练，日志如何唯一定位 | TrainingSessionLog 身份 | DC-010 |
+| DC-057 | P1 | 训练暂停/恢复的计时语义、离线恢复、跨设备计时与超时恢复 | Trainer 执行状态 | R-EX-03 |
+| DC-058 | P1 | 用户误点完成或跳过后是否可撤销/更正，变更事实怎样保留追加审计 | exerciseRecords | INV-26 |
+| DC-059 | P1 | `ended` 时如何区分正常完成、主动提前结束、取消和安全终止；是否新增结束原因 | TrainingSessionLog | DC-013 |
+| DC-060 | P1 | 用户暂停或完成的 TrainingPlan 能否再次激活，多个计划同时处于 active 的规则 | TrainingPlan.status | DC-012 |
+| DC-061 | P1 | 已接受计划更改频率/课模板后，历史日志及未来排期如何与修订关联 | 计划排期 / Revision | DC-010 |
+| DC-062 | P1 | 多个限制覆盖同一计划/动作时 UI 展示及解除顺序如何合并，是否存在最严格优先策略 | SafetyRestriction 范围 | DC-003 |
+| DC-063 | P1 | 导致限制的 BodyFact/Observation 更正后，限制需不需要触发复核，谁可以发起解除 | SafetyState 来源变化 | DC-004 |
+| DC-064 | P1 | 并发新增安全风险与解除旧限制时，如何确保单条限制级别的 CAS / 不可清除新风险 | SafetyState 并发安全 | INV-09/20 |
+| DC-065 | P1 | 专业放行的用户转述与文件来源出现矛盾/失效时如何提示、驳回或请求复核 | professional_clearance | DC-004 |
+| DC-066 | P1 | 若引入病程 Episode，其 ID、时间区间、复发与结束边界，以及与 BodyFact 的对应关系 | Diagnosis 历史 | DC-021 |
+| DC-067 | P1 | 多条 ConditionEntry 合并/拆分时如何保持稳定引用、用户确认、撤回历史及训练关联 | Diagnosis 条目身份 | DC-047 |
+| DC-068 | P1 | 已撤回病情再次采纳时，旧拒绝指纹和新证据豁免是否应重新计算 | Diagnosis 反复采纳 | DC-024 |
+| DC-069 | P1 | 多份临床文件的诊断结论相互冲突时如何展示新旧来源及用户选择，不伪称医学排除 | Diagnosis 临床历史 | INV-15 |
+| DC-070 | P1 | 直接编辑与另一设备的正式分析同时提交时，诊断修订冲突应如何安全恢复并通知用户 | Diagnosis 并发 | INV-09/12 |
+
 **已确定但不可改写的边界**：确有危险风险时终结当前 Run 的 INV-23、安全限制不能静默修改 TrainingPlan 的 INV-08、用户拒绝更新不撤回整个诊断的 INV-18、临床文件与模型分析不同来源的 INV-11/15、提案关闭不等于拒绝，均已是正式契约。上表只决策这些规则尚未覆盖的细节。
 
-原 [open-questions.md](./open-questions.md) 的 Q-15、Q-17、Q-18、Q-19 仍然保留，作为合并前已有问题的来源；待原 83 项可访问后，再决定是否以单一登记表替换。
+原 [open-questions.md](./open-questions.md) 的 Q-15、Q-17、Q-18、Q-19 仍然保留，作为 PR #245 的正式待决来源；新一轮独立发现的详情进入本表。提交合并前需由产品负责人明确 P0 的范围和取舍；未获批准的业务语义不得由 Agent 根据旧代码自动填充。
+
+## P0 决策评审稿（不预选答案）
+
+下面只列**需要明确产品意图**的 P0，候选方向不是已获批准的行为，也没有绑定旧代码。可以一次按领域讨论，不需要把技术实现细节交给产品负责人选择。
+
+| ID | 必须明确的问题 | 可比较的方向 |
+| --- | --- | --- |
+| DC-001 | 风险等级 | 少量可解释等级 / 细分等级；无论哪种都需稳定、可测试的门禁行为 |
+| DC-002 | 如何判断危险症状 | 基于明确规则的信号分类 / 证据与规则结合；AI 模型本身不担任最终解除权威 |
+| DC-003 | 风险作用范围 | 单计划、单动作 / 再加入全训练阻断；需要界定重叠时行为 |
+| DC-004 | 解除条件 | 有结构的规则和来源 / 少量枚举化条件；必须兼容已批准的三种解除策略 |
+| DC-005 | 风险处理后的分析 | 手动重新请求 / 明确复核合格后才允许请求；原被阻断 Run 永不复活 |
+| DC-006 | 训练中突然出现风险 | 自动暂停当前 Session / 中止当前动作并要求明确恢复；任何方案都不能继续执行受限动作 |
+| DC-007 | Habits 如何写入 | 所有明确本人陈述自动记录 / 某些类别先审核；哪些是需要澄清的“歧义”须清晰 |
+| DC-008 | Records 如何写入 | 与 BodyState 使用同一入库权威 / 特定记录类别单独复核；Person 只展示而不复制真值 |
+| DC-009 | 多提案确认交互 | 同一 Chat 中逐项处理 / 结构化批量浏览后逐项决定；临床、结束、普通提案保持不同语义 |
+| DC-010 | 排期与漏练补练 | 仅每周频率 / 具体日历排期、漏练和补练规则 |
+| DC-011 | 动作身份 | 计划修订内稳定 ID / 跨修订可追踪 ID；不能继续用名称充当身份 |
+| DC-012 | 计划生命周期 | 暂停/恢复/完成/重开允许的状态图；手动与自动事件有哪些权威 |
+| DC-013 | 跳过粒度 | 当前组 / 当前动作 / 整次课；结束和跳过是否独立事件 |
+| DC-014 | Penpot Draft | 预览 / 未接受计划草稿 / 其他表现；先核对实际交互再选 |
+| DC-015 | Profile 身份 | 最小必需资料 / 扩展可选资料；哪些字段可编辑或只展示 |
+| DC-016 | 对话数量 | 一个长期 Conversation / 多 Conversation 同时长期存在；需要明确 pending 互动如何归属 |
+| DC-017 | 等待决定时继续补充 | 在卡片内补充 / 普通输入框仍能发送绑定原 Run 的内容 / 混合机制 |
+| DC-035 | 报告与派生证据删除 | 保留不可识别的证明链 / 清除并撤销衍生证据 / 按用户指令与合规边界区分 |
+| DC-039 | 旧公开对话分享 | 明确保留且需要授权、过期、撤回、脱敏 / 停用并处理历史分享；不能在未决定前把私有健康数据公开为默认能力 |
+
+**决策落地路径**：先确认业务行为 → 更新相应领域属性与合法状态转换 → 更新 Agent 工作流和 UI 状态 → 补充正反例验收 → 实现 Go 权限与并发校验。缺少安全解除和隐私授权的情形不得因前端按钮可见而放宽规则。

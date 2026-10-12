@@ -98,3 +98,26 @@ type BodyHypothesis = {          // 只保存用户本人提出的怀疑（R-BS-
 ### 2.5 UI 状态和验收
 
 记录应支持：当前/已缓解/历史、用户提出的怀疑、事实更正、待澄清、来源证据可追溯、OCR 待核实、保存成功和保存失败。产品默认不展示内部修订号。验收沿用 BS-01～11，新增 BS-12～15；对于 DC-019/020 未定转换不写伪造的通过条件。
+
+### 2.6 当前 Go 实现映射（As-Is，不是新规格）
+
+| 旧持久对象 | 已存在的字段/状态 | 新契约迁移注意 |
+| --- | --- | --- |
+| [BodyState](../../../apps/api/internal/model/body_state.go) | UserID、CurrentRevision、SafetyState(JSON)、CreatedAt/UpdatedAt；Facts/Observations/Hypotheses 为读取投影 | 新规格的 `concernGroups` 是派生视图，不能为了匹配旧 JSON 再建第二套事实 |
+| [BodyStateFact](../../../apps/api/internal/model/body_state.go) | ID、UserID、ConcernKey、Kind、BodyRegion/ID、Value、Details、Origin、ReviewState、LifecycleState、Trend、SourceKey、Provenance、ObservedAt、ValidFrom/Until、SupersedesFactID、ExcludedFromReasoning、Created/UpdatedRevision 与时间 | 旧 `ReviewState`、`Trend` 等不是新 BodyFact 的既定字段；需决定保留、映射或退役（DC-025/026） |
+| [BodyStateObservation](../../../apps/api/internal/model/body_state.go) | Kind、Method、Value(JSON)、Condition、SourceKey、Provenance、ObservedAt、ReviewState、LifecycleState、SupersedesObservationID、ExcludedFromReasoning、修订和时间 | 旧 `unverified/confirmed/rejected` 是 Observation 的 review_state，不等于文档证据的 admissible/needs_review/rejected（DC-027/028） |
+| [BodyStateHypothesis](../../../apps/api/internal/model/body_state_reasoning.go) | `active/strengthened/weakened/unsupported/retired`，Confidence、SupportingFact/Observation/Evidence IDs、CounterevidenceIDs、SourceAnalysisID、Provenance | 旧注释和写入路径面向 AI 推测；与新用户假设的来源/生命周期冲突（DC-020/029），严禁直接照搬 |
+| [BodyStateRevision](../../../apps/api/internal/model/body_state.go) | ID、UserID、Revision、ChangeType、Source、Changes(JSON)、CreatedAt | 旧变更流是可靠的迁移依据，但 JSON 事件结构不等于新领域的最终逻辑契约（DC-030） |
+
+以上证据也能在 [数据库基线迁移](../../../apps/api/migrations/000001_vnext_baseline.up.sql) 中核对。**As-Is 只描述当前实现，不授权用旧字段覆盖新产品规则。**
+
+### 2.7 领域转换审查表（未定项必须保持开放）
+
+| 操作 | 当前结果是否已定义 | 未定项 |
+| --- | --- | --- |
+| 新增、重复写入、纠错、真实病程变化 | 已批准 Add/Duplicate/Correct/TemporalChange；由 Go 校验事务 | 证据身份、并发重试行为见 INV-03/09 |
+| 观察候选自动准入 | 证据管线已定义可自动或人工准入 | 方法、单位、置信度、版本和更正后的重新准入（DC-027/028） |
+| `historical` 恢复到 active | **未定** | DC-019/031 |
+| 用户假设撤回或改为更谨慎的判断 | **未定** | DC-020/029 |
+| 多 Fact 组成 ConcernGroup、Concern 合并/拆分 | 分组仅为派生投影；身份规则 **未定** | DC-032 |
+| 源消息删除、敏感信息撤回后如何保持审计来源 | **未定** | DC-033 |

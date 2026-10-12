@@ -16,7 +16,7 @@ BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然
 | [UI 与交互](./interface.md) | 3D 人体桌面、业务窗口、交互工具、平台要求 | — |
 | [验收规范](./acceptance.md) | 测试矩阵（引用规则编号）与实施顺序 | `BS/DX/TP/UI/SEC-*` |
 | [术语表](./glossary.md) | 标准术语、避免使用的说法、Penpot / 旧代码名称对照 | — |
-| [领域待决](./domain-decisions.md) | 可访问材料中的待决项子集；原 83 项待合流 | DC-* |
+| [领域待决](./domain-decisions.md) | 由正式规格和源码独立重建的 70 项（19 项 P0），并非 Hark 原始 83 项的恢复副本 | DC-* |
 | [实现差异](./implementation-gaps.md) | 源码静态证据与目标契约差异 | IG-* |
 | [开放问题](./open-questions.md) | 规格内的矛盾与待决定事项 | `Q-*` |
 | [决策记录](./decisions.md) | 已决定问题的结论、原因与写入位置（规则本身仍在上述各文件） | `Q-*`、`GAP-*` |
