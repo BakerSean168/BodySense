@@ -12,7 +12,7 @@
 | **BodyHypothesis** / 用户假设 | 用户本人提出的病因怀疑或可能疾病（`source = user`），自动记录；不具备确诊权威。AI 提出的假设不属于 BodyState，只在 ConditionAnalysisRun 中 | [requirements R-BS-06](./requirements.md#22-bodystate-身体状态) · [domain §2](./domain.md#2-bodystate) | 候选诊断（DiagnosisAnalysis candidates，旧实现）；用「假设」指 AI 推测的持久记录 |
 | **Diagnosis** / 综合诊断 | 每位用户唯一的当前综合结果，只由用户确认过的 ConditionEntry 组成 | [requirements §2.3](./requirements.md#23-diagnosis-综合诊断) · [domain §3](./domain.md#3-diagnosis) | 综合分析、评估、评估报告、Assessment、问诊诊断、诊断报告 |
 | **ConditionEntry** / 病情条目 | Diagnosis 内具有稳定身份的单个病情：名称、原因分析、处理方案、来源（`source`）、结论状态（`conclusionStatus`）、确认记录（`confirmation`）、病程（`lifecycle`）与采纳状态（`disposition`） | [domain §3](./domain.md#3-diagnosis) | 候选病情、诊断候选、局部诊断报告；`certainty`（已拆分的旧字段） |
-| **ConditionAnalysisRun** / 正式分析运行 | 一次正式分析的追加式审计：请求、范围、底版修订、证据、AI 假设、产生的提案。创建时写入的基础记录与审计事件不可变；当前状态（open / committed / closed_without_change）是由事件推导的投影，按顺序回放基础记录与事件可完全重现 | [domain §3.1](./domain.md#31-正式分析审计对象) | DiagnosisAnalysis（新规格中不再使用此名） |
+| **ConditionAnalysisRun** / 正式分析运行 | 一次正式分析的追加式审计：请求、范围、底版修订、证据、AI 假设（创建时快照 + 之后追加的 `hypothesis_added`，均无权威）、产生的提案。创建时写入的基础记录与审计事件不可变；当前状态（open / committed / closed_without_change）是由事件推导的投影，按顺序回放基础记录与事件可完全重现 | [domain §3.1](./domain.md#31-正式分析审计对象) | DiagnosisAnalysis（新规格中不再使用此名） |
 | **ConditionProposal** / 病情提案 | 一次运行提出的单个条目新增/更新/结束，带内容指纹与证据 ID，尚待用户在 Chat 中决定；结束提案须写明结束目标（`endTarget`：标记缓解 / 不再适用）与原因 | [domain §3.1](./domain.md#31-正式分析审计对象) · [agent-workflows §3.2](./agent-workflows.md#32-diagnosis-正式分析与病情确认) | 已确认诊断、初步诊断（当作已写入时） |
 | **ConditionProposalDecision** / 用户决定记录 | 用户对某个提案的决定（含拒绝）的追加式审计；用于「不重复提议」判定 | [domain §3.1](./domain.md#31-正式分析审计对象) | 「否定记录」（未定义存储时的旧说法） |
 | **ConditionDirectEdit** / 直接编辑记录 | 用户明确要求更正、撤回或标记缓解某个条目时，经轻量确认写入的用户决定审计（谁、什么、何时、原因）；不经正式分析 | [requirements R-DX-13](./requirements.md#23-diagnosis-综合诊断) · [domain §3.5](./domain.md#35-用户直接更正撤回与标记缓解) | 用「撤回提案」指直接编辑 |
@@ -48,6 +48,7 @@ ConditionEntry 把旧 `certainty` 拆成独立维度（[domain §3](./domain.md#
 | 采纳状态 | 该解释是否仍被采纳：采纳 / 用户撤回 / 不再适用 | `disposition.state = adopted / withdrawn_by_user / no_longer_applicable` |
 | 用户认可 Agent 分析 | 用户同意纳入个人管理记录，**不等于临床确诊** | — |
 | 正式分析 | 用户请求/授权后进行、可能写入 Diagnosis 的分析 | `analyze_conditions` → ConditionAnalysisRun |
+| 分析安全阻断 | 正式分析中出现需要停止分析的严重风险（警示 / 需尽快就医类），运行终止、不写入 Diagnosis；与 Trainer 的执行限制（SafetyState）不是一回事 | `ConditionAnalysisEvent.safety_blocked` → `outcome = safety_blocked` |
 | 初步解释 | 普通 Chat 中对可能方向的讨论，不写入 Diagnosis | — |
 
 「评估」只用于描述医生或专业人员的线下诊治（如「建议就医进行专业检查」），不得用于指代 Diagnosis 或 Agent 的分析。
