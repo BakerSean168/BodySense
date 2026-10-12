@@ -175,7 +175,7 @@ pnpm postman:validate-native   # 可选：使用已安装的 Postman CLI 做原�
 - [文档总索引](../README.md)：现行文档、主题位置与归档说明
 - [产品文档导航](../product/README.md)
 - [产品需求](../product/requirements.md)
-- [领域契约](../product/domain.md)
+- [领域契约](../product/domain/README.md)
 - [Agent 工作流](../product/agent-workflows.md)
 - [UI 与交互](../product/interface.md)
 - [验收标准](../product/acceptance.md)

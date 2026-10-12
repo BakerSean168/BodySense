@@ -2,7 +2,7 @@
 
 **状态：产品业务规格 · 2026-10-12（业务规则唯一来源）**
 
-本文件回答「做什么、为什么」，并为每条业务规则分配编号（`R-*`、`G-*`）。数据契约与不变量见 [领域模型](./domain.md)，流程与工具见 [Agent 工作流](./agent-workflows.md)，窗口与交互见 [UI 与交互](./interface.md)，测试矩阵见 [验收规范](./acceptance.md)。术语以 [术语表](./glossary.md) 为准。
+本文件回答「做什么、为什么」，并为每条业务规则分配编号（`R-*`、`G-*`）。数据契约与不变量见 [领域模型](./domain/README.md)，流程与工具见 [Agent 工作流](./agent-workflows.md)，窗口与交互见 [UI 与交互](./interface.md)，测试矩阵见 [验收规范](./acceptance.md)。术语以 [术语表](./glossary.md) 为准。
 
 ## 1. 产品目标
 
@@ -125,3 +125,9 @@ BodySense 提供健康信息整理、解释与辅助训练建议，不替代医�
 | **F｜风险阻断** | 出现需要就医检查的警示情况 → 清楚提示下一步，限制不合适的训练执行，保留原计划内容 | R-SAFE-01～02 |
 
 未决问题与已发现的规格矛盾集中列于 [开放问题](./open-questions.md)。
+
+## 5. 领域状态契约落地边界
+
+每个领域的字段、状态枚举、合法转移、事件、权限、历史与验收以 [领域契约](./domain/README.md) 中相应权威文档为准。不得把 BodyHypothesis 与 Agent 推测、TrainingPlan.status 与 SafetyRestriction、训练结束与全部动作已完成、Person 展示与第二份身体真值混同。
+
+未定的业务语义在 [domain-decisions.md](./domain-decisions.md) 中保留，现阶段只覆盖可核实子集；现有代码与目标差异见 [implementation-gaps.md](./implementation-gaps.md)，不代表已经实现。

@@ -45,7 +45,7 @@ Repository documentation owns product semantics and invariants.
 The primary product-design documents are:
 
 - `docs/product/requirements.md`;
-- `docs/product/domain.md`;
+- `docs/product/domain/README.md`;
 - `docs/product/agent-workflows.md`;
 - `docs/product/interface.md`;
 - `docs/design/README.md`;

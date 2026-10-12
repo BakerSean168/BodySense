@@ -1,6 +1,6 @@
 # BodySense · UI 与交互规格
 
-**本文件定义窗口、交互与平台要求。** 业务规则见 [产品需求](./requirements.md)，数据见 [领域模型](./domain.md)，Agent 流程见 [Agent 工作流](./agent-workflows.md)。视觉基准是 Penpot 文件 **BodySense · Product Design** 的 Product 页（见 §8）；设计稿中的旧窗口名按 [术语表 §3](./glossary.md#3-penpot--旧代码名称对照) 换算。
+**本文件定义窗口、交互与平台要求。** 业务规则见 [产品需求](./requirements.md)，数据见 [领域模型](./domain/README.md)，Agent 流程见 [Agent 工作流](./agent-workflows.md)。视觉基准是 Penpot 文件 **BodySense · Product Design** 的 Product 页（见 §8）；设计稿中的旧窗口名按 [术语表 §3](./glossary.md#3-penpot--旧代码名称对照) 换算。
 
 ## 1. 核心空间
 
@@ -116,3 +116,15 @@ Penpot 项目：**BodySense · Product Design**，文件 ID `24d9d841-759d-81bc-
 - [移动 Viewer](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=0)
 
 原型是视觉与交互基准；业务语义以本目录规格为准。旧 UI 架构（问诊会话、单一 Treatment 及其修订、按问诊生成的 DiagnosisAnalysis 候选、Assessment 报告）不得覆盖本规格。
+
+## 9. 业务窗口状态索引（供 Penpot 后续精细化）
+
+| 窗口 | 必须区分的业务和 UI 状态 | 归属与未决 |
+| --- | --- | --- |
+| Chat | loading/error、pending、已决定未提交、继续补充、恢复、expired、stale、安全阻断 | [Person/Chat](./domain/person-chat.md)；DC-017、Q-19 |
+| Person | 五标签各自 empty/loading/populated/error；报告候选 admissible/needs_review/rejected；身份弹层 | [Person/Chat](./domain/person-chat.md)；DC-007/008/015 |
+| Diagnosis | 四个独立状态维度，提案确认、证据变化、历史、安全终结 | [Diagnosis](./domain/diagnosis.md)；DC-021/024 |
+| TrainingPlan | 计划 active/paused/completed、提案 pending/accepted/rejected/expired、独立安全限制 | [Training](./domain/training.md)；DC-010/012 |
+| Trainer | in_progress/paused/ended、动作和组的真实完成、限制暂不宜执行；Draft 未定 | [Training](./domain/training.md)；Q-15、DC-006/013 |
+
+这是状态覆盖清单，不要求为每个组合复制 Penpot 静态画板。窗口视觉状态不能冒充后端持久业务状态。

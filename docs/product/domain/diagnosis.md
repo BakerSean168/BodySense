@@ -1,139 +1,4 @@
-# BodySense · 领域模型与数据契约
-
-**本文件定义数据契约与不变量（`INV-*`）。** 业务规则（为什么、什么场景）见 [产品需求](./requirements.md)，执行步骤见 [Agent 工作流](./agent-workflows.md)。业务数据以用户为隔离边界；当前状态是可查询的投影，内部修订用于审计、一致性与恢复。
-
-字段均为**逻辑契约**；实际持久化结构按类型和服务边界落实，不要求照搬为单一表。
-
-## 1. 聚合关系
-
-~~~text
-User
-├─ Profile                    基础资料：身份与偏好（在 Person 中展示）
-├─ BodyState (1)              当前身体事实及真实病程
-│  ├─ BodyFact[]              用户自述、行为和生活习惯
-│  ├─ BodyObservation[]       测量、自测和有来源的观察
-│  ├─ BodyHypothesis[]        用户本人提出的怀疑（source = user）；AI 假设不进入 BodyState
-│  ├─ ConcernGroups           由相关信息形成的组织范围
-│  ├─ SafetyState             权威风险状态与执行限制（Trainer 据此把关）
-│  └─ BodyStateRevision[]
-├─ Diagnosis (1)              用户确认过的病情综合诊断（含用户选择保留的疑似病情）
-│  ├─ ConditionEntry[]        稳定身份，支持多项局部更新
-│  ├─ SafetySummary
-│  ├─ ConditionDirectEdit[]   用户直接更正 / 撤回 / 标记缓解的决定审计（§3.5）
-│  └─ DiagnosisRevision[]
-├─ ConditionAnalysisRun[]     正式分析执行审计（审计事件只追加；运行状态为投影），含 AI 假设（创建时快照 + 追加事件）与证据引用
-│  ├─ ConditionProposal[]     本次分析提出的条目新增/变更
-│  └─ ConditionProposalDecision[]  用户对每个提案的决定（审计）
-└─ TrainingPlan (0..N)
-   ├─ CurrentPlanContent
-   ├─ TrainingPlanRevision[]
-   ├─ PlanChangeProposal[]
-   └─ TrainingSessionLog[]    实际执行的训练记录（区别于计划中的 PlanSessionTemplate）
-~~~
-
-- 一个病情可以关联多个 Concern，一个 Concern 可关联多种候选解释。Concern 是便于组织事实的派生分组，不是另一份身体真值，不要求用户创建或管理独立问题实体与报告。
-- Conversation 记录对话和工具活动；当前身体事实的权威来源是 BodyState（G-02）。
-- Profile 保存相对稳定的身份信息；测量值、生活习惯和伤病状态属于具有时间语义的 BodyState。
-
-## 2. BodyState
-
-~~~ts
-type BodyState = {
-  userId: string;
-  currentRevision: number;       // 内部字段
-  currentFacts: BodyFact[];
-  observations: BodyObservation[];
-  hypotheses: BodyHypothesis[];
-  concernGroups: DerivedConcernGroup[];  // 组织投影，不单独持有身体事实
-  safetyState: SafetyState;
-};
-
-type BodyFact = {
-  id: string;
-  statement: string;
-  bodyRegionIds: string[];
-  subject: "self";
-  kind: "symptom" | "health_history" | "activity" | "lifestyle" | "training_feedback";
-  source: { kind: "user_message" | "direct_edit" | "structured_answer"; id: string };
-  validFrom?: string;
-  validTo?: string;
-  observedAt?: string;
-  recordedAt: string;
-  timePrecision: "exact" | "day" | "range" | "approximate" | "unknown";
-  lifecycle: "active" | "resolved" | "historical";
-  correctedFactId?: string;
-  supersedesFactId?: string;
-};
-
-type BodyHypothesis = {          // 只保存用户本人提出的怀疑（R-BS-06）
-  id: string;
-  statement: string;             // 如「我怀疑是偏头痛」
-  source: { kind: "user"; messageId: string };
-  relatedFactIds: string[];
-  bodyRegionIds: string[];
-  recordedAt: string;
-};
-
-type SafetyState = {             // 风险状态的权威来源（R-SAFE-03）
-  restrictions: SafetyRestriction[];
-};
-
-type SafetyRestriction = {
-  restrictionId: string;
-  riskLevel: string;             // 风险等级；取值集合待定（Q-18）
-  reason: string;                // 面向用户的原因与就医提示
-  scope:
-    | { kind: "plan"; planId: string }
-    | { kind: "exercise"; planId: string; exerciseIds: string[] };
-  validFrom: string;
-  validUntil?: string;           // on_expiry：到期时间，必填；其他策略：复核时点，为空表示无预定复核时点
-  liftPolicy: "on_expiry" | "user_reverification" | "professional_clearance";  // 解除策略，见下文
-  liftConditions: string[];      // 如「经医生检查确认可恢复训练」
-  liftedAt?: string;
-  liftedReason?: string;         // 解除时记录满足了哪个条件及来源
-  liftBasis?:                    // 解除依据，必须与 liftPolicy 一致
-    | { kind: "expiry" }                                              // 仅 on_expiry
-    | { kind: "user_reverification"; checkInteractionId: string }     // 用户经复核问答重新确认症状
-    | { kind: "professional_clearance";
-        sourceKind: "user_message" | "clinical_document"; sourceId: string };  // 用户记录的专业放行及来源
-  sourceIds: string[];           // 触发该限制的事实 / 观察 / 分析
-};
-~~~
-
-- SafetyState 持有风险状态；Trainer 在开始和继续执行时检查当前有效的限制并把关（R-SAFE-03）。限制不修改 `TrainingPlan.status` 或计划内容（INV-08）。
-- 范围为 `exercise` 时只拦截指定动作。
-- **解除规则**（R-SAFE-04、INV-20）：
-  - `on_expiry`：到达 `validUntil` 自动解除（`liftBasis.kind = expiry`）。只有这一策略允许到期自动解除。
-  - `user_reverification`：到达 `validUntil` 只触发复核提示，限制继续生效；用户通过复核问答重新确认症状、结果满足 `liftConditions` 后才解除。
-  - `professional_clearance`：到达 `validUntil` 同样只触发复核提示，限制继续生效；用户记录专业人员（如医生）的放行并给出来源（用户消息或经 [证据管线](../architecture/health-document-evidence-pipeline.md) 采纳的文件证据）后才解除。
-  - 需要就医检查的警示类风险（红旗征象 / 建议就医）默认 `professional_clearance`。其余风险等级的取值及其默认策略见 [Q-18](./open-questions.md)。
-  - Agent 不能自行解除限制，也不能放宽已设定的 `liftPolicy`；每次解除必须写入与策略一致的 `liftBasis`。
-
-### 2.1 写入语义与证据分类
-
-满足 R-BS-02 的用户自述，经过结构验证后直接保存，无需事前人工批准。系统必须核查来源消息、用户身份、主体归属、时间语义、字段可解释性及幂等标识。
-
-| 分类 | 含义 | 权威边界 |
-| --- | --- | --- |
-| 用户自述（BodyFact） | 用户明确报告的现象、健康史或生活习惯 | 自动记录不等于临床客观核实 |
-| Observation | 有方法及来源的检查、自测、测量或报告观察；报告识别值只有按 [证据管线](../architecture/health-document-evidence-pipeline.md) 规则采纳后才形成 Observation（R-PS-03） | 可查看方法与来源；未核实 / 低于阈值的值不是可信临床证据 |
-| Hypothesis（BodyHypothesis） | 用户本人提出的病因怀疑或可能疾病，`source = user`，自动记录 | 不具备确诊权威；AI 提出的假设只存在于 ConditionAnalysisRun / ConditionProposal 审计，不写入 BodyState |
-| Evidence | 支持或反驳假设的文献、报告、测量等 | 必须有可追溯来源 |
-
-存在不可消除的关键歧义时，只对相关字段创建 Clarification；同一条消息的其他明确内容可以先提交（R-BS-03）。
-
-### 2.2 时间与更正操作
-
-| 操作 | 当前投影 | 审计和时间线 |
-| --- | --- | --- |
-| Add | 新增事实 | 记录来源与适用时间 |
-| TemporalChange | 更新有效状态 | 保留旧状态的真实时间区间 |
-| Correct | 更正错误记录 | 保留纠错痕迹，错误数据不当病程 |
-| Duplicate | 无实质改变或增加证据 | 不能制造多份相同事件 |
-| Clarify | 暂不写入模糊字段 | 记录待回答的问题、目标和来源 |
-
-- 至少区分身体状态有效时间、观察时间、记录时间、原始证据形成时间。描述「最近」「去年」「一周前」时保留原始精度并使用用户时区；不能为了填充字段而编造日期（R-BS-05）。
-- 一个语义完整的事务可以增删改多个 BodyFact，但只形成一次 BodyStateRevision。
+# BodySense · Diagnosis 领域契约
 
 ## 3. Diagnosis
 
@@ -214,7 +79,7 @@ type ConditionEntry = {
 
 字段组合约束：
 
-- `source` 只描述来源类型，由证据决定，**用户点击确认不能改变来源**；「临床文件记载」即 `source = clinical_document`，只能由经 [证据管线](../architecture/health-document-evidence-pipeline.md) 采纳的文件证据获得（R-PS-03）。
+- `source` 只描述来源类型，由证据决定，**用户点击确认不能改变来源**；「临床文件记载」即 `source = clinical_document`，只能由经 [证据管线](../../architecture/health-document-evidence-pipeline.md) 采纳的文件证据获得（R-PS-03）。
 - `conclusionStatus = clinical_diagnosis` 只允许与 `confirmation.decision = include_clinical` 及临床来源（`clinical_document` / `user_reported_clinical`）同时出现；`agent_analysis` 与 `user_suspicion` 只能是 `likely` 或 `suspected`。
 - **临床文件证据 ≠ 临床诊断**：`source = clinical_document` 且 `conclusionStatus = clinical_diagnosis` 只在被采纳的文件证据**明确记载由临床医生作出的该诊断**时成立（如诊断证明、病历或出院小结中的诊断）。化验值、影像测量值等只是支持某个假设的文件证据，只能作为 `agent_analysis` 提案的证据（`evidenceIds` / `supportingEvidenceIds`），不能使条目来源变为 `clinical_document`，也不能把结论升级为 `clinical_diagnosis`（INV-15）。
 - `user_reported_clinical` 表示「用户说医生这样诊断」，不等于有文件支持；`include_clinical` 只表示用户同意纳入个人病情管理，不是对医生诊断的再次判断。
@@ -222,7 +87,7 @@ type ConditionEntry = {
 
 ### 3.1 正式分析审计对象
 
-旧代码中的 DiagnosisAnalysis（按问诊生成的候选诊断）名称保留给旧实现；新规格拆为三个对象（术语对照见 [术语表 §3](./glossary.md#3-penpot--旧代码名称对照)），审计事件由 ConditionAnalysisEvent 追加记录：
+旧代码中的 DiagnosisAnalysis（按问诊生成的候选诊断）名称保留给旧实现；新规格拆为三个对象（术语对照见 [术语表 §3](../glossary.md#3-penpot--旧代码名称对照)），审计事件由 ConditionAnalysisEvent 追加记录：
 
 ~~~ts
 type ConditionAnalysisRun = {          // 一次正式分析执行 = 基础记录 + 由 ConditionAnalysisEvent 推导的投影
@@ -342,7 +207,7 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
   - 终结事件（`committed`、`closed_without_change`、`insufficient_evidence`、`safety_blocked`）只能有一个；终结后该运行的任何事件（含决定、复核、`hypothesis_added`）与补丁 / 提交请求一律被拒绝；
   - `insufficient_evidence` 只能在运行尚未产生任何 `proposal_created` 时写入；
   - `safety_blocked` 可在运行 `open` 期间任何时刻写入，包括已有提案、部分或全部已决定但尚未提交时。已有提案时，在同一原子事务中先为每个 `pending` 提案写入 `proposal_expired`（`safety_blocked`），再写入 `safety_blocked`；已决定提案保持 `decided`，决定留档但不生效；不写入 `committed`，不产生 DiagnosisRevision（§3.3「运行中安全阻断」、INV-23）；
-  - **终结竞争**：同一运行的终结写入串行化（如对运行事件序号使用乐观锁），先写入的终结事件胜出，另一个被拒绝：`safety_blocked` 先写入时提交被拒、不产生修订；`committed` 先写入时 `safety_blocked` 被拒，已提交的修订保留，安全提示仍按 [Agent 工作流 §5](./agent-workflows.md#5-安全处理) 照常展示；
+  - **终结竞争**：同一运行的终结写入串行化（如对运行事件序号使用乐观锁），先写入的终结事件胜出，另一个被拒绝：`safety_blocked` 先写入时提交被拒、不产生修订；`committed` 先写入时 `safety_blocked` 被拒，已提交的修订保留，安全提示仍按 [Agent 工作流 §5](../agent-workflows.md#5-安全处理) 照常展示；
   - **重复阻断幂等**：运行已以 `safety_blocked` 终结时，重复的 `safety_blocked` 请求（网络重试或 Agent 重复调用）返回已有结果，不追加事件。
 - **可回放**：按 `at`（同一时刻按写入顺序）依次回放基础记录与 ConditionAnalysisEvent，必须重现每个 Run / Proposal 的全部投影字段（含 `hypotheses`）与决定是否仍生效；不存在只能由投影本身保存、无法从事件推导的状态（INV-22）。
 - 当前 Diagnosis 是单一对外聚合视图。
@@ -380,7 +245,7 @@ type ConditionAnalysisEvent = {        // 追加写入的审计事件：写入�
   - `unaffected`：新证据与该提案无关，也不改变其内容指纹——原决定照常生效；
   - `affected`：新证据与该提案相关（应列入其证据或反证）或会改变其内容指纹——该提案记为 `superseded`（`evidence_changed`），原决定保留为审计但不再生效；Agent 在同一运行内重新提出提案（新证据 ID 满足 §3.1 不重复提议的例外），用户须重新决定；
   - 复核由 Agent 执行，结果与覆盖的证据 ID 留档；提交时 Go 业务规则校验覆盖完整性：任何已决定提案存在未复核的新证据 ID 时补丁不得提交，受影响的决定绝不未经复核提交。
-- **超时**：运行的未决定提案记为 `expired`（`timeout`），随后按上述规则提交已作出的决定。超时时长见 [Q-17](./open-questions.md)。
+- **超时**：运行的未决定提案记为 `expired`（`timeout`），随后按上述规则提交已作出的决定。超时时长见 [Q-17](../open-questions.md)。
 - **用户结束本次确认**（如「其余先不处理」）：未决定提案记为 `expired`（`run_closed`），已作出的决定照常提交。
 - **底版变化**：提交时 Diagnosis 当前修订与 `basedOnDiagnosisRevision` 不一致，补丁被拒绝；受影响提案记为 `expired`（`base_revision_changed`），Agent 重新核验后再展示，不静默合并。
 - **运行中安全阻断**（R-DX-10、R-SAFE-01）：
@@ -443,121 +308,23 @@ type ConditionDirectEdit = {           // 用户决定审计事件：追加写�
 - 更正不能改变 `source`、`conclusionStatus` 或 `confirmation`（INV-11）；需要重新判断原因或处理方案时，应发起正式分析。
 - 存在进行中的运行时，直接编辑会改变其底版，该运行提交时按 §3.3「底版变化」处理。
 
-## 4. TrainingPlan
+### 3.6 病情状态索引与尚未解决的生命周期
 
-~~~ts
-type TrainingPlan = {
-  planId: string;
-  userId: string;
-  title: string;
-  goal: string;
-  relatedConditionIds: string[];
-  relatedConcernIds: string[];
-  status: "active" | "paused" | "completed";   // 计划自身状态；安全限制不改写它
-  currentAcceptedRevisionId: string;
-  currentContent: {
-    sessions: PlanSessionTemplate[];  // 单次课计划只有一个模板；A/B 日等多课计划有多个
-    frequency: { sessionsPerWeek?: number; description?: string };
-    constraints: string[];
-  };
-};
+| 独立维度 | 已确定的枚举 | 明确的转换与权限 |
+| --- | --- | --- |
+| 来源 source | clinical_document / user_reported_clinical / agent_analysis / user_suspicion | 临床来源须有相应证据；用户选择不能制造临床事实 |
+| 结论 conclusionStatus | likely / suspected / clinical_diagnosis | 新结论通过正式提案 + confirm_condition；疑似升级仍保留旧结论历史 |
+| 病程 lifecycle | active / monitoring / resolved | mark_resolved 结束提案被接受或用户直接确认缓解才修改 |
+| 解释采纳 disposition | adopted / withdrawn_by_user / no_longer_applicable | 用户明确请求可撤回，正式结束提案可标不再适用；拒绝一次更新不撤回条目 |
+| 分析运行 state | open / committed / closed_without_change，另有 outcome | 由追加事件推导，严重安全阻断不产生 DiagnosisRevision |
+| 提案 state | pending / decided / superseded / expired | 关闭 Chat 不等于拒绝；新证据影响已决定结果时取代并重新征询 |
 
-type PlanSessionTemplate = {          // 计划中「一次课」的模板，不是实际执行
-  templateId: string;
-  title?: string;                     // 如「A 日 · 下肢」
-  stages: {
-    phase: "warmup" | "main" | "cooldown";
-    exercises: {
-      exerciseId: string;
-      name: string;
-      sets: number;
-      repetitions?: number;
-      durationSeconds?: number;
-      restSeconds?: number;
-    }[];
-  }[];
-};
+**复发与再次采纳未定**：病情从 resolved 后再次出现，复用 conditionId、引入 Episode 还是建立相关的新条目，见 DC-021；已撤回/不再适用的解释重新采纳，见 DC-024。未决前不得自动重置 lifecycle/disposition，更不能覆盖旧的用户决定和证据。
 
-type TrainingSessionLog = {           // 一次实际执行的训练记录（Trainer 产生）
-  sessionLogId: string;
-  planId: string;
-  planRevisionId: string;
-  templateId: string;
-  date: string;                       // 用户时区的训练日期
-  startedAt: string;
-  endedAt?: string;
-  state: "in_progress" | "paused" | "ended";
-  exerciseRecords: {
-    exerciseId: string;
-    setNumber: number;
-    outcome: "completed" | "skipped";
-    actualRepetitions?: number;
-    actualDurationSeconds?: number;
-    recordedAt: string;               // 来自用户的明确完成 / 跳过操作或陈述
-  }[];
-  feedback?: string;                  // 主观反馈；身体变化另按 R-BS-01 写入 BodyState
-};
+### 3.7 事件、授权与审计
 
-type PlanChangeProposal = {
-  proposalId: string;
-  planId: string;
-  basedOnRevisionId: string;
-  initiatedBy: "user" | "agent";
-  reason: string;
-  proposedChanges: PlanPatch[];
-  state: "pending" | "accepted" | "rejected" | "expired";
-  expiredReason?: "timeout" | "base_revision_changed";
-  userAuthorizationId?: string;
-};
-~~~
+新增/更新/结束病情：用户请求正式分析 → Run 固定 BodyState/Diagnosis 底版 → Agent 提案 → 用户对每条提案决定 → 复核新证据及风险 → 一次原子补丁 → 一个 DiagnosisRevision。每个阶段引用准确的 runId/proposalId/contentFingerprint/evidenceIds；拒绝/过期/安全阻断不能偷偷提交。
 
-- 每份 Plan 独立修订；每个动作与训练记录关联明确的 planId（R-TP-01）。
-- `currentContent` 必须能直接呈现 R-TP-02 要求的完整处方：每个 PlanSessionTemplate 按热身 → 正式训练 → 必要放松排列，逐个动作名称、组数、次数/时长、必要休息，加上整体训练频率。
-- PlanSessionTemplate 是计划内容；TrainingSessionLog 是执行事实，二者不混用。执行记录不回写模板。
-- TrainingSessionLog 按 planId、日期、exerciseId 定位；只有用户明确的完成 / 跳过操作或陈述才形成 `exerciseRecords`，不根据点击、浏览或演示播放推断完成（R-EX-04）。
-- 同一份计划的动作/组次/频率/排程只有一个当前有效权威副本。
-- 用户明确请求的修改（R-TP-03）直接提交并保留该请求的授权来源。
-- Agent 建议（R-TP-04）仅创建 Proposal；接受时检查对应方案、用户身份、底版修订和决定状态，才允许提交。Proposal 状态：
-  - 关闭界面或离开对话：保持 `pending`，可恢复；
-  - 用户明确选择「暂不修改」：`rejected`；
-  - 超时或计划底版修订已变化：`expired`（超时时长见 [Q-17](./open-questions.md)）。
-  只有 `accepted` 产生内容修订。
-- 安全执行限制由 BodyState `SafetyState` 持有，不等同于修改计划内容（R-SAFE-02、R-SAFE-03）。
-- TrainingSessionLog 和身体变化回写只触发影响检查，不直接修改计划（R-TP-05）。
+直接更正/撤回/缓解只在用户明确请求后以轻量确认提交，记录 ConditionDirectEdit；不能用 Agent 推测调用该路径。临床诊断与普通 AI 分析来源及用户接受行为彼此独立，安全阻断或证据不足必须如实展示。
 
-## 5. 一致性、审计与权限
-
-- Go 业务服务持有持久化状态和授权判定；Python Agent 提供结构化输入、推理与工具调用；Web 显示当前状态并提交用户动作。
-- 每项写操作绑定 userId、sourceId、idempotencyKey、expectedRevision（适用时）与业务权限。
-- 工具执行需要报告成功/失败，不允许前端在事务未提交时宣称已保存。
-- 异步事件重复、乱序或网络重试不造成重复数据或重复修订；并发提交使用乐观锁或等效机制避免丢失修改。
-- 训练提案的授权必须对应**准确的提案身份及内容**，不能重用对其他计划的授权；病情确认记录同样绑定准确的提案身份和内容。
-- 病程与业务修订可检索，但不把内部编号或版本管理列为普通页面的默认入口。
-
-## 6. 运行时不变量
-
-| ID | 不变量 |
-| --- | --- |
-| INV-01 | BodyState、Diagnosis 和每份 TrainingPlan 各有明确、唯一的业务拥有者 |
-| INV-02 | 用户自述不会被模型转化为临床确诊；Observation / Hypothesis 与 Fact 不混同；AI 假设不写入 BodyState |
-| INV-03 | Correction 与 TemporalChange 是不同业务操作 |
-| INV-04 | Diagnosis 的局部补丁不会删除或改写无关病情 |
-| INV-05 | 同一 Diagnosis 原子补丁最多产生一个整体新修订 |
-| INV-06 | Diagnosis 条目的创建/实质更新需要可追溯的用户请求，以及用户对病名、原因和处理方案的确认决定（`likely` / `keep_as_suspected` / `include_clinical`，见 §3.2）；单纯请求分析不代表接受 Agent 结论。用户直接更正 / 撤回 / 标记缓解以对准确变更的确认代替病情确认工具（§3.5） |
-| INV-07 | 未经用户授权绝不改变 TrainingPlan 的当前有效内容 |
-| INV-08 | 训练安全阻断与计划内容修订的权限独立：风险状态由 BodyState SafetyState 持有，Trainer 执行门禁，`TrainingPlan.status` 与内容不因此改变 |
-| INV-09 | 工具、事件和网络重试具备幂等、错误提示和可恢复性 |
-| INV-10 | 当前页面不暴露技术修订号、历史版本管理或后端运行编号 |
-| INV-11 | `ConditionEntry.source` 只由证据来源决定，用户确认不能把条目变为 `clinical_document`；`clinical_diagnosis` 只与临床来源同时出现 |
-| INV-12 | 一次 ConditionAnalysisRun 的全部生效决定在一个原子补丁中提交；提交前 Diagnosis 不变，已作出的决定不丢失（以 `safety_blocked` 终结的运行不提交，见 INV-23） |
-| INV-13 | 已被用户拒绝的提案指纹，无相关新证据 ID 时不得再次提出 |
-| INV-14 | 撤回 / 不再适用只改变 `disposition`，条目与历史保留，`lifecycle` 与 BodyState 事实不被改写 |
-| INV-15 | 只有明确记载临床医生诊断的已采纳文件证据才能支持 `source = clinical_document` + `conclusionStatus = clinical_diagnosis`；化验 / 影像等数值只作为 `agent_analysis` 提案的证据，不升级来源或结论 |
-| INV-16 | 正式分析的审计事件、提案内容与用户决定只追加、不改写；运行与提案的当前状态是由事件推导的投影，可以更新 |
-| INV-17 | 运行中加入新证据后，每个已决定提案都必须对其决定之后的全部新证据 ID 完成复核才能提交；受影响的决定失效并须重新提出、重新决定 |
-| INV-18 | 对已有条目提案的 `rejected` 不改变该条目；`withdrawn_by_user` 只来自用户明确请求并经确认的直接编辑 |
-| INV-19 | 直接编辑路径只能由用户的明确请求触发，Agent 不得用它做自己的修改；每次直接编辑留下用户决定审计（谁、什么、何时、原因），并产生一次 Diagnosis 修订 |
-| INV-20 | 安全限制只按其 `liftPolicy` 解除：只有 `on_expiry` 到期自动解除；其他策略到期只触发复核、限制继续生效；每次解除记录与策略一致的依据；Agent 不能自行解除或放宽策略 |
-| INV-21 | `changeKind = end` 的提案必须写明 `endTarget`（`mark_resolved` / `mark_no_longer_applicable`）并计入内容指纹；提交只应用 `accept_end` 决定所针对的那个 `endTarget`；`disposition = no_longer_applicable` 只来自被接受的 `mark_no_longer_applicable` 结束提案 |
-| INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、`hypotheses`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件；运行开始后形成的 AI 假设以 `hypothesis_added` 追加，不改写创建时快照 |
-| INV-23 | 以 `safety_blocked` 终结的 ConditionAnalysisRun 绝不产生 DiagnosisRevision：未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效；终结后该运行的补丁、提交与任何事件由 Go 后端拒绝；每个运行只有一个终结事件（先写入者胜出），重复的 `safety_blocked` 幂等 |
+**UI 状态**：来源、结论强度、当前病程、解释是否采纳、提案等待决定/已决定未提交/过时、分析无结果/安全阻断、当前条目与历史。验收沿用 DX-01～14，新增 DX-15/16；复发与重新采纳用例待 DC-021/024 决策。

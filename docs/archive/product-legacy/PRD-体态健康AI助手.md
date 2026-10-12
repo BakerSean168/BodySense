@@ -29,7 +29,7 @@ BodySense 是一个 AI Agent 驱动的个人身体状态应用。用户通过自
 ## 规格与验收
 
 - [完整产品需求](../../product/requirements.md)
-- [领域模型和数据契约](../../product/domain.md)
+- [领域模型和数据契约](../../product/domain/README.md)
 - [Agent 与交互工具](../../product/agent-workflows.md)
 - [UI 与交互](../../product/interface.md)
 - [验收标准](../../product/acceptance.md)

@@ -42,4 +42,4 @@
 - 安全提醒与执行限制具有独立的优先级，不是隐式的训练内容变更。
 - 普通知识解释不触发本人病历写入或正式诊断发布。
 
-具体契约见 [领域模型](../product/domain.md)、[Agent 工作流](../product/agent-workflows.md)。
+具体契约见 [领域模型](../product/domain/README.md)、[Agent 工作流](../product/agent-workflows.md)。
