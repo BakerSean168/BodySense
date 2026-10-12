@@ -79,18 +79,18 @@ Agent 主动建议调整时，Chat 的轻量交互呈现：
 
 复杂变更可在同一计划窗口中展开审阅；只有接受或明确请求后才更新计划内容，暂不修改或关闭不造成暗改。关闭后建议仍为待决定，可在 Chat 中回到该建议继续选择；建议失效时明确提示原因。
 
-计划有多个课模板（如 A/B 日）时分别展示，每个模板内按热身 → 正式训练 → 放松排列。存在有效的安全限制时，计划窗口与 Trainer 显示「暂不宜执行」及原因、作用范围、解除条件；到达复核时点时提示用户复核或记录专业人员放行，未完成前仍显示「暂不宜执行」；计划状态与内容不变（R-SAFE-03、R-SAFE-04）。
+计划有多个课模板（如 A/B 日）时分别展示，每个模板内按热身 → 正式训练 → 按需放松排列。**Draft 是等待用户确认的计划预览**，不能出现在已接受计划列表或直接启动训练。默认频率模式不自动生成日历漏练/补练；仅显式安排才展示日历课次。命中 advisory 时提示注意事项且允许执行；命中 restricted/urgent 时，计划窗口与 Trainer 显示「暂不宜执行」及原因、作用范围、解除条件；非自动解除策略到达复核时点时提示用户复核或记录专业人员放行，解除前仍阻断匹配范围；计划状态与内容不变（R-SAFE-03、R-SAFE-04）。
 
 ### 5.1 Trainer 训练执行
 
 规则见 R-EX-01～04、R-SAFE-03。
 
 - 打开指定计划的指定课模板；显示当前动作、第几组 / 共几组、目标次数或时长、休息计时与动作演示。
-- 支持开始、暂停、恢复、跳过当前动作；暂停后恢复回到原动作与组次，关闭窗口不丢失进行中的记录。
-- 完成以用户的明确操作或陈述为准；浏览、点击动作卡片或播放演示不记为完成。
+- 支持开始、暂停、恢复、明确完成或跳过**一组/整个动作**，以及正常完成/提前结束；暂停后恢复回到原动作与组次，关闭窗口不丢失进行中的记录。
+- 完成以用户的明确操作或陈述为准；浏览、点击动作卡片、切换到下一项、播放演示均不记为完成。误触可更正且保留审计；同一日多次训练必须为独立实例。
 - 训练结束时可记录主观反馈；明确的身体变化按 R-BS-01 写入 BodyState。
-- 受安全限制的动作或计划不可开始，显示「暂不宜执行」；只限制具体动作时，其余动作可继续。
-- Penpot 中 Workflow/Training Today / Move / Feedback / Paused / Completed 对应上述执行状态；**Draft 状态保留**，其含义待 Penpot 核对（[Q-15](./open-questions.md)）。
+- SafetyState 的 advisory 只提示，restricted 对匹配动作/计划安全暂停并显示「暂不宜执行」，urgent 全训练阻断并安全终止；同一用户其它未受限动作可在用户明确选择后继续，不修改计划处方。
+- Penpot 中 Workflow/Training Today / Move / Feedback / Paused / Completed 对应执行状态；原型的 **Draft** 画面应改为 PlanProposal 未接受的预览/确认态，不属于 Trainer Session 状态。产品语义已按 TP-D2 确定，Penpot 视觉结构待后续同步。
 
 ## 6. 人体交互工具
 
@@ -121,7 +121,7 @@ Penpot 项目：**BodySense · Product Design**，文件 ID `24d9d841-759d-81bc-
 | Chat | loading/error、pending、已决定未提交、继续补充、恢复、expired、stale、安全阻断 | [Person/Chat](./domain/person-chat.md)；DC-017、Q-19 |
 | Person | 五标签各自 empty/loading/populated/error；报告候选 admissible/needs_review/rejected；身份弹层 | [Person/Chat](./domain/person-chat.md)；DC-007/008/015 |
 | Diagnosis | 四个独立状态维度，提案确认、证据变化、历史、安全终结 | [Diagnosis](./domain/diagnosis.md)；DC-021/024 |
-| TrainingPlan | 计划 active/paused/completed、提案 pending/accepted/rejected/expired、独立安全限制 | [Training](./domain/training.md)；DC-010/012 |
-| Trainer | in_progress/paused/ended、动作和组的真实完成、限制暂不宜执行；Draft 未定 | [Training](./domain/training.md)；Q-15、DC-006/013 |
+| TrainingPlan | 计划 active/paused/completed，Draft/Proposal pending/accepted/rejected/expired，频率或显式日历、独立安全限制 | [Training](./domain/training.md)；TP-D1～D6 |
+| Trainer | in_progress/paused/ended、逐组完成/跳过、更正、正常/提前/安全结束、受限范围与复核；Draft 不属于 Trainer | [Training](./domain/training.md)、[Safety](./domain/safety.md)；TP-D7～D12、SAFE-D1～D8 |
 
 这是状态覆盖清单，不要求为每个组合复制 Penpot 静态画板。窗口视觉状态不能冒充后端持久业务状态。

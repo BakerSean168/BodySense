@@ -2,6 +2,40 @@
 
 **本文件记录已由产品负责人（Arlon）决定的问题。** 决定的内容已写入对应规格文件，规则以规格文件为准；本表只说明决定了什么、为什么、写在哪里。尚未决定的问题见 [开放问题](./open-questions.md)。
 
+## 2026-10-13 · TrainingPlan / Trainer 一揽子决策（TP-D1～D12）
+
+**一次收敛，不逐题重复征询。** 业务规则以 [Training 契约](./domain/training.md) 和 [Safety 契约](./domain/safety.md) 为准；下述已定业务语义不代表运行时或物理 Schema 完成迁移。
+
+| ID | 已确定的业务语义 | 对应待决 |
+| --- | --- | --- |
+| TP-D1 | 多份独立完整训练计划，状态 active/paused/completed 仅由明确用户操作转换；多计划可同时 active，已完成计划可明确重新启用 | DC-012/060 |
+| TP-D2 | Draft 为未接受计划预览；Agent 拟定的首次创建计划经用户明确接受才产生首个有效 Plan；统一 `PlanProposal(create/update)` | DC-014、Q-15 |
+| TP-D3 | 用户明确、低歧义调整可直接授权精确修改；Agent 主动建议只生成具体 Proposal，关闭保持 pending，拒绝不改计划 | R-TP-03/04、DC-052 |
+| TP-D4 | 计划提案 7×24 小时未决过期；底版或相关安全/诊断/BodyState 发生实质变化提前失效；内容指纹、用户身份和并发控制严格校验 | DC-052/053；Q-17 的 Training 部分 |
+| TP-D5 | 修订是不可变内容快照+精确 patch+用户授权；计划状态事件独立；同一医学诊断/BodyState 证据可关联，不创建 BodyConcern | DC-052/053/055 |
+| TP-D6 | 默认仅训练频率，明确选择才建立日历排期；不自动判漏练/补练；执行开始时 IANA 用户时区和日期固定，同日多次训练不合并 | DC-010/022/061 |
+| TP-D7 | `exerciseId` 是动作概念，`planExerciseId` 是模板条目，`sessionLogId` 是实际训练实例；同名不等于同 ID，动作替换创建新条目 ID | DC-011/056 |
+| TP-D8 | 完成/跳过按用户明确操作记录 set 或 exercise 粒度；错误动作以更正事件追加，不以浏览、下一项或演示推断执行事实 | DC-013/054/058 |
+| TP-D9 | Session in_progress/paused/ended 分离 pauseReason、endedReason；正常/提前/安全结束可区分，计时暂停不累计；断线恢复不伪造训练事实 | DC-057/059 |
+| TP-D10 | 单用户最多一个正在执行的 Session，允许多份暂停与同日多个不同 sessionLogId；旧训练日志按来源能力保守迁移，不把打卡当组完成 | DC-054/056 |
+| TP-D11 | 计划反馈/新证据只触发只读影响检查、去重复核建议；Agent 无权自行改动处方，SafetyState 独立把关 | DC-055/061 |
+| TP-D12 | 3D 示范、训练时间先后与计划关联不构成医学病因/疗效证据；身体反馈中的明确自述进入 BodyState | R-EX-01/02 |
+
+## 2026-10-13 · SafetyState 一揽子决策（SAFE-D1～D8）
+
+| ID | 已确定的业务语义 | 对应待决 |
+| --- | --- | --- |
+| SAFE-D1 | SafetyState 是 BodyState 唯一权威；Trainer 门禁是只读投影，TrainingPlan.status 和处方不随风险自动改变 | DC-001/006 |
+| SAFE-D2 | 产品执行风险分为 advisory（提示）、restricted（局部阻断）、urgent（全训练阻断/安全提示）；并非临床严重程度分类 | DC-001/002 |
+| SAFE-D3 | 范围 all_training/plan/exercise；exercise 按动作概念 ID 匹配；重叠风险取最严格有效限制，分别解除 | DC-003/062 |
+| SAFE-D4 | on_expiry 仅允许明确低风险且有审核有效期的限制；其他默认用户复核，需临床评估的风险和 urgent 要求有来源的专业放行 | DC-002/004、Q-18 |
+| SAFE-D5 | 更正或撤回证据不自动解除风险；单条限制按 restrictionId、来源和策略条件更新，避免并发清除新增高风险 | DC-004/063/064/065 |
+| SAFE-D6 | 当前动作命中 restricted → Trainer 安全暂停；urgent → 安全终止 Session；不写已完成/跳过、不改处方 | DC-006 |
+| SAFE-D7 | 普通训练限制不终止 Diagnosis Run；真正 urgent 可按已确认的 safety_blocked 零提交终结；恢复须用户发起新分析 | DC-005、INV-23 |
+| SAFE-D8 | 临床红旗判定/阈值及来源准入规则需要独立专业验证；旧自由文本风险清除和整块 JSON 覆写不得视为满足本契约 | DC-001～006、IG-04 |
+
+**保留工程待办**：PlanPatch DTO、数据库迁移、旧 Treatment/CheckIn 数据、动作库与安全规则专业审核及真实端到端测试，均不是本轮已经完成的事项。
+
 ## 2026-10-13 · Diagnosis V2 统一业务模型（DX-D5～D15）
 
 **当前有效原则以 [Diagnosis V2](./domain/diagnosis.md) 为准。** 本文件下方的 Q-01、GAP-A/C/F 等 V1 选择保留为历史决策记录，但其 lifecycle、描述性病名、用户决定 likely/keep_as_suspected、clinical_diagnosis 枚举、endTarget/mark_resolved 等设计已经被 V2 **明确取代**，不可继续作为新实现依据。早期 DX-D1～D3 在“ConditionEntry=持续健康问题”的假设下形成；该对象定义现已撤回，真实症状经历仍归 BodyState。

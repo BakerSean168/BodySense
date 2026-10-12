@@ -6,8 +6,8 @@
 | --- | --- |
 | BodyState、BodyFact、SymptomEpisode、BodyObservation、BodyHypothesis | [bodystate.md](./bodystate.md) |
 | Diagnosis、ConditionEntry、分析与提案审计 | [diagnosis.md](./diagnosis.md) |
-| TrainingPlan、Trainer、TrainingSessionLog | [training.md](./training.md) |
-| SafetyState、SafetyRestriction | [safety.md](./safety.md) |
+| TrainingPlan、PlanProposal、PlanSessionTemplate、Trainer、TrainingSessionLog | [training.md](./training.md) |
+| SafetyState、SafetyRestriction、TrainerGate | [safety.md](./safety.md) |
 | Person、Profile、资产与 Chat/Conversation | [person-chat.md](./person-chat.md) |
 
 业务规则由 [requirements.md](../requirements.md) 定义，流程见 [agent-workflows.md](../agent-workflows.md)，视觉与交互见 [interface.md](../interface.md)，验收见 [acceptance.md](../acceptance.md)。未决定的语义保留在 [开放问题](../open-questions.md) 和 [领域决策登记](../domain-decisions.md)，不能当作已批准规则。
@@ -34,9 +34,9 @@ User
 │  ├─ ConditionProposal[]     本次分析提出的条目新增/变更
 │  └─ ConditionProposalDecision[]  用户对每个提案的决定（审计）
 └─ TrainingPlan (0..N)
-   ├─ CurrentPlanContent
+   ├─ CurrentPlanContent     课模板、频率及按需排期；关联 ConditionEntry 与 BodyState 稳定证据
    ├─ TrainingPlanRevision[]
-   ├─ PlanChangeProposal[]
+   ├─ PlanProposal[]        创建/更新的准确授权提案，Draft 非已生效 Plan
    └─ TrainingSessionLog[]    实际执行的训练记录（区别于计划中的 PlanSessionTemplate）
 ~~~
 
@@ -97,6 +97,12 @@ User
 | INV-37 | Agent 评估仅 suspected/likely 两个定性等级；临床声明可以不带 AI assessment，必须原样表示“考虑”等医学不确定性 |
 | INV-38 | 新证据/来源变化只能产生派生的诊断复核提示；正式内容更新由用户发起分析并确认，提示去重且不另建 DiagnosisReviewTask |
 | INV-39 | 诊断关系与替代不由共享症状自动推导；新诊断采纳不隐式使旧条目 inactive，inactive 重新采纳须重新分析并确认 |
+| INV-40 | 未接受的 Plan Draft/PlanProposal 不是有效 TrainingPlan；首次创建需要用户明确接受。Plan 只关联稳定 ConditionEntry/BodyState 证据，不创建 BodyConcern |
+| INV-41 | 动作概念 exerciseId、模板条目 planExerciseId、训练实例 sessionLogId 分别稳定标识概念、处方位置和实际执行；同名/同日不合并执行事实 |
+| INV-42 | Trainer 只在用户明确完成、跳过或更正时追加有效动作记录；跨午夜/时区按开始时用户时区快照记录训练日；未排期不自动生成漏练 |
+| INV-43 | PlanProposal 的接受校验身份、内容指纹、底版、7 天期限与关联安全上下文；并发/新证据失效重新授权；安全阻断不等于计划内容修订 |
+| INV-44 | SafetyState 的 advisory/restricted/urgent 门禁独立于计划状态，重叠限制以最严格有效限制为准；解除一条不能放行仍被另一条限制覆盖的动作 |
+| INV-45 | urgent 风险可终止运行中的 Trainer 并按既有 Diagnosis safety_blocked 语义处理；restricted 命中执行暂停；风险事件绝不伪造完成/跳过或改写计划历史 |
 
 ## 7. 状态索引与领域权威
 
@@ -109,9 +115,9 @@ User
 | ConditionAnalysisRun | open / committed / closed_without_change 与 outcome | [Diagnosis](./diagnosis.md) |
 | ConditionProposal | pending / decided / superseded / expired | [Diagnosis](./diagnosis.md) |
 | TrainingPlan | active / paused / completed | [TrainingPlan](./training.md) |
-| TrainingSessionLog | in_progress / paused / ended | [Trainer](./training.md) |
-| PlanChangeProposal | pending / accepted / rejected / expired | [TrainingPlan](./training.md) |
-| SafetyRestriction | 由有效期、作用范围和解除依据推导门禁；无独立 status 枚举 | [SafetyState](./safety.md) |
+| TrainingSessionLog | in_progress / paused / ended；pauseReason 与 endedReason 独立 | [Trainer](./training.md) |
+| PlanProposal（create/update） | pending / accepted / rejected / expired；7 天未决定则过期 | [TrainingPlan](./training.md) |
+| SafetyRestriction | advisory/restricted/urgent；由作用范围、有效期和解除依据推导门禁，无独立 status 枚举 | [SafetyState](./safety.md) |
 | 文档证据候选 | admissible / needs_review / rejected | [Person / Chat](./person-chat.md) |
 | Chat 待回复交互 | pending；accept / reject / resume / expire / stale 等语义操作 | [Person / Chat](./person-chat.md) |
 
@@ -125,8 +131,8 @@ User
 | --- | --- | --- | --- |
 | BodyState | BS-D1～D10 已确认：五类事实、症状 Episode、记录/病程独立、主动冲突澄清、来源分级、隐私删除边界 | 旧模型迁移及精确物理 Schema DC-025～030、DC-032；删除传播 DC-033/035；安全详见 Safety 领域 | IG-05；新增模型仍待实施 |
 | Diagnosis | ConditionEntry 四维状态、Run/Proposal/Decision 事件回放与原子提交 | DC-021/024、DC-047～051、DC-066～070（复发、重新采纳与历史） | IG-05 与旧 Diagnosis 迁移 |
-| TrainingPlan/Trainer | 计划/日志/提案分开持有状态、基本动作/组次、授权与安全门禁 | DC-010～014、DC-052～061（排期、修订、跳过及结束语义） | IG-01/02/03 |
-| SafetyState | 三类 liftPolicy、生效范围、何时阻断与不可绕过原则 | DC-001～006、DC-062～065（风险等级、范围重叠、解除证据） | IG-04 |
+| TrainingPlan/Trainer | TP-D1～D12：计划、课模板、稳定动作身份、草案/建议、修订、排期、训练日、逐组真实执行、反馈和跨域授权已决定 | PlanPatch 物理 DTO、旧 Treatment/CheckIn 迁移、离线计时精度与动作库资源映射仍需工程方案 DC-052～061 | IG-01/02/03；新目标模型未实施 |
+| SafetyState | SAFE-D1～D8：三级产品风险、全局/计划/动作门禁、最严格优先、解除依据、分析与执行安全终止、并发原则已决定 | 临床安全规则/阈值及专业审查、旧安全 JSON 迁移与后端条件更新仍需工程验证 DC-062～065 | IG-04；旧自由文本解除不能视为合规 |
 | Person/Chat | Person 五标签是组合视图；Habits/Records 自动记录与权威边界已按 BS-D8 定稿；Conversation 不是身体事实真值，交互身份可恢复 | DC-009、DC-015～017、DC-023、DC-034～046（身份、隐私、会话） | IG-06/07 |
 
-**完整性判定**：每个对象最终都需要字段表（含来源、默认/可空、单位与精度）、状态枚举和非法组合、合法转换表（触发/授权/事务/审计）、数据迁移规则以及 UI 对照和可执行验收。当前遗漏项按决策登记，尚不能把这些文件视为完整可迁移的最终 Schema。
+**完整性判定**：每个对象最终都需要字段表（含来源、默认/可空、单位与精度）、状态枚举和非法组合、合法转换表（触发/授权/事务/审计）、数据迁移规则以及 UI 对照和可执行验收。当前遗漏项按决策登记，业务规则已定不等于物理 Schema 可直接迁移；必须先完成映射和验证。

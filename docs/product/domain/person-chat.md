@@ -28,7 +28,7 @@
 | Conversation | 历史消息和工具活动可追溯 | 离开/收起 Chat 后，待回复业务交互不丢失 | 单/多会话、归档/删除生命周期 DC-016 |
 | PendingInteraction | pending（业务待回复的稳定身份）；已回答/拒绝、失效是语义事件 | accept、reject、close、resume、expire、retry、stale、fail 均遵循 [Agent 工作流 §4](../agent-workflows.md#4-交互工具状态)；close 不是 reject | 完整运行时存储结构、输入是否可并行补充 DC-017；提案超时 DC-018 |
 
-**不要混淆**：打开、拖动、收起、加载等是窗口 UI 状态；Conversation 消息及 Agent Run 是持久运行状态；ConditionProposal/PlanChangeProposal 属于原领域的业务状态。不得把一个全局 UI `status` 同时用来表示三者。
+**不要混淆**：打开、拖动、收起、加载等是窗口 UI 状态；Conversation 消息及 Agent Run 是持久运行状态；ConditionProposal/PlanProposal 属于原领域的业务状态。不得把一个全局 UI `status` 同时用来表示三者。
 
 ## 3. 已确定的数据流与权限
 
@@ -79,7 +79,7 @@
 | --- | --- | --- |
 | UI/Composer | loading、focus、collapsed、composer_locked、uploading、error | React 表示层；隐藏/收起不改变业务决定 |
 | Agent 运行 | streaming、interrupted、finished、failed；当前代码的 ToolCall running/succeeded/failed | 运行时持久日志和重放；中断后可根据原 RunId/InteractionId 关联 |
-| 领域待决定 | ConditionProposal pending/decided、PlanChangeProposal pending/accepted/rejected/expired | 各自领域服务；用户选择必须绑定精确提案内容和修订，不能只写一条聊天文本 |
+| 领域待决定 | ConditionProposal pending/decided、PlanProposal pending/accepted/rejected/expired | 各自领域服务；用户选择必须绑定精确提案内容和修订，不能只写一条聊天文本 |
 
 **继续补充是既有产品语义，不等于必须开放所有自由输入。** 已有 [activeTurnSelectors](../../../apps/web/src/features/consultation/runtime/activeTurnSelectors.ts) 对 `interrupted` 锁 Composer；实际允许的补充消息方式及其 Run/Proposal 归属待 DC-017。关闭、刷新、恢复前务必保留可辨认的待回复交互身份（INV-29）。
 

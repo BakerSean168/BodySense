@@ -21,13 +21,14 @@ BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然
 | [开放问题](./open-questions.md) | 规格内的矛盾与待决定事项 | `Q-*` |
 | [决策记录](./decisions.md) | 已决定问题的结论、原因与写入位置（规则本身仍在上述各文件） | `Q-*`、`GAP-*` |
 
-文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。Diagnosis V2 的新医学身份和确认语义取代原 V1 规则；历史决策仍留存但不作为新实现依据。
+文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。Diagnosis V2 的新医学身份和确认语义取代原 V1 规则；Training V2 与 Safety 的批量业务决策也已登记。历史决策仍留存但不作为新实现依据。
 
 ## 核心对象一览
 
 - **BodyState 身体状态**：每位用户一份；明确的本人陈述自动记录，五类 BodyFact 与症状 Episode 分离、历史和更正独立；关键冲突在实时 Chat 主动 Ask User；用户自报观察与文件证据分级，用户本人怀疑独立记录（R-BS-01～10、BS-D1～D10）。
 - **Diagnosis V2 综合诊断**：每位用户一份；当前显示经用户采纳的具名医学疾病/综合征诊断（ConditionEntry），停用历史保留。AI suspected/likely 证据评估、医生原始声明、多来源、BodyState 多对多证据及用户 adopted/inactive 分离；逐项确认、一次原子修订（R-DX-01～17、DX-D5～D15）。
-- **TrainingPlan 训练计划**：可有多份，每份是完整处方；Agent 建议需用户「接受调整」才生效（R-TP-01～05）。
+- **TrainingPlan / Trainer（TP-D1～D12）**：多份独立完整处方；Draft 是尚未采纳的计划预览，接受后才生效。PlanProposal 统一创建/调整建议，计划修订与真实执行日志分离；每组完成或跳过须有明确用户行为；默认频率而非自动日历排期（R-TP-01～10、R-EX-01～08）。
+- **SafetyState（SAFE-D1～D8）**：BodyState 内唯一风险权威；advisory/restricted/urgent 分级与范围匹配，Trainer 严格执行门禁，专业放行和复核解除按来源校验，不改写计划内容或状态（R-SAFE-01～08）。
 - **交互空间**：3D 人体持续作为底层桌面，Chat、Person、Diagnosis、TrainingPlan、Trainer 为浮动窗口（[interface](./interface.md)）。
 
 ## 设计参照

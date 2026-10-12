@@ -89,6 +89,16 @@
 | TP-13 | 服务器和用户位于不同时区/日期 | 日志 date 为用户训练日期，关联准确的模板与计划修订 | INV-27 |
 | TP-14 | 训练途中出现匹配下一动作的安全限制 | 继续执行前重新执行门禁；中断记录具体行为待 DC-006 | R-SAFE-03、INV-08 |
 | TP-15 | 保存训练反馈，旧 Treatment 同时更新状态 | 不未经用户授权修改当前 TrainingPlan 内容；新旧状态映射须单独审核 | R-TP-05、INV-07 |
+| TP-16 | Agent 生成训练方案，用户仅预览 Draft 就关闭 | 不新增 TrainingPlan，不产生第一份有效 Revision；恢复后仍可继续准确提案 | R-TP-06、INV-40 |
+| TP-17 | 用户接受准确创建草案，同时网络重试 | 仅创建一份 TrainingPlan 与首个不可变 Revision，其他计划不受影响 | R-TP-06/08/10、INV-09/43 |
+| TP-18 | A/B 模板中出现两次同名动作或改组次 | 不同 planExerciseId 分别定位；仅调整剂量保留条目 ID，替换动作创建新条目 ID | R-TP-08、INV-41 |
+| TP-19 | 用户仅设置「每周 3 次」，错过某一天 | frequency_only 不生成漏练、补练、skipped 或 Completed Session；显式日历课次不执行也不伪造 skipped | R-TP-09、INV-42 |
+| TP-20 | 用户在相同时区一日内先后执行同一模板两次，第二次跨午夜 | 产生不同 sessionLogId；各自固定开始时本地日期与 revision/template，不自动分裂跨午夜历史 | R-EX-05、INV-27/41/42 |
+| TP-21 | 用户点击「下一项」/播放动作演示/断线，再回来继续 | 未明确完成或跳过的组没有 Action；继续原 Session，计时不虚构；误触完成可追加 corrected 审计 | R-EX-06/07、INV-26/42 |
+| TP-22 | Agent 提议调整后其他设备修改计划或出现相关新风险，或超过 7 天 | 准确提案 expired 并不可接受；计划内容不变，若重新提出需新授权 | R-TP-10、INV-43 |
+| TP-23 | 用户将 completed 计划重新启用；另有两个 active 计划 | 重新启用保留原 planId 和历史；多 active 合法，同一用户最多一个 in_progress Trainer 实例 | R-TP-07、R-EX-07 |
+| TP-24 | 正常完成、提前结束或风险导致终止 | SessionLog endedReason 不同，已完成的组保持事实；未做动作不自动记完成/跳过；计划状态与处方均不变 | R-EX-07、R-SAFE-07、INV-45 |
+| TP-25 | 训练后反馈「右肩更痛」，Agent 建议调整计划 | 原主观反馈存在 Trainer，明确身体陈述进入 BodyState；建议本身不修改计划，安全门禁独立执行 | R-EX-08、R-TP-05、INV-07 |
 | UI-01 | 桌面关闭/收起浮动窗口 | 可查看持续存在的 3D 人体场景 | [interface §1](./interface.md#1-核心空间) |
 | UI-02 | 人体点选一个部位 | 仅形成上下文，不自动记录异常/疼痛 | [interface §6](./interface.md#6-人体交互工具) |
 | UI-03 | Chat → 人体工具 → 返回 Chat | 上下文与待回答交互保持一致 | [interface §1](./interface.md#1-核心空间) |
@@ -99,6 +109,13 @@
 | SAFE-01 | 专业人员放行策略，只有任意文字说明而无来源 | 后端不能以此清除限制，仍需有权威解除依据 | R-SAFE-04、INV-20 |
 | SAFE-02 | 非自动解除策略超过复核时间 | 仅请求复核，不可当作解除 | R-SAFE-04、INV-20 |
 | SAFE-03 | 只有普通训练限制、正在进行正式分析 | 影响 Trainer 执行但不自动 safety_blocked 终结 Diagnosis | R-DX-10、INV-23 |
+| SAFE-04 | 用户同一动作受 advisory 和 restricted 两条限制 | 门禁选择 restricted 的 block，分别显示来源与原因；解除 advisory 不放行 restricted | R-SAFE-05/06、INV-44 |
+| SAFE-05 | 全局 urgent 与局部 restricted 并存，解除局部限制 | 全局仍阻断所有计划；urgent 不得靠时间或 Agent 自行解除 | R-SAFE-05/06/08、INV-20/44 |
+| SAFE-06 | 训练中正在执行的动作命中 restricted | 安全暂停 paused(safety_hold)，保留已完成 Action，不产生虚假的 skipped 或计划修订 | R-SAFE-07、INV-45 |
+| SAFE-07 | 训练中新增 urgent 风险 | ended(safety_stopped)，阻断新训练；需停止正式诊断时仍遵守 INV-23 的零提交终结 | R-SAFE-05/07、INV-23/45 |
+| SAFE-08 | 旧风险的来源证据被纠正，同时另一设备新增更高风险 | 按 restrictionId 条件修改，不能整体覆盖新增限制；不直接把证据纠正当解除 | R-SAFE-08、INV-09/44 |
+| SAFE-09 | 临床来源矛盾、上传文件仅 OCR 候选、专业放行没有明确适用范围 | 专业放行待复核，限制保持有效；用户转述仅按用户来源等级展示 | R-SAFE-04/08、INV-20 |
+| SAFE-10 | 安全门禁校验暂不可用，用户试图开始或继续匹配动作 | 不宣称「安全」，后端不授权继续受影响动作，提示重试；原训练事实保持 | R-SAFE-07/08 |
 | UI-08 | Chat 有待确认提案，用户选择继续补充 | 存在可用补充路径，关联原 Run 并保留待决定状态；通用输入方式待 DC-017 | R-DX-04、INV-29 |
 | UI-09 | Person 为空、加载失败或报告证据待核实 | 区分 empty/loading/error、admissible/needs_review/rejected；不以演示值替代 | R-PS-01～03、INV-24/28 |
 | UI-10 | 多提案中 A 已决定、B 未决定，关闭后再回来 | A 留档未生效、B 保持 pending 且可恢复 | R-DX-12、INV-29 |
@@ -109,10 +126,10 @@
 
 | 阶段 | 交付物 | 验收重点 |
 | --- | --- | --- |
-| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型 | 类型、权限、INV-01～29 的契约测试 |
+| P1 领域契约 | BodyState 自动写入和时间/来源模型；Diagnosis 当前聚合；Plan 级授权模型与 SafetyState 分级规则 | 类型、权限、INV-01～45 的契约测试 |
 | P2 自述记录 | Agent 提取 → Go 校验提交 → 自动反馈、澄清恢复；上传资料的证据采纳 | BS-01～11（含 BS-04b） |
 | P3 Diagnosis V2 | 用户请求触发具名诊断分析；Run/Proposal/Decision 审计；来源/确定程度独立；Chat 采纳工具；一次原子提交 | DXV2-01～28 |
-| P4 TrainingPlan | 每份计划的课模板与阶段化动作、组次/频率、只读影响检查、用户授权、Trainer 执行记录与安全门禁 | TP-01～11 |
+| P4 TrainingPlan | 每份计划的课模板与阶段化动作、组次/频率、只读影响检查、用户授权、Trainer 执行记录与安全门禁 | TP-01～25、SAFE-01～10 |
 | P5 交互集成 | 3D 桌面、浮动 Chat、Person、Diagnosis 与 Trainer 的真实数据状态 | UI-01～10 |
 | P6 稳定化 | 数据权限、并发、事件恢复、安全门禁及端到端回归 | SEC-01～02 与全矩阵 |
 

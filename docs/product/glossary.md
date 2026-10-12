@@ -18,15 +18,15 @@
 | **ConditionProposalDecision** / 用户提案决定 | 用户对准确诊断提案作出 accept/reject 的追加式审计；不调整医学 suspected/likely，继续补充不属于决定 | [domain §3.2](./domain/diagnosis.md#32-用户选择与数据映射) | 将用户采纳按钮视为医学诊断概率选择 |
 | **ConditionDirectEdit** / 直接编辑审计 | 用户明确请求非实质展示元数据更正或撤回具体医学诊断，经轻量确认写入，不能变更医学判断或制造“已缓解” | [requirements R-DX-13](./requirements.md#23-diagnosis-综合诊断) · [domain §3.5](./domain/diagnosis.md#35-用户直接更正与撤回) | 用病程缓解表示诊断撤回、Agent 自行直接编辑 |
 | **TrainingPlan** / 训练计划 | 一份完整训练处方（热身 → 正式训练 → 必要放松，含组数、次数/时长、频率）；每位用户可有多份 | [requirements §2.4](./requirements.md#24-trainingplan-训练计划) · [domain §4](./domain/training.md#4-trainingplan) | Treatment、治疗方案、训练模块、部位模块 |
-| **PlanChangeProposal** / 计划调整提案 | Agent 主动提出的某份计划的具体修改，用户「接受调整 / 暂不修改」前不生效 | [domain §4](./domain/training.md#4-trainingplan) | Treatment revision、方案修订（指提案时） |
+| **PlanProposal** / 训练计划提案 | 统一未接受的首次创建 Draft（create）和 Agent 建议调整（update）；提案绑定内容指纹/底版/用户授权，最长 7 天未决自动失效，不接受不生效 | [domain §4](./domain/training.md#4-trainingplan) | PlanChangeProposal（旧逻辑 DTO）、Treatment revision、把 Draft 当已生效训练计划 |
 | **Trainer** / 训练执行 | 打开某份 TrainingPlan 进行训练、计时与反馈的执行窗口 | [requirements §2.5](./requirements.md#25-训练执行与反馈) · [interface §2](./interface.md#2-业务窗口) | 训练流程（Workflow/Training，设计稿旧名） |
 | **PlanSessionTemplate** / 课模板 | 计划内容中「一次课」的模板，含热身/正式/放松阶段；单课计划只有一个 | [domain §4](./domain/training.md#4-trainingplan) | TrainingSession（指计划内容时）、exerciseStages（已移入模板） |
-| **TrainingSessionLog** / 训练记录 | 一次实际执行：按计划、日期与动作记录用户明确完成/跳过的情况与主观反馈 | [requirements R-EX-04](./requirements.md#25-训练执行与反馈) · [domain §4](./domain/training.md#4-trainingplan) | TrainingLog（旧代码名）；把课模板与训练记录混称 |
+| **TrainingSessionLog** / 训练记录 | 唯一 sessionLogId 的一次实际执行，绑定执行时计划修订、模板、用户时区训练日，逐组记录明确完成/跳过、撤销更正及反馈 | [requirements R-EX-05～08](./requirements.md#25-训练执行与反馈) · [domain §4](./domain/training.md#4-trainingplan) | TrainingLog（旧代码名）、计划模板、将打卡布尔值当作全组完成 |
 | **Person** / 个人档案 | 展示个人资料与身体记录、器材、资料等的窗口与业务范围；五个分类 Records / Equipment / Media / Reports / Habits，身份在标题区与 Identity Popover | [requirements §2.6](./requirements.md#26-person-个人档案与当前状态) · [interface §3](./interface.md#3-person-个人档案) | Profile 窗口（设计稿旧名） |
 | **Profile** / 基础资料 | Person 中相对稳定的身份与偏好数据（领域对象），显示在 Person 标题区与 Identity Popover；不含有时间语义的测量与习惯 | [domain §1](./domain/README.md#1-聚合关系) · [R-PS-04](./requirements.md#26-person-个人档案与当前状态) | 用 Profile 指整个 Person 窗口；把 Profile 当作第六个分类标签页 |
 | **Chat** | 自然表达、提问、发起分析与授权计划修改的对话窗口，承载交互工具 | [interface §2](./interface.md#2-业务窗口) | Assistant（设计稿旧名）、Consultation / 问诊会话 |
 | **Conversation** / 对话 | Chat 中的交流与工具活动记录；不是身体事实的权威存储 | [domain §1](./domain/README.md#1-聚合关系) | Consultation Session（旧实现） |
-| **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（计划/动作）、有效期、解除策略（`liftPolicy`：到期自动解除 / 用户复核 / 专业人员放行）与解除条件，Trainer 据此把关；界面显示「暂不宜执行」；不等于修改计划内容 | [requirements R-SAFE-03](./requirements.md#27-安全) · [SafetyState](./domain/safety.md#23-safetystate-与执行限制) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
+| **SafetyState / 安全阻断** | BodyState 中的权威风险状态：执行限制的风险等级、范围（全训练/计划/动作）、有效期、解除策略（`liftPolicy`：到期自动解除 / 用户复核 / 专业人员放行）与解除条件，Trainer 据此把关；产品等级 advisory/restricted/urgent，重叠按最严生效；不等于修改计划内容或状态 | [requirements R-SAFE-03](./requirements.md#27-安全) · [SafetyState](./domain/safety.md#23-safetystate-与执行限制) | 安全修订（不存在此概念）；用计划的 paused 状态表示安全阻断 |
 
 ## 2. 来源、医学判断与采纳用语
 
@@ -66,9 +66,9 @@ Penpot 文件 **BodySense · Product Design**（`24d9d841-759d-81bc-8008-b642325
 | Workflow/Assessment Safety Hold | 安全阻断状态 | **保留**，表达安全阻断与就医提示 |
 | Profile（Window/Profile、Profile/Category *、Workflow/Profile *） | Person | 五个分类 Records / Equipment / Media / Reports / Habits 沿用；身份信息在标题区与 Identity Popover |
 | Training（Window/Training、Plan Legs / Functional / Picker） | TrainingPlan | 多份计划与计划选择器 |
-| Workflow/Training Today / Draft / Move / Feedback / Paused / Completed | Trainer | 训练执行各状态（[interface §5.1](./interface.md#51-trainer-训练执行)）；Draft 保留，含义待 Penpot 核对（[Q-15](./open-questions.md)） |
+| Workflow/Training Today / Draft / Move / Feedback / Paused / Completed | Trainer + Plan Draft | Today/Move/Feedback/Paused/Completed 属于执行视图；**Draft 是未接受的计划预览**，原型需改到创建/确认路径（TP-D2） |
 | TrainingLog（旧代码） | TrainingSessionLog | 新规格以课模板与执行记录区分 |
-| Treatment（旧代码，单一方案 + revisions） | TrainingPlan + PlanChangeProposal | 新规格为多份计划、提案需用户接受 |
+| Treatment（旧代码，单一方案 + revisions） | TrainingPlan + PlanProposal | 新规格为多份计划、提案需用户接受 |
 | Consultation / Consultation Session（旧代码） | Chat / Conversation | 不再以问诊会话为业务中心 |
 | DiagnosisAnalysis / candidates（旧代码，按问诊生成） | ConditionAnalysisRun + ConditionProposal + ConditionProposalDecision → ConditionEntry | DiagnosisAnalysis 这个名字只保留给旧代码，新规格不再使用 |
 | `certainty`、V1 单个 `source` / `conclusionStatus` / `lifecycle` | V2 多来源声明 + 可选 AI assessment + disposition + 用户 Decision | 旧字段需迁移并保留历史原意；V1 的 clinical_diagnosis 不再是 AI 确定程度，V1 的用户 likely/keep_as_suspected 不能当作医学证据等级 |
