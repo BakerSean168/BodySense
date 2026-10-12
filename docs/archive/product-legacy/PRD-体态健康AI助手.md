@@ -1,5 +1,7 @@
 # BodySense · 产品需求文档
 
+> 已归档（2026-10-12）：被 docs/product/README.md 与 docs/product/requirements.md 取代。
+
 **产品业务规格 · 2026-10-11**
 
 ## 产品定位
@@ -26,10 +28,10 @@ BodySense 是一个 AI Agent 驱动的个人身体状态应用。用户通过自
 
 ## 规格与验收
 
-- [完整产品需求](./product/requirements.md)
-- [领域模型和数据契约](./product/domain.md)
-- [Agent 与交互工具](./product/agent-workflows.md)
-- [UI 与交互](./product/interface.md)
-- [验收标准](./product/acceptance.md)
+- [完整产品需求](../../product/requirements.md)
+- [领域模型和数据契约](../../product/domain.md)
+- [Agent 与交互工具](../../product/agent-workflows.md)
+- [UI 与交互](../../product/interface.md)
+- [验收标准](../../product/acceptance.md)
 
 BodySense 提供健康信息整理、解释与辅助训练建议，不替代医生或其他专业人员的医学诊断与治疗。

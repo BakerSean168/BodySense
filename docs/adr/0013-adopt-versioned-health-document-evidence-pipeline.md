@@ -487,7 +487,7 @@ This ADR is **Proposed**, not yet Accepted, because the OCR Champion remains ben
 
 - [`../architecture/health-document-evidence-pipeline.md`](../architecture/health-document-evidence-pipeline.md)
 - [`../plan/active/2026-09-01-health-document-technology-selection-and-benchmark.md`](../plan/active/2026-09-01-health-document-technology-selection-and-benchmark.md)
-- [`../feature_spec_health_document_ingestion.md`](../feature_spec_health_document_ingestion.md)
+- [`../feature_spec_health_document_ingestion.md`](../archive/product-legacy/feature_spec_health_document_ingestion.md)
 
 The current production source of truth remains Tesseract/PyMuPDF + ADR 0011 admissibility until this lane is implemented and promoted.
 

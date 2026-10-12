@@ -1,5 +1,7 @@
 # Agent Platform Role Governance
 
+> **注意（2026-10-12）**：本文描述的是重构前的现有实现（Consultation Session、Treatment、Assessment、DiagnosisAnalysis candidates 等旧模型）。现行业务规则以 [docs/product](../product/README.md) 为准，术语换算见 [术语表 §3](../product/glossary.md#3-penpot--旧代码名称对照)。
+
 Status: current architecture after the AI Service Agent-platform closeout (2026-08-21)
 
 ## 1. One platform, role-appropriate governance

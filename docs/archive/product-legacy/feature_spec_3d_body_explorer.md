@@ -1,5 +1,8 @@
 # BodySense · 3D 人体交互规格
 
+> 已归档（2026-10-12）：被 docs/product/interface.md（§1、§6、§7）取代；工程实现见 docs/architecture/body-explorer-3d-anatomy.md。
+
+
 ## 目标
 
 3D 人体是 BodySense 工作空间持续存在的底层 Canvas。用户可直接探索自己的身体区域并在需要时用工具辅助表达不适、查看相关记录和参考动作。
@@ -21,7 +24,7 @@
 
 模型加载、WebGL 不可用、空区域、触控操作、焦点恢复和异步取消都需要可理解的状态与退化路径。人体工具不能绕过 BodyState 的来源/确认规则或 Diagnosis 的正式分析与安全门禁。
 
-- [UI 与交互](./product/interface.md)
-- [身体区域映射](./architecture/body-region-ontology.md)
-- [3D 模型架构](./architecture/body-explorer-3d-anatomy.md)
-- [验收规范](./product/acceptance.md)
+- [UI 与交互](../../product/interface.md)
+- [身体区域映射](../../architecture/body-region-ontology.md)
+- [3D 模型架构](../../architecture/body-explorer-3d-anatomy.md)
+- [验收规范](../../product/acceptance.md)

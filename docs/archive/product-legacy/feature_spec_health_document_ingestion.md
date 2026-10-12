@@ -1,10 +1,13 @@
 # Feature Spec: Health Document Ingestion & Evidence Review
 
+> 已归档（2026-10-12）：被 docs/product/interface.md §3 取代（上传资料归 Person 的 Media / Reports，分析在 Chat 中发起；「Assessment」即 Diagnosis）；工程管线见 docs/architecture/health-document-evidence-pipeline.md，产品规则见 docs/product/requirements.md R-PS-03（docs/product/decisions.md Q-08）。
+
+
 - Status: Target product contract / implementation planned
 - Date: 2026-09-01
-- Architecture: [`architecture/health-document-evidence-pipeline.md`](./architecture/health-document-evidence-pipeline.md)
-- Decision: [`adr/0013-adopt-versioned-health-document-evidence-pipeline.md`](./adr/0013-adopt-versioned-health-document-evidence-pipeline.md)
-- Existing admission contract: [`adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md`](./adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)
+- Architecture: [`architecture/health-document-evidence-pipeline.md`](../../architecture/health-document-evidence-pipeline.md)
+- Decision: [`adr/0013-adopt-versioned-health-document-evidence-pipeline.md`](../../adr/0013-adopt-versioned-health-document-evidence-pipeline.md)
+- Existing admission contract: [`adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md`](../../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)
 
 ## 1. Product goal
 

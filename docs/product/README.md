@@ -1,32 +1,33 @@
 # BodySense · 产品文档
 
-BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然表达积累身体信息，按需获得有依据的综合分析，管理与执行训练计划。
+BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然表达积累身体信息，按需获得有依据的综合诊断，管理与执行多份训练计划。
 
-## 文档导航
+**本目录是业务规则的唯一来源（Single Source of Truth）。** 设计稿、旧代码或其他文档与本目录冲突时，以本目录为准；本目录内部的未决问题列在 [开放问题](./open-questions.md)。
 
-| 文档 | 说明 |
-| --- | --- |
-| [产品需求](./requirements.md) | 产品目标、用户任务、业务规则与边界 |
-| [领域模型](./domain.md) | BodyState、Diagnosis、ConditionEntry、TrainingPlan 与数据契约 |
-| [Agent 工作流](./agent-workflows.md) | 信息提取、澄清、正式分析、计划修改和确认 |
-| [UI 与交互](./interface.md) | 3D 人体桌面、浮动窗口、Person 与互动工具 |
-| [验收标准](./acceptance.md) | 端到端场景、不可破坏约束与实施顺序 |
+## 文档分工
 
-这些文档共同构成产品规格。文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。
+每条规则只有一个归属文件，其他文件通过规则编号引用：
 
-## 核心原则
+| 文档 | 负责什么 | 编号 |
+| --- | --- | --- |
+| [产品需求](./requirements.md) | 做什么、为什么、业务规则与典型场景 | `R-*`、`G-*` |
+| [领域模型](./domain.md) | BodyState、Diagnosis、ConditionEntry、分析审计对象、TrainingPlan 的数据契约与不变量 | `INV-*` |
+| [Agent 工作流](./agent-workflows.md) | 记录、澄清、正式分析、病情确认、计划修改的流程与工具 | — |
+| [UI 与交互](./interface.md) | 3D 人体桌面、业务窗口、交互工具、平台要求 | — |
+| [验收规范](./acceptance.md) | 测试矩阵（引用规则编号）与实施顺序 | `BS/DX/TP/UI/SEC-*` |
+| [术语表](./glossary.md) | 标准术语、避免使用的说法、Penpot / 旧代码名称对照 | — |
+| [开放问题](./open-questions.md) | 规格内的矛盾与待决定事项 | `Q-*` |
+| [决策记录](./decisions.md) | 已决定问题的结论、原因与写入位置（规则本身仍在上述各文件） | `Q-*`、`GAP-*` |
 
-- **BodyState**：每位用户唯一且持续更新；明确的本人身体陈述默认自动记录，保留时间与来源。
-- **Diagnosis**：每位用户唯一的当前综合诊断，由多个可单独更新的病情条目组成；整体作为一个修订单元。
-- **TrainingPlan**：每位用户可有多份独立计划；仅按明确用户请求或已接受的 Agent 建议更新具体计划内容。
-- **Agent**：通过对话和交互工具完成提问、分析和业务操作；后端负责校验、持久化和权限。
-- **交互空间**：3D 人体持续作为底层桌面，Chat 和业务内容使用可移动、可收起的浮动窗口。
-- **展示状态**：默认呈现当前身体信息、综合诊断和训练计划，不要求用户管理内部版本。
+文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。
 
-身体自述、客观观察、模型推测、临床诊断具有不同证据等级。BodySense 不能代替专业医疗评估。
+## 核心对象一览
+
+- **BodyState 身体状态**：每位用户一份；明确的本人陈述自动记录，有歧义才追问；用户本人的怀疑记为用户假设（R-BS-01～06）。
+- **Diagnosis 综合诊断**：每位用户一份；只包含用户在 Chat 确认工具中决定采纳的病情条目（「大概率是」「先保留」或临床来源的「纳入」），来源与结论分开记录（R-DX-01～13）。
+- **TrainingPlan 训练计划**：可有多份，每份是完整处方；Agent 建议需用户「接受调整」才生效（R-TP-01～05）。
+- **交互空间**：3D 人体持续作为底层桌面，Chat、Person、Diagnosis、TrainingPlan、Trainer 为浮动窗口（[interface](./interface.md)）。
 
 ## 设计参照
 
-Penpot：[桌面原型](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) · [移动端原型](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=0)。
-
-业务对象和用户任务决定交互功能，具体视觉组成与状态参照可编辑原型。
+Penpot **BodySense · Product Design** 的 Product 页是视觉基准：[桌面原型](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) · [移动端原型](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=0)。设计稿中的 Assistant / Assessment / Profile / Training 等旧名见 [术语表 §3](./glossary.md#3-penpot--旧代码名称对照)。

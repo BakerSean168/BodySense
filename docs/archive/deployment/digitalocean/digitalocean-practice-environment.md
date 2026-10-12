@@ -1,5 +1,8 @@
 # DigitalOcean 云原生练习环境
 
+> 已归档（2026-10-12）：DigitalOcean 练习环境已于 2026-08-22 退役，当前部署见 docs/architecture/deployment-architecture.md。
+
+
 > **Retired 2026-08-22:** DigitalOcean is no longer an active BodySense environment. The implementation artifacts were moved to `docs/archive/deployment/digitalocean/`. This document is historical only.
 
 

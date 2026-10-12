@@ -1,5 +1,8 @@
 # Body Canvas V3 — design / implementation handoff
 
+> 已归档（2026-10-12）：被 docs/product/interface.md 与 docs/design/README.md 取代；文中 Penpot 页面 ID 536d2a99… 已失效，当前 Product 页为 ed4c6ec0-8f91-80cb-8008-c1e744bad64b；Treatment / assessment 等旧架构不再适用。
+
+
 Status: implementation candidate, browser-verified, production promotion pending.
 Penpot file: `24d9d841-759d-81bc-8008-b6423250c2b8`
 Product page: `536d2a99-67da-80a5-8008-c113cf18702a`

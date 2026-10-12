@@ -1,5 +1,8 @@
 # Body Canvas V3 — Penpot to implementation
 
+> 已归档（2026-10-12）：被 docs/product/interface.md 与 docs/design/README.md 取代；该计划基于旧的 Treatment / Assessment 架构与已失效的 V3 Penpot 页面。
+
+
 Status: implementation complete / browser verified / PR-ready · 2026-10-08
 Execution owner: ChatGPT Web (direct implementation; no delegated writer)
 Branch: `feature/body-canvas-v3`, based on the repository's current `origin/main`. The remote has no `dev` branch and CI/PR workflows target `main`, so integration follows the existing feature-branch → PR → `main` path; the canonical main worktree is never used as a direct writer.

@@ -4,7 +4,7 @@
 
 - 清晰的本人身体陈述 → 自动保存 BodyState。
 - 有关键歧义 → Agent 发起针对性澄清。
-- 用户明确请求正式分析 → 更新唯一综合 Diagnosis 的相应病情条目。
+- 用户明确请求正式分析 → Agent 形成病情提案 → 用户在 Chat 的 confirm_condition 中逐个决定 → 一次原子提交更新唯一综合 Diagnosis 的相应病情条目（规则见 [agent-workflows §3.2](../product/agent-workflows.md#32-diagnosis-正式分析与病情确认)）。
 - 用户要求修改计划 → 更新对应 TrainingPlan。
 - Agent 发现计划风险 → 提议调整，用户决定是否应用。
 - 训练反馈与身体变化 → 进入 BodyState 及后续分析上下文。
