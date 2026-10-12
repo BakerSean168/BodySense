@@ -2,6 +2,26 @@
 
 **本文件记录已由产品负责人（Arlon）决定的问题。** 决定的内容已写入对应规格文件，规则以规格文件为准；本表只说明决定了什么、为什么、写在哪里。尚未决定的问题见 [开放问题](./open-questions.md)。
 
+## 2026-10-13 · Diagnosis V2 统一业务模型（DX-D5～D15）
+
+**当前有效原则以 [Diagnosis V2](./domain/diagnosis.md) 为准。** 本文件下方的 Q-01、GAP-A/C/F 等 V1 选择保留为历史决策记录，但其 lifecycle、描述性病名、用户决定 likely/keep_as_suspected、clinical_diagnosis 枚举、endTarget/mark_resolved 等设计已经被 V2 **明确取代**，不可继续作为新实现依据。早期 DX-D1～D3 在“ConditionEntry=持续健康问题”的假设下形成；该对象定义现已撤回，真实症状经历仍归 BodyState。
+
+| ID | 已确认的 V2 业务原则 | 权威位置 |
+| --- | --- | --- |
+| DX-D5 | ConditionEntry 没有通用 active/monitoring/resolved lifecycle；症状历程归 SymptomEpisode，疾病活动性不能由其自动推断 | Diagnosis §3.0/§3.6，R-DX-01/13 |
+| DX-D6 | 医学来源、AI 证据评估、临床医生原始声明、用户采纳四者分离；来源声明多条并存 | Diagnosis §3.0/§3.6，R-DX-08/16 |
+| DX-D7 | disposition 只保留 adopted/inactive；撤回、替代、不再适用与重新采纳原因独立审计 | Diagnosis §3.4/§3.6，R-DX-15 |
+| DX-D8 | ConditionEntry 是具体具名医学疾病/综合征概念，同一概念证据更新保留 ID，实质不同医学概念新建条目 | Diagnosis §3，R-DX-01/14 |
+| DX-D9 | 用户决定采纳/不采纳，不直接决定 suspected/likely，不制造临床确诊 | Diagnosis §3.2，R-DX-04/08 |
+| DX-D10 | AI 证据评估只使用 suspected/likely 定性等级；证据不足可以不提案，临床声明原始不确定性独立 | Diagnosis §3.0/§3.6，R-DX-08/11 |
+| DX-D11 | 新证据先进入来源权威；诊断只在用户请求分析并确认后实质更新 | Diagnosis §3.6，R-DX-06 |
+| DX-D12 | 多个临床来源和不同意见并存，不以较新自动覆盖较早或伪称医学排除 | Diagnosis §3.6，R-DX-16 |
+| DX-D13 | Agent 可自动发现变化、建议复核/Ask User 澄清；不自行发起正式诊断 Run | Diagnosis §3.6，R-DX-06 |
+| DX-D14 | 复核提示从新证据与已评估范围派生，去重/收起，不新增 DiagnosisReviewTask | Diagnosis §3.6，R-DX-17 |
+| DX-D15 | 一次 Run 内多个具名诊断提案逐项确认，全部有效决定一次原子提交，安全阻断零提交 | Diagnosis §3.2～3.3，R-DX-12 |
+
+**综合业务边界（本轮同意）**：BodyState 通过 Fact、Observation、SymptomEpisode 和派生 ConcernGroup 组织事实；**不新增 BodyConcern**。ConditionEntry 仅用于经用户选择纳入的具体医学诊断；跨领域为多对多证据关联，支持 supporting/counter/context。V1 的旧 Q/GAP 决策属于历史，不要求删除审计；有关物理 Schema、数据兼容、隐私擦除、风险 P0 及 Run 竞态的工程细节仍另案评审。
+
 ## 2026-10-12 · BodyState 业务模型评审（BS-D1～D10）
 
 本轮为**业务逻辑契约确认**，并不代表 Go/API、数据迁移、证据删除机制已经实现。BS-D7 来自用户对实时主动澄清的明确要求；BS-D8～D10 已确认其原则，其中具体的数据擦除范围与技术流程继续由 DC-033/035 决定。

@@ -2,7 +2,7 @@
 
 **状态：独立重建，待产品评审，未与 Hark 原草稿核对。** GitHub 未保存 Hark 所述的 `ec817b8` 和五份 `work/domain-drafts/`；此表依据已合并的产品规格、当前 Go/React/SQL 源码重新梳理决策问题。条目与 Hark 所说的 83 项、21 项 P0 **没有逐条对应关系**，不得把独立重建的数量作为原草稿恢复率。DC-* 是本轮独立编号，后续如找到原文件再以语义、来源和影响范围去重映射。
 
-**本表仍保留全部 70 个原始议题（含 19 个 P0），因此这些总数并非「仍待决定」数量。** BS-D1～D10 的已决原则见 [decisions.md](./decisions.md)，对应 DC-007/008/019/020/027/028/031 在下面标注状态；与旧系统迁移、隐私清除等独立细则仍按原 ID 跟踪。
+**本表仍保留全部 70 个原始议题（含 19 个 P0），因此这些总数并非「仍待决定」数量。** Diagnosis DX-D5～D15 已决原则见 [decisions.md](./decisions.md) 与 [Diagnosis V2](./domain/diagnosis.md)；旧 Diagnosis V1 的描述性病名、通用 lifecycle、用户按钮调整 suspected/likely、临床确诊等级和 mark_resolved 均已退役，不能用旧表述覆盖 V2。 BS-D1～D10 的已决原则见 [decisions.md](./decisions.md)，对应 DC-007/008/019/020/027/028/031 在下面标注状态；与旧系统迁移、隐私清除等独立细则仍按原 ID 跟踪。
 
 **决策归属**：P0 均为需要产品负责人拍板的业务或隐私约束。P1/P2 混合业务语义与工程迁移问题：例如 DC-028/029/030/038/044/046/052/053/064/070 可以先由工程方提供实现方案和验证，但不得突破已获批准的不变量；涉及用户可见行为或权限改变时仍需产品批准。任何未决定的业务语义都不能写成正式默认值。`pending` 在本表中表示决策尚未结案，而非产品的业务状态。
 
@@ -16,7 +16,7 @@
 | DC-006 | P0 | 正在执行的 Trainer 收到新安全限制时暂停、跳过或终止的粒度及记录 | TrainingSessionLog / SafetyRestriction | 新 |
 | DC-007 | P0 | **原则已决（BS-D8）**：明确本人习惯自动写入 BodyFact；仅关键歧义/特定证据准入另行处理，Habits 不复制事实 | Person / BodyFact | 新 |
 | DC-008 | P0 | **原则已决（BS-D8）**：明确的本人身体陈述自动写入所属权威领域；Records 不绕过 Diagnosis 确认，也不持有第二份事实 | Person / BodyState | 新 |
-| DC-009 | P0 | 临床/结束提案以及多提案确认卡片如何展示与操作 | Chat / Diagnosis UI | Q-19 |
+| DC-009 | P0 | **Diagnosis V2 原则已决（DX-D15）**：具名医学提案逐项 accept/reject/继续补充，一次原子提交；卡片具体文案、组件与响应式展示仍待 Q-19/Penpot | Chat / Diagnosis UI | Q-19 |
 | DC-010 | P0 | 训练频率、排期、漏练、补练与用户时区的业务语义 | TrainingPlan 排程与训练记录 | 新 |
 | DC-011 | P0 | 动作身份的稳定规则；同名动作、跨计划与修订的标识如何关联 | exerciseId / 历史回放 | 新 |
 | DC-012 | P0 | 计划暂停、完成、恢复与重开有哪些合法转换、授权和审计 | TrainingPlan.status | 新 |
@@ -28,10 +28,10 @@
 | DC-018 | P1 | 病情/计划提案超时时长、配置和提醒策略 | Proposal 生命周期 | Q-17 |
 | DC-019 | P1 | **已决（BS-D1）**：historical 只属于时间语义，不再是 BodyFact 的生命周期状态；记录状态独立为 asserted/superseded/withdrawn | BodyFact 目标契约 | 新 |
 | DC-020 | P1 | **原则已决（BS-D9）**：仅用户本人假设；可按原始陈述更正、撤回并保留关联事实/观察；AI 旧数据迁移仍待 DC-029 | BodyHypothesis | 新 |
-| DC-021 | P1 | 病情缓解后再发作，复用 conditionId 还是创建 episode/新条目 | Diagnosis 病程 | 新 |
+| DC-021 | P1 | **Diagnosis V2 原则已决（DX-D5/D8）**：症状缓解/复发属于 BodyState SymptomEpisode；ConditionEntry 是具名医学诊断概念，不持有通用 lifecycle，重新评估不自动修改 Diagnosis；Episode 引用物理迁移待 DC-066 | Diagnosis / BodyState 边界 | DX-D5/D8、DC-066 |
 | DC-022 | P1 | 训练当天跨时区、跨午夜时，`date` 应如何归属 | TrainingSessionLog.date | 新 |
 | DC-023 | P1 | 资料、报告、器材的完整字段、删除/停用和历史保留 | Person 资产 | 新 |
-| DC-024 | P1 | 已撤回或不再适用的病情，未来重新采纳的条件及审计方式 | ConditionEntry.disposition | 新 |
+| DC-024 | P1 | **原则已决（DX-D7/D8）**：已停用的医学诊断同概念重新采纳沿用 conditionId，需新分析、准确确认与历史审计；具体拒绝指纹与并发复用待 DC-068/070 | disposition 与重采纳 | DX-D7/D8 |
 
 | DC-025 | P1 | 旧 `BodyStateFact.ReviewState` 和 `Trend` 是否进入新 BodyFact，还是只作为兼容投影 | BodyFact / 历史迁移 | [BodyState As-Is](./domain/bodystate.md#28-当前-go-实现映射as-is不是新规格) |
 | DC-026 | P1 | 旧 `Kind` 类目（`lifestyle.*`、`history.*`、`equipment.available`）如何对齐新 `symptom/activity/lifestyle` 并保持检索稳定 | BodyFact 类目与旧数据 | 同上 |
@@ -55,10 +55,10 @@
 | DC-044 | P1 | Agent ToolCall succeeded 是否必须附带业务写入 commitId/revision 才能向用户报告“已保存” | Agent 工具与领域授权 | INV-09 |
 | DC-045 | P1 | 同一 Run 有多个 pending 工具确认时的顺序、去重及互相失效策略 | PendingInteraction | DC-017 |
 | DC-046 | P1 | 用户与 Agent 同时编辑不同 Conversation 时，何种运行锁和用户可见的冲突反馈 | Conversation / Run | G-04 |
-| DC-047 | P1 | 同一病情的名称同义、不同部位、多种病因假设如何匹配现有 conditionId，避免错误合并 | Diagnosis 身份 | DC-021 |
-| DC-048 | P1 | 医疗证据更新或撤销后，诊断结论来源升级/降级如何保留关联和历史版本 | ConditionEntry 来源链 | INV-11/15 |
+| DC-047 | P1 | **原则已决（DX-D8）**：conditionId 对应具名医学概念；同义规范化可保留、实质不同概念须新建；侧别/限定信息和同名去重的精确匹配机制仍待工程方案 | Diagnosis 身份 | DX-D8，DC-067 |
+| DC-048 | P1 | **原则已决（DX-D6/D11/D12）**：来源多记录并存、临床原话与证据版本可追踪、来源资格变化仅建议复核；具体迁移与证据撤销传播仍待技术协议 | ConditionEntry 来源链 | DX-D6/11/12 |
 | DC-049 | P1 | 用户一次直接更正同时影响 BodyState 和 Diagnosis，跨聚合提交如何界定原子性/部分失败补偿 | ConditionDirectEdit | INV-19 |
-| DC-050 | P1 | 新证据改变已确认提案后，新/旧内容指纹及交互卡怎样衔接而不重复索取授权 | ConditionProposal | INV-17 |
+| DC-050 | P1 | **原则已决（DX-D15）**：补充证据后只重新询问受影响的已决定提案；内容指纹和交互卡的版本映射、网络中断恢复协议仍待工程细化 | ConditionProposal | INV-17 |
 | DC-051 | P1 | ConditionAnalysisRun 基础修订过期后，是结束旧 Run 还是创建新 Run，如何展示已决但未生效的记录 | Diagnosis 运行恢复 | INV-12/16 |
 | DC-052 | P1 | PlanPatch 各操作（添加/移除/改组次/改频率/排期）逻辑类型、路径和冲突边界 | PlanPatch | R-TP-03/04 |
 | DC-053 | P1 | TrainingPlanRevision 的 ID、父修订、精确 diff、授权记录和历史回放契约 | TrainingPlanRevision | INV-07/09 |
@@ -74,10 +74,10 @@
 | DC-063 | P1 | 导致限制的 BodyFact/Observation 更正后，限制需不需要触发复核，谁可以发起解除 | SafetyState 来源变化 | DC-004 |
 | DC-064 | P1 | 并发新增安全风险与解除旧限制时，如何确保单条限制级别的 CAS / 不可清除新风险 | SafetyState 并发安全 | INV-09/20 |
 | DC-065 | P1 | 专业放行的用户转述与文件来源出现矛盾/失效时如何提示、驳回或请求复核 | professional_clearance | DC-004 |
-| DC-066 | P1 | 若引入病程 Episode，其 ID、时间区间、复发与结束边界，以及与 BodyFact 的对应关系 | Diagnosis 历史 | DC-021 |
-| DC-067 | P1 | 多条 ConditionEntry 合并/拆分时如何保持稳定引用、用户确认、撤回历史及训练关联 | Diagnosis 条目身份 | DC-047 |
-| DC-068 | P1 | 已撤回病情再次采纳时，旧拒绝指纹和新证据豁免是否应重新计算 | Diagnosis 反复采纳 | DC-024 |
-| DC-069 | P1 | 多份临床文件的诊断结论相互冲突时如何展示新旧来源及用户选择，不伪称医学排除 | Diagnosis 临床历史 | INV-15 |
+| DC-066 | P1 | **领域边界已决（BS-D3/D4、DX-D5）**：症状 Episode 的 ID/时间与复发只在 BodyState；Diagnosis 引用其证据版本，具体重放、引用重定向和旧数据迁移仍待 DC-030 | Diagnosis ↔ SymptomEpisode | DC-021 / BS-D3/D4 |
+| DC-067 | P1 | **原则已决（DX-D8）**：不同医学概念不应直接合并为一个 ConditionEntry，同一概念保留稳定 ID；历史条目误合并、拆分、现有下游引用映射待工程方案和必要的用户授权 | Diagnosis 条目身份 | DX-D8/INV-39 |
+| DC-068 | P1 | **原则已决（DX-D7/D8）**：inactive → adopted 需新分析及用户接受，旧撤回史保留；与历史拒绝的指纹去重和证据新鲜度具体计算待技术方案 | Diagnosis 重新采纳 | DX-D7/D8 |
+| DC-069 | P1 | **业务语义已决（DX-D12）**：多临床声明独立保留且不覆盖，医生原始不确定性和有效来源分别展示；结构化映射与原资料撤销传播待实现 | Diagnosis 临床历史 | DX-D12 |
 | DC-070 | P1 | 直接编辑与另一设备的正式分析同时提交时，诊断修订冲突应如何安全恢复并通知用户 | Diagnosis 并发 | INV-09/12 |
 
 **已确定但不可改写的边界**：确有危险风险时终结当前 Run 的 INV-23、安全限制不能静默修改 TrainingPlan 的 INV-08、用户拒绝更新不撤回整个诊断的 INV-18、临床文件与模型分析不同来源的 INV-11/15、提案关闭不等于拒绝，均已是正式契约。上表只决策这些规则尚未覆盖的细节。

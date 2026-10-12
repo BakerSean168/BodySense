@@ -224,7 +224,7 @@ type DerivedConcernGroup = {
 | Person / Habits / Records | Person 提供视图和经授权的录入、更正入口；实际身体陈述/观察写回 BodyState，病情条目仍归 Diagnosis |
 | Chat / Ask User | Chat 持有会话、问答及待回复工具的状态；BodyState 只持有事实、冲突依据和完成澄清后的领域更改 |
 | TrainingPlan / Trainer | 已执行组次、完成/跳过由 TrainingSessionLog 持有；BodyFact 只保留训练主观反馈或明确的身体变化，并引用训练记录 |
-| Diagnosis | 依据受影响 BodyStateRevision / Fact / Observation / Episode，必要时复核；不能因为 BodyState 关系变动自动修改用户已确认病情 |
+| Diagnosis | 以 Fact/Observation/Episode 与医学诊断形成多对多证据引用，具体具名病名、采纳与医学评估归 Diagnosis；BodyState 变动只建议复核，不自动改写用户已确认的 ConditionEntry，不新增 BodyConcern |
 | SafetyState | BodyState 持有风险约束；具体限制范围与解除由 [safety.md](./safety.md) 定义；来源更正不自动放宽限制 |
 
 ### 2.7 UI 派生状态与验收

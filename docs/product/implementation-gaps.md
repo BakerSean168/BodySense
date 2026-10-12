@@ -1,6 +1,6 @@
 # BodySense · 目标领域契约与当前实现差异
 
-**基线**：`main` 合并 PR #245 后的目标业务契约（7472989）。本页只记录可追溯的静态代码证据，不代表运行时 E2E 已复现；不授权本 PR 修改业务代码、迁移或生产配置。
+**代码对照基线**：`main` 合并 PR #245 后的旧运行时代码（7472989），目标产品规则已升级至 Diagnosis V2。本页只记录可追溯的静态代码证据，不代表运行时 E2E 已复现；本次更新不修改业务代码、迁移或生产配置。
 
 | ID | 严重性 | 源码证据 | 当前观察 / 与目标契约的关系 | 处理与回归依据 |
 | --- | --- | --- | --- | --- |
@@ -13,6 +13,8 @@
 | IG-07 | P1 可用性 | [activeTurnSelectors.ts](../../apps/web/src/features/consultation/runtime/activeTurnSelectors.ts)（selectIsComposerLocked 约 99–102 行）及 [AssistantChatPanel.tsx](../../apps/web/src/features/consultation/components/AssistantChatPanel.tsx)（约 487、552 行） | interrupted 状态锁定整个 Composer；当前「继续补充」不能通过普通消息输入路径完成。其他交互卡片可回答，但补充内容的业务归属和方式未确定 | 需要产品决定 DC-017；UI-08 测试继续补充通道，不强行规定必须使用通用 Composer |
 | IG-08 | P1 领域模型 | [body_state.go](../../apps/api/internal/model/body_state.go)（BodyStateFact/BodyState）、[body_state_repository.go](../../apps/api/internal/repository/body_state_repository.go)（UpsertFact/TransitionFact） | 现有 Fact 的 LifecycleState/ReviewState/Trend 仍混合当前陈述和实际变化；仓库目标契约已将 assertionStatus 与症状 Episode 派生状态分开，但尚未见新 Episode 完整持久关联及状态投影 | 后续独立代码/迁移 PR，先做旧数据表征测试并明确 DC-025/026/030；验证 BS-16～27，不在文档 PR 中直接更改库表 |
 | IG-09 | P1 来源与隐私 | [body_state_reasoning.go](../../apps/api/internal/model/body_state_reasoning.go)、[body_state.go](../../apps/api/internal/model/body_state.go) | 现有假设模型面向 AI，观察使用旧 review_state；新产品已明确自报、设备与文档来源分级以及陈述撤回和隐私删除独立，但源与衍生数据的精确删除机制尚未定义 | DC-027～029、DC-033/035 未结案前只实现有批准规则的迁移，验证 BS-28/31；BS-32 保持未具备验收前置条件 |
+
+| IG-10 | P1 Diagnosis V2 契约迁移 | [diagnosis_analysis.go](../../apps/api/internal/model/diagnosis_analysis.go)、[diagnosis_application_service.go](../../apps/api/internal/service/diagnosis_application_service.go) | 旧 Analysis/Candidate 及用户确认逻辑并非 V2 目标的具名医学 ConditionEntry、双态 disposition、多来源临床声明、AI suspected/likely 与 accept/reject 独立决策；未看到 V2 全套表/事件/Schema 已迁移的验证 | 独立迁移 PR：旧病名/描述性条目分类、状态/决定映射、API/事务/前端契约与历史兼容；先完成表征测试并验证 DXV2-01～28。不把文档修改宣称为运行时实现 |
 
 ## 交付要求与执行隔离
 

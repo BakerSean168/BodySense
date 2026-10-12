@@ -22,13 +22,13 @@ User
 │  ├─ SymptomEpisode[]        有事实依据的症状经历、关联与推导状态
 │  ├─ BodyObservation[]       测量、自测和有来源的观察
 │  ├─ BodyHypothesis[]        用户本人提出的怀疑（source = user）；AI 假设不进入 BodyState
-│  ├─ ConcernGroups           由相关信息形成的组织范围
+│  ├─ ConcernGroups           由相关信息形成的派生组织范围（无独立权威）
 │  ├─ SafetyState             权威风险状态与执行限制（Trainer 据此把关）
 │  └─ BodyStateRevision[]
-├─ Diagnosis (1)              用户确认过的病情综合诊断（含用户选择保留的疑似病情）
-│  ├─ ConditionEntry[]        稳定身份，支持多项局部更新
-│  ├─ SafetySummary
-│  ├─ ConditionDirectEdit[]   用户直接更正 / 撤回 / 标记缓解的决定审计（§3.5）
+├─ Diagnosis (1)              当前采纳的具名医学诊断集合及停用历史
+│  ├─ ConditionEntry[]        具名医学诊断概念，adopted/inactive，支持局部修订
+│  ├─ DerivedSafetySummary     从 SafetyState 只读投影，非第二权威
+│  ├─ ConditionDirectEdit[]   用户更正非实质元数据/撤回诊断的决定审计（§3.5）
 │  └─ DiagnosisRevision[]
 ├─ ConditionAnalysisRun[]     正式分析执行审计（审计事件只追加；运行状态为投影），含 AI 假设（创建时快照 + 追加事件）与证据引用
 │  ├─ ConditionProposal[]     本次分析提出的条目新增/变更
@@ -40,7 +40,7 @@ User
    └─ TrainingSessionLog[]    实际执行的训练记录（区别于计划中的 PlanSessionTemplate）
 ~~~
 
-- 一个病情可以关联多个 Concern，一个 Concern 可关联多种候选解释。SymptomEpisode 是有稳定身份、可追溯关联的症状经历，其状态由有效事实/事件推导；Concern 是便于组织事实的派生分组，不是另一份身体真值，不要求用户创建或管理独立问题实体与报告。
+- 一项具名医学诊断可以引用多条 Fact/Observation/Episode 等证据；一条事实也可以被多个医学诊断引用，证据关联本身不建立因果。SymptomEpisode 只组织有来源的症状经历；DerivedConcernGroup 是派生显示，不作为 Diagnosis 的必需身份，也不创建 BodyConcern。
 - Conversation 记录对话和工具活动；当前身体事实的权威来源是 BodyState（G-02）。
 - Profile 保存相对稳定的身份信息；测量值、生活习惯和伤病状态属于具有时间语义的 BodyState。
 
@@ -57,28 +57,28 @@ User
 
 | ID | 不变量 |
 | --- | --- |
-| INV-01 | BodyState、Diagnosis 和每份 TrainingPlan 各有明确、唯一的业务拥有者 |
+| INV-01 | 每用户各有一份权威 BodyState、Diagnosis；每份 TrainingPlan 有独立拥有者；Diagnosis 引用 BodyState 而不复制身体事实 |
 | INV-02 | 用户自述不会被模型转化为临床确诊；Observation / Hypothesis 与 Fact 不混同；AI 假设不写入 BodyState |
 | INV-03 | Correction 与 TemporalChange 是不同业务操作 |
-| INV-04 | Diagnosis 的局部补丁不会删除或改写无关病情 |
-| INV-05 | 同一 Diagnosis 原子补丁最多产生一个整体新修订 |
-| INV-06 | Diagnosis 条目的创建/实质更新需要可追溯的用户请求，以及用户对病名、原因和处理方案的确认决定（`likely` / `keep_as_suspected` / `include_clinical`，见 §3.2）；单纯请求分析不代表接受 Agent 结论。用户直接更正 / 撤回 / 标记缓解以对准确变更的确认代替病情确认工具（§3.5） |
+| INV-04 | Diagnosis 局部 patch 不删除、不重建无关医学诊断条目；实质不同医学诊断使用不同 conditionId，同一概念的名称规范化可以保留 ID |
+| INV-05 | 一次有效 Diagnosis 原子补丁最多产生一次整体新修订；无实际变更不创建空修订 |
+| INV-06 | 具名医学诊断的创建、实质更新、采纳变化与诊断间关系均需要准确提案的用户接受；分析请求不是接受结论。用户直接元数据纠错/撤回走准确的轻量确认（§3.5） |
 | INV-07 | 未经用户授权绝不改变 TrainingPlan 的当前有效内容 |
 | INV-08 | 训练安全阻断与计划内容修订的权限独立：风险状态由 BodyState SafetyState 持有，Trainer 执行门禁，`TrainingPlan.status` 与内容不因此改变 |
 | INV-09 | 工具、事件和网络重试具备幂等、错误提示和可恢复性 |
 | INV-10 | 当前页面不暴露技术修订号、历史版本管理或后端运行编号 |
-| INV-11 | `ConditionEntry.source` 只由证据来源决定，用户确认不能把条目变为 `clinical_document`；`clinical_diagnosis` 只与临床来源同时出现 |
-| INV-12 | 一次 ConditionAnalysisRun 的全部生效决定在一个原子补丁中提交；提交前 Diagnosis 不变，已作出的决定不丢失（以 `safety_blocked` 终结的运行不提交，见 INV-23） |
-| INV-13 | 已被用户拒绝的提案指纹，无相关新证据 ID 时不得再次提出 |
-| INV-14 | 撤回 / 不再适用只改变 `disposition`，条目与历史保留，`lifecycle` 与 BodyState 事实不被改写 |
-| INV-15 | 只有明确记载临床医生诊断的已采纳文件证据才能支持 `source = clinical_document` + `conclusionStatus = clinical_diagnosis`；化验 / 影像等数值只作为 `agent_analysis` 提案的证据，不升级来源或结论 |
-| INV-16 | 正式分析的审计事件、提案内容与用户决定只追加、不改写；运行与提案的当前状态是由事件推导的投影，可以更新 |
-| INV-17 | 运行中加入新证据后，每个已决定提案都必须对其决定之后的全部新证据 ID 完成复核才能提交；受影响的决定失效并须重新提出、重新决定 |
-| INV-18 | 对已有条目提案的 `rejected` 不改变该条目；`withdrawn_by_user` 只来自用户明确请求并经确认的直接编辑 |
-| INV-19 | 直接编辑路径只能由用户的明确请求触发，Agent 不得用它做自己的修改；每次直接编辑留下用户决定审计（谁、什么、何时、原因），并产生一次 Diagnosis 修订 |
+| INV-11 | ConditionEntry 的多来源声明、临床诊断原话、AI assessment 和用户 disposition 相互独立；用户采纳不改变 suspected/likely 或临床来源，旧 clinical_diagnosis 确定性等级退役 |
+| INV-12 | ConditionAnalysisRun 中全部有效决定在一次原子事务中提交，提交前 Diagnosis 不变；以 safety_blocked 终结的 Run 不得提交 |
+| INV-13 | 明确 reject 的语义相同提案，若无相关新证据 ID/版本不得重复提出；仅任意修订号变化不构成新证据 |
+| INV-14 | ConditionEntry disposition 仅 adopted/inactive；停用原因（用户撤回、替代、不再适用等）独立追加审计；不会删除已采纳历史、BodyState 事实或制造症状已缓解结论 |
+| INV-15 | 诊断临床来源必须保留医生原始不确定性和有准入资格的来源；用户转述与医疗文件不同，检验数值不能冒充医生具名诊断，较新文件不覆盖旧临床声明 |
+| INV-16 | Run/Proposal 基础数据、提案内容与用户 Decision 及分析事件只追加、不可静默改写；当前 Run/Proposal state 为事件投影 |
+| INV-17 | 新证据进入进行中的 Run 后，所有已决定提案必须复核后才能提交；受影响的提案重新提出并由用户重新决定，未受影响的不重复询问 |
+| INV-18 | 对已有 ConditionEntry 的更新、停用或关系提案选 reject 不改变该条目；撤回已采纳诊断只能来自用户明确请求并经确认的直接编辑，或用户接受准确的 set_disposition 提案 |
+| INV-19 | 直接编辑只由用户明确请求触发，限于不改变医学诊断实质的元数据纠错或明确撤回；保留谁、改什么、何时、为什么的独立授权审计，不允许 mark_resolved |
 | INV-20 | 安全限制只按其 `liftPolicy` 解除：只有 `on_expiry` 到期自动解除；其他策略到期只触发复核、限制继续生效；每次解除记录与策略一致的依据；Agent 不能自行解除或放宽策略 |
-| INV-21 | `changeKind = end` 的提案必须写明 `endTarget`（`mark_resolved` / `mark_no_longer_applicable`）并计入内容指纹；提交只应用 `accept_end` 决定所针对的那个 `endTarget`；`disposition = no_longer_applicable` 只来自被接受的 `mark_no_longer_applicable` 结束提案 |
-| INV-22 | 正式分析的投影可完全回放：按顺序回放 ConditionAnalysisRun / ConditionProposal 基础记录、ConditionProposalDecision 与 ConditionAnalysisEvent，可重现当前每个运行与提案的状态（含 `outcome`、`settledAt`、`hypotheses`、过期/取代原因与决定是否生效）；证据不足与安全阻断各有终结事件；运行开始后形成的 AI 假设以 `hypothesis_added` 追加，不改写创建时快照 |
+| INV-21 | 提案 create/update/set_disposition/update_relation 的目标内容（包括状态目标、停用原因及关系）绑定内容指纹与用户 accept 决定；不得将对一项医学诊断的授权复用于另一内容 |
+| INV-22 | 回放 Run/Proposal 基础记录、Decision 与有序事件应重建 Run outcome、hypotheses、证据、提案、待决/取代/过期状态及决定有效性；AI 运行时假设以 hypothesis_added 追加 |
 | INV-23 | 以 `safety_blocked` 终结的 ConditionAnalysisRun 绝不产生 DiagnosisRevision：未决定提案 `expired`（`safety_blocked`），已作出的决定只留档、不生效；终结后该运行的补丁、提交与任何事件由 Go 后端拒绝；每个运行只有一个终结事件（先写入者胜出），重复的 `safety_blocked` 幂等 |
 
 | INV-24 | 文件/图片提取的 BodyObservation 只有在对应证据候选按既有管线准入后才可形成；OCR 未准入候选不能直接成为可信观察或 Diagnosis；来源明确的用户自报/自测可以作为该来源等级的 Observation，但不得冒充临床核实结果 |
@@ -92,6 +92,12 @@ User
 | INV-32 | 症状经历的实质冲突由 Agent 优先 Ask User；未完成交互属 Chat 状态，不是 Episode 状态；只有状态确实受冲突影响才保守降为 unknown，安全风险不等待关联完成 |
 | INV-33 | 用户自述观察、自测/设备观察与文件候选准入各留来源等级；记录状态、文件准入与医学证据权威不混用；AI 假设不写入用户 BodyHypothesis |
 | INV-34 | Person 的 Records/Habits 只是各领域真值的视图或入口；事实更正、陈述撤回与健康数据隐私删除不可混用，删除清除与衍生证据处理须另有明确契约（DC-033/035） |
+| INV-35 | ConditionEntry 必须是具名医学疾病或综合征而非纯症状标题；无足够病名证据时保留 BodyState/Run，不编造正式 Diagnosis 条目 |
+| INV-36 | BodyState 与 Diagnosis 按证据 ID/版本形成多对多关系，supporting/counter/context 区分，SymptomEpisode 和其 Fact 不得重复计权或暗示未经证实的因果 |
+| INV-37 | Agent 评估仅 suspected/likely 两个定性等级；临床声明可以不带 AI assessment，必须原样表示“考虑”等医学不确定性 |
+| INV-38 | 新证据/来源变化只能产生派生的诊断复核提示；正式内容更新由用户发起分析并确认，提示去重且不另建 DiagnosisReviewTask |
+| INV-39 | 诊断关系与替代不由共享症状自动推导；新诊断采纳不隐式使旧条目 inactive，inactive 重新采纳须重新分析并确认 |
+
 ## 7. 状态索引与领域权威
 
 | 对象 | 已定义状态/维度 | 详细转换与规则 |
@@ -99,7 +105,7 @@ User
 | BodyFact | assertionStatus: asserted / superseded / withdrawn；实际时间单独建模 | [BodyState](./bodystate.md) |
 | SymptomEpisode | 由证据推导 unknown / ongoing / ended；身份 current / superseded | [BodyState](./bodystate.md) |
 | BodyObservation / BodyHypothesis | 来源分级与各自的 assertionStatus；文件准入独立 | [BodyState](./bodystate.md) |
-| ConditionEntry | source / conclusionStatus / lifecycle / disposition 四个独立维度 | [Diagnosis](./diagnosis.md) |
+| ConditionEntry | 具名医学诊断身份 + assessment（AI suspected/likely，可空） + 多来源声明 + evidenceLinks + disposition（adopted/inactive）；没有通用 lifecycle | [Diagnosis](./diagnosis.md) |
 | ConditionAnalysisRun | open / committed / closed_without_change 与 outcome | [Diagnosis](./diagnosis.md) |
 | ConditionProposal | pending / decided / superseded / expired | [Diagnosis](./diagnosis.md) |
 | TrainingPlan | active / paused / completed | [TrainingPlan](./training.md) |
