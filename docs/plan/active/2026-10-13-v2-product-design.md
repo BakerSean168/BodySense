@@ -59,7 +59,10 @@ Cross-window design obligations: active body-region selection; body model remain
 
 Initial status: existing Penpot base available, but **no V2 domain design gate is signed off**. PD-BASE-01 may proceed in parallel with DS-BS-01; PD-BS-01 can prototype early but only close after typed contract review and a real viewer walkthrough. Final visual polish (spacing, motion, icon consistency and broad responsive tuning) belongs to Track D **after** workflow and technical-state behavior are proven, not before.
 
-
 ### Same-Run Ask User checkpoint
 
 The actual React pending question now replaces normal input; the same shared AskUserCard supports retry/draft, accessible labels, separate choice groups and all required fields. Desktop and 390px light/dark sheet screenshots were inspected; canvas tokens and the dark heading were corrected. This is implementation visual evidence, not editable Penpot V2 sign-off or a whole-Chat theme rewrite. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.
+
+### 2026-10-13 · Explicit Penpot kickoff handoff (not a Viewer sign-off)
+
+[BodyState ViewModel and Episode design brief](./2026-10-13-bodystate-viewmodel-episode-handoff.md) now lists the actual Records/Habits fields and all seven read states, plus Episode uncertain/evidence-backed states. It is sufficient to start editing the existing Product / Components / Foundations page without awaiting all migrations. The React window now consumes the bounded ViewModel and has component regressions for partial Habits history and inconsistent revision pages. **PD-BASE-01 and PD-BS-01 remain OPEN** until actual editable Penpot frames/flows, visual review and contract-to-frame acceptance; this code change did not modify the official Penpot design file.

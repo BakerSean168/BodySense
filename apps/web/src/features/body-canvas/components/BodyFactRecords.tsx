@@ -13,6 +13,7 @@ import {
   BODY_FACT_KIND_LABELS as FACT_KINDS,
   type BodyFactKind as FactKind,
 } from "../model/bodyFactPresentation";
+import { projectBodyFactSurface } from "../model/bodyFactViewModel";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -83,12 +84,24 @@ export function BodyFactRecords({
   }, [owner]);
 
   const page = query.data?.pages[0];
-  const facts = (query.data?.pages.flatMap((item) => item.facts) ?? []).filter(
-    (fact) => !habitsOnly || fact.kind === "lifestyle",
-  );
+  const view = projectBodyFactSurface({
+    pages: query.data?.pages,
+    surface: habitsOnly ? "habits" : "records",
+    hasOwner: Boolean(owner),
+    isPending: query.isPending,
+    isError: query.isError,
+  });
 
   async function submit() {
-    if (!owner || !canEdit || !page || saving || !statement.trim()) return;
+    if (
+      !owner ||
+      !canEdit ||
+      !page ||
+      view.pagesDisagree ||
+      saving ||
+      !statement.trim()
+    )
+      return;
     const submittingOwner = owner;
     const effectiveKind = habitsOnly ? "lifestyle" : kind;
     const content = JSON.stringify([
@@ -185,7 +198,7 @@ export function BodyFactRecords({
               setAdding(true);
               setNotice(null);
             }}
-            disabled={!page}
+            disabled={!page || view.pagesDisagree}
           >
             <Plus size={15} />
             补充记录
@@ -214,17 +227,34 @@ export function BodyFactRecords({
           </button>
         </p>
       ) : null}
+      {view.pagesDisagree ? (
+        <p role="alert" className="bc-error">
+          翻页期间身体记录发生了变化，已暂时隐藏不同版本的历史页面。请刷新后继续查看或修改。
+          <button
+            type="button"
+            className="bc-text-button"
+            onClick={() => void query.refetch()}
+          >
+            重新读取
+          </button>
+        </p>
+      ) : null}
       {notice ? (
         <p role="status" className="bc-record-saved">
           <Check size={15} />
           {notice}
         </p>
       ) : null}
-      {!query.isPending && !query.isError && facts.length === 0 ? (
+      {!query.isError &&
+      (view.state === "empty" || view.state === "partial_empty") ? (
         <p className="bc-window-empty-text">
-          {habitsOnly
-            ? "尚未记录生活习惯。可以在对话中描述，或直接补充记录。"
-            : "还没有身体记录。可以在对话中描述，或直接补充记录。"}
+          {view.state === "partial_empty"
+            ? habitsOnly
+              ? "当前加载的记录中没有生活习惯，可以继续读取更早的记录。"
+              : "当前加载的记录为空，可以继续读取更早的记录。"
+            : habitsOnly
+              ? "尚未记录生活习惯。可以在对话中描述，或直接补充记录。"
+              : "还没有身体记录。可以在对话中描述，或直接补充记录。"}
         </p>
       ) : null}
       {adding ? (
@@ -306,38 +336,43 @@ export function BodyFactRecords({
         </form>
       ) : null}
       <ul className="bc-record-list">
-        {facts.map((fact) => (
-          <li key={fact.id} className="bc-record-item">
-            <span className="bc-status">{FACT_KINDS[fact.kind]}</span>
-            <p className="bc-record-statement">{fact.statement}</p>
-            <p className="bc-window-note">
-              发生时间：
-              {fact.temporal.original_expression ||
-                fact.temporal.start ||
-                "未说明"}
-            </p>
-            <time className="bc-window-note" dateTime={fact.recorded_at}>
-              记录于 {recordedTime(fact.recorded_at)}
-            </time>
-            {fact.supersedes_fact_id ? (
-              <span className="bc-window-note">更正后的陈述</span>
-            ) : null}
-            {canEdit && page ? (
-              <BodyFactAmendment
-                record={fact}
-                revision={page.current_revision}
-                onRefresh={() => void query.refetch()}
-                onCommitted={(message) => {
-                  if (ownerRef.current !== fact.user_id) return;
-                  setNotice(message);
-                  void queryClient.invalidateQueries({
-                    queryKey: ["workspace"],
-                  });
-                }}
-              />
-            ) : null}
-          </li>
-        ))}
+        {view.records.map(
+          ({
+            id,
+            record,
+            label,
+            statement: statementText,
+            occurrence,
+            recordedAt,
+            isCorrection,
+          }) => (
+            <li key={id} className="bc-record-item">
+              <span className="bc-status">{label}</span>
+              <p className="bc-record-statement">{statementText}</p>
+              <p className="bc-window-note">发生时间：{occurrence}</p>
+              <time className="bc-window-note" dateTime={recordedAt}>
+                记录于 {recordedTime(recordedAt)}
+              </time>
+              {isCorrection ? (
+                <span className="bc-window-note">更正后的陈述</span>
+              ) : null}
+              {canEdit && page && !view.pagesDisagree ? (
+                <BodyFactAmendment
+                  record={record}
+                  revision={page.current_revision}
+                  onRefresh={() => void query.refetch()}
+                  onCommitted={(message) => {
+                    if (ownerRef.current !== record.user_id) return;
+                    setNotice(message);
+                    void queryClient.invalidateQueries({
+                      queryKey: ["workspace"],
+                    });
+                  }}
+                />
+              ) : null}
+            </li>
+          ),
+        )}
       </ul>
       {query.hasNextPage ? (
         <button

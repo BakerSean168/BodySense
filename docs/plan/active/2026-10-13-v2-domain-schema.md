@@ -69,17 +69,18 @@ UI status also requires explicit distinction between `persisted`, `pending`, `re
 
 At foundation creation: business-level decisions are documented; the comprehensive typed V2 read/query surface is **not**. The immediate next owner is **DS-BASE-01 / DS-BS-01**. Handoff to track B requires accepted display/query contract; handoff to track C persistence requires tested migrations. Update only the relevant readiness gates with exact evidence after their acceptance; leave all other domains pending.
 
-
 ## 2026-10-13 verified checkpoint
 
 A: bounded Records/Habits projection and command/receipt handoff established; full Episode/Observation/Hypothesis contract remains open. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
-
 
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
 
-
 ### Same-Run Ask User checkpoint
 
 Migration 000006, typed answer validation and Go-owned structured-answer source contract are implemented and native-PostgreSQL tested. No new public transport is needed: existing canonical answer/stream/receipt APIs are reused. Full singleton/retention and Episode storage remain open. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.
+
+### 2026-10-13 · BodyState bounded ViewModel and Episode v7 schema
+
+Records/Habits presentation projection is now executable and used by the Person window (`bodyFactViewModel.ts`). [The exact Track A/Track B handoff](./2026-10-13-bodystate-viewmodel-episode-handoff.md) maps generated fields to empty/partial/stale/commit views. Additive migration `000007_symptom_episode_evidence` establishes owner-bound Episode identities, symptom Fact links and explicit state evidence, with no persisted guessed course. PostgreSQL 18 native replay and constraint/race checks passed locally. **DS-BS-02 remains IN PROGRESS**: no public Episode write/read endpoint, user-authorized link admission/merge/split, Observation/Hypothesis or full ConcernGroup.
