@@ -12,6 +12,7 @@ import {
   AssessmentReplayReport,
   AssessmentReportV2,
   AuthSession,
+  BodyEpisodeCommandReceipt,
   BodyEpisodePage,
   BodyEpisodeRecord,
   BodyFactCommit,
@@ -90,6 +91,8 @@ import type {
   AuthLoginRequest,
   AuthRegisterRequest,
   AuthSessionOutput,
+  BodyEpisodeAssociationRequest,
+  BodyEpisodeCommandReceiptOutput,
   BodyEpisodePageOutput,
   BodyEpisodeRecordOutput,
   BodyFactCommitOutput,
@@ -304,6 +307,60 @@ export const listBodyFactRecords = async (params?: ListBodyFactRecordsParams, op
 
 
 
+export const getCreateBodyEpisodeUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/episodes`
+}
+
+/**
+ * Uses only a server-verified existing self-reported symptom and its available source. Never accepts a title, inferred status, onset/resolution claim or AI authorization.
+ * @summary Explicit user command creating an organizational Episode from an already-asserted positive symptom Fact.
+ */
+export const createBodyEpisode = async (bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreateBodyEpisodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
 export const getListBodyEpisodesUrl = (params?: ListBodyEpisodesParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -385,6 +442,61 @@ export const getBodyEpisode = async (id: string, options?: RequestInit, fetchFn?
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyEpisodeRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLinkBodyEpisodeFactUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/facts`
+}
+
+/**
+ * Creates only an observation link after owner, availability, type, side, region, revision and unique-primary checks. No implicit disease state, resolution, merge, split or recurrence.
+ * @summary Explicitly associate one compatible symptom Fact to the specified current Episode.
+ */
+export const linkBodyEpisodeFact = async (id: string,
+    bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getLinkBodyEpisodeFactUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
   return data
 }
 

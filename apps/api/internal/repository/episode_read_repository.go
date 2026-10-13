@@ -18,8 +18,9 @@ var ErrEpisodeNotFound = errors.New("episode not available for this owner")
 
 // ListEpisodes reads all current Episode identities and status-evidence links
 // from one repeatable-read snapshot. It never recomputes medical truth from
-// plain symptoms or absence of new records. The public transport is a later
-// generated-contract slice; this repository never accepts AI write commands.
+// plain symptoms or absence of new records. The generated public read
+// boundary remains independent of the exact direct-user create/link command;
+// no AI may use this projection to invent a medical status.
 func (r *BodyStateRepository) ListEpisodes(ctx context.Context, owner uuid.UUID, beforeRevision int64) (*model.EpisodePage, error) {
 	if owner == uuid.Nil || beforeRevision < 0 {
 		return nil, fmt.Errorf("%w: owner and non-negative cursor required", model.ErrInvalidEpisodeEvidence)

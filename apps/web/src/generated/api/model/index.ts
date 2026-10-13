@@ -34,6 +34,8 @@ export * from './assessmentReportV2.zod';
 export * from './authLoginRequest.zod';
 export * from './authRegisterRequest.zod';
 export * from './authSession.zod';
+export * from './bodyEpisodeAssociationRequest.zod';
+export * from './bodyEpisodeCommandReceipt.zod';
 export * from './bodyEpisodeFactReference.zod';
 export * from './bodyEpisodePage.zod';
 export * from './bodyEpisodeRecord.zod';

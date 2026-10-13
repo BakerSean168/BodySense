@@ -31,6 +31,7 @@ type bodyStateFactService interface {
 type PublicServer struct {
 	bodyFacts                bodyFactApplication
 	episodes                 episodeReadApplication
+	episodeCommands          episodeCommandApplication
 	bodyState                bodyStateFactService
 	bodyStateRoutes          bodyStateRouteService
 	healthWorkspace          healthWorkspaceService

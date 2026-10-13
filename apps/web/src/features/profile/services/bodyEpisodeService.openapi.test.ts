@@ -114,3 +114,110 @@ describe("BodyState Episode generated read service", () => {
     } satisfies Partial<ApiRequestError>);
   });
 });
+
+describe("BodyState Episode explicit user commands", () => {
+  beforeEach(() => authFetchMock.mockReset());
+  const command = {
+    idempotency_key: "user-create-episode",
+    expected_revision: 1,
+    fact_id: factID,
+  };
+  const receipt = {
+    id: "456789ab-4567-4567-9567-456789abcdef",
+    user_id: owner,
+    operation: "create",
+    episode_id: episodeID,
+    fact_id: factID,
+    revision: 2,
+    revision_id: "56789abc-5678-4678-9678-56789abcdef0",
+    event_id: "6789abcd-6789-4789-9789-6789abcdef01",
+    committed_at: "2026-10-13T00:00:00Z",
+  };
+
+  it("only accepts a real committed create receipt", async () => {
+    authFetchMock.mockResolvedValueOnce(json(receipt));
+    expect(await bodyEpisodeService.create(command)).toEqual(receipt);
+    expect(authFetchMock).toHaveBeenCalledWith(
+      "/api/v1/body-state/episodes",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    );
+    authFetchMock.mockResolvedValueOnce(json({ success: true }));
+    await expect(bodyEpisodeService.create(command)).rejects.toThrow();
+  });
+
+  it("uses the exact Episode and Fact IDs for explicit linking", async () => {
+    authFetchMock.mockResolvedValue(json({ ...receipt, operation: "link" }));
+    const response = await bodyEpisodeService.linkFact(episodeID, command);
+    expect(response.operation).toBe("link");
+    expect(response.episode_id).toBe(episodeID);
+    expect(authFetchMock).toHaveBeenCalledWith(
+      `/api/v1/body-state/episodes/${episodeID}/facts`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    );
+  });
+
+  it("rejects model-injected source, owner, symptom status and extra fields before fetch", async () => {
+    const forged = {
+      ...command,
+      user_id: owner,
+      source_evidence_id: factID,
+      diagnosis: "migraine",
+      state: "ended",
+      role: "resolution",
+    };
+    await expect(
+      bodyEpisodeService.create(
+        forged as Parameters<typeof bodyEpisodeService.create>[0],
+      ),
+    ).rejects.toThrow();
+    await expect(
+      bodyEpisodeService.linkFact("../foreign", command),
+    ).rejects.toThrow();
+    await expect(
+      bodyEpisodeService.create({ ...command, expected_revision: -1 }),
+    ).rejects.toThrow();
+    expect(authFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves optimistic conflicts and source-unavailable denials rather than saying saved", async () => {
+    authFetchMock.mockResolvedValueOnce(
+      json(
+        {
+          error: {
+            code: "REVISION_CONFLICT",
+            message: "reload before retry",
+          },
+        },
+        409,
+      ),
+    );
+    await expect(bodyEpisodeService.create(command)).rejects.toMatchObject({
+      status: 409,
+      code: "REVISION_CONFLICT",
+    } satisfies Partial<ApiRequestError>);
+    authFetchMock.mockResolvedValueOnce(
+      json(
+        {
+          error: {
+            code: "EPISODE_SOURCE_UNAVAILABLE",
+            message: "source no longer available",
+          },
+        },
+        404,
+      ),
+    );
+    await expect(
+      bodyEpisodeService.linkFact(episodeID, command),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "EPISODE_SOURCE_UNAVAILABLE",
+    } satisfies Partial<ApiRequestError>);
+    expect(authFetchMock).toHaveBeenCalledTimes(2);
+  });
+});

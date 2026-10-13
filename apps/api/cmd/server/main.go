@@ -135,6 +135,7 @@ func main() {
 	)
 	bodyFactService := service.NewBodyFactService(bodyStateRepo, service.NewCanonicalBodyRegionIDValidator())
 	episodeReadService := service.NewEpisodeReadService(bodyStateRepo)
+	episodeCommandService := service.NewEpisodeCommandService(bodyStateRepo)
 	lifestyleService := service.NewLifestyleService(bodyStateService)
 	bodyMetricsService := service.NewBodyMetricsService(bodyStateService)
 	healthHistoryService := service.NewHealthHistoryService(bodyStateService)
@@ -367,7 +368,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyFacts(bodyFactService).WithEpisodes(episodeReadService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyFacts(bodyFactService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

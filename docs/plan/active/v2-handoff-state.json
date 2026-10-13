@@ -37,14 +37,14 @@
       "name": "Additive BodyFact ledger and typed API",
       "state": "in_progress",
       "next": "ENG-BS-02",
-      "details": "Ordinary and accepted-answer full self-statements plus direct amendments have real Go/Python/PostgreSQL/Person paths; migration 000006 adds exact resume/source identity. Whole BodyState projection and legacy cutover remain open."
+      "details": "True Go/Python/Postgres/Person accepted user statement and direct amendments, plus source-bound Episode v8 manually authorized create/observation-link transactions; full BodyState/status/observation/hypothesis and legacy cutover open."
     },
     {
       "id": "F-CONTRACT",
       "name": "Canonical domain-to-view-model handoff",
       "state": "in_progress",
       "next": "DS-BASE-01",
-      "details": "Live Person Records/Habits read model plus canonical API-generated bounded Episode list/detail with auditable source/state/missing identity fields; complete Episode ViewModel and other domains still open."
+      "details": "Actual Person Records/Habits and typed source-backed Episode read plus exact direct-user create/link commit receipt contract. Complete medical/condition and other domain ViewModel remains open."
     },
     {
       "id": "F-PENPOT",
@@ -85,12 +85,12 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Records/Habits in live Person; read-only Episode list/detail has canonical generated BodyEpisodePage/Record and source-backed status, tenant/availability/partial-page safeguards. Full target EpisodeDetail/relations/onset, Observation/Hypothesis/ConcernGroup and Penpot visual contract pending."
+          "details": "Person Records/Habits live; bounded owner-scoped source-backed Episode list/detail and exact user create/link receipt DTOs are typed. Missing full EpisodeDetail/relations/history/onset/end status admission, Observation/Hypothesis/ConcernGroup and Penpot visual contract."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Migrations 000002..000007 source+Episode identity on isolated PG18; Episode owner-bound read queries use repeatable-read snapshots and respect blocked/erased evidence, cross-user denial and account cascades. Episode user-authorized command/event writes, Observation/Hypothesis and legacy cutover missing."
+          "details": "Native PostgreSQL 18 migrations 000002..000008 source/Episode identity and privacy-counted exact Episode command receipts verified full-up/down/up; direct-user create/link is owner/source/Fact/revision-bound and atomic, while AI High consent, complete status, Observation/Hypothesis and legacy retirement remain open."
         },
         "design": {
           "state": "in_progress",
@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Authenticated strict read-only Episode GET list/detail with generated Go/TS/Zod/Postman, DB/source validation, immutable revision cursor and Go query/domain service; no public Episode write or user-authorized link, recurrence/merge/split, complete history/diagnosis/other domain replacement."
+          "details": "Strict OpenAPI generated read and direct-user Episode POST create/link, one BodyState revision/outbox/receipt; verified available self symptom and primary observation link, no inferred onset/end. Browser generated service supports commands; real Person Episode interaction, AI High/Ask User, relations/merge/split/status evidence and all other BodyState consumers remain open."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Native PG18 schema v7 up/down/up and race-enabled read/write-source/projection tests; actual Go generated HTTP→DB 200/404 and cross-user/source block; snapshot barrier test passed. Full CI exact SHA and future Episode command/E2E/Penpot/staging sign-off pending."
+          "details": "Native PG18 migration v8 full up/down/up and race-enabled source/tenant/rollback/same-key concurrent command and real public HTTP create→link→read 200/404 validation passed. Generated browser service 9 tests+typecheck passed. Full exact-head CI and actual Person UI/E2E/Penpot/release qualification pending."
         }
       }
     },
@@ -366,7 +366,7 @@
         "scripts/validate-body-fact-ledger.sh"
       ],
       "limits": [
-        "Episode schema/projection is staging only: no admission/write/list public endpoint",
+        "Historical v7 foundation; subsequent bounded Episode read and manual source-validated create/link paths now separately tracked.",
         "episode relations, merge/split, explicit user authorization and recurrence actions pending",
         "Observation, user Hypothesis, ConcernGroup, legacy cleanup pending",
         "Penpot editable V2 review not yet performed; handoff is a specification",
@@ -387,36 +387,60 @@
         "scripts/validate-body-fact-ledger.sh"
       ],
       "limits": [
-        "Read-only; no public Episode admission/record/associate/resolve/merge/split command or Python Agent Episode writer",
+        "This historical read-only slice did not itself authorize mutations; separate direct-user create/link added later as episode-direct-user-association-v8.",
         "Synthesized Episode fixture for HTTP; real user-authorized Episode association still unimplemented",
         "No full target Episode ViewModel, relation history, Observation, user Hypothesis, ConcernGroup or verified controlled-copy erasure",
         "Independent design worktree untouched; no editable Penpot final sign-off",
         "No staging or production deployment"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-direct-user-association-v8",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/api/internal/repository/episode_command_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_command_test.go",
+        "apps/api/internal/transport/httpapi/episode_command_integration_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "Direct authenticated user command only; AI High and Ask User contextual authorization not implemented",
+        "Only new positive-symptom identity and compatible observation link; never an ongoing/ended status or inferred onset/time",
+        "Browser typed adapter exists, but actual Person Episode create/link UI is not wired",
+        "Merge/split/unlink/recurrence relations and source-affecting status-claim admission still pending",
+        "Observation/Hypothesis/ConcernGroup/legacy replacement and full controlled-copy erasure pending",
+        "No Penpot editable official sign-off or staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T08:42:00Z",
+  "updatedAtUtc": "2026-10-13T09:32:41Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeQuery-20261013",
-    "baselineHead": "a6d1c7c4c12b2c590561c4ddfec14c3511a61d5c",
+    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeAdmission-20261013",
+    "baselineHead": "ee092fa495c1bb2193dad7f79b15683970c33ec7",
     "state": "locally_verified_ci_pending",
     "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
-    "nextTickets": ["DS-BS-02", "ENG-BS-02", "PD-BS-01", "IR-BS-01"],
+    "nextTickets": ["ENG-BS-02", "DS-BS-02", "PD-BS-01", "IR-BS-01"],
     "verification": {
-      "nativeMigrationVersion": 7,
+      "priorShaCI": "ee092fa495c1bb2193dad7f79b15683970c33ec7: 12/12 passed",
+      "nativeMigrationVersion": 8,
       "nativeMigrations": "full_up_down_up_passed",
-      "episodePostgresReadHttpRace": "passed",
-      "episodeConcurrentSourceBlockSnapshot": "passed",
-      "explicitMissingAndForeignDenied": "passed",
+      "episodeCommandPostgresRace": "passed_latest_v8_with_incompatible_side_type_and_absence_tests",
+      "episodeConcurrentRetryAndRollback": "passed",
+      "episodeCommandRealHTTP": "passed",
+      "episodeNegativeAndTenantDenials": "passed",
+      "episodeBrowserAdapterTests": "9_passed",
+      "episodeBrowserTypecheck": "passed",
       "fullGoQuality": "passed_all_packages_and_go_vet",
-      "fullWebQuality": "passed_70_files_421_tests_lint_typecheck_build",
-      "generatedContractExactness": "passed",
+      "fullWebQuality": "passed_70_test_files_425_tests_lint_typecheck_build",
+      "generatedContractCheck": "passed",
       "exactShaCI": "pending_push",
       "officialPenpotEditor": "not_touched",
       "postmanAndArchitecture": "passed",
-      "planGates": "passed_5_of_5",
-      "nativePostgresHTTP": "passed_7_episode_cases_pg18_race"
+      "activePlanGates": "passed_5_of_5"
     }
   }
 }

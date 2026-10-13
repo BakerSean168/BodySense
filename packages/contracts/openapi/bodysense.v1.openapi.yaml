@@ -66,6 +66,32 @@ paths:
         "500": *a4
         "503": *a5
   /api/v1/body-state/episodes:
+    post:
+      operationId: createBodyEpisode
+      summary: Explicit user command creating an organizational Episode from an already-asserted positive symptom Fact.
+      description: Uses only a server-verified existing self-reported symptom and its available source. Never accepts a title, inferred status, onset/resolution claim or AI authorization.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Atomic semantic revision and original durable receipt on exact replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
     get:
       operationId: listBodyEpisodes
       summary: Read source-backed symptom Episode identities from one BodyState revision snapshot.
@@ -115,6 +141,40 @@ paths:
         "401": *a2
         "404":
           $ref: "#/components/responses/NotFound"
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/facts:
+    post:
+      operationId: linkBodyEpisodeFact
+      summary: Explicitly associate one compatible symptom Fact to the specified current Episode.
+      description: Creates only an observation link after owner, availability, type, side, region, revision and unique-primary checks. No implicit disease state, resolution, merge, split or recurrence.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Committed source association; exact retry returns original IDs and revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
         "500": *a4
         "503": *a5
   /api/v1/body-state/facts:
@@ -3364,6 +3424,42 @@ components:
           type: integer
           format: int64
           minimum: 1
+    BodyEpisodeAssociationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, fact_id]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: "^\\S(?:.*\\S)?$"
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        fact_id: *a7
+    BodyEpisodeCommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, operation, episode_id, fact_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        operation:
+          type: string
+          enum: [create, link]
+        episode_id: *a7
+        fact_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
     BodyEpisodeFactReference:
       type: object
       additionalProperties: false

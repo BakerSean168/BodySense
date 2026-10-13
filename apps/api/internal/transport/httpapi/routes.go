@@ -84,6 +84,8 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
 	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
 	// Evidence-backed Episode reads; mutation/AI linkage is not a public capability.
+	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)
+	protected.POST("/body-state/episodes/:id/facts", wrapper.LinkBodyEpisodeFact)
 	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
