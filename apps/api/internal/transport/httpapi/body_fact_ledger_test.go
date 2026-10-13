@@ -157,3 +157,14 @@ func TestBodyFactHTTPValidatesReadProjectionAndCursor(t *testing.T) {
 		t.Fatal("invalid cursor reached application")
 	}
 }
+
+func (f *fakeBodyFactApplication) CorrectDirectFact(_ context.Context, owner, target uuid.UUID, command model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	f.calls++
+	f.owner = owner
+	return f.receipt, f.err
+}
+func (f *fakeBodyFactApplication) WithdrawDirectFact(_ context.Context, owner, target uuid.UUID, command model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	f.calls++
+	f.owner = owner
+	return f.receipt, f.err
+}

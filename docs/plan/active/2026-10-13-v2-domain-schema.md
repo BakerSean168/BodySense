@@ -73,3 +73,8 @@ At foundation creation: business-level decisions are documented; the comprehensi
 ## 2026-10-13 verified checkpoint
 
 A: bounded Records/Habits projection and command/receipt handoff established; full Episode/Observation/Hypothesis contract remains open. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
+
+
+### Explicit assertion amendments checkpoint
+
+Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.

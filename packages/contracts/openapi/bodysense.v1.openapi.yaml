@@ -2488,6 +2488,82 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/body-state/records/{id}/correct:
+    post:
+      operationId: correctBodyFactRecord
+      summary: Correct one explicit user assertion while retaining its original provenance.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectBodyFactRecordRequest"
+      responses:
+        "200":
+          description: An actual atomic amendment receipt. Withdrawal does not erase historical evidence or resolve symptoms.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactCommit"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
+  /api/v1/body-state/records/{id}/withdraw:
+    post:
+      operationId: withdrawBodyFactRecord
+      summary: Withdraw one user assertion without claiming privacy erasure or symptom resolution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBodyFactRecordRequest"
+      responses:
+        "200":
+          description: An actual atomic amendment receipt. Withdrawal does not erase historical evidence or resolve symptoms.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactCommit"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
 components:
   parameters:
     ConversationId:
@@ -2790,6 +2866,10 @@ components:
         recorded_at:
           type: string
           format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
     RecordHealthHistoryFactInput:
       type: object
       additionalProperties: false
@@ -2862,6 +2942,10 @@ components:
         recorded_at:
           type: string
           format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
     RecordActivityFactInput:
       type: object
       additionalProperties: false
@@ -2934,6 +3018,10 @@ components:
         recorded_at:
           type: string
           format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
     RecordLifestyleFactInput:
       type: object
       additionalProperties: false
@@ -3006,6 +3094,10 @@ components:
         recorded_at:
           type: string
           format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
     RecordTrainingFeedbackFactInput:
       type: object
       additionalProperties: false
@@ -3078,6 +3170,10 @@ components:
         recorded_at:
           type: string
           format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
     RecordBodyFactInput:
       oneOf:
         - $ref: "#/components/schemas/RecordSymptomFactInput"
@@ -3108,6 +3204,39 @@ components:
           activity: "#/components/schemas/ActivityBodyFactRecord"
           lifestyle: "#/components/schemas/LifestyleBodyFactRecord"
           training_feedback: "#/components/schemas/TrainingFeedbackBodyFactRecord"
+    CorrectBodyFactRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+        - replacement
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: "#/components/schemas/RecordBodyFactInput"
+    WithdrawBodyFactRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
     RecordBodyFactsRequest:
       type: object
       additionalProperties: false
@@ -5909,9 +6038,13 @@ components:
           $ref: '#/components/schemas/JsonValue'
         status: {type: string, enum: [running, succeeded, failed]}
         result:
-          $ref: '#/components/schemas/JsonValue'
+          anyOf:
+          - $ref: '#/components/schemas/JsonValue'
+          - type: 'null'
         error:
-          $ref: '#/components/schemas/JsonValue'
+          anyOf:
+          - $ref: '#/components/schemas/JsonValue'
+          - type: 'null'
         created_at: {type: string, format: date-time}
         started_at: {type: string, format: date-time}
         finished_at:

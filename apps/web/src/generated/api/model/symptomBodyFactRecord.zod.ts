@@ -30,7 +30,8 @@ export const SymptomBodyFactRecord = /*#__PURE__*/ zod.strictObject({
   "source_evidence_id": /*#__PURE__*/ zod.uuid(),
   "assertion_status": /*#__PURE__*/ zod.enum(['asserted', 'superseded', 'withdrawn']),
   "created_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
-  "recorded_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
+  "recorded_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
+  "supersedes_fact_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.describe('Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.'))
 });
 
 export type SymptomBodyFactRecord = zod.input<typeof SymptomBodyFactRecord>;

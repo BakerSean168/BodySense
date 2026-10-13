@@ -81,6 +81,8 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Approved assertion ledger, protected by the same authenticated owner boundary.
 	protected.POST("/body-state/records", wrapper.RecordBodyFacts)
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
+	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
+	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
 
 	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
 	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)

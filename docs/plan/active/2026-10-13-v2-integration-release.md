@@ -66,3 +66,8 @@ Review by verified root cause, not vague screenshots. Each finding names severit
 ## 2026-10-13 verified checkpoint
 
 D: #244 whitespace and training navigation/CSS regressions reproduced and fixed in the unreleased integration branch; 6 real-server E2E cases pass, including mobile geometry. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
+
+
+### Explicit assertion amendments checkpoint
+
+Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.

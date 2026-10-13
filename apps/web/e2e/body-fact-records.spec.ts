@@ -6,6 +6,11 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 
+// These cases include registration, real Go/Python/DB calls and full reloads.
+// Keep each expectation's normal timeout; allow a cold 3D/browser startup on
+// shared CI hosts without exhausting the entire case's default 30 seconds.
+test.describe.configure({ timeout: 90_000 });
+
 const api = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
 async function register(page: Page, request: APIRequestContext) {
@@ -202,4 +207,138 @@ test("Person Records narrow viewport keeps live form and records inside the shee
     path: testInfo.outputPath("person-records-mobile.png"),
     fullPage: true,
   });
+});
+
+test("Person Records corrections and withdrawal use exact targets and durable replay", async ({
+  page,
+  request,
+}) => {
+  const headers = await register(page, request);
+  const initial = await request.post(`${api}/api/v1/body-state/records`, {
+    headers,
+    data: {
+      idempotency_key: crypto.randomUUID(),
+      expected_revision: 0,
+      facts: [
+        {
+          kind: "activity",
+          statement: "我昨天跑步三十分钟",
+          body_region_ids: [],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
+    },
+  });
+  expect(initial.ok()).toBeTruthy();
+  const originalId = (await initial.json()).fact_ids[0];
+  await page.goto("/consultation?view=state");
+  const records = page.getByTestId("body-fact-records");
+  await expect(
+    records.getByText("我昨天跑步三十分钟", { exact: true }),
+  ).toBeVisible();
+  await records.getByRole("button", { name: "更正", exact: true }).click();
+  await records
+    .getByLabel("更正后的完整陈述")
+    .fill("我昨天只是散步十分钟，原来说错了");
+  await records.getByRole("button", { name: "保存更正" }).click();
+  await expect(
+    records.getByText("更正已保存，原陈述保留在历史中。"),
+  ).toBeVisible();
+  await expect(
+    records.getByText("我昨天只是散步十分钟，原来说错了", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    records.getByText("我昨天跑步三十分钟", { exact: true }),
+  ).toHaveCount(0);
+  const corrected = await (
+    await request.get(`${api}/api/v1/body-state/records`, { headers })
+  ).json();
+  expect(corrected.facts).toHaveLength(1);
+  expect(corrected.facts[0].supersedes_fact_id).toBe(originalId);
+  expect(corrected.current_revision).toBe(2);
+  const currentId = corrected.facts[0].id;
+  await records.getByRole("button", { name: "撤回陈述" }).click();
+  await expect(records.getByText(/这不是隐私数据删除/)).toBeVisible();
+  const outgoing = page.waitForRequest(
+    (req) =>
+      req.url().endsWith(`/records/${currentId}/withdraw`) &&
+      req.method() === "POST",
+  );
+  const incoming = page.waitForResponse(
+    (res) =>
+      res.url().endsWith(`/records/${currentId}/withdraw`) &&
+      res.request().method() === "POST",
+  );
+  await records.getByRole("button", { name: "确认撤回" }).click();
+  const originalRequest = await outgoing;
+  const originalReceipt = await (await incoming).json();
+  await expect(records.getByText(/陈述已撤回，历史保留/)).toBeVisible();
+  await expect(records.getByText(/还没有身体记录/)).toBeVisible();
+  const replay = await request.post(
+    `${api}/api/v1/body-state/records/${currentId}/withdraw`,
+    { headers, data: originalRequest.postDataJSON() },
+  );
+  expect(replay.ok()).toBeTruthy();
+  expect((await replay.json()).id).toBe(originalReceipt.id);
+  const final = await (
+    await request.get(`${api}/api/v1/body-state/records`, { headers })
+  ).json();
+  expect(final.facts).toEqual([]);
+  expect(final.current_revision).toBe(3);
+  await page.reload();
+  await expect(records.getByText(/还没有身体记录/)).toBeVisible();
+});
+
+test("BodyFact tool identity stays distinct across runs and users in durable thread projection", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const headers = await register(page, request);
+  const first = await send(request, headers, "我每晚睡七小时。");
+  await send(request, headers, "我没有肩痛。", first.conversationId);
+  const response = await request.get(
+    `${api}/api/v1/consultations/${first.conversationId}/thread`,
+    { headers },
+  );
+  expect(response.ok(), await response.text()).toBeTruthy();
+  const projection = await response.json();
+  const calls = projection.tool_calls.filter(
+    (item: { tool_name: string }) => item.tool_name === "record_body_state",
+  );
+  expect(calls).toHaveLength(2);
+  const ids = calls.map((item: { tool_call_id: string }) => item.tool_call_id);
+  expect(new Set(ids).size).toBe(2);
+  for (const call of calls) {
+    expect(call.tool_call_id).toBe(`bodyfact-intake-v1:${call.run_id}`);
+    expect(call.result.status).toBe("persisted");
+  }
+  const secondContext = await browser.newContext();
+  try {
+    const otherPage = await secondContext.newPage();
+    const otherHeaders = await register(otherPage, secondContext.request);
+    const other = await send(
+      secondContext.request,
+      otherHeaders,
+      "我每晚睡七小时。",
+    );
+    const otherResponse = await secondContext.request.get(
+      `${api}/api/v1/consultations/${other.conversationId}/thread`,
+      { headers: otherHeaders },
+    );
+    expect(otherResponse.ok(), await otherResponse.text()).toBeTruthy();
+    const otherCalls = (await otherResponse.json()).tool_calls.filter(
+      (item: { tool_name: string }) => item.tool_name === "record_body_state",
+    );
+    expect(otherCalls).toHaveLength(1);
+    expect(ids).not.toContain(otherCalls[0].tool_call_id);
+    const forbidden = await secondContext.request.get(
+      `${api}/api/v1/consultations/${first.conversationId}/thread`,
+      { headers: otherHeaders },
+    );
+    expect(forbidden.status()).toBe(404);
+  } finally {
+    await secondContext.close();
+  }
 });

@@ -1,4 +1,6 @@
 import {
+  correctBodyFactRecord,
+  withdrawBodyFactRecord,
   listBodyFactRecords,
   recordBodyFacts,
 } from "@/generated/api/bodysense";
@@ -6,6 +8,8 @@ import {
   RecordBodyFactsRequest,
   type RecordBodyFactsRequest as RecordBodyFactsInput,
 } from "@/generated/api/model/recordBodyFactsRequest.zod";
+import { CorrectBodyFactRecordRequest } from "@/generated/api/model/correctBodyFactRecordRequest.zod";
+import { WithdrawBodyFactRecordRequest } from "@/generated/api/model/withdrawBodyFactRecordRequest.zod";
 import { ListBodyFactRecordsParams } from "@/generated/api/model/listBodyFactRecordsParams.zod";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
@@ -16,8 +20,39 @@ export type BodyFactRecordsPage = Awaited<
 >;
 export type BodyFactCommitReceipt = Awaited<ReturnType<typeof recordBodyFacts>>;
 export type BodyFactRecordInput = RecordBodyFactsInput;
+export type BodyFactRecord = BodyFactRecordsPage["facts"][number];
+export type BodyFactCorrectionInput = Parameters<
+  typeof correctBodyFactRecord
+>[1];
+export type BodyFactWithdrawalInput = Parameters<
+  typeof withdrawBodyFactRecord
+>[1];
 
 export const bodyFactRecordsService = {
+  correct: (
+    id: string,
+    input: BodyFactCorrectionInput,
+  ): Promise<BodyFactCommitReceipt> =>
+    withOpenApiError(() =>
+      correctBodyFactRecord(
+        id,
+        CorrectBodyFactRecordRequest.parse(input),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  withdraw: (
+    id: string,
+    input: BodyFactWithdrawalInput,
+  ): Promise<BodyFactCommitReceipt> =>
+    withOpenApiError(() =>
+      withdrawBodyFactRecord(
+        id,
+        WithdrawBodyFactRecordRequest.parse(input),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
   list: (beforeRevision?: number): Promise<BodyFactRecordsPage> =>
     withOpenApiError(() =>
       listBodyFactRecords(

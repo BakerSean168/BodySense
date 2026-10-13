@@ -186,7 +186,10 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 from ...testing_support.body_fact_fixture import body_fact_fixture_events
 
                 for item in await body_fact_fixture_events(
-                    request.input.text, request.business_context.body_state, manifest
+                    request.input.text,
+                    request.business_context.body_state,
+                    manifest,
+                    request.run_id,
                 ):
                     if item["type"] == "tool_call":
                         event = ToolCallRuntimeEvent(tool=item["tool"], args=item["args"])

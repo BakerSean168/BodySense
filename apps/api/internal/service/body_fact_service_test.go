@@ -121,3 +121,10 @@ func TestBodyFactMessageSourceRequiresOwnerRunAndValidatedRegions(t *testing.T) 
 		t.Fatalf("verified command not forwarded: %#v %v", receipt, err)
 	}
 }
+
+func (f *fakeFactLedger) CorrectDirectFact(ctx context.Context, owner, _ uuid.UUID, _ model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	return f.RecordDirectFacts(ctx, owner, serviceFactCommand())
+}
+func (f *fakeFactLedger) WithdrawDirectFact(ctx context.Context, owner, _ uuid.UUID, _ model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	return f.RecordDirectFacts(ctx, owner, serviceFactCommand())
+}

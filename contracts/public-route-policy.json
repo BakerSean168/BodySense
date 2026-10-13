@@ -18,6 +18,16 @@
       "method": "POST",
       "path": "/api/v1/body-state/records",
       "reason": "SF-11 approved BodyFact assertion ledger, direct-user command/receipt and bounded tenant-owned read projection."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/records/{id}/correct",
+      "reason": "SF-20 explicit user assertion correction/withdrawal with exact target, optimistic revision, immutable source history and idempotent commit receipt."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/records/{id}/withdraw",
+      "reason": "SF-20 explicit user assertion correction/withdrawal with exact target, optimistic revision, immutable source history and idempotent commit receipt."
     }
   ]
 }

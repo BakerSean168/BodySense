@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from langgraph.types import StreamWriter
 from pydantic_ai.exceptions import AgentRunError
@@ -28,6 +29,7 @@ async def acquire_body_fact_turn(
         writer({"type": "text_delta", "delta": "身体记录暂时无法核验，本轮暂不自动保存。\n"})
         return {"intake_result": {"capture_status": "unavailable"}, "intake_question": None}
     try:
+        run_id = str(UUID(str(state.get("run_id", ""))))
         output = await (intake_service or BodyFactIntakeService()).assess(
             latest_user_message=text,
             config=manifest,
@@ -41,7 +43,7 @@ async def acquire_body_fact_turn(
 
     result = {"turn_kind": output.turn_kind, "capture_status": "not_applicable"}
     if output.facts:
-        tool_id = "bodyfact-intake-v1"
+        tool_id = f"bodyfact-intake-v1:{run_id}"
         writer(
             {
                 "type": "tool_call",

@@ -7,15 +7,12 @@ import {
 } from "@/features/profile/services/bodyFactRecordsService";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/authStore";
+import { BodyFactAmendment } from "./BodyFactAmendment";
 
-const FACT_KINDS = {
-  symptom: "身体感受",
-  health_history: "健康经历",
-  activity: "活动记录",
-  lifestyle: "生活习惯",
-  training_feedback: "训练反馈",
-} as const;
-type FactKind = keyof typeof FACT_KINDS;
+import {
+  BODY_FACT_KIND_LABELS as FACT_KINDS,
+  type BodyFactKind as FactKind,
+} from "../model/bodyFactPresentation";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -322,6 +319,23 @@ export function BodyFactRecords({
             <time className="bc-window-note" dateTime={fact.recorded_at}>
               记录于 {recordedTime(fact.recorded_at)}
             </time>
+            {fact.supersedes_fact_id ? (
+              <span className="bc-window-note">更正后的陈述</span>
+            ) : null}
+            {canEdit && page ? (
+              <BodyFactAmendment
+                record={fact}
+                revision={page.current_revision}
+                onRefresh={() => void query.refetch()}
+                onCommitted={(message) => {
+                  if (ownerRef.current !== fact.user_id) return;
+                  setNotice(message);
+                  void queryClient.invalidateQueries({
+                    queryKey: ["workspace"],
+                  });
+                }}
+              />
+            ) : null}
           </li>
         ))}
       </ul>

@@ -99,25 +99,30 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   // The tab is the only place the category name appears.
   await expect(page.getByRole("heading", { name: "身体记录" })).toBeHidden();
 
-  await page.getByRole("button", { name: "添加记录" }).click();
-  await page.getByPlaceholder("身体区域，例如：颈部、左肩、右肩").fill("颈部");
-  await page.getByPlaceholder("记录内容").fill("久坐后颈肩酸胀");
+  await page
+    .getByTestId("body-fact-records")
+    .getByRole("button", { name: "补充记录" })
+    .click();
+  await page.getByLabel("你的描述").fill("久坐后颈肩酸胀");
   await page.getByRole("button", { name: "保存记录" }).click();
 
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 
-  const bodyStateResponse = await request.get(`${apiBase}/api/v1/body-state`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const bodyStateResponse = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
   expect(bodyStateResponse.ok()).toBeTruthy();
   const bodyState = (await bodyStateResponse.json()) as {
     current_revision: number;
-    facts: Array<{ value: string }>;
+    facts: Array<{ statement: string }>;
   };
   expect(bodyState.current_revision).toBe(1);
   expect(bodyState.facts).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ value: "久坐后颈肩酸胀" }),
+      expect.objectContaining({ statement: "久坐后颈肩酸胀" }),
     ]),
   );
 

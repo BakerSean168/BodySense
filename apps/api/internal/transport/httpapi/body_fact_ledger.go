@@ -11,6 +11,8 @@ import (
 )
 
 type bodyFactApplication interface {
+	CorrectDirectFact(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyFactCommand) (*model.BodyFactCommit, error)
+	WithdrawDirectFact(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyFactCommand) (*model.BodyFactCommit, error)
 	RecordDirectFacts(context.Context, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	ListFacts(context.Context, uuid.UUID, int64) (*model.BodyFactPage, error)
 }
@@ -81,6 +83,10 @@ func (s *PublicServer) ListBodyFactRecords(ctx context.Context, request openapiv
 
 func classifyBodyFactPublicError(err error) bodyStatePublicError {
 	switch {
+	case errors.Is(err, model.ErrBodyFactNotFound):
+		return bodyStatePublicError{status: http.StatusNotFound, code: "FACT_NOT_FOUND", message: "record is unavailable for this owner"}
+	case errors.Is(err, model.ErrBodyFactNotCurrent):
+		return bodyStatePublicError{status: http.StatusConflict, code: "FACT_NOT_CURRENT", message: "record was already corrected or withdrawn"}
 	case errors.Is(err, model.ErrInvalidBodyFact):
 		return bodyStatePublicError{status: http.StatusBadRequest, code: "INVALID_BODY_FACT", message: err.Error()}
 	case errors.Is(err, model.ErrBodyFactIdempotencyConflict):

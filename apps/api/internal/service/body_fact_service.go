@@ -9,6 +9,8 @@ import (
 )
 
 type bodyFactLedger interface {
+	CorrectDirectFact(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyFactCommand) (*model.BodyFactCommit, error)
+	WithdrawDirectFact(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyFactCommand) (*model.BodyFactCommit, error)
 	RecordDirectFacts(context.Context, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	RecordRunFacts(context.Context, uuid.UUID, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	RecordMessageFacts(context.Context, uuid.UUID, model.MessageFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
@@ -96,4 +98,31 @@ func (s *BodyFactService) ListFacts(ctx context.Context, userID uuid.UUID, befor
 		return nil, fmt.Errorf("%w: invalid owner or cursor", model.ErrInvalidBodyFact)
 	}
 	return s.ledger.ListFacts(ctx, userID, beforeRevision)
+}
+
+func (s *BodyFactService) CorrectDirectFact(ctx context.Context, owner, target uuid.UUID, command model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	if owner == uuid.Nil || target == uuid.Nil {
+		return nil, fmt.Errorf("%w: owner and exact target required", model.ErrInvalidBodyFact)
+	}
+	if err := command.Validate(true); err != nil {
+		return nil, err
+	}
+	for _, region := range command.Replacement.BodyRegionIDs {
+		if s.regions == nil {
+			return nil, ErrBodyRegionIDValidationUnavailable
+		}
+		if !s.regions.IsValidBodyRegionID(region) {
+			return nil, ErrUnknownBodyRegionID
+		}
+	}
+	return s.ledger.CorrectDirectFact(ctx, owner, target, command)
+}
+func (s *BodyFactService) WithdrawDirectFact(ctx context.Context, owner, target uuid.UUID, command model.AmendBodyFactCommand) (*model.BodyFactCommit, error) {
+	if owner == uuid.Nil || target == uuid.Nil {
+		return nil, fmt.Errorf("%w: owner and exact target required", model.ErrInvalidBodyFact)
+	}
+	if err := command.Validate(false); err != nil {
+		return nil, err
+	}
+	return s.ledger.WithdrawDirectFact(ctx, owner, target, command)
 }

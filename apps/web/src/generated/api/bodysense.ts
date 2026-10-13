@@ -113,6 +113,7 @@ import type {
   ConversationRunListResponseOutput,
   ConversationTitleRequest,
   ConversationUpdateRequest,
+  CorrectBodyFactRecordRequest,
   CorrectBodyStateFactRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
@@ -193,7 +194,8 @@ import type {
   UploadListResponseOutput,
   UpsertBodyStateFactRequest,
   UserProfileResponseOutput,
-  UserUploadOutput
+  UserUploadOutput,
+  WithdrawBodyFactRecordRequest
 } from './model';
 
 export const getRecordBodyFactsUrl = () => {
@@ -4630,5 +4632,113 @@ export const getKnowledgeStats = async ( options?: RequestInit, fetchFn?: typeof
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? KnowledgeStats.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCorrectBodyFactRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/records/${id}/correct`
+}
+
+/**
+ * @summary Correct one explicit user assertion while retaining its original provenance.
+ */
+export const correctBodyFactRecord = async (id: string,
+    correctBodyFactRecordRequest: CorrectBodyFactRecordRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCorrectBodyFactRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(correctBodyFactRecordRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyFactRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/records/${id}/withdraw`
+}
+
+/**
+ * @summary Withdraw one user assertion without claiming privacy erasure or symptom resolution.
+ */
+export const withdrawBodyFactRecord = async (id: string,
+    withdrawBodyFactRecordRequest: WithdrawBodyFactRecordRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyFactRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyFactRecordRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
   return data
 }

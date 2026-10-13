@@ -17,6 +17,8 @@ import (
 var (
 	ErrInvalidBodyFact             = errors.New("invalid body fact")
 	ErrBodyFactIdempotencyConflict = errors.New("body fact idempotency conflict")
+	ErrBodyFactNotFound            = errors.New("body fact not found")
+	ErrBodyFactNotCurrent          = errors.New("body fact is no longer current")
 )
 
 // FactTemporal preserves the user's occurrence time separately from persistence time.
@@ -84,6 +86,30 @@ type BodyFactInput struct {
 	Details       json.RawMessage `json:"details"`
 }
 
+// AmendBodyFactCommand is an explicit user action on exactly one assertion.
+// Replacement is present only for correction; withdrawal keeps historical data.
+type AmendBodyFactCommand struct {
+	IdempotencyKey   string         `json:"idempotency_key"`
+	ExpectedRevision int64          `json:"expected_revision"`
+	Replacement      *BodyFactInput `json:"replacement,omitempty"`
+}
+
+func (c AmendBodyFactCommand) Validate(correction bool) error {
+	if c.ExpectedRevision < 0 || len(c.IdempotencyKey) < 1 || len(c.IdempotencyKey) > 128 || strings.TrimSpace(c.IdempotencyKey) != c.IdempotencyKey {
+		return fmt.Errorf("%w: explicit command identity and non-negative revision are required", ErrInvalidBodyFact)
+	}
+	if correction {
+		if c.Replacement == nil {
+			return fmt.Errorf("%w: correction requires a replacement", ErrInvalidBodyFact)
+		}
+		return (RecordBodyFactsCommand{IdempotencyKey: c.IdempotencyKey, ExpectedRevision: c.ExpectedRevision, Facts: []BodyFactInput{*c.Replacement}}).Validate()
+	}
+	if c.Replacement != nil {
+		return fmt.Errorf("%w: withdrawal cannot contain a replacement", ErrInvalidBodyFact)
+	}
+	return nil
+}
+
 type RecordBodyFactsCommand struct {
 	IdempotencyKey   string          `json:"idempotency_key"`
 	ExpectedRevision int64           `json:"expected_revision"`
@@ -129,6 +155,7 @@ type BodyFact struct {
 	Temporal         datatypes.JSON `gorm:"type:jsonb;not null" json:"temporal"`
 	Details          datatypes.JSON `gorm:"type:jsonb;not null" json:"details"`
 	SourceEvidenceID uuid.UUID      `gorm:"type:uuid;not null" json:"source_evidence_id"`
+	SupersedesFactID *uuid.UUID     `gorm:"type:uuid" json:"supersedes_fact_id,omitempty"`
 	AssertionStatus  string         `gorm:"not null" json:"assertion_status"`
 	CreatedRevision  int64          `gorm:"not null" json:"created_revision"`
 	RecordedAt       time.Time      `gorm:"not null" json:"recorded_at"`

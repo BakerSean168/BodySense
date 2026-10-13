@@ -69,3 +69,8 @@ Per ticket: add behavior/negative tests, run focused checks, run relevant isolat
 ## 2026-10-13 verified checkpoint
 
 C: ordinary user self-report / direct-edit BodyFact vertical is implemented and locally verified; next complete corrections/withdrawals and structured source answer gaps. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
+
+
+### Explicit assertion amendments checkpoint
+
+Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.

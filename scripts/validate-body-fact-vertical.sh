@@ -76,8 +76,7 @@ curl -fsS "http://127.0.0.1:$API_PORT/api/health" >/dev/null
 curl -fsS "http://127.0.0.1:$AI_PORT/health" >/dev/null
 cd "$ROOT"
 CI=true E2E_BASE_URL="http://127.0.0.1:$WEB_PORT" E2E_API_BASE_URL="http://127.0.0.1:$API_PORT" \
-  timeout 420 node node_modules/@playwright/test/cli.js test \
-  apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts \
-  --grep 'Person Records|Python extraction|negative self-report|closes the longitudinal loop|remains discoverable after reload' \
+  timeout 720 node node_modules/@playwright/test/cli.js test \
+  apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts apps/web/e2e/lifestyle-current-update.spec.ts \
   --reporter=list | tee "$EVIDENCE/browser.log"
 echo BODY_FACT_VERTICAL_E2E=PASS

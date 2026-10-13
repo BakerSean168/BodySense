@@ -97,6 +97,7 @@ def test_runtime_emits_one_proposal_not_fake_persistence_or_legacy_writes():
         service.assess.return_value = output()
         result = await acquire_body_fact_turn(
             {
+                "run_id": "11111111-1111-4111-8111-111111111111",
                 "latest_user_message": "我没有肩痛",
                 "body_state": {"records_available": True, "current_revision": 4},
             },
@@ -119,7 +120,11 @@ def test_unavailable_state_does_not_assume_zero_or_call_model():
         writer = []
         service = AsyncMock(spec=BodyFactIntakeService)
         result = await acquire_body_fact_turn(
-            {"latest_user_message": "我没有肩痛", "body_state": {}},
+            {
+                "run_id": "11111111-1111-4111-8111-111111111111",
+                "latest_user_message": "我没有肩痛",
+                "body_state": {},
+            },
             writer=writer.append,
             manifest=configuration(),
             intake_service=service,
@@ -138,6 +143,7 @@ def test_ambiguous_message_asks_without_saving_and_failure_does_not_guess():
             turn_kind="ambiguous", clarification="这指的是谁？"
         )
         state = {
+            "run_id": "11111111-1111-4111-8111-111111111111",
             "latest_user_message": "肩膀痛",
             "body_state": {"records_available": True, "current_revision": 0},
         }
@@ -168,3 +174,31 @@ def test_question_shaped_self_reference_does_not_become_a_fact():
     for text in ("我应该跑步吗？", "我有肩痛吗", "My shoulder hurts?"):
         with pytest.raises(ValueError):
             validate_fact_proposal(output(text, "unknown"), text)
+
+
+def test_tool_identity_is_unique_per_run_but_stable_on_replay():
+    async def run():
+        service = AsyncMock(spec=BodyFactIntakeService)
+        service.assess.return_value = output()
+        identities = []
+        for run_id in (
+            "11111111-1111-4111-8111-111111111111",
+            "22222222-2222-4222-8222-222222222222",
+            "11111111-1111-4111-8111-111111111111",
+        ):
+            events = []
+            await acquire_body_fact_turn(
+                {
+                    "run_id": run_id,
+                    "latest_user_message": "我没有肩痛",
+                    "body_state": {"records_available": True, "current_revision": 0},
+                },
+                writer=events.append,
+                manifest=configuration(),
+                intake_service=service,
+            )
+            identities.append(events[0]["id"])
+        assert identities[0] != identities[1]
+        assert identities[0] == identities[2]
+
+    asyncio.run(run())

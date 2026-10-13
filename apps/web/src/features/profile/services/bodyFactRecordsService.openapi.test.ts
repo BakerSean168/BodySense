@@ -124,3 +124,34 @@ describe("Person BodyFact generated service", () => {
     await expect(bodyFactRecordsService.list()).rejects.toThrow();
   });
 });
+
+it("validates exact correction and withdrawal requests through generated routes", async () => {
+  authFetchMock.mockReset();
+  authFetchMock.mockImplementation(async () => json(receipt));
+  const correction = {
+    idempotency_key: "correction-key",
+    expected_revision: 3,
+    replacement: command.facts[0],
+  };
+  await bodyFactRecordsService.correct(id, correction);
+  expect(authFetchMock).toHaveBeenLastCalledWith(
+    `/api/v1/body-state/records/${id}/correct`,
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify(correction),
+    }),
+  );
+  const withdrawal = { idempotency_key: "withdraw-key", expected_revision: 4 };
+  await bodyFactRecordsService.withdraw(id, withdrawal);
+  expect(authFetchMock).toHaveBeenLastCalledWith(
+    `/api/v1/body-state/records/${id}/withdraw`,
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify(withdrawal),
+    }),
+  );
+  const forged = { ...withdrawal, replacement: command.facts[0] };
+  authFetchMock.mockClear();
+  await expect(bodyFactRecordsService.withdraw(id, forged)).rejects.toThrow();
+  expect(authFetchMock).not.toHaveBeenCalled();
+});

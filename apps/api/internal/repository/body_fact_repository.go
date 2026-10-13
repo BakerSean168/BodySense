@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -202,7 +203,21 @@ func (r *BodyStateRepository) ListFacts(ctx context.Context, userID uuid.UUID, b
 	if userID == uuid.Nil || beforeRevision < 0 {
 		return nil, fmt.Errorf("%w: invalid owner or cursor", model.ErrInvalidBodyFact)
 	}
-	db := database.FromContext(ctx, r.db)
+	// Corrections can change an existing row's assertion state without changing
+	// its created revision. All page queries therefore share one DB snapshot.
+	var page *model.BodyFactPage
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		var err error
+		page, err = listBodyFactsSnapshot(tx, userID, beforeRevision)
+		return err
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	return page, nil
+}
+
+func listBodyFactsSnapshot(db *gorm.DB, userID uuid.UUID, beforeRevision int64) (*model.BodyFactPage, error) {
 	page := &model.BodyFactPage{UserID: userID, Facts: []model.BodyFact{}}
 	var state model.BodyState
 	if err := db.Where("user_id = ?", userID).First(&state).Error; err != nil {

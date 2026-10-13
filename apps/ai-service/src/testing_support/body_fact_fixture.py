@@ -19,6 +19,7 @@ async def body_fact_fixture_events(
     text: str,
     body_state: dict[str, Any],
     manifest: ConsultationAgentManifest,
+    run_id: str,
 ) -> list[dict[str, Any]]:
     corpus = {
         "我每晚睡七小时。": ("lifestyle", "unknown"),
@@ -42,7 +43,7 @@ async def body_fact_fixture_events(
     service = BodyFactIntakeService(model_resolver=lambda _: TestModel(custom_output_args=args))
     events: list[dict[str, Any]] = []
     await acquire_body_fact_turn(
-        {"latest_user_message": text, "body_state": body_state},
+        {"latest_user_message": text, "body_state": body_state, "run_id": run_id},
         writer=events.append,
         manifest=manifest,
         intake_service=service,

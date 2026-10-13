@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-01",
-          "details": "Ordinary self-report Chat -> Python -> Go run-bound atomic commit -> actual Person Records/Habits is locally verified; structured answers, corrections/withdrawals and Episode consumers remain."
+          "details": "Ordinary source-bound Chat capture and direct Fact create/correct/withdraw -> actual Person UI are implemented and locally verified; exact structured answers, Episode/Observation/Hypothesis remain."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Six real-server browser cases pass, including replay, negative/third-party, mobile and repaired training paths. Domain-wide V2 integration and production qualification are not complete."
+          "details": "Ten affected real-server browser cases pass, including exact amendments/replay, temporal habit history and cross-run/user thread projection. Full BodyState and production acceptance remain open."
         }
       }
     },
@@ -292,6 +292,26 @@
         "full source-erasure and event consumers pending",
         "final Penpot visual review pending",
         "no staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-fact-explicit-amendments",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-vertical-contract.md",
+      "tests": [
+        "apps/api/internal/repository/body_fact_amendment_repository_test.go",
+        "apps/api/internal/transport/httpapi/body_fact_amendments_test.go",
+        "apps/api/internal/transport/httpapi/body_fact_thread_test.go",
+        "apps/web/src/features/body-canvas/components/BodyFactAmendment.test.tsx",
+        "apps/web/e2e/body-fact-records.spec.ts",
+        "apps/web/e2e/lifestyle-current-update.spec.ts"
+      ],
+      "limits": [
+        "Agent structured correction authorization pending",
+        "Episode/Observation/Hypothesis pending",
+        "withdrawal preserves history and is not erasure",
+        "fresh exact-SHA CI and production qualification required"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
