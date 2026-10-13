@@ -83,6 +83,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
 	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
 	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
+	// New source-backed BodyObservation ledger, distinct from legacy observations.
+	protected.POST("/body-state/observation-records", wrapper.RecordBodyObservation)
+	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)
 	// Owner-authorized explicit Episode mutations and source-backed reads;
 	// AI-driven high-confidence association has no public bypass route.
 	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)

@@ -85,12 +85,12 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Canonical Person Records/Habits and provisional Episode source-selection UI plus typed v9 explicit-status admission. v10 adds user-reported recurrence relation projection with source availability and supported/needs_review, at one BodyState revision. No complete Episode relations/merge/split history or signed-off Penpot presentation."
+          "details": "Person Records/Habits live and provisional Episode source-selection UI, v9 explicit-status, v10 recurrence source relation. V11 adds whole-revision source-available user-report BodyObservation read contract and typed client without any final Penpot Observation UI; no completed all-domain ViewModel or hypothesis/ConcernGroup."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Native PostgreSQL 18 migrations 000002..000010 full-up/down/up and immutable checks verified. V10 stores exact user-authorized recurrence relations with two owner-bound Episode FKs, primary symptom Fact/source FK, one authorization receipt/revision/outbox and source-visible reads, preserving independent v9 states. Observation/Hypothesis, merge/split and legacy retirement remain OPEN."
+          "details": "V1 baseline immutable; v2-v10 native PostgreSQL 18 BodyFact/Episode migrations verified on prior exact-SHA CI. Additive v11 user-report BodyObservation uses exact owner+record+original-source composite FK, raw values/units, independent ID-only commit/revision/outbox and no legacy dual write. PG18 v11 full up/down v10/replay v11, native cross-owner/cascade, concurrent replay, late rollback, guarded downgrade and forged source-FK tests PASS. Correction/withdrawal, device/document admission, Hypothesis/ConcernGroup and legacy retirement remain OPEN."
         },
         "design": {
           "state": "in_progress",
@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Real Person BodyFact/Episode create/link provisional UI + v9 source-backed status admission. V10 adds direct user reported recurrence write/read, typed Go/TS/strict HTTP, incompatible evidence/time refusal, non-disclosing cross-owner reads, current-source filtering, needs_review after end correction and graph acyclicity. Race-enabled native PG18 repository/HTTP plus full Web 73/456 tests PASS. Final designer-approved recurrence UI, automatic High and complete BodyState remain OPEN."
+          "details": "Real Person BodyFact/Episode create/link provisional UI, v9 status evidence and v10 explicit recurrence source relation were previously exact-SHA verified. V11 implements authenticated source-backed direct-user BodyObservation Go write/read and strict generated OpenAPI/TS/Zod with a typed browser adapter; no unreviewed clinical normalization, file import or AI origin. Native PG18 Go/HTTP, uncached Web 74/460 lint/typecheck/build and 16/16 real isolated Chromium E2E PASS; final designer-approved Observation UI, full BodyState and deployment OPEN."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Prior v9 PR #247 head d010a63d00002f7d508e1b669f33758cf7e93441 exact CI 12/12 SUCCESS. New v10: PostgreSQL 18 v10 full up/down v9/replay v10, race Go repository/HTTP/consultation (including 6 recurrence tests) PASS; generated contracts and 106 Postman operations parity PASS; Web 73 files/456 tests lint/typecheck/build PASS; real isolated Go/PG18/Redis/Python/React Chromium 15/15 PASS without retry, test resources cleaned. New v10 exact-SHA GitHub CI PENDING. No staging/production or whole-domain release."
+          "details": "PR #247 v10 exact SHA 0e287ab128bb09a8e8fae354c16bf5e49acbe7bf CI 12/12 SUCCESS. New v11 native PostgreSQL 18 up/down/replay plus race-enabled Go repo/real HTTP/consultation PASS; generated 108 OpenAPI/Postman operations PASS; Web 74 files/460 tests lint/typecheck/build PASS; genuine Go/PG18/Redis/Python/React Chromium 16/16 PASS without retries including new Observation user auth and exact replay, resources cleaned. V11 exact new SHA GitHub CI PENDING. No staging/production or whole-domain release."
         }
       }
     },
@@ -494,28 +494,48 @@
         "Complete Episode reorganization and temporal resolution, Observation/Hypothesis/ConcernGroup, legacy retirement, controlled erasure and V2 production launch remain open"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-observation-direct-user-report-v11",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-body-observation-direct-report.md",
+      "tests": [
+        "apps/api/internal/model/body_observation_test.go",
+        "apps/api/internal/repository/body_observation_repository_test.go",
+        "apps/api/internal/transport/httpapi/body_observation_ledger_test.go",
+        "apps/web/src/features/profile/services/bodyObservationService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Direct user self-reported original observation only; device/document/file/AI-origin, clinical verification, normalized measurement and diagnosis are deliberately unimplemented",
+        "One source-backed direct-edit record+id-only commit/revision/outbox, not a duplicate source in legacy body_state_observations or body_facts",
+        "Correction/withdrawal, historical versions, controlled original-source erasure and cross-domain evidence references are not yet user-facing v11 capabilities",
+        "Canonical generated Web adapter is not a Penpot UI; Track B editable design PR #250 remains independent",
+        "Full BodyState observation/hypothesis/ConcernGroup, safety, diagnosis, all-domain integration and staging/production gates remain open"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T13:44:00Z",
+  "updatedAtUtc": "2026-10-13T15:34:00Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeRecurrenceRelations-20261013",
-    "baselineHead": "d010a63d00002f7d508e1b669f33758cf7e93441",
+    "owner": "ChatGPT-Web/ENG-BS-03-BodyObservationDirectReport-20261013",
+    "baselineHead": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf",
     "state": "locally_verified_new_exact_sha_ci_pending",
-    "contract": "docs/plan/active/2026-10-13-episode-recurrence-relations.md",
-    "nextTickets": ["DS-BS-02", "ENG-BS-02", "IR-BS-01", "PD-BS-01"],
+    "contract": "docs/plan/active/2026-10-13-body-observation-direct-report.md",
+    "nextTickets": ["DS-BS-03", "ENG-BS-03", "IR-BS-02", "PD-BS-01"],
     "verification": {
-      "priorHeadExactShaCI": "d010a63d00002f7d508e1b669f33758cf7e93441:12_of_12_SUCCESS",
-      "nativePostgres": "migration_10_full_up_down_9_replay_10_and_race_Go_repository_HTTP_consultation_PASS",
-      "recurrenceNegativeCoverage": "direct_user_source_only;old_ended_new_distinct;known_wrong_chronology_DENIED;foreign_owner_DENIED;source_withdrawal_review_or_hide;cycle_DENIED;late_rollback_and_concurrent_exact_replay_PASS",
-      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_106_routes_PASS",
-      "currentFullWeb": "73_files_456_tests_lint_typecheck_build_PASS_uncached",
-      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React;resources_cleaned",
+      "priorHeadExactShaCI": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf:12_of_12_SUCCESS",
+      "nativePostgres": "v11_full_up_down_v10_replay_v11_and_race_Go_repository_HTTP_consultation_PASS;composite_owner_and_source_fk;same_key_exact_timestamp_replay;rollback;cascade",
+      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_108_routes_PASS",
+      "currentFullWeb": "74_files_460_tests_lint_typecheck_build_PASS_uncached",
+      "currentNativeBrowser": "16_of_16_PASS_no_retries_real_Go_Postgres18_Redis_Python_React;resources_cleaned",
+      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-3298738/",
       "newExactShaCI": "pending_push",
-      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_checksum_v10_PASS",
+      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_v11_checksum_immutable_PASS",
       "independentPenpotPR": "250_not_written",
       "stagingProduction": "not_deployed",
-      "evidenceRoot": ".runtime/schema-first-v2-evidence/",
-      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2871484/"
+      "evidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   }
 }

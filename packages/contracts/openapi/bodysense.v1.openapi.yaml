@@ -65,6 +65,56 @@ paths:
         "409": *a3
         "500": *a4
         "503": *a5
+  /api/v1/body-state/observation-records:
+    post:
+      operationId: recordBodyObservation
+      summary: Store one explicit user-reported observation without claiming device or clinical verification.
+      description: Authenticated direct edit only. Raw value and original unit are never normalized or interpreted as a diagnosis. Provenance, source version, revision and receipt are assigned server-side; no legacy observation dual write.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordBodyObservationRequest"
+      responses:
+        "200":
+          description: Durable source-backed observation receipt; exact retry replays the original IDs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "409": *a3
+        "500": *a4
+        "503": *a5
+    get:
+      operationId: listBodyObservationRecords
+      summary: Read current source-available user reports from one BodyState revision.
+      description: This new user-report ledger is not the legacy medical observation table; absence of reports never implies clinical normality. Device/document candidates are not admitted here.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: At most 20 source-backed direct reports with a revision cursor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationRecordPage"
+        "400": *a1
+        "401": *a2
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/episodes:
     post:
       operationId: createBodyEpisode
@@ -3526,6 +3576,142 @@ components:
           maxItems: 400
           items:
             $ref: "#/components/schemas/BodyFactRecord"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    RecordBodyObservationInput:
+      type: object
+      additionalProperties: false
+      required: [kind, statement, observed_at]
+      properties:
+        kind:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: "^[a-z][a-z0-9_]{1,63}$"
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        raw_value:
+          type: string
+          maxLength: 120
+        raw_unit:
+          type: string
+          maxLength: 48
+        method:
+          type: string
+          maxLength: 240
+        measurement_context:
+          type: string
+          maxLength: 500
+        observed_at:
+          $ref: "#/components/schemas/BodyFactTemporal"
+    RecordBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, observation]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        observation:
+          $ref: "#/components/schemas/RecordBodyObservationInput"
+    BodyObservationCommit:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, observation_id, source_evidence_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        observation_id: *a7
+        source_evidence_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyObservationSource:
+      type: object
+      additionalProperties: false
+      required: [kind, id, version]
+      properties:
+        kind:
+          type: string
+          enum: [user_report]
+        id: *a7
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyObservationRecord:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, kind, statement, observed_at, source, assertion_status, created_revision, recorded_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        kind:
+          type: string
+          minLength: 2
+          maxLength: 64
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        raw_value:
+          type: string
+          maxLength: 120
+        raw_unit:
+          type: string
+          maxLength: 48
+        method:
+          type: string
+          maxLength: 240
+        measurement_context:
+          type: string
+          maxLength: 500
+        observed_at:
+          $ref: "#/components/schemas/BodyFactTemporal"
+        source:
+          $ref: "#/components/schemas/BodyObservationSource"
+        assertion_status:
+          type: string
+          enum: [asserted]
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+    BodyObservationRecordPage:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, observations, has_more]
+      properties:
+        user_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        observations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/BodyObservationRecord"
         has_more:
           type: boolean
         next_before_revision:

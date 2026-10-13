@@ -20,6 +20,8 @@ import {
   BodyFactCommit,
   BodyFactRecordPage,
   BodyMetricsSnapshot,
+  BodyObservationCommit,
+  BodyObservationRecordPage,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
   BodyStateHypothesisMutationResponse,
@@ -103,6 +105,8 @@ import type {
   BodyFactCommitOutput,
   BodyFactRecordPageOutput,
   BodyMetricsSnapshotOutput,
+  BodyObservationCommitOutput,
+  BodyObservationRecordPageOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
   BodyStateHypothesisInput,
@@ -156,6 +160,7 @@ import type {
   ListBodyEpisodeRelationsParams,
   ListBodyEpisodesParams,
   ListBodyFactRecordsParams,
+  ListBodyObservationRecordsParams,
   ListConversationsParams,
   ListDiagnosisAnalysesParams,
   ListOutcomesParams,
@@ -172,6 +177,7 @@ import type {
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
   RecordBodyFactsRequest,
+  RecordBodyObservationRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
@@ -308,6 +314,107 @@ export const listBodyFactRecords = async (params?: ListBodyFactRecordsParams, op
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyFactRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordBodyObservationUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/observation-records`
+}
+
+/**
+ * Authenticated direct edit only. Raw value and original unit are never normalized or interpreted as a diagnosis. Provenance, source version, revision and receipt are assigned server-side; no legacy observation dual write.
+ * @summary Store one explicit user-reported observation without claiming device or clinical verification.
+ */
+export const recordBodyObservation = async (recordBodyObservationRequest: RecordBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyObservationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyObservationRecordsUrl = (params?: ListBodyObservationRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/observation-records?${stringifiedParams}` : `/api/v1/body-state/observation-records`
+}
+
+/**
+ * This new user-report ledger is not the legacy medical observation table; absence of reports never implies clinical normality. Device/document candidates are not admitted here.
+ * @summary Read current source-available user reports from one BodyState revision.
+ */
+export const listBodyObservationRecords = async (params?: ListBodyObservationRecordsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationRecordPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyObservationRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationRecordPage, status?: number} = new globalThis.Error();
+    const data : BodyObservationRecordPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationRecordPage.parse(parsedBody) : parsedBody
   return data
 }
 
