@@ -1,6 +1,6 @@
 # BodySense
 
-> **An Agent-powered personal body-state workspace** for capturing body changes, maintaining a single current comprehensive diagnosis, and managing independently authorized training plans.
+> An AI that remembers your body: it maps the aches and changes you mention onto a 3D body, forms an overall assessment once you confirm it, and coaches you through each training plan.
 
 <p align="left">
   <strong>Language:</strong> English · <a href="./docs/zh-CN/README.md">Simplified Chinese</a>
