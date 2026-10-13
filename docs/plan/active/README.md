@@ -7,7 +7,13 @@ The coordinated pre-user vNext engineering reset completed through Phase 11 and 
 
 Current active plans keep their own product/operations acceptance owners:
 
-- [BodySense V2 Schema-First Full Refactor](./2026-10-13-schema-first-full-refactor.md) - **ACTIVE / PRIMARY DOMAIN IMPLEMENTATION PLAN**; owns the approved three-stage domain-model replacement, typed schemas/contracts, Go/Python/React vertical slices, existing Penpot window integration, verification and rollout. ChatGPT Web is the implementation owner; hourly continuation resumes this plan rather than starting another overlapping task. Prior domain/runtime/UI work must converge here without concurrent writers.
+- [**BodySense V2 Parallel Full-Stack Rebuild · Master Plan**](./2026-10-13-v2-parallel-master.md) — **ACTIVE / PRIMARY V2 PROGRAM**. One domain/Schema foundation, parallel Product Design and Engineering, continuous per-domain Integration/Release. No recurring automation is enabled.
+  - [A · Domain & Schema](./2026-10-13-v2-domain-schema.md) — domain persistence, presentation/read-model and command/event contracts.
+  - [B · Product Design](./2026-10-13-v2-product-design.md) — editable Penpot, window flows, states, contract-based handoff.
+  - [C · Engineering](./2026-10-13-v2-engineering.md) — Go/Python/React typed vertical slices and first functional UI.
+  - [D · Integration & Release](./2026-10-13-v2-integration-release.md) — continuous domain E2E, visual QA, legacy removal, exact-SHA staging/production.
+  - [**Shared domain handoff readiness**](./v2-handoff-state.json) — five product domains × six independently evidenced gates; validate with `pnpm plan:check`.
+- [BodySense V2 Schema-First · SF Ticket Ledger](./2026-10-13-schema-first-full-refactor.md) — **ACTIVE / ENGINEERING IMPLEMENTATION DETAIL**, subordinate to the V2 master above. Preserves SF-00–90 actual tests/commits and next SF-12; not a second master or an hourly supervisor.
 
 - [`2026-09-24-full-stack-upgrade-and-remote-dev-modernization.md`](./2026-09-24-full-stack-upgrade-and-remote-dev-modernization.md) — ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-13 LOCAL ACCEPTED / BS-UPG-110 AND BS-UPG-120 PENDING; coordinated toolchain/dependency/runtime modernization, MemoFlow-derived Vite Bundled Dev for remote GCP development, staged Go/Python/React/3D/Redis/LiteLLM/image upgrades, and full local/staging/release acceptance.
 - [`2026-09-01-documentation-code-alignment-audit.md`](./2026-09-01-documentation-code-alignment-audit.md) — ACTIVE; repository-wide ADR/current-doc/code alignment audit. Current documentation baseline has been cleaned; remaining P1/P2 evidence/mechanism/code gaps are explicitly tracked here.

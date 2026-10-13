@@ -1,6 +1,6 @@
-# BodySense V2 Schema-First Full Refactor
+# BodySense V2 Schema-First · Engineering SF Ticket Ledger
 
-Status: ACTIVE. Execution owner: ChatGPT Web; Agent Fabric is the execution transport, not a second implementation agent.
+Status: ACTIVE / ENGINEERING DETAIL. [Primary V2 program](./2026-10-13-v2-parallel-master.md) · [Engineering workstream](./2026-10-13-v2-engineering.md) · [Single handoff state](./v2-handoff-state.json). This document preserves the SF-00–SF-90 implementation checkpoints and verification evidence, not a competing sequential master. Execution owner: ChatGPT Web; Agent Fabric is the execution transport, not a second implementation agent.
 
 ## Outcome and authority
 
@@ -37,8 +37,8 @@ Business authority: [product index](../../product/README.md), [BodyState](../../
 | Ticket | Scope and dependency | Observable gate | Status |
 | --- | --- | --- | --- |
 | SF-00 | Merge approved contracts, inventory existing implementation and establish this plan | Merged #246, clean baseline, exact ownership and resumable checkpoint | DONE |
-| SF-10 | BodyFact/source-evidence/commit-receipt/outbox schema and atomic Go persistence, additive staging of replacement tables | Actual PostgreSQL migration; one revision for a batch; concurrent retry, stale revision, cross-user reference and rollback tests | LOCAL ACCEPTED / PR CI PENDING |
-| SF-11 | Typed public read/record operations and generated Go/TS validation for explicitly entered user facts | API auth and schema rejection tests; generated artifacts reproduce exactly; returned receipt reflects persisted revision | LOCAL ACCEPTED / PR CI PENDING |
+| SF-10 | BodyFact/source-evidence/commit-receipt/outbox schema and atomic Go persistence, additive staging of replacement tables | Actual PostgreSQL migration; one revision for a batch; concurrent retry, stale revision, cross-user reference and rollback tests | LOCAL ACCEPTED / CI 12/12 PASS on ce00bc0c1, UNMERGED |
+| SF-11 | Typed public read/record operations and generated Go/TS validation for explicitly entered user facts | API auth and schema rejection tests; generated artifacts reproduce exactly; returned receipt reflects persisted revision | LOCAL ACCEPTED / CI 12/12 PASS on ce00bc0c1, UNMERGED |
 | SF-12 | Python extraction/tool binding for clear self statements and Person Records/Habits read/write UI | User message -> validated extraction -> Go -> DB -> receipt -> refreshed Person; failure never displayed as saved | IN PROGRESS — source-binding and browser contract service verified; Python/live Person wiring pending |
 | SF-20 | Episode identity/links/deterministic projection, corrections/withdrawals and user hypotheses; replace old Fact/Observation owners | BS-16..32, negative/ambiguous/recurrence/correction cases and reference replay | PENDING |
 | SF-30 | Single Conversation, serial run/Ask User identity, replacement composer and recovery; remove share/list/create UX | PC3-01..05/19, concurrent devices, no second run while pending, old public tokens inaccessible | PENDING |
@@ -113,9 +113,9 @@ After checking current PR CI and preserving this branch, implement the first rea
 - Numeric normalization catalogs, concern-group display keys and physical erasure propagation need engineering contracts and tests, not implicit legacy mappings.
 - UI PR #244 failed checks need reproduction and focused repair before integration/rollout.
 
-## Hourly continuation
+## On-demand continuation (hourly automation disabled)
 
-Existing Agent-Fabric-only automation `6acd19647d148191acb982240a5e9c80` was paused after a prior safety block; confirm its current enabled state before claiming hourly work or recreating a scheduler. Do not create a duplicate supervisor. The previous automation `6acd1623e99c8191a95396c306d382fe` was disabled after its update failed because it depended on an unavailable GitHub connector. The replacement was successfully created and enabled; repository operations use the existing authorized host tools. Its scheduled execution is not proof that a coding process runs continuously between invocations. Every invocation should read this plan plus live git/job state, execute a bounded verifiable next task when no healthy same-scope writer exists, and record actual results. Retrying a temporarily failed authorized operation is allowed; do not bypass a persistent platform safety/authentication block. Model substitution does not change execution ownership.
+On 2026-10-13, the user requested disabling the hourly continuation automation `6acd19647d148191acb982240a5e9c80`; `automations.update` confirmed `is_enabled=false`. Do **not** reactivate or create a duplicate. A manual continuation must first read the [V2 primary program](./2026-10-13-v2-parallel-master.md), its four workstream plans, this SF checkpoint, and live branch/worktree/jobs/lock. Follow one writer per checkout and the shared handoff gates. On a transient tool failure, inspect, perform bounded retry, isolate the blocker and proceed with independent safe tasks. Never bypass persistent platform safety/authentication controls. Model substitution does not change implementation ownership.
 
 ## Checkpoint ledger
 
