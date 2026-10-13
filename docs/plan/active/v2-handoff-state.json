@@ -72,8 +72,15 @@
     {
       "id": "body-state",
       "name": "BodyState / BodyFact / Episode",
-      "product": ["docs/product/domain/bodystate.md"],
-      "sf": ["SF-10", "SF-11", "SF-12", "SF-20"],
+      "product": [
+        "docs/product/domain/bodystate.md"
+      ],
+      "sf": [
+        "SF-10",
+        "SF-11",
+        "SF-12",
+        "SF-20"
+      ],
       "gates": {
         "business": {
           "state": "ready",
@@ -100,20 +107,25 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "True Chat→Go→PG→Person BodyFact flow and source-bound Episode read and direct-user v8 create/link APIs. Real Person Records Episode disclosure now supports user-entered typed positive/negative symptom Fact, durable receipt, separately confirmed Episode create/link, exact idem replay, stale/owner guards and mobile. Full target Episode ViewModel/UI, AI High and Observation/Hypothesis/Concern remain open."
+          "details": "Source-bound BodyFact and Episode v8 create/link are browser-integrated in real Person; extra hardening refactored single useBodyEpisodeController and three stateless UI parts without wire changes. Initial/follow-up GET failures fail-closed, unknown Fact/Episode writes lock their exact original intent. 27 focused tests and full Web 73 files/452 tests passed. Whole V2 Episode/Observation/Hypothesis/legacy and independent Penpot UI still open."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Native PostgreSQL 18 migration v8 and race-enabled owner/source/rollback tests, generated Go/TS contracts, previous fe284d581 SHA 12/12 CI. This batch real E2E 15/15 green (user UI positive Fact → Episode → negative Fact → link → unknown read/refresh/390px); frontend 73 files/448 tests+lint/typecheck/build PASS. Exact new-SHA CI and final Penpot release acceptance pending."
+          "details": "Previous commit 2904b61 exact CI 12/12 PASS. This hardening has 27 focused tests, full uncached Web lint/typecheck/build with 73/452 tests PASS, and synthetic PostgreSQL 18 + Go/Python + real browser 15/15 PASS (no retries, cleanup verified). Plan and migration immutable checks PASS; new submitted exact-SHA CI pending. No staging/production release."
         }
       }
     },
     {
       "id": "conversation-person",
       "name": "Conversation / Ask User / Person Profile",
-      "product": ["docs/product/domain/person-chat.md"],
-      "sf": ["SF-30", "SF-70"],
+      "product": [
+        "docs/product/domain/person-chat.md"
+      ],
+      "sf": [
+        "SF-30",
+        "SF-70"
+      ],
       "gates": {
         "business": {
           "state": "ready",
@@ -152,8 +164,12 @@
     {
       "id": "diagnosis",
       "name": "Diagnosis V2 / ConditionEntry",
-      "product": ["docs/product/domain/diagnosis.md"],
-      "sf": ["SF-40"],
+      "product": [
+        "docs/product/domain/diagnosis.md"
+      ],
+      "sf": [
+        "SF-40"
+      ],
       "gates": {
         "business": {
           "state": "ready",
@@ -196,7 +212,9 @@
         "docs/product/domain/training.md",
         "docs/product/domain/safety.md"
       ],
-      "sf": ["SF-50"],
+      "sf": [
+        "SF-50"
+      ],
       "gates": {
         "business": {
           "state": "ready",
@@ -236,8 +254,13 @@
     {
       "id": "person-assets",
       "name": "Equipment / UserAsset / Media / Reports",
-      "product": ["docs/product/domain/person-chat.md"],
-      "sf": ["SF-60", "SF-70"],
+      "product": [
+        "docs/product/domain/person-chat.md"
+      ],
+      "sf": [
+        "SF-60",
+        "SF-70"
+      ],
       "gates": {
         "business": {
           "state": "ready",
@@ -434,32 +457,53 @@
         "No staging/production deployment, full controlled-copy erasure sign-off or official Penpot final Viewer acceptance"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-person-read-error-retry-hardening",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/components/BodyEpisodeAssociations.test.tsx",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeAssociations.test.ts",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeSymptomDraft.test.ts",
+        "apps/web/e2e/body-episode-associations.spec.ts",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "4 red-before-green regressions cover initial fetch failure, cached stale fetch failure, immutable unknown Episode command and immutable unknown Fact command",
+        "Hook owns generated read/mutation transport, views are stateless; independent PR #250 owns final Episode Penpot screen",
+        "Full native/browser/CI acceptance remains pending on new commit; no schema or endpoint changes",
+        "No V2 wide-domain, legacy retirement, final visual or production release claim"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T11:00:32Z",
+  "updatedAtUtc": "2026-10-13T11:38:42Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-UI-Bridge-20261013",
-    "baselineHead": "fe284d581279a4659090ea00193730505eee239c",
+    "owner": "ChatGPT-Web/ENG-BS-UI-Hardening-20261013",
+    "baselineHead": "2904b61f4a4904bf39876a392821484b34ae2004",
     "state": "locally_verified_ci_pending",
     "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
-    "nextTickets": ["IR-BS-01", "PD-BS-01", "ENG-BS-02", "DS-BS-02"],
+    "nextTickets": [
+      "IR-BS-01",
+      "PD-BS-01",
+      "ENG-BS-02",
+      "DS-BS-02"
+    ],
     "verification": {
-      "previousExactShaCI": "fe284d581279a4659090ea00193730505eee239c: 12/12 SUCCESS",
-      "newEpisodePersonProjectionTests": "6_passed",
-      "newDirectSymptomCommandTests": "3_passed",
-      "newEpisodePersonComponentTests": "14_passed",
-      "focusedTotal": "23_of_23_passed",
-      "fullWebQuality": "73_files_448_tests_lint_typecheck_build_passed_uncached",
-      "realBrowserE2E": "15_of_15_passed_no_retries",
-      "realBrowserFlow": "Person typed symptom Fact → committed Go receipt → explicit Episode create/replay → negative symptom Fact → user link → source-backed unknown projection → reload → 390px",
-      "migrationBaseline": "native_PostgreSQL_v8_and_prior_exact_sha_passed; no_current_db_changes",
-      "activePlanCheck": "5_of_5_passed",
-      "codegen": "passed_no_wire_format_change",
-      "exactShaCI": "pending_push",
-      "independentDesignPr": "250_draft_worktree_untouched",
-      "productionDeployment": "not_performed",
-      "evidenceRoot": ".runtime/schema-first-v2-evidence/",
-      "browserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2238986/"
+      "priorHeadExactShaCI": "2904b61f4a4904bf39876a392821484b34ae2004: 12/12 SUCCESS",
+      "regressionRedFirst": "4_of_4_failed_on_previous_component",
+      "regressionGreen": "4_of_4_passed",
+      "componentizedBoundary": "useBodyEpisodeController_and_3_stateless_view_components",
+      "targetedTests": "27_of_27_passed_after_hook_split",
+      "targetedTypecheck": "passed",
+      "currentFullWeb": "73_files_452_tests_lint_typecheck_build_PASS_uncached",
+      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React",
+      "currentPlanAndCodegen": "5_of_5_plan_migration_immutability_and_generated_contract_PASS",
+      "newExactShaCI": "pending_push",
+      "independentPenpotPR": "250_not_written",
+      "stagingProduction": "not_deployed",
+      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2382181/"
     }
   }
 }

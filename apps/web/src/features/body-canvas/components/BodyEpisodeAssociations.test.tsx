@@ -439,3 +439,95 @@ describe("Person symptom input to Episode source", () => {
     expect(api.facts.record).not.toHaveBeenCalled();
   });
 });
+
+describe("Episode read and ambiguous-write safety regressions", () => {
+  it("never labels an unavailable initial Episode query as an empty health history", async () => {
+    api.episode.list.mockRejectedValueOnce(new Error("来源暂时不可读取"));
+    mount();
+    await userEvent.click(
+      screen.getByRole("button", { name: "查看与关联经历" }),
+    );
+    expect(await screen.findByText(/资料读取失败，请刷新重试/)).toBeVisible();
+    expect(screen.queryByText(/没有症状经历/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "确认新建经历" }),
+    ).not.toBeInTheDocument();
+    api.episode.list.mockResolvedValue(episodePage());
+    await userEvent.click(
+      screen.getByRole("button", { name: "刷新症状经历和身体记录" }),
+    );
+    expect(
+      await screen.findByText(/当前已读取的记录中没有症状经历/),
+    ).toBeVisible();
+  });
+
+  it("blocks new Fact or Episode commands when a cached read refresh fails", async () => {
+    mount();
+    await openEditor();
+    await userEvent.selectOptions(
+      screen.getByLabelText("本人症状陈述"),
+      positiveID,
+    );
+    api.episode.list.mockRejectedValueOnce(new Error("失去来源连接"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "刷新症状经历和身体记录" }),
+    );
+    expect(await screen.findByText(/资料读取失败，请刷新重试/)).toBeVisible();
+    expect(
+      screen.queryByText(/当前已读取的记录中没有症状经历/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "确认新建经历" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "补充可关联的本人症状" }),
+    ).not.toBeInTheDocument();
+    expect(api.episode.create).not.toHaveBeenCalled();
+    expect(api.facts.record).not.toHaveBeenCalled();
+  });
+
+  it("holds original Episode command identity against switching to another target after an unknown result", async () => {
+    api.episode.create.mockRejectedValueOnce(new Error("提交状态未确认"));
+    mount();
+    await openEditor();
+    await userEvent.selectOptions(
+      screen.getByLabelText("本人症状陈述"),
+      positiveID,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
+    expect(await screen.findByText(/提交状态未确认/)).toBeVisible();
+    expect(screen.getByLabelText("操作")).toBeDisabled();
+    expect(screen.getByLabelText("本人症状陈述")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "补充可关联的本人症状" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "重试原请求" })).toBeEnabled();
+    expect(api.episode.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not allow editing the source Fact draft or new Episode creation with an uncertain Fact command", async () => {
+    api.facts.record.mockRejectedValueOnce(new Error("症状提交状态未确认"));
+    mount();
+    await openEditor();
+    await userEvent.click(
+      screen.getByRole("button", { name: "补充可关联的本人症状" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("本人完整症状陈述"),
+      "我右肩疼痛",
+    );
+    await userEvent.type(screen.getByLabelText("症状类型（本人描述）"), "肩痛");
+    await userEvent.click(
+      screen.getByRole("button", { name: "先保存症状陈述" }),
+    );
+    expect(await screen.findByText(/症状提交状态未确认/)).toBeVisible();
+    expect(screen.getByLabelText("本人完整症状陈述")).toBeDisabled();
+    expect(screen.getByLabelText("症状类型（本人描述）")).toBeDisabled();
+    expect(screen.getByLabelText("当前陈述是否存在症状")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "重试原症状记录" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "确认新建经历" })).toBeDisabled();
+    expect(api.episode.create).not.toHaveBeenCalled();
+  });
+});
