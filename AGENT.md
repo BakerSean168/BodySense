@@ -154,14 +154,14 @@ docs/
 - 需要 build、lint、test 时，优先运行离改动最近的 Nx target 或对应语言的测试命令。
 - 涉及 Docker、运行时、env 注入、部署链路的改动，默认先用 `docker compose -f docker/docker-compose.yml --profile dev` 做本地 prod-like 验证。
 - 复杂任务先写计划，再实施。计划统一放在 `docs/plan/active/` 目录下，完成后移至 `docs/plan/archive/`。
+- **当前 BodySense V2 的执行入口**是 [并行重构 Master Plan](docs/plan/active/2026-10-13-v2-parallel-master.md)，下设 Domain & Schema / Product Design / Engineering / Integration & Release 四条 Active Plan；唯一跨线领域就绪状态见 [v2-handoff-state.json](docs/plan/active/v2-handoff-state.json)。原 [SF 实施计划](docs/plan/active/2026-10-13-schema-first-full-refactor.md)保留为 Engineering checkpoint，不是另一份 Master Plan。用 `pnpm plan:check` 验证引用和 gate 一致性；定时续跑目前关闭。
 
-## Git 分支策略
+## Git 分支策略（按当前实际交付流水线）
 
-采用 3 分支 Git Flow：
-
-- `main`：生产就绪代码，只接受从 `dev` 合并
-- `dev`：开发主线，feature 分支合并到此
-- `feature/xxx`：功能分支，从 `dev` 切出，完成后合并回 `dev`
+- `main`：受保护的主分支，变更通过 PR、必需 CI 和审核合入；发布流程以受保护的 `main` / 不可变提交为权威。
+- 实施分支（如 `refactor/schema-first-v2-20261013`）通过 PR 合入 `main`；已有 UI 工作分支按门槛修复/审查后集成。
+- 当前没有活动 `dev` 分支，**不要根据旧三分支 Git Flow 创建 `dev` 或另一条平行主线**。
+- 同一工作区只允许一名写入者；并行设计/工程通过独立交付物和稳定契约衔接，不由多个 Agent 同时编辑同一个 worktree。
 
 ## Commit 规范
 
@@ -188,9 +188,9 @@ docs/
 
 ## 变更策略
 
-- 项目处于 MVP 活跃开发期，不要求向后兼容。
-- 不需要数据迁移路径。
-- 优先做根因修复，不引入临时 shim、补丁层或双轨兼容。
+- 项目处于 V2 主动重构期；旧业务模型可以在其消费者完成迁移并验收后退役，不保留永久平行权威或泛用兼容 shim。
+- **生产/真实数据切换必须有经过验证的迁移、重建、回退或完整授权的数据清理方案**；“不需要数据迁移路径”不适用于当前持久化系统。不可修改已发布的迁移校验和；任何破坏性操作先核实目标 BodySense 资源归属及业务授权。
+- 优先做根因修复；新领域实现基于批准的 `docs/product` 契约和真实读写/提交回执。
 - 如果更干净的结构性重构可行，优先于局部修补。
 - 保持实现直接、明确、易读。
 

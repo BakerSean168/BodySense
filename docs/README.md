@@ -1,6 +1,6 @@
 # BodySense · 文档导航
 
-**更新：2026-10-12。** 本页说明哪些文档是现行的、每个主题在哪里、哪些已归档以及为什么。
+**更新：2026-10-13。** 本页说明哪些文档是现行的、每个主题在哪里、哪些已归档以及为什么。
 
 ## 1. 先读什么
 
@@ -13,7 +13,8 @@
 | 视觉与交互基准 | [design/](./design/README.md) → Penpot「BodySense · Product Design」Product 页 | 视觉基准 |
 | 当前代码的技术架构 | [architecture/](./architecture/README.md) | 技术现状（见 §3 说明） |
 | 架构决策 | [adr/](#adr架构决策记录) | 历史决策记录 |
-| 进行中的工程计划 | [plan/active/](./plan/active/README.md) | 现行 |
+| V2 全面重构总计划与四条并行工作线 | [并行重构 Master Plan](./plan/active/2026-10-13-v2-parallel-master.md) → [四线索引](./plan/active/README.md) | **现行实施统筹** |
+| 进行中的其他工程计划 | [plan/active/](./plan/active/README.md) | 现行 |
 | 运维手册 | [runbooks/](#runbooks-运维手册)、[security/](#security-安全与数据) | 现行 |
 
 **冲突处理**：业务规则以 `product/` 为准；Penpot 设计稿与旧代码中的 Assistant / Assessment / Profile / Training / Treatment / Consultation 等旧名按 [术语表 §3](./product/glossary.md#3-penpot--旧代码名称对照) 换算，旧 UI 架构（问诊会话、单一 Treatment 及修订、按问诊生成的诊断候选、Assessment 报告）不得覆盖新规格。技术实现细节以代码、契约与迁移为准。

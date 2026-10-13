@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "note": "Single gate-status registry; a plan is not implementation evidence. Gate ready requires dated reproducible proof. Initial snapshot is not an ongoing environment monitor.",
+  "baseline": {
+    "auditedAtUtc": "2026-10-13T02:44:12Z",
+    "branch": "refactor/schema-first-v2-20261013",
+    "headAtAudit": "ce00bc0c177d6cb227d0aad4344314ff44034633",
+    "codePr": 247,
+    "designPr": 244,
+    "codePrHeadChecks": "12/12 SUCCESS at audited SHA; Draft",
+    "designPrIssues": [
+      "Governance child",
+      "Browser longitudinal health E2E child"
+    ],
+    "hourlyAutomation": "disabled"
+  },
+  "masterPlan": "docs/plan/active/2026-10-13-v2-parallel-master.md",
+  "tracks": {
+    "domain_schema": "docs/plan/active/2026-10-13-v2-domain-schema.md",
+    "product_design": "docs/plan/active/2026-10-13-v2-product-design.md",
+    "engineering": "docs/plan/active/2026-10-13-v2-engineering.md",
+    "integration_release": "docs/plan/active/2026-10-13-v2-integration-release.md"
+  },
+  "foundations": [
+    {
+      "id": "F-PRODUCT",
+      "name": "Approved target product domains",
+      "state": "ready",
+      "proof": [
+        "docs/product/README.md",
+        "docs/product/domain/README.md",
+        "docs/product/acceptance.md"
+      ]
+    },
+    {
+      "id": "F-BODYFACT",
+      "name": "Additive BodyFact ledger and typed API",
+      "state": "in_progress",
+      "next": "ENG-BS-01",
+      "details": "Migrations 000002/000003 and generated API verified but not a full domain read/write vertical"
+    },
+    {
+      "id": "F-CONTRACT",
+      "name": "Canonical domain-to-view-model handoff",
+      "state": "in_progress",
+      "next": "DS-BASE-01",
+      "details": "Authoritative owners known; complete per-window read models not accepted"
+    },
+    {
+      "id": "F-PENPOT",
+      "name": "Editable UI source and flow inventory",
+      "state": "in_progress",
+      "next": "PD-BASE-01",
+      "details": "Source exists; current code PR 244 has failed checks and requires review"
+    },
+    {
+      "id": "F-ACCEPTANCE",
+      "name": "Per-domain executable integration matrix",
+      "state": "not_started",
+      "next": "IR-BASE-01",
+      "details": "Existing product acceptance exists; cross-track E2E matrix not yet established"
+    },
+    {
+      "id": "F-RELEASE",
+      "name": "V2 release qualification",
+      "state": "not_started",
+      "next": "IR-FINAL-01",
+      "details": "No v2 staging/production migration or promotion performed"
+    }
+  ],
+  "domains": [
+    {
+      "id": "body-state",
+      "name": "BodyState / BodyFact / Episode",
+      "product": ["docs/product/domain/bodystate.md"],
+      "sf": ["SF-10", "SF-11", "SF-12", "SF-20"],
+      "gates": {
+        "business": {
+          "state": "ready",
+          "proof": [
+            "docs/product/domain/bodystate.md",
+            "docs/product/acceptance.md"
+          ]
+        },
+        "view_model": {
+          "state": "in_progress",
+          "next": "DS-BS-01",
+          "details": "GET/POST records is typed; complete Person Records/Habits/Episode projection and error contract not accepted"
+        },
+        "database": {
+          "state": "in_progress",
+          "next": "DS-BS-02",
+          "details": "Migration 000002 ledger plus 000003 message source tested; Episode and legacy cutover not implemented"
+        },
+        "design": {
+          "state": "in_progress",
+          "next": "PD-BS-01",
+          "details": "Penpot shell exists; view-model-linked Records/Habits states and Viewer sign-off missing"
+        },
+        "engineering": {
+          "state": "in_progress",
+          "next": "ENG-BS-01",
+          "details": "Source binding and typed browser adapter implemented; actual Python tool and Person window consumption pending"
+        },
+        "integration": {
+          "state": "not_started",
+          "next": "IR-BS-01",
+          "details": "No whole Python-to-Go-to-Person acceptance"
+        }
+      }
+    },
+    {
+      "id": "conversation-person",
+      "name": "Conversation / Ask User / Person Profile",
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-30", "SF-70"],
+      "gates": {
+        "business": {
+          "state": "ready",
+          "proof": [
+            "docs/product/domain/person-chat.md",
+            "docs/product/acceptance.md"
+          ]
+        },
+        "view_model": {
+          "state": "not_started",
+          "next": "DS-PC-01",
+          "details": "One Conversation, active Run, Ask User and retention projection not yet generated for V2"
+        },
+        "database": {
+          "state": "not_started",
+          "next": "DS-PC-01",
+          "details": "Legacy multi-conversation storage remains; V2 singleton/retention migration pending"
+        },
+        "design": {
+          "state": "in_progress",
+          "next": "PD-PC-01",
+          "details": "Chat prototype baseline exists; one-session/Ask User replacement states not accepted"
+        },
+        "engineering": {
+          "state": "not_started",
+          "next": "ENG-PC-01",
+          "details": "V2 one-Conversation/Ask User implementation pending"
+        },
+        "integration": {
+          "state": "not_started",
+          "next": "IR-PC-01",
+          "details": "No singleton Chat V2 E2E"
+        }
+      }
+    },
+    {
+      "id": "diagnosis",
+      "name": "Diagnosis V2 / ConditionEntry",
+      "product": ["docs/product/domain/diagnosis.md"],
+      "sf": ["SF-40"],
+      "gates": {
+        "business": {
+          "state": "ready",
+          "proof": [
+            "docs/product/domain/diagnosis.md",
+            "docs/product/acceptance.md"
+          ]
+        },
+        "view_model": {
+          "state": "not_started",
+          "next": "DS-DX-01",
+          "details": "ConditionEntry/proposal/evidence query and exact decision command contracts pending"
+        },
+        "database": {
+          "state": "not_started",
+          "next": "DS-DX-01",
+          "details": "Legacy diagnosis analysis and treatment tables remain in 000001"
+        },
+        "design": {
+          "state": "in_progress",
+          "next": "PD-DX-01",
+          "details": "Existing Diagnosis window visual baseline; precise confirmation and Q-19 review pending"
+        },
+        "engineering": {
+          "state": "not_started",
+          "next": "ENG-DX-01",
+          "details": "Target ConditionEntry and atomic proposal workflow not implemented"
+        },
+        "integration": {
+          "state": "not_started",
+          "next": "IR-DX-01",
+          "details": "No Diagnosis V2 acceptance"
+        }
+      }
+    },
+    {
+      "id": "training-safety",
+      "name": "TrainingPlan / Trainer / SafetyState",
+      "product": [
+        "docs/product/domain/training.md",
+        "docs/product/domain/safety.md"
+      ],
+      "sf": ["SF-50"],
+      "gates": {
+        "business": {
+          "state": "ready",
+          "proof": [
+            "docs/product/domain/training.md",
+            "docs/product/domain/safety.md",
+            "docs/product/acceptance.md"
+          ]
+        },
+        "view_model": {
+          "state": "not_started",
+          "next": "DS-TP-01",
+          "details": "Plan/template/proposal/session/gate projection contract pending"
+        },
+        "database": {
+          "state": "not_started",
+          "next": "DS-TP-01",
+          "details": "Target independent Trainer and Safety storage not yet migrated"
+        },
+        "design": {
+          "state": "in_progress",
+          "next": "PD-TP-01",
+          "details": "Existing training window prototypes; proposal/execution/safety semantics not accepted"
+        },
+        "engineering": {
+          "state": "not_started",
+          "next": "ENG-TP-01",
+          "details": "Target plan/trainer/safety workflow pending"
+        },
+        "integration": {
+          "state": "not_started",
+          "next": "IR-TP-01",
+          "details": "No Trainer/Safety V2 E2E"
+        }
+      }
+    },
+    {
+      "id": "person-assets",
+      "name": "Equipment / UserAsset / Media / Reports",
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-60", "SF-70"],
+      "gates": {
+        "business": {
+          "state": "ready",
+          "proof": [
+            "docs/product/domain/person-chat.md",
+            "docs/product/acceptance.md"
+          ]
+        },
+        "view_model": {
+          "state": "not_started",
+          "next": "DS-ASSET-01",
+          "details": "Shared asset/admission/removal/erasure query and command projections pending"
+        },
+        "database": {
+          "state": "not_started",
+          "next": "DS-ASSET-01",
+          "details": "Target shared UserAsset and two deletion commands not yet fully migrated"
+        },
+        "design": {
+          "state": "in_progress",
+          "next": "PD-ASSET-01",
+          "details": "Existing Person tabs; source availability and distinct deletion confirmations not accepted"
+        },
+        "engineering": {
+          "state": "not_started",
+          "next": "ENG-ASSET-01",
+          "details": "Target UserAsset migration and verified controlled-copy erase pending"
+        },
+        "integration": {
+          "state": "not_started",
+          "next": "IR-ASSET-01",
+          "details": "No target source-erasure E2E"
+        }
+      }
+    }
+  ]
+}
