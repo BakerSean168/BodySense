@@ -219,6 +219,103 @@ export function classifyLoadedBodyList(
       : "partial_empty";
 }
 
+/**
+ * Read-only bridge for the implemented GET /body-state/records transport.
+ * It is intentionally NOT a full person.records/person.habits target read-model:
+ * the V1 page has no source admissibility, Observation, Hypothesis or Episode joins.
+ * Explicitly preserve those absences instead of fabricating resolved sources.
+ */
+export const boundedBodyFactCard = z.strictObject({
+  factId: id,
+  kind: z.enum([
+    "symptom",
+    "health_history",
+    "activity",
+    "lifestyle",
+    "training_feedback",
+  ]),
+  statement: text,
+  bodyRegionIds: z.array(id),
+  sourceEvidenceId: id,
+  recordedAt: instant,
+  temporal: z.strictObject({
+    precision: z.enum(["exact", "day", "range", "approximate", "unknown"]),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    originalExpression: z.string().optional(),
+    timeZone: z.string().optional(),
+  }),
+  assertionStatus,
+  supersedesFactId: id.optional(),
+});
+export const boundedBodyFactVM = z
+  .strictObject({
+    contract: z.literal("bodyfact-ledger-page/v1"),
+    query: z.enum(["person.records", "person.habits"]),
+    state: z.enum([
+      "unauthenticated",
+      "loading",
+      "unavailable",
+      "empty",
+      "partial_empty",
+      "ready",
+      "stale",
+    ]),
+    currentRevision: z.number().int().nonnegative().nullable(),
+    hasMore: z.boolean(),
+    pagesDisagree: z.boolean(),
+    records: z.array(boundedBodyFactCard),
+    missingSections: z.tuple([
+      z.literal("source_metadata"),
+      z.literal("observations"),
+      z.literal("hypotheses"),
+      z.literal("episodes"),
+      z.literal("concern_groups"),
+    ]),
+  })
+  .superRefine((v, ctx) => {
+    if (
+      (v.state === "unauthenticated" ||
+        v.state === "loading" ||
+        v.state === "unavailable") &&
+      v.records.length
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "No data should appear for unowned or never loaded ledger",
+      });
+    if (v.state === "unauthenticated" && v.currentRevision !== null)
+      ctx.addIssue({
+        code: "custom",
+        message: "Do not leak another owner's revision",
+      });
+    if (v.state === "empty" && (v.records.length || v.hasMore))
+      ctx.addIssue({
+        code: "custom",
+        message: "Empty requires an exhausted scan",
+      });
+    if (v.state === "partial_empty" && (v.records.length || !v.hasMore))
+      ctx.addIssue({
+        code: "custom",
+        message: "Partial-empty requires remaining pages",
+      });
+    if ((v.state === "stale") !== v.pagesDisagree)
+      ctx.addIssue({
+        code: "custom",
+        message: "Stale revision conflict must stay visible",
+      });
+    if (
+      v.query === "person.habits" &&
+      v.records.some((r) => r.kind !== "lifestyle")
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Habits is a lifestyle-filtered ledger, never another data owner",
+      });
+  });
+export type BoundedBodyFactVM = z.infer<typeof boundedBodyFactVM>;
+
 export const personRecordsVM = resourceSchema(recordsData);
 export const personHabitsVM = resourceSchema(
   z.strictObject({

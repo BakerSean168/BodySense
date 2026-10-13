@@ -22,7 +22,7 @@ import { presentationV2Queries } from "@bodysense/contracts/presentation-v2";
 const records = presentationV2Queries["person.records"].parse(projection);
 ```
 
-`projection` 的生产构造器是后续工程交付，不是本次以强制类型断言冒充的适配器。现有 HTTP 权威仍为 `packages/contracts/openapi/bodysense.v1.openapi.yaml`，事件权威仍为 `packages/contracts/schemas/stream-event.v1.schema.json`；本次未修改 HTTP/Proto/事件 wire format。
+`projection` 的**完整五域生产构造器**仍是后续工程交付，不以强制类型断言冒充。在现有 API 范围内，Records/Habits 已由 `bodyFactV2Adapter.ts` 做了真实的 bounded bridge：输入为真实 BodyFact 生成 DTO 经 `projectBodyFactSurface` 投影后的 owner-bound 数据，输出经 `boundedBodyFactVM` 严格校验，随后被 `BodyFactRecords.tsx` 消费。它明确标记只包含 facts；source metadata / Observations / Hypotheses / Episodes / ConcernGroups 尚无读 API，不能伪造为已核验、也不能误判为真正空集合。完整的 `person.records`/`person.habits` schema 仍保持单独目标契约，须待 joined server projection 后切换。现有 HTTP 权威仍为 `packages/contracts/openapi/bodysense.v1.openapi.yaml`，事件权威仍为 `packages/contracts/schemas/stream-event.v1.schema.json`；本次未修改 HTTP/Proto/事件 wire format。
 
 ## 2. 共用边界
 
@@ -103,7 +103,7 @@ Diagnosis 当前查询返回整个 adopted 集合而不是一页；count 与 sel
 
 ## 5. 尚待 Track C/D 的真实接线，不得误报
 
-BodyFact 当前有 generated `list/record/correct/withdraw` 服务，Ask User 有原 Run 恢复；先把这些真实响应映射到目标 VM。其余目标读取/命令、HTTP 路由、Proto payload、鉴权/并发/幂等重放、event→query invalidation，须由相应领域的工程 ticket 补齐。
+BodyFact 当前 generated `list/record/correct/withdraw` 服务中，Records/Habits 的 **bounded real transport → VM → React** 已接通，并有 7 个新的 Adapter 专项测试及既有组件行为测试；Ask User 保留原 Run 恢复。由于旧接口不包含关联诊断来源和 Episode 证据，不应假装已经产出 `presentationV2Queries['person.records']` 的完整 `ready` 内容。其余目标读取/命令、HTTP 路由、Proto payload、鉴权/并发/幂等重放、event→query invalidation，须由相应领域的工程 ticket 补齐。
 
 | 责任              | 尚待验证                                                                                           |
 | ----------------- | -------------------------------------------------------------------------------------------------- |

@@ -65,6 +65,19 @@ beforeEach(() => {
 });
 
 describe("BodyFact Records and Habits", () => {
+  it("consumes the bounded V2 API projection rather than an invented complete clinical VM", async () => {
+    mount();
+    await screen.findByText(/还没有身体记录/);
+    expect(screen.getByTestId("body-fact-records")).toHaveAttribute(
+      "data-vm-contract",
+      "bodyfact-ledger-page/v1",
+    );
+    expect(screen.getByTestId("body-fact-records")).toHaveAttribute(
+      "data-vm-state",
+      "empty",
+    );
+  });
+
   it("renders a genuine empty state without technical revisions or clinical confirmation", async () => {
     mount();
     expect(await screen.findByText(/还没有身体记录/)).toBeVisible();

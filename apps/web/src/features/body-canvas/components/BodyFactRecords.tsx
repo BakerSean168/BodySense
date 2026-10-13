@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LoaderCircle, Plus, RefreshCw } from "lucide-react";
 import {
@@ -14,6 +14,7 @@ import {
   type BodyFactKind as FactKind,
 } from "../model/bodyFactPresentation";
 import { projectBodyFactSurface } from "../model/bodyFactViewModel";
+import { projectBoundedBodyFactVM } from "../model/bodyFactV2Adapter";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -84,13 +85,24 @@ export function BodyFactRecords({
   }, [owner]);
 
   const page = query.data?.pages[0];
-  const view = projectBodyFactSurface({
-    pages: query.data?.pages,
-    surface: habitsOnly ? "habits" : "records",
-    hasOwner: Boolean(owner),
-    isPending: query.isPending,
-    isError: query.isError,
-  });
+  const view = useMemo(
+    () =>
+      projectBodyFactSurface({
+        pages: query.data?.pages,
+        surface: habitsOnly ? "habits" : "records",
+        hasOwner: Boolean(owner),
+        isPending: query.isPending,
+        isError: query.isError,
+      }),
+    [query.data?.pages, habitsOnly, owner, query.isPending, query.isError],
+  );
+
+  // A bounded transport projection is not a complete V2 health read-model.
+  // Keep ledger parsing stable while the user types into the local draft form.
+  const boundedVM = useMemo(
+    () => projectBoundedBodyFactVM(view, habitsOnly ? "habits" : "records"),
+    [view, habitsOnly],
+  );
 
   async function submit() {
     if (
@@ -173,7 +185,12 @@ export function BodyFactRecords({
   if (!owner) return <p className="bc-window-note">请登录后查看个人记录。</p>;
 
   return (
-    <div className="bc-person-category" data-testid="body-fact-records">
+    <div
+      className="bc-person-category"
+      data-testid="body-fact-records"
+      data-vm-contract={boundedVM.contract}
+      data-vm-state={boundedVM.state}
+    >
       <div className="bc-record-actions">
         <span className="bc-window-note">
           {habitsOnly ? "本人陈述的习惯与变化" : "本人陈述，不代表临床诊断"}
@@ -246,9 +263,9 @@ export function BodyFactRecords({
         </p>
       ) : null}
       {!query.isError &&
-      (view.state === "empty" || view.state === "partial_empty") ? (
+      (boundedVM.state === "empty" || boundedVM.state === "partial_empty") ? (
         <p className="bc-window-empty-text">
-          {view.state === "partial_empty"
+          {boundedVM.state === "partial_empty"
             ? habitsOnly
               ? "当前加载的记录中没有生活习惯，可以继续读取更早的记录。"
               : "当前加载的记录为空，可以继续读取更早的记录。"

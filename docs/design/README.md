@@ -42,6 +42,13 @@ Product 页仍使用部分旧窗口名，阅读时按下表换算（完整对照
 - [术语表](../product/glossary.md)
 - [视觉 Foundations](./foundations.md)
 
+## V2 前端设计实施与交接（未完成最终验收）
+
+- [五大业务领域 ViewModel 契约](./v2/viewmodels.md)：16 项目标查询与命令边界；Records/Habits 已有真实 BodyFact bounded Adapter。
+- [Penpot V2 实际写入检查点](./v2/penpot-handoff-checkpoint.md)：42 个状态画板与 14 个可编辑复用组件的形状证据、哪些交互已验证和哪些门禁仍未完成。
+- [Penpot 画板/组件精确 ID 清单](./v2/penpot-scene-manifest.json) 和 [六组业务 Flow 条件契约](./v2/penpot-flow-contract.json)：设计恢复时使用已有源文件与授权业务状态，不重建一套图片原型。
+- 本地检查：`node scripts/design/validate-v2-penpot-handoff.mjs && node --test scripts/design/validate-v2-penpot-handoff.test.mjs`。通过表示引用和业务流*规格*自洽，不等于 Penpot 真实 Flow/Viewer 已验收。
+
 ## 交互约束
 
 1. 3D 人体 Canvas 持续作为底层桌面；业务窗口位于其上，可以打开、拖动、收起和恢复。
