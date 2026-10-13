@@ -170,3 +170,8 @@ Evidence (local, not automatic production qualification):
 - Focused amendment/record/browser-client tests: **21/21**; full browser tests, lint, TypeScript and build passed earlier in the batch and are rechecked in exact-head CI. Python full suite **695 tests**, Pyright 0 errors/warnings, Ruff passed. Go full packages/vet, generated contract equality and architecture/migration checks passed. Latest logs are `amend-focused-final.log`, `amend-web-quality.log`, `amend-python-all.log`, `amend-pyright.log`, `amend-ruff.log`, `amend-go-final.log`, `amend-generated-check.log`.
 
 Still open: Episode/Observation/user-Hypothesis, exact structured Ask User answer capture and Agent-authorized correction workflow, cross-domain event consumers and verified health-data erasure, remaining Diagnosis/Training/Safety schema/runtime migration, final Penpot visual sign-off and staging/production release. This closes the **direct user Fact correction/withdrawal sub-slice**, not all of SF-20 or BodyState.
+
+
+### Run-scoped projection checkpoint
+
+The event timeline no longer treats provider tool IDs as globally unique: migration 000005 plus Go projection keys scope identity to the server Run; repeatable-read thread snapshots and 4 native PostgreSQL concurrency/tenant/rollback regressions pass. See [integration matrix and current evidence](./2026-10-13-bodyfact-integration-matrix.md) and [bounded implementation checkpoint](./2026-10-13-bodyfact-vertical-contract.md). SF-30 remains open for true singleton Chat/retention/structured-answer migration.

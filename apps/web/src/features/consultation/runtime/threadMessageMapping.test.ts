@@ -4,10 +4,7 @@ import {
   toInitialThreadTimeline,
   toInitialThreadMessage,
 } from "./threadMessageMapping";
-import {
-  parseStreamEvent,
-  type StreamEvent,
-} from "@bodysense/contracts";
+import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
 import type {
   InteractionHistoryItem,
   Message,
@@ -331,4 +328,44 @@ describe("threadMessageMapping", () => {
       },
     });
   });
+});
+
+it("keeps repeated provider tool IDs local to each assistant message", () => {
+  const message = (id: string, run: string, value: string): Message =>
+    makeMessage({
+      id,
+      run_id: run,
+      parts: [
+        {
+          type: "tool-call",
+          toolCallId: "provider-call-1",
+          toolName: "search_knowledge",
+          args: { query: value },
+        },
+        {
+          type: "tool-result",
+          toolCallId: "provider-call-1",
+          toolName: "search_knowledge",
+          result: { value },
+        },
+      ],
+    });
+  const first = toInitialThreadMessage(
+    message("message-a", "run-a", "first only"),
+  );
+  const second = toInitialThreadMessage(
+    message("message-b", "run-b", "second only"),
+  );
+  expect(first.content).toEqual([
+    expect.objectContaining({
+      toolCallId: "provider-call-1",
+      result: { value: "first only" },
+    }),
+  ]);
+  expect(second.content).toEqual([
+    expect.objectContaining({
+      toolCallId: "provider-call-1",
+      result: { value: "second only" },
+    }),
+  ]);
 });

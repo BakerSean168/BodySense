@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -82,8 +83,25 @@ func (r *ThreadProjectionRepository) GetByConversationID(
 	ctx context.Context,
 	conversationID, userID uuid.UUID,
 ) (*model.ThreadProjection, []model.ThreadProjectionMessage, []model.ThreadProjectionToolCall, error) {
+	// Projection metadata, messages and tools are replaced atomically by the
+	// writer. Read all three from one repeatable snapshot, not mixed refreshes.
+	var projection *model.ThreadProjection
+	var messages []model.ThreadProjectionMessage
+	var toolCalls []model.ThreadProjectionToolCall
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		projection, messages, toolCalls, err = readThreadProjectionSnapshot(tx, conversationID, userID)
+		return err
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return projection, messages, toolCalls, nil
+}
+
+func readThreadProjectionSnapshot(db *gorm.DB, conversationID, userID uuid.UUID) (*model.ThreadProjection, []model.ThreadProjectionMessage, []model.ThreadProjectionToolCall, error) {
 	var projection model.ThreadProjection
-	err := r.db.WithContext(ctx).
+	err := db.
 		Where("conversation_id = ? AND user_id = ?", conversationID, userID).
 		First(&projection).Error
 	if err == gorm.ErrRecordNotFound {
@@ -94,7 +112,7 @@ func (r *ThreadProjectionRepository) GetByConversationID(
 	}
 
 	var messages []model.ThreadProjectionMessage
-	err = r.db.WithContext(ctx).
+	err = db.
 		Where("conversation_id = ?", conversationID).
 		Order("seq ASC").
 		Find(&messages).Error
@@ -103,7 +121,7 @@ func (r *ThreadProjectionRepository) GetByConversationID(
 	}
 
 	var toolCalls []model.ThreadProjectionToolCall
-	err = r.db.WithContext(ctx).
+	err = db.
 		Where("conversation_id = ?", conversationID).
 		Order("created_at ASC").
 		Find(&toolCalls).Error

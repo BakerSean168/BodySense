@@ -12,10 +12,10 @@ trap cleanup EXIT
 docker run -d --name "$CONTAINER" \
   -e POSTGRES_PASSWORD="$PASSWORD" -e POSTGRES_DB="$DB" "$IMAGE" >/dev/null
 for _ in $(seq 1 40); do
-  docker exec "$CONTAINER" pg_isready -U postgres -d "$DB" >/dev/null 2>&1 && break
+  docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U postgres -d "$DB" >/dev/null 2>&1 && break
   sleep 1
 done
-docker exec "$CONTAINER" pg_isready -U postgres -d "$DB" >/dev/null
+docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U postgres -d "$DB" >/dev/null
 IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER")"
 (
   cd "$ROOT/apps/api"
@@ -24,7 +24,7 @@ IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}
   DATABASE_URL="postgres://postgres:$PASSWORD@$IP:5432/$DB?sslmode=disable"
   go run ./cmd/migration-validator -database-url "$DATABASE_URL" -migrations file://migrations
   BODYSENSE_INTEGRATION_DATABASE_URL="host=$IP user=postgres password=$PASSWORD dbname=$DB port=5432 sslmode=disable" \
-    go test -p 2 -race ./internal/repository ./internal/transport/httpapi -run '^TestBodyFact.*Postgres$' -count=1 -v
+    go test -p 2 -race ./internal/repository ./internal/transport/httpapi -run '^Test(BodyFact|ThreadProjection).*Postgres$' -count=1 -v
   # Replay after synthetic test cleanup too; never target a running environment.
   go run ./cmd/migration-validator -database-url "$DATABASE_URL" -migrations file://migrations
 )

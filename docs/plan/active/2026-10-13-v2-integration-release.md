@@ -71,3 +71,17 @@ D: #244 whitespace and training navigation/CSS regressions reproduced and fixed 
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
+
+
+## 2026-10-13 · Run-scoped tool projection root repair
+
+A regression first demonstrated that two different Runs sharing a provider tool ID collapsed into one timeline entry. The root fix is now independent of the new BodyFact producer's namespaced ID: migration `000005_run_scoped_tool_projection` changes the projection primary key to `(run_id, tool_call_id)`, and the event-to-read-model builder uses the server-owned Run plus original provider ID. The raw provider ID remains unchanged for tool response/Ask User identity. Distinct runs and users may legitimately use the same ID without collision or overwritten success/failure state.
+
+Thread metadata, messages and projected tools are also read from one repeatable-read transaction. A concurrent complete snapshot replacement no longer combines old metadata with new message/tool rows. Native PostgreSQL tests cover repeated provider IDs across runs/users, failed final tool-write atomic rollback, an actual concurrent read/write barrier, and refused downgrade that would destroy distinct-run history. The browser's message-local tool result matching already has the correct scope; its regression verifies same IDs in separate assistant messages retain distinct results without introducing another ID translation layer.
+
+Executed: full Go tests and vet pass (`projection-go-quality.log`); native PostgreSQL migration v5 full-up/down/up plus **20 BodyFact + 4 ThreadProjection cases** with race detection pass (`projection-postgres.log`); frontend thread mapping tests 8/8 pass; TypeScript and architecture boundaries pass. The four affected real-server browser spec files passed 10/10 again in `projection-e2e.log`; all isolated resources were cleaned. The exact final CI result is recorded separately against its final pushed SHA; earlier CI statuses are not recycled.
+
+[The integration evidence matrix](./2026-10-13-bodyfact-integration-matrix.md) now maps user scenarios, source owners, regression tests and explicit limits, including remaining structured answers, Episode/Observation/Hypothesis, cross-domain erasure and final release gates. This is infrastructure correctness for the ongoing Chat migration, not completion of single-Conversation/retention or the full V2 project.
+
+
+The prior amendment milestone `7abe9daa60141ac02f7c148bf91e850b16ca55ef` passed all 12 required GitHub CI checks before the projection-root-fix commit. This is evidence for that exact prior SHA, not a substitute for the next commit's CI.

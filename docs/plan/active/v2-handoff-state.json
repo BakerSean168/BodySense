@@ -56,9 +56,9 @@
     {
       "id": "F-ACCEPTANCE",
       "name": "Per-domain executable integration matrix",
-      "state": "not_started",
+      "state": "in_progress",
       "next": "IR-BASE-01",
-      "details": "Existing product acceptance exists; cross-track E2E matrix not yet established"
+      "details": "Bounded BodyFact/Chat evidence matrix and actual E2E/concurrency cases established; other domain acceptance remains pending."
     },
     {
       "id": "F-RELEASE",
@@ -312,6 +312,22 @@
         "Episode/Observation/Hypothesis pending",
         "withdrawal preserves history and is not erasure",
         "fresh exact-SHA CI and production qualification required"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "run-scoped-tool-projection",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-integration-matrix.md",
+      "tests": [
+        "apps/api/internal/service/thread_projection_service_test.go",
+        "apps/api/internal/repository/thread_projection_repository_test.go",
+        "apps/web/src/features/consultation/runtime/threadMessageMapping.test.ts"
+      ],
+      "limits": [
+        "does not complete single Conversation migration",
+        "retention and structured answers remain open",
+        "exact-SHA CI required"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
