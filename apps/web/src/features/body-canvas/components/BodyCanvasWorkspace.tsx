@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
-import { Accessibility, Activity, ArrowRight, BoxSelect, Brush, ChevronDown, ClipboardList, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Stethoscope, Sun, Undo2, X } from "lucide-react";
+import { ArrowRight, BoxSelect, Brush, ChevronDown, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Sun, Undo2, X } from "lucide-react";
 import { AppUserMenu } from "@/components/layout/AppUserMenu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -9,14 +9,12 @@ import { BodyExplorer } from "@/features/body-explorer/components/BodyExplorer";
 import type { BodyExplorerWorkspaceController } from "@/features/body-explorer/hooks/useBodyExplorerWorkspace";
 import { BODY_REGION_IDS, getBodyRegionDefinition, isBodyRegionId, type BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { resolveRecordBodyRegion, selectBodyRegionVisualSummaries } from "@/features/body-explorer/model/bodyExplorerSelectors";
-import { TrainingExecutionPanel } from "@/features/training/components/TrainingExecutionPanel";
 import { buildCanvasContext, canvasShortcut, EMPTY_SELECTION, getReferenceMotion, REFERENCE_MOTIONS, selectionReducer, type CanvasPanel, type CanvasTool, type MotionId } from "../model/bodyCanvas";
 import {
   activeBusinessWindow,
   businessWindowReducer,
   businessWindowStackIndex,
   EMPTY_BUSINESS_WINDOWS,
-  getBusinessWindowMeta,
   isBusinessWindowVisible,
   type BusinessWindowId,
 } from "../model/businessWindows";
@@ -24,6 +22,8 @@ import { projectDiagnosisView } from "../model/confirmedConditions";
 import { projectTrainingPlans, readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "../model/trainingPlans";
 import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
 import { BusinessWindowHost, BusinessSheetHost } from "./BusinessWindowHost";
+import { BodyCanvasDock } from "./BodyCanvasDock";
+import { ChatWindowHeader, DiagnosisWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
 import { DiagnosisWindow } from "./DiagnosisWindow";
 import {
   PersonIdentityTrigger,
@@ -31,6 +31,7 @@ import {
   type PersonProfileIdentity,
 } from "./PersonWindow";
 import { TrainingPlanWindow } from "./TrainingPlanWindow";
+import { TrainerEntryGuard } from "./TrainerEntryGuard";
 import { PlanProposals } from "./PlanProposals";
 import "../body-canvas.css";
 
@@ -64,14 +65,6 @@ const TOOLS = [
   ["orbit", "旋转与点选", "V", MousePointer2],
   ["brush", "涂抹选区", "B", Brush],
   ["box", "框选区域", "S", BoxSelect],
-] as const;
-
-const DOCK_ITEMS = [
-  ["chat", "助手", MessageCircle],
-  ["person", "档案", Accessibility],
-  ["diagnosis", "诊断", Stethoscope],
-  ["training", "训练", ClipboardList],
-  ["trainer", "执行", Activity],
 ] as const;
 
 const CANVAS_OVERLAY_META: Record<"anatomy" | "help", { title: string; description: string }> = {
@@ -120,13 +113,13 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   // state lives with the header owner rather than inside the body.
   const [personInfoOpen, setPersonInfoOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => readSelectedPlanId());
+  const [selectedConditionId, setSelectedConditionId] = useState<string | null>(null);
+  /** Page-local explicit Start intent. A deep link or shortcut never supplies it. */
+  const [launchedTrainerPlanId, setLaunchedTrainerPlanId] = useState<string | null>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const activeWindow = activeBusinessWindow(windows);
   const trainingOpen = isBusinessWindowVisible(windows, "training") || isBusinessWindowVisible(windows, "trainer");
-  // Windows that are open but not on the stage. Because Dock/Open/Active are
-  // mutually exclusive this is exactly "every open window except the active one".
-  const foldedWindows = windows.order.filter((window) => window !== activeWindow);
   const data = useTrainingWindowData(trainingOpen);
 
   const definition = getReferenceMotion(motion);
@@ -158,12 +151,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const toggleWindow = useCallback((window: BusinessWindowId) => {
     dispatchWindow({ type: "toggle", window });
     setRegionListOpen(false);
-  }, []);
-  const minimizeWindow = useCallback((window: BusinessWindowId) => {
-    dispatchWindow({ type: "minimize", window });
-  }, []);
-  const restoreWindow = useCallback((window: BusinessWindowId) => {
-    dispatchWindow({ type: "restore", window });
   }, []);
   const closeAllWindows = useCallback(() => {
     dispatchWindow({ type: "closeAll" });
@@ -260,18 +247,28 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      // Base UI owns focus/escape inside a modal or menu. Never issue a background command there.
-      if (event.target instanceof HTMLElement && event.target.closest("[role='dialog'], [role='menu']")) return;
-      const action = canvasShortcut(event);
-      if (!action) return;
-      if (action.type === "escape") {
-        // Layered retreat: window -> canvas overlay -> tool -> picker -> selection.
-        if (activeWindow) closeWindow(activeWindow);
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        // The actual modal/menu owns its Escape; a non-modal mobile business
+        // sheet does not. Do not dismiss a native select's open options.
+        if (
+          target?.closest("[role='menu'], [aria-modal='true'], select")
+        ) return;
+        // Close the transient Person overlay before hiding the whole window.
+        if (personInfoOpen) setPersonInfoOpen(false);
+        else if (activeWindow) closeWindow(activeWindow);
         else if (canvasOverlay) setCanvasOverlay(null);
         else if (tool !== "orbit") setTool("orbit");
         else if (regionListOpen) setRegionListOpen(false);
         else clear();
-      } else if (action.type === "panel") {
+        event.preventDefault();
+        return;
+      }
+      // Base UI owns keyboard input in menus/dialogs and form fields.
+      if (target?.closest("[role='dialog'], [role='menu']")) return;
+      const action = canvasShortcut(event);
+      if (!action) return;
+      if (action.type === "panel") {
         if (action.panel === "anatomy" || action.panel === "help") {
           const overlay = action.panel;
           setCanvasOverlay((current) => (current === overlay ? null : overlay));
@@ -280,18 +277,34 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         } else {
           setCanvasOverlay("help");
         }
-      }
-      else if (action.type === "tool") { setTool(action.tool); if (action.tool !== "orbit") setPlaying(false); }
-      else if (action.type === "motion") chooseMotion(action.motion);
-      else if (action.type === "pause") { setMotionMode(true); if (!safetyReview) setPlaying((value) => !value); }
-      else if (action.type === "reset") setResetKey((value) => value + 1);
+      } else if (action.type === "tool") {
+        setTool(action.tool);
+        if (action.tool !== "orbit") setPlaying(false);
+      } else if (action.type === "motion") chooseMotion(action.motion);
+      else if (action.type === "pause") {
+        setMotionMode(true);
+        if (!safetyReview) setPlaying((value) => !value);
+      } else if (action.type === "reset") setResetKey((value) => value + 1);
       else if (action.type === "undo") undo();
       else if (action.type === "chat") ask();
       event.preventDefault();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [activeWindow, ask, canvasOverlay, chooseMotion, clear, closeWindow, regionListOpen, safetyReview, tool, toggleWindow, undo]);
+  }, [
+    activeWindow,
+    ask,
+    canvasOverlay,
+    chooseMotion,
+    clear,
+    closeWindow,
+    personInfoOpen,
+    regionListOpen,
+    safetyReview,
+    tool,
+    toggleWindow,
+    undo,
+  ]);
 
   const showRegionCard = primary && regionCardOpen && !activeWindow && !regionListOpen;
   const sceneFallback = <div className="bc-scene-status" role="status"><LoaderCircle className="animate-spin" size={28} /><p>正在准备身体视图</p><button className="bc-button" onClick={onTextFallback}>按名称选择区域</button></div>;
@@ -303,54 +316,130 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "chat":
         return <div className="bc-chat-content">{props.chat}</div>;
       case "person":
-        return <PersonWindow
-          identity={identity}
-          identityInfoOpen={personInfoOpen}
-          onIdentityInfoOpenChange={setPersonInfoOpen}
-          bodyState={props.bodyState}
-          canEdit={props.workspace?.capabilities.can_edit_body_state === true}
-          onEditProfile={props.onOpenProfile}
-        />;
+        return (
+          <PersonWindow
+            identity={identity}
+            identityInfoOpen={personInfoOpen}
+            onIdentityInfoOpenChange={setPersonInfoOpen}
+            bodyState={props.bodyState}
+            canEdit={props.workspace?.capabilities.can_edit_body_state === true}
+            onEditProfile={props.onOpenProfile}
+          />
+        );
       case "diagnosis":
-        return <DiagnosisWindow
-          view={diagnosisView}
-          loading={props.loading && !props.workspace}
-          error={props.error && !props.workspace ? "当前诊断暂时无法同步。" : null}
-          canRequestReview={props.workspace?.capabilities.can_request_diagnosis === true}
-          onRequestReview={() => openWindow("chat")}
-          onClose={() => closeWindow("diagnosis")}
-        />;
+        return (
+          <DiagnosisWindow
+            view={diagnosisView}
+            selectedConditionId={selectedConditionId}
+            loading={props.loading && !props.workspace}
+            error={
+              props.error && !props.workspace ? "当前诊断暂时无法同步。" : null
+            }
+          />
+        );
       case "training":
-        return <TrainingPlanWindow
-          proposals={
-            props.workspace ? (
-              <PlanProposals
-                workspace={props.workspace}
-                onAccepted={(planId) => {
-                  setSelectedPlanId(planId);
-                  writeSelectedPlanId(planId);
-                }}
-              />
-            ) : null
-          }
-          projected={projected}
-          onSelectPlan={(planId) => { setSelectedPlanId(planId); writeSelectedPlanId(planId); }}
-          loading={data.loading}
-          error={data.error}
-          executionBlocked={safetyReview}
-          canExecute={props.workspace?.capabilities.can_execute_treatment === true}
-          onStartTraining={() => openWindow("trainer")}
-          onAskAssistant={() => openWindow("chat")}
-          onClose={() => closeWindow("training")}
-        />;
+        return (
+          <TrainingPlanWindow
+            proposals={
+              props.workspace ? (
+                <PlanProposals
+                  workspace={props.workspace}
+                  onAccepted={(planId) => {
+                    setSelectedPlanId(planId);
+                    writeSelectedPlanId(planId);
+                  }}
+                />
+              ) : null
+            }
+            projected={projected}
+            loading={data.loading}
+            error={data.error}
+            executionBlocked={safetyReview}
+            canExecute={
+              props.workspace?.capabilities.can_execute_treatment === true
+            }
+            onStartTraining={(planId) => {
+              // UI admission only: the Go service remains authoritative.
+              if (
+                projected.selected?.planId !== planId ||
+                !projected.selected.isAccepted ||
+                props.workspace?.capabilities.can_execute_treatment !== true ||
+                safetyReview
+              ) return;
+              setLaunchedTrainerPlanId(planId);
+              openWindow("trainer");
+            }}
+          />
+        );
       case "trainer":
-        return <div className="bc-window-body">{selectedPlanId
-          ? <TrainingExecutionPanel planId={selectedPlanId} />
-          : <p className="bc-window-empty-text">先选择一份训练计划，再开始执行。</p>}</div>;
+        return (
+          <TrainerEntryGuard
+            planId={projected.selected?.planId ?? null}
+            launchedPlanId={launchedTrainerPlanId}
+            accepted={projected.selected?.isAccepted === true}
+            canExecute={props.workspace?.capabilities.can_execute_treatment === true}
+            safetyBlocked={safetyReview}
+            loading={data.loading}
+            error={data.error}
+            onOpenTraining={() => openWindow("training")}
+          />
+        );
       default:
         return null;
     }
   };
+
+  const chooseTrainingPlan = (planId: string) => {
+    setSelectedPlanId(planId);
+    writeSelectedPlanId(planId);
+  };
+
+  const renderWindowHeader = (window: BusinessWindowId): ReactNode => {
+    switch (window) {
+      case "person":
+        return (
+          <PersonIdentityTrigger
+            identity={identity}
+            open={personInfoOpen}
+            onToggle={() => setPersonInfoOpen((open) => !open)}
+          />
+        );
+      case "diagnosis":
+        return (
+          <DiagnosisWindowHeader
+            view={diagnosisView}
+            selectedConditionId={selectedConditionId}
+            onSelectCondition={setSelectedConditionId}
+          />
+        );
+      case "training":
+        return (
+          <TrainingWindowHeader
+            projected={projected}
+            onSelectPlan={chooseTrainingPlan}
+          />
+        );
+      case "chat":
+        return <ChatWindowHeader />;
+      default:
+        return undefined;
+    }
+  };
+
+  const renderHeaderActions = (window: BusinessWindowId): ReactNode =>
+    window === "diagnosis" || window === "training" ? (
+      <button
+        type="button"
+        className="bc-icon-button bc-header-chat-action"
+        aria-label={
+          window === "diagnosis" ? "与助手讨论当前诊断" : "与助手调整训练计划"
+        }
+        title="打开对话，不会自动提交或修改记录"
+        onClick={() => openWindow("chat")}
+      >
+        <MessageCircle size={19} strokeWidth={1.8} />
+      </button>
+    ) : null;
 
   return <main className={`${themeClass} bc-workspace`} data-testid="body-canvas-workspace">
     <header className="bc-topbar">
@@ -414,80 +503,48 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       </>}
 
       {/* Business windows: desktop floats over the body, mobile becomes a sheet.
-          The same reducer state drives both, so a window can never duplicate, and
-          a closed-but-mounted window stays hidden rather than losing its state. */}
-      <div className="bc-business-layer">
-        {!mobile && mountedWindows.map((window) => (
-          <BusinessWindowHost
-            key={window}
-            windowId={window}
-            minimized={activeWindow !== window}
-            stackIndex={businessWindowStackIndex(windows, window)}
-            isActive={activeWindow === window}
-            onFocus={() => openWindow(window)}
-            onMinimize={() => minimizeWindow(window)}
-            onClose={() => closeWindow(window)}
-            headerLeft={
-              window === "person" ? (
-                <PersonIdentityTrigger
-                  identity={identity}
-                  open={personInfoOpen}
-                  onToggle={() => setPersonInfoOpen((open) => !open)}
-                />
-              ) : undefined
-            }
-            hideTitle={window === "person"}
-          >
-            {renderWindowBody(window)}
-          </BusinessWindowHost>
-        ))}
-        {mobile && mountedWindows.map((window) => (
-          <BusinessSheetHost
-            key={window}
-            windowId={window}
-            hidden={activeWindow !== window}
-            onClose={() => closeWindow(window)}
-            headerLeft={
-              window === "person" ? (
-                <PersonIdentityTrigger
-                  identity={identity}
-                  open={personInfoOpen}
-                  onToggle={() => setPersonInfoOpen((open) => !open)}
-                />
-              ) : undefined
-            }
-            hideTitle={window === "person"}
-          >
-            {renderWindowBody(window)}
-          </BusinessSheetHost>
-        ))}
-      </div>
-
-      {!mobile && foldedWindows.length > 0 && <div className="bc-minimized-tray" aria-label="已收起的业务窗口">
-        {foldedWindows.map((window) => (
-          <span key={window} className="bc-minimized-chip">
-            <button
-              type="button"
-              className="bc-minimized-restore"
-              onClick={() => restoreWindow(window)}
-            >
-              恢复{getBusinessWindowMeta(window).title}
-            </button>
-            <button
-              type="button"
-              className="bc-minimized-dismiss"
-              aria-label={`关闭${getBusinessWindowMeta(window).title}`}
-              onClick={() => closeWindow(window)}
-            >
-              <X size={14} />
-            </button>
-          </span>
-        ))}
-      </div>}
+          The same reducer drives both responsive shells; a closed-but-mounted
+          task stays hidden without losing unsaved draft or scroll state. */}
+        <div className="bc-business-layer">
+          {!mobile &&
+            mountedWindows.map((window) => (
+              <BusinessWindowHost
+                key={window}
+                windowId={window}
+                minimized={activeWindow !== window}
+                stackIndex={businessWindowStackIndex(windows, window)}
+                isActive={activeWindow === window}
+                onClose={() => closeWindow(window)}
+                headerLeft={renderWindowHeader(window)}
+                headerActions={renderHeaderActions(window)}
+                hideTitle={["person", "diagnosis", "training", "chat"].includes(
+                  window,
+                )}
+              >
+                {renderWindowBody(window)}
+              </BusinessWindowHost>
+            ))}
+          {mobile &&
+            mountedWindows.map((window) => (
+              <BusinessSheetHost
+                key={window}
+                windowId={window}
+                hidden={activeWindow !== window}
+                onClose={() => closeWindow(window)}
+                headerLeft={renderWindowHeader(window)}
+                headerActions={renderHeaderActions(window)}
+                hideTitle={["person", "diagnosis", "training", "chat"].includes(
+                  window,
+                )}
+              >
+                {renderWindowBody(window)}
+              </BusinessSheetHost>
+            ))}
+        </div>
 
       <div className="bc-attribution"><span>参考人体 · 非个人扫描</span><span>Vanatome / Z-Anatomy · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a></span><span>拖动旋转 · 滚轮缩放 · 点击选区</span></div>
       <button className="bc-help-entry bc-button" onClick={() => setCanvasOverlay("help")}>快捷键<kbd>?</kbd></button>
-      <nav className="bc-dock" aria-label="身体工作区导航">{DOCK_ITEMS.map(([window, label, Icon]) => <button key={window} className={`bc-dock-item bc-dock-${window}`} aria-label={getBusinessWindowMeta(window).title} aria-pressed={isBusinessWindowVisible(windows, window)} onClick={() => toggleWindow(window)}><Icon size={20} strokeWidth={1.7} /><span>{label}</span><kbd>{getBusinessWindowMetaKey(window)}</kbd></button>)}</nav>
+      <BodyCanvasDock activeWindow={activeWindow} confirmedDiagnosisCount={diagnosisView.confirmed.length} onToggle={toggleWindow} />
     </section>
 
     <Dialog open={canvasOverlay !== null} onOpenChange={(open) => { if (!open) setCanvasOverlay(null); }}>
@@ -495,7 +552,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         <div className="bc-inventory-heading"><div><span className="bc-eyebrow">{canvasOverlay ? `CANVAS TOOL / ${canvasOverlay.toUpperCase()}` : "CANVAS TOOL"}</span><DialogTitle className="bc-inventory-title">{canvasOverlay ? CANVAS_OVERLAY_META[canvasOverlay].title : "画布工具"}</DialogTitle><DialogDescription>{canvasOverlay ? CANVAS_OVERLAY_META[canvasOverlay].description : ""}</DialogDescription></div><button className="bc-icon-button" aria-label="关闭当前面板" onClick={() => setCanvasOverlay(null)}><X size={21} /></button></div>
         <div className="bc-inventory-content">
           {canvasOverlay === "anatomy" && <BodyExplorer snapshot={props.bodyState} semanticBridge={props.bodyExplorer.semanticBridge} className="bc-anatomy-viewer" />}
-          {canvasOverlay === "help" && <div className="bc-keyboard-help">{[["V / B / S", "旋转点选、涂抹、框选"], ["1 / 2 / 3 / 4", "站立、跑步、跳跃、坐姿"], ["F / Space", "暂停或继续动作"], ["/", "打开对话窗口"], ["P / D / I / T", "训练计划、诊断、档案、训练执行"], ["X / R", "精细解剖、复位视角"], ["Z / Esc", "撤销选区、逐层返回"]].map(([key, label]) => <div key={key}><kbd>{key}</kbd><span>{label}</span></div>)}<p>输入文字、使用输入法或打开模态面板时，不触发背景单键命令。涂抹标记跟随模型表面；清除选区不会删除身体记录。窗口关闭、最小化或切换都不会丢失选区、对话或未完成操作。</p><button className="bc-button" onClick={() => { setCanvasOverlay(null); setRegionListOpen(true); }}>按名称选择身体区域<List size={17} /></button></div>}
+          {canvasOverlay === "help" && <div className="bc-keyboard-help">{[["V / B / S", "旋转点选、涂抹、框选"], ["1 / 2 / 3 / 4", "站立、跑步、跳跃、坐姿"], ["F / Space", "暂停或继续动作"], ["/", "打开对话窗口"], ["P / D / I / T", "训练计划、诊断、档案、训练执行"], ["X / R", "精细解剖、复位视角"], ["Z / Esc", "撤销选区、逐层返回"]].map(([key, label]) => <div key={key}><kbd>{key}</kbd><span>{label}</span></div>)}<p>输入文字、使用输入法或打开模态面板时，不触发背景单键命令。涂抹标记跟随模型表面；清除选区不会删除身体记录。窗口关闭或通过 Dock 切换不会丢失选区、对话或未完成操作。</p><button className="bc-button" onClick={() => { setCanvasOverlay(null); setRegionListOpen(true); }}>按名称选择身体区域<List size={17} /></button></div>}
         </div>
       </DialogContent>
     </Dialog>
@@ -509,18 +566,7 @@ const CANVAS_PANEL_TO_WINDOW: Partial<Record<CanvasPanel, BusinessWindowId>> = {
   diagnosis: "diagnosis",
   treatment: "training",
   progress: "person",
+  trainer: "trainer",
 };
-
-const WINDOW_KEYS: Record<BusinessWindowId, string> = {
-  chat: "/",
-  person: "I",
-  diagnosis: "D",
-  training: "P",
-  trainer: "T",
-};
-
-function getBusinessWindowMetaKey(window: BusinessWindowId): string {
-  return WINDOW_KEYS[window];
-}
 
 export type { CanvasPanel };

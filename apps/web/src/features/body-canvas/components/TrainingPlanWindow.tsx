@@ -1,11 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  ChevronDown,
-  LoaderCircle,
-  MessageCircle,
-  Play,
-} from "lucide-react";
+import type { ReactNode } from "react";
+import { AlertTriangle, LoaderCircle, Play } from "lucide-react";
 import {
   formatDosage,
   type PlanExercise,
@@ -14,18 +8,9 @@ import {
 } from "../model/trainingPlans";
 
 /**
- * TrainingPlan business window.
- *
- * Design contract (Penpot V5.5):
- * - header: single level-1 title on the left, Close on the right; no decorative
- *   icon and no repeated subtitle;
- * - one light single-line plan-selection row at the top showing the current plan
- *   name, its frequency and a compact switch affordance; clicking it opens the
- *   minimal picker (prototype picker height 234px);
- * - the body is one ordered action list per stage; content scrolls vertically;
- * - footer keeps 「开始训练 / 与助手调整」;
- * - switching plans must reuse the same window identity — the parent host owns
- *   that invariant, and this component only ever renders one plan.
+ * Penpot V2 TrainingPlan content. The selected plan lives in the shared header
+ * next to the contextual Chat action, so this body contains only scrollable
+ * stage content and one guarded Start button. Draft plans never run here.
  */
 
 export interface TrainingPlanWindowProps {
@@ -35,15 +20,12 @@ export interface TrainingPlanWindowProps {
    * window never mutates plan content itself.
    */
   proposals?: ReactNode;
-  onSelectPlan: (planId: string) => void;
   loading?: boolean;
   error?: string | null;
   /** True when the backend reported a safety block that prevents execution. */
   executionBlocked: boolean;
   canExecute: boolean;
   onStartTraining: (planId: string) => void;
-  onAskAssistant: (planId: string) => void;
-  onClose: () => void;
 }
 
 function ExerciseRow({ exercise }: { exercise: PlanExercise }) {
@@ -76,7 +58,11 @@ function StageList({ stages }: { stages: TrainingStage[] }) {
   return (
     <div className="bc-stage-list">
       {stages.map((stage) => (
-        <section key={stage.phase} className="bc-plan-stage" data-stage={stage.phase}>
+        <section
+          key={stage.phase}
+          className="bc-plan-stage"
+          data-stage={stage.phase}
+        >
           <h3 className="bc-stage-title">{stage.label}</h3>
           <ol className="bc-exercise-list">
             {stage.exercises.map((exercise) => (
@@ -89,73 +75,15 @@ function StageList({ stages }: { stages: TrainingStage[] }) {
   );
 }
 
-function PlanPicker({
-  plans,
-  selectedPlanId,
-  onSelect,
-  onClose,
-}: {
-  plans: ProjectedTrainingPlans["plans"];
-  selectedPlanId: string | null;
-  onSelect: (planId: string) => void;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) return;
-      if (ref.current?.contains(event.target)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      className="bc-plan-picker"
-      role="listbox"
-      aria-label="选择训练计划"
-    >
-      {plans.map((plan) => (
-        <button
-          key={plan.planId}
-          type="button"
-          role="option"
-          aria-selected={plan.planId === selectedPlanId}
-          className="bc-plan-option"
-          data-plan-id={plan.planId}
-          onClick={() => {
-            onSelect(plan.planId);
-            onClose();
-          }}
-        >
-          <span className="bc-plan-option-title">{plan.title}</span>
-          {plan.isAccepted ? (
-            <span className="bc-plan-option-badge">当前生效</span>
-          ) : (
-            <span className="bc-plan-option-status">{plan.status}</span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function TrainingPlanWindow({
   projected,
   proposals,
-  onSelectPlan,
   loading = false,
   error = null,
   executionBlocked,
   canExecute,
   onStartTraining,
-  onAskAssistant,
-  onClose,
 }: TrainingPlanWindowProps) {
-  const [pickerOpen, setPickerOpen] = useState(false);
   const plan = projected.selected;
 
   return (
@@ -190,32 +118,17 @@ export function TrainingPlanWindow({
           </div>
         ) : null}
 
-        {plan ? (
-          <>
-            <div className="bc-plan-selector">
-              <button
-                type="button"
-                className="bc-plan-selector-trigger"
-                aria-expanded={pickerOpen}
-                aria-haspopup="listbox"
-                onClick={() => setPickerOpen((open) => !open)}
-              >
-                <span className="bc-plan-selector-name">{plan.title}</span>
-                <span className="bc-plan-selector-meta">
-                  {plan.frequency ?? "频率未提供"} · {plan.exerciseCount} 个动作
-                </span>
-                <ChevronDown size={16} />
-              </button>
-              {pickerOpen ? (
-                <PlanPicker
-                  plans={projected.plans}
-                  selectedPlanId={plan.planId}
-                  onSelect={onSelectPlan}
-                  onClose={() => setPickerOpen(false)}
-                />
-              ) : null}
-            </div>
+        {plan && !plan.isAccepted ? (
+          <div className="bc-window-alert" role="status">
+            <AlertTriangle size={16} />
+            <span>
+              这份计划尚未被接受。它不能作为当前训练执行；请在对话中审阅并明确确认。
+            </span>
+          </div>
+        ) : null}
 
+        {plan?.isAccepted ? (
+          <>
             {executionBlocked ? (
               <div role="alert" className="bc-window-alert">
                 <AlertTriangle size={16} />
@@ -250,23 +163,15 @@ export function TrainingPlanWindow({
         <button
           type="button"
           className="bc-button bc-primary"
-          disabled={!plan || !canExecute || executionBlocked}
-          onClick={() => plan && onStartTraining(plan.planId)}
+          disabled={!plan?.isAccepted || !canExecute || executionBlocked}
+          onClick={() => {
+            if (plan?.isAccepted && canExecute && !executionBlocked) {
+              onStartTraining(plan.planId);
+            }
+          }}
         >
           <Play size={16} />
           开始训练
-        </button>
-        <button
-          type="button"
-          className="bc-button"
-          disabled={!plan}
-          onClick={() => plan && onAskAssistant(plan.planId)}
-        >
-          <MessageCircle size={16} />
-          与助手调整
-        </button>
-        <button type="button" className="bc-button" onClick={onClose}>
-          关闭
         </button>
       </footer>
     </section>
