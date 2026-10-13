@@ -649,7 +649,7 @@ The architecture is complete when:
 
 - ADR 0006: `../adr/0006-adopt-vanatome-3d-anatomy-engine.md`
 - BodyRegion ontology: `./body-region-ontology.md`
-- Feature spec: `../feature_spec_3d_body_explorer.md`
+- Feature spec: `../archive/product-legacy/feature_spec_3d_body_explorer.md`（已归档，现行规格见 `../product/interface.md`）
 - Active implementation plan: `../plan/active/2026-08-27-vanatome-3d-body-explorer.md`
 - Vanatome repository: https://github.com/vixotic/Vanatome
 - Atlas contract: https://github.com/vixotic/Vanatome/blob/main/docs/atlas-contract.md

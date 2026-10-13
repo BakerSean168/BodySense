@@ -74,17 +74,35 @@ class ConsultationRuntimeState(_message.Message):
     extracted_info: _containers.RepeatedCompositeFieldContainer[_struct_pb2.Struct]
     def __init__(self, phase: _Optional[str] = ..., extracted_info: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ...) -> None: ...
 
+class ConsultationReferenceMotion(_message.Message):
+    __slots__ = ("id", "label", "phase", "paused", "source")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    PHASE_FIELD_NUMBER: _ClassVar[int]
+    PAUSED_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    label: str
+    phase: float
+    paused: bool
+    source: str
+    def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., phase: _Optional[float] = ..., paused: _Optional[bool] = ..., source: _Optional[str] = ...) -> None: ...
+
 class ConsultationSpatialContext(_message.Message):
-    __slots__ = ("body_region_id", "body_region_label", "anatomy_id", "anatomy_name")
+    __slots__ = ("body_region_id", "body_region_label", "anatomy_id", "anatomy_name", "body_region_ids", "reference_motion")
     BODY_REGION_ID_FIELD_NUMBER: _ClassVar[int]
     BODY_REGION_LABEL_FIELD_NUMBER: _ClassVar[int]
     ANATOMY_ID_FIELD_NUMBER: _ClassVar[int]
     ANATOMY_NAME_FIELD_NUMBER: _ClassVar[int]
+    BODY_REGION_IDS_FIELD_NUMBER: _ClassVar[int]
+    REFERENCE_MOTION_FIELD_NUMBER: _ClassVar[int]
     body_region_id: str
     body_region_label: str
     anatomy_id: str
     anatomy_name: str
-    def __init__(self, body_region_id: _Optional[str] = ..., body_region_label: _Optional[str] = ..., anatomy_id: _Optional[str] = ..., anatomy_name: _Optional[str] = ...) -> None: ...
+    body_region_ids: _containers.RepeatedScalarFieldContainer[str]
+    reference_motion: ConsultationReferenceMotion
+    def __init__(self, body_region_id: _Optional[str] = ..., body_region_label: _Optional[str] = ..., anatomy_id: _Optional[str] = ..., anatomy_name: _Optional[str] = ..., body_region_ids: _Optional[_Iterable[str]] = ..., reference_motion: _Optional[_Union[ConsultationReferenceMotion, _Mapping]] = ...) -> None: ...
 
 class ConsultationBusinessContext(_message.Message):
     __slots__ = ("profile", "body_state", "runtime_state", "relevant_history", "current_diagnosis", "current_treatment", "recent_outcomes", "spatial_context", "posture_analysis")

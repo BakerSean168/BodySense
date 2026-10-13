@@ -1,5 +1,8 @@
 # BodySense 全面项目审查报告
 
+> 已归档（2026-10-12）：历史项目审查快照（针对重构前实现），当前业务规则见 docs/product/，当前实现见 docs/architecture/current-longitudinal-system.md。
+
+
 > **Historical review snapshot.** Findings refer to the pre-longitudinal implementation. See `docs/architecture/current-longitudinal-system.md` for current behavior.
 
 

@@ -318,31 +318,66 @@ def _format_longitudinal_context(state: ConsultationThreadState) -> str:
     return "\n\n".join(sections)
 
 
+_REFERENCE_MOTION_LABELS = {
+    "stand": "站立",
+    "run": "跑步",
+    "jump": "跳跃",
+    "sit": "坐姿",
+    "arm_raise": "抬臂观察",
+    "calf_raise": "提踵",
+    "hip_hinge": "髋铰链",
+    "bridge": "臀桥",
+}
+
+
 def _format_spatial_context(spatial_context: dict[str, Any]) -> str:
     if not spatial_context:
         return ""
     region_id = str(spatial_context.get("body_region_id") or "").strip()
     region_label = str(spatial_context.get("body_region_label") or "").strip()
+    region_ids = [
+        str(value).strip()
+        for value in spatial_context.get("body_region_ids", [])
+        if str(value).strip()
+    ]
     anatomy_id = str(spatial_context.get("anatomy_id") or "").strip()
     anatomy_name = str(spatial_context.get("anatomy_name") or "").strip()
-    if not region_id and not anatomy_id:
+    motion = spatial_context.get("reference_motion")
+    if not region_id and not region_ids and not anatomy_id and not isinstance(motion, dict):
         return ""
 
     lines = ["## 用户当前查看的身体位置（界面导航上下文）"]
     if region_id or region_label:
         lines.append(
-            f"- 身体区域：{region_label or region_id} ({region_id or '未提供 canonical ID'})"
+            f"- 主身体区域：{region_label or region_id} ({region_id or '未提供 canonical ID'})"
         )
+    if region_ids:
+        lines.append("- 当前选区 canonical IDs：" + "、".join(region_ids))
     if anatomy_id or anatomy_name:
         lines.append(
             f"- 解剖结构：{anatomy_name or anatomy_id} ({anatomy_id or '未提供 anatomy ID'})"
         )
+    if isinstance(motion, dict):
+        motion_id = str(motion.get("id") or "").strip()
+        motion_label = _REFERENCE_MOTION_LABELS.get(motion_id, motion_id)
+        phase = motion.get("phase")
+        paused = bool(motion.get("paused"))
+        lines.append(
+            f"- 当前参考动作：{motion_label} ({motion_id})，"
+            f"标准化阶段 {phase}，{'已暂停' if paused else '播放中'}。"
+        )
+        lines.append(
+            "- 该动作来自 BodySense 的 reference_animation 教学层，只用于让用户描述"
+            "“在什么动作/阶段”。它不是用户实际动作视频、姿态测量、组织受力数据或"
+            "生物力学证据。"
+        )
     lines.append(
-        "- 这只是用户在 3D Body Explorer 中主动选择的查看位置，不是症状事实、病因证据或医学诊断。"
+        "- 身体选择只是用户在 3D Body Canvas 中主动指定的界面上下文，"
+        "不是症状事实、病因证据或医学诊断。"
     )
     lines.append(
-        "- 回答时应结合 Go 提供的当前 BodyState；若该区域没有已确认记录，"
-        "不得因为用户选中了它就声称那里存在问题。"
+        "- 回答时应结合 Go 提供的当前 BodyState；若这些区域没有已确认记录，"
+        "不得因为用户选中了它们或播放了参考动作，就声称存在问题、肌肉紧张、负荷异常或特定病变。"
     )
     return "\n".join(lines)
 

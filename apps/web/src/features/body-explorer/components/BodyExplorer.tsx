@@ -109,7 +109,6 @@ export function BodyExplorer({
     (nextMode: "region" | "anatomy") => {
       if (semanticBridge?.onModeChange) semanticBridge.onModeChange(nextMode);
       else setInternalMode(nextMode);
-      if (nextMode === "region") semanticBridge?.onRegionModeRequested?.();
     },
     [semanticBridge],
   );
@@ -230,6 +229,7 @@ export function BodyExplorer({
               onSelectedAnatomyIdChange={setSelection}
               mode={mode}
               onModeChange={handleModeChange}
+              onRegionModeRequested={semanticBridge?.onRegionModeRequested}
               selectedRegionLabel={semanticBridge?.selectedRegionLabel}
               focusRequest={semanticBridge?.focusRequest}
               resetRequestKey={semanticBridge?.resetRequestKey}

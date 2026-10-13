@@ -15,6 +15,7 @@ const (
 	BodyStateFactKindLifestyleSubstances = "lifestyle.substances"
 	BodyStateFactKindLifestyleRecovery   = "lifestyle.recovery"
 	BodyStateFactKindInjuryHistory       = "history.injury_summary"
+	BodyStateFactKindEquipmentAvailable  = "equipment.available"
 
 	BodyStateObservationKindHeight = "anthropometry.height"
 	BodyStateObservationKindWeight = "anthropometry.weight"

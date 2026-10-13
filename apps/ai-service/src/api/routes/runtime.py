@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -94,11 +94,21 @@ class ConsultationRuntimeState(BaseModel):
     extracted_info: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class ReferenceMotionContext(BaseModel):
+    id: str = Field(min_length=1, max_length=80)
+    label: str = Field(min_length=1, max_length=120)
+    phase: float = Field(ge=0, le=1)
+    paused: bool
+    source: Literal["reference_animation"]
+
+
 class SpatialContext(BaseModel):
     body_region_id: str | None = None
     body_region_label: str | None = None
+    body_region_ids: list[str] = Field(default_factory=list, max_length=35)
     anatomy_id: str | None = None
     anatomy_name: str | None = None
+    reference_motion: ReferenceMotionContext | None = None
 
 
 class BusinessContext(BaseModel):

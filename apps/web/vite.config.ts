@@ -9,6 +9,7 @@ import {
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
+import { realpathSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 // Strip 'use client' directives from @base-ui/react modules
@@ -29,6 +30,11 @@ function enforceChunkBudgets(): Plugin {
   const defaultRawLimit = 500_000;
   const bodyExplorerRawLimit = 1_300_000;
   const bodyExplorerGzipLimit = 300_000;
+  // Three contains a single >500 kB source module, so once two independent lazy
+  // 3D views share it Rolldown must emit a common lazy-only runtime chunk. Keep
+  // the global 500 kB budget intact and govern that unavoidable runtime explicitly.
+  const body3DThreeRawLimit = 900_000;
+  const body3DThreeGzipLimit = 300_000;
 
   return {
     name: "bodysense-web-chunk-budgets",
@@ -39,11 +45,41 @@ function enforceChunkBudgets(): Plugin {
 
         const rawBytes = Buffer.byteLength(output.code, "utf8");
         const isBodyExplorer3D = output.name === "BodyExplorer3D";
+        const isBody3DThreeRuntime = output.name === "Body3DThreeRuntime";
+
+        if (isBody3DThreeRuntime) {
+          const onlyThreeModules = Object.keys(output.modules).every((id) =>
+            /node_modules[\\/]three[\\/]/.test(id),
+          );
+          const staticallyReachableFromEntry = (fileName: string, seen = new Set<string>()): boolean => {
+            if (seen.has(fileName)) return false;
+            seen.add(fileName);
+            return Object.values(bundle).some((candidate) => {
+              if (candidate.type !== "chunk" || !candidate.imports.includes(fileName)) return false;
+              return candidate.isEntry || staticallyReachableFromEntry(candidate.fileName, seen);
+            });
+          };
+          const gzipBytes = gzipSync(output.code).byteLength;
+          if (!onlyThreeModules || staticallyReachableFromEntry(output.fileName) || rawBytes > body3DThreeRawLimit || gzipBytes > body3DThreeGzipLimit) {
+            this.error(
+              `Body3DThreeRuntime must remain Three-only, lazy-only, and within its explicit budget: ` +
+                `${rawBytes} raw / ${gzipBytes} gzip bytes.`,
+            );
+          }
+          continue;
+        }
 
         if (!isBodyExplorer3D && rawBytes > defaultRawLimit) {
+          const largestModules = Object.entries(output.modules)
+            .map(([id, meta]) => ({ id, bytes: meta.renderedLength }))
+            .sort((left, right) => right.bytes - left.bytes)
+            .slice(0, 6)
+            .map(({ id, bytes }) => `${bytes}:${id}`)
+            .join(", ");
           this.error(
             `Unexpected Web chunk ${output.fileName} is ${rawBytes} bytes; ` +
-              `the default production budget is ${defaultRawLimit} bytes.`,
+              `the default production budget is ${defaultRawLimit} bytes. ` +
+              `Largest modules: ${largestModules}`,
           );
         }
 
@@ -119,6 +155,8 @@ function createTailwindPlugins(useBundledDev: boolean): Plugin[] {
 }
 
 const webRoot = path.resolve(import.meta.dirname);
+const repositoryRoot = path.resolve(webRoot, "../..");
+const dependencyRoot = realpathSync(path.join(repositoryRoot, "node_modules"));
 
 export function createBodySenseViteConfig({
   mode,
@@ -170,6 +208,19 @@ export function createBodySenseViteConfig({
       noExternal: ["@base-ui/react"],
     },
     build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "Body3DThreeRuntime",
+                test: /node_modules[\\/]three[\\/]/,
+                priority: 30,
+              },
+            ],
+          },
+        },
+      },
       // BodyExplorer3D is intentionally isolated behind React.lazy. Vite's generic
       // warning cannot express that exception, so the custom plugin above keeps a
       // 500 kB default budget for every other chunk and a tighter raw+gzip budget
@@ -178,6 +229,12 @@ export function createBodySenseViteConfig({
     },
     server: {
       ...(allowedHosts.length > 0 ? { allowedHosts } : {}),
+      // Worktrees may share the repository dependency tree through a symlink.
+      // Vite resolves font URLs to the real path, so permit exactly the repo and
+      // the resolved node_modules root instead of widening @fs to /home/dev/projects.
+      fs: {
+        allow: [repositoryRoot, dependencyRoot],
+      },
       // Direct dev stays loopback-only. Tailscale Serve owns the Tailnet address
       // on the same project port and proxies into this listener.
       host: process.env.BODYSENSE_WEB_HOST || "127.0.0.1",

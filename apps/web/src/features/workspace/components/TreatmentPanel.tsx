@@ -21,6 +21,7 @@ import { selectProposedTreatmentRevisions } from "../model/workspaceSelectors";
 
 interface TreatmentPanelProps {
   workspace: HealthWorkspace;
+  onDemonstrateExercise?: (title: string) => boolean;
 }
 
 const statusLabels: Record<string, string> = {
@@ -60,7 +61,7 @@ function prescriptionText(value: Record<string, unknown>) {
     .join(" · ");
 }
 
-export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
+export function TreatmentPanel({ workspace, onDemonstrateExercise }: TreatmentPanelProps) {
   const treatmentCommand = useTreatmentCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<
@@ -251,6 +252,20 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
                     {prescriptionText(intervention.prescription)}
                   </p>
                 )}
+                {onDemonstrateExercise ? (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="mt-2"
+                    onClick={() => {
+                      if (!onDemonstrateExercise(intervention.title)) {
+                        toast.info("这个动作暂时没有匹配的参考动画；方案内容仍可正常执行与记录。");
+                      }
+                    }}
+                  >
+                    查看参考动作
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>

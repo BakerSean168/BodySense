@@ -33,6 +33,10 @@ async function registerBrowser(page: Page): Promise<void> {
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
   await page.goto("/consultation");
+  // Body Canvas V3 is intentionally body-first, so the contextual assistant
+  // starts collapsed. Runtime recovery still exercises the real composer after
+  // the user explicitly opens that surface.
+  await page.getByRole("button", { name: "打开身体助手" }).click();
   await expect(
     page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeVisible();

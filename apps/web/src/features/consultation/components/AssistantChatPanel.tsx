@@ -320,9 +320,18 @@ function ChatInputArea({
             <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[#75d5a7]/20 bg-[#75d5a7]/[0.08] px-2.5 py-1 text-[11px] text-[#a9e7c8]">
               <MapPin className="size-3 shrink-0" aria-hidden="true" />
               <span className="truncate">
-                {spatialContext.body_region_label || "当前身体区域"}
+                {spatialContext.body_region_label ||
+                  (spatialContext.body_region_ids?.length
+                    ? "当前身体选区"
+                    : "当前动作情境")}
+                {(spatialContext.body_region_ids?.length ?? 0) > 1
+                  ? ` +${(spatialContext.body_region_ids?.length ?? 1) - 1} 个区域`
+                  : ""}
                 {spatialContext.anatomy_name
                   ? ` · ${spatialContext.anatomy_name}`
+                  : ""}
+                {spatialContext.reference_motion
+                  ? ` · ${spatialContext.reference_motion.label}${spatialContext.reference_motion.paused ? "（已暂停）" : ""}`
                   : ""}
               </span>
               {onClearSpatialContext ? (

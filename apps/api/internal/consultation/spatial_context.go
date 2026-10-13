@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 
 	"github.com/bodysense/api/internal/service"
@@ -11,6 +12,11 @@ import (
 )
 
 var errInvalidSpatialContext = errors.New("invalid Body Explorer context")
+
+var allowedReferenceMotions = map[string]string{
+	"stand": "站立", "run": "跑步", "jump": "跳跃", "sit": "坐姿",
+	"arm_raise": "抬臂观察", "calf_raise": "提踵", "hip_hinge": "髋铰链", "bridge": "臀桥",
+}
 
 type bodyExplorerMessageMetadata struct {
 	BodyExplorerContext *service.ConsultationSpatialContext `json:"body_explorer_context,omitempty"`
@@ -41,7 +47,57 @@ func normalizeSpatialContextMetadata(raw json.RawMessage) (datatypes.JSON, *serv
 	if ctx.BodyRegionID != "" && !service.IsCanonicalBodyRegionID(ctx.BodyRegionID) {
 		return nil, nil, errInvalidSpatialContext
 	}
-	if ctx.BodyRegionID == "" && ctx.AnatomyID == "" {
+
+	normalizedRegions := make([]string, 0, len(ctx.BodyRegionIDs)+1)
+	seenRegions := make(map[string]struct{}, len(ctx.BodyRegionIDs)+1)
+	addRegion := func(value string) error {
+		regionID := strings.TrimSpace(value)
+		if regionID == "" {
+			return nil
+		}
+		if len(regionID) > 80 || !service.IsCanonicalBodyRegionID(regionID) {
+			return errInvalidSpatialContext
+		}
+		if _, exists := seenRegions[regionID]; exists {
+			return nil
+		}
+		seenRegions[regionID] = struct{}{}
+		normalizedRegions = append(normalizedRegions, regionID)
+		return nil
+	}
+	if err := addRegion(ctx.BodyRegionID); err != nil {
+		return nil, nil, err
+	}
+	for _, regionID := range ctx.BodyRegionIDs {
+		if err := addRegion(regionID); err != nil {
+			return nil, nil, err
+		}
+	}
+	if len(normalizedRegions) > 35 {
+		return nil, nil, errInvalidSpatialContext
+	}
+	ctx.BodyRegionIDs = normalizedRegions
+	if ctx.BodyRegionID == "" && len(normalizedRegions) > 0 {
+		ctx.BodyRegionID = normalizedRegions[0]
+	}
+
+	if ctx.ReferenceMotion != nil {
+		motion := *ctx.ReferenceMotion
+		motion.ID = strings.TrimSpace(motion.ID)
+		motion.Label = strings.TrimSpace(motion.Label)
+		motion.Source = strings.TrimSpace(motion.Source)
+		canonicalLabel, ok := allowedReferenceMotions[motion.ID]
+		if !ok ||
+			motion.Source != "reference_animation" ||
+			math.IsNaN(motion.Phase) || math.IsInf(motion.Phase, 0) ||
+			motion.Phase < 0 || motion.Phase > 1 {
+			return nil, nil, errInvalidSpatialContext
+		}
+		motion.Label = canonicalLabel
+		ctx.ReferenceMotion = &motion
+	}
+
+	if ctx.BodyRegionID == "" && ctx.AnatomyID == "" && ctx.ReferenceMotion == nil {
 		return datatypes.JSON(`{}`), nil, nil
 	}
 

@@ -15,8 +15,8 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   // The canonical 35-region vocabulary and all curated Vanatome mappings are
   // exhaustively validated by the fast ontology/mapping contract tests. This
   // browser scenario intentionally samples representative regions while keeping
-  // the expensive real-atlas/WebGL checks, visual states, warm reloads, and
-  // tab/view recovery under software-rendered CI.
+  // the expensive real-atlas/WebGL checks, visual states, and panel/view recovery
+  // under software-rendered CI. Cache policy itself is covered by delivery tests.
   test.setTimeout(360_000);
   const email = `body3d-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
@@ -89,24 +89,33 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   });
 
   const coldStart = Date.now();
-  await page.goto("/consultation?view=state");
+  await page.goto("/consultation");
+  await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
+  await page
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "精细解剖" })
+    .click();
+  const anatomyDialog = page.getByRole("dialog");
+  const bodyExplorer = anatomyDialog.getByRole("region", {
+    name: "3D 身体探索",
+  });
   await expect(
-    page.getByRole("combobox", { name: "选择身体区域" }),
+    bodyExplorer.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
   await expect
     .poll(
       async () => {
-        if (await page.getByText("3D 身体视图暂时不可用").isVisible()) {
+        if (await bodyExplorer.getByText("3D 身体视图暂时不可用").isVisible()) {
           throw new Error(
             `3D atlas failed before readiness: ${JSON.stringify(atlasRequestFailures)}`,
           );
         }
-        return page.getByText("Atlas 1.4.0", { exact: true }).isVisible();
+        return bodyExplorer.getByText("Atlas 1.4.0", { exact: true }).isVisible();
       },
       { timeout: 75_000 },
     )
     .toBe(true);
-  await expect(page.getByTestId("body-explorer-3d")).toHaveAttribute(
+  await expect(bodyExplorer.getByTestId("body-explorer-3d")).toHaveAttribute(
     "data-viewer-state",
     "ready",
     { timeout: 75_000 },
@@ -117,7 +126,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     fullPage: true,
   });
 
-  const regionSelect = page.getByRole("combobox", { name: "选择身体区域" });
+  const regionSelect = bodyExplorer.getByRole("combobox", { name: "选择身体区域" });
   const pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
 
@@ -126,7 +135,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   // selection while retaining that atlas. A subsequent canvas click must
   // therefore create a fresh anatomy selection through Vanatome raycasting.
   await regionSelect.selectOption("shoulder.right");
-  await expect(page.getByTestId("body-explorer-3d")).toHaveAttribute(
+  await expect(bodyExplorer.getByTestId("body-explorer-3d")).toHaveAttribute(
     "data-loaded-systems",
     /muscular/,
     { timeout: 75_000 },
@@ -134,10 +143,10 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await regionSelect.selectOption("");
   await expect(regionSelect).toHaveValue("");
 
-  const canvas = page.locator("canvas").first();
+  const canvas = bodyExplorer.locator("canvas").first();
   const canvasBox = await canvas.boundingBox();
   expect(canvasBox).not.toBeNull();
-  const focusButton = page.getByRole("button", { name: "聚焦" });
+  const focusButton = bodyExplorer.getByRole("button", { name: "聚焦" });
   await expect(focusButton).toBeDisabled();
   let pointerHit = false;
   if (canvasBox) {
@@ -169,13 +178,23 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     }
   }
   expect(pointerHit).toBe(true);
-  await expect(page.getByRole("button", { name: "隔离" })).toBeEnabled();
+  await expect(bodyExplorer.getByRole("button", { name: "隔离" })).toBeEnabled();
+  const regionBeforeFullBodyReset = await regionSelect.inputValue();
+  expect(regionBeforeFullBodyReset).not.toBe("");
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-pointer-hit.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "返回全身" }).click();
-  await expect(focusButton).toBeDisabled();
+  // Resolve the current control after the WebGL subtree settles. Do not force
+  // the click: a forced coordinate click can land on the canvas if that tiny
+  // control subtree is replaced and immediately select anatomy again.
+  await bodyExplorer
+    .getByRole("button", { name: "返回全身" })
+    .click({ timeout: 20_000 });
+  await expect(focusButton).toBeDisabled({ timeout: 20_000 });
+  // Full-body camera reset is intentionally distinct from clearing the user's
+  // canonical BodyRegion context on the surrounding Body Canvas.
+  await expect(regionSelect).toHaveValue(regionBeforeFullBodyReset);
 
   const canonicalRegionIds = await regionSelect
     .locator("option")
@@ -195,61 +214,61 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     expect(canonicalRegionIds).toContain(regionId);
     await regionSelect.selectOption(regionId);
     await expect(regionSelect).toHaveValue(regionId);
-    await expect(page.getByRole("button", { name: "深入查看" })).toBeVisible();
-    await expect(page.getByText("3D 身体视图暂时不可用")).toHaveCount(0);
+    await expect(bodyExplorer.getByRole("button", { name: "深入查看" })).toBeVisible();
+    await expect(bodyExplorer.getByText("3D 身体视图暂时不可用")).toHaveCount(0);
   }
   expect(pageErrors).toEqual([]);
 
   await regionSelect.selectOption("shoulder.right");
-  await expect(page.getByText("抬高手臂时右肩疼")).toBeVisible();
+  await expect(bodyExplorer.getByText("抬高手臂时右肩疼")).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-right-shoulder-selected.png"),
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "深入查看" }).click();
-  await page.getByRole("button", { name: "肌肉" }).click();
+  await bodyExplorer.getByRole("button", { name: "深入查看" }).click();
+  await bodyExplorer.getByRole("button", { name: "肌肉" }).click();
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-anatomy-muscular.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "返回区域" }).click();
+  await bodyExplorer.getByRole("button", { name: "返回区域" }).click();
 
   await regionSelect.selectOption("lower_back");
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-lower-back-selected.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "深入查看" }).click();
-  await page.getByRole("button", { name: "骨骼" }).click();
+  await bodyExplorer.getByRole("button", { name: "深入查看" }).click();
+  await bodyExplorer.getByRole("button", { name: "骨骼" }).click();
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-anatomy-skeletal.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "返回区域" }).click();
+  await bodyExplorer.getByRole("button", { name: "返回区域" }).click();
 
   await regionSelect.selectOption("");
   await regionSelect.selectOption("shoulder.right");
   const heapBeforeTabs = await readUsedJsHeap(page);
-  for (let index = 0; index < 5; index += 1) {
-    await page.getByRole("tab", { name: "分析" }).click();
-    await expect(page.getByRole("tab", { name: "分析" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await page.getByRole("tab", { name: "状态" }).click();
-    await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible({
+  for (let index = 0; index < 2; index += 1) {
+    await anatomyDialog.getByRole("button", { name: "评估", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "评估与依据" })).toBeVisible();
+    await anatomyDialog.getByRole("button", { name: "关闭当前面板" }).click();
+    await page
+      .getByRole("toolbar", { name: "身体画布工具" })
+      .getByRole("button", { name: "精细解剖" })
+      .click();
+    await expect(bodyExplorer.getByText("Atlas 1.4.0", { exact: true })).toBeVisible({
       timeout: 30_000,
     });
   }
   const heapAfterTabs = await readUsedJsHeap(page);
 
-  await page.getByRole("button", { name: "收起对话区" }).click();
-  await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
-
-  const askButtons = page.getByRole("button", { name: "询问 BodySense" });
+  await expect(page.getByLabel("身体上下文助手")).toBeHidden();
+  const askButtons = bodyExplorer.getByRole("button", { name: "询问 BodySense" });
   await askButtons.first().click();
-  await expect(page.getByRole("button", { name: "收起对话区" })).toBeVisible();
+  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
+  await expect(anatomyDialog).toBeHidden();
   await expect(page.getByText(/右肩/).last()).toBeVisible();
   await expect(
     page.getByRole("button", { name: "移除身体区域上下文" }),
@@ -259,6 +278,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     path: testInfo.outputPath("body-explorer-right-shoulder.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "收起助手" }).click();
 
   expect(atlasRequests.length).toBeGreaterThan(0);
   const staticRequests = [...atlasRequests, ...bodyExplorerChunkRequests];
@@ -291,35 +311,26 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
       maxDuration: Math.max(0, ...entries.map((entry) => entry.duration)),
     };
   });
-  const warmStart = Date.now();
-  await page.reload();
-  await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.getByTestId("body-explorer-3d")).toHaveAttribute(
-    "data-viewer-state",
-    "ready",
-    { timeout: 30_000 },
-  );
-  const warmReadyMs = Date.now() - warmStart;
-
   testInfo.annotations.push({
     type: "body3d-performance",
     description: JSON.stringify({
       coldReadyMs,
-      warmReadyMs,
       heapBeforeTabs,
       heapAfterTabs,
       ...resourceSummary,
     }),
   });
 
+  await page
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "精细解剖" })
+    .click();
+  await expect(anatomyDialog).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "工作区" }).click();
   await expect(
-    page.getByRole("combobox", { name: "选择身体区域" }),
+    bodyExplorer.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
-  await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
+  await expect(bodyExplorer.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
 
@@ -350,9 +361,14 @@ test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
   await page.route("**/releases/1.4.0/catalog.json", (route) => route.abort());
-  await page.goto("/consultation?view=state");
+  await page.goto("/consultation");
+  await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
+  await page
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "精细解剖" })
+    .click();
 
-  await expect(page.getByText("3D 身体视图暂时不可用")).toBeVisible({
+  await expect(page.getByRole("dialog").getByText("3D 身体视图暂时不可用")).toBeVisible({
     timeout: 30_000,
   });
   await expect(

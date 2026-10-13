@@ -5,7 +5,7 @@
 - Owner: BodySense
 - Governing ADR: [ADR 0013](../../adr/0013-adopt-versioned-health-document-evidence-pipeline.md) — Proposed until benchmark/promotion decision
 - Target architecture: [Health Document Evidence Pipeline](../../architecture/health-document-evidence-pipeline.md)
-- User-facing contract: [Health Document Ingestion Feature Spec](../../feature_spec_health_document_ingestion.md)
+- User-facing contract: [Health Document Ingestion Feature Spec](../../archive/product-legacy/feature_spec_health_document_ingestion.md)
 - Existing safety gate: [ADR 0011](../../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)
 
 ## Current implementation status — 2026-09-02

@@ -1,6 +1,6 @@
 # BodySense
 
-> **AI-native longitudinal body-health workspace** — connecting long-running conversations, durable body state, evidence-aware diagnosis, treatment plans, and training feedback into one traceable loop.
+> **An Agent-powered personal body-state workspace** for capturing body changes, maintaining a single current comprehensive diagnosis, and managing independently authorized training plans.
 
 <p align="left">
   <strong>Language:</strong> English · <a href="./docs/zh-CN/README.md">Simplified Chinese</a>
@@ -9,35 +9,26 @@
 <p align="left">
   <a href="https://body.bakersean.top"><strong>Live App</strong></a> ·
   <a href="https://bakersean168.github.io/BodySense/"><strong>Project Page</strong></a> ·
-  <a href="./docs/feature_spec_longitudinal_body_health.md"><strong>Product Spec</strong></a> ·
-  <a href="./docs/architecture/deployment-architecture.md"><strong>Architecture</strong></a>
+  <a href="./docs/product/README.md"><strong>Product Spec</strong></a> ·
+  <a href="./docs/architecture/README.md"><strong>Architecture</strong></a>
 </p>
 
-BodySense is not a one-shot AI consultation demo. It is designed around a long-lived health workspace where people can continuously describe changes, add observations, correct facts, review how analysis evolves, and feed treatment or training outcomes back into future reasoning.
+BodySense keeps long-term body information as structured, time-aware data. A clear user statement about their own body is recorded automatically, while ambiguities are clarified through interactive tools. The Agent can help analyze specific conditions within one comprehensive Diagnosis and suggest adjustments to individual training plans. Formal Diagnosis changes require the user's request or authorization; training content changes require a direct request or acceptance of an Agent proposal.
+
+The interface uses a persistent interactive 3D body canvas with movable Chat and business windows for Person, Diagnosis, TrainingPlan and Trainer. The normal experience shows current results rather than internal revision history.
 
 > [!IMPORTANT]
-> BodySense is a personal health-information and posture-analysis assistant project. It is not a medical device and does not replace diagnosis or treatment from physicians, physical therapists, or other qualified professionals.
+> BodySense supports personal health-information organization and evidence-aware explanation. It is not a medical device and does not replace qualified medical diagnosis or treatment.
 
-## Product loop
+## Business model
 
-```mermaid
-flowchart LR
-    A[Long-running health conversation] --> B[Durable BodyState]
-    B --> C[Diagnosis analysis]
-    C --> D[Treatment / training]
-    D --> E[Feedback & outcomes]
-    E --> B
-    B --> F[Trends & safety]
-    F --> A
-```
+- **BodyState** — one durable state per user, with clear self-reports saved automatically and correction distinguished from actual progression.
+- **Diagnosis** — one comprehensive current result, made up of condition entries that can be updated independently within an atomic overall revision.
+- **TrainingPlan** — multiple independent current plans, changed only when the user requests or explicitly accepts a proposed modification.
+- **Agent** — natural-language interaction, targeted evidence gathering, clarification, scoped diagnosis analysis and plan-impact review.
+- **3D workspace** — persistent body canvas, context tools and movable windows, consistent on desktop and mobile.
 
-The core experience has five parts:
-
-- **Long-lived conversation** — users do not need to create a new consultation for every body issue.
-- **Live BodyState** — structured facts, observations, changes, AI hypotheses, and safety state evolve over time and remain user-correctable.
-- **Evidence-aware diagnosis** — diagnosis is bound to an exact BodyState revision, temporal context, observations, and retrieved evidence instead of relying only on chat history.
-- **Revisioned treatment** — the current intervention plan has an explicit version and review lifecycle rather than being silently overwritten by a new message.
-- **Closed feedback loop** — adherence, training execution, symptom changes, and self-assessment results feed back into durable state and later review.
+For detailed semantics, see the [product specification](./docs/product/README.md).
 
 ## Why it is interesting
 
@@ -181,12 +172,16 @@ See [`docs/architecture/deployment-architecture.md`](./docs/architecture/deploym
 
 ## Documentation
 
-Start here if you want to understand the product rather than only the code:
-
-- [`Longitudinal Body Health Workspace`](./docs/feature_spec_longitudinal_body_health.md) — current product model and user experience.
-- [`Deployment Architecture`](./docs/architecture/deployment-architecture.md) — current production topology and release flow.
-- [`AGENT.md`](./AGENT.md) — repository conventions and AI-assisted engineering workflow.
-- [`docs/`](./docs/) — architecture, ADRs, feature specs, evals, and implementation history.
+- [Documentation index (Chinese)](./docs/README.md) — what is current, where each topic lives, what is archived
+- [Product overview](./docs/product/README.md)
+- [Product requirements](./docs/product/requirements.md)
+- [Domain contracts](./docs/product/domain/README.md)
+- [Agent interactions](./docs/product/agent-workflows.md)
+- [UI behavior](./docs/product/interface.md)
+- [Acceptance](./docs/product/acceptance.md)
+- [Glossary & Penpot name mapping](./docs/product/glossary.md)
+- [Architecture](./docs/architecture/README.md)
+- [Repository conventions](./AGENT.md)
 
 ## Repository status & license
 

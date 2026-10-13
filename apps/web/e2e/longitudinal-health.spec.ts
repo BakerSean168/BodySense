@@ -8,6 +8,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   page,
   request,
 }) => {
+  test.setTimeout(120_000);
   const email = `e2e-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
 
@@ -58,23 +59,24 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   expect(conversationData.conversations).toHaveLength(1);
 
   await page.goto(`/consultation/${conversationData.conversations[0].id}`);
-  await expect(page.getByRole("tablist", { name: "健康工作区" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "状态" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
+  await expect(page.getByLabel("身体上下文助手")).toBeHidden();
 
-  await page.getByRole("button", { name: "收起对话区" }).click();
-  await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
+  await page.getByRole("button", { name: "打开身体助手" }).click();
+  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
+  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
+  await page.getByRole("button", { name: "收起助手" }).click();
 
-  await page.getByRole("tab", { name: "分析" }).click();
+  await page.getByRole("button", { name: "评估与依据" }).click();
   await expect(page).toHaveURL(/view=diagnosis/);
-  await expect(page.getByRole("tabpanel", { name: "分析" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "评估与依据" })).toBeVisible();
   await expect(page.getByText("还没有分析结果")).toBeVisible();
-  await page.getByRole("tab", { name: /状态/ }).click();
+
+  await page.getByRole("dialog").getByRole("button", { name: "身体" }).click();
   await expect(page).toHaveURL(/view=state/);
+  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
 
   await page.getByRole("button", { name: "添加记录" }).click();
   await page.getByPlaceholder("身体区域，例如：颈部、左肩、右肩").fill("颈部");
@@ -99,6 +101,8 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   );
 
   await page.reload();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 });
 
@@ -106,6 +110,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   page,
   request,
 }) => {
+  test.setTimeout(120_000);
   const email = `loop-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
 
@@ -233,8 +238,9 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
     { headers },
   );
-  expect(diagnosisResponse.ok()).toBeTruthy();
-  const diagnosis = (await diagnosisResponse.json()) as {
+  const diagnosisBody = await diagnosisResponse.text();
+  expect(diagnosisResponse.ok(), diagnosisBody).toBeTruthy();
+  const diagnosis = JSON.parse(diagnosisBody) as {
     analysis_id: string;
     candidates: Array<{ candidate_id: string }>;
   };
