@@ -77,6 +77,10 @@ jobs:
       - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - name: Validate delivery policy contracts
         run: node --test scripts/delivery/*.test.mjs
+      - name: Validate V2 active plans and handoff evidence
+        run: |
+          node scripts/plan/validate-v2-parallel.mjs
+          node --test scripts/plan/*.test.mjs
       - name: Validate committed repository diff hygiene
         shell: bash
         run: |
