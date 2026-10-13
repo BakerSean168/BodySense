@@ -1737,6 +1737,11 @@
 .bc-record-item { border: 1px solid var(--bc-line); border-radius: .75rem; padding: .875rem; min-width: 0; }
 .bc-record-statement { white-space: pre-wrap; overflow-wrap: anywhere; margin: .5rem 0; }
 .bc-record-saved { display: flex; align-items: center; gap: .375rem; }
+/* Minimum functional field sizing; Penpot remains the visual design authority. */
+.bc-episode-editor { min-width: 0; }
+.bc-episode-editor label { display: grid; gap: 6px; min-width: 0; }
+.bc-episode-editor select, .bc-episode-editor input, .bc-episode-editor textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; color: var(--bc-ink); background: var(--bc-paper); font: inherit; }
+.bc-episode-editor textarea { overflow-wrap: anywhere; resize: vertical; }
 .bc-person-category textarea { width: 100%; resize: vertical; min-height: 5rem; }
 
 .bc-person-category .bc-equipment-form textarea {

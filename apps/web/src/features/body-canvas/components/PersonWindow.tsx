@@ -14,6 +14,7 @@ import type {
 } from "@/features/consultation/types/consultation";
 import { useBodyStateCommand } from "@/features/workspace/hooks/useBodyStateCommand";
 import { BodyFactRecords } from "./BodyFactRecords";
+import { BodyEpisodeAssociations } from "./BodyEpisodeAssociations";
 import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { errorMessage } from "@/lib/api-client";
 import {
@@ -547,12 +548,13 @@ export function PersonWindow({
         aria-label={meta.regionLabel}
         data-category={category}
       >
-        {category === "records" || category === "habits" ? (
-          <BodyFactRecords
-            key={category}
-            habitsOnly={category === "habits"}
-            canEdit={canEdit}
-          />
+        {category === "records" ? (
+          <>
+            <BodyFactRecords canEdit={canEdit} />
+            <BodyEpisodeAssociations canEdit={canEdit} />
+          </>
+        ) : category === "habits" ? (
+          <BodyFactRecords habitsOnly canEdit={canEdit} />
         ) : data.error ? (
           <p role="alert" className="bc-error">
             {data.error}

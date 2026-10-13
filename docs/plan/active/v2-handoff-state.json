@@ -85,7 +85,7 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Person Records/Habits live; bounded owner-scoped source-backed Episode list/detail and exact user create/link receipt DTOs are typed. Missing full EpisodeDetail/relations/history/onset/end status admission, Observation/Hypothesis/ConcernGroup and Penpot visual contract."
+          "details": "Live Records/Habits source projection plus bounded Episode Fact selection and source-backed status; typed direct symptom-presence Fact DTO and direct user Episode receipt used by provisional Person UI. No complete Episode relation/history, Observation/Hypothesis/ConcernGroup or signed-off Penpot projection."
         },
         "database": {
           "state": "in_progress",
@@ -95,17 +95,17 @@
         "design": {
           "state": "in_progress",
           "next": "PD-BS-01",
-          "details": "Editable Penpot baseline exists; bounded BodyState VM component/state handoff written at docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md; official editable Penpot changes and Viewer sign-off pending."
+          "details": "Official editable Penpot Product/components and navigation independently developed on PR #250; this engineering slice adds a deliberately provisional disclosure inside existing Person Records and no edits to design PR worktree. Pixel-level Episode UI/Viewer sign-off pending."
         },
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Strict OpenAPI generated read and direct-user Episode POST create/link, one BodyState revision/outbox/receipt; verified available self symptom and primary observation link, no inferred onset/end. Browser generated service supports commands; real Person Episode interaction, AI High/Ask User, relations/merge/split/status evidence and all other BodyState consumers remain open."
+          "details": "True Chat→Go→PG→Person BodyFact flow and source-bound Episode read and direct-user v8 create/link APIs. Real Person Records Episode disclosure now supports user-entered typed positive/negative symptom Fact, durable receipt, separately confirmed Episode create/link, exact idem replay, stale/owner guards and mobile. Full target Episode ViewModel/UI, AI High and Observation/Hypothesis/Concern remain open."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Native PG18 migration v8 full up/down/up and race-enabled source/tenant/rollback/same-key concurrent command and real public HTTP create→link→read 200/404 validation passed. Generated browser service 9 tests+typecheck passed. Full exact-head CI and actual Person UI/E2E/Penpot/release qualification pending."
+          "details": "Native PostgreSQL 18 migration v8 and race-enabled owner/source/rollback tests, generated Go/TS contracts, previous fe284d581 SHA 12/12 CI. This batch real E2E 15/15 green (user UI positive Fact → Episode → negative Fact → link → unknown read/refresh/390px); frontend 73 files/448 tests+lint/typecheck/build PASS. Exact new-SHA CI and final Penpot release acceptance pending."
         }
       }
     },
@@ -415,32 +415,51 @@
         "No Penpot editable official sign-off or staging/production release"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "person-episode-functional-ui-v1",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/model/bodyEpisodeAssociations.test.ts",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeSymptomDraft.test.ts",
+        "apps/web/src/features/body-canvas/components/BodyEpisodeAssociations.test.tsx",
+        "apps/web/e2e/body-episode-associations.spec.ts",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Functional Person Records disclosure is provisional; official Episode window/visual design is independently authored on PR #250",
+        "User-entered positive or negative symptom Fact is saved separately from explicitly authorized Episode create/link; no automatic AI association or recovery inference",
+        "No explicit ongoing/ended claim admission, recurrence, merge/split/unlink, full Episode relation/history/Observation/Hypothesis/ConcernGroup or legacy retirement",
+        "No staging/production deployment, full controlled-copy erasure sign-off or official Penpot final Viewer acceptance"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T09:32:41Z",
+  "updatedAtUtc": "2026-10-13T11:00:32Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeAdmission-20261013",
-    "baselineHead": "ee092fa495c1bb2193dad7f79b15683970c33ec7",
+    "owner": "ChatGPT-Web/ENG-BS-UI-Bridge-20261013",
+    "baselineHead": "fe284d581279a4659090ea00193730505eee239c",
     "state": "locally_verified_ci_pending",
-    "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
-    "nextTickets": ["ENG-BS-02", "DS-BS-02", "PD-BS-01", "IR-BS-01"],
+    "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+    "nextTickets": ["IR-BS-01", "PD-BS-01", "ENG-BS-02", "DS-BS-02"],
     "verification": {
-      "priorShaCI": "ee092fa495c1bb2193dad7f79b15683970c33ec7: 12/12 passed",
-      "nativeMigrationVersion": 8,
-      "nativeMigrations": "full_up_down_up_passed",
-      "episodeCommandPostgresRace": "passed_latest_v8_with_incompatible_side_type_and_absence_tests",
-      "episodeConcurrentRetryAndRollback": "passed",
-      "episodeCommandRealHTTP": "passed",
-      "episodeNegativeAndTenantDenials": "passed",
-      "episodeBrowserAdapterTests": "9_passed",
-      "episodeBrowserTypecheck": "passed",
-      "fullGoQuality": "passed_all_packages_and_go_vet",
-      "fullWebQuality": "passed_70_test_files_425_tests_lint_typecheck_build",
-      "generatedContractCheck": "passed",
+      "previousExactShaCI": "fe284d581279a4659090ea00193730505eee239c: 12/12 SUCCESS",
+      "newEpisodePersonProjectionTests": "6_passed",
+      "newDirectSymptomCommandTests": "3_passed",
+      "newEpisodePersonComponentTests": "14_passed",
+      "focusedTotal": "23_of_23_passed",
+      "fullWebQuality": "73_files_448_tests_lint_typecheck_build_passed_uncached",
+      "realBrowserE2E": "15_of_15_passed_no_retries",
+      "realBrowserFlow": "Person typed symptom Fact → committed Go receipt → explicit Episode create/replay → negative symptom Fact → user link → source-backed unknown projection → reload → 390px",
+      "migrationBaseline": "native_PostgreSQL_v8_and_prior_exact_sha_passed; no_current_db_changes",
+      "activePlanCheck": "5_of_5_passed",
+      "codegen": "passed_no_wire_format_change",
       "exactShaCI": "pending_push",
-      "officialPenpotEditor": "not_touched",
-      "postmanAndArchitecture": "passed",
-      "activePlanGates": "passed_5_of_5"
+      "independentDesignPr": "250_draft_worktree_untouched",
+      "productionDeployment": "not_performed",
+      "evidenceRoot": ".runtime/schema-first-v2-evidence/",
+      "browserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2238986/"
     }
   }
 }
