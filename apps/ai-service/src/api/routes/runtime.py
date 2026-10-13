@@ -16,6 +16,7 @@ import asyncio
 import logging
 import os
 from typing import Any, Literal
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -25,6 +26,7 @@ from ...models.consultation_runtime_event import (
     AgentConfigurationRuntimeEvent,
     ConsultationRuntimeEvent,
     ConsultationRuntimeEventPayload,
+    InteractionRequiredRuntimeEvent,
     PhaseChangedRuntimeEvent,
     RedFlagDetectedRuntimeEvent,
     StreamDoneRuntimeEvent,
@@ -205,6 +207,34 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                         tool_call_id=item.get("id"),
                     )
                     seq += 1
+            if request.input.text in {"E2E_BODYFACT_ASK_SELF", "E2E_BODYFACT_ASK_CHOICE"}:
+                native_id = uuid5(NAMESPACE_URL, f"bodysense:e2e:ask:{request.run_id}").hex
+                tool_id = f"ask-bodyfact:{request.run_id}"
+                choice = request.input.text.endswith("CHOICE")
+                question: dict[str, Any] = {
+                    "question": "Which side?" if choice else "Describe your own current symptoms.",
+                    "answer_type": "single_choice" if choice else "text",
+                    "allow_custom_input": False if choice else True,
+                }
+                if choice:
+                    question["options"] = ["left", "right"]
+                yield _stub_event(
+                    seq=seq,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    tool_call_id=tool_id,
+                    event=ToolCallRuntimeEvent(tool="ask_user", args=question),
+                )
+                yield _stub_event(
+                    seq=seq + 1,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    tool_call_id=tool_id,
+                    event=InteractionRequiredRuntimeEvent(
+                        interaction_id=native_id, question=question
+                    ),
+                )
+                return
             if trigger_safety:
                 yield _stub_event(
                     seq=seq,
@@ -313,6 +343,81 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
         logger.warning("Rejected invalid resume runtime command: %s", exc)
         raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
 
+    if _e2e_stub_enabled():
+
+        async def e2e_resume_generator():
+            expected = uuid5(NAMESPACE_URL, f"bodysense:e2e:ask:{request.run_id}")
+            if UUID(request.interrupt_id) != expected:
+                yield _stub_event(
+                    seq=1,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    event=StreamErrorRuntimeEvent(message="Synthetic native interrupt mismatch."),
+                )
+                return
+            manifest = get_consultation_manifest(request.configuration_id)
+            seq = 1
+            yield _stub_event(
+                seq=seq,
+                run_id=request.run_id,
+                conversation_id=request.conversation_id,
+                event=AgentConfigurationRuntimeEvent(
+                    agent_configuration=manifest.provenance(),
+                    execution_provenance={
+                        "status": "executed",
+                        "runtime": "langgraph-e2e-stub",
+                        "logical_model": manifest.logical_model,
+                        "model_group_revision": manifest.model_group_revision,
+                        "usage": {},
+                    },
+                ),
+            )
+            seq += 1
+            from ...testing_support.body_fact_fixture import body_fact_fixture_events
+
+            for item in await body_fact_fixture_events(
+                str(request.answer.get("text", "")),
+                request.business_context.body_state,
+                manifest,
+                request.run_id,
+                interrupt_id=request.interrupt_id,
+            ):
+                if item["type"] == "tool_call":
+                    event = ToolCallRuntimeEvent(tool=item["tool"], args=item["args"])
+                elif item["type"] == "tool_result":
+                    event = ToolResultRuntimeEvent(tool=item["tool"], result=item["result"])
+                else:
+                    event = TextDeltaRuntimeEvent(delta=item["delta"])
+                yield _stub_event(
+                    seq=seq,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    event=event,
+                    tool_call_id=item.get("id"),
+                )
+                seq += 1
+            yield _stub_event(
+                seq=seq,
+                run_id=request.run_id,
+                conversation_id=request.conversation_id,
+                tool_call_id=f"ask-bodyfact:{request.run_id}",
+                event=ToolResultRuntimeEvent(tool="ask_user", result={"answer": request.answer}),
+            )
+            yield _stub_event(
+                seq=seq + 1,
+                run_id=request.run_id,
+                conversation_id=request.conversation_id,
+                event=TextDeltaRuntimeEvent(delta="E2E accepted answer processed."),
+            )
+            yield _stub_event(
+                seq=seq + 2,
+                run_id=request.run_id,
+                conversation_id=request.conversation_id,
+                event=StreamDoneRuntimeEvent(),
+            )
+
+        return StreamingResponse(e2e_resume_generator(), media_type="application/x-ndjson")
+
     async def ndjson_generator():
         try:
             async for event in resume_thread_interrupt(
@@ -321,6 +426,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
                 run_id=request.run_id,
                 configuration_id=request.configuration_id,
                 answer=request.answer,
+                interrupt_id=request.interrupt_id,
                 profile=request.business_context.profile,
                 body_state=request.business_context.body_state,
                 relevant_history=request.business_context.relevant_history,

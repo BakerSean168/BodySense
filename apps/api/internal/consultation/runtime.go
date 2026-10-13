@@ -56,6 +56,7 @@ type runtimeBodyStateService interface {
 	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
 	RecordLifestyleContext(ctx context.Context, userID, runID uuid.UUID, payload json.RawMessage) error
 	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
+	RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error)
 	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, toolCallID string, question datatypes.JSON, answer json.RawMessage) error
 }
 
@@ -82,6 +83,7 @@ type Runtime struct {
 	uploadService               *service.UploadService
 	bodyStateService            runtimeBodyStateService
 	bodyFacts                   runtimeBodyFactService
+	interactionResumes          *service.InteractionResumeService
 	contextRetrievalService     *service.ContextRetrievalService
 	diagnosisAnalysisService    *service.DiagnosisAnalysisService
 	diagnosisFreshnessService   *service.DiagnosisFreshnessService
@@ -579,27 +581,10 @@ func (r *Runtime) ResumeInteraction(
 	interactionID uuid.UUID,
 	req ResumeInteractionInput,
 ) *HTTPError {
-	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
-	if err != nil {
-		return httpErr(
-			http.StatusInternalServerError,
-			ConsultationErrorInternal,
-			"failed to check idempotency",
-		)
-	}
-	if found {
-		if existing.Status == "running" || existing.Status == "waiting_user" {
-			return httpErr(
-				http.StatusConflict,
-				"RUN_IN_PROGRESS",
-				"a run with this request ID is already in progress",
-			)
-		}
-		r.replayCompletedRun(ctx, w, existing)
-		return nil
-	}
-
 	session, err := r.consultationService.GetConsultation(ctx, conversationID, uid)
+	if errors.Is(err, service.ErrConsultationNotFound) {
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "consultation not found")
+	}
 	if err != nil {
 		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load consultation")
 	}
@@ -635,6 +620,31 @@ func (r *Runtime) ResumeInteraction(
 	}
 	if _, err := service.ConsultationDecisionPolicyRevisionForConfiguration(pinnedConfigurationID); err != nil {
 		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "interrupted run configuration is no longer repository-authorized")
+	}
+
+	policy, _ := service.ConsultationDecisionPolicyRevisionForConfiguration(pinnedConfigurationID)
+	if policy == service.ConsultationDecisionPolicyV3 {
+		return r.resumeBodyFactInteraction(ctx, w, uid, session, interaction, req)
+	}
+
+	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
+	if err != nil {
+		return httpErr(
+			http.StatusInternalServerError,
+			ConsultationErrorInternal,
+			"failed to check idempotency",
+		)
+	}
+	if found {
+		if existing.Status == "running" || existing.Status == "waiting_user" {
+			return httpErr(
+				http.StatusConflict,
+				"RUN_IN_PROGRESS",
+				"a run with this request ID is already in progress",
+			)
+		}
+		r.replayCompletedRun(ctx, w, existing)
+		return nil
 	}
 
 	// The interaction answer is a durable health input, not merely a chat message.
@@ -801,6 +811,9 @@ func (r *Runtime) createTurnEnvelope(
 		"consultation-thread",
 	)
 	if err != nil {
+		if errors.Is(err, model.ErrInteractionResumeConflict) {
+			return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(http.StatusConflict, "REQUEST_ID_CONFLICT", "request ID already belongs to an accepted answer")
+		}
 		if errors.Is(err, model.ErrConversationRunInProgress) {
 			return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
 				http.StatusConflict,
@@ -998,6 +1011,7 @@ type streamState struct {
 	AssistantMsgID          string
 	ConversationStr         string
 	ExpectedConfigurationID string
+	AnswerSource            *model.AnswerFactSource
 }
 
 type ConsultationExecutionIdentity struct {
@@ -1007,11 +1021,12 @@ type ConsultationExecutionIdentity struct {
 }
 
 type streamResult struct {
-	AssistantParts     []map[string]any
-	Usage              any
-	ProviderResponseID string
-	GovernanceResult   datatypes.JSON
-	ExecutionIdentity  ConsultationExecutionIdentity
+	AssistantParts       []map[string]any
+	Usage                any
+	ProviderResponseID   string
+	GovernanceResult     datatypes.JSON
+	ExecutionIdentity    ConsultationExecutionIdentity
+	OwnedSafetyRevisions []model.BodyStateRevision
 }
 
 func projectConsultationRuntimeEvent(event service.ConsultationRuntimeEvent) (dto.StreamEvent, error) {
@@ -1239,7 +1254,7 @@ func (r *Runtime) handleAIEvent(
 	case service.ConsultationRuntimeToolResultPayload:
 		var captureErr error
 		if payload.Tool == "record_body_state" {
-			committed, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result)
+			committed, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result, result.OwnedSafetyRevisions...)
 			captureErr = err
 			if err != nil {
 				log.Printf("BodyFact proposal rejected: %v", err)
@@ -1289,7 +1304,17 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", publicEvent.Payload))
 
 	case service.ConsultationRuntimeRedFlagDetectedPayload:
-		if err := r.persistSafetyEvent(ctx, state.UID, publicEvent.Payload); err != nil {
+		var revision *model.BodyStateRevision
+		var safetyErr error
+		if r.bodyStateService == nil {
+			safetyErr = errors.New("BodyState service is not configured")
+		} else {
+			revision, safetyErr = r.bodyStateService.RecordSafetyEventWithReceipt(ctx, state.UID, publicEvent.Payload)
+		}
+		if revision != nil && safetyErr == nil {
+			result.OwnedSafetyRevisions = append(result.OwnedSafetyRevisions, *revision)
+		}
+		if err := safetyErr; err != nil {
 			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
 			return true
@@ -1379,6 +1404,12 @@ func (r *Runtime) handleInteractionRequired(
 	state streamState,
 	result *streamResult,
 ) bool {
+	policy, _ := service.ConsultationDecisionPolicyRevisionForConfiguration(state.ExpectedConfigurationID)
+	sameRunResume := policy == service.ConsultationDecisionPolicyV3
+	var nativeIDs []string
+	if sameRunResume {
+		nativeIDs = []string{payload.InteractionID}
+	}
 	_, preparedEvents, err := r.interactionService.CreatePendingInteractionWithEvents(
 		ctx,
 		state.Run.ID,
@@ -1415,8 +1446,17 @@ func (r *Runtime) handleInteractionRequired(
 			if err != nil {
 				return nil, err
 			}
-			return []dto.StreamEvent{requiredEvent, interruptedEvent}, nil
+			prepared := []dto.StreamEvent{requiredEvent, interruptedEvent}
+			if sameRunResume {
+				done, err := sw.NewEvent("stream", "stream.done", state.BaseIDs, map[string]any{}, "")
+				if err != nil {
+					return nil, err
+				}
+				prepared = append(prepared, done)
+			}
+			return prepared, nil
 		},
+		nativeIDs...,
 	)
 	if err != nil {
 		log.Printf("failed to atomically create pending interaction for conversation %s: %v", state.ConversationID, err)
@@ -1425,19 +1465,21 @@ func (r *Runtime) handleInteractionRequired(
 		return true
 	}
 
+	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
+	if err := r.messageService.UpdateMessageCompletedWithStatus(ctx, state.AssistantMsg.ID, state.ConversationID, datatypes.JSON(finalPartsJSON), "aborted"); err != nil {
+		log.Printf("failed to finalize interrupted assistant message %s: %v", state.AssistantMsg.ID, err)
+	}
+
 	for _, preparedEvent := range preparedEvents {
 		if err := sw.WriteEvent(ctx, preparedEvent); err != nil {
 			log.Printf("SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v", preparedEvent.Type, state.Run.ID, state.ConversationID, preparedEvent.Seq, err)
 		}
 	}
 
-	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
-	if err := r.messageService.UpdateMessageCompletedWithStatus(ctx, state.AssistantMsg.ID, state.ConversationID, datatypes.JSON(finalPartsJSON), "aborted"); err != nil {
-		log.Printf("failed to finalize interrupted assistant message %s: %v", state.AssistantMsg.ID, err)
+	if !sameRunResume {
+		r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
+		r.clearActiveRun(ctx, state.ConversationID, state.UID)
 	}
-
-	r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
-	r.clearActiveRun(ctx, state.ConversationID, state.UID)
 	r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
 	return true
 }

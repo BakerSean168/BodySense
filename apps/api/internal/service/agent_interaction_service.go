@@ -110,11 +110,12 @@ func (s *AgentInteractionService) CreatePendingInteractionWithEvents(
 	toolCallID string,
 	question datatypes.JSON,
 	prepare interactionPreparedEventsBuilder,
+	nativeInterruptID ...string,
 ) (*model.AgentInteraction, []dto.StreamEvent, error) {
 	if prepare == nil {
 		return nil, nil, errors.New("create pending interaction: prepared event builder is required")
 	}
-	return s.createPendingInteraction(ctx, runID, conversationID, toolCallID, question, prepare)
+	return s.createPendingInteraction(ctx, runID, conversationID, toolCallID, question, prepare, nativeInterruptID...)
 }
 
 func (s *AgentInteractionService) createPendingInteraction(
@@ -123,6 +124,7 @@ func (s *AgentInteractionService) createPendingInteraction(
 	toolCallID string,
 	question datatypes.JSON,
 	prepare interactionPreparedEventsBuilder,
+	nativeInterruptID ...string,
 ) (*model.AgentInteraction, []dto.StreamEvent, error) {
 	if s.transactions == nil {
 		return nil, nil, errors.New("create pending interaction: transaction manager is not configured")
@@ -147,6 +149,22 @@ func (s *AgentInteractionService) createPendingInteraction(
 		Status:         model.AgentInteractionPending,
 		CreatedAt:      now,
 		ExpiresAt:      &expires,
+	}
+
+	if len(nativeInterruptID) > 0 {
+		raw := nativeInterruptID[0]
+		if len(raw) != 32 {
+			return nil, nil, errors.New("invalid native interrupt identity")
+		}
+		parsed, err := uuid.Parse(raw)
+		if err != nil || parsed == uuid.Nil {
+			return nil, nil, errors.New("invalid native interrupt identity")
+		}
+		metadata, err := json.Marshal(map[string]string{"runtime_interrupt_id": raw})
+		if err != nil {
+			return nil, nil, err
+		}
+		interaction.Metadata = datatypes.JSON(metadata)
 	}
 
 	var created *model.AgentInteraction

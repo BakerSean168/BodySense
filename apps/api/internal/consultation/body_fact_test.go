@@ -133,3 +133,38 @@ func TestBodyFactRuntimeV3RejectsLegacyFactMutationEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestBodyFactExpectedRevisionFollowsOnlyOwnContiguousSafetyReceipt(t *testing.T) {
+	cases := []struct {
+		name     string
+		target   int64
+		foreign  bool
+		invalid  bool
+		expected int64
+	}{
+		{name: "own contiguous", target: 3, expected: 3},
+		{name: "external revision gap", target: 4, expected: 2},
+		{name: "foreign receipt", target: 3, foreign: true, expected: 2},
+		{name: "unpersisted receipt", target: 3, invalid: true, expected: 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ledger := &captureFactService{}
+			r := &Runtime{bodyFacts: ledger}
+			state := factStreamState()
+			receipt := model.BodyStateRevision{ID: uuid.New(), UserID: state.UID, Revision: tc.target, ChangeType: "safety.updated", Source: "consultation"}
+			if tc.foreign {
+				receipt.UserID = uuid.New()
+			}
+			if tc.invalid {
+				receipt.ID = uuid.Nil
+			}
+			if _, err := r.commitBodyFactProposal(context.Background(), state, "capture", proposedFacts(), receipt); err != nil {
+				t.Fatal(err)
+			}
+			if ledger.command.ExpectedRevision != tc.expected {
+				t.Fatalf("revision=%d wanted=%d", ledger.command.ExpectedRevision, tc.expected)
+			}
+		})
+	}
+}

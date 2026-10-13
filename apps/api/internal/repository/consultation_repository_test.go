@@ -39,6 +39,9 @@ func TestConsultationRepositoryCreateRunEnvelopeUsesSingleTransaction(t *testing
 	mock.ExpectQuery(`SELECT .* FROM "users" WHERE id = \$1.*FOR UPDATE`).
 		WithArgs(userID, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "interaction_resumes" WHERE user_id = \$1 AND request_id = \$2`).
+		WithArgs(userID, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	// ADR 0004: an omitted conversation id now looks for the user's canonical
 	// long-lived consultation, not merely an empty conversation.
 	mock.ExpectQuery(`SELECT .* FROM "conversations" JOIN consultation_sessions ON consultation_sessions\.conversation_id = conversations\.id WHERE conversations\.user_id = \$1 AND conversations\.status = \$2 AND conversations\.deleted_at IS NULL ORDER BY COALESCE\(conversations\.last_message_at, conversations\.created_at\) DESC.*LIMIT \$3`).
@@ -99,6 +102,9 @@ func TestCreateRunEnvelopeReclaimsExpiredLeaseAndProceeds(t *testing.T) {
 	mock.ExpectQuery(`SELECT .* FROM "users" WHERE id = \$1.*FOR UPDATE`).
 		WithArgs(userID, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "interaction_resumes" WHERE user_id = \$1 AND request_id = \$2`).
+		WithArgs(userID, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	// Explicit conversation id resolves directly (resolveRunConversation locks
 	// the conversation and observes the stale active run).
 	mock.ExpectQuery(`SELECT .* FROM "conversations" WHERE id = \$1 AND user_id = \$2 AND deleted_at IS NULL.*FOR UPDATE`).

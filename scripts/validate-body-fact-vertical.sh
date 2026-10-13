@@ -77,6 +77,6 @@ curl -fsS "http://127.0.0.1:$AI_PORT/health" >/dev/null
 cd "$ROOT"
 CI=true E2E_BASE_URL="http://127.0.0.1:$WEB_PORT" E2E_API_BASE_URL="http://127.0.0.1:$API_PORT" \
   timeout 720 node node_modules/@playwright/test/cli.js test \
-  apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts apps/web/e2e/lifestyle-current-update.spec.ts \
+  apps/web/e2e/ask-user-body-facts.spec.ts apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts apps/web/e2e/lifestyle-current-update.spec.ts \
   --reporter=list | tee "$EVIDENCE/browser.log"
 echo BODY_FACT_VERTICAL_E2E=PASS

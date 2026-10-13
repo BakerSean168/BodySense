@@ -36,8 +36,8 @@
       "id": "F-BODYFACT",
       "name": "Additive BodyFact ledger and typed API",
       "state": "in_progress",
-      "next": "ENG-BS-01",
-      "details": "Migrations 000002/000003 and generated API verified but not a full domain read/write vertical"
+      "next": "ENG-BS-02",
+      "details": "Ordinary and accepted-answer full self-statements plus direct amendments have real Go/Python/PostgreSQL/Person paths; migration 000006 adds exact resume/source identity. Whole BodyState projection and legacy cutover remain open."
     },
     {
       "id": "F-CONTRACT",
@@ -51,7 +51,7 @@
       "name": "Editable UI source and flow inventory",
       "state": "in_progress",
       "next": "PD-BASE-01",
-      "details": "Source exists; current code PR 244 has failed checks and requires review"
+      "details": "Existing #244 shell is integrated and repaired in the refactor branch; actual pending-composer desktop/mobile visuals inspected. Editable Penpot V2 domain/complete pixel sign-off remains open."
     },
     {
       "id": "F-ACCEPTANCE",
@@ -90,7 +90,7 @@
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Migration 000002 ledger plus 000003 message source tested; Episode and legacy cutover not implemented"
+          "details": "Migrations 000002..000006 cover facts, sources, amendments and original-Run answer provenance; native tests and history-preserving rollback pass. Episode/Observation/Hypothesis and legacy cutover remain open."
         },
         "design": {
           "state": "in_progress",
@@ -99,13 +99,13 @@
         },
         "engineering": {
           "state": "in_progress",
-          "next": "ENG-BS-01",
-          "details": "Ordinary source-bound Chat capture and direct Fact create/correct/withdraw -> actual Person UI are implemented and locally verified; exact structured answers, Episode/Observation/Hypothesis remain."
+          "next": "ENG-BS-02",
+          "details": "Ordinary Chat and exact accepted-answer full self-statements persist through Go provenance to Person; create/correct/withdraw tested. Short contextual interpretation, Episode/Observation/Hypothesis and Agent-authorized amendment decisions remain open."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Ten affected real-server browser cases pass, including exact amendments/replay, temporal habit history and cross-run/user thread projection. Full BodyState and production acceptance remain open."
+          "details": "Four Ask User browser cases extend the prior ten real-server paths; native same-Run/answer concurrency/source-pruning and safety-ordering tests pass. Final follow-up visuals and exact-head CI are recorded per execution; not whole BodyState/release acceptance."
         }
       }
     },
@@ -123,29 +123,29 @@
           ]
         },
         "view_model": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-PC-01",
-          "details": "One Conversation, active Run, Ask User and retention projection not yet generated for V2"
+          "details": "Existing canonical answer and stream contracts now support original-Run sequenced continuation and a replacement composer. Singleton Conversation and retention projection still pending."
         },
         "database": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-PC-01",
-          "details": "Legacy multi-conversation storage remains; V2 singleton/retention migration pending"
+          "details": "000006 adds one exact accepted-answer resume receipt and durable source binding; ten new PostgreSQL race/rollback/tenant/pruning tests pass. Multi-conversation legacy tables and full retention still remain."
         },
         "design": {
           "state": "in_progress",
           "next": "PD-PC-01",
-          "details": "Chat prototype baseline exists; one-session/Ask User replacement states not accepted"
+          "details": "Shared AskUserCard replaces ordinary input; retry/draft, all fields, accessibility and 390px light/dark canvas styles tested/inspected. Editable Penpot single-session and complete Chat theme parity remain open."
         },
         "engineering": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "ENG-PC-01",
-          "details": "V2 one-Conversation/Ask User implementation pending"
+          "details": "V3 continues original Run from stored native interrupt; atomic answer/message/lease/milestones, stable retries and exact-source facts implemented. Singleton Conversation, full recovery and controlled raw history pruning remain open."
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-PC-01",
-          "details": "No singleton Chat V2 E2E"
+          "details": "Actual native LangGraph checkpoint test plus four real-server browser paths cover reload/answer/negative/forged/foreign/cancel/retry/mobile. No singleton Chat or complete retention acceptance claimed."
         }
       }
     },
@@ -287,7 +287,7 @@
       ],
       "configurationId": "consult-config-83b6a1cc70477c82",
       "limits": [
-        "structured answers pending",
+        "short contextual answer interpretation pending (full self-statements supported)",
         "Episode/Observation/Hypothesis pending",
         "full source-erasure and event consumers pending",
         "final Penpot visual review pending",
@@ -326,10 +326,57 @@
       ],
       "limits": [
         "does not complete single Conversation migration",
-        "retention and structured answers remain open",
+        "retention and short contextual answer interpretation remain open",
         "exact-SHA CI required"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "v3-same-run-ask-user-source",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-ask-user-source-contract.md",
+      "tests": [
+        "apps/api/internal/model/interaction_resume_test.go",
+        "apps/api/internal/consultation/interaction_resume_postgres_test.go",
+        "apps/api/internal/consultation/body_fact_test.go",
+        "apps/ai-service/tests/unit/test_body_fact_answer_resume.py",
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts",
+        "apps/web/src/features/consultation/components/__tests__/AskUserCard.test.tsx",
+        "apps/web/e2e/ask-user-body-facts.spec.ts"
+      ],
+      "limits": [
+        "complete literal self-statements only; contextual answers are not promoted to health facts",
+        "singleton Conversation and three retention cursors pending",
+        "Episode/Observation/Hypothesis and exact Agent amendment decisions pending",
+        "full cross-domain erasure and scoped Safety V2 remain open",
+        "editable Penpot final sign-off and full Chat palette parity not claimed",
+        "no staging/production promotion; exact new-head CI pending"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
-  ]
+  ],
+  "updatedAtUtc": "2026-10-13T06:21:23Z",
+  "latestExecution": {
+    "owner": "ChatGPT-Web/V2-AskUser-20261013",
+    "baselineHead": "167ebfd725fd73f2f682e92448b3b2ad706c6684",
+    "state": "locally_verified",
+    "newCodeCi": "not_yet_pushed",
+    "nextTickets": ["DS-BS-02", "ENG-BS-02", "DS-PC-01", "ENG-PC-01"],
+    "contract": "docs/plan/active/2026-10-13-ask-user-source-contract.md",
+    "verification": {
+      "postgresRaceCases": 34,
+      "nativeInteractionResumeCases": 10,
+      "realServerBrowserCases": 14,
+      "webTests": 408,
+      "webFiles": 68,
+      "pythonTests": 705,
+      "goPackagesVetStaticcheck": "passed",
+      "pythonPyrightRuff": "passed",
+      "webLintTypecheckBuild": "passed",
+      "canonicalContractsAndArchitecture": "passed",
+      "postmanRoutes": 99,
+      "nativeMigrationVersion": 6,
+      "isolatedResources": "cleaned"
+    }
+  }
 }

@@ -85,3 +85,8 @@ Executed: full Go tests and vet pass (`projection-go-quality.log`); native Postg
 
 
 The prior amendment milestone `7abe9daa60141ac02f7c148bf91e850b16ca55ef` passed all 12 required GitHub CI checks before the projection-root-fix commit. This is evidence for that exact prior SHA, not a substitute for the next commit's CI.
+
+
+### Same-Run Ask User checkpoint
+
+The Ask User slice now has native checkpoint tests, 10 new PostgreSQL cases, four new browser paths and complete Go/Python/Web checks. Previous foreign-owner 500 and dark-title defects were repaired. Keep local evidence separate from exact-head CI and do not promote this partial V2 program as a finished application. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.

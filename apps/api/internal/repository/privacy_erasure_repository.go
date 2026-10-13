@@ -33,6 +33,7 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "identity_profile", table: "user_profiles", column: "user_id"},
 	{name: "conversations", table: "conversations", column: "user_id"},
 	{name: "runs", table: "runs", column: "user_id"},
+	{name: "interaction_resumes", table: "interaction_resumes", column: "user_id"},
 	{name: "jobs", table: "jobs", column: "user_id"},
 	{name: "ai_output_reviews", table: "ai_output_reviews", column: "user_id"},
 	{name: "assessment_reports", table: "assessment_reports", column: "user_id"},

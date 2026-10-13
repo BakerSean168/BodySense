@@ -34,3 +34,8 @@ Logs are under `.runtime/schema-first-v2-evidence/`; exact commits and CI eviden
 ## Explicit remaining gaps
 
 The following are not accepted by this matrix: structured Ask User answer-to-fact binding and exact Agent correction authorization; full SymptomEpisode/Observation/user-Hypothesis replacement; full source/erasure propagation across derived data/checkpoints; Diagnosis V2 multi-proposal authority; Training/Trainer/Safety target semantics; editable Penpot final design review; or V2 staging/production deployment. Ordinary source facts and explicit user amendments do not close those gates.
+
+
+## Accepted-answer continuation extension
+
+The [Ask User source contract](./2026-10-13-ask-user-source-contract.md) extends the ordinary BodyFact boundary without duplicating facts. Actual native checkpoint recovery, original-Run continuation, exact transactional answer identity, source pruning/retention of minimal evidence, negative/foreign/forged/cancelled paths and the replacement mobile composer have separate tests. The joint browser harness now includes `apps/web/e2e/ask-user-body-facts.spec.ts`; native PostgreSQL CI includes the `InteractionResume` cases in `internal/consultation`. Singleton Conversation and the complete retention/Safety/erasure contracts are not accepted by this extension.

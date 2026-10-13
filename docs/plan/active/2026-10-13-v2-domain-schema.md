@@ -78,3 +78,8 @@ A: bounded Records/Habits projection and command/receipt handoff established; fu
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
+
+
+### Same-Run Ask User checkpoint
+
+Migration 000006, typed answer validation and Go-owned structured-answer source contract are implemented and native-PostgreSQL tested. No new public transport is needed: existing canonical answer/stream/receipt APIs are reused. Full singleton/retention and Episode storage remain open. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.

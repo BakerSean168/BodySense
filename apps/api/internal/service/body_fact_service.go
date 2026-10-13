@@ -126,3 +126,30 @@ func (s *BodyFactService) WithdrawDirectFact(ctx context.Context, owner, target 
 	}
 	return s.ledger.WithdrawDirectFact(ctx, owner, target, command)
 }
+
+// RecordAnswerFacts accepts only the server resume envelope, never Agent-authored IDs.
+func (s *BodyFactService) RecordAnswerFacts(ctx context.Context, owner uuid.UUID, source model.AnswerFactSource, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	if owner == uuid.Nil || source.RunID == uuid.Nil || source.InteractionID == uuid.Nil || source.MessageID == uuid.Nil {
+		return nil, fmt.Errorf("%w: accepted answer required", model.ErrInvalidBodyFact)
+	}
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
+	for _, fact := range command.Facts {
+		for _, region := range fact.BodyRegionIDs {
+			if s.regions == nil {
+				return nil, ErrBodyRegionIDValidationUnavailable
+			}
+			if !s.regions.IsValidBodyRegionID(region) {
+				return nil, ErrUnknownBodyRegionID
+			}
+		}
+	}
+	ledger, ok := s.ledger.(interface {
+		RecordAnswerFacts(context.Context, uuid.UUID, model.AnswerFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("%w: answer ledger unavailable", model.ErrInvalidBodyFact)
+	}
+	return ledger.RecordAnswerFacts(ctx, owner, source, command)
+}

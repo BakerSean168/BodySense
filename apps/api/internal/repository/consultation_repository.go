@@ -133,6 +133,15 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 			First(&owner).Error; err != nil {
 			return err
 		}
+		// Request IDs cannot be rebound from an accepted answer to a new turn.
+		// Owner locking serializes this check with ClaimInteractionResume.
+		var reserved int64
+		if err := tx.Model(&model.InteractionResume{}).Where("user_id = ? AND request_id = ?", userID, requestID).Count(&reserved).Error; err != nil {
+			return err
+		}
+		if reserved != 0 {
+			return model.ErrInteractionResumeConflict
+		}
 		resolvedConversationID, resolvedSession, err := r.resolveRunConversation(ctx, tx, userID, conversationID)
 		if err != nil {
 			return err

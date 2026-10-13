@@ -11,7 +11,7 @@ from typing import Any
 from pydantic_ai.models.test import TestModel
 
 from ..configuration.consultation_agent_config import ConsultationAgentManifest
-from ..runtime.body_fact_capture import acquire_body_fact_turn
+from ..runtime.body_fact_capture import acquire_body_fact_answer, acquire_body_fact_turn
 from ..services.body_fact_intake_service import BodyFactIntakeService
 
 
@@ -20,6 +20,8 @@ async def body_fact_fixture_events(
     body_state: dict[str, Any],
     manifest: ConsultationAgentManifest,
     run_id: str,
+    *,
+    interrupt_id: str | None = None,
 ) -> list[dict[str, Any]]:
     corpus = {
         "我每晚睡七小时。": ("lifestyle", "unknown"),
@@ -42,10 +44,21 @@ async def body_fact_fixture_events(
         }
     service = BodyFactIntakeService(model_resolver=lambda _: TestModel(custom_output_args=args))
     events: list[dict[str, Any]] = []
-    await acquire_body_fact_turn(
-        {"latest_user_message": text, "body_state": body_state, "run_id": run_id},
-        writer=events.append,
-        manifest=manifest,
-        intake_service=service,
-    )
+    if interrupt_id is None:
+        await acquire_body_fact_turn(
+            {"latest_user_message": text, "body_state": body_state, "run_id": run_id},
+            writer=events.append,
+            manifest=manifest,
+            intake_service=service,
+        )
+    else:
+        await acquire_body_fact_answer(
+            run_id=run_id,
+            interrupt_id=interrupt_id,
+            answer={"text": text},
+            body_state=body_state,
+            writer=events.append,
+            manifest=manifest,
+            intake_service=service,
+        )
     return events

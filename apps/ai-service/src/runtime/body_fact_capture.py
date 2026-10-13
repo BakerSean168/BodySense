@@ -44,6 +44,9 @@ async def acquire_body_fact_turn(
     result = {"turn_kind": output.turn_kind, "capture_status": "not_applicable"}
     if output.facts:
         tool_id = f"bodyfact-intake-v1:{run_id}"
+        answer_scope = state.get("answer_interaction_id")
+        if answer_scope:
+            tool_id += f":answer:{UUID(str(answer_scope)).hex}"
         writer(
             {
                 "type": "tool_call",
@@ -73,3 +76,36 @@ async def acquire_body_fact_turn(
             }
         )
     return {"intake_result": result, "intake_question": question}
+
+
+async def acquire_body_fact_answer(
+    *,
+    run_id: str,
+    interrupt_id: str,
+    answer: dict[str, Any],
+    body_state: dict[str, Any],
+    writer: StreamWriter,
+    manifest: ConsultationAgentManifest,
+    intake_service: BodyFactIntakeService | None = None,
+) -> dict[str, Any]:
+    """Extract literal self-statements only after an exact Go-accepted answer.
+
+    A short answer such as yes is not expanded into the assistant's medical
+    suggestion. Question-dependent interpretation needs its own typed contract.
+    """
+    UUID(interrupt_id)
+    text = answer.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return {"capture_status": "not_applicable"}
+    acquired = await acquire_body_fact_turn(
+        {
+            "run_id": run_id,
+            "answer_interaction_id": interrupt_id,
+            "latest_user_message": text,
+            "body_state": body_state,
+        },
+        writer=writer,
+        manifest=manifest,
+        intake_service=intake_service,
+    )
+    return acquired["intake_result"]

@@ -8,6 +8,7 @@ import logging
 import re
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal, TypedDict, assert_never, cast
+from uuid import UUID
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
@@ -84,7 +85,7 @@ from ..services.consultation_state_acquisition import (
     intake_state_candidates,
 )
 from ..services.red_flag_detector import get_red_flag_detector
-from .body_fact_capture import acquire_body_fact_turn
+from .body_fact_capture import acquire_body_fact_answer, acquire_body_fact_turn
 from .checkpointing import get_runtime_checkpointer
 
 logger = logging.getLogger(__name__)
@@ -1409,6 +1410,7 @@ async def resume_thread_interrupt(
     run_id: str,
     configuration_id: str,
     answer: dict[str, Any],
+    interrupt_id: str | None = None,
     profile: dict[str, Any] | None = None,
     body_state: dict[str, Any] | None = None,
     relevant_history: list[dict[str, Any]] | None = None,
@@ -1438,7 +1440,48 @@ async def resume_thread_interrupt(
             f"checkpoint={checkpoint_configuration_id} requested={manifest.configuration_id}"
         )
 
+    body_fact_resume = bool(
+        manifest.intake and manifest.intake.policy_revision == BODY_FACT_INTAKE_POLICY
+    )
+    if body_fact_resume:
+        if not interrupt_id or checkpoint_values.get("run_id") != run_id:
+            raise ValueError(
+                "BodyFact resume must preserve its original Run and interrupt identity"
+            )
+        pending = getattr(checkpoint, "interrupts", ())
+        if len(pending) != 1 or UUID(str(pending[0].id)).hex != UUID(interrupt_id).hex:
+            raise ValueError("Resume does not match the pending native interrupt")
+
     yield _runtime_agent_configuration_event(factory, manifest=manifest, run_id=run_id)
+    answer_safety: dict[str, Any] | None = None
+    if body_fact_resume:
+        # The original safety node ran before the interruption. New user input
+        # must pass the same existing screen before extraction or advice; a
+        # negative screen never clears an earlier independent restriction.
+        detected = get_red_flag_detector().detect([], str(answer.get("text", "")))
+        if detected.has_red_flags:
+            answer_safety = detected.to_dict()
+            yield factory.next(
+                RedFlagDetectedRuntimeEvent(
+                    has_red_flags=True, flags=answer_safety.get("flags", [])
+                ),
+                run_id=run_id,
+            )
+    answer_intake: dict[str, Any] | None = None
+    if body_fact_resume and interrupt_id:
+        capture_events: list[dict[str, Any]] = []
+        answer_intake = await acquire_body_fact_answer(
+            run_id=run_id,
+            interrupt_id=interrupt_id,
+            answer=answer,
+            body_state=body_state or {},
+            writer=capture_events.append,
+            manifest=manifest,
+        )
+        for capture_event in capture_events:
+            mapped = _map_internal_event(factory, capture_event, run_id=run_id)
+            if mapped is not None:
+                yield mapped
 
     # Refresh durable business context at resume time as well. The LangGraph
     # checkpoint owns runtime protocol state, while Go-owned BodyState may have
@@ -1447,6 +1490,8 @@ async def resume_thread_interrupt(
         Command(
             resume=answer,
             update={
+                **({"intake_result": answer_intake} if answer_intake is not None else {}),
+                **({"red_flag_result": answer_safety} if answer_safety is not None else {}),
                 "profile": profile or {},
                 "body_state": body_state or {},
                 "relevant_history": list(relevant_history or []),

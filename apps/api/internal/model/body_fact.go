@@ -136,6 +136,9 @@ type StatementEvidence struct {
 	SourceConversationID *uuid.UUID `gorm:"type:uuid" json:"source_conversation_id,omitempty"`
 	SourceRunID          *uuid.UUID `gorm:"type:uuid" json:"source_run_id,omitempty"`
 	SourceMessageID      *uuid.UUID `gorm:"type:uuid" json:"source_message_id,omitempty"`
+	SourceInteractionID  *uuid.UUID `gorm:"type:uuid" json:"source_interaction_id,omitempty"`
+	SourceToolCallID     *string    `json:"source_tool_call_id,omitempty"`
+	QuestionExcerpt      *string    `json:"question_excerpt,omitempty"`
 	Excerpt              string     `gorm:"not null" json:"excerpt"`
 	Availability         string     `gorm:"not null" json:"availability"`
 	RecordedAt           time.Time  `gorm:"not null" json:"recorded_at"`

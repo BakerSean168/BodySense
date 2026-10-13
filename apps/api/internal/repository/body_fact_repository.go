@@ -24,7 +24,7 @@ import (
 // aggregate. This is deliberately not an Upsert: changing a statement requires a
 // new command and correction authorization, never reuse of an idempotency key.
 func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
-	return r.recordFacts(ctx, userID, command, nil)
+	return r.recordFacts(ctx, userID, command, nil, nil)
 }
 
 // RecordMessageFacts only accepts literal excerpts from a user-authored message
@@ -34,7 +34,7 @@ func (r *BodyStateRepository) RecordMessageFacts(ctx context.Context, userID uui
 	if source.RunID == uuid.Nil || source.MessageID == uuid.Nil {
 		return nil, fmt.Errorf("%w: run and user message identities are required", model.ErrInvalidBodyFact)
 	}
-	return r.recordFacts(ctx, userID, command, &source)
+	return r.recordFacts(ctx, userID, command, &source, nil)
 }
 
 // RecordRunFacts resolves the original user message from the Go-owned turn.
@@ -44,10 +44,10 @@ func (r *BodyStateRepository) RecordRunFacts(ctx context.Context, userID, runID 
 	if runID == uuid.Nil {
 		return nil, fmt.Errorf("%w: run identity required", model.ErrInvalidBodyFact)
 	}
-	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: runID})
+	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: runID}, nil)
 }
 
-func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource) (*model.BodyFactCommit, error) {
+func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource, answerSource *model.AnswerFactSource) (*model.BodyFactCommit, error) {
 	if userID == uuid.Nil {
 		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyFact)
 	}
@@ -57,6 +57,13 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 	fingerprint, err := bodyFactCommandFingerprint(command)
 	if source != nil {
 		fingerprint, err = bodyFactMessageFingerprint(command, *source)
+	}
+	if answerSource != nil {
+		fingerprint, err = bodyFactFingerprintValue(struct {
+			Kind    string                       `json:"source_kind"`
+			Source  model.AnswerFactSource       `json:"source"`
+			Command model.RecordBodyFactsCommand `json:"command"`
+		}{Kind: "structured_answer", Source: *answerSource, Command: command})
 	}
 	if err != nil {
 		return nil, err
@@ -91,6 +98,8 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 		// source label or stale/incorrect content_text projection.
 		sourceKind := "direct_edit"
 		var sourceConversationID, sourceMessageID uuid.UUID
+		var answerInteraction *model.AgentInteraction
+		var questionExcerpt string
 		if source != nil {
 			// Shared row locks serialize source edits/removal and Run cancellation
 			// with this commit. A completed/cancelled Run cannot accept NEW facts.
@@ -119,6 +128,21 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 				}
 			}
 			sourceKind = "user_message"
+			if answerSource != nil {
+				answerInteraction, questionExcerpt, err = verifyBodyFactAnswer(tx, userID, *answerSource, userMessage)
+				if err != nil {
+					return err
+				}
+				sourceKind = "structured_answer"
+			} else {
+				var metadata struct {
+					IsAnswer bool `json:"is_interaction_answer"`
+				}
+				if json.Unmarshal(userMessage.Metadata, &metadata) != nil || metadata.IsAnswer {
+					return fmt.Errorf("%w: structured answers require exact resume source binding", model.ErrInvalidBodyFact)
+				}
+			}
+
 			sourceConversationID = userMessage.ConversationID
 			sourceMessageID = userMessage.ID
 		}
@@ -152,6 +176,11 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 				sourceRow.SourceConversationID = &sourceConversationID
 				sourceRow.SourceRunID = &source.RunID
 				sourceRow.SourceMessageID = &sourceMessageID
+			}
+			if answerInteraction != nil {
+				sourceRow.SourceInteractionID = &answerInteraction.ID
+				sourceRow.SourceToolCallID = &answerInteraction.ToolCallID
+				sourceRow.QuestionExcerpt = &questionExcerpt
 			}
 			evidence = append(evidence, sourceRow)
 			factIDs = append(factIDs, factID)

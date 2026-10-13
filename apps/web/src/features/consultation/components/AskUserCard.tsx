@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { AskUserField, AskUserQuestion } from "../types/consultation";
 
 interface AskUserCardProps {
@@ -23,6 +23,7 @@ export function AskUserCard({
   onRetry,
   title = "问诊追问",
 }: AskUserCardProps) {
+  const questionId = useId();
   const [textAnswer, setTextAnswer] = useState("");
   const [selectedSingle, setSelectedSingle] = useState<string>("");
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
@@ -31,13 +32,12 @@ export function AskUserCard({
   const [customAnswer, setCustomAnswer] = useState("");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
-  const allowCustomInput =
-    question.allow_custom_input ?? Boolean(question.options?.length);
-  const multiFields = question.fields?.slice(0, 3) ?? [];
+  const allowCustomInput = question.allow_custom_input === true;
+  const multiFields = question.fields ?? [];
   const isMultiField = multiFields.length > 0;
 
   const buildCustomAnswerPayload = (values: string[]) => {
-    const normalized = values.filter((value) => value.trim().length > 0);
+    const normalized = values.map((value) => value.trim()).filter(Boolean);
     if (normalized.length === 0) {
       return null;
     }
@@ -136,7 +136,7 @@ export function AskUserCard({
             <label key={opt} className="flex items-center gap-2 text-sm">
               <input
                 type="radio"
-                name={`field_${field.key}`}
+                name={`${questionId}-${field.key}`}
                 checked={value === opt}
                 onChange={() => setValue(opt)}
                 disabled={isSubmitting}
@@ -199,22 +199,28 @@ export function AskUserCard({
   };
 
   return (
-    <div className="my-2 rounded-xl border border-sky-300/10 bg-sky-300/[0.04] p-4 text-white/80">
-      <p className="mb-1 text-[11px] font-semibold tracking-wide text-sky-200/65">
+    <div className="ask-user-card my-2 rounded-xl border border-sky-300/10 bg-sky-300/[0.04] p-4 text-white/80">
+      <p className="ask-user-title mb-1 text-[11px] font-semibold tracking-wide text-sky-200/65">
         {title}
       </p>
-      <p className="mb-3 text-sm font-medium text-white/90">
+      <p
+        id={questionId}
+        className="ask-user-question mb-3 text-sm font-medium text-white/90"
+      >
         {question.question}
       </p>
 
       {question.context && (
-        <p className="mb-3 text-xs leading-relaxed text-white/45">
+        <p className="ask-user-context mb-3 text-xs leading-relaxed text-white/45">
           {question.context}
         </p>
       )}
 
       {error && (
-        <div className="mb-3 rounded border border-red-300/15 bg-red-300/[0.055] p-3">
+        <div
+          role="alert"
+          className="ask-user-error mb-3 rounded border border-red-300/15 bg-red-300/[0.055] p-3"
+        >
           <p className="text-sm text-red-200/80">提交失败：{error}</p>
           {onRetry && (
             <button
@@ -253,6 +259,7 @@ export function AskUserCard({
                     : "text"
               }
               className="mb-3 w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
+              aria-labelledby={questionId}
               placeholder={
                 question.answer_type === "text"
                   ? "输入你的回答..."
@@ -272,7 +279,7 @@ export function AskUserCard({
                 <label key={opt} className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
-                    name="ask_user_single"
+                    name={questionId}
                     value={opt}
                     checked={selectedSingle === opt}
                     onChange={() => {
@@ -288,7 +295,7 @@ export function AskUserCard({
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
-                    name="ask_user_single"
+                    name={questionId}
                     checked={customSingleEnabled}
                     onChange={() => {
                       setSelectedSingle("");
@@ -360,7 +367,7 @@ export function AskUserCard({
       )}
 
       <button
-        className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#171717] transition-colors hover:bg-white disabled:opacity-45"
+        className="ask-user-submit rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#171717] transition-colors hover:bg-white disabled:opacity-45"
         onClick={handleSubmit}
         disabled={isSubmitting}
       >

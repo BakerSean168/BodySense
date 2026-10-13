@@ -34,7 +34,7 @@ type bodyFactProposal struct {
 	Facts            []model.BodyFactInput `json:"facts"`
 }
 
-func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage) (json.RawMessage, error) {
+func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage, ownedSafetyRevisions ...model.BodyStateRevision) (json.RawMessage, error) {
 	if r.bodyFacts == nil || state.Run == nil || state.UID == uuid.Nil || state.Run.ID == uuid.Nil || state.Run.UserID != state.UID || state.Run.ConversationID != state.ConversationID {
 		return nil, fmt.Errorf("BodyFact persistence or authenticated run is unavailable")
 	}
@@ -62,10 +62,36 @@ func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState,
 		ExpectedRevision: *proposal.ExpectedRevision,
 		Facts:            proposal.Facts,
 	}
+	// A safety check in this very stream may have advanced the aggregate before
+	// its extraction proposal arrives. Follow only actual contiguous Go receipts.
+	// Do not fetch "latest" and rebase over an unrelated user/device change;
+	// direct-user writes and amendments keep their original revision checks.
+	for _, revision := range ownedSafetyRevisions {
+		if revision.UserID == state.UID && revision.ID != uuid.Nil &&
+			revision.ChangeType == "safety.updated" && revision.Source == "consultation" &&
+			revision.Revision > 0 && command.ExpectedRevision == revision.Revision-1 {
+			command.ExpectedRevision = revision.Revision
+		}
+	}
 	if err := command.Validate(); err != nil {
 		return nil, err
 	}
-	receipt, err := r.bodyFacts.RecordRunFacts(ctx, state.UID, state.Run.ID, command)
+	var receipt *model.BodyFactCommit
+	if state.AnswerSource != nil {
+		source := *state.AnswerSource
+		if source.RunID != state.Run.ID {
+			return nil, fmt.Errorf("answer does not belong to the active Run")
+		}
+		ledger, ok := r.bodyFacts.(interface {
+			RecordAnswerFacts(context.Context, uuid.UUID, model.AnswerFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
+		})
+		if !ok {
+			return nil, fmt.Errorf("accepted-answer persistence unavailable")
+		}
+		receipt, err = ledger.RecordAnswerFacts(ctx, state.UID, source, command)
+	} else {
+		receipt, err = r.bodyFacts.RecordRunFacts(ctx, state.UID, state.Run.ID, command)
+	}
 	if err != nil {
 		return nil, err
 	}

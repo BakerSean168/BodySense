@@ -669,12 +669,19 @@ func (s *BodyStateService) ResolveSafetyState(ctx context.Context, userID uuid.U
 }
 
 func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error {
+	_, err := s.RecordSafetyEventWithReceipt(ctx, userID, payload)
+	return err
+}
+
+// RecordSafetyEventWithReceipt exposes only a committed local revision to the
+// owning runtime. A negative screen is not authorization to relax a restriction.
+func (s *BodyStateService) RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error) {
 	var event struct {
 		HasRedFlags bool            `json:"has_red_flags"`
 		Flags       json.RawMessage `json:"flags"`
 	}
 	if len(payload) == 0 || json.Unmarshal(payload, &event) != nil || !event.HasRedFlags {
-		return nil
+		return nil, nil
 	}
 	flags := event.Flags
 	if len(flags) == 0 {
@@ -685,8 +692,11 @@ func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UU
 		"flags":         json.RawMessage(flags),
 		"status":        "requires_review",
 	}))
-	_, err := s.repo.SetSafetyState(ctx, userID, nil, state, "consultation")
-	return err
+	revision, err := s.repo.SetSafetyState(ctx, userID, nil, state, "consultation")
+	if err != nil {
+		return nil, err
+	}
+	return revision, nil
 }
 
 func bodyStateSymptomDetails(raw map[string]any, trustedSafety bool) datatypes.JSON {

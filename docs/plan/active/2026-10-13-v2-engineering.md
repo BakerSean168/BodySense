@@ -74,3 +74,8 @@ C: ordinary user self-report / direct-edit BodyFact vertical is implemented and 
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
+
+
+### Same-Run Ask User checkpoint
+
+V3 resumes the original Run from its stored native interrupt. Answer/messages/lease/milestones commit atomically; full literal self-statements use the exact accepted-answer source. Retry, source preservation, negative safety behavior and competing updates are covered. Short contextual interpretation and whole-Conversation/retention remain open; next DS-BS-02 / ENG-BS-02 and remaining ENG-PC-01. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.

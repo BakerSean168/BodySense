@@ -1170,6 +1170,7 @@
   border-bottom: 1px solid var(--bc-line);
 }
 .bc-business-window-title {
+  color: var(--bc-ink);
   margin: 0;
   font-size: 18px;
   font-weight: 700;
@@ -1750,4 +1751,61 @@
 .bc-person-category .bc-equipment-form textarea:focus-visible {
   outline: 2px solid var(--bc-primary);
   outline-offset: 2px;
+}
+
+/* Pending Ask User reuses the shared card and the active canvas theme. */
+.body-canvas-theme .bc-chat-composer-area {
+  background: linear-gradient(to top, var(--bc-paper) 78%, transparent);
+}
+.body-canvas-theme .bc-chat-run-status {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .bc-chat-run-status p { color: var(--bc-muted); }
+.body-canvas-theme .bc-chat-run-status button { color: var(--bc-danger); }
+.body-canvas-theme .bc-pending-composer { scrollbar-gutter: stable; }
+.body-canvas-theme .ask-user-card {
+  margin: 0;
+  min-width: 0;
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+  overflow-wrap: anywhere;
+}
+.body-canvas-theme .ask-user-title { color: var(--bc-primary); }
+.body-canvas-theme .ask-user-question { color: var(--bc-ink); }
+.body-canvas-theme .ask-user-context,
+.body-canvas-theme .ask-user-card label { color: var(--bc-secondary); }
+.body-canvas-theme .ask-user-card input:not([type="checkbox"]):not([type="radio"]) {
+  min-width: 0;
+  border-color: var(--bc-line);
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .ask-user-card input::placeholder { color: var(--bc-muted); }
+.body-canvas-theme .ask-user-card input { accent-color: var(--bc-primary); }
+.body-canvas-theme .ask-user-card input:focus-visible,
+.body-canvas-theme .ask-user-card button:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.body-canvas-theme .ask-user-submit {
+  min-height: 38px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.body-canvas-theme .ask-user-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bc-primary-soft) 85%, var(--bc-primary));
+}
+.body-canvas-theme .ask-user-error {
+  border-color: color-mix(in srgb, var(--bc-danger) 35%, var(--bc-line));
+  background: var(--bc-danger-soft);
+}
+.body-canvas-theme .ask-user-error p,
+.body-canvas-theme .ask-user-error button { color: var(--bc-danger); }
+@media (max-width: 760px) {
+  .body-canvas-theme .bc-chat-composer-area { padding-top: 12px; }
+  .body-canvas-theme .ask-user-submit { min-height: 44px; }
 }
