@@ -57,3 +57,7 @@ The browser tests run actual React, Go, Python, Proto and PostgreSQL; controlled
 ## Remaining handoff
 
 Next: DS-BS-02 / ENG-BS-02 for Episode identity, links, deterministic replay and full evidence/source projections; DS-PC-01 / ENG-PC-01 for singleton Conversation, complete recovery and controlled retention. Short answer interpretation, Agent-authorized corrections, final editable Penpot states and the other domain gates remain open. `PC3-02..05/19` denotes the targeted sub-behaviors above, not a blanket pass of the entire product acceptance matrix. Hourly automation remains off. No staging or production promotion/reset was performed by this slice.
+
+### Immutable code checkpoint
+
+Implementation commit: `6d4fd8100776d688d5f112d688cc8c9598590cb9`. The follow-up registry commit changes documentation only. Local evidence above was executed against this code content. Required GitHub checks must match the final published branch head; their accepted result is recorded in PR #247 after completion, not inferred from the earlier baseline.

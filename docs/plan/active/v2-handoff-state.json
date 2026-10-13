@@ -355,12 +355,12 @@
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T06:21:23Z",
+  "updatedAtUtc": "2026-10-13T06:21:48Z",
   "latestExecution": {
     "owner": "ChatGPT-Web/V2-AskUser-20261013",
     "baselineHead": "167ebfd725fd73f2f682e92448b3b2ad706c6684",
     "state": "locally_verified",
-    "newCodeCi": "not_yet_pushed",
+    "newCodeCi": "Live exact-head CI is authoritative in PR #247 and its bound verification comment; local test results are not a CI claim.",
     "nextTickets": ["DS-BS-02", "ENG-BS-02", "DS-PC-01", "ENG-PC-01"],
     "contract": "docs/plan/active/2026-10-13-ask-user-source-contract.md",
     "verification": {
@@ -377,6 +377,7 @@
       "postmanRoutes": 99,
       "nativeMigrationVersion": 6,
       "isolatedResources": "cleaned"
-    }
+    },
+    "codeSha": "6d4fd8100776d688d5f112d688cc8c9598590cb9"
   }
 }
