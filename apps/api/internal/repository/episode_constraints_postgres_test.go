@@ -3,12 +3,41 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
+
+func TestSymptomEpisodeDowngradeRefusesEvidencePostgres(t *testing.T) {
+	db := openBodyStateContextIntegrationDB(t)
+	owner := seedBodyStateContextUser(t, db)
+	command := messageFactTestCommand()
+	command.IdempotencyKey = "episode-downgrade-source"
+	receipt, err := NewBodyStateRepository(db).RecordDirectFacts(context.Background(), owner, command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	episodeID := uuid.New()
+	if err := db.Exec(`INSERT INTO public.symptom_episodes
+      (id,user_id,symptom_type,body_region_ids,laterality,identity_status,created_revision,created_at)
+      VALUES (?,?,?,?::jsonb,'unknown','current',?,?)`,
+		episodeID, owner, "headache", "[]", receipt.Revision, time.Now().UTC()).Error; err != nil {
+		t.Fatal(err)
+	}
+	down, err := os.ReadFile("../../migrations/000007_symptom_episode_evidence.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := db.Begin()
+	defer tx.Rollback()
+	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "cannot downgrade: symptom episode identity or evidence exists") {
+		t.Fatalf("lossy Episode rollback was not refused: %v", err)
+	}
+}
 
 // Constraints are exercised on the actual vNext schema, not a GORM auto-migrate.
 // No production Episode writer is exposed before explicit user association rules.
