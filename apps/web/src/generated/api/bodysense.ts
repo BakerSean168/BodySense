@@ -502,6 +502,61 @@ const res = await (fetchFn ?? fetch)(getLinkBodyEpisodeFactUrl(id),
 
 
 
+export const getAdmitBodyEpisodeStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/status`
+}
+
+/**
+ * The exact self-reported symptom Fact must still have an available original source and contain a typed explicit course report consistent with user-reported presence. Ordinary absence and unknown times do not automatically imply recovery. This command admits evidence, not an inferred medical diagnosis or guaranteed status.
+ * @summary User-authorized explicit symptom course evidence from one already-linked Fact.
+ */
+export const admitBodyEpisodeStatus = async (id: string,
+    bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAdmitBodyEpisodeStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
 export const getAddBodyStateFactUrl = () => {
 
 

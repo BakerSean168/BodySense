@@ -92,12 +92,12 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Live Records/Habits source projection plus bounded Episode Fact selection and source-backed status; typed direct symptom-presence Fact DTO and direct user Episode receipt used by provisional Person UI. No complete Episode relation/history, Observation/Hypothesis/ConcernGroup or signed-off Penpot projection."
+          "details": "Live Person Records/Habits and provisional Episode source-selection UI continue to use canonical whole-revision reads. v9 adds source-evidence status DTO and strict typed client; no signed-off Penpot status admission, full Episode relation/history, Observation/Hypothesis/ConcernGroup."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Native PostgreSQL 18 migrations 000002..000008 source/Episode identity and privacy-counted exact Episode command receipts verified full-up/down/up; direct-user create/link is owner/source/Fact/revision-bound and atomic, while AI High consent, complete status, Observation/Hypothesis and legacy retirement remain open."
+          "details": "Native PostgreSQL 18 migrations 000002..000009 full-up/down/up verified, including guarded status receipt downgrade. Direct-edit-only Episode status admission attaches typed explicit course claims to existing episode_state_evidence, one source/owner-bound revision+outbox+idempotent receipt. Whole-domain relations, Observation/Hypothesis and legacy retirement remain OPEN."
         },
         "design": {
           "state": "in_progress",
@@ -107,12 +107,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Source-bound BodyFact and Episode v8 create/link are browser-integrated in real Person; extra hardening refactored single useBodyEpisodeController and three stateless UI parts without wire changes. Initial/follow-up GET failures fail-closed, unknown Fact/Episode writes lock their exact original intent. 27 focused tests and full Web 73 files/452 tests passed. Whole V2 Episode/Observation/Hypothesis/legacy and independent Penpot UI still open."
+          "details": "Episode create/link + Person provisional UI and retry-hardening implemented. v9 owner/source-verified explicit current/resolution report passes race-enabled PostgreSQL 18 repository/HTTP, including generic absence rejection, foreign target non-disclosure, message provenance denial, source invalidation, rollback, concurrent replay and recurrence separation; generated browser adapter added without Penpot UI changes. Whole ENG-BS-02 still open."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Previous commit 2904b61 exact CI 12/12 PASS. This hardening has 27 focused tests, full uncached Web lint/typecheck/build with 73/452 tests PASS, and synthetic PostgreSQL 18 + Go/Python + real browser 15/15 PASS (no retries, cleanup verified). Plan and migration immutable checks PASS; new submitted exact-SHA CI pending. No staging/production release."
+          "details": "Previous PR #247 SHA 6548539b6119891a8f946b3b608d886ab3004123 exact CI 12/12 PASS. New v9 locally: uncached Web 73 files/453 tests lint/typecheck/build PASS, PostgreSQL 18 up/down/up + Go race repository/HTTP/consultation PASS, pnpm contracts:verify + 104 Postman route parity PASS, real Go/PG18/Python/React Chromium vertical E2E 15/15 PASS without retry and isolated resources cleaned. plan 5/5 and checksum immutable PASS. New v9 exact-SHA GitHub CI pending; no staging/production."
         }
       }
     },
@@ -476,34 +476,54 @@
         "No V2 wide-domain, legacy retirement, final visual or production release claim"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-explicit-status-source-admission-v9",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-status-admission.md",
+      "tests": [
+        "apps/api/internal/model/body_fact_test.go",
+        "apps/api/internal/repository/episode_status_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_status_http_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Explicit source report only in existing self symptom Fact; independent exact user POST required to admit to Episode status evidence; generic negative and unreviewed Chat interpretation denied",
+        "PostgreSQL v9 expands existing receipt operation; existing episode_state_evidence remains sole status basis, derived state not stored by client",
+        "Current Episode can project ongoing/ended as of source business time, but recurrence linking/authorization, long-term relations and conflict adjudication remain incomplete",
+        "The production Person/Penpot UI does not yet expose a signed-off status-admission flow; typed generated Web adapter exists only",
+        "Full domain Schema/ViewModel, Observation/Hypothesis/ConcernGroup, legacy retirement, cross-domain release and staging/production are not accepted"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T11:38:42Z",
+  "updatedAtUtc": "2026-10-13T12:45:10Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-UI-Hardening-20261013",
-    "baselineHead": "2904b61f4a4904bf39876a392821484b34ae2004",
-    "state": "locally_verified_ci_pending",
-    "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeStatusAdmission-20261013",
+    "baselineHead": "6548539b6119891a8f946b3b608d886ab3004123",
+    "state": "locally_verified_new_exact_sha_ci_pending",
+    "contract": "docs/plan/active/2026-10-13-episode-status-admission.md",
     "nextTickets": [
-      "IR-BS-01",
-      "PD-BS-01",
+      "DS-BS-02",
       "ENG-BS-02",
-      "DS-BS-02"
+      "IR-BS-01",
+      "PD-BS-01"
     ],
     "verification": {
-      "priorHeadExactShaCI": "2904b61f4a4904bf39876a392821484b34ae2004: 12/12 SUCCESS",
-      "regressionRedFirst": "4_of_4_failed_on_previous_component",
-      "regressionGreen": "4_of_4_passed",
-      "componentizedBoundary": "useBodyEpisodeController_and_3_stateless_view_components",
-      "targetedTests": "27_of_27_passed_after_hook_split",
-      "targetedTypecheck": "passed",
-      "currentFullWeb": "73_files_452_tests_lint_typecheck_build_PASS_uncached",
-      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React",
-      "currentPlanAndCodegen": "5_of_5_plan_migration_immutability_and_generated_contract_PASS",
+      "priorHeadExactShaCI": "6548539b6119891a8f946b3b608d886ab3004123:12_of_12_SUCCESS",
+      "currentFullWeb": "73_files_453_tests_lint_typecheck_build_PASS_uncached",
+      "nativePostgres": "migration_9_full_up_down_8_replay_9_and_race_Go_repository_HTTP_consultation_PASS",
+      "statusNegativeCoverage": "ordinary_negative_without_explicit_resolution_DENIED;foreign_episode_404;unreviewed_user_message_DENIED;rollback_concurrent_idempotence_source_withdrawal_recurrence_PASS",
+      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_104_routes_PASS",
+      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React;isolated_resources_clean",
+      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_checksum_v9_PASS",
       "newExactShaCI": "pending_push",
-      "independentPenpotPR": "250_not_written",
+      "independentPenpotPR": "250_untouched",
       "stagingProduction": "not_deployed",
-      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2382181/"
+      "evidenceRoot": ".runtime/schema-first-v2-evidence/",
+      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2646867/"
     }
   }
 }

@@ -177,6 +177,40 @@ paths:
         "409": *a3
         "500": *a4
         "503": *a5
+  /api/v1/body-state/episodes/{id}/status:
+    post:
+      operationId: admitBodyEpisodeStatus
+      summary: User-authorized explicit symptom course evidence from one already-linked Fact.
+      description: The exact self-reported symptom Fact must still have an available original source and contain a typed explicit course report consistent with user-reported presence. Ordinary absence and unknown times do not automatically imply recovery. This command admits evidence, not an inferred medical diagnosis or guaranteed status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Evidence committed; reread projection, which may remain unknown if times conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/facts:
     post:
       operationId: addBodyStateFact
@@ -2845,6 +2879,12 @@ components:
         occurrence_context:
           type: string
           maxLength: 500
+        episode_course_report:
+          type: string
+          description: Explicit user-authored report about this symptom course. Not inferred from a generic present/absent statement; admitted separately by a user-authorized Episode command.
+          enum:
+            - explicit_current_report
+            - explicit_resolution
     BodyFactHealthHistoryDetails:
       type: object
       additionalProperties: false
@@ -3448,7 +3488,7 @@ components:
         user_id: *a7
         operation:
           type: string
-          enum: [create, link]
+          enum: [create, link, status]
         episode_id: *a7
         fact_id: *a7
         revision:

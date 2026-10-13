@@ -162,6 +162,29 @@ describe("BodyState Episode explicit user commands", () => {
     );
   });
 
+  it("admits only a source Fact as explicit Episode evidence, never client-supplied state", async () => {
+    authFetchMock.mockResolvedValueOnce(
+      json({ ...receipt, operation: "status" }),
+    );
+    const admitted = await bodyEpisodeService.admitStatus(episodeID, command);
+    expect(admitted.operation).toBe("status");
+    expect(authFetchMock).toHaveBeenCalledWith(
+      `/api/v1/body-state/episodes/${episodeID}/status`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    );
+    await expect(
+      bodyEpisodeService.admitStatus(episodeID, {
+        ...command,
+        state: "ended",
+        claim: "explicit_resolution",
+      } as Parameters<typeof bodyEpisodeService.admitStatus>[1]),
+    ).rejects.toThrow();
+    expect(authFetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects model-injected source, owner, symptom status and extra fields before fetch", async () => {
     const forged = {
       ...command,

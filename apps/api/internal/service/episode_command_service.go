@@ -11,6 +11,7 @@ import (
 type episodeCommandRepository interface {
 	CreateEpisode(context.Context, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	LinkEpisodeFact(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
+	AdmitEpisodeStatus(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 }
 
 // The only authorized caller is an exact authenticated direct-user HTTP
@@ -30,6 +31,19 @@ func (s *EpisodeCommandService) CreateEpisode(ctx context.Context, owner uuid.UU
 	}
 	return s.repository.CreateEpisode(ctx, owner, c)
 }
+
+// AdmitEpisodeStatus admits only an already-linked explicit user course report.
+// No client-supplied medical conclusion is accepted by this entry point.
+func (s *EpisodeCommandService) AdmitEpisodeStatus(ctx context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
+	if owner == uuid.Nil || episode == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated owner and exact Episode required", model.ErrInvalidEpisodeEvidence)
+	}
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return s.repository.AdmitEpisodeStatus(ctx, owner, episode, c)
+}
+
 func (s *EpisodeCommandService) LinkEpisodeFact(ctx context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
 	if owner == uuid.Nil || episode == uuid.Nil {
 		return nil, fmt.Errorf("%w: authenticated owner and target required", model.ErrInvalidEpisodeEvidence)

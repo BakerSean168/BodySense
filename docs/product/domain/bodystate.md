@@ -81,13 +81,15 @@ type BodyFact = {
 
 | kind | `details` 最小业务内容（逻辑字段，允许未提供） | 状态/归属 |
 | --- | --- | --- |
-| `symptom` | `symptomType`、`presence: present/absent`、`laterality`、`severity`（原始量表/单位）、`pattern: continuous/intermittent/unknown`、`triggers`、`relievingFactors`、`occurrenceContext` | 用户每次明确描述均为事实；持续、缓解、复发由 Episode 推导 |
+| `symptom` | `symptomType`、`presence: present/absent`、`laterality`、`severity`（原始量表/单位）、`pattern: continuous/intermittent/unknown`、`triggers`、`relievingFactors`、`occurrenceContext`、可选的明确病程陈述 `episodeCourseReport` | 用户每次明确描述均为事实；持续、缓解、复发由 Episode 推导 |
 | `health_history` | `historyKind`、事件描述、所述发生时间/结果、来源上下文 | 既往损伤、手术、用户转述医生诊断等历史陈述；通常是事件，不强制状态机 |
 | `activity` | `activityType`、持续时间/运动量/强度（有依据时） | 某次具体活动事件；长期习惯归 lifestyle |
 | `lifestyle` | `habitType`、频率/规律/典型时长、适用时期 | 事实有效时间段表达习惯调整、停止与未知；不覆盖旧时期 |
 | `training_feedback` | `sessionLogId`、`exerciseId`（可选）、反馈类别与原文 | 一次用户主观反馈；正式完成/跳过仍由 Trainer 的 TrainingSessionLog 权威持有 |
 
 字段不由 Agent 依据习惯擅自填满；无来源则保留未提供。症状的同一次/多次发作，不由部位和固定天数判断；同一句训练反馈若明确包含身体症状，可同时形成来源共享但职责不同的 symptom Fact，且避免复制 Trainer 已有的完成记录。
+
+明确病程陈述作为 **symptom Fact 自身可选的来源解释字段**：`episodeCourseReport = explicit_current_report | explicit_resolution`；前者与 `presence=present` 对应，后者与 `presence=absent` 对应，但反向推断不成立，普通“现在没有疼”**绝非**“本次病程已结束”。保存 Fact、将 Fact 组织到 Episode、将明确报告纳入 Episode 状态证据是三个独立写入动作。当前 v9 工程仅开放经过本人直接编辑的明确陈述及其精确关联的用户授权提交；Chat/Agent 提取的 High 可信病程关联仍须完成独立验证，不得复用直接编辑命令绕过审核。见 [v9 证据准入验收说明](../../plan/active/2026-10-13-episode-status-admission.md)。
 
 ### 2.4 SymptomEpisode：身份、关联及状态（BS-D3～D7）
 

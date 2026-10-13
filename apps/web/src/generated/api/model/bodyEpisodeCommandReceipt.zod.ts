@@ -13,7 +13,7 @@ import * as zod from 'zod/mini';
 export const BodyEpisodeCommandReceipt = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
-  "operation": /*#__PURE__*/ zod.enum(['create', 'link']),
+  "operation": /*#__PURE__*/ zod.enum(['create', 'link', 'status']),
   "episode_id": /*#__PURE__*/ zod.uuid(),
   "fact_id": /*#__PURE__*/ zod.uuid(),
   "revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),

@@ -31,6 +31,13 @@ func (f *episodeCommandHTTPFake) CreateEpisode(_ context.Context, owner uuid.UUI
 	f.command = c
 	return f.receipt, f.err
 }
+func (f *episodeCommandHTTPFake) AdmitEpisodeStatus(_ context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
+	f.calls++
+	f.owner = owner
+	f.target = episode
+	f.command = c
+	return f.receipt, f.err
+}
 func (f *episodeCommandHTTPFake) LinkEpisodeFact(_ context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
 	f.calls++
 	f.owner = owner

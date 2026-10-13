@@ -30,7 +30,8 @@ export const BodyFactSymptomDetails = /*#__PURE__*/ zod.strictObject({
   "pattern": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['continuous', 'intermittent', 'unknown'])),
   "triggers": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsTriggersItemMax))).check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsTriggersMax))),
   "relieving_factors": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsRelievingFactorsItemMax))).check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsRelievingFactorsMax))),
-  "occurrence_context": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsOccurrenceContextMax)))
+  "occurrence_context": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(bodyFactSymptomDetailsOccurrenceContextMax))),
+  "episode_course_report": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['explicit_current_report', 'explicit_resolution'])).check(/*#__PURE__*/ zod.describe('Explicit user-authored report about this symptom course. Not inferred from a generic present/absent statement; admitted separately by a user-authorized Episode command.'))
 });
 
 export type BodyFactSymptomDetails = zod.input<typeof BodyFactSymptomDetails>;

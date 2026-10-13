@@ -164,6 +164,18 @@ func (r *BodyStateRepository) commitEpisodeAssociation(ctx context.Context, owne
 			if sourceCount == 0 {
 				return ErrEpisodeNotFound
 			}
+			// A later explicit current report after a source-backed ended
+			// course is a new Episode identity, never a silent reopening.
+			// Reject BEFORE creating an irreversible unique-primary link.
+			if details.EpisodeCourseReport == "explicit_current_report" {
+				page, err := listEpisodeSnapshot(tx, owner, 0, &episodeID)
+				if err != nil {
+					return err
+				}
+				if len(page.Episodes) != 1 || page.Episodes[0].Projection.State == "ended" {
+					return model.ErrEpisodeAssociationConflict
+				}
+			}
 		}
 		var conflicting model.EpisodeFactLink
 		err = tx.Where("user_id = ? AND fact_id = ? AND is_primary = TRUE", owner, fact.ID).Take(&conflicting).Error

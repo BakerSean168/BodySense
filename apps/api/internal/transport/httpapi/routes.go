@@ -86,6 +86,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Evidence-backed Episode reads; mutation/AI linkage is not a public capability.
 	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)
 	protected.POST("/body-state/episodes/:id/facts", wrapper.LinkBodyEpisodeFact)
+	protected.POST("/body-state/episodes/:id/status", wrapper.AdmitBodyEpisodeStatus)
 	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 

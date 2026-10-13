@@ -83,3 +83,34 @@ func TestBodyFactNegativeSymptomDoesNotBecomeEpisodeResolution(t *testing.T) {
 		t.Fatal("a negative observation must not imply the episode ended")
 	}
 }
+
+func TestExplicitEpisodeCourseReportRequiresARealSymptomStatementAndMatchingPresence(t *testing.T) {
+	tests := []struct {
+		name    string
+		details string
+		invalid bool
+	}{
+		{"explicit_current", `{"symptom_type":"shoulder pain","presence":"present","episode_course_report":"explicit_current_report"}`, false},
+		{"explicit_end", `{"symptom_type":"shoulder pain","presence":"absent","episode_course_report":"explicit_resolution"}`, false},
+		{"ordinary_negative", `{"symptom_type":"shoulder pain","presence":"absent"}`, false},
+		{"generic_negative_cannot_be_reinterpreted", `{"presence":"absent","episode_course_report":"explicit_current_report"}`, true},
+		{"positive_is_not_resolution", `{"presence":"present","episode_course_report":"explicit_resolution"}`, true},
+		{"arbitrary_clinical_state", `{"presence":"absent","episode_course_report":"recovered"}`, true},
+		{"missing_presence", `{"episode_course_report":"explicit_resolution"}`, true},
+		{"empty_presence", `{"presence":"","episode_course_report":"explicit_current_report"}`, true},
+		{"injected_assessment", `{"presence":"absent","episode_state":"ended"}`, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := validFactCommand()
+			c.Facts[0].Details = json.RawMessage(tc.details)
+			err := c.Validate()
+			if tc.invalid && !errors.Is(err, ErrInvalidBodyFact) {
+				t.Fatalf("invalid assertion accepted: %v", err)
+			}
+			if !tc.invalid && err != nil {
+				t.Fatalf("legitimate explicit input refused: %v", err)
+			}
+		})
+	}
+}

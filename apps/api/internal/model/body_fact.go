@@ -32,14 +32,17 @@ type FactTemporal struct {
 }
 
 type SymptomFactDetails struct {
-	SymptomType       string        `json:"symptom_type,omitempty"`
-	Presence          string        `json:"presence,omitempty"`
-	Laterality        string        `json:"laterality,omitempty"`
-	Severity          *FactSeverity `json:"severity,omitempty"`
-	Pattern           string        `json:"pattern,omitempty"`
-	Triggers          []string      `json:"triggers,omitempty"`
-	RelievingFactors  []string      `json:"relieving_factors,omitempty"`
-	OccurrenceContext string        `json:"occurrence_context,omitempty"`
+	SymptomType string `json:"symptom_type,omitempty"`
+	// Explicit user-authored report for this symptom course; never inferred
+	// from presence=absent, silence, improvement or a model guess.
+	EpisodeCourseReport string        `json:"episode_course_report,omitempty"`
+	Presence            string        `json:"presence,omitempty"`
+	Laterality          string        `json:"laterality,omitempty"`
+	Severity            *FactSeverity `json:"severity,omitempty"`
+	Pattern             string        `json:"pattern,omitempty"`
+	Triggers            []string      `json:"triggers,omitempty"`
+	RelievingFactors    []string      `json:"relieving_factors,omitempty"`
+	OccurrenceContext   string        `json:"occurrence_context,omitempty"`
 }
 
 type FactSeverity struct {
@@ -260,6 +263,11 @@ func (c RecordBodyFactsCommand) Validate() error {
 		if !oneOf(symptom.Presence, "", "present", "absent") || !oneOf(symptom.Pattern, "", "continuous", "intermittent", "unknown") ||
 			!oneOf(symptom.Laterality, "", "left", "right", "bilateral", "not_applicable", "unknown") {
 			return invalid("invalid symptom presence, pattern or laterality")
+		}
+		if !oneOf(symptom.EpisodeCourseReport, "", "explicit_current_report", "explicit_resolution") ||
+			(symptom.EpisodeCourseReport == "explicit_current_report" && symptom.Presence != "present") ||
+			(symptom.EpisodeCourseReport == "explicit_resolution" && symptom.Presence != "absent") {
+			return invalid("explicit Episode course report must match user-reported presence")
 		}
 		if symptom.Severity != nil && strings.TrimSpace(symptom.Severity.RawValue) == "" {
 			return invalid("severity must preserve a raw_value")

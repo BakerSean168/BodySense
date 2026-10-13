@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  admitBodyEpisodeStatus,
   createBodyEpisode,
   getBodyEpisode,
   linkBodyEpisodeFact,
@@ -29,6 +30,20 @@ export const bodyEpisodeService = {
   ): Promise<BodyEpisodeCommandReceipt> =>
     withOpenApiError(() =>
       createBodyEpisode(
+        BodyEpisodeAssociationRequest.parse(input),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  // Commit a status EVIDENCE basis, never client-authored "ongoing/ended".
+  // The exact linked Fact must contain a previously saved explicit course report.
+  admitStatus: (
+    episodeId: string,
+    input: EpisodeAssociationInput,
+  ): Promise<BodyEpisodeCommandReceipt> =>
+    withOpenApiError(() =>
+      admitBodyEpisodeStatus(
+        z.uuid().parse(episodeId),
         BodyEpisodeAssociationRequest.parse(input),
         undefined,
         openApiAuthFetch,

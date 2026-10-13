@@ -14,6 +14,7 @@ import (
 type episodeCommandApplication interface {
 	CreateEpisode(context.Context, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	LinkEpisodeFact(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
+	AdmitEpisodeStatus(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 }
 
 func (s *PublicServer) WithEpisodeCommands(commands episodeCommandApplication) *PublicServer {
@@ -87,7 +88,9 @@ func validEpisodeCommandReceipt(owner, target uuid.UUID, c model.EpisodeAssociat
 		receipt.EventID == uuid.Nil || receipt.Operation != operation || receipt.CommittedAt.IsZero() {
 		return false
 	}
-	return operation != "link" || receipt.EpisodeID == target
+	// Both an existing-Episode link and a status admission require an exact
+	// owner-selected target, not just a plausible committed receipt.
+	return operation == "create" || receipt.EpisodeID == target
 }
 
 func classifyEpisodeCommandError(err error) (int, string, string) {
