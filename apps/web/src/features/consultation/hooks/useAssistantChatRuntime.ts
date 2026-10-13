@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
+import { readBodyFactCommit } from "@/features/profile/services/bodyFactReceipt";
 import {
   useLocalRuntime,
   type ChatModelAdapter,
@@ -72,6 +74,7 @@ export interface ConsultationAdapterOptions {
   onActiveTurnUpdate?: (state: ActiveTurnState) => void;
   /** Called when the stream has fully completed or errored/aborted. */
   onStreamFinished?: () => void;
+  onBodyFactCommitted?: () => void;
 }
 
 export function useAssistantChatRuntime(
@@ -191,7 +194,22 @@ export function useAssistantChatRuntime(
       }
     }
 
+    const receivedFactCommits = new Set<string>();
     function dispatch(event: StreamEvent) {
+      if (
+        event.type === "tool.result" &&
+        event.payload.tool === "record_body_state"
+      ) {
+        const receipt = readBodyFactCommit(event.payload.result);
+        if (
+          receipt &&
+          receipt.user_id === useAuthStore.getState().user?.id &&
+          !receivedFactCommits.has(receipt.id)
+        ) {
+          receivedFactCommits.add(receipt.id);
+          optionsRef.current.onBodyFactCommitted?.();
+        }
+      }
       if (typeof event.seq === "number") {
         maxSeq = Math.max(maxSeq, event.seq);
       }

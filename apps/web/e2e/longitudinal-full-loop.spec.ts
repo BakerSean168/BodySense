@@ -315,7 +315,9 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
 
   await page.goto(`/consultation/${conversationId}?view=treatment`);
   await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
-  const trainingAction = page.getByRole("button", { name: "展开训练执行" });
+  const trainingAction = page
+    .getByTestId("training-window")
+    .getByRole("button", { name: "开始训练", exact: true });
   await expect(trainingAction).toBeVisible();
   await page.reload();
   await expect(trainingAction).toBeVisible();

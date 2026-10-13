@@ -4,16 +4,14 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
-  type ReactNode,
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { InfoPanelSkeleton } from "../components/InfoPanelSkeleton";
 import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
 import { useConversationsQuery } from "../hooks/useConversationsQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
-import { useDiagnosisActions } from "../hooks/useDiagnosisActions";
 import type { ConsultationSpatialContext } from "../types/consultation";
 import {
   buildActiveTurnSeedFromRuntimeEvents,
@@ -22,23 +20,18 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BodyCanvasWorkspace } from "@/features/body-canvas/components/BodyCanvasWorkspace";
-import { demonstrationForTitle, type MotionId } from "@/features/body-canvas/model/bodyCanvas";
-import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
-import { useWorkbenchPreferencesStore } from "../model/workbenchPreferencesStore";
+import type { MotionId } from "@/features/body-canvas/model/bodyCanvas";
 import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
+import { useHealthWorkspaceQuery } from "@/features/workspace";
+import { useBodyExplorerWorkspace } from "@/features/body-explorer";
 import {
-  BodyStateWorkbench,
-  OutcomeTrendsPanel,
-  TreatmentPanel,
-  useHealthWorkspaceQuery,
-} from "@/features/workspace";
-import {
-  getBodyRegionDefinition,
-  type BodyRegionId,
-  useBodyExplorerWorkspace,
-} from "@/features/body-explorer";
+  resolveWindowFromView,
+  type BusinessWindowId,
+} from "@/features/body-canvas/model/businessWindows";
+import { useProfileStore } from "@/stores/profileStore";
+import { useAuthStore } from "@/stores/authStore";
 
 const loadAssistantChatPanel = () =>
   retryDynamicImport(() => import("../components/AssistantChatPanel")).then(
@@ -47,20 +40,7 @@ const loadAssistantChatPanel = () =>
     }),
   );
 const AssistantChatPanel = lazy(loadAssistantChatPanel);
-const DiagnosisPanel = lazy(() =>
-  retryDynamicImport(() => import("../components/DiagnosisPanel")).then(
-    (module) => ({
-      default: module.DiagnosisPanel,
-    }),
-  ),
-);
-const DiagnosisHistoryPanel = lazy(() =>
-  retryDynamicImport(() => import("../components/DiagnosisHistoryPanel")).then(
-    (module) => ({
-      default: module.DiagnosisHistoryPanel,
-    }),
-  ),
-);
+
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,13 +50,12 @@ export function ConsultationPage() {
   const [chatSpatialContext, setChatSpatialContext] =
     useState<ConsultationSpatialContext | null>(null);
   const [composerFocusKey, setComposerFocusKey] = useState(0);
-  const chatOpen = useWorkbenchPreferencesStore((state) => state.chatOpen);
-  const setChatOpen = useWorkbenchPreferencesStore(
-    (state) => state.setChatOpen,
-  );
-  const setMobileSurface = useWorkbenchPreferencesStore(
-    (state) => state.setMobileSurface,
-  );
+  // Asking a question from any canvas surface must surface the Chat window; the
+  // revision counter keeps repeat requests observable.
+  const [windowRequest, setWindowRequest] = useState<{
+    window: BusinessWindowId;
+    revision: number;
+  } | null>(null);
 
   // Chat is a persistent contextual surface even though V3 is body-first.
   // Discover its lazy chunk early so opening the assistant does not wait on the
@@ -137,20 +116,18 @@ export function ConsultationPage() {
   const handleAskSpatialContext = useCallback(
     (context: ConsultationSpatialContext) => {
       setChatSpatialContext(context);
-      setChatOpen(true);
-      setMobileSurface("chat");
       setComposerFocusKey((key) => key + 1);
+      setWindowRequest((current) => ({
+        window: "chat",
+        revision: (current?.revision ?? 0) + 1,
+      }));
     },
-    [setChatOpen, setMobileSurface],
+    [],
   );
   const bodyExplorer = useBodyExplorerWorkspace(
     bodyState,
     handleAskSpatialContext,
   );
-  const diagnosisAnalysis = workspace?.diagnosis?.analysis_id
-    ? workspace.diagnosis
-    : null;
-  const candidates = diagnosisAnalysis?.candidates ?? [];
   const pendingInteractions = displayedThread?.pending_interactions ?? [];
   const interactionHistory = displayedThread?.interaction_history ?? [];
 
@@ -219,38 +196,42 @@ export function ConsultationPage() {
     pendingTerminalRemountId,
   ]);
 
-  // Client-only presentation state. A bare consultation route stays body-first,
-  // while an explicit ?view= deep link opens the corresponding inventory panel.
-  const requestedWorkspaceView = searchParams.get("view");
-  const workspaceView = parseWorkspaceView(requestedWorkspaceView);
-  const isExplicitWorkspaceView =
-    requestedWorkspaceView === "state" ||
-    requestedWorkspaceView === "diagnosis" ||
-    requestedWorkspaceView === "treatment" ||
-    requestedWorkspaceView === "progress";
-  const [workspacePanelOpen, setWorkspacePanelOpen] = useState(
-    isExplicitWorkspaceView,
-  );
-  const previousRequestedWorkspaceViewRef = useRef(requestedWorkspaceView);
-  useEffect(() => {
-    if (previousRequestedWorkspaceViewRef.current === requestedWorkspaceView) return;
-    previousRequestedWorkspaceViewRef.current = requestedWorkspaceView;
-    if (isExplicitWorkspaceView) setWorkspacePanelOpen(true);
-  }, [isExplicitWorkspaceView, requestedWorkspaceView]);
-  const [demonstrationRequest, setDemonstrationRequest] = useState<{
-    motion: MotionId;
-    revision: number;
-  } | null>(null);
+  // Client-only presentation state. A bare consultation route stays body-first.
+  // An explicit ?view= deep link opens the matching business window once; the
+  // route mirror afterwards is a consequence of the user's window choice, not a
+  // second source of truth for which window is open.
+  const requestedWindow = searchParams.get("view");
+  const initialWindow: BusinessWindowId | null =
+    resolveWindowFromView(requestedWindow);
+  const demonstrationRequest: { motion: MotionId; revision: number } | null = null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  const handleWorkspaceViewChange = useCallback(
-    (view: WorkspaceView) => {
-      const next = new URLSearchParams(searchParams);
-      next.set("view", view);
-      setSearchParams(next, { replace: true });
-      setWorkspacePanelOpen(true);
+  const profile = useProfileStore((state) => state.profile);
+  const accountName = useAuthStore((state) => state.user?.email ?? "");
+  // The identity header shows the real account name so it is never a fabricated
+  // label; missing values stay blank rather than being invented.
+  const personIdentity = useMemo(
+    () => ({
+      nickname: accountName,
+      birth_date: profile?.birth_date,
+      gender: profile?.gender,
+    }),
+    [accountName, profile?.birth_date, profile?.gender],
+  );
+  const handleWindowChange = useCallback(
+    (window: BusinessWindowId | null) => {
+      // Functional update avoids mirroring a stale query string when the route
+      // changes in the same batch as the window action.
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (window) next.set("view", window);
+          else next.delete("view");
+          return next;
+        },
+        { replace: true },
+      );
     },
-    [searchParams, setSearchParams],
+    [setSearchParams],
   );
 
   // Server-state actions are isolated in feature hooks; this page composes them.
@@ -258,23 +239,6 @@ export function ConsultationPage() {
     routeConversationId,
     activeConversationIdRef,
   });
-  const diagnosisActions = useDiagnosisActions({
-    conversationId: routeConversationId,
-    bodyState,
-    analysis: diagnosisAnalysis,
-  });
-  const diagnosisHistory = diagnosisActions.history;
-
-  const handleAnalyzeDiagnosis = useCallback(() => {
-    if (
-      !diagnosisActions.canAnalyze ||
-      diagnosisActions.isAnalyzing ||
-      workspace?.capabilities.can_request_diagnosis === false
-    )
-      return;
-    diagnosisActions.analyze();
-  }, [diagnosisActions, workspace?.capabilities.can_request_diagnosis]);
-
   // --- Loading / Error States ---
   const isThreadLoading =
     Boolean(routeConversationId) && threadQuery.isPending && !threadData;
@@ -390,132 +354,6 @@ export function ConsultationPage() {
   // thread must not hold the business surface behind a skeleton when the
   // workspace endpoint has already returned.
   const workspaceUnavailable = workspaceQuery.isError && !workspace;
-  const bodyStateReady = Boolean(bodyState);
-  const canRequestDiagnosis =
-    workspace?.capabilities.can_request_diagnosis ??
-    diagnosisActions.canAnalyze;
-
-  const stateWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="身体信息暂时无法同步，请稍后重试。" />
-  ) : workspaceQuery.isPending && !bodyState ? (
-    <InfoPanelSkeleton />
-  ) : bodyStateReady && bodyState ? (
-    <BodyStateWorkbench
-      snapshot={{
-        ...bodyState,
-        hypotheses: bodyState.hypotheses ?? [],
-      }}
-      selectedRegionId={bodyExplorer.selectedRegionId}
-      onSelectRegion={bodyExplorer.selectRegion}
-      onAskRegion={(regionId: BodyRegionId) => {
-        const region = getBodyRegionDefinition(regionId);
-        handleAskSpatialContext({
-          body_region_id: regionId,
-          body_region_label: region.labels["zh-CN"],
-        });
-      }}
-    />
-  ) : (
-    <WorkspaceEmptyState
-      title="还没有身体记录"
-      description="继续对话，确认后的身体信息会出现在这里。"
-    />
-  );
-
-  const diagnosisWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="当前分析暂时无法同步，请稍后重试。" />
-  ) : workspaceQuery.isPending && !workspace ? (
-    <InfoPanelSkeleton />
-  ) : (
-    <div className="space-y-5">
-      {diagnosisActions.error ? (
-        <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-          {diagnosisActions.error}
-        </p>
-      ) : null}
-      <Suspense fallback={<InfoPanelSkeleton />}>
-        {candidates.length === 0 &&
-        diagnosisAnalysis?.status !== "insufficient_information" &&
-        diagnosisAnalysis?.status !== "safety_blocked" ? (
-          <WorkspaceEmptyState
-            title="还没有分析结果"
-            description="继续补充身体情况，信息足够后可以生成分析。"
-            action={
-              <Button
-                onClick={handleAnalyzeDiagnosis}
-                disabled={!canRequestDiagnosis || diagnosisActions.isAnalyzing}
-              >
-                {diagnosisActions.isAnalyzing ? "分析中..." : "生成分析"}
-              </Button>
-            }
-          />
-        ) : (
-          <DiagnosisPanel
-            analysisId={diagnosisAnalysis?.analysis_id}
-            bodyStateRevision={diagnosisAnalysis?.body_state_revision}
-            status={diagnosisAnalysis?.status}
-            summary={diagnosisAnalysis?.summary}
-            candidates={candidates}
-            citations={diagnosisAnalysis?.citations}
-            freshness={diagnosisAnalysis?.freshness}
-            onSaveAssessments={diagnosisActions.saveAssessments}
-            isSavingAssessments={diagnosisActions.isSavingAssessments}
-          />
-        )}
-      </Suspense>
-      <Suspense fallback={null}>
-        <DiagnosisHistoryPanel
-          analyses={diagnosisHistory}
-          currentAnalysisId={diagnosisAnalysis?.analysis_id}
-        />
-      </Suspense>
-    </div>
-  );
-
-  const handleDemonstrateExercise = useCallback((title: string) => {
-    const motion = demonstrationForTitle(title);
-    if (!motion) return false;
-    setWorkspacePanelOpen(false);
-    setChatOpen(false);
-    setDemonstrationRequest((current) => ({
-      motion,
-      revision: (current?.revision ?? 0) + 1,
-    }));
-    return true;
-  }, [setChatOpen]);
-
-  const treatmentWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="当前方案暂时无法同步，请稍后重试。" />
-  ) : workspaceQuery.isPending && !workspace ? (
-    <InfoPanelSkeleton />
-  ) : workspace ? (
-    <TreatmentPanel
-      workspace={workspace}
-      onDemonstrateExercise={handleDemonstrateExercise}
-    />
-  ) : (
-    <WorkspaceEmptyState
-      title="尚无当前方案"
-      description="完成必要的分析与确认后，BodySense 会在这里整理下一步建议。"
-    />
-  );
-
-  const progressWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="进展信息暂时无法同步，请稍后重试。" />
-  ) : workspaceQuery.isPending && !workspace ? (
-    <InfoPanelSkeleton />
-  ) : workspace &&
-    (workspace.trends.length > 0 || workspace.recent_outcomes.length > 0) ? (
-    <OutcomeTrendsPanel
-      trends={workspace.trends}
-      outcomes={workspace.recent_outcomes}
-    />
-  ) : (
-    <WorkspaceEmptyState
-      title="还没有进展记录"
-      description="记录训练或身体变化后，趋势会出现在这里。"
-    />
-  );
 
   return (
     <div className="h-dvh overflow-hidden text-foreground">
@@ -523,22 +361,13 @@ export function ConsultationPage() {
         bodyState={bodyState}
         workspace={workspace}
         bodyExplorer={bodyExplorer}
-        workspaceView={workspaceView}
-        workspacePanelOpen={workspacePanelOpen}
-        onWorkspaceViewChange={handleWorkspaceViewChange}
-        onCloseWorkspace={() => setWorkspacePanelOpen(false)}
-        panels={{
-          state: stateWorkspace,
-          diagnosis: diagnosisWorkspace,
-          treatment: treatmentWorkspace,
-          progress: progressWorkspace,
-        }}
         chat={chatPanel}
-        chatOpen={chatOpen}
-        onChatOpenChange={setChatOpen}
         onAskContext={handleAskSpatialContext}
         onOpenProfile={() => setIsProfileOpen(true)}
-        profileOpen={isProfileOpen}
+        identity={personIdentity}
+        initialWindow={initialWindow}
+        onWindowChange={handleWindowChange}
+        windowRequest={windowRequest}
         demonstrationRequest={demonstrationRequest}
         loading={workspaceQuery.isFetching || isThreadSwitching}
         error={workspaceUnavailable || hasThreadSwitchError}
@@ -564,34 +393,6 @@ function PanelTransitionOverlay({ label }: { label: string }) {
           {label}
         </p>
       </div>
-    </div>
-  );
-}
-
-function WorkspaceEmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-muted-foreground">
-        {description}
-      </p>
-      {action ? <div className="mt-5">{action}</div> : null}
-    </div>
-  );
-}
-
-function WorkspaceError({ message }: { message: string }) {
-  return (
-    <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-4 text-sm text-destructive">
-      {message}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // RecordDirectFacts owns a single semantic transaction on the existing BodyState
@@ -33,6 +34,16 @@ func (r *BodyStateRepository) RecordMessageFacts(ctx context.Context, userID uui
 		return nil, fmt.Errorf("%w: run and user message identities are required", model.ErrInvalidBodyFact)
 	}
 	return r.recordFacts(ctx, userID, command, &source)
+}
+
+// RecordRunFacts resolves the original user message from the Go-owned turn.
+// The model supplies no message ID; stable run+command fingerprint allows exact
+// receipt replay even after the original message was legally pruned.
+func (r *BodyStateRepository) RecordRunFacts(ctx context.Context, userID, runID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	if runID == uuid.Nil {
+		return nil, fmt.Errorf("%w: run identity required", model.ErrInvalidBodyFact)
+	}
+	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: runID})
 }
 
 func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource) (*model.BodyFactCommit, error) {
@@ -78,20 +89,25 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 		// Checking the structured Parts avoids trusting a client-supplied
 		// source label or stale/incorrect content_text projection.
 		sourceKind := "direct_edit"
-		var sourceConversationID uuid.UUID
+		var sourceConversationID, sourceMessageID uuid.UUID
 		if source != nil {
-			var userMessage model.Message
-			err := tx.Table("public.messages AS m").Select("m.*").
+			// Shared row locks serialize source edits/removal and Run cancellation
+			// with this commit. A completed/cancelled Run cannot accept NEW facts.
+			var messages []model.Message
+			query := tx.Table("public.messages AS m").Select("m.*").
 				Joins("JOIN public.runs AS r ON r.turn_id = m.turn_id AND r.conversation_id = m.conversation_id").
 				Joins("JOIN public.conversations AS c ON c.id = m.conversation_id").
-				Where("m.id = ? AND r.id = ? AND r.user_id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND m.role = ? AND m.status = ?", source.MessageID, source.RunID, userID, userID, "user", "completed").
-				Take(&userMessage).Error
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("%w: user-authored source is not available for this run", model.ErrInvalidBodyFact)
+				Where("r.id = ? AND r.user_id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND r.status = ? AND m.role = ? AND m.status = ?", source.RunID, userID, userID, "running", "user", "completed")
+			if source.MessageID != uuid.Nil {
+				query = query.Where("m.id = ?", source.MessageID)
 			}
-			if err != nil {
+			if err := query.Clauses(clause.Locking{Strength: "SHARE"}).Limit(2).Find(&messages).Error; err != nil {
 				return err
 			}
+			if len(messages) != 1 {
+				return fmt.Errorf("%w: exactly one live user-authored source is required for this run", model.ErrInvalidBodyFact)
+			}
+			userMessage := messages[0]
 			original := messageTextFromParts(userMessage.Parts)
 			if original == "" {
 				return fmt.Errorf("%w: source message contains no user-authored text", model.ErrInvalidBodyFact)
@@ -103,6 +119,7 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 			}
 			sourceKind = "user_message"
 			sourceConversationID = userMessage.ConversationID
+			sourceMessageID = userMessage.ID
 		}
 
 		now := time.Now().UTC()
@@ -133,7 +150,7 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 			if source != nil {
 				sourceRow.SourceConversationID = &sourceConversationID
 				sourceRow.SourceRunID = &source.RunID
-				sourceRow.SourceMessageID = &source.MessageID
+				sourceRow.SourceMessageID = &sourceMessageID
 			}
 			evidence = append(evidence, sourceRow)
 			factIDs = append(factIDs, factID)

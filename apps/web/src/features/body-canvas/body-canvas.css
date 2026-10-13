@@ -44,6 +44,8 @@
   height: 100dvh;
   overflow: hidden;
   background: var(--bc-canvas);
+  /* Vertical space kept clear below a floating business window for the Dock. */
+  --bc-dock-clearance: 96px;
 }
 .bc-workspace button,
 .bc-inventory-dialog button {
@@ -1102,3 +1104,636 @@
     transition-duration: .001ms !important;
   }
 }
+
+/* ==========================================================================
+   Business windows (Penpot V5.5)
+   Body-first stage with independently openable business windows. Geometry
+   follows the prototype (Diagnosis 420x574, TrainingPlan 420x615, Chat
+   374x528); placement adapts to the real stage instead of hardcoding the
+   prototype's fixed x=430/440 coordinates.
+   ========================================================================== */
+.bc-business-layer {
+  position: absolute;
+  /* The layer lives inside .bc-stage, which already starts below the topbar.
+     Adding the topbar height again here would double-offset every window. */
+  inset: 0;
+  z-index: 36;
+  pointer-events: none;
+}
+.bc-business-layer > * { pointer-events: auto; }
+.bc-business-window {
+  position: absolute;
+  /*
+   * Horizontal placement adapts to the real stage. The Penpot prototype froze
+   * x=430/440 so its own 878px Viewer had no clipping; production must instead
+   * keep the preferred offset while guaranteeing the window never runs off the
+   * stage or covers the Dock. clamp() falls back to the 12px minimum when the
+   * preferred offset plus the window width no longer fit.
+   */
+  left: clamp(
+    12px,
+    var(--bc-window-left, 430px),
+    calc(100% - var(--bc-window-width, 420px) - 12px)
+  );
+  top: var(--bc-window-top, 18px);
+  width: min(var(--bc-window-width, 420px), calc(100% - 24px));
+  /*
+   * Height is bounded by the Penpot window size, the preferred maximum and the
+   * space the stage actually has. The reserved bottom band keeps the Dock and
+   * the minimized-window tray reachable on short stages, so a tall window can
+   * never cover the control the user needs to switch or close windows.
+   */
+  height: min(
+    var(--bc-window-height, 574px),
+    var(--bc-window-max-height, 640px),
+    calc(100% - var(--bc-window-top, 18px) - var(--bc-dock-clearance, 96px))
+  );
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bc-line);
+  border-radius: 18px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  box-shadow: var(--bc-shadow);
+}
+.bc-business-window[data-active="false"] { box-shadow: 0 12px 34px rgba(31, 47, 37, .08); }
+.bc-business-window[hidden] { display: none; }
+.bc-business-window-header {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-height: 63px;
+  padding: 0 12px 0 20px;
+  border-bottom: 1px solid var(--bc-line);
+}
+.bc-business-window-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.bc-business-window-controls { display: flex; align-items: center; gap: 2px; }
+.bc-sheet-handle { display: none; }
+.bc-business-window-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.bc-business-window-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.bc-window-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 16px 20px;
+}
+.bc-window-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--bc-line);
+  background: var(--bc-paper);
+}
+.bc-window-footer .bc-button { flex: 1 1 auto; min-width: 0; }
+.bc-window-loading,
+.bc-window-note,
+.bc-window-count,
+.bc-window-pending {
+  margin: 0 0 12px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.bc-window-loading { display: flex; align-items: center; gap: 8px; }
+.bc-window-count { color: var(--bc-secondary); font-weight: 650; }
+.bc-window-pending { margin-top: 14px; }
+.bc-window-alert {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--bc-warning) 30%, var(--bc-line));
+  border-radius: 11px;
+  background: var(--bc-warning-soft);
+  color: var(--bc-warning);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.bc-window-empty {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 34px 12px;
+  text-align: center;
+}
+.bc-window-empty-title { margin: 0; font-size: 13px; font-weight: 650; }
+.bc-window-empty-text {
+  margin: 0;
+  max-width: 300px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.bc-error {
+  margin: 0 0 10px;
+  color: var(--bc-danger);
+  font-size: 12px;
+}
+
+/* Person window ---------------------------------------------------------- */
+.bc-person {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.bc-person-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+  color: var(--bc-ink);
+}
+.bc-person-identity:hover { background: var(--bc-subtle); }
+.bc-person-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--bc-line);
+  border-radius: 999px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-person-name { font-size: 14px; font-weight: 650; }
+.bc-person-popover {
+  position: absolute;
+  z-index: 5;
+  left: 20px;
+  top: 66px;
+  width: 348px;
+  min-height: 184px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--bc-line);
+  border-radius: 16px;
+  background: var(--bc-paper);
+  box-shadow: var(--bc-shadow);
+}
+.bc-person-popover-value {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bc-person-popover-hint { margin: 0; color: var(--bc-muted); font-size: 11px; }
+.bc-person-popover-action {
+  margin-top: auto;
+  align-self: flex-end;
+  min-height: 32px;
+  color: var(--bc-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-person-popover-action:hover { text-decoration: underline; text-underline-offset: 3px; }
+.bc-person-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--bc-line);
+}
+.bc-person-tabs button {
+  position: relative;
+  min-width: 136px;
+  min-height: 46px;
+  padding: 0 4px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.bc-person-tabs button:hover { color: var(--bc-ink); }
+.bc-person-tabs button[aria-pressed="true"] { color: var(--bc-primary); }
+.bc-person-tabs button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 76px;
+  height: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--bc-primary);
+}
+.bc-person-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 22px 24px;
+}
+.bc-person-category { display: grid; gap: 14px; }
+.bc-person-count { margin: 0; color: var(--bc-muted); font-size: 12px; font-weight: 650; }
+.bc-person-empty {
+  min-height: 280px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.bc-person-empty-icon { color: var(--bc-muted); }
+.bc-person-empty-text {
+  margin: 0;
+  max-width: 380px;
+  color: var(--bc-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.bc-person-empty-action { min-height: 40px; }
+.bc-person-equipment {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-equipment > li {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 14px;
+  border: 1px solid var(--bc-line);
+  border-radius: 14px;
+  background: var(--bc-subtle);
+}
+.bc-person-equipment-symbol { color: var(--bc-primary); }
+.bc-person-equipment strong { font-size: 13px; }
+.bc-person-equipment p { margin: 0; color: var(--bc-muted); font-size: 11px; }
+.bc-person-uploads { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bc-person-uploads > li {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+  background: var(--bc-subtle);
+}
+.bc-person-uploads strong { font-size: 13px; }
+.bc-person-uploads span { color: var(--bc-muted); font-size: 11px; }
+.bc-person-habits { display: grid; gap: 2px; margin: 0; }
+.bc-person-habits > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--bc-line) 70%, transparent);
+}
+.bc-person-habits dt { color: var(--bc-muted); font-size: 12px; }
+.bc-person-habits dd { margin: 0; font-size: 13px; }
+.bc-person-habit-empty { color: var(--bc-muted); }
+.bc-person-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--bc-muted);
+  font-size: 12px;
+}
+.bc-person-record-group > ul { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.bc-person-record-group > ul > li {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+}
+.bc-person-record-group > ul > li span { color: var(--bc-muted); font-size: 11px; }
+.bc-person-group-title {
+  margin: 0;
+  color: var(--bc-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+/* Diagnosis window ------------------------------------------------------- */
+.bc-condition-list { display: grid; gap: 12px; }
+.bc-condition {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--bc-line);
+  border-radius: 14px;
+  background: var(--bc-subtle);
+}
+.bc-condition-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.bc-condition-head h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.bc-condition-certainty {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+  font-size: 10px;
+  font-weight: 650;
+}
+.bc-condition-row { margin: 0; display: grid; grid-template-columns: 72px 1fr; gap: 8px; font-size: 12px; line-height: 1.6; }
+.bc-condition-label { color: var(--bc-muted); }
+.bc-condition-value { color: var(--bc-ink); }
+.bc-condition-handling {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--bc-line) 70%, transparent);
+}
+.bc-condition-note { margin: 2px 0 0; color: var(--bc-muted); font-size: 11px; line-height: 1.55; }
+.bc-condition-safety {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--bc-warning);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* TrainingPlan window --------------------------------------------------- */
+.bc-plan-selector { position: relative; margin-bottom: 12px; }
+.bc-plan-selector-trigger {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  text-align: left;
+}
+.bc-plan-selector-trigger:hover { background: var(--bc-subtle); }
+.bc-plan-selector-name { font-size: 13px; font-weight: 650; }
+.bc-plan-selector-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-plan-picker {
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  max-height: 234px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--bc-line);
+  border-radius: 13px;
+  background: var(--bc-paper);
+  box-shadow: var(--bc-shadow);
+}
+.bc-plan-option {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--bc-ink);
+  font-size: 12px;
+  text-align: left;
+}
+.bc-plan-option:hover { background: var(--bc-subtle); }
+.bc-plan-option[aria-selected="true"] { background: var(--bc-primary-soft); color: var(--bc-primary); }
+.bc-plan-option-title { font-weight: 600; }
+.bc-plan-option-badge,
+.bc-plan-option-status { color: var(--bc-muted); font-size: 10px; }
+.bc-plan-option[aria-selected="true"] .bc-plan-option-badge { color: var(--bc-primary); }
+.bc-stage-list { display: grid; gap: 16px; }
+.bc-stage-title {
+  margin: 0 0 8px;
+  color: var(--bc-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.bc-exercise-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bc-exercise {
+  display: grid;
+  gap: 4px;
+  padding: 11px 13px;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+  background: var(--bc-subtle);
+}
+.bc-exercise-main { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.bc-exercise-main strong { font-size: 13px; }
+.bc-exercise-dosage { color: var(--bc-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.bc-exercise-dosage-missing { color: var(--bc-warning); }
+.bc-exercise-note { margin: 0; color: var(--bc-muted); font-size: 11px; line-height: 1.5; }
+
+/* Mobile bottom sheet ---------------------------------------------------- */
+.bc-business-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 36;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--bc-line);
+  border-radius: 24px 24px 0 0;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  box-shadow: 0 -18px 60px rgba(31, 47, 37, .18);
+}
+.bc-business-sheet-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bc-business-sheet-content .bc-window-body { padding: 14px 18px; }
+.bc-business-sheet-footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--bc-line);
+}
+.bc-business-sheet-footer .bc-button { flex: 1 1 auto; min-width: 0; }
+
+@media (max-width: 760px) {
+  .bc-business-window-header {
+    min-height: 74px;
+    padding: 0 10px 0 18px;
+  }
+  .bc-business-window-title { font-size: 17px; }
+  .bc-sheet-handle {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    width: 40px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bc-muted) 45%, transparent);
+  }
+  .bc-person-popover { left: 18px; right: 18px; width: auto; }
+  .bc-person-tabs { justify-content: center; gap: 9px; padding: 0 8px; }
+  .bc-person-tabs button { min-width: 66px; font-size: 11px; }
+  .bc-person-tabs button[aria-pressed="true"]::after { width: 46px; }
+  .bc-person-body { padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .bc-person-equipment { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bc-person-habits > div { grid-template-columns: 1fr; gap: 3px; }
+}
+
+/* Minimized business windows stay recoverable without covering the body. */
+.bc-minimized-tray {
+  position: absolute;
+  z-index: 34;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+}
+.bc-minimized-chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 4px;
+  border: 1px solid var(--bc-line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bc-paper) 94%, transparent);
+  box-shadow: 0 8px 26px rgba(33, 49, 38, .12);
+  backdrop-filter: blur(16px);
+}
+.bc-minimized-restore {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 9px;
+  color: var(--bc-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.bc-minimized-restore:hover { background: var(--bc-subtle); }
+.bc-minimized-dismiss {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--bc-muted);
+}
+.bc-minimized-dismiss:hover { background: var(--bc-subtle); color: var(--bc-ink); }
+@media (max-width: 760px) {
+  .bc-minimized-tray { bottom: 76px; }
+}
+
+/* Plan authorization: proposals are pending until the user explicitly accepts. */
+.bc-plan-proposals { display: grid; gap: 10px; margin-top: 16px; }
+.bc-proposal {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px dashed color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line));
+  border-radius: 13px;
+  background: var(--bc-subtle);
+}
+.bc-proposal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.bc-proposal-head strong { font-size: 13px; }
+.bc-proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-proposal-actions li {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bc-paper);
+  color: var(--bc-secondary);
+  font-size: 11px;
+}
+.bc-proposal-buttons,
+.bc-plan-option-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.bc-block { display: block; margin-top: 3px; }
+
+/* Records keep real add/confirm capabilities inside the Person window. */
+.bc-record-editor { display: grid; gap: 10px; margin-top: 4px; }
+.bc-record-pending { display: grid; gap: 6px; }
+.bc-record-pending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--bc-warning) 28%, var(--bc-line));
+  border-radius: 11px;
+  background: var(--bc-warning-soft);
+  font-size: 12px;
+}
+.bc-record-pending-row > div { display: flex; gap: 6px; }
+.bc-record-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bc-record-form .bc-plan-option-buttons { grid-column: 1 / -1; }
+@media (max-width: 760px) {
+  .bc-record-form { grid-template-columns: 1fr; }
+}
+
+/* BodyFact ledger uses the existing floating-window visual system. */
+.bc-record-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.bc-record-actions > .bc-window-note { flex: 1; min-width: 10rem; }
+.bc-record-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .75rem; }
+.bc-record-item { border: 1px solid var(--bc-line); border-radius: .75rem; padding: .875rem; min-width: 0; }
+.bc-record-statement { white-space: pre-wrap; overflow-wrap: anywhere; margin: .5rem 0; }
+.bc-record-saved { display: flex; align-items: center; gap: .375rem; }
+.bc-person-category textarea { width: 100%; resize: vertical; min-height: 5rem; }

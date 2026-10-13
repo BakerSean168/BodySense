@@ -15,6 +15,7 @@ export type BodyFactRecordsPage = Awaited<
   ReturnType<typeof listBodyFactRecords>
 >;
 export type BodyFactCommitReceipt = Awaited<ReturnType<typeof recordBodyFacts>>;
+export type BodyFactRecordInput = RecordBodyFactsInput;
 
 export const bodyFactRecordsService = {
   list: (beforeRevision?: number): Promise<BodyFactRecordsPage> =>

@@ -64,3 +64,8 @@ Business `ready` alone permits detailed implementation plans. A stable Track A `
 Per ticket: add behavior/negative tests, run focused checks, run relevant isolated PostgreSQL and generated contract checks, rerun affected/full CI as warranted, peer-review entire diff, update the exact ticket/SF checkpoint, record a verifiable SHA and evidence paths in `v2-handoff-state.json`. Keep transitional old routes explicitly enumerated; never remove an active consumer before the new read path is accepted. CI `success` on an unrelated SHA is not evidence.
 
 **Next:** ENG-BS-01; the schema/doc/fixture discovery in ENG-BASE-01 can proceed independently of blocked Python or UI code. The separate hourly automation remains off.
+
+
+## 2026-10-13 verified checkpoint
+
+C: ordinary user self-report / direct-edit BodyFact vertical is implemented and locally verified; next complete corrections/withdrawals and structured source answer gaps. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.

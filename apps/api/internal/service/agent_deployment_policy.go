@@ -53,7 +53,7 @@ const (
 	defaultAssessmentConfigurationID = "assess-config-617534e4b17c512a"
 	assessmentLogicalModelV1         = "bodysense-structured"
 
-	defaultConsultationConfigurationID = "consult-config-7feb8ca2d5bfad5a"
+	defaultConsultationConfigurationID = BodyFactConsultationConfigurationID
 
 	defaultPostureConfigurationID = "posture-config-efa3a84622818772"
 
@@ -155,9 +155,15 @@ var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistrati
 }
 
 const ConsultationDecisionPolicyV2 = "consultation-go-runtime-v2"
+const ConsultationDecisionPolicyV3 = "consultation-go-runtime-v3"
+const BodyFactConsultationConfigurationID = "consult-config-83b6a1cc70477c82"
 
 var knownConsultationConfigurations = map[string]consultationConfigurationRegistration{
-	defaultConsultationConfigurationID: {
+	BodyFactConsultationConfigurationID: {
+		DecisionPolicyRevision: ConsultationDecisionPolicyV3,
+		LogicalModel:           "bodysense-consultation",
+	},
+	"consult-config-7feb8ca2d5bfad5a": {
 		DecisionPolicyRevision: ConsultationDecisionPolicyV2,
 		LogicalModel:           "bodysense-consultation",
 	},

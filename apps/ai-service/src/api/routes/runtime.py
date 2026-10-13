@@ -30,6 +30,8 @@ from ...models.consultation_runtime_event import (
     StreamDoneRuntimeEvent,
     StreamErrorRuntimeEvent,
     TextDeltaRuntimeEvent,
+    ToolCallRuntimeEvent,
+    ToolResultRuntimeEvent,
 )
 from ...runtime.consultation_thread import (
     get_consultation_manifest,
@@ -61,6 +63,7 @@ def _stub_event(
     run_id: str,
     conversation_id: str,
     event: ConsultationRuntimeEventPayload,
+    tool_call_id: str | None = None,
 ) -> str:
     return serialize_runtime_event(
         ConsultationRuntimeEvent(
@@ -68,6 +71,7 @@ def _stub_event(
             conversation_id=conversation_id,
             run_id=run_id,
             event=event,
+            tool_call_id=tool_call_id,
         )
     )
 
@@ -178,6 +182,26 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 ),
             )
             seq += 1
+            if manifest.intake and manifest.intake.policy_revision == "body-fact-intake-v1":
+                from ...testing_support.body_fact_fixture import body_fact_fixture_events
+
+                for item in await body_fact_fixture_events(
+                    request.input.text, request.business_context.body_state, manifest
+                ):
+                    if item["type"] == "tool_call":
+                        event = ToolCallRuntimeEvent(tool=item["tool"], args=item["args"])
+                    elif item["type"] == "tool_result":
+                        event = ToolResultRuntimeEvent(tool=item["tool"], result=item["result"])
+                    else:
+                        event = TextDeltaRuntimeEvent(delta=item["delta"])
+                    yield _stub_event(
+                        seq=seq,
+                        run_id=request.run_id,
+                        conversation_id=request.conversation_id,
+                        event=event,
+                        tool_call_id=item.get("id"),
+                    )
+                    seq += 1
             if trigger_safety:
                 yield _stub_event(
                     seq=seq,
@@ -285,6 +309,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
     except RuntimeCommandError as exc:
         logger.warning("Rejected invalid resume runtime command: %s", exc)
         raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
+
     async def ndjson_generator():
         try:
             async for event in resume_thread_interrupt(

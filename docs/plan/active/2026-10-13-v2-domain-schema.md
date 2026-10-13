@@ -68,3 +68,8 @@ UI status also requires explicit distinction between `persisted`, `pending`, `re
 ## Checkpoint and next handoff
 
 At foundation creation: business-level decisions are documented; the comprehensive typed V2 read/query surface is **not**. The immediate next owner is **DS-BASE-01 / DS-BS-01**. Handoff to track B requires accepted display/query contract; handoff to track C persistence requires tested migrations. Update only the relevant readiness gates with exact evidence after their acceptance; leave all other domains pending.
+
+
+## 2026-10-13 verified checkpoint
+
+A: bounded Records/Habits projection and command/receipt handoff established; full Episode/Observation/Hypothesis contract remains open. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.

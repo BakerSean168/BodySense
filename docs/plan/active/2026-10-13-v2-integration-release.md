@@ -61,3 +61,8 @@ Baseline 2026-10-13: #247 code PR is Draft (audited first two migrations/Go/API 
 Review by verified root cause, not vague screenshots. Each finding names severity (P0 security/data or unsafe behavior, P1 missing required behavior, P2 robustness, P3 visual polish), exact file/route/event/flow, violated contract, reproduction, owner A/B/C and target test. Fix in small independent repair passes, rerun focused gate then affected full suite; mark fixed/partially fixed/not reproduced/deferred with reason. Do not create simultaneous writers on the same workspace.
 
 **Next:** IR-BASE-01 may run without waiting for DS-BS-01. UI styling finalization is intentionally deferred; UI behavior and safety gate acceptance is not.
+
+
+## 2026-10-13 verified checkpoint
+
+D: #244 whitespace and training navigation/CSS regressions reproduced and fixed in the unreleased integration branch; 6 real-server E2E cases pass, including mobile geometry. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.

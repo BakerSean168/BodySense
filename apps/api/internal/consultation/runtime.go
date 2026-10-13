@@ -81,6 +81,7 @@ type Runtime struct {
 	runtimeEventService         *service.RuntimeEventService
 	uploadService               *service.UploadService
 	bodyStateService            runtimeBodyStateService
+	bodyFacts                   runtimeBodyFactService
 	contextRetrievalService     *service.ContextRetrievalService
 	diagnosisAnalysisService    *service.DiagnosisAnalysisService
 	diagnosisFreshnessService   *service.DiagnosisFreshnessService
@@ -912,6 +913,28 @@ func (r *Runtime) buildBusinessContext(
 			}
 		}
 	}
+	// A bounded new-ledger projection is distinct from legacy observations.
+	// Read failure is explicit so v3 cannot invent revision zero and claim capture.
+	if r.bodyFacts != nil {
+		combined := map[string]any{}
+		if len(bc.BodyState) > 0 {
+			_ = json.Unmarshal(bc.BodyState, &combined)
+		}
+		if page, err := r.bodyFacts.ListFacts(ctx, uid, 0); err == nil && page != nil && page.UserID == uid {
+			combined["current_revision"] = page.CurrentRevision
+			records := page.Facts
+			if len(records) > 40 {
+				records = records[:40]
+			}
+			combined["records"] = records
+			combined["records_available"] = true
+		} else {
+			combined["records_available"] = false
+		}
+		if raw, err := json.Marshal(combined); err == nil {
+			bc.BodyState = raw
+		}
+	}
 	if r.contextRetrievalService != nil {
 		if history, err := r.contextRetrievalService.Retrieve(
 			ctx, uid, conversationID, queryText, bodyStateSnapshot,
@@ -1190,6 +1213,10 @@ func (r *Runtime) handleAIEvent(
 	result *streamResult,
 	phase *string,
 ) bool {
+	if err := validateBodyFactRuntimeEvent(state.ExpectedConfigurationID, event); err != nil {
+		r.failActiveStream(ctx, sw, state, "旧版事实写入事件未通过当前契约核验，未保存该记录。")
+		return true
+	}
 	publicEvent, projectionErr := projectConsultationRuntimeEvent(event)
 	if projectionErr != nil && event.Kind() != service.ConsultationRuntimeAgentConfiguration {
 		r.failActiveStream(ctx, sw, state, "invalid internal runtime event projection")
@@ -1210,11 +1237,28 @@ func (r *Runtime) handleAIEvent(
 		r.agentToolService.RecordToolCall(ctx, state.Run.ID, state.ConversationID, &msgID, event.IDs.ToolCallID, payload.Tool, datatypes.JSON(payload.Args))
 
 	case service.ConsultationRuntimeToolResultPayload:
+		var captureErr error
+		if payload.Tool == "record_body_state" {
+			committed, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result)
+			captureErr = err
+			if err != nil {
+				log.Printf("BodyFact proposal rejected: %v", err)
+				payload.Result = json.RawMessage(`{"status":"rejected","error":"身体记录尚未确认保存，请刷新记录后重试。"}`)
+			} else {
+				payload.Result = committed
+			}
+			// Only a receipt or explicit rejection crosses the browser boundary.
+			publicEvent.Payload, _ = json.Marshal(payload)
+		}
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "tool.result")
 		result.AssistantParts = append(result.AssistantParts, map[string]any{
 			"type": "tool-result", "toolName": payload.Tool, "result": payload.Result, "toolCallId": event.IDs.ToolCallID,
 		})
 		r.agentToolService.RecordToolResult(ctx, state.Run.ID, event.IDs.ToolCallID, datatypes.JSON(payload.Result), toolResultIsError(payload.Result))
+		if captureErr != nil {
+			r.failActiveStream(ctx, sw, state, "身体记录尚未确认保存，请刷新记录后重试。")
+			return true
+		}
 
 	case service.ConsultationRuntimeExtractedInfoPayload:
 		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {

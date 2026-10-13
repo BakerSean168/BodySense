@@ -201,6 +201,7 @@ func main() {
 		agentDeploymentPolicy,
 		bodyStateService,
 	)
+	consultationRuntime.AttachBodyFactService(bodyFactService)
 	consultationRuntime.AttachLongitudinalContextServices(
 		contextRetrievalService,
 		diagnosisAnalysisService,

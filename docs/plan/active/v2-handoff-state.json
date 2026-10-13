@@ -85,7 +85,7 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "GET/POST records is typed; complete Person Records/Habits/Episode projection and error contract not accepted"
+          "details": "Bounded Records/Habits ledger projection and command/receipt contract implemented; full Episode/Observation/Hypothesis display contract still open."
         },
         "database": {
           "state": "in_progress",
@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-01",
-          "details": "Source binding and typed browser adapter implemented; actual Python tool and Person window consumption pending"
+          "details": "Ordinary self-report Chat -> Python -> Go run-bound atomic commit -> actual Person Records/Habits is locally verified; structured answers, corrections/withdrawals and Episode consumers remain."
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "No whole Python-to-Go-to-Person acceptance"
+          "details": "Six real-server browser cases pass, including replay, negative/third-party, mobile and repaired training paths. Domain-wide V2 integration and production qualification are not complete."
         }
       }
     },
@@ -272,6 +272,28 @@
           "details": "No target source-erasure E2E"
         }
       }
+    }
+  ],
+  "boundedSlices": [
+    {
+      "id": "body-fact-ordinary-statement-vertical",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-vertical-contract.md",
+      "tests": [
+        "apps/web/e2e/body-fact-records.spec.ts",
+        "apps/api/internal/consultation/body_fact_test.go",
+        "apps/api/internal/repository/body_fact_message_repository_test.go",
+        "apps/ai-service/tests/unit/test_body_fact_capture.py"
+      ],
+      "configurationId": "consult-config-83b6a1cc70477c82",
+      "limits": [
+        "structured answers pending",
+        "Episode/Observation/Hypothesis pending",
+        "full source-erasure and event consumers pending",
+        "final Penpot visual review pending",
+        "no staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ]
 }

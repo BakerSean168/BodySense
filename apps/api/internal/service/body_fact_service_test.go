@@ -25,6 +25,9 @@ func (f *fakeFactLedger) RecordMessageFacts(_ context.Context, owner uuid.UUID, 
 	f.owner = owner
 	return &model.BodyFactCommit{ID: uuid.New(), UserID: owner, Revision: 1}, nil
 }
+func (f *fakeFactLedger) RecordRunFacts(ctx context.Context, owner, runID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	return f.RecordMessageFacts(ctx, owner, model.MessageFactSource{RunID: runID}, command)
+}
 func (f *fakeFactLedger) ListFacts(_ context.Context, owner uuid.UUID, _ int64) (*model.BodyFactPage, error) {
 	f.calls++
 	f.owner = owner

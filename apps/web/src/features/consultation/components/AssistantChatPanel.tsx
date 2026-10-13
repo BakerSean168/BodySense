@@ -198,6 +198,9 @@ export function AssistantChatPanel({
         : undefined,
       onMessagePersisted,
       onStreamFinished,
+      // Refresh durable projections when a commit arrives, even if the same
+      // run then waits for Ask User rather than finishing the stream.
+      onBodyFactCommitted: onStreamFinished,
       onActiveTurnUpdate: (state: ActiveTurnState) => {
         activeTurnRef.current?.(state);
       },

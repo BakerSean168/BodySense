@@ -10,6 +10,7 @@ import (
 
 type bodyFactLedger interface {
 	RecordDirectFacts(context.Context, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
+	RecordRunFacts(context.Context, uuid.UUID, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	RecordMessageFacts(context.Context, uuid.UUID, model.MessageFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	ListFacts(context.Context, uuid.UUID, int64) (*model.BodyFactPage, error)
 }
@@ -66,6 +67,28 @@ func (s *BodyFactService) RecordMessageFacts(ctx context.Context, userID uuid.UU
 		}
 	}
 	return s.ledger.RecordMessageFacts(ctx, userID, source, command)
+}
+
+// RecordRunFacts binds an extraction proposal to a server-owned Run, never
+// to a source identity supplied by the model. Repository rechecks in transaction.
+func (s *BodyFactService) RecordRunFacts(ctx context.Context, userID, runID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	if userID == uuid.Nil || runID == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated run required", model.ErrInvalidBodyFact)
+	}
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
+	for _, fact := range command.Facts {
+		for _, region := range fact.BodyRegionIDs {
+			if s.regions == nil {
+				return nil, ErrBodyRegionIDValidationUnavailable
+			}
+			if !s.regions.IsValidBodyRegionID(region) {
+				return nil, ErrUnknownBodyRegionID
+			}
+		}
+	}
+	return s.ledger.RecordRunFacts(ctx, userID, runID, command)
 }
 
 func (s *BodyFactService) ListFacts(ctx context.Context, userID uuid.UUID, beforeRevision int64) (*model.BodyFactPage, error) {

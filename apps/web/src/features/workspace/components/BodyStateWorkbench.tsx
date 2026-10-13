@@ -38,6 +38,12 @@ interface BodyStateWorkbenchProps {
   selectedRegionId?: BodyRegionId | null;
   onSelectRegion?: (regionId: BodyRegionId | null) => void;
   onAskRegion?: (regionId: BodyRegionId) => void;
+  /**
+   * Hides the workbench's own "身体记录" heading. The Person window's tab already
+   * names the category, and the design forbids repeating the category name as a
+   * body title.
+   */
+  hideHeading?: boolean;
 }
 
 const lifestyleSectionByKind: Record<string, LifestyleSectionKey> = {
@@ -145,6 +151,7 @@ export function BodyStateWorkbench({
   selectedRegionId = null,
   onSelectRegion,
   onAskRegion,
+  hideHeading = false,
 }: BodyStateWorkbenchProps) {
   const bodyStateCommand = useBodyStateCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -329,12 +336,14 @@ export function BodyStateWorkbench({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <History className="h-3.5 w-3.5 text-primary" />
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
-            身体记录
-          </h3>
-        </div>
+        {hideHeading ? null : (
+          <div className="flex items-center gap-2">
+            <History className="h-3.5 w-3.5 text-primary" />
+            <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+              身体记录
+            </h3>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           {selectedRegionId && onAskRegion ? (
             <Button

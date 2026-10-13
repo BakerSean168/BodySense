@@ -182,3 +182,59 @@ func TestBodyFactMessageRejectsOtherOwnerAndMismatchedReplayPostgres(t *testing.
 	}
 	assertBodyFactCount(t, db, "body_state_revisions", owner, 1)
 }
+
+func TestBodyFactRunSourceResolutionReplayAndCancellationPostgres(t *testing.T) {
+	db := openBodyStateContextIntegrationDB(t)
+	owner := seedBodyStateContextUser(t, db)
+	source := seedUserMessageFactEnvelope(t, db, owner, datatypes.JSON(`[{"type":"text","text":"My shoulder hurts, and I sleep seven hours."}]`), "user")
+	repo := NewBodyStateRepository(db)
+	command := messageFactTestCommand()
+	first, err := repo.RecordRunFacts(context.Background(), owner, source.RunID, command)
+	if err != nil || first == nil {
+		t.Fatalf("run-bound commit=%v err=%v", first, err)
+	}
+	var evidence model.StatementEvidence
+	if err := db.Where("user_id = ?", owner).First(&evidence).Error; err != nil {
+		t.Fatal(err)
+	}
+	if evidence.SourceMessageID == nil || *evidence.SourceMessageID != source.MessageID {
+		t.Fatal("run did not resolve its own user message")
+	}
+	if err := db.Model(&model.Run{}).Where("id = ?", source.RunID).Update("status", "cancelled").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Delete(&model.Message{}, "id = ?", source.MessageID).Error; err != nil {
+		t.Fatal(err)
+	}
+	replay, err := repo.RecordRunFacts(context.Background(), owner, source.RunID, command)
+	if err != nil || replay == nil || replay.ID != first.ID {
+		t.Fatalf("original receipt not replayed: %v %v", replay, err)
+	}
+	command.IdempotencyKey = "new-command-after-cancellation"
+	command.ExpectedRevision = 1
+	if receipt, err := repo.RecordRunFacts(context.Background(), owner, source.RunID, command); err == nil || receipt != nil {
+		t.Fatal("cancelled run admitted a new batch")
+	}
+	assertBodyFactCount(t, db, "body_fact_commits", owner, 1)
+}
+
+func TestBodyFactRunSourceRejectsAmbiguousUserMessagePostgres(t *testing.T) {
+	db := openBodyStateContextIntegrationDB(t)
+	owner := seedBodyStateContextUser(t, db)
+	source := seedUserMessageFactEnvelope(t, db, owner, datatypes.JSON(`[{"type":"text","text":"My shoulder hurts, and I sleep seven hours."}]`), "user")
+	var original model.Message
+	if err := db.First(&original, "id = ?", source.MessageID).Error; err != nil {
+		t.Fatal(err)
+	}
+	duplicate := original
+	duplicate.ID = uuid.New()
+	duplicate.Seq = 2
+	if err := db.Create(&duplicate).Error; err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := NewBodyStateRepository(db).RecordRunFacts(context.Background(), owner, source.RunID, messageFactTestCommand())
+	if err == nil || receipt != nil {
+		t.Fatal("ambiguous source picked an arbitrary user message")
+	}
+	assertBodyFactCount(t, db, "body_fact_commits", owner, 0)
+}
