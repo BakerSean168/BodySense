@@ -90,7 +90,7 @@
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "V1 baseline immutable; v2-v10 native PostgreSQL 18 BodyFact/Episode migrations verified on prior exact-SHA CI. Additive v11 user-report BodyObservation uses exact owner+record+original-source composite FK, raw values/units, independent ID-only commit/revision/outbox and no legacy dual write. PG18 v11 full up/down v10/replay v11, native cross-owner/cascade, concurrent replay, late rollback, guarded downgrade and forged source-FK tests PASS. Correction/withdrawal, device/document admission, Hypothesis/ConcernGroup and legacy retirement remain OPEN."
+          "details": "v1-v11 immutable SQL, v11 direct-user Observation owner-source composite FK and atomic receipts verified exact-SHA GitHub CI on c2076d1dd39d64afa0ec616813e722a94db657ad (12/12). New additive v12 amends exact user source-backed observation correction/withdrawal: server-owned operation/target owner FK, guarded data-loss down, immutable supersession source; PG18 v12 up/down-v11/replay-v12 PASS; real repo/HTTP/race rerun pending. Device/file admission, Hypothesis, ConcernGroup and all-domain schema OPEN."
         },
         "design": {
           "state": "in_progress",
@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Real Person BodyFact/Episode create/link provisional UI, v9 status evidence and v10 explicit recurrence source relation were previously exact-SHA verified. V11 implements authenticated source-backed direct-user BodyObservation Go write/read and strict generated OpenAPI/TS/Zod with a typed browser adapter; no unreviewed clinical normalization, file import or AI origin. Native PG18 Go/HTTP, uncached Web 74/460 lint/typecheck/build and 16/16 real isolated Chromium E2E PASS; final designer-approved Observation UI, full BodyState and deployment OPEN."
+          "details": "v11 direct-user BodyObservation source/original capture, generated OpenAPI Go/TS/Zod and browser adapter exact-SHA GitHub CI 12/12 PASS. v12 adds strict correct/withdraw current direct observation with per-user idempotency, source-preserving successor and rollback, typed client; canonical OpenAPI/Postman 110 operations PASS, Web 75 files/464 Vitest tests, lint/typecheck/build PASS. Native PG18 and 17 browser tests PENDING. No final editable Penpot Observation UI, AI interpretation or global domain signoff."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "PR #247 v10 exact SHA 0e287ab128bb09a8e8fae354c16bf5e49acbe7bf CI 12/12 SUCCESS. New v11 native PostgreSQL 18 up/down/replay plus race-enabled Go repo/real HTTP/consultation PASS; generated 108 OpenAPI/Postman operations PASS; Web 74 files/460 tests lint/typecheck/build PASS; genuine Go/PG18/Redis/Python/React Chromium 16/16 PASS without retries including new Observation user auth and exact replay, resources cleaned. V11 exact new SHA GitHub CI PENDING. No staging/production or whole-domain release."
+          "details": "PR #253 exact SHA c2076d1dd39d64afa0ec616813e722a94db657ad CI 12/12 SUCCESS. v12 add two user-authorized observation amendment endpoints and PG18 migration v12 up/down/replay PASS; OpenAPI Go/TS/Zod Postman 110 operations PASS; Web 75 files/464 tests lint/typecheck/build PASS; native Go/PG18 and real browser v12 amendment flow pending. Staging/production and V2 whole-domain gates remain OPEN."
         }
       }
     },
@@ -515,24 +515,45 @@
         "Full BodyState observation/hypothesis/ConcernGroup, safety, diagnosis, all-domain integration and staging/production gates remain open"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-observation-direct-amendments-v12",
+      "status": "in_progress",
+      "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
+      "tests": [
+        "apps/api/internal/repository/body_observation_amendment_repository_test.go",
+        "apps/api/internal/repository/body_observation_amendment_guards_test.go",
+        "apps/api/internal/transport/httpapi/body_observation_amendments_test.go",
+        "apps/web/src/features/profile/services/bodyObservationService.amendments.openapi.test.ts",
+        "apps/web/e2e/body-observation-amendments.spec.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Direct user command only; correction of the old report and withdrawal of one exact assertion are not a later measurement or clinical recovery",
+        "Correction supersedes original source-linked row; withdrawal only hides current assertion, not private historical erasure",
+        "Global per-user exact idempotency and BodyState revision shared with v11 write",
+        "Only generated TS/Zod browser adapter; Penpot Track B UI independently owned",
+        "No device/document/lab/OCR admission, measurement normalization, BodyHypothesis, ConcernGroup, legacy retirement or production deployment"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T15:34:00Z",
+  "updatedAtUtc": "2026-10-13T17:16:00Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-03-BodyObservationDirectReport-20261013",
-    "baselineHead": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf",
-    "state": "locally_verified_new_exact_sha_ci_pending",
-    "contract": "docs/plan/active/2026-10-13-body-observation-direct-report.md",
-    "nextTickets": ["DS-BS-03", "ENG-BS-03", "IR-BS-02", "PD-BS-01"],
+    "owner": "ChatGPT-Web/ENG-BS-04-ObservationAmendments-20261013",
+    "baselineHead": "c2076d1dd39d64afa0ec616813e722a94db657ad",
+    "state": "in_progress_native_go_pg18_and_browser_pending",
+    "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
+    "nextTickets": ["DS-BS-04", "ENG-BS-04", "IR-BS-03", "PD-BS-01"],
     "verification": {
-      "priorHeadExactShaCI": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf:12_of_12_SUCCESS",
-      "nativePostgres": "v11_full_up_down_v10_replay_v11_and_race_Go_repository_HTTP_consultation_PASS;composite_owner_and_source_fk;same_key_exact_timestamp_replay;rollback;cascade",
-      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_108_routes_PASS",
-      "currentFullWeb": "74_files_460_tests_lint_typecheck_build_PASS_uncached",
-      "currentNativeBrowser": "16_of_16_PASS_no_retries_real_Go_Postgres18_Redis_Python_React;resources_cleaned",
-      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-3298738/",
+      "priorHeadExactShaCI": "c2076d1dd39d64afa0ec616813e722a94db657ad:12_of_12_SUCCESS",
+      "nativePostgres": "v12_full_up_down_v11_replay_v12_PASS;repository_HTTP_race_test_build_fix_and_rerun_pending",
+      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_110_routes_PASS",
+      "currentFullWeb": "75_files_464_tests_lint_typecheck_build_PASS_uncached",
+      "currentNativeBrowser": "17_of_17_PASS_no_retries_real_Go_Postgres18_Redis_Python_React;resources_cleaned",
       "newExactShaCI": "pending_push",
-      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_v11_checksum_immutable_PASS",
+      "currentPlanAndCodegen": "pnpm_plan_check_and_migration_v12_checksums_final_validation_pending",
       "independentPenpotPR": "250_not_written",
       "stagingProduction": "not_deployed",
       "evidenceRoot": ".runtime/schema-first-v2-evidence/"

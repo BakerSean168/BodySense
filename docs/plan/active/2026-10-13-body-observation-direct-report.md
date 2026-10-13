@@ -1,6 +1,6 @@
 # BodySense V2 · DS-BS-03 / ENG-BS-03 · Direct user-reported BodyObservation
 
-Status: **BOUNDED v11 LOCALLY VERIFIED — exact-SHA GitHub CI pending** (2026-10-13).
+Status: **BOUNDED v11 VERIFIED — GitHub exact-SHA CI 12/12 SUCCESS** (2026-10-13).
 Authority: [V2 master](./2026-10-13-v2-parallel-master.md) · [BodyState BS-D9](../../product/domain/bodystate.md#25-bodyobservationbodyhypothesisconcerngroup-与证据分级bs-d9) · [single readiness register](./v2-handoff-state.json).
 
 ## Scope: user-report observations, not objectively verified measurements

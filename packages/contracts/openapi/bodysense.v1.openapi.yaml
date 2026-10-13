@@ -115,6 +115,74 @@ paths:
         "401": *a2
         "500": *a4
         "503": *a5
+  /api/v1/body-state/observation-records/{id}/correct:
+    post:
+      operationId: correctBodyObservationRecord
+      summary: Explicitly correct exactly one current user-reported observation, preserving its old source and identity.
+      description: Authenticated direct-user correction. Stores a new original self-report and links back to the superseded record; rejects identical replacements, stale revisions and clinical/device attribution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectBodyObservationRequest"
+      responses:
+        "200":
+          description: Durable amendment receipt. This does not represent a new health event or a verified clinical value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/observation-records/{id}/withdraw:
+    post:
+      operationId: withdrawBodyObservationRecord
+      summary: Withdraw one exact user-reported observation assertion without erasing original source history.
+      description: Explicit authenticated user withdrawal removes the assertion from current source-backed reads, preserving historical audit and independently authorized source erasure semantics.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBodyObservationRequest"
+      responses:
+        "200":
+          description: One durable withdrawal receipt; exact-key replay returns its original identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/episodes:
     post:
       operationId: createBodyEpisode
@@ -3625,6 +3693,34 @@ components:
           minimum: 0
         observation:
           $ref: "#/components/schemas/RecordBodyObservationInput"
+    CorrectBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, replacement]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: "#/components/schemas/RecordBodyObservationInput"
+    WithdrawBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
     BodyObservationCommit:
       type: object
       additionalProperties: false

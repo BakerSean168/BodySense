@@ -15,6 +15,8 @@ import (
 // report may be recorded; source metadata is entirely server-owned.
 type bodyObservationApplication interface {
 	RecordDirectObservation(context.Context, uuid.UUID, model.RecordBodyObservationCommand) (*model.BodyObservationCommit, error)
+	CorrectDirectObservation(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyObservationCommand) (*model.BodyObservationCommit, error)
+	WithdrawDirectObservation(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyObservationCommand) (*model.BodyObservationCommit, error)
 	ListDirectObservations(context.Context, uuid.UUID, int64) (*model.BodyObservationPage, error)
 }
 
@@ -99,6 +101,10 @@ func classifyBodyObservationPublicError(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, model.ErrInvalidBodyObservation):
 		return http.StatusBadRequest, "INVALID_OBSERVATION", "invalid observation request"
+	case errors.Is(err, model.ErrBodyObservationNotFound):
+		return http.StatusNotFound, "OBSERVATION_NOT_FOUND", "observation is unavailable to this owner"
+	case errors.Is(err, model.ErrBodyObservationNotCurrent):
+		return http.StatusConflict, "OBSERVATION_NOT_CURRENT", "observation has already been corrected or withdrawn"
 	case errors.Is(err, model.ErrBodyObservationIdempotencyConflict):
 		return http.StatusConflict, "OBSERVATION_IDEMPOTENCY_CONFLICT", "idempotency key already authorized different input"
 	default:

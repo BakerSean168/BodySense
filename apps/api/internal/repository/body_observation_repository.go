@@ -95,7 +95,7 @@ func (r *BodyStateRepository) RecordDirectObservation(ctx context.Context, owner
 			return err
 		}
 		receipt := model.BodyObservationCommit{ID: commitID, UserID: owner,
-			IdempotencyKey: command.IdempotencyKey, Fingerprint: fingerprint,
+			IdempotencyKey: command.IdempotencyKey, Fingerprint: fingerprint, Operation: "record",
 			ObservationID: observationID, SourceEvidenceID: evidenceID,
 			Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
 		if err := tx.Create(&receipt).Error; err != nil {

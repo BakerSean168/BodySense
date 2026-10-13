@@ -36,6 +36,16 @@ func (f *observationHTTPFake) RecordDirectObservation(_ context.Context, owner u
 	f.command = command
 	return f.commit, f.err
 }
+func (f *observationHTTPFake) CorrectDirectObservation(_ context.Context, owner, target uuid.UUID, c model.AmendBodyObservationCommand) (*model.BodyObservationCommit, error) {
+	f.calls++
+	f.owner = owner
+	return f.commit, f.err
+}
+func (f *observationHTTPFake) WithdrawDirectObservation(_ context.Context, owner, target uuid.UUID, c model.AmendBodyObservationCommand) (*model.BodyObservationCommit, error) {
+	f.calls++
+	f.owner = owner
+	return f.commit, f.err
+}
 func (f *observationHTTPFake) ListDirectObservations(_ context.Context, owner uuid.UUID, cursor int64) (*model.BodyObservationPage, error) {
 	f.calls++
 	f.owner = owner

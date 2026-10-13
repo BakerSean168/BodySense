@@ -130,6 +130,7 @@ import type {
   ConversationTitleRequest,
   ConversationUpdateRequest,
   CorrectBodyFactRecordRequest,
+  CorrectBodyObservationRequest,
   CorrectBodyStateFactRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
@@ -215,7 +216,8 @@ import type {
   UpsertBodyStateFactRequest,
   UserProfileResponseOutput,
   UserUploadOutput,
-  WithdrawBodyFactRecordRequest
+  WithdrawBodyFactRecordRequest,
+  WithdrawBodyObservationRequest
 } from './model';
 
 export const getRecordBodyFactsUrl = () => {
@@ -415,6 +417,116 @@ export const listBodyObservationRecords = async (params?: ListBodyObservationRec
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyObservationRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCorrectBodyObservationRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/observation-records/${id}/correct`
+}
+
+/**
+ * Authenticated direct-user correction. Stores a new original self-report and links back to the superseded record; rejects identical replacements, stale revisions and clinical/device attribution.
+ * @summary Explicitly correct exactly one current user-reported observation, preserving its old source and identity.
+ */
+export const correctBodyObservationRecord = async (id: string,
+    correctBodyObservationRequest: CorrectBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCorrectBodyObservationRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(correctBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyObservationRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/observation-records/${id}/withdraw`
+}
+
+/**
+ * Explicit authenticated user withdrawal removes the assertion from current source-backed reads, preserving historical audit and independently authorized source erasure semantics.
+ * @summary Withdraw one exact user-reported observation assertion without erasing original source history.
+ */
+export const withdrawBodyObservationRecord = async (id: string,
+    withdrawBodyObservationRequest: WithdrawBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyObservationRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
   return data
 }
 

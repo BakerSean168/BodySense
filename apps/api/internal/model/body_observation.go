@@ -15,6 +15,8 @@ import (
 var (
 	ErrInvalidBodyObservation             = errors.New("invalid body observation")
 	ErrBodyObservationIdempotencyConflict = errors.New("body observation idempotency conflict")
+	ErrBodyObservationNotFound            = errors.New("body observation not found")
+	ErrBodyObservationNotCurrent          = errors.New("body observation is no longer current")
 )
 
 // ObservationKind is deliberately an organizational label and NOT a clinical
@@ -77,6 +79,35 @@ func (c RecordBodyObservationCommand) Validate() error {
 	return nil
 }
 
+// AmendBodyObservationCommand explicitly targets exactly one prior report.
+// Correction is an error in the old *statement*; a genuine later measurement
+// uses RecordDirectObservation with a new occurrence instead. Withdrawal is
+// not a request to erase all controlled copies of the user's health history.
+type AmendBodyObservationCommand struct {
+	IdempotencyKey   string                      `json:"idempotency_key"`
+	ExpectedRevision int64                       `json:"expected_revision"`
+	Replacement      *RecordBodyObservationInput `json:"replacement,omitempty"`
+}
+
+func (c AmendBodyObservationCommand) Validate(correction bool) error {
+	if c.IdempotencyKey == "" || len(c.IdempotencyKey) > 128 ||
+		c.IdempotencyKey != strings.TrimSpace(c.IdempotencyKey) ||
+		c.ExpectedRevision < 0 {
+		return fmt.Errorf("%w: exact idempotency key and expected revision required", ErrInvalidBodyObservation)
+	}
+	if correction {
+		if c.Replacement == nil {
+			return fmt.Errorf("%w: an explicit new self-report is required for correction", ErrInvalidBodyObservation)
+		}
+		return (RecordBodyObservationCommand{IdempotencyKey: c.IdempotencyKey,
+			ExpectedRevision: c.ExpectedRevision, Observation: *c.Replacement}).Validate()
+	}
+	if c.Replacement != nil {
+		return fmt.Errorf("%w: withdrawal cannot silently replace a report", ErrInvalidBodyObservation)
+	}
+	return nil
+}
+
 // No duplicate source statement is stored on the observation row: it lives in
 // the shared statement_evidence authoritative source and is joined for reads.
 type BodyObservation struct {
@@ -100,16 +131,18 @@ func (BodyObservation) TableName() string { return "body_observations" }
 // One exact semantic command yields one id-only durable commit. No original
 // statement, raw value or unit is copied to the generic audit/outbox.
 type BodyObservationCommit struct {
-	ID               uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID           uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
-	IdempotencyKey   string    `gorm:"not null" json:"-"`
-	Fingerprint      string    `gorm:"not null" json:"-"`
-	ObservationID    uuid.UUID `gorm:"type:uuid;not null" json:"observation_id"`
-	SourceEvidenceID uuid.UUID `gorm:"type:uuid;not null" json:"source_evidence_id"`
-	Revision         int64     `gorm:"not null" json:"revision"`
-	RevisionID       uuid.UUID `gorm:"type:uuid;not null" json:"revision_id"`
-	EventID          uuid.UUID `gorm:"type:uuid;not null" json:"event_id"`
-	CommittedAt      time.Time `gorm:"not null" json:"committed_at"`
+	ID                  uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID              uuid.UUID  `gorm:"type:uuid;not null" json:"user_id"`
+	IdempotencyKey      string     `gorm:"not null" json:"-"`
+	Fingerprint         string     `gorm:"not null" json:"-"`
+	Operation           string     `gorm:"not null" json:"-"`
+	TargetObservationID *uuid.UUID `gorm:"type:uuid" json:"-"`
+	ObservationID       uuid.UUID  `gorm:"type:uuid;not null" json:"observation_id"`
+	SourceEvidenceID    uuid.UUID  `gorm:"type:uuid;not null" json:"source_evidence_id"`
+	Revision            int64      `gorm:"not null" json:"revision"`
+	RevisionID          uuid.UUID  `gorm:"type:uuid;not null" json:"revision_id"`
+	EventID             uuid.UUID  `gorm:"type:uuid;not null" json:"event_id"`
+	CommittedAt         time.Time  `gorm:"not null" json:"committed_at"`
 }
 
 func (BodyObservationCommit) TableName() string { return "body_observation_commits" }

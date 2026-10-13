@@ -8,6 +8,12 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { clearStructuredSafetyCapture } from "./support/safety";
 
+// The genuine consultation stream explicitly permits a 60s API request.
+// Playwright's default 30s test deadline would abort that allowed request
+// on a cold shared CI browser. Match the suite's bounded 90s full-run budget;
+// do not relax individual application assertions or mask failed responses.
+test.describe.configure({ timeout: 90_000 });
+
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
 async function expectJson<T>(response: APIResponse, label: string): Promise<T> {

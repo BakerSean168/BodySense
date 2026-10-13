@@ -1,8 +1,18 @@
 import {
   listBodyObservationRecords,
   recordBodyObservation,
+  correctBodyObservationRecord,
+  withdrawBodyObservationRecord,
 } from "@/generated/api/bodysense";
 import { ListBodyObservationRecordsParams } from "@/generated/api/model/listBodyObservationRecordsParams.zod";
+import {
+  CorrectBodyObservationRequest,
+  type CorrectBodyObservationRequest as ObservationCorrection,
+} from "@/generated/api/model/correctBodyObservationRequest.zod";
+import {
+  WithdrawBodyObservationRequest,
+  type WithdrawBodyObservationRequest as ObservationWithdrawal,
+} from "@/generated/api/model/withdrawBodyObservationRequest.zod";
 import {
   RecordBodyObservationRequest,
   type RecordBodyObservationRequest as BodyObservationInput,
@@ -13,6 +23,8 @@ import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 // This adapter neither guesses a normalized clinical measurement nor submits
 // device/document provenance. Track B independently owns final visual design.
 export type BodyObservationCommand = BodyObservationInput;
+export type BodyObservationCorrection = ObservationCorrection;
+export type BodyObservationWithdrawal = ObservationWithdrawal;
 export type BodyObservationCommit = Awaited<
   ReturnType<typeof recordBodyObservation>
 >;
@@ -25,6 +37,32 @@ export const bodyObservationService = {
     withOpenApiError(() =>
       recordBodyObservation(
         RecordBodyObservationRequest.parse(input),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  // Exactly one existing observation ID; correction preserves the earlier
+  // source and produces a separate version, not a new measurement reading.
+  correct: (
+    target: string,
+    input: ObservationCorrection,
+  ): Promise<BodyObservationCommit> =>
+    withOpenApiError(() =>
+      correctBodyObservationRecord(
+        target,
+        CorrectBodyObservationRequest.parse(input),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  withdraw: (
+    target: string,
+    input: ObservationWithdrawal,
+  ): Promise<BodyObservationCommit> =>
+    withOpenApiError(() =>
+      withdrawBodyObservationRecord(
+        target,
+        WithdrawBodyObservationRequest.parse(input),
         undefined,
         openApiAuthFetch,
       ),

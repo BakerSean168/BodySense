@@ -6,7 +6,12 @@ import { useAuthStore } from "@/stores/authStore";
 import { ApiRequestError } from "@/lib/api-client";
 import { BodyFactRecords } from "./BodyFactRecords";
 
-const api = vi.hoisted(() => ({ list: vi.fn(), record: vi.fn() }));
+const api = vi.hoisted(() => ({
+  list: vi.fn(),
+  record: vi.fn(),
+  correct: vi.fn(),
+  withdraw: vi.fn(),
+}));
 vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
   bodyFactRecordsService: api,
 }));
@@ -57,6 +62,8 @@ function mount(habitsOnly = false) {
 beforeEach(() => {
   api.list.mockReset();
   api.record.mockReset();
+  api.correct.mockReset();
+  api.withdraw.mockReset();
   api.list.mockResolvedValue(page());
   useAuthStore.setState({
     user: { id: owner, email: "synthetic@example.test" },
@@ -165,6 +172,65 @@ describe("BodyFact Records and Habits", () => {
     await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
     expect(await screen.findByText("已保存你的陈述。")).toBeVisible();
     expect(api.record.mock.calls[1][0]).toEqual(original);
+  });
+
+  it("does not assert empty health history between a durable receipt and a delayed refetch", async () => {
+    let completeRead!: (result: ReturnType<typeof page>) => void;
+    const pendingRead = new Promise<ReturnType<typeof page>>((resolve) => {
+      completeRead = resolve;
+    });
+    api.list.mockResolvedValueOnce(page());
+    api.list.mockImplementationOnce(() => pendingRead);
+    api.record.mockResolvedValue(receipt);
+    mount();
+    await screen.findByText(/还没有身体记录/);
+    await userEvent.click(screen.getByRole("button", { name: /补充记录/ }));
+    await userEvent.type(
+      screen.getByLabelText("你的描述"),
+      "我今天步行二十分钟",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
+    expect(await screen.findByText("已保存你的陈述。")).toBeVisible();
+    expect(await screen.findByText(/正在同步已保存的记录/)).toBeVisible();
+    expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+    expect(api.record).toHaveBeenCalledTimes(1);
+
+    completeRead({
+      ...page([fact("activity", "我今天步行二十分钟")]),
+      current_revision: receipt.revision,
+    });
+    expect(await screen.findByText("我今天步行二十分钟")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/正在同步已保存的记录/),
+      ).not.toBeInTheDocument(),
+    );
+    expect(api.record).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides a withdrawn assertion until its receipt revision is present in the current query", async () => {
+    let finish!: (result: ReturnType<typeof page>) => void;
+    const pending = new Promise<ReturnType<typeof page>>((resolve) => {
+      finish = resolve;
+    });
+    api.list.mockResolvedValueOnce(page([fact()]));
+    api.list.mockImplementationOnce(() => pending);
+    api.withdraw.mockResolvedValue({
+      ...receipt,
+      fact_ids: [factId],
+    });
+    mount();
+    expect(await screen.findByText("我昨天肩膀不舒服")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "撤回陈述" }));
+    await userEvent.click(screen.getByRole("button", { name: "确认撤回" }));
+    expect(await screen.findByText(/陈述已撤回，历史保留/)).toBeVisible();
+    expect(screen.getByText(/正在同步已保存的记录/)).toBeVisible();
+    expect(screen.queryByText("我昨天肩膀不舒服")).not.toBeInTheDocument();
+    expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+    finish({ ...page(), current_revision: receipt.revision });
+    expect(await screen.findByText(/还没有身体记录/)).toBeVisible();
   });
 
   it("keeps a confirmed commit successful when the following refresh fails", async () => {
