@@ -89,6 +89,55 @@ describe("BodyFact Records and Habits", () => {
     expect(screen.getByText("发生时间：未说明")).toBeVisible();
   });
 
+  it("does not call a partially scanned Habits history truly empty", async () => {
+    api.list.mockResolvedValueOnce({
+      ...page([fact("symptom", "昨天肩痛")]),
+      has_more: true,
+      next_before_revision: 3,
+    });
+    api.list.mockResolvedValueOnce(
+      page([
+        {
+          ...fact("lifestyle", "一周前每天散步"),
+          id: "33333333-3333-4333-8333-333333333333",
+          created_revision: 2,
+        },
+      ]),
+    );
+    mount(true);
+    expect(
+      await screen.findByText(/当前加载的记录中没有生活习惯/),
+    ).toBeVisible();
+    expect(screen.queryByText(/尚未记录生活习惯/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "读取更早记录" }));
+    expect(await screen.findByText("一周前每天散步")).toBeVisible();
+  });
+
+  it("does not mix historical records from different revisions after a concurrent edit", async () => {
+    api.list.mockResolvedValueOnce({
+      ...page([fact("symptom", "原有肩部陈述")]),
+      has_more: true,
+      next_before_revision: 3,
+    });
+    api.list.mockResolvedValueOnce({
+      ...page([
+        {
+          ...fact("activity", "已过时的历史记录"),
+          id: "44444444-4444-4444-8444-444444444444",
+        },
+      ]),
+      current_revision: 4,
+    });
+    mount();
+    expect(await screen.findByText("原有肩部陈述")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "读取更早记录" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "翻页期间身体记录发生了变化",
+    );
+    expect(screen.queryByText("已过时的历史记录")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+  });
+
   it("shows read failure with retry, rather than an empty or fabricated record", async () => {
     api.list.mockRejectedValueOnce(new Error("offline"));
     mount();

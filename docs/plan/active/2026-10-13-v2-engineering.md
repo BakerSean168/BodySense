@@ -65,17 +65,18 @@ Per ticket: add behavior/negative tests, run focused checks, run relevant isolat
 
 **Next:** ENG-BS-01; the schema/doc/fixture discovery in ENG-BASE-01 can proceed independently of blocked Python or UI code. The separate hourly automation remains off.
 
-
 ## 2026-10-13 verified checkpoint
 
 C: ordinary user self-report / direct-edit BodyFact vertical is implemented and locally verified; next complete corrections/withdrawals and structured source answer gaps. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
-
 
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
 
-
 ### Same-Run Ask User checkpoint
 
 V3 resumes the original Run from its stored native interrupt. Answer/messages/lease/milestones commit atomically; full literal self-statements use the exact accepted-answer source. Retry, source preservation, negative safety behavior and competing updates are covered. Short contextual interpretation and whole-Conversation/retention remain open; next DS-BS-02 / ENG-BS-02 and remaining ENG-PC-01. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.
+
+### 2026-10-13 · Episode persistent evidence foundation and live Person ViewModel
+
+The existing `GET /body-state/records` DTO now feeds a pure `bodyFactViewModel.ts` consumed by real Person Records/Habits. Stale cross-page versions are detected and inconsistent older pages hidden before correction; filtering out all currently loaded habits no longer produces a false global-empty state. Migration `000007` adds stable symptom_episode identity, evidence-linked primary/secondary Fact associations and explicit-status source constraints. Go `ProjectExplicitEpisodeState` reconstructs a conservative state without timeout, assumed absence or record-time inference. See [implementation handoff](./2026-10-13-bodystate-viewmodel-episode-handoff.md). **Still no Episode admission/command/query API, Observation/Hypothesis, user-confirmed merge/split or retired legacy schema. ENG-BS-02 remains open.**

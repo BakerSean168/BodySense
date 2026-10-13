@@ -62,16 +62,13 @@ Review by verified root cause, not vague screenshots. Each finding names severit
 
 **Next:** IR-BASE-01 may run without waiting for DS-BS-01. UI styling finalization is intentionally deferred; UI behavior and safety gate acceptance is not.
 
-
 ## 2026-10-13 verified checkpoint
 
 D: #244 whitespace and training navigation/CSS regressions reproduced and fixed in the unreleased integration branch; 6 real-server E2E cases pass, including mobile geometry. See [bounded contract, changes and evidence](./2026-10-13-bodyfact-vertical-contract.md). Domain-wide gates and production release remain open.
 
-
 ### Explicit assertion amendments checkpoint
 
 Migration 000004 and authenticated generated correction/withdrawal endpoints, actual Person UI and ten affected browser E2E paths are locally verified. Read [the bounded handoff and exact acceptance evidence](./2026-10-13-bodyfact-vertical-contract.md). Episode/Observation/Hypothesis and whole-domain release gates remain open. The prior failed #247 browser run is not labelled green; the next pushed SHA must pass fresh CI.
-
 
 ## 2026-10-13 · Run-scoped tool projection root repair
 
@@ -83,10 +80,12 @@ Executed: full Go tests and vet pass (`projection-go-quality.log`); native Postg
 
 [The integration evidence matrix](./2026-10-13-bodyfact-integration-matrix.md) now maps user scenarios, source owners, regression tests and explicit limits, including remaining structured answers, Episode/Observation/Hypothesis, cross-domain erasure and final release gates. This is infrastructure correctness for the ongoing Chat migration, not completion of single-Conversation/retention or the full V2 project.
 
-
 The prior amendment milestone `7abe9daa60141ac02f7c148bf91e850b16ca55ef` passed all 12 required GitHub CI checks before the projection-root-fix commit. This is evidence for that exact prior SHA, not a substitute for the next commit's CI.
-
 
 ### Same-Run Ask User checkpoint
 
 The Ask User slice now has native checkpoint tests, 10 new PostgreSQL cases, four new browser paths and complete Go/Python/Web checks. Previous foreign-owner 500 and dark-title defects were repaired. Keep local evidence separate from exact-head CI and do not promote this partial V2 program as a finished application. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.
+
+### 2026-10-13 · Bounded episode and Person projection acceptance
+
+[ViewModel and Episode evidence matrix](./2026-10-13-bodystate-viewmodel-episode-handoff.md) tracks source fields, page freshness, proposed Penpot states and intentionally unimplemented capabilities. Isolated PostgreSQL v7 native full-up/down/up with race-enabled new Episode constraints and existing BodyFact/Ask User cases passed; Go status projector and Person component focused tests passed. Complete exact-SHA CI remains the authority after push. No Penpot editable sign-off, production-like Episode path, database reset or staging/production promotion has taken place. IR-BS-01 remains open.

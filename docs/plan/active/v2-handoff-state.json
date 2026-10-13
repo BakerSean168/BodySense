@@ -44,14 +44,14 @@
       "name": "Canonical domain-to-view-model handoff",
       "state": "in_progress",
       "next": "DS-BASE-01",
-      "details": "Authoritative owners known; complete per-window read models not accepted"
+      "details": "A typed Records/Habits ViewModel is now consumed by actual Person; bounded field/status Penpot handoff exists. Whole Episode and other domain view-models remain open."
     },
     {
       "id": "F-PENPOT",
       "name": "Editable UI source and flow inventory",
       "state": "in_progress",
       "next": "PD-BASE-01",
-      "details": "Existing #244 shell is integrated and repaired in the refactor branch; actual pending-composer desktop/mobile visuals inspected. Editable Penpot V2 domain/complete pixel sign-off remains open."
+      "details": "Reusable existing Penpot source and concrete BodyState view-model-to-component handoff available; no official Penpot Product edits or V2 Viewer sign-off in this execution."
     },
     {
       "id": "F-ACCEPTANCE",
@@ -85,27 +85,27 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Bounded Records/Habits ledger projection and command/receipt contract implemented; full Episode/Observation/Hypothesis display contract still open."
+          "details": "Records/Habits BodyFactSurfaceViewModel implemented and used, with partial history and mixed-page revision guards; EpisodeState pure typed projection and handoff documented. Full Episode/Observation/Hypothesis/Concern read models still open."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Migrations 000002..000006 cover facts, sources, amendments and original-Run answer provenance; native tests and history-preserving rollback pass. Episode/Observation/Hypothesis and legacy cutover remain open."
+          "details": "000002..000007 additive BodyFact/answer-source/episode identity and source binding migrations tested on isolated PostgreSQL 18, native up/down/up and account cascade; Episode write API, observations, hypotheses and legacy cutover missing."
         },
         "design": {
           "state": "in_progress",
           "next": "PD-BS-01",
-          "details": "Penpot shell exists; view-model-linked Records/Habits states and Viewer sign-off missing"
+          "details": "Editable Penpot baseline exists; bounded BodyState VM component/state handoff written at docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md; official editable Penpot changes and Viewer sign-off pending."
         },
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Ordinary Chat and exact accepted-answer full self-statements persist through Go provenance to Person; create/correct/withdraw tested. Short contextual interpretation, Episode/Observation/Hypothesis and Agent-authorized amendment decisions remain open."
+          "details": "Person Records/Habits now uses a pure typed view model; Go Episode state projector and DB identity/evidence constraints implemented. Full Episode authorized admission/read/merge/split, Observation, Hypothesis and replacement consumers still missing."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Four Ask User browser cases extend the prior ten real-server paths; native same-Run/answer concurrency/source-pruning and safety-ordering tests pass. Final follow-up visuals and exact-head CI are recorded per execution; not whole BodyState/release acceptance."
+          "details": "Native PostgreSQL 18 migration v7 replay and new owner/source/primary/cascade constraints with race detection PASS; focused ViewModel/Person and Go model tests PASS. Final cross-domain and visual acceptance pending."
         }
       }
     },
@@ -353,31 +353,45 @@
         "no staging/production promotion; exact new-head CI pending"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "person-bodyfact-vm-episode-v7-foundation",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/model/bodyFactViewModel.test.ts",
+        "apps/web/src/features/body-canvas/components/BodyFactRecords.test.tsx",
+        "apps/api/internal/model/episode_test.go",
+        "apps/api/internal/repository/episode_constraints_postgres_test.go",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "Episode schema/projection is staging only: no admission/write/list public endpoint",
+        "episode relations, merge/split, explicit user authorization and recurrence actions pending",
+        "Observation, user Hypothesis, ConcernGroup, legacy cleanup pending",
+        "Penpot editable V2 review not yet performed; handoff is a specification",
+        "no v2 staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
   "updatedAtUtc": "2026-10-13T06:21:48Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/V2-AskUser-20261013",
-    "baselineHead": "167ebfd725fd73f2f682e92448b3b2ad706c6684",
-    "state": "locally_verified",
-    "newCodeCi": "Live exact-head CI is authoritative in PR #247 and its bound verification comment; local test results are not a CI claim.",
-    "nextTickets": ["DS-BS-02", "ENG-BS-02", "DS-PC-01", "ENG-PC-01"],
-    "contract": "docs/plan/active/2026-10-13-ask-user-source-contract.md",
+    "owner": "ChatGPT-Web/V2-ViewModel-Episode-20261013",
+    "baselineHead": "57aaf8974a835964db074dda7b39f3b80f162a86",
+    "state": "locally_verified_ci_pending",
+    "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+    "nextTickets": ["DS-BS-02", "ENG-BS-02", "PD-BASE-01", "PD-BS-01"],
     "verification": {
-      "postgresRaceCases": 34,
-      "nativeInteractionResumeCases": 10,
-      "realServerBrowserCases": 14,
-      "webTests": 408,
-      "webFiles": 68,
-      "pythonTests": 705,
-      "goPackagesVetStaticcheck": "passed",
-      "pythonPyrightRuff": "passed",
-      "webLintTypecheckBuild": "passed",
-      "canonicalContractsAndArchitecture": "passed",
-      "postmanRoutes": 99,
-      "nativeMigrationVersion": 6,
-      "isolatedResources": "cleaned"
-    },
-    "codeSha": "6d4fd8100776d688d5f112d688cc8c9598590cb9"
+      "nativeMigrationVersion": 7,
+      "nativeMigrations": "full_up_down_up_passed",
+      "postgresConstraintsRace": "passed",
+      "bodyFactViewModelComponentTests": 16,
+      "goEpisodeModelTests": "passed",
+      "fullGoQuality": "passed",
+      "fullWebQuality": "passed",
+      "exactShaCI": "pending_after_push",
+      "standalonePenpotViewer": "not_performed"
+    }
   }
 }
