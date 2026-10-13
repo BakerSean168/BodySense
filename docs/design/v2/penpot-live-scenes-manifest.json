@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "fileId": "24d9d841-759d-81bc-8008-b6423250c2b8",
   "pageId": "ed4c6ec0-8f91-80cb-8008-c1e744bad64b",
-  "snapshotAtUtc": "2026-10-13T11:01:15Z",
+  "snapshotAtUtc": "2026-10-13T12:49:25Z",
   "phase": "PILOT_LIVE_INTERACTIONS_NOT_FULL_SIGNOFF",
-  "basis": "Actual official Penpot MCP Product page readback for scene shapes and navigation; separate CDP Viewer DOM click traces for QA. Values are synthetic design fixtures; do not imply backend mutations or whole-flow signoff.",
+  "basis": "Official Penpot MCP scene/link/overlay shape introspection plus independent Penpot Viewer Chrome CDP DOM-click observations. Data is explicitly synthetic; this is not API persistence, production scroll, or domain Flow sign-off.",
   "newComponents": [
     {
       "name": "V2 / Stage component / Desktop",
@@ -136,6 +136,182 @@
       "height": 900,
       "fixture": "synthetic-design-only",
       "windowClip": null
+    },
+    {
+      "key": "Desktop / Person / Equipment",
+      "id": "fd33df62-30bb-801e-8008-c884759b670b",
+      "canvasId": "fd33df62-30bb-801e-8008-c88478b5c9f5",
+      "windowId": "fd33df62-30bb-801e-8008-c88483a29909",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Person / Media",
+      "id": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "canvasId": "fd33df62-30bb-801e-8008-c884881530ab",
+      "windowId": "fd33df62-30bb-801e-8008-c8849286ef98",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Person / Reports",
+      "id": "fd33df62-30bb-801e-8008-c88494420477",
+      "canvasId": "fd33df62-30bb-801e-8008-c88496c3d519",
+      "windowId": "fd33df62-30bb-801e-8008-c884a13d2d5b",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Chat / Diagnosis request",
+      "id": "fd33df62-30bb-801e-8008-c885dbc97c8e",
+      "canvasId": "fd33df62-30bb-801e-8008-c885de7d0542",
+      "windowId": "fd33df62-30bb-801e-8008-c885ea784e55",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Diagnosis / History",
+      "id": "fd33df62-30bb-801e-8008-c885ebf48a13",
+      "canvasId": "fd33df62-30bb-801e-8008-c885eee63f00",
+      "windowId": "fd33df62-30bb-801e-8008-c885f9a0906d",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Training / Proposal",
+      "id": "fd33df62-30bb-801e-8008-c885fb1dd2e5",
+      "canvasId": "fd33df62-30bb-801e-8008-c885fdaf56eb",
+      "windowId": "fd33df62-30bb-801e-8008-c886096ced19",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Trainer / In progress",
+      "id": "fd33df62-30bb-801e-8008-c886d9aae3c5",
+      "canvasId": "fd33df62-30bb-801e-8008-c886dc636e7c",
+      "windowId": "fd33df62-30bb-801e-8008-c886e7f65192",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Trainer / Recovery",
+      "id": "fd33df62-30bb-801e-8008-c886e9856542",
+      "canvasId": "fd33df62-30bb-801e-8008-c886ec658ec5",
+      "windowId": "fd33df62-30bb-801e-8008-c886f7d79f3f",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Safety / Restricted",
+      "id": "fd33df62-30bb-801e-8008-c886f984fe97",
+      "canvasId": "fd33df62-30bb-801e-8008-c886fc0b2298",
+      "windowId": "fd33df62-30bb-801e-8008-c8870785f09b",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Assets / Delete scope",
+      "id": "fd33df62-30bb-801e-8008-c8872bc1f3d0",
+      "canvasId": "fd33df62-30bb-801e-8008-c8872ed995c7",
+      "windowId": "fd33df62-30bb-801e-8008-c8873a797f57",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Assets / Erasure confirm",
+      "id": "fd33df62-30bb-801e-8008-c8873c023741",
+      "canvasId": "fd33df62-30bb-801e-8008-c8873ea1420f",
+      "windowId": "fd33df62-30bb-801e-8008-c8874a202497",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Assets / Erasure retry",
+      "id": "fd33df62-30bb-801e-8008-c8874ba3f9cb",
+      "canvasId": "fd33df62-30bb-801e-8008-c8874e66d047",
+      "windowId": "fd33df62-30bb-801e-8008-c88759e78f59",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Home / trainer-active",
+      "id": "fd33df62-30bb-801e-8008-c887807c122a",
+      "canvasId": "fd33df62-30bb-801e-8008-c887832f0e6e",
+      "windowId": null,
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": null
+    },
+    {
+      "key": "Desktop / Home / trainer-paused",
+      "id": "fd33df62-30bb-801e-8008-c887a3c0938e",
+      "canvasId": "fd33df62-30bb-801e-8008-c887a6aa085a",
+      "windowId": null,
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": null
+    },
+    {
+      "key": "Desktop / Assets / Original unavailable",
+      "id": "fd33df62-30bb-801e-8008-c8885ff8ee38",
+      "canvasId": "fd33df62-30bb-801e-8008-c88862ad8d00",
+      "windowId": "fd33df62-30bb-801e-8008-c8886e98e0d5",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
+    },
+    {
+      "key": "Desktop / Body / Region",
+      "id": "fd33df62-30bb-801e-8008-c8887037a6c9",
+      "canvasId": "fd33df62-30bb-801e-8008-c8887306bdcc",
+      "windowId": "fd33df62-30bb-801e-8008-c8887eafcb7e",
+      "kind": "desktop",
+      "width": 1440,
+      "height": 900,
+      "fixture": "synthetic-design-only",
+      "windowClip": false
     },
     {
       "key": "Mobile / Home",
@@ -341,12 +517,42 @@
     {
       "kind": "local",
       "from": "Desktop / Person / Records",
+      "to": "Desktop / Person / Equipment",
+      "control": "tab-1",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d8e85fa04",
+      "targetId": "fd33df62-30bb-801e-8008-c884759b670b",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Records",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d8e85fa05",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Records",
+      "to": "Desktop / Person / Reports",
+      "control": "tab-3",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d8e85fa06",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Records",
       "to": "Desktop / Person / Habits",
       "control": "tab-4",
       "sourceId": "67dd3a44-a677-8060-8008-c86d8e85fa07",
       "targetId": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
       "action": "navigate-to",
-      "reason": "local.select_habits"
+      "reason": "local.switch_person_facet"
     },
     {
       "kind": "local",
@@ -407,6 +613,36 @@
       "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
       "action": "navigate-to",
       "reason": "local.close_window_preserve_run"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / Current",
+      "to": "Desktop / Chat / Diagnosis request",
+      "control": "primary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e48bf3b23",
+      "targetId": "fd33df62-30bb-801e-8008-c885dbc97c8e",
+      "action": "navigate-to",
+      "reason": "local.open_contextual_diagnosis_chat"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / Current",
+      "to": "Desktop / Diagnosis / History",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e48bf3b24",
+      "targetId": "fd33df62-30bb-801e-8008-c885ebf48a13",
+      "action": "navigate-to",
+      "reason": "local.view_diagnosis_history"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / Current",
+      "to": "Desktop / Chat / Diagnosis request",
+      "control": "chat",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e48bf3af0",
+      "targetId": "fd33df62-30bb-801e-8008-c885dbc97c8e",
+      "action": "navigate-to",
+      "reason": "local.open_contextual_diagnosis_chat"
     },
     {
       "kind": "local",
@@ -517,6 +753,16 @@
       "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
       "action": "navigate-to",
       "reason": "local.close_window_preserve_run"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Accepted",
+      "to": "Desktop / Training / Proposal",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e8de72c43",
+      "targetId": "fd33df62-30bb-801e-8008-c885fb1dd2e5",
+      "action": "navigate-to",
+      "reason": "local.inspect_training_proposal"
     },
     {
       "kind": "local",
@@ -666,7 +912,37 @@
       "sourceId": "67dd3a44-a677-8060-8008-c86ea8ddde09",
       "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
       "action": "navigate-to",
-      "reason": "local.select_records"
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Habits",
+      "to": "Desktop / Person / Equipment",
+      "control": "tab-1",
+      "sourceId": "67dd3a44-a677-8060-8008-c86ea8ddde0a",
+      "targetId": "fd33df62-30bb-801e-8008-c884759b670b",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Habits",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "67dd3a44-a677-8060-8008-c86ea8ddde0b",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Habits",
+      "to": "Desktop / Person / Reports",
+      "control": "tab-3",
+      "sourceId": "67dd3a44-a677-8060-8008-c86ea8ddde0c",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
     },
     {
       "kind": "local",
@@ -737,6 +1013,756 @@
       "targetId": "fd33df62-30bb-801e-8008-c87b7d634e61",
       "action": "navigate-to",
       "reason": "local.reopen_selected_draft"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Home",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c88478b97421",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.toggle_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88478b97422",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c88478b97423",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c88478b9be57",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2990e",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Person / Records",
+      "control": "tab-0",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2c622",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2c624",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Person / Reports",
+      "control": "tab-3",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2c625",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Person / Habits",
+      "control": "tab-4",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2c626",
+      "targetId": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Home",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c8848816448e",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.toggle_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c8848816b48c",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c8848816b48d",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c8848816b48e",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286ef9d",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Person / Records",
+      "control": "tab-0",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286efbf",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Person / Equipment",
+      "control": "tab-1",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286efc0",
+      "targetId": "fd33df62-30bb-801e-8008-c884759b670b",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Person / Reports",
+      "control": "tab-3",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286efc2",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Person / Habits",
+      "control": "tab-4",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286efc3",
+      "targetId": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Home",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c88496c5519a",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.toggle_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88496c5519b",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c88496c5519c",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c88496c5519d",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_module"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d60",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_person_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Records",
+      "control": "tab-0",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d82",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Equipment",
+      "control": "tab-1",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d83",
+      "targetId": "fd33df62-30bb-801e-8008-c884759b670b",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d84",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Habits",
+      "control": "tab-4",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d86",
+      "targetId": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
+      "action": "navigate-to",
+      "reason": "local.switch_person_facet"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c885de7e6f65",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c885de7e6f66",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c885de7e6f67",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Home",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c885de7e6f68",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c885ea784e59",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Person / Records",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c885ea784e76",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.open_records_no_submission"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c885eee797e3",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c885eee797e4",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c885eee797e5",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c885eee797e6",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c885f9a09071",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c885f9a0908d",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.return_current_diagnosis"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c885fdb0d2a0",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c885fdb0d2a1",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c885fdb0d2a2",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c885fdb0d2a3",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_window_no_domain_write"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886096ced1d",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_unaccepted_proposal_no_change"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Trainer / In progress",
+      "to": "Desktop / Home / trainer-active",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886e7f65196",
+      "targetId": "fd33df62-30bb-801e-8008-c887807c122a",
+      "action": "navigate-to",
+      "reason": "local.hide_trainer_not_end_session"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Trainer / Recovery",
+      "to": "Desktop / Home / trainer-paused",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886f7d79f43",
+      "targetId": "fd33df62-30bb-801e-8008-c887a3c0938e",
+      "action": "navigate-to",
+      "reason": "local.hide_trainer_not_end_session"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Safety / Restricted",
+      "to": "Desktop / Chat / Draft",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8870785f0c0",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.ask_about_restriction"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Safety / Restricted",
+      "to": "Desktop / Training / Accepted",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8870785f0c1",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.view_plan_still_accepted"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Delete scope",
+      "to": "Desktop / Person / Reports",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c8873a797f5b",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.cancel_scope_preview"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Delete scope",
+      "to": "Desktop / Assets / Erasure confirm",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8873a797f7a",
+      "targetId": "fd33df62-30bb-801e-8008-c8873c023741",
+      "action": "navigate-to",
+      "reason": "local.review_full_erasure_scope_without_delete"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Erasure confirm",
+      "to": "Desktop / Person / Reports",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c8874a20249b",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.close_erasure_confirmation_without_delete"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Erasure confirm",
+      "to": "Desktop / Person / Reports",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8874a2024b8",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.cancel_erasure_without_delete"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Erasure retry",
+      "to": "Desktop / Person / Reports",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c88759e78f5d",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.close_progress_without_claiming_completion"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Erasure retry",
+      "to": "Desktop / Person / Reports",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c88759e78f7c",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.view_reports_while_cleanup_retryable"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a74",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Trainer / In progress",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a75",
+      "targetId": "fd33df62-30bb-801e-8008-c886d9aae3c5",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a76",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a77",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee07",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Trainer / Recovery",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee08",
+      "targetId": "fd33df62-30bb-801e-8008-c886e9856542",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee09",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee0a",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.reopen_window_preserve_trainer_state"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c88862af2cf1",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88862af2cf2",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c88862af5370",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c88862af5371",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Person / Reports",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c8886e98e0d9",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.close_original_availability_notice"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Person / Reports",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8886e98e0f7",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "action": "navigate-to",
+      "reason": "local.return_to_report_list_original_missing"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Person / Records",
+      "control": "dock:me",
+      "sourceId": "fd33df62-30bb-801e-8008-c8887307e394",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c888730833c3",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "dock:assessment",
+      "sourceId": "fd33df62-30bb-801e-8008-c888730833c4",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Chat / Draft",
+      "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c888730833c5",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.switch_module_no_domain_mutation"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c8887eafcb82",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "action": "navigate-to",
+      "reason": "local.close_selected_body_region_window"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Chat / Draft",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8887eb02a18",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "action": "navigate-to",
+      "reason": "local.ask_about_selected_body_region"
+    },
+    {
+      "kind": "local",
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Person / Records",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8887eb02a19",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "action": "navigate-to",
+      "reason": "local.view_body_region_records"
     },
     {
       "kind": "local",
@@ -1011,203 +2037,1422 @@
   ],
   "flowStarts": [
     {
-      "name": "V2 / Desktop / Shell and dock",
-      "startKey": "Desktop / Home",
-      "startId": "67dd3a44-a677-8060-8008-c86d4ba246c9"
+      "name": "V2 / Trainer / Active session persisted",
+      "startKey": "Desktop / Home / trainer-active",
+      "startId": "fd33df62-30bb-801e-8008-c887807c122a",
+      "startName": "V2 / Scene / Desktop / Home / trainer-active"
     },
     {
-      "name": "V2 / Mobile / Shell and dock",
-      "startKey": "Mobile / Home",
-      "startId": "67dd3a44-a677-8060-8008-c873c516b867"
+      "name": "V2 / Trainer / Paused recover",
+      "startKey": "Desktop / Home / trainer-paused",
+      "startId": "fd33df62-30bb-801e-8008-c887a3c0938e",
+      "startName": "V2 / Scene / Desktop / Home / trainer-paused"
     },
     {
-      "name": "V2 / Chat / Existing Run waiting for user",
-      "startKey": "Desktop / Chat / Ask User",
-      "startId": "fd33df62-30bb-801e-8008-c87b6e50103c"
+      "name": "V2 / UserAsset / Original unavailable history remains",
+      "startKey": "Desktop / Assets / Original unavailable",
+      "startId": "fd33df62-30bb-801e-8008-c8885ff8ee38",
+      "startName": "V2 / Scene / Desktop / Assets / Original unavailable"
     },
     {
-      "name": "V2 / Desktop / Reopen pending Run",
-      "startKey": "Desktop / Home / chat-waiting",
-      "startId": "fd33df62-30bb-801e-8008-c87b5428d46c"
+      "name": "V2 / Person / Five editable facets",
+      "startKey": "Desktop / Person / Records",
+      "startId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "startName": "V2 / Scene / Desktop / Person / Records"
+    },
+    {
+      "name": "V2 / Training / Proposal review no implicit acceptance",
+      "startKey": "Desktop / Training / Accepted",
+      "startId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "startName": "V2 / Scene / Desktop / Training / Accepted"
+    },
+    {
+      "name": "V2 / UserAsset / Cleanup incomplete never claim success",
+      "startKey": "Desktop / Assets / Erasure retry",
+      "startId": "fd33df62-30bb-801e-8008-c8874ba3f9cb",
+      "startName": "V2 / Scene / Desktop / Assets / Erasure retry"
+    },
+    {
+      "name": "V2 / Safety / Scoped restriction without auto clearance",
+      "startKey": "Desktop / Safety / Restricted",
+      "startId": "fd33df62-30bb-801e-8008-c886f984fe97",
+      "startName": "V2 / Scene / Desktop / Safety / Restricted"
     },
     {
       "name": "V2 / Mobile / Reopen pending Run",
       "startKey": "Mobile / Home / chat-waiting",
-      "startId": "fd33df62-30bb-801e-8008-c87ab1458d48"
+      "startId": "fd33df62-30bb-801e-8008-c87ab1458d48",
+      "startName": "V2 / Scene / Mobile / Home / chat-waiting"
     },
     {
-      "name": "V2 / Desktop / Resume selected draft",
-      "startKey": "Desktop / Home / chat-selected",
-      "startId": "fd33df62-30bb-801e-8008-c87d2b22e9c2"
+      "name": "V2 / Body / Selected region no automatic fact",
+      "startKey": "Desktop / Body / Region",
+      "startId": "fd33df62-30bb-801e-8008-c8887037a6c9",
+      "startName": "V2 / Scene / Desktop / Body / Region"
+    },
+    {
+      "name": "V2 / Desktop / Shell and dock",
+      "startKey": "Desktop / Home",
+      "startId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "startName": "V2 / Scene / Desktop / Home"
+    },
+    {
+      "name": "V2 / UserAsset / Explicit removal scope preview",
+      "startKey": "Desktop / Assets / Delete scope",
+      "startId": "fd33df62-30bb-801e-8008-c8872bc1f3d0",
+      "startName": "V2 / Scene / Desktop / Assets / Delete scope"
+    },
+    {
+      "name": "V2 / UserAsset / Media and reports share file",
+      "startKey": "Desktop / Person / Media",
+      "startId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "startName": "V2 / Scene / Desktop / Person / Media"
     },
     {
       "name": "V2 / Mobile / Resume selected draft",
       "startKey": "Mobile / Home / chat-selected",
-      "startId": "fd33df62-30bb-801e-8008-c87d2f9d6b56"
+      "startId": "fd33df62-30bb-801e-8008-c87d2f9d6b56",
+      "startName": "V2 / Scene / Mobile / Home / chat-selected"
+    },
+    {
+      "name": "V2 / Chat / Existing Run waiting for user",
+      "startKey": "Desktop / Chat / Ask User",
+      "startId": "fd33df62-30bb-801e-8008-c87b6e50103c",
+      "startName": "V2 / Scene / Desktop / Chat / Ask User"
+    },
+    {
+      "name": "V2 / Diagnosis / Context chat and evidence history",
+      "startKey": "Desktop / Diagnosis / Current",
+      "startId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "startName": "V2 / Scene / Desktop / Diagnosis / Current"
+    },
+    {
+      "name": "V2 / Desktop / Reopen pending Run",
+      "startKey": "Desktop / Home / chat-waiting",
+      "startId": "fd33df62-30bb-801e-8008-c87b5428d46c",
+      "startName": "V2 / Scene / Desktop / Home / chat-waiting"
+    },
+    {
+      "name": "V2 / Mobile / Shell and dock",
+      "startKey": "Mobile / Home",
+      "startId": "67dd3a44-a677-8060-8008-c873c516b867",
+      "startName": "V2 / Scene / Mobile / Home"
+    },
+    {
+      "name": "V2 / Desktop / Resume selected draft",
+      "startKey": "Desktop / Home / chat-selected",
+      "startId": "fd33df62-30bb-801e-8008-c87d2b22e9c2",
+      "startName": "V2 / Scene / Desktop / Home / chat-selected"
     }
   ],
+  "flowStartEvidence": "Official penpot.currentPage.flows startingBoard readback",
+  "identityOverlay": {
+    "overlay": {
+      "id": "fd33df62-30bb-801e-8008-c88592149e08",
+      "name": "V2 / Overlay / Person identity",
+      "width": 380,
+      "height": 432,
+      "query": "person.profile",
+      "fixture": "synthetic-design-only",
+      "closeSourceId": "fd33df62-30bb-801e-8008-c885b2d45e2b",
+      "closeAction": "close-overlay"
+    },
+    "openers": [
+      {
+        "from": "Desktop / Person / Records",
+        "sourceId": "67dd3a44-a677-8060-8008-c86d8e85b800",
+        "destinationId": "fd33df62-30bb-801e-8008-c88592149e08",
+        "type": "open-overlay",
+        "closeWhenClickOutside": false,
+        "background": false
+      },
+      {
+        "from": "Desktop / Person / Equipment",
+        "sourceId": "fd33df62-30bb-801e-8008-c88483a2990f",
+        "destinationId": "fd33df62-30bb-801e-8008-c88592149e08",
+        "type": "open-overlay",
+        "closeWhenClickOutside": false,
+        "background": false
+      },
+      {
+        "from": "Desktop / Person / Media",
+        "sourceId": "fd33df62-30bb-801e-8008-c8849286ef9e",
+        "destinationId": "fd33df62-30bb-801e-8008-c88592149e08",
+        "type": "open-overlay",
+        "closeWhenClickOutside": false,
+        "background": false
+      },
+      {
+        "from": "Desktop / Person / Reports",
+        "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d61",
+        "destinationId": "fd33df62-30bb-801e-8008-c88592149e08",
+        "type": "open-overlay",
+        "closeWhenClickOutside": false,
+        "background": false
+      },
+      {
+        "from": "Desktop / Person / Habits",
+        "sourceId": "67dd3a44-a677-8060-8008-c86ea8dddde8",
+        "destinationId": "fd33df62-30bb-801e-8008-c88592149e08",
+        "type": "open-overlay",
+        "closeWhenClickOutside": false,
+        "background": false
+      }
+    ],
+    "viewerQa": {
+      "status": "passed",
+      "observedAtUtc": "2026-10-13T11:47:19.047Z",
+      "baseScene": "Desktop / Person / Records",
+      "steps": [
+        {
+          "action": "open-overlay",
+          "sourceId": "67dd3a44-a677-8060-8008-c86d8e85b800",
+          "targetId": "fd33df62-30bb-801e-8008-c88592149e08",
+          "evidence": "Chrome Penpot Viewer DOM click; open-overlay; saved rect {'x': 400, 'y': 168, 'width': 674, 'height': 50, 'target': 'rect'}"
+        },
+        {
+          "action": "close-overlay",
+          "sourceId": "fd33df62-30bb-801e-8008-c885b2d45e2b",
+          "targetId": "fd33df62-30bb-801e-8008-c88592149e08",
+          "evidence": "Chrome Penpot Viewer DOM click; close-overlay; saved rect {'x': 720, 'y': 670, 'width': 350, 'height': 46, 'target': 'text'}"
+        }
+      ]
+    }
+  },
   "viewerQa": [
     {
       "status": "passed",
+      "case": "mobile-chat-default",
+      "step": 1,
       "from": "Mobile / Home",
       "to": "Mobile / Chat / Draft",
       "control": "dock:assistant",
+      "sourceId": "67dd3a44-a677-8060-8008-c873e0752ec5",
+      "targetId": "fd33df62-30bb-801e-8008-c87a378dde9a",
       "observedAtUtc": "2026-10-13T10:49:02.038Z",
-      "evidence": "Penpot Viewer real DOM click 1/2 in mobile-chat-default; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c873e0752ec5"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c873e0752ec5 and displayed Mobile / Chat / Draft on step 1 of case mobile-chat-default; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-chat-default",
+      "step": 2,
       "from": "Mobile / Chat / Draft",
       "to": "Mobile / Home",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87a378e214d",
+      "targetId": "67dd3a44-a677-8060-8008-c873c516b867",
       "observedAtUtc": "2026-10-13T10:49:02.038Z",
-      "evidence": "Penpot Viewer real DOM click 2/2 in mobile-chat-default; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87a378e214d"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87a378e214d and displayed Mobile / Home on step 2 of case mobile-chat-default; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-chat-resume",
+      "step": 1,
       "from": "Mobile / Home / chat-waiting",
       "to": "Mobile / Chat / Ask User",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87ab3ef5f2a",
+      "targetId": "fd33df62-30bb-801e-8008-c879856c77b0",
       "observedAtUtc": "2026-10-13T10:49:35.616Z",
-      "evidence": "Penpot Viewer real DOM click 1/4 in mobile-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87ab3ef5f2a"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87ab3ef5f2a and displayed Mobile / Chat / Ask User on step 1 of case mobile-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-chat-resume",
+      "step": 2,
       "from": "Mobile / Chat / Ask User",
       "to": "Mobile / Home / chat-waiting",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87993a0481c",
+      "targetId": "fd33df62-30bb-801e-8008-c87ab1458d48",
       "observedAtUtc": "2026-10-13T10:49:35.616Z",
-      "evidence": "Penpot Viewer real DOM click 2/4 in mobile-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87993a0481c"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87993a0481c and displayed Mobile / Home / chat-waiting on step 2 of case mobile-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-chat-resume",
+      "step": 3,
       "from": "Mobile / Home / chat-waiting",
       "to": "Mobile / Chat / Ask User",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87ab3ef5f2a",
+      "targetId": "fd33df62-30bb-801e-8008-c879856c77b0",
       "observedAtUtc": "2026-10-13T10:49:35.616Z",
-      "evidence": "Penpot Viewer real DOM click 3/4 in mobile-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87ab3ef5f2a"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87ab3ef5f2a and displayed Mobile / Chat / Ask User on step 3 of case mobile-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-chat-resume",
+      "step": 4,
       "from": "Mobile / Chat / Ask User",
       "to": "Mobile / Chat / Answer selected",
       "control": "option-1",
+      "sourceId": "fd33df62-30bb-801e-8008-c87993a08fcb",
+      "targetId": "fd33df62-30bb-801e-8008-c87ab510738d",
       "observedAtUtc": "2026-10-13T10:49:35.616Z",
-      "evidence": "Penpot Viewer real DOM click 4/4 in mobile-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87993a08fcb"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87993a08fcb and displayed Mobile / Chat / Answer selected on step 4 of case mobile-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-dock-switch",
+      "step": 1,
       "from": "Desktop / Person / Records",
       "to": "Desktop / Diagnosis / Current",
       "control": "dock:assessment",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d84438187",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
       "observedAtUtc": "2026-10-13T10:49:58.296Z",
-      "evidence": "Penpot Viewer real DOM click 1/3 in desktop-dock-switch; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c86d84438187"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86d84438187 and displayed Desktop / Diagnosis / Current on step 1 of case desktop-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-dock-switch",
+      "step": 2,
       "from": "Desktop / Diagnosis / Current",
       "to": "Desktop / Training / Accepted",
       "control": "dock:training",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e3e92c206",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
       "observedAtUtc": "2026-10-13T10:49:58.296Z",
-      "evidence": "Penpot Viewer real DOM click 2/3 in desktop-dock-switch; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c86e3e92c206"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e3e92c206 and displayed Desktop / Training / Accepted on step 2 of case desktop-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-dock-switch",
+      "step": 3,
       "from": "Desktop / Training / Accepted",
       "to": "Desktop / Chat / Draft",
       "control": "dock:assistant",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e82f4d566",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
       "observedAtUtc": "2026-10-13T10:49:58.296Z",
-      "evidence": "Penpot Viewer real DOM click 3/3 in desktop-dock-switch; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c86e82f4d566"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e82f4d566 and displayed Desktop / Chat / Draft on step 3 of case desktop-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-dock-switch",
+      "step": 1,
       "from": "Mobile / Home",
       "to": "Mobile / Diagnosis / Current",
       "control": "dock:assessment",
+      "sourceId": "67dd3a44-a677-8060-8008-c873e0752ec4",
+      "targetId": "fd33df62-30bb-801e-8008-c8794c5b3184",
       "observedAtUtc": "2026-10-13T10:51:04.551Z",
-      "evidence": "Penpot Viewer real DOM click 1/3 in mobile-dock-switch; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c873e0752ec4"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c873e0752ec4 and displayed Mobile / Diagnosis / Current on step 1 of case mobile-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-dock-switch",
+      "step": 2,
       "from": "Mobile / Diagnosis / Current",
       "to": "Mobile / Home",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87974808795",
+      "targetId": "67dd3a44-a677-8060-8008-c873c516b867",
       "observedAtUtc": "2026-10-13T10:51:04.551Z",
-      "evidence": "Penpot Viewer real DOM click 2/3 in mobile-dock-switch; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87974808795"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87974808795 and displayed Mobile / Home on step 2 of case mobile-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-dock-switch",
+      "step": 3,
       "from": "Mobile / Home",
       "to": "Mobile / Training / Accepted",
       "control": "dock:training",
+      "sourceId": "67dd3a44-a677-8060-8008-c873e074eed9",
+      "targetId": "fd33df62-30bb-801e-8008-c87976194f14",
       "observedAtUtc": "2026-10-13T10:51:04.551Z",
-      "evidence": "Penpot Viewer real DOM click 3/3 in mobile-dock-switch; observed destination scene name and live browser DOM; hotspot 67dd3a44-a677-8060-8008-c873e074eed9"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c873e074eed9 and displayed Mobile / Training / Accepted on step 3 of case mobile-dock-switch; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-selected-draft-resume",
+      "step": 1,
       "from": "Mobile / Chat / Answer selected",
       "to": "Mobile / Home / chat-selected",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87ac3aae80b",
+      "targetId": "fd33df62-30bb-801e-8008-c87d2f9d6b56",
       "observedAtUtc": "2026-10-13T10:54:30.497Z",
-      "evidence": "Penpot Viewer real DOM click 1/2 in mobile-selected-draft-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87ac3aae80b"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87ac3aae80b and displayed Mobile / Home / chat-selected on step 1 of case mobile-selected-draft-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "mobile-selected-draft-resume",
+      "step": 2,
       "from": "Mobile / Home / chat-selected",
       "to": "Mobile / Chat / Answer selected",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87d323b47ff",
+      "targetId": "fd33df62-30bb-801e-8008-c87ab510738d",
       "observedAtUtc": "2026-10-13T10:54:30.497Z",
-      "evidence": "Penpot Viewer real DOM click 2/2 in mobile-selected-draft-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87d323b47ff"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87d323b47ff and displayed Mobile / Chat / Answer selected on step 2 of case mobile-selected-draft-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-selected-draft-resume",
+      "step": 1,
       "from": "Desktop / Chat / Answer selected",
       "to": "Desktop / Home / chat-selected",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87b8aa70ec8",
+      "targetId": "fd33df62-30bb-801e-8008-c87d2b22e9c2",
       "observedAtUtc": "2026-10-13T10:54:41.958Z",
-      "evidence": "Penpot Viewer real DOM click 1/2 in desktop-selected-draft-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87b8aa70ec8"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87b8aa70ec8 and displayed Desktop / Home / chat-selected on step 1 of case desktop-selected-draft-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-selected-draft-resume",
+      "step": 2,
       "from": "Desktop / Home / chat-selected",
       "to": "Desktop / Chat / Answer selected",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87d2e05a7f8",
+      "targetId": "fd33df62-30bb-801e-8008-c87b7d634e61",
       "observedAtUtc": "2026-10-13T10:54:41.958Z",
-      "evidence": "Penpot Viewer real DOM click 2/2 in desktop-selected-draft-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87d2e05a7f8"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87d2e05a7f8 and displayed Desktop / Chat / Answer selected on step 2 of case desktop-selected-draft-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-chat-resume",
+      "step": 1,
       "from": "Desktop / Home / chat-waiting",
       "to": "Desktop / Chat / Ask User",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87b6d3f4a4b",
+      "targetId": "fd33df62-30bb-801e-8008-c87b6e50103c",
       "observedAtUtc": "2026-10-13T11:00:54.377Z",
-      "evidence": "Penpot Viewer real DOM click 1/4 in desktop-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87b6d3f4a4b"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87b6d3f4a4b and displayed Desktop / Chat / Ask User on step 1 of case desktop-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-chat-resume",
+      "step": 2,
       "from": "Desktop / Chat / Ask User",
       "to": "Desktop / Home / chat-waiting",
       "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c87b7bd76585",
+      "targetId": "fd33df62-30bb-801e-8008-c87b5428d46c",
       "observedAtUtc": "2026-10-13T11:00:54.377Z",
-      "evidence": "Penpot Viewer real DOM click 2/4 in desktop-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87b7bd76585"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87b7bd76585 and displayed Desktop / Home / chat-waiting on step 2 of case desktop-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-chat-resume",
+      "step": 3,
       "from": "Desktop / Home / chat-waiting",
       "to": "Desktop / Chat / Ask User",
       "control": "dock:assistant",
+      "sourceId": "fd33df62-30bb-801e-8008-c87b6d3f4a4b",
+      "targetId": "fd33df62-30bb-801e-8008-c87b6e50103c",
       "observedAtUtc": "2026-10-13T11:00:54.377Z",
-      "evidence": "Penpot Viewer real DOM click 3/4 in desktop-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87b6d3f4a4b"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87b6d3f4a4b and displayed Desktop / Chat / Ask User on step 3 of case desktop-chat-resume; captured by Chrome CDP"
     },
     {
       "status": "passed",
+      "case": "desktop-chat-resume",
+      "step": 4,
       "from": "Desktop / Chat / Ask User",
       "to": "Desktop / Chat / Answer selected",
       "control": "option-1",
+      "sourceId": "fd33df62-30bb-801e-8008-c87b7bd76598",
+      "targetId": "fd33df62-30bb-801e-8008-c87b7d634e61",
       "observedAtUtc": "2026-10-13T11:00:54.377Z",
-      "evidence": "Penpot Viewer real DOM click 4/4 in desktop-chat-resume; observed destination scene name and live browser DOM; hotspot fd33df62-30bb-801e-8008-c87b7bd76598"
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c87b7bd76598 and displayed Desktop / Chat / Answer selected on step 4 of case desktop-chat-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-person-five-tabs",
+      "step": 1,
+      "from": "Desktop / Person / Records",
+      "to": "Desktop / Person / Equipment",
+      "control": "tab-1",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d8e85fa04",
+      "targetId": "fd33df62-30bb-801e-8008-c884759b670b",
+      "observedAtUtc": "2026-10-13T11:43:39.095Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86d8e85fa04 and displayed Desktop / Person / Equipment on step 1 of case desktop-person-five-tabs; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-person-five-tabs",
+      "step": 2,
+      "from": "Desktop / Person / Equipment",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "fd33df62-30bb-801e-8008-c88483a2c624",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "observedAtUtc": "2026-10-13T11:43:39.095Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c88483a2c624 and displayed Desktop / Person / Media on step 2 of case desktop-person-five-tabs; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-person-five-tabs",
+      "step": 3,
+      "from": "Desktop / Person / Media",
+      "to": "Desktop / Person / Reports",
+      "control": "tab-3",
+      "sourceId": "fd33df62-30bb-801e-8008-c8849286efc2",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "observedAtUtc": "2026-10-13T11:43:39.095Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8849286efc2 and displayed Desktop / Person / Reports on step 3 of case desktop-person-five-tabs; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-person-five-tabs",
+      "step": 4,
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Habits",
+      "control": "tab-4",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d86",
+      "targetId": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
+      "observedAtUtc": "2026-10-13T11:43:39.095Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c884a13d2d86 and displayed Desktop / Person / Habits on step 4 of case desktop-person-five-tabs; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-person-five-tabs",
+      "step": 5,
+      "from": "Desktop / Person / Habits",
+      "to": "Desktop / Person / Records",
+      "control": "tab-0",
+      "sourceId": "67dd3a44-a677-8060-8008-c86ea8ddde09",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "observedAtUtc": "2026-10-13T11:43:39.095Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86ea8ddde09 and displayed Desktop / Person / Records on step 5 of case desktop-person-five-tabs; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-diagnosis-history-and-chat",
+      "step": 1,
+      "from": "Desktop / Diagnosis / Current",
+      "to": "Desktop / Diagnosis / History",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e48bf3b24",
+      "targetId": "fd33df62-30bb-801e-8008-c885ebf48a13",
+      "observedAtUtc": "2026-10-13T12:36:21.108Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e48bf3b24 and displayed Desktop / Diagnosis / History on step 1 of case desktop-diagnosis-history-and-chat; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-diagnosis-history-and-chat",
+      "step": 2,
+      "from": "Desktop / Diagnosis / History",
+      "to": "Desktop / Diagnosis / Current",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c885f9a0908d",
+      "targetId": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+      "observedAtUtc": "2026-10-13T12:36:21.108Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c885f9a0908d and displayed Desktop / Diagnosis / Current on step 2 of case desktop-diagnosis-history-and-chat; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-diagnosis-history-and-chat",
+      "step": 3,
+      "from": "Desktop / Diagnosis / Current",
+      "to": "Desktop / Chat / Diagnosis request",
+      "control": "chat",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e48bf3af0",
+      "targetId": "fd33df62-30bb-801e-8008-c885dbc97c8e",
+      "observedAtUtc": "2026-10-13T12:36:21.108Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e48bf3af0 and displayed Desktop / Chat / Diagnosis request on step 3 of case desktop-diagnosis-history-and-chat; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-diagnosis-history-and-chat",
+      "step": 4,
+      "from": "Desktop / Chat / Diagnosis request",
+      "to": "Desktop / Person / Records",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c885ea784e76",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "observedAtUtc": "2026-10-13T12:36:21.108Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c885ea784e76 and displayed Desktop / Person / Records on step 4 of case desktop-diagnosis-history-and-chat; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-training-proposal-review",
+      "step": 1,
+      "from": "Desktop / Training / Accepted",
+      "to": "Desktop / Training / Proposal",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e8de72c43",
+      "targetId": "fd33df62-30bb-801e-8008-c885fb1dd2e5",
+      "observedAtUtc": "2026-10-13T12:36:36.299Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e8de72c43 and displayed Desktop / Training / Proposal on step 1 of case desktop-training-proposal-review; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-training-proposal-review",
+      "step": 2,
+      "from": "Desktop / Training / Proposal",
+      "to": "Desktop / Home",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886096ced1d",
+      "targetId": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+      "observedAtUtc": "2026-10-13T12:36:36.299Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c886096ced1d and displayed Desktop / Home on step 2 of case desktop-training-proposal-review; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-training-proposal-review",
+      "step": 3,
+      "from": "Desktop / Home",
+      "to": "Desktop / Training / Accepted",
+      "control": "dock:training",
+      "sourceId": "67dd3a44-a677-8060-8008-c86d65050213",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "observedAtUtc": "2026-10-13T12:36:36.299Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86d65050213 and displayed Desktop / Training / Accepted on step 3 of case desktop-training-proposal-review; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-active-resume",
+      "step": 1,
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Trainer / In progress",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a75",
+      "targetId": "fd33df62-30bb-801e-8008-c886d9aae3c5",
+      "observedAtUtc": "2026-10-13T12:39:53.844Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c88783308a75 and displayed Desktop / Trainer / In progress on step 1 of case desktop-trainer-active-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-active-resume",
+      "step": 2,
+      "from": "Desktop / Trainer / In progress",
+      "to": "Desktop / Home / trainer-active",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886e7f65196",
+      "targetId": "fd33df62-30bb-801e-8008-c887807c122a",
+      "observedAtUtc": "2026-10-13T12:39:53.844Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c886e7f65196 and displayed Desktop / Home / trainer-active on step 2 of case desktop-trainer-active-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-active-resume",
+      "step": 3,
+      "from": "Desktop / Home / trainer-active",
+      "to": "Desktop / Trainer / In progress",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c88783308a75",
+      "targetId": "fd33df62-30bb-801e-8008-c886d9aae3c5",
+      "observedAtUtc": "2026-10-13T12:39:53.844Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c88783308a75 and displayed Desktop / Trainer / In progress on step 3 of case desktop-trainer-active-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-paused-resume",
+      "step": 1,
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Trainer / Recovery",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee08",
+      "targetId": "fd33df62-30bb-801e-8008-c886e9856542",
+      "observedAtUtc": "2026-10-13T12:40:11.566Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c887a6abee08 and displayed Desktop / Trainer / Recovery on step 1 of case desktop-trainer-paused-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-paused-resume",
+      "step": 2,
+      "from": "Desktop / Trainer / Recovery",
+      "to": "Desktop / Home / trainer-paused",
+      "control": "close",
+      "sourceId": "fd33df62-30bb-801e-8008-c886f7d79f43",
+      "targetId": "fd33df62-30bb-801e-8008-c887a3c0938e",
+      "observedAtUtc": "2026-10-13T12:40:11.566Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c886f7d79f43 and displayed Desktop / Home / trainer-paused on step 2 of case desktop-trainer-paused-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-trainer-paused-resume",
+      "step": 3,
+      "from": "Desktop / Home / trainer-paused",
+      "to": "Desktop / Trainer / Recovery",
+      "control": "dock:training",
+      "sourceId": "fd33df62-30bb-801e-8008-c887a6abee08",
+      "targetId": "fd33df62-30bb-801e-8008-c886e9856542",
+      "observedAtUtc": "2026-10-13T12:40:11.566Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c887a6abee08 and displayed Desktop / Trainer / Recovery on step 3 of case desktop-trainer-paused-resume; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-safety-restricted-view",
+      "step": 1,
+      "from": "Desktop / Safety / Restricted",
+      "to": "Desktop / Training / Accepted",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8870785f0c1",
+      "targetId": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+      "observedAtUtc": "2026-10-13T12:40:47.451Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8870785f0c1 and displayed Desktop / Training / Accepted on step 1 of case desktop-safety-restricted-view; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-safety-restricted-view",
+      "step": 2,
+      "from": "Desktop / Training / Accepted",
+      "to": "Desktop / Training / Proposal",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e8de72c43",
+      "targetId": "fd33df62-30bb-801e-8008-c885fb1dd2e5",
+      "observedAtUtc": "2026-10-13T12:40:47.451Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e8de72c43 and displayed Desktop / Training / Proposal on step 2 of case desktop-safety-restricted-view; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-erasure-scope-review-cancel",
+      "step": 1,
+      "from": "Desktop / Assets / Delete scope",
+      "to": "Desktop / Assets / Erasure confirm",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8873a797f7a",
+      "targetId": "fd33df62-30bb-801e-8008-c8873c023741",
+      "observedAtUtc": "2026-10-13T12:41:04.078Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8873a797f7a and displayed Desktop / Assets / Erasure confirm on step 1 of case desktop-erasure-scope-review-cancel; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-erasure-scope-review-cancel",
+      "step": 2,
+      "from": "Desktop / Assets / Erasure confirm",
+      "to": "Desktop / Person / Reports",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8874a2024b8",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "observedAtUtc": "2026-10-13T12:41:04.078Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8874a2024b8 and displayed Desktop / Person / Reports on step 2 of case desktop-erasure-scope-review-cancel; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-erasure-scope-review-cancel",
+      "step": 3,
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d84",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "observedAtUtc": "2026-10-13T12:41:04.078Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c884a13d2d84 and displayed Desktop / Person / Media on step 3 of case desktop-erasure-scope-review-cancel; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-erasure-incomplete-return",
+      "step": 1,
+      "from": "Desktop / Assets / Erasure retry",
+      "to": "Desktop / Person / Reports",
+      "control": "secondary",
+      "sourceId": "fd33df62-30bb-801e-8008-c88759e78f7c",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "observedAtUtc": "2026-10-13T12:41:21.715Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c88759e78f7c and displayed Desktop / Person / Reports on step 1 of case desktop-erasure-incomplete-return; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-erasure-incomplete-return",
+      "step": 2,
+      "from": "Desktop / Person / Reports",
+      "to": "Desktop / Person / Media",
+      "control": "tab-2",
+      "sourceId": "fd33df62-30bb-801e-8008-c884a13d2d84",
+      "targetId": "fd33df62-30bb-801e-8008-c88485672ac0",
+      "observedAtUtc": "2026-10-13T12:41:21.715Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c884a13d2d84 and displayed Desktop / Person / Media on step 2 of case desktop-erasure-incomplete-return; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-original-unavailable-return",
+      "step": 1,
+      "from": "Desktop / Assets / Original unavailable",
+      "to": "Desktop / Person / Reports",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8886e98e0f7",
+      "targetId": "fd33df62-30bb-801e-8008-c88494420477",
+      "observedAtUtc": "2026-10-13T12:41:37.719Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8886e98e0f7 and displayed Desktop / Person / Reports on step 1 of case desktop-original-unavailable-return; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-region-context-chat",
+      "step": 1,
+      "from": "Desktop / Body / Region",
+      "to": "Desktop / Chat / Draft",
+      "control": "primary",
+      "sourceId": "fd33df62-30bb-801e-8008-c8887eb02a18",
+      "targetId": "67dd3a44-a677-8060-8008-c86e49d7398b",
+      "observedAtUtc": "2026-10-13T12:41:54.523Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot fd33df62-30bb-801e-8008-c8887eb02a18 and displayed Desktop / Chat / Draft on step 1 of case desktop-region-context-chat; captured by Chrome CDP"
+    },
+    {
+      "status": "passed",
+      "case": "desktop-region-context-chat",
+      "step": 2,
+      "from": "Desktop / Chat / Draft",
+      "to": "Desktop / Person / Records",
+      "control": "secondary",
+      "sourceId": "67dd3a44-a677-8060-8008-c86e582cc7cd",
+      "targetId": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+      "observedAtUtc": "2026-10-13T12:41:54.523Z",
+      "evidence": "Penpot Viewer clicked actual DOM hotspot 67dd3a44-a677-8060-8008-c86e582cc7cd and displayed Desktop / Person / Records on step 2 of case desktop-region-context-chat; captured by Chrome CDP"
     }
   ],
+  "coordinateAudit": {
+    "method": "Penpot official Product scene shape coordinates; design-space geometry only, not browser device or scroll verification",
+    "desktopViewportWidth": 1280,
+    "mobileViewportWidth": 390,
+    "scenes": [
+      {
+        "key": "Desktop / Home",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86d4ba246c9",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Person / Records",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86d80fb23b7",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86d8e85b7fa",
+        "x": 40,
+        "y": 92,
+        "windowWidth": 780,
+        "windowHeight": 680,
+        "right": 820,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Diagnosis / Current",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86e3bb11a96",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86e48bf3aea",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 680,
+        "right": 1232,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Chat / Draft",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86e49d7398b",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86e582cc7ac",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 640,
+        "right": 602,
+        "bottom": 732,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Training / Accepted",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86e803e5bf5",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86e8de72c09",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 720,
+        "right": 1232,
+        "bottom": 812,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Body / Episode",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86e8f2eaa92",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86e9b84537e",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 680,
+        "right": 602,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Person / Habits",
+        "kind": "desktop",
+        "id": "67dd3a44-a677-8060-8008-c86e9c7b9b77",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "67dd3a44-a677-8060-8008-c86ea8dddde2",
+        "x": 40,
+        "y": 92,
+        "windowWidth": 780,
+        "windowHeight": 680,
+        "right": 820,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Home",
+        "kind": "mobile",
+        "id": "67dd3a44-a677-8060-8008-c873c516b867",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Person / Records",
+        "kind": "mobile",
+        "id": "67dd3a44-a677-8060-8008-c873e16a6933",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "67dd3a44-a677-8060-8008-c873efdab724",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Diagnosis / Current",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c8794c5b3184",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "fd33df62-30bb-801e-8008-c87974808791",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Training / Accepted",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c87976194f14",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "fd33df62-30bb-801e-8008-c87983f9dbd3",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Chat / Ask User",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c879856c77b0",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "fd33df62-30bb-801e-8008-c87993a04818",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Chat / Draft",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c87a378dde9a",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "fd33df62-30bb-801e-8008-c87a378dde9c",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Home / chat-waiting",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c87ab1458d48",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Chat / Answer selected",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c87ab510738d",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": "fd33df62-30bb-801e-8008-c87ac3aae807",
+        "x": 16,
+        "y": 18,
+        "windowWidth": 358,
+        "windowHeight": 704,
+        "right": 374,
+        "bottom": 722,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Home / chat-waiting",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c87b5428d46c",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Chat / Ask User",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c87b6e50103c",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c87b7bd76581",
+        "x": 42,
+        "y": 75,
+        "windowWidth": 560,
+        "windowHeight": 740,
+        "right": 602,
+        "bottom": 815,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Chat / Answer selected",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c87b7d634e61",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c87b8aa70ec4",
+        "x": 42,
+        "y": 75,
+        "windowWidth": 560,
+        "windowHeight": 740,
+        "right": 602,
+        "bottom": 815,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Home / chat-selected",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c87d2b22e9c2",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Mobile / Home / chat-selected",
+        "kind": "mobile",
+        "id": "fd33df62-30bb-801e-8008-c87d2f9d6b56",
+        "stageWidth": 390,
+        "stageHeight": 844,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 390,
+        "viewerHeight": 844,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Person / Equipment",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c884759b670b",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c88483a29909",
+        "x": 40,
+        "y": 92,
+        "windowWidth": 780,
+        "windowHeight": 680,
+        "right": 820,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Person / Media",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c88485672ac0",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8849286ef98",
+        "x": 40,
+        "y": 92,
+        "windowWidth": 780,
+        "windowHeight": 680,
+        "right": 820,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Person / Reports",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c88494420477",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c884a13d2d5b",
+        "x": 40,
+        "y": 92,
+        "windowWidth": 780,
+        "windowHeight": 680,
+        "right": 820,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Chat / Diagnosis request",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c885dbc97c8e",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c885ea784e55",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 640,
+        "right": 1232,
+        "bottom": 732,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Diagnosis / History",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c885ebf48a13",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c885f9a0906d",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 640,
+        "right": 1232,
+        "bottom": 732,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Training / Proposal",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c885fb1dd2e5",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c886096ced19",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 680,
+        "right": 1232,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Trainer / In progress",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c886d9aae3c5",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c886e7f65192",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 700,
+        "right": 1232,
+        "bottom": 792,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Trainer / Recovery",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c886e9856542",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c886f7d79f3f",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 700,
+        "right": 1232,
+        "bottom": 792,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Safety / Restricted",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c886f984fe97",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8870785f09b",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 680,
+        "right": 1232,
+        "bottom": 772,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Assets / Delete scope",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c8872bc1f3d0",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8873a797f57",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 700,
+        "right": 602,
+        "bottom": 792,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Assets / Erasure confirm",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c8873c023741",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8874a202497",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 660,
+        "right": 602,
+        "bottom": 752,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Assets / Erasure retry",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c8874ba3f9cb",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c88759e78f59",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 660,
+        "right": 602,
+        "bottom": 752,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Home / trainer-active",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c887807c122a",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Home / trainer-paused",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c887a3c0938e",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": null,
+        "x": null,
+        "y": null,
+        "windowWidth": null,
+        "windowHeight": null,
+        "right": null,
+        "bottom": null,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Assets / Original unavailable",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c8885ff8ee38",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8886e98e0d5",
+        "x": 42,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 620,
+        "right": 602,
+        "bottom": 712,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      },
+      {
+        "key": "Desktop / Body / Region",
+        "kind": "desktop",
+        "id": "fd33df62-30bb-801e-8008-c8887037a6c9",
+        "stageWidth": 1440,
+        "stageHeight": 900,
+        "windowId": "fd33df62-30bb-801e-8008-c8887eafcb7e",
+        "x": 672,
+        "y": 92,
+        "windowWidth": 560,
+        "windowHeight": 620,
+        "right": 1232,
+        "bottom": 712,
+        "viewerWidth": 1280,
+        "viewerHeight": 900,
+        "horizontallyInViewport": true,
+        "verticallyInStage": true
+      }
+    ]
+  },
+  "blockedViewerCases": [],
   "viewerEvidence": {
     "testCases": [
       {
@@ -1251,27 +3496,205 @@
         "status": "passed",
         "clickedSteps": 4,
         "observedAtUtc": "2026-10-13T11:00:54.377Z"
+      },
+      {
+        "name": "desktop-person-five-tabs",
+        "status": "passed",
+        "clickedSteps": 5,
+        "observedAtUtc": "2026-10-13T11:43:39.095Z"
+      },
+      {
+        "name": "desktop-diagnosis-history-and-chat",
+        "status": "passed",
+        "clickedSteps": 4,
+        "observedAtUtc": "2026-10-13T12:36:21.108Z"
+      },
+      {
+        "name": "desktop-training-proposal-review",
+        "status": "passed",
+        "clickedSteps": 3,
+        "observedAtUtc": "2026-10-13T12:36:36.299Z"
+      },
+      {
+        "name": "desktop-trainer-active-resume",
+        "status": "passed",
+        "clickedSteps": 3,
+        "observedAtUtc": "2026-10-13T12:39:53.844Z"
+      },
+      {
+        "name": "desktop-trainer-paused-resume",
+        "status": "passed",
+        "clickedSteps": 3,
+        "observedAtUtc": "2026-10-13T12:40:11.566Z"
+      },
+      {
+        "name": "desktop-safety-restricted-view",
+        "status": "passed",
+        "clickedSteps": 2,
+        "observedAtUtc": "2026-10-13T12:40:47.451Z"
+      },
+      {
+        "name": "desktop-erasure-scope-review-cancel",
+        "status": "passed",
+        "clickedSteps": 3,
+        "observedAtUtc": "2026-10-13T12:41:04.078Z"
+      },
+      {
+        "name": "desktop-erasure-incomplete-return",
+        "status": "passed",
+        "clickedSteps": 2,
+        "observedAtUtc": "2026-10-13T12:41:21.715Z"
+      },
+      {
+        "name": "desktop-original-unavailable-return",
+        "status": "passed",
+        "clickedSteps": 1,
+        "observedAtUtc": "2026-10-13T12:41:37.719Z"
+      },
+      {
+        "name": "desktop-region-context-chat",
+        "status": "passed",
+        "clickedSteps": 2,
+        "observedAtUtc": "2026-10-13T12:41:54.523Z"
       }
     ],
     "traceOnOracle2": "/home/ubuntu/.tmp/bodysense-v2-viewer-qa-results.json",
     "verifiedContents": [
-      "Desktop Records BodyFact statements and source/uncertainty card",
-      "Mobile ordinary Chat Draft not AskUser",
-      "Reopen waiting/selected answers on both devices"
+      "Person five facets and identity overlay open/close",
+      "Diagnosis contextual Chat and history",
+      "Training proposal is a review, not accepted",
+      "Trainer active/paused keeps context after window close",
+      "Scoped safety restriction independent from plan",
+      "UserAsset removal scope, failed retry, original unavailable have distinct navigation",
+      "Chat same synthetic Run pending / selected draft reopening"
     ]
   },
   "acceptance": {
     "localNavigation": "partial_viewer_QA",
-    "domainWriteTransitions": "not_wired_server_receipt_required",
+    "domainWriteTransitions": "gated_no_success_navigation_without_server_receipt",
     "independentScrolling": "not_verified",
     "pixelAndAccessibility": "not_verified",
-    "mobile390": "several_Viewers_passed_not_complete"
+    "mobile390": "limited_viewer_QA_not_complete"
   },
   "outstanding": [
-    "Business flows PD-DX, PD-TP and PD-ASSET must not navigate from click directly to medical, training or erasure success without authoritative backend evidence.",
-    "Full desktop+390 px viewport visual, independent inner scroll, responsive clipping, keyboard navigation and screen reader verification still pending.",
-    "Chat actual run_id, answer interaction_id and idempotency persistence cannot be tested in Penpot synthetic Viewer.",
-    "Diagnosis report/badge/adopted count binding to real read model, Training safety/plan lifecycle, Media & Reports and erasure propagation need genuine API engineering acceptance.",
-    "Some existing state boards are still isolated instead of presented as shared Body Canvas combinations. Design flows are not released as complete."
+    "Do not navigate from proposal acceptance or analysis progress to medical, training or erasure success before the authoritative server receipt; generated state frames are illustrative only.",
+    "True fixed header/footer and independent middle scrolling, actual 390px viewport, clipping, focus, Escape, keyboard, screen readers and pixel-level layout still require Viewer acceptance.",
+    "Chat actual run_id, answer interaction_id, idempotency persistence, and DomainCommitReceipt cannot be validated by synthetic Penpot click flows.",
+    "Diagnosis adopted count/evidence, Trainer safety/session commands and erasure copy-by-copy verification require Track A/C backend integration and review.",
+    "Some of the 42 original state variants are intentionally not yet composited; remaining domain conditional scenarios and production VM parity are not fully signed off."
+  ],
+  "guardedCommands": [
+    {
+      "sceneKey": "Desktop / Chat / Diagnosis request",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c885ea784e75",
+      "command": "chat.send",
+      "guard": "requires new server Run and proposals, not auto-confirm",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Training / Accepted",
+      "slot": "primary",
+      "id": "67dd3a44-a677-8060-8008-c86e8de72c42",
+      "command": "trainer.start_session",
+      "guard": "requires safety gate and server acknowledgement",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Training / Proposal",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c886096ced52",
+      "command": "training.proposal.accept",
+      "guard": "requires exact proposal/plan revision and accepted ack",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Training / Proposal",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c886096ced53",
+      "command": "training.proposal.reject",
+      "guard": "requires explicit rejection acknowledgement",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Trainer / In progress",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c886e7f651b4",
+      "command": "trainer.complete_set",
+      "guard": "requires authenticated set instance and ack; no automatic next set",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Trainer / In progress",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c886e7f651b5",
+      "command": "trainer.pause",
+      "guard": "requires same session and server pause ack",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Trainer / Recovery",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c886f7d79f64",
+      "command": "trainer.resume",
+      "guard": "requires safety recheck and server ack",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Trainer / Recovery",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c886f7d79f65",
+      "command": "trainer.finish_early",
+      "guard": "requires explicit end marker and ack",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Person / Media",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c8849286efd4",
+      "command": "person.asset.prepare_deletion_scope",
+      "guard": "requires UserAsset ID and server-discovered scope; no deletion yet",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Person / Reports",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c884a13d2d97",
+      "command": "person.asset.prepare_deletion_scope",
+      "guard": "same UserAsset as Media; scope from authoritative server read",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Assets / Delete scope",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c8873a797f7b",
+      "command": "person.asset.remove_original",
+      "guard": "requires original-only confirmation and backend receipt; historical structured evidence remains",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Assets / Erasure confirm",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c8874a2024b7",
+      "command": "person.asset.erase_related",
+      "guard": "requires exact scope consent, stop-new-use gate, propagation and verified receipt",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Assets / Erasure retry",
+      "slot": "primary",
+      "id": "fd33df62-30bb-801e-8008-c88759e78f7b",
+      "command": "person.asset.retry_erasure",
+      "guard": "requires same erasure operation identity and per-copy verification",
+      "interactions": 0
+    },
+    {
+      "sceneKey": "Desktop / Assets / Original unavailable",
+      "slot": "secondary",
+      "id": "fd33df62-30bb-801e-8008-c8886e98e0f8",
+      "command": "person.asset.prepare_deletion_scope",
+      "guard": "requires server-scoped projection; does not erase already admitted facts",
+      "interactions": 0
+    }
   ]
 }

@@ -80,3 +80,106 @@ test("no incomplete design stage can silently claim domain release readiness", (
   broken.outstanding = [];
   assert.equal(validateLivePenpotScenes(broken, original).ok, false);
 });
+
+test("identity profile uses one real overlay shared by all five Person facets", () => {
+  const r = validateLivePenpotScenes(live, original);
+  assert.equal(r.ok, true, r.errors.join("; "));
+  assert.equal(live.identityOverlay.openers.length, 5);
+  assert.equal(r.overlayQa, true);
+});
+
+test("an identity popover cannot silently masquerade as a navigation tab", () => {
+  const broken = clone(live);
+  broken.identityOverlay.openers[0].type = "navigate-to";
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("a shared identity overlay must be reached from every Person facet", () => {
+  const broken = clone(live);
+  broken.identityOverlay.openers.pop();
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("a privileged server command cannot be linked as ordinary Penpot navigation", () => {
+  const broken = clone(live);
+  broken.guardedCommands[0].interactions = 1;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("multi-segment command names are allowed but empty guards are rejected", () => {
+  assert.equal(validateLivePenpotScenes(live, original).ok, true);
+  const broken = clone(live);
+  const command = broken.guardedCommands.find((g) =>
+    g.command.startsWith("person.asset."),
+  );
+  assert.ok(command);
+  command.guard = "";
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("a guarded business action must not reuse a saved navigation hotspot", () => {
+  const broken = clone(live);
+  broken.guardedCommands[0].id = broken.localInteractions[0].sourceId;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("all 36 canvas scenes have unique bounded Penpot coordinate evidence", () => {
+  const result = validateLivePenpotScenes(live, original);
+  assert.equal(result.ok, true, result.errors.join("; "));
+  assert.equal(result.coordinateAudited, result.scenes);
+  assert.ok(result.coordinateAudited >= 36);
+});
+
+test("a clipped 1280px desktop floating window is not accepted", () => {
+  const broken = clone(live);
+  const frame = broken.coordinateAudit.scenes.find(
+    (s) => s.kind === "desktop" && s.windowId,
+  );
+  assert.ok(frame);
+  frame.x = 840;
+  frame.right = frame.x + frame.windowWidth;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("a mobile floating window must retain its 16px minimum horizontal margin", () => {
+  const broken = clone(live);
+  const frame = broken.coordinateAudit.scenes.find(
+    (s) => s.kind === "mobile" && s.windowId,
+  );
+  assert.ok(frame);
+  frame.x = 20;
+  frame.right = frame.x + frame.windowWidth;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("viewport evidence cannot invent an unknown Penpot scene", () => {
+  const broken = clone(live);
+  broken.coordinateAudit.scenes[0].id = "00000000-0000-0000-0000-000000000001";
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("Viewer click trace must cite the exact Penpot hotspot shape ID", () => {
+  const broken = clone(live);
+  broken.viewerQa[0].sourceId = "00000000-0000-0000-0000-000000000002";
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("Viewer click sequence may not claim a skipped transition", () => {
+  const broken = clone(live);
+  const index = broken.viewerQa.findIndex((step) => step.step === 2);
+  assert.ok(index > 0);
+  broken.viewerQa[index].step = 3;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("Viewer test-case summary must agree with the exact observed step count", () => {
+  const broken = clone(live);
+  broken.viewerEvidence.testCases[0].clickedSteps += 1;
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});
+
+test("Flow starting points must match the actual saved Penpot startingBoard names", () => {
+  const broken = clone(live);
+  broken.flowStarts[0].startName = "V2 / Scene / Invented scene";
+  assert.equal(validateLivePenpotScenes(broken, original).ok, false);
+});

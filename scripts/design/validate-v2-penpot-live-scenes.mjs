@@ -112,6 +112,11 @@ export function validateLivePenpotScenes(live, original) {
     sources.add(edge.sourceId);
   }
 
+  requireProof(
+    live.flowStartEvidence ===
+      "Official penpot.currentPage.flows startingBoard readback",
+    "Flow starts must be backed by actual official Penpot page flows",
+  );
   const starts = new Set();
   for (const f of live.flowStarts || []) {
     requireProof(
@@ -119,7 +124,9 @@ export function validateLivePenpotScenes(live, original) {
       "Flow name missing/duplicated",
     );
     requireProof(
-      scenes.has(f.startKey) && f.startId === scenes.get(f.startKey)?.id,
+      scenes.has(f.startKey) &&
+        f.startId === scenes.get(f.startKey)?.id &&
+        f.startName === "V2 / Scene / " + f.startKey,
       "Flow start must point at an actual combined scene",
     );
     starts.add(f.name);
@@ -130,6 +137,7 @@ export function validateLivePenpotScenes(live, original) {
       "Missing actual Canvas flow start: " + kind,
     );
 
+  const caseProgress = new Map();
   for (const test of live.viewerQa || []) {
     requireProof(
       test.status === "passed" || test.status === "blocked",
@@ -148,16 +156,185 @@ export function validateLivePenpotScenes(live, original) {
         "Passing Viewer QA requires timestamped real click evidence",
       );
       requireProof(
-        (live.localInteractions || []).some(
-          (edge) =>
-            edge.from === test.from &&
-            edge.to === test.to &&
-            edge.control === test.control,
-        ),
-        "Viewer QA claim cannot exist without corresponding saved navigation",
+        UUID.test(test.sourceId) &&
+          UUID.test(test.targetId) &&
+          (live.localInteractions || []).some(
+            (edge) =>
+              edge.sourceId === test.sourceId &&
+              edge.targetId === test.targetId &&
+              edge.from === test.from &&
+              edge.to === test.to &&
+              edge.control === test.control,
+          ),
+        "Viewer QA must identify its actual saved Penpot hotspot and destination IDs",
       );
+      const progress = caseProgress.get(test.case);
+      requireProof(
+        typeof test.case === "string" &&
+          test.case.length > 0 &&
+          Number.isInteger(test.step) &&
+          test.step === (progress?.step || 0) + 1 &&
+          (!progress || progress.to === test.from),
+        "Viewer QA sequence must be contiguous in its named test case",
+      );
+      caseProgress.set(test.case, test);
     }
   }
+
+  requireProof(
+    caseProgress.size >= 17,
+    "The expanded Viewer handoff lacks sufficient distinct tested flows",
+  );
+  const caseRecords = new Set();
+  for (const entry of live.viewerEvidence?.testCases || []) {
+    requireProof(
+      entry.status === "passed" &&
+        !caseRecords.has(entry.name) &&
+        caseProgress.get(entry.name)?.step === entry.clickedSteps &&
+        caseProgress.get(entry.name)?.observedAtUtc === entry.observedAtUtc,
+      "Viewer test-case summary must match the actual ordered click trace: " +
+        entry.name,
+    );
+    caseRecords.add(entry.name);
+  }
+  requireProof(
+    caseRecords.size === caseProgress.size,
+    "Every Viewer click series requires exactly one matching test-case record",
+  );
+
+  requireProof(
+    scenes.size >= 34,
+    "Insufficient real composed V2 domain scenes for the expanded handoff",
+  );
+  requireProof(
+    sources.size >= 120,
+    "Expanded Penpot navigation inventory is incomplete",
+  );
+  requireProof(starts.size >= 15, "Essential design Flow starts are missing");
+
+  const geometry = live.coordinateAudit;
+  requireProof(
+    geometry?.desktopViewportWidth === 1280 &&
+      geometry?.mobileViewportWidth === 390 &&
+      typeof geometry?.method === "string" &&
+      geometry.method.includes("Penpot") &&
+      geometry.method.includes("not browser"),
+    "Viewport coordinate audit needs real Penpot shape readback and a design-only disclaimer",
+  );
+  const auditedKeys = new Set();
+  for (const frame of geometry?.scenes || []) {
+    const originalFrame = scenes.get(frame.key);
+    const isMobile = frame.kind === "mobile";
+    const viewportWidth = isMobile ? 390 : 1280;
+    const viewportHeight = isMobile ? 844 : 900;
+    const rightMargin = isMobile ? 16 : 48;
+    requireProof(
+      Boolean(originalFrame) &&
+        !auditedKeys.has(frame.key) &&
+        frame.id === originalFrame?.id &&
+        frame.windowId === originalFrame?.windowId &&
+        frame.kind === originalFrame?.kind &&
+        frame.viewerWidth === viewportWidth &&
+        frame.viewerHeight === viewportHeight,
+      "Coordinate audit does not match a unique saved scene: " + frame.key,
+    );
+    if (frame.windowId !== null) {
+      requireProof(
+        Number.isFinite(frame.x) &&
+          Number.isFinite(frame.y) &&
+          Number.isFinite(frame.windowWidth) &&
+          Number.isFinite(frame.windowHeight) &&
+          frame.x >= 0 &&
+          frame.y >= 0 &&
+          frame.windowWidth > 0 &&
+          frame.windowHeight > 0 &&
+          frame.right === frame.x + frame.windowWidth &&
+          frame.bottom === frame.y + frame.windowHeight &&
+          frame.right <= viewportWidth - rightMargin &&
+          frame.bottom <= viewportHeight,
+        "Floating window exceeds bounded Penpot canvas/viewer coordinates: " +
+          frame.key,
+      );
+    }
+    auditedKeys.add(frame.key);
+  }
+  requireProof(
+    auditedKeys.size === scenes.size,
+    "Every real scene must have one Penpot coordinate audit entry",
+  );
+
+  const identity = live.identityOverlay;
+  const popup = identity?.overlay;
+  requireProof(
+    UUID.test(popup?.id) && popup?.closeAction === "close-overlay",
+    "Person profile must be a single closable identity overlay, not a sixth facet",
+  );
+  const identitySources = new Set();
+  const expectedFacets = new Set([
+    "Desktop / Person / Records",
+    "Desktop / Person / Equipment",
+    "Desktop / Person / Media",
+    "Desktop / Person / Reports",
+    "Desktop / Person / Habits",
+  ]);
+  for (const opener of identity?.openers || []) {
+    requireProof(
+      expectedFacets.has(opener.from) &&
+        opener.type === "open-overlay" &&
+        opener.destinationId === popup?.id &&
+        UUID.test(opener.sourceId) &&
+        !identitySources.has(opener.sourceId) &&
+        !sources.has(opener.sourceId) &&
+        opener.closeWhenClickOutside === false,
+      "Identity overlay opener is not a unique, safe facet-local hotspot: " +
+        opener.from,
+    );
+    identitySources.add(opener.sourceId);
+    expectedFacets.delete(opener.from);
+  }
+  requireProof(
+    expectedFacets.size === 0 && identitySources.size === 5,
+    "All five Person facets must open the same identity overlay",
+  );
+  const popupQa = identity?.viewerQa;
+  requireProof(
+    popupQa?.status === "passed" &&
+      typeof popupQa?.observedAtUtc === "string" &&
+      !Number.isNaN(Date.parse(popupQa.observedAtUtc)) &&
+      popupQa?.baseScene === "Desktop / Person / Records" &&
+      popupQa.steps?.length === 2 &&
+      popupQa.steps[0].action === "open-overlay" &&
+      identitySources.has(popupQa.steps[0].sourceId) &&
+      popupQa.steps[1].action === "close-overlay" &&
+      popupQa.steps[1].sourceId === popup?.closeSourceId &&
+      popupQa.steps.every(
+        (step) =>
+          step.targetId === popup?.id &&
+          step.evidence?.includes("Chrome Penpot Viewer DOM click"),
+      ),
+    "Identity overlay needs actual Viewer open/close click evidence",
+  );
+
+  const guardedIds = new Set();
+  for (const control of live.guardedCommands || []) {
+    requireProof(
+      scenes.has(control.sceneKey) &&
+        UUID.test(control.id) &&
+        !guardedIds.has(control.id) &&
+        !sources.has(control.id) &&
+        control.interactions === 0 &&
+        /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(control.command) &&
+        typeof control.guard === "string" &&
+        control.guard.trim().length > 10,
+      "A persisting command must have zero unconditional prototype navigation and an authoritative guard: " +
+        control.sceneKey,
+    );
+    guardedIds.add(control.id);
+  }
+  requireProof(
+    guardedIds.size >= 14,
+    "Explicit server-gated controls are missing from the safe prototype handoff",
+  );
 
   requireProof(
     Array.isArray(live.outstanding) && live.outstanding.length > 0,
@@ -171,6 +348,10 @@ export function validateLivePenpotScenes(live, original) {
     viewerPassed: (live.viewerQa || []).filter((q) => q.status === "passed")
       .length,
     flowStarts: starts.size,
+    guardedCommands: guardedIds.size,
+    overlayQa: popupQa?.status === "passed",
+    coordinateAudited: auditedKeys.size,
+    viewerCasesPassed: caseProgress.size,
   };
 }
 

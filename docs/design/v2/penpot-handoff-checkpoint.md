@@ -1,16 +1,27 @@
 # BodySense V2 · Penpot 可编辑原型交接与验收检查点
 
-**状态：已验证 20 个 Canvas 组合场景、77 条本地导航及 7 组/20 步 Viewer 点击；领域写入、独立滚动、视觉与完整移动端验收仍未签收，因此任何设计门禁仍不得标记 ready。**
+**状态：官方 Penpot 已核验 36 个 Canvas 组合场景、162 条本地导航、18 个 Flow 起点、14 个受服务端约束的命令控件；17 组／48 步 Viewer 导航及 Person 身份浮层的 2 步点击均通过。领域写入、独立滚动、视觉、完整移动端验收仍未签收，所有设计门禁继续保持 OPEN。**
 
 时间：2026-10-13。工程分支：`design/v2-viewmodels-penpot-20261013`；基础为 PR #247 的 `refactor/schema-first-v2-20261013`，不涉及旧 UI PR #244 工作树。文件与页面以 [当前 Product 设计稿](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) 为准。
 
-## 2026-10-13 最新现场审计
+## 2026-10-13 · 最新 Penpot 实际回读／Viewer 验收
+
+- **组合场景 36**：Desktop 27、Mobile 9，均为真实共享人体 Canvas 和可编辑窗口形状；既有 42 个独立 V2 状态源画板与 14 个组件继续保留，不重建截图。
+- **本地导航 162 条、正式 Flow 起点 18 个**：均有官方 Penpot MCP 读回的源形状、目标场景 ID。所有转移只处理窗口、分类、选项与上下文，不把点击等同服务端授权业务提交。
+- **业务按钮 14 项服务端守卫**：Diagnosis 的正式复核、TrainingPlan 接受/拒绝、Trainer 逐组完成/暂停/恢复/提前结束、资料删除范围及清理重试等均存储了命令与前置回执要求，原型中没有无条件成功导航；详见 [`penpot-live-scenes-manifest.json`](./penpot-live-scenes-manifest.json) `guardedCommands`。
+- **真实 Viewer 17 组／48 步通过**：新增 Person 五分类连续切换、Diagnosis 当前→历史→上下文 Chat、已接受计划→调整预览→关闭、Trainer 正在进行／已暂停的关闭恢复、Safety scoped restriction、UserAsset 清理预览与失败重试、原件不可用、人体区域上下文；结合前一轮 Chat/Ask User 同 Run 合成状态恢复。身份 Popover 另有打开/关闭两步真实点击记录。每步具有实际点击的 Penpot hotspot shape ID、目标画板 ID、用例次序与时间戳，不能用造假的导航图替代。
+- **画板坐标审计 36/36**：9 个右侧 560px 浮窗从 1440px 画板的 `x=840` 调整至 `x=672`，以便在 1280px Viewer 中保留至少 48px 的右缘空间；移动端 390px 源画板窗口保持 16px 左右边距。这里是官方形状的**设计坐标核验**，**不等于**已做 390px 实机浏览器截图、键盘、滚动或逐像素验收。
+- **设计自动校验**：`validate-v2-penpot-live-scenes.mjs` 现在交叉验证 36 个场景、162 个唯一热点、17 条独立 Viewer 用例的 48 步连续轨迹、18 个起点、共享身份 Overlay 与 14 个受保护命令，以及画板几何边界；对错误目标 ID、伪造点击证据、越界窗口、把服务端动作当本地跳转等有负面测试。
+
+**仍未完成：** 真正的业务 Run／DomainCommitReceipt／按范围清理回执、悬浮窗内部固定 Header/Footer 与中间滚动、全流程响应式／390px Viewer、键盘／Esc／焦点恢复、真实数据与 3D 局部选区集成、视觉像素对齐。上述 Local Viewer PASS 不提升 Domain 或集成发布 Gate 状态，不允许标记 `ready`。
+
+## 2026-10-13 · 早一轮 20 场景审计（历史检查点）
 
 官方 Penpot MCP 从 Product 页面真实图层及 Interaction 对象回读 **20 个组合场景（Desktop 11 / Mobile 9）、77 条本地 `navigate-to` 导航、7 个正式 Flow 起点**。每条导航的操作形状 ID 与目标画板 ID、设计场景及来源约束均写入 [`penpot-live-scenes-manifest.json`](./penpot-live-scenes-manifest.json)，并由新增加的 `scripts/design/validate-v2-penpot-live-scenes.mjs` 和 8 项安全测试交叉验证。
 
 Viewer 浏览器已执行 **7 组/20 步点击回归**：两端 Dock 跨窗切换、移动端普通聊天打开关闭、等待用户回答时关闭／重新打开，以及已选择但未提交的答案关闭／重开仍保留选择。所有测试都有时间与真实画板到达证据。此处的“同一 Run”只是合成设计数据的状态演示；真实 Run ID、提交回执、医学诊断/训练成功/擦除成功不由 Penpot 模拟。中间内容已能显示，但**顶部/底部固定且中段独立滚动、真实 390px viewport、键盘和像素级视觉验收尚未通过**。
 
-以下更早检查点描述的是分阶段产物，阅读时请以上述最新现场审计为准。
+本节及下方旧数据是阶段性历史记录；**当前事实以本页首部 36 场景／162 连线／17 组 Viewer 及最新 Manifest 为准**。
 
 ## 已有实际写入证据
 
@@ -32,7 +43,7 @@ Viewer 浏览器已执行 **7 组/20 步点击回归**：两端 Dock 跨窗切�
 
 | 工作项 | 当前证据 | 通过门槛 |
 | --- | --- | --- |
-| PD-BASE-01 | 14 个组件、42 个源画板、20 个组合场景、77 条连线、7 组/20 步 Viewer QA、Overlay QA | 完整交互、独立滚动、390px 实机视口、键盘、视觉与业务状态验收通过前保持 in_progress |
+| PD-BASE-01 | 14 个组件、42 个源画板、36 个组合场景、162 条连线、18 个起点、17 组/48 步 Viewer QA，身份 Overlay 2 步 QA，14 个命令守卫 | 完整端到端与授权、独立滚动、390px 浏览器视口、键盘、视觉及真实业务状态验收前保持 OPEN |
 | PD-BS-01 | Records/Habits 的 bounded API → VM → UI 已接；Episode 仍为目标契约 | 当前 owner、partial-empty/stale、来源不详、Episode 依据与跨窗口跳转均有桌面/390px 真正 Viewer 证据 |
 | PD-PC-01 | React 原 Run Ask User 已有实现；Penpot 区分普通 Chat、Ask User、答案已选、waiting/selected 关闭与重开；Viewer 两端验收选中态保留 | Run ID、interaction ID、后端提交/失败重试及真实滚动仍须联合验收 |
 | PD-DX-01 | 有 sequential proposal 与 atomic commit 候选画板 | 只有领域确认回执出现后才到提交成功画板；Dock 计数来自新的 adopted 查询，医学来源真实可追溯 |
@@ -40,11 +51,11 @@ Viewer 浏览器已执行 **7 组/20 步点击回归**：两端 Dock 跨窗切�
 | PD-ASSET-01 | 原件删除/关联数据擦除画板已创建 | 补齐 `propagating` 中间状态，完整 scope verification 后才能显示 finished |
 | IR 交接 | 类型、契约单测、Penpot 画板来源已记录 | 浏览器键盘/滚动/中文字体/文本溢出/实际 viewport 与后端权限、并发恢复一起验收 |
 
-**连接恢复与稳定性：** 2026-10-13 的官方 Penpot 插件曾进入 `no heartbeat`。只关闭并重新打开原编辑器标签页后，恢复 MCP 能读写真实 Product 设计；Viewer 仍保留。发现一次性调用 42 次 `findShapeById` 易冻结编辑器，改为从 `penpot-scene-manifest.json` 轻量恢复缓存，并以 1–3 个场景为小批次创建设计。自动化辅助脚本位于 Oracle2 `/home/ubuntu/.tmp/bodysense-v2-{hydrate-lite,compose-core,fix-floating-overflow}.js`，属于临时可恢复会话代码；**Penpot 页面中已写入的组件、画板与交互是持久的，插件 `storage` 不是。** 真实 Viewer 已验证 Home → Records，但不等于其他业务 Flow 全部通过。
+**连接恢复与稳定性：** 2026-10-13 的官方 Penpot 插件曾进入 `no heartbeat`。只关闭并重新打开原编辑器标签页后，恢复 MCP 能读写真实 Product 设计；Viewer 仍保留。发现一次性调用 42 次 `findShapeById` 易冻结编辑器，改为从 `penpot-scene-manifest.json` 轻量恢复缓存，并以 1–3 个场景为小批次创建设计。自动化辅助脚本位于 Oracle2 `/home/ubuntu/.tmp/bodysense-v2-{hydrate-lite,compose-core,fix-floating-overflow}.js`，属于临时可恢复会话代码；**Penpot 页面中已写入的组件、画板与交互是持久的，插件 `storage` 不是。** 真实 Viewer 已对 17 组局部交互完成点击验证，但不是业务 Flow 全部签收。
 
 ## 下一次编辑的执行顺序
 
-1. 从 [`penpot-live-scenes-manifest.json`](./penpot-live-scenes-manifest.json) 的 20 个根画板和 77 条已保存交互 ID 定位继续；先只读校验 Product 根图层及组件，严禁重复生成既有组合场景。
+1. 从 [`penpot-live-scenes-manifest.json`](./penpot-live-scenes-manifest.json) 的 36 个根画板、162 条本地交互与 14 个受保护业务控件精确 ID 定位继续；先只读核验 Product 图层，严禁重复生成既有组合画板。
 2. 以 `penpot-flow-contract.json` 的业务条件为准，从现有 Canvas 场景挂 Dock/浮窗导航，再连接本地非提交交互。**API 尚不存在时只做条件化概念原型并标注；不可用的按钮必须明确禁用**。
 3. 为 Chat 回复/诊断批量回执/训练组完成/擦除 verifier 的结果分支分别创建被授权的实际成功和失败场景；补齐缺失的 loading、empty、permission_denied、stale、offline 代表性变体，不重复粘贴一套同质静态屏幕。
 4. 做真实 Penpot Viewer 桌面 + 390px 的点击、滚动、Overlay 关闭后 Run 持续、缩放/剪裁/文字溢出校验。记录实际缺陷与截图，不用静态形状数量代替验收。
