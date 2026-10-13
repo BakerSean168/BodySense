@@ -21,7 +21,7 @@ import {
 import { projectDiagnosisView } from "../model/confirmedConditions";
 import { projectTrainingPlans, readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "../model/trainingPlans";
 import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
-import { BusinessWindowHost, BusinessSheetHost } from "./BusinessWindowHost";
+import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
 import { ChatWindowHeader, DiagnosisWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
 import { DiagnosisWindow } from "./DiagnosisWindow";
@@ -506,40 +506,24 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           The same reducer drives both responsive shells; a closed-but-mounted
           task stays hidden without losing unsaved draft or scroll state. */}
         <div className="bc-business-layer">
-          {!mobile &&
-            mountedWindows.map((window) => (
-              <BusinessWindowHost
-                key={window}
-                windowId={window}
-                minimized={activeWindow !== window}
-                stackIndex={businessWindowStackIndex(windows, window)}
-                isActive={activeWindow === window}
-                onClose={() => closeWindow(window)}
-                headerLeft={renderWindowHeader(window)}
-                headerActions={renderHeaderActions(window)}
-                hideTitle={["person", "diagnosis", "training", "chat"].includes(
-                  window,
-                )}
-              >
-                {renderWindowBody(window)}
-              </BusinessWindowHost>
-            ))}
-          {mobile &&
-            mountedWindows.map((window) => (
-              <BusinessSheetHost
-                key={window}
-                windowId={window}
-                hidden={activeWindow !== window}
-                onClose={() => closeWindow(window)}
-                headerLeft={renderWindowHeader(window)}
-                headerActions={renderHeaderActions(window)}
-                hideTitle={["person", "diagnosis", "training", "chat"].includes(
-                  window,
-                )}
-              >
-                {renderWindowBody(window)}
-              </BusinessSheetHost>
-            ))}
+          {mountedWindows.map((window) => (
+            <BusinessWindowHost
+              key={window}
+              windowId={window}
+              mobile={mobile}
+              minimized={activeWindow !== window}
+              stackIndex={businessWindowStackIndex(windows, window)}
+              isActive={activeWindow === window}
+              onClose={() => closeWindow(window)}
+              headerLeft={renderWindowHeader(window)}
+              headerActions={renderHeaderActions(window)}
+              hideTitle={["person", "diagnosis", "training", "chat"].includes(
+                window,
+              )}
+            >
+              {renderWindowBody(window)}
+            </BusinessWindowHost>
+          ))}
         </div>
 
       <div className="bc-attribution"><span>参考人体 · 非个人扫描</span><span>Vanatome / Z-Anatomy · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a></span><span>拖动旋转 · 滚轮缩放 · 点击选区</span></div>

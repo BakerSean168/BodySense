@@ -20,6 +20,10 @@ import {
 export interface BusinessWindowHostProps {
   windowId: BusinessWindowId;
   minimized?: boolean;
+  /** Responsive presentation changes without remounting a live task. */
+  mobile?: boolean;
+  /** Mobile-only action footer; the task content stays mounted on resize. */
+  footer?: ReactNode;
   /** Index within the open stack, used only for the cascade offset. */
   stackIndex: number;
   onClose: () => void;
@@ -39,6 +43,8 @@ export interface BusinessWindowHostProps {
 export function BusinessWindowHost({
   windowId,
   minimized = false,
+  mobile = false,
+  footer,
   stackIndex,
   onClose,
   isActive = false,
@@ -54,18 +60,14 @@ export function BusinessWindowHost({
 
   return (
     <div
-      className="bc-business-window"
+      className={mobile ? "bc-business-sheet" : "bc-business-window"}
       data-window={windowId}
       data-active={isActive ? "true" : "false"}
       data-minimized={minimized ? "true" : "false"}
+      data-hidden={mobile ? (minimized ? "true" : "false") : undefined}
       hidden={minimized}
-      /*
-       * A non-modal, persistent floating window is a landmark rather than a
-       * dialog: several can be open, they never trap focus and they stay
-       * mounted while folded. Using role="region" also keeps genuine modal
-       * overlays (anatomy, shortcuts) unambiguous for assistive technology.
-       */
-      role="region"
+      role={mobile ? "dialog" : "region"}
+      aria-modal={mobile ? "false" : undefined}
       aria-labelledby={hideTitle ? undefined : headingId}
       aria-label={hideTitle ? meta.title : undefined}
       style={
@@ -96,69 +98,10 @@ export function BusinessWindowHost({
           </button>
         </div>
       </header>
-      <div className="bc-business-window-content">{children}</div>
+      <div className={mobile ? "bc-business-sheet-content" : "bc-business-window-content"}>
+        {children}
+      </div>
+      {mobile && footer ? <div className="bc-business-sheet-footer">{footer}</div> : null}
     </div>
-  );
-}
-
-/**
- * Mobile presents the same business semantics as a bounded floating overlay.
- * The bottom Dock remains visible, and a task stays mounted but hidden on close
- * or a Dock switch so its scroll position and incomplete input survive.
- */
-export function BusinessSheetHost({
-  windowId,
-  hidden = false,
-  onClose,
-  headerLeft,
-  headerActions,
-  hideTitle = false,
-  children,
-  footer,
-}: {
-  windowId: BusinessWindowId;
-  /** Kept mounted but off-screen so closing a sheet preserves its task state. */
-  hidden?: boolean;
-  onClose: () => void;
-  headerLeft?: ReactNode;
-  headerActions?: ReactNode;
-  hideTitle?: boolean;
-  children: ReactNode;
-  footer?: ReactNode;
-}) {
-  const meta = getBusinessWindowMeta(windowId);
-  const headingId = `bc-sheet-title-${windowId}`;
-  return (
-    <section
-      className="bc-business-sheet"
-      data-window={windowId}
-      data-hidden={hidden ? "true" : "false"}
-      hidden={hidden}
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby={hideTitle ? undefined : headingId}
-      aria-label={hideTitle ? meta.title : undefined}
-    >
-      <header className="bc-business-window-header">
-        {headerLeft ?? (
-          <h2 id={headingId} className="bc-business-window-title">
-            {meta.title}
-          </h2>
-        )}
-        <div className="bc-business-window-controls">
-          {headerActions}
-          <button
-            type="button"
-            className="bc-icon-button"
-            aria-label={`关闭${meta.title}`}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-      </header>
-      <div className="bc-business-sheet-content">{children}</div>
-      {footer ? <div className="bc-business-sheet-footer">{footer}</div> : null}
-    </section>
   );
 }
