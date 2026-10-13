@@ -10,7 +10,7 @@
       "cache": true,
       "options": {
         "commands": [
-          "pnpm exec vitest run packages/contracts/src/stream-event-parser.test.ts packages/contracts/src/stream-event-schema-parity.test.ts packages/contracts/src/presentation-v2.test.ts",
+          "pnpm exec vitest run packages/contracts/src/stream-event-parser.test.ts packages/contracts/src/stream-event-schema-parity.test.ts packages/contracts/src/presentation-v2.test.ts packages/contracts/src/presentation-v2-handoff.test.ts",
           "cd apps/api && go test ./internal/dto -count=1 -run 'Fixture|StreamEvent|Schema'"
         ],
         "parallel": false

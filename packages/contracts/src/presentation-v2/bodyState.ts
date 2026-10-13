@@ -205,6 +205,20 @@ export const recordsData = z.strictObject({
   nextCursor: id.nullable(),
   canRecord: capability,
 });
+/** Derive a visible list state without claiming an unscanned filtered history is empty. */
+export function classifyLoadedBodyList(
+  loadedMatchCount: number,
+  nextCursor: string | null,
+): "populated" | "empty" | "partial_empty" {
+  z.number().int().nonnegative().parse(loadedMatchCount);
+  id.nullable().parse(nextCursor);
+  return loadedMatchCount > 0
+    ? "populated"
+    : nextCursor === null
+      ? "empty"
+      : "partial_empty";
+}
+
 export const personRecordsVM = resourceSchema(recordsData);
 export const personHabitsVM = resourceSchema(
   z.strictObject({

@@ -197,6 +197,20 @@ export const commandOutcome = z.discriminatedUnion("state", [
     refresh: z.array(queryName).min(1),
   }),
   z.strictObject({
+    state: z.literal("commit_uncertain"),
+    idempotencyKey: id,
+    error: recoverableError,
+    retainDraft: z.literal(true),
+    recovery: z.literal("same_idempotency_key"),
+  }),
+  z.strictObject({
+    state: z.literal("committed_refresh_failed"),
+    receipt: commitReceipt,
+    refresh: z.array(queryName).min(1),
+    error: recoverableError,
+    recovery: z.literal("refresh_queries_only"),
+  }),
+  z.strictObject({
     state: z.literal("unchanged"),
     requestId: id,
     explanation: text,
