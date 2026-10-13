@@ -15,6 +15,7 @@ type episodeCommandApplication interface {
 	CreateEpisode(context.Context, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	LinkEpisodeFact(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	AdmitEpisodeStatus(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
+	ReportEpisodeRecurrence(context.Context, uuid.UUID, uuid.UUID, model.EpisodeRecurrenceCommand) (*model.EpisodeRecurrenceReceipt, error)
 }
 
 func (s *PublicServer) WithEpisodeCommands(commands episodeCommandApplication) *PublicServer {

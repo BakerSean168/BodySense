@@ -72,15 +72,8 @@
     {
       "id": "body-state",
       "name": "BodyState / BodyFact / Episode",
-      "product": [
-        "docs/product/domain/bodystate.md"
-      ],
-      "sf": [
-        "SF-10",
-        "SF-11",
-        "SF-12",
-        "SF-20"
-      ],
+      "product": ["docs/product/domain/bodystate.md"],
+      "sf": ["SF-10", "SF-11", "SF-12", "SF-20"],
       "gates": {
         "business": {
           "state": "ready",
@@ -92,12 +85,12 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Live Person Records/Habits and provisional Episode source-selection UI continue to use canonical whole-revision reads. v9 adds source-evidence status DTO and strict typed client; no signed-off Penpot status admission, full Episode relation/history, Observation/Hypothesis/ConcernGroup."
+          "details": "Canonical Person Records/Habits and provisional Episode source-selection UI plus typed v9 explicit-status admission. v10 adds user-reported recurrence relation projection with source availability and supported/needs_review, at one BodyState revision. No complete Episode relations/merge/split history or signed-off Penpot presentation."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Native PostgreSQL 18 migrations 000002..000009 full-up/down/up verified, including guarded status receipt downgrade. Direct-edit-only Episode status admission attaches typed explicit course claims to existing episode_state_evidence, one source/owner-bound revision+outbox+idempotent receipt. Whole-domain relations, Observation/Hypothesis and legacy retirement remain OPEN."
+          "details": "Native PostgreSQL 18 migrations 000002..000010 full-up/down/up and immutable checks verified. V10 stores exact user-authorized recurrence relations with two owner-bound Episode FKs, primary symptom Fact/source FK, one authorization receipt/revision/outbox and source-visible reads, preserving independent v9 states. Observation/Hypothesis, merge/split and legacy retirement remain OPEN."
         },
         "design": {
           "state": "in_progress",
@@ -107,25 +100,20 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Episode create/link + Person provisional UI and retry-hardening implemented. v9 owner/source-verified explicit current/resolution report passes race-enabled PostgreSQL 18 repository/HTTP, including generic absence rejection, foreign target non-disclosure, message provenance denial, source invalidation, rollback, concurrent replay and recurrence separation; generated browser adapter added without Penpot UI changes. Whole ENG-BS-02 still open."
+          "details": "Real Person BodyFact/Episode create/link provisional UI + v9 source-backed status admission. V10 adds direct user reported recurrence write/read, typed Go/TS/strict HTTP, incompatible evidence/time refusal, non-disclosing cross-owner reads, current-source filtering, needs_review after end correction and graph acyclicity. Race-enabled native PG18 repository/HTTP plus full Web 73/456 tests PASS. Final designer-approved recurrence UI, automatic High and complete BodyState remain OPEN."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Previous PR #247 SHA 6548539b6119891a8f946b3b608d886ab3004123 exact CI 12/12 PASS. New v9 locally: uncached Web 73 files/453 tests lint/typecheck/build PASS, PostgreSQL 18 up/down/up + Go race repository/HTTP/consultation PASS, pnpm contracts:verify + 104 Postman route parity PASS, real Go/PG18/Python/React Chromium vertical E2E 15/15 PASS without retry and isolated resources cleaned. plan 5/5 and checksum immutable PASS. New v9 exact-SHA GitHub CI pending; no staging/production."
+          "details": "Prior v9 PR #247 head d010a63d00002f7d508e1b669f33758cf7e93441 exact CI 12/12 SUCCESS. New v10: PostgreSQL 18 v10 full up/down v9/replay v10, race Go repository/HTTP/consultation (including 6 recurrence tests) PASS; generated contracts and 106 Postman operations parity PASS; Web 73 files/456 tests lint/typecheck/build PASS; real isolated Go/PG18/Redis/Python/React Chromium 15/15 PASS without retry, test resources cleaned. New v10 exact-SHA GitHub CI PENDING. No staging/production or whole-domain release."
         }
       }
     },
     {
       "id": "conversation-person",
       "name": "Conversation / Ask User / Person Profile",
-      "product": [
-        "docs/product/domain/person-chat.md"
-      ],
-      "sf": [
-        "SF-30",
-        "SF-70"
-      ],
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-30", "SF-70"],
       "gates": {
         "business": {
           "state": "ready",
@@ -164,12 +152,8 @@
     {
       "id": "diagnosis",
       "name": "Diagnosis V2 / ConditionEntry",
-      "product": [
-        "docs/product/domain/diagnosis.md"
-      ],
-      "sf": [
-        "SF-40"
-      ],
+      "product": ["docs/product/domain/diagnosis.md"],
+      "sf": ["SF-40"],
       "gates": {
         "business": {
           "state": "ready",
@@ -212,9 +196,7 @@
         "docs/product/domain/training.md",
         "docs/product/domain/safety.md"
       ],
-      "sf": [
-        "SF-50"
-      ],
+      "sf": ["SF-50"],
       "gates": {
         "business": {
           "state": "ready",
@@ -254,13 +236,8 @@
     {
       "id": "person-assets",
       "name": "Equipment / UserAsset / Media / Reports",
-      "product": [
-        "docs/product/domain/person-chat.md"
-      ],
-      "sf": [
-        "SF-60",
-        "SF-70"
-      ],
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-60", "SF-70"],
       "gates": {
         "business": {
           "state": "ready",
@@ -497,33 +474,48 @@
         "Full domain Schema/ViewModel, Observation/Hypothesis/ConcernGroup, legacy retirement, cross-domain release and staging/production are not accepted"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-direct-user-recurrence-relations-v10",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-recurrence-relations.md",
+      "tests": [
+        "apps/api/internal/repository/episode_recurrence_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_recurrence_http_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Only authenticated direct user can link a SOURCE-VERIFIED ended old Episode and a separate new current-source Episode; no implicit AI High or medical etiology",
+        "Both Episode IDs remain independent; no merge, split, implicit status transition, or copied symptom Fact",
+        "Old end withdrawal downgrades review; blocked/withdrawn new original source hides active relations; exact durable authorization and per-user revision remain immutable",
+        "Final Penpot V2 Episode recurrence interaction is separately authored under design PR #250; strict generated browser adapter is not UI signoff",
+        "Complete Episode reorganization and temporal resolution, Observation/Hypothesis/ConcernGroup, legacy retirement, controlled erasure and V2 production launch remain open"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T12:45:10Z",
+  "updatedAtUtc": "2026-10-13T13:44:00Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeStatusAdmission-20261013",
-    "baselineHead": "6548539b6119891a8f946b3b608d886ab3004123",
+    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeRecurrenceRelations-20261013",
+    "baselineHead": "d010a63d00002f7d508e1b669f33758cf7e93441",
     "state": "locally_verified_new_exact_sha_ci_pending",
-    "contract": "docs/plan/active/2026-10-13-episode-status-admission.md",
-    "nextTickets": [
-      "DS-BS-02",
-      "ENG-BS-02",
-      "IR-BS-01",
-      "PD-BS-01"
-    ],
+    "contract": "docs/plan/active/2026-10-13-episode-recurrence-relations.md",
+    "nextTickets": ["DS-BS-02", "ENG-BS-02", "IR-BS-01", "PD-BS-01"],
     "verification": {
-      "priorHeadExactShaCI": "6548539b6119891a8f946b3b608d886ab3004123:12_of_12_SUCCESS",
-      "currentFullWeb": "73_files_453_tests_lint_typecheck_build_PASS_uncached",
-      "nativePostgres": "migration_9_full_up_down_8_replay_9_and_race_Go_repository_HTTP_consultation_PASS",
-      "statusNegativeCoverage": "ordinary_negative_without_explicit_resolution_DENIED;foreign_episode_404;unreviewed_user_message_DENIED;rollback_concurrent_idempotence_source_withdrawal_recurrence_PASS",
-      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_104_routes_PASS",
-      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React;isolated_resources_clean",
-      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_checksum_v9_PASS",
+      "priorHeadExactShaCI": "d010a63d00002f7d508e1b669f33758cf7e93441:12_of_12_SUCCESS",
+      "nativePostgres": "migration_10_full_up_down_9_replay_10_and_race_Go_repository_HTTP_consultation_PASS",
+      "recurrenceNegativeCoverage": "direct_user_source_only;old_ended_new_distinct;known_wrong_chronology_DENIED;foreign_owner_DENIED;source_withdrawal_review_or_hide;cycle_DENIED;late_rollback_and_concurrent_exact_replay_PASS",
+      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_106_routes_PASS",
+      "currentFullWeb": "73_files_456_tests_lint_typecheck_build_PASS_uncached",
+      "currentNativeBrowser": "15_of_15_PASS_no_retries_real_Go_Postgres_Python_React;resources_cleaned",
       "newExactShaCI": "pending_push",
-      "independentPenpotPR": "250_untouched",
+      "currentPlanAndCodegen": "pnpm_plan_check_5_of_5_and_migration_checksum_v10_PASS",
+      "independentPenpotPR": "250_not_written",
       "stagingProduction": "not_deployed",
       "evidenceRoot": ".runtime/schema-first-v2-evidence/",
-      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2646867/"
+      "nativeBrowserEvidence": ".runtime/schema-first-v2-evidence/vertical-e2e-2871484/"
     }
   }
 }

@@ -211,6 +211,74 @@ paths:
         "409": *a3
         "500": *a4
         "503": *a5
+  /api/v1/body-state/episodes/{id}/recurrences:
+    post:
+      operationId: reportBodyEpisodeRecurrence
+      summary: Direct user report that a distinct new Episode recurred after a source-backed completed Episode.
+      description: Requires original completed Episode and a distinct currently source-visible new Episode with exact primary user-authored positive symptom Fact; creates an organizational relation only, never clinical etiology or old Episode reopening.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeRecurrenceRequest"
+      responses:
+        "200":
+          description: Durable and exactly replayable source-authorized historical relation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRecurrenceReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/relations:
+    get:
+      operationId: listBodyEpisodeRelations
+      summary: Source-visible authorized recurrence links touching one Episode at a stable BodyState revision.
+      description: Hide relations with blocked or withdrawn new basis Fact, and mark the old course needs_review if its explicit ending evidence was invalidated. This read never implies shared clinical cause.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Revision-scoped, minimally sourced relation page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRelationPage"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/facts:
     post:
       operationId: addBodyStateFact
@@ -3464,6 +3532,84 @@ components:
           type: integer
           format: int64
           minimum: 1
+    BodyEpisodeRecurrenceRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, new_episode_id, fact_id]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: "^\\S(?:.*\\S)?$"
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        new_episode_id: *a7
+        fact_id: *a7
+    BodyEpisodeRecurrenceReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, relation_id, from_episode_id, to_episode_id, fact_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        relation_id: *a7
+        from_episode_id: *a7
+        to_episode_id: *a7
+        fact_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyEpisodeRelationReference:
+      type: object
+      additionalProperties: false
+      required: [id, from_episode_id, to_episode_id, kind, basis_fact_id, authorization_id, created_revision, review_state]
+      properties:
+        id: *a7
+        from_episode_id: *a7
+        to_episode_id: *a7
+        kind:
+          type: string
+          enum: [recurrence_reported]
+        basis_fact_id: *a7
+        authorization_id: *a7
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        review_state:
+          type: string
+          enum: [supported, needs_review]
+    BodyEpisodeRelationPage:
+      type: object
+      additionalProperties: false
+      required: [user_id, episode_id, current_revision, relations, has_more]
+      properties:
+        user_id: *a7
+        episode_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        relations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/BodyEpisodeRelationReference"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
     BodyEpisodeAssociationRequest:
       type: object
       additionalProperties: false
@@ -3488,7 +3634,7 @@ components:
         user_id: *a7
         operation:
           type: string
-          enum: [create, link, status]
+          enum: [create, link, status, recurrence]
         episode_id: *a7
         fact_id: *a7
         revision:

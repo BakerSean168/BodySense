@@ -16,12 +16,14 @@ import (
 )
 
 type episodeCommandHTTPFake struct {
-	calls   int
-	owner   uuid.UUID
-	target  uuid.UUID
-	command model.EpisodeAssociationCommand
-	receipt *model.EpisodeCommandReceipt
-	err     error
+	calls             int
+	owner             uuid.UUID
+	target            uuid.UUID
+	command           model.EpisodeAssociationCommand
+	receipt           *model.EpisodeCommandReceipt
+	recurrenceCommand model.EpisodeRecurrenceCommand
+	recurrenceReceipt *model.EpisodeRecurrenceReceipt
+	err               error
 }
 
 func (f *episodeCommandHTTPFake) CreateEpisode(_ context.Context, owner uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
@@ -37,6 +39,13 @@ func (f *episodeCommandHTTPFake) AdmitEpisodeStatus(_ context.Context, owner, ep
 	f.target = episode
 	f.command = c
 	return f.receipt, f.err
+}
+func (f *episodeCommandHTTPFake) ReportEpisodeRecurrence(_ context.Context, owner, old uuid.UUID, c model.EpisodeRecurrenceCommand) (*model.EpisodeRecurrenceReceipt, error) {
+	f.calls++
+	f.owner = owner
+	f.target = old
+	f.recurrenceCommand = c
+	return f.recurrenceReceipt, f.err
 }
 func (f *episodeCommandHTTPFake) LinkEpisodeFact(_ context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {
 	f.calls++

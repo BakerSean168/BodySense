@@ -37,6 +37,16 @@ func (s *episodeReaderStub) GetEpisode(_ context.Context, owner, id uuid.UUID) (
 	return &model.EpisodeRecord{ID: id, UserID: owner}, nil
 }
 
+func (s *episodeReaderStub) ListEpisodeRelations(_ context.Context, owner, target uuid.UUID, cursor int64) (*model.EpisodeRelationPage, error) {
+	s.owner = owner
+	s.episode = target
+	s.cursor = cursor
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &model.EpisodeRelationPage{UserID: owner, EpisodeID: target, Relations: []model.EpisodeRelationReference{}}, nil
+}
+
 func TestEpisodeReadServiceValidatesAuthenticationAndCursors(t *testing.T) {
 	stub := &episodeReaderStub{}
 	svc := NewEpisodeReadService(stub)

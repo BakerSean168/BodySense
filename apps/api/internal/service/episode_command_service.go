@@ -12,6 +12,7 @@ type episodeCommandRepository interface {
 	CreateEpisode(context.Context, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	LinkEpisodeFact(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
 	AdmitEpisodeStatus(context.Context, uuid.UUID, uuid.UUID, model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error)
+	ReportEpisodeRecurrence(context.Context, uuid.UUID, uuid.UUID, model.EpisodeRecurrenceCommand) (*model.EpisodeRecurrenceReceipt, error)
 }
 
 // The only authorized caller is an exact authenticated direct-user HTTP
@@ -42,6 +43,18 @@ func (s *EpisodeCommandService) AdmitEpisodeStatus(ctx context.Context, owner, e
 		return nil, err
 	}
 	return s.repository.AdmitEpisodeStatus(ctx, owner, episode, c)
+}
+
+// Explicitly relate an existing completed course to a distinct new course.
+// The authenticated user, not a generative model, authorizes exact IDs.
+func (s *EpisodeCommandService) ReportEpisodeRecurrence(ctx context.Context, owner, old uuid.UUID, c model.EpisodeRecurrenceCommand) (*model.EpisodeRecurrenceReceipt, error) {
+	if owner == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidEpisodeEvidence)
+	}
+	if err := c.Validate(old); err != nil {
+		return nil, err
+	}
+	return s.repository.ReportEpisodeRecurrence(ctx, owner, old, c)
 }
 
 func (s *EpisodeCommandService) LinkEpisodeFact(ctx context.Context, owner, episode uuid.UUID, c model.EpisodeAssociationCommand) (*model.EpisodeCommandReceipt, error) {

@@ -115,6 +115,121 @@ describe("BodyState Episode generated read service", () => {
   });
 });
 
+describe("BodyState Episode explicitly reported recurrence and source-backed relations", () => {
+  beforeEach(() => authFetchMock.mockReset());
+  const newer = "456789ab-4567-4567-9567-456789abcdef";
+  const relationId = "56789abc-5678-4678-9678-56789abcdef0";
+  const authorizationId = "6789abcd-6789-4789-9789-6789abcdef01";
+  const revisionId = "789abcde-789a-489a-989a-789abcdef012";
+  const eventId = "89abcdef-89ab-49ab-99ab-89abcdef0123";
+  const input = {
+    idempotency_key: "user-reported-recurrence",
+    expected_revision: 9,
+    new_episode_id: newer,
+    fact_id: factID,
+  };
+  const receipt = {
+    id: authorizationId,
+    user_id: owner,
+    relation_id: relationId,
+    from_episode_id: episodeID,
+    to_episode_id: newer,
+    fact_id: factID,
+    revision: 10,
+    revision_id: revisionId,
+    event_id: eventId,
+    committed_at: "2026-10-13T00:00:00Z",
+  };
+  it("accepts only explicit exact owner Episode targets through generated POST", async () => {
+    authFetchMock.mockResolvedValueOnce(json(receipt));
+    expect(await bodyEpisodeService.reportRecurrence(episodeID, input)).toEqual(
+      receipt,
+    );
+    expect(authFetchMock).toHaveBeenCalledWith(
+      `/api/v1/body-state/episodes/${episodeID}/recurrences`,
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    const injected = {
+      ...input,
+      clinical_etiology: "same illness",
+      status: "resolved",
+    };
+    await expect(
+      bodyEpisodeService.reportRecurrence(episodeID, injected as typeof input),
+    ).rejects.toThrow();
+    await expect(
+      bodyEpisodeService.reportRecurrence(episodeID, {
+        ...input,
+        new_episode_id: "../spoof",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      bodyEpisodeService.reportRecurrence("../spoof", input),
+    ).rejects.toThrow();
+    expect(authFetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("uses immutable revision-cursor relation read and preserves needs_review source state", async () => {
+    const relation = {
+      id: relationId,
+      from_episode_id: episodeID,
+      to_episode_id: newer,
+      kind: "recurrence_reported",
+      basis_fact_id: factID,
+      authorization_id: authorizationId,
+      created_revision: 10,
+      review_state: "needs_review",
+    };
+    const page = {
+      user_id: owner,
+      episode_id: episodeID,
+      current_revision: 11,
+      relations: [relation],
+      has_more: false,
+    };
+    authFetchMock.mockResolvedValueOnce(json(page));
+    expect(
+      (await bodyEpisodeService.listRelations(episodeID)).relations[0],
+    ).toEqual(relation);
+    expect(authFetchMock).toHaveBeenLastCalledWith(
+      `/api/v1/body-state/episodes/${episodeID}/relations`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    authFetchMock.mockResolvedValueOnce(json(page));
+    await bodyEpisodeService.listRelations(episodeID, 10);
+    expect(authFetchMock).toHaveBeenLastCalledWith(
+      `/api/v1/body-state/episodes/${episodeID}/relations?before_revision=10`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    await expect(
+      bodyEpisodeService.listRelations(episodeID, -1),
+    ).rejects.toThrow();
+    expect(authFetchMock).toHaveBeenCalledTimes(2);
+  });
+  it("rejects invalid unproven relation responses without claiming a clinical recurrence", async () => {
+    authFetchMock.mockResolvedValueOnce(
+      json({
+        user_id: owner,
+        episode_id: episodeID,
+        current_revision: 10,
+        relations: [
+          {
+            id: relationId,
+            from_episode_id: episodeID,
+            to_episode_id: newer,
+            kind: "diagnosed_recurring",
+            basis_fact_id: factID,
+            authorization_id: authorizationId,
+            created_revision: 10,
+            review_state: "supported",
+          },
+        ],
+        has_more: false,
+      }),
+    );
+    await expect(bodyEpisodeService.listRelations(episodeID)).rejects.toThrow();
+  });
+});
+
 describe("BodyState Episode explicit user commands", () => {
   beforeEach(() => authFetchMock.mockReset());
   const command = {

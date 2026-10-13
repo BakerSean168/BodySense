@@ -15,6 +15,8 @@ import {
   BodyEpisodeCommandReceipt,
   BodyEpisodePage,
   BodyEpisodeRecord,
+  BodyEpisodeRecurrenceReceipt,
+  BodyEpisodeRelationPage,
   BodyFactCommit,
   BodyFactRecordPage,
   BodyMetricsSnapshot,
@@ -95,6 +97,9 @@ import type {
   BodyEpisodeCommandReceiptOutput,
   BodyEpisodePageOutput,
   BodyEpisodeRecordOutput,
+  BodyEpisodeRecurrenceReceiptOutput,
+  BodyEpisodeRecurrenceRequest,
+  BodyEpisodeRelationPageOutput,
   BodyFactCommitOutput,
   BodyFactRecordPageOutput,
   BodyMetricsSnapshotOutput,
@@ -148,6 +153,7 @@ import type {
   KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListBodyEpisodeRelationsParams,
   ListBodyEpisodesParams,
   ListBodyFactRecordsParams,
   ListConversationsParams,
@@ -552,6 +558,110 @@ const res = await (fetchFn ?? fetch)(getAdmitBodyEpisodeStatusUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReportBodyEpisodeRecurrenceUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/recurrences`
+}
+
+/**
+ * Requires original completed Episode and a distinct currently source-visible new Episode with exact primary user-authored positive symptom Fact; creates an organizational relation only, never clinical etiology or old Episode reopening.
+ * @summary Direct user report that a distinct new Episode recurred after a source-backed completed Episode.
+ */
+export const reportBodyEpisodeRecurrence = async (id: string,
+    bodyEpisodeRecurrenceRequest: BodyEpisodeRecurrenceRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRecurrenceReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReportBodyEpisodeRecurrenceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeRecurrenceRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRecurrenceReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRecurrenceReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRecurrenceReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyEpisodeRelationsUrl = (id: string,
+    params?: ListBodyEpisodeRelationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/episodes/${id}/relations?${stringifiedParams}` : `/api/v1/body-state/episodes/${id}/relations`
+}
+
+/**
+ * Hide relations with blocked or withdrawn new basis Fact, and mark the old course needs_review if its explicit ending evidence was invalidated. This read never implies shared clinical cause.
+ * @summary Source-visible authorized recurrence links touching one Episode at a stable BodyState revision.
+ */
+export const listBodyEpisodeRelations = async (id: string,
+    params?: ListBodyEpisodeRelationsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRelationPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyEpisodeRelationsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRelationPage, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRelationPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRelationPage.parse(parsedBody) : parsedBody
   return data
 }
 

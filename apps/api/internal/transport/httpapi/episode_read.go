@@ -14,6 +14,7 @@ import (
 type episodeReadApplication interface {
 	ListEpisodes(context.Context, uuid.UUID, int64) (*model.EpisodePage, error)
 	GetEpisode(context.Context, uuid.UUID, uuid.UUID) (*model.EpisodeRecord, error)
+	ListEpisodeRelations(context.Context, uuid.UUID, uuid.UUID, int64) (*model.EpisodeRelationPage, error)
 }
 
 func (s *PublicServer) WithEpisodes(read episodeReadApplication) *PublicServer {

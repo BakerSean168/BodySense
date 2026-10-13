@@ -187,6 +187,13 @@ func lastExplicitAsOf(input []EpisodeStateBasis) string {
 	return latest.Start
 }
 
+// CompareEpisodeEvidenceTime reports A relative to B only when trusted,
+// sufficiently precise business times establish strict chronology. A
+// non-comparable overlap or unknown time is never treated as "later".
+func CompareEpisodeEvidenceTime(a, b FactTemporal) (int, bool) {
+	return compareEvidenceTimes(a, b)
+}
+
 // Return order of A relative to B only when the underlying explicit times
 // prove separation. Unknown/approximate/range or overlapping day windows do
 // not establish a medical course by guessing chronology.

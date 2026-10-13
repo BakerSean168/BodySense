@@ -17,13 +17,14 @@ import (
 )
 
 type episodeReadHTTPFake struct {
-	owner  uuid.UUID
-	target uuid.UUID
-	before int64
-	calls  int
-	page   *model.EpisodePage
-	record *model.EpisodeRecord
-	err    error
+	owner     uuid.UUID
+	target    uuid.UUID
+	before    int64
+	calls     int
+	page      *model.EpisodePage
+	record    *model.EpisodeRecord
+	relations *model.EpisodeRelationPage
+	err       error
 }
 
 func (f *episodeReadHTTPFake) ListEpisodes(_ context.Context, owner uuid.UUID, before int64) (*model.EpisodePage, error) {
@@ -37,6 +38,14 @@ func (f *episodeReadHTTPFake) GetEpisode(_ context.Context, owner, id uuid.UUID)
 	f.target = id
 	f.calls++
 	return f.record, f.err
+}
+
+func (f *episodeReadHTTPFake) ListEpisodeRelations(_ context.Context, owner, id uuid.UUID, before int64) (*model.EpisodeRelationPage, error) {
+	f.owner = owner
+	f.target = id
+	f.before = before
+	f.calls++
+	return f.relations, f.err
 }
 
 func episodeHTTPRouter(t *testing.T, owner uuid.UUID, source episodeReadApplication) *gin.Engine {
