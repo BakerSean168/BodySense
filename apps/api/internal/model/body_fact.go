@@ -90,17 +90,29 @@ type RecordBodyFactsCommand struct {
 	Facts            []BodyFactInput `json:"facts"`
 }
 
+// MessageFactSource identifies a Go-created consultation envelope. It is NOT
+// trusted simply because an AI tool passes these IDs: persistence verifies the
+// run, conversation owner, user-role message and matching turn in the database.
+// Each persisted fact must quote a literal excerpt from that user's message.
+type MessageFactSource struct {
+	RunID     uuid.UUID
+	MessageID uuid.UUID
+}
+
 // StatementEvidence is the minimum durable user-statement source. The public
 // direct-edit command creates these server-side; callers cannot claim a message,
 // clinical source, other user's identity or arbitrary source version.
 type StatementEvidence struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID        uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
-	SourceKind    string    `gorm:"not null" json:"source_kind"`
-	SourceVersion int64     `gorm:"not null" json:"source_version"`
-	Excerpt       string    `gorm:"not null" json:"excerpt"`
-	Availability  string    `gorm:"not null" json:"availability"`
-	RecordedAt    time.Time `gorm:"not null" json:"recorded_at"`
+	ID                   uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID               uuid.UUID  `gorm:"type:uuid;not null" json:"user_id"`
+	SourceKind           string     `gorm:"not null" json:"source_kind"`
+	SourceVersion        int64      `gorm:"not null" json:"source_version"`
+	SourceConversationID *uuid.UUID `gorm:"type:uuid" json:"source_conversation_id,omitempty"`
+	SourceRunID          *uuid.UUID `gorm:"type:uuid" json:"source_run_id,omitempty"`
+	SourceMessageID      *uuid.UUID `gorm:"type:uuid" json:"source_message_id,omitempty"`
+	Excerpt              string     `gorm:"not null" json:"excerpt"`
+	Availability         string     `gorm:"not null" json:"availability"`
+	RecordedAt           time.Time  `gorm:"not null" json:"recorded_at"`
 }
 
 func (StatementEvidence) TableName() string { return "statement_evidence" }

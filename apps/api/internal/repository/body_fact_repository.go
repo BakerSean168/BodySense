@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -21,6 +22,20 @@ import (
 // aggregate. This is deliberately not an Upsert: changing a statement requires a
 // new command and correction authorization, never reuse of an idempotency key.
 func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	return r.recordFacts(ctx, userID, command, nil)
+}
+
+// RecordMessageFacts only accepts literal excerpts from a user-authored message
+// in the provided Go-owned run. The run/message/owner/turn join is checked in
+// the same transaction as the fact commit, not trusted from an Agent payload.
+func (r *BodyStateRepository) RecordMessageFacts(ctx context.Context, userID uuid.UUID, source model.MessageFactSource, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	if source.RunID == uuid.Nil || source.MessageID == uuid.Nil {
+		return nil, fmt.Errorf("%w: run and user message identities are required", model.ErrInvalidBodyFact)
+	}
+	return r.recordFacts(ctx, userID, command, &source)
+}
+
+func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource) (*model.BodyFactCommit, error) {
 	if userID == uuid.Nil {
 		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyFact)
 	}
@@ -28,6 +43,9 @@ func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid
 		return nil, err
 	}
 	fingerprint, err := bodyFactCommandFingerprint(command)
+	if source != nil {
+		fingerprint, err = bodyFactMessageFingerprint(command, *source)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +73,38 @@ func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid
 			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 
+		// User messages deliberately have no run_id FK: the Run is identified
+		// by the shared turn, which is the real consultation envelope shape.
+		// Checking the structured Parts avoids trusting a client-supplied
+		// source label or stale/incorrect content_text projection.
+		sourceKind := "direct_edit"
+		var sourceConversationID uuid.UUID
+		if source != nil {
+			var userMessage model.Message
+			err := tx.Table("public.messages AS m").Select("m.*").
+				Joins("JOIN public.runs AS r ON r.turn_id = m.turn_id AND r.conversation_id = m.conversation_id").
+				Joins("JOIN public.conversations AS c ON c.id = m.conversation_id").
+				Where("m.id = ? AND r.id = ? AND r.user_id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND m.role = ? AND m.status = ?", source.MessageID, source.RunID, userID, userID, "user", "completed").
+				Take(&userMessage).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: user-authored source is not available for this run", model.ErrInvalidBodyFact)
+			}
+			if err != nil {
+				return err
+			}
+			original := messageTextFromParts(userMessage.Parts)
+			if original == "" {
+				return fmt.Errorf("%w: source message contains no user-authored text", model.ErrInvalidBodyFact)
+			}
+			for _, fact := range command.Facts {
+				if !strings.Contains(original, fact.Statement) {
+					return fmt.Errorf("%w: statement is not a verbatim excerpt from the user message", model.ErrInvalidBodyFact)
+				}
+			}
+			sourceKind = "user_message"
+			sourceConversationID = userMessage.ConversationID
+		}
+
 		now := time.Now().UTC()
 		commitID, eventID := uuid.New(), uuid.New()
 		facts := make([]model.BodyFact, 0, len(command.Facts))
@@ -76,17 +126,23 @@ func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid
 				BodyRegionIDs: datatypes.JSON(regions), Temporal: datatypes.JSON(temporal), Details: datatypes.JSON(input.Details),
 				SourceEvidenceID: evidenceID, AssertionStatus: "asserted", CreatedRevision: next, RecordedAt: now,
 			})
-			evidence = append(evidence, model.StatementEvidence{
-				ID: evidenceID, UserID: userID, SourceKind: "direct_edit", SourceVersion: 1,
+			sourceRow := model.StatementEvidence{
+				ID: evidenceID, UserID: userID, SourceKind: sourceKind, SourceVersion: 1,
 				Excerpt: input.Statement, Availability: "available", RecordedAt: now,
-			})
+			}
+			if source != nil {
+				sourceRow.SourceConversationID = &sourceConversationID
+				sourceRow.SourceRunID = &source.RunID
+				sourceRow.SourceMessageID = &source.MessageID
+			}
+			evidence = append(evidence, sourceRow)
 			factIDs = append(factIDs, factID)
 			evidenceIDs = append(evidenceIDs, evidenceID)
 		}
 		// Revision and outbox carry identifiers only. Raw health text remains in
 		// its owning rows and can be erased without retaining hidden audit copies.
 		metadata := map[string]any{"commit_id": commitID, "fact_ids": factIDs, "source_evidence_ids": evidenceIDs}
-		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "facts.recorded", "direct_edit", metadata)
+		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "facts.recorded", sourceKind, metadata)
 		if err != nil {
 			return err
 		}
@@ -168,7 +224,20 @@ func (r *BodyStateRepository) ListFacts(ctx context.Context, userID uuid.UUID, b
 }
 
 func bodyFactCommandFingerprint(command model.RecordBodyFactsCommand) (string, error) {
-	encoded, err := json.Marshal(command)
+	return bodyFactFingerprintValue(command)
+}
+
+func bodyFactMessageFingerprint(command model.RecordBodyFactsCommand, source model.MessageFactSource) (string, error) {
+	return bodyFactFingerprintValue(struct {
+		Kind      string                       `json:"source_kind"`
+		RunID     uuid.UUID                    `json:"run_id"`
+		MessageID uuid.UUID                    `json:"message_id"`
+		Command   model.RecordBodyFactsCommand `json:"command"`
+	}{Kind: "user_message", RunID: source.RunID, MessageID: source.MessageID, Command: command})
+}
+
+func bodyFactFingerprintValue(payload any) (string, error) {
+	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
 	}

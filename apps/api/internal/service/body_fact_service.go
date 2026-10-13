@@ -10,6 +10,7 @@ import (
 
 type bodyFactLedger interface {
 	RecordDirectFacts(context.Context, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
+	RecordMessageFacts(context.Context, uuid.UUID, model.MessageFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 	ListFacts(context.Context, uuid.UUID, int64) (*model.BodyFactPage, error)
 }
 
@@ -42,6 +43,29 @@ func (s *BodyFactService) RecordDirectFacts(ctx context.Context, userID uuid.UUI
 		}
 	}
 	return s.ledger.RecordDirectFacts(ctx, userID, command)
+}
+
+// RecordMessageFacts accepts a consultation run's message identity only after
+// validating all fact kinds/regions. The repository independently verifies the
+// original Go-owned envelope and exact user-authored excerpts.
+func (s *BodyFactService) RecordMessageFacts(ctx context.Context, userID uuid.UUID, source model.MessageFactSource, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	if userID == uuid.Nil || source.RunID == uuid.Nil || source.MessageID == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated run and source message required", model.ErrInvalidBodyFact)
+	}
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
+	for _, fact := range command.Facts {
+		for _, region := range fact.BodyRegionIDs {
+			if s.regions == nil {
+				return nil, ErrBodyRegionIDValidationUnavailable
+			}
+			if !s.regions.IsValidBodyRegionID(region) {
+				return nil, ErrUnknownBodyRegionID
+			}
+		}
+	}
+	return s.ledger.RecordMessageFacts(ctx, userID, source, command)
 }
 
 func (s *BodyFactService) ListFacts(ctx context.Context, userID uuid.UUID, beforeRevision int64) (*model.BodyFactPage, error) {

@@ -20,6 +20,11 @@ func (f *fakeFactLedger) RecordDirectFacts(_ context.Context, owner uuid.UUID, _
 	f.owner = owner
 	return &model.BodyFactCommit{ID: uuid.New(), UserID: owner, Revision: 1}, nil
 }
+func (f *fakeFactLedger) RecordMessageFacts(_ context.Context, owner uuid.UUID, _ model.MessageFactSource, _ model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
+	f.calls++
+	f.owner = owner
+	return &model.BodyFactCommit{ID: uuid.New(), UserID: owner, Revision: 1}, nil
+}
 func (f *fakeFactLedger) ListFacts(_ context.Context, owner uuid.UUID, _ int64) (*model.BodyFactPage, error) {
 	f.calls++
 	f.owner = owner
@@ -76,5 +81,40 @@ func TestBodyFactServiceRejectsMissingOwnerAndInvalidCommand(t *testing.T) {
 	}
 	if ledger.calls != 0 {
 		t.Fatal("invalid command reached persistence")
+	}
+}
+
+func TestBodyFactMessageSourceRequiresOwnerRunAndValidatedRegions(t *testing.T) {
+	ledger := &fakeFactLedger{}
+	application := NewBodyFactService(ledger, NewCanonicalBodyRegionIDValidator())
+	owner := uuid.New()
+	source := model.MessageFactSource{RunID: uuid.New(), MessageID: uuid.New()}
+	command := serviceFactCommand()
+	for _, tc := range []struct {
+		name   string
+		owner  uuid.UUID
+		source model.MessageFactSource
+		want   error
+	}{
+		{"missing owner", uuid.Nil, source, model.ErrInvalidBodyFact},
+		{"missing run", owner, model.MessageFactSource{MessageID: source.MessageID}, model.ErrInvalidBodyFact},
+		{"missing message", owner, model.MessageFactSource{RunID: source.RunID}, model.ErrInvalidBodyFact},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if receipt, err := application.RecordMessageFacts(context.Background(), tc.owner, tc.source, command); !errors.Is(err, tc.want) || receipt != nil {
+				t.Fatalf("receipt=%#v err=%v", receipt, err)
+			}
+		})
+	}
+	command.Facts[0].BodyRegionIDs = []string{"unverified.claimed.anatomy"}
+	if _, err := application.RecordMessageFacts(context.Background(), owner, source, command); !errors.Is(err, ErrUnknownBodyRegionID) {
+		t.Fatalf("unknown canonical region accepted: %v", err)
+	}
+	if ledger.calls != 0 {
+		t.Fatal("invalid message binding reached persistence")
+	}
+	command.Facts[0].BodyRegionIDs = []string{"shoulder.left"}
+	if receipt, err := application.RecordMessageFacts(context.Background(), owner, source, command); err != nil || receipt == nil || ledger.calls != 1 || ledger.owner != owner {
+		t.Fatalf("verified command not forwarded: %#v %v", receipt, err)
 	}
 }
