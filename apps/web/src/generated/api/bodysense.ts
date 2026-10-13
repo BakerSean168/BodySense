@@ -12,6 +12,8 @@ import {
   AssessmentReplayReport,
   AssessmentReportV2,
   AuthSession,
+  BodyEpisodePage,
+  BodyEpisodeRecord,
   BodyFactCommit,
   BodyFactRecordPage,
   BodyMetricsSnapshot,
@@ -88,6 +90,8 @@ import type {
   AuthLoginRequest,
   AuthRegisterRequest,
   AuthSessionOutput,
+  BodyEpisodePageOutput,
+  BodyEpisodeRecordOutput,
   BodyFactCommitOutput,
   BodyFactRecordPageOutput,
   BodyMetricsSnapshotOutput,
@@ -141,6 +145,7 @@ import type {
   KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListBodyEpisodesParams,
   ListBodyFactRecordsParams,
   ListConversationsParams,
   ListDiagnosisAnalysesParams,
@@ -294,6 +299,92 @@ export const listBodyFactRecords = async (params?: ListBodyFactRecordsParams, op
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyFactRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyEpisodesUrl = (params?: ListBodyEpisodesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/episodes?${stringifiedParams}` : `/api/v1/body-state/episodes`
+}
+
+/**
+ * Read-only. A clinical condition, inferred recovery or user-approved episode association cannot be created through this endpoint. Blocked or erased source-only identities are hidden, and negative symptoms do not imply an Episode ended.
+ * @summary Read source-backed symptom Episode identities from one BodyState revision snapshot.
+ */
+export const listBodyEpisodes = async (params?: ListBodyEpisodesParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodePageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyEpisodesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodePage, status?: number} = new globalThis.Error();
+    const data : BodyEpisodePage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodePage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetBodyEpisodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}`
+}
+
+/**
+ * @summary Read one source-visible Episode without exposing any other owner's identity.
+ */
+export const getBodyEpisode = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetBodyEpisodeUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRecord, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRecord.parse(parsedBody) : parsedBody
   return data
 }
 

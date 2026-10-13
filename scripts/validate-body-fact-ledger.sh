@@ -24,7 +24,7 @@ IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}
   DATABASE_URL="postgres://postgres:$PASSWORD@$IP:5432/$DB?sslmode=disable"
   go run ./cmd/migration-validator -database-url "$DATABASE_URL" -migrations file://migrations
   BODYSENSE_INTEGRATION_DATABASE_URL="host=$IP user=postgres password=$PASSWORD dbname=$DB port=5432 sslmode=disable" \
-    go test -p 2 -race ./internal/repository ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|ThreadProjection|InteractionResume|SymptomEpisode).*Postgres$' -count=1 -v
+    go test -p 2 -race ./internal/repository ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode).*Postgres$' -count=1 -v
   # Replay after synthetic test cleanup too; never target a running environment.
   go run ./cmd/migration-validator -database-url "$DATABASE_URL" -migrations file://migrations
 )

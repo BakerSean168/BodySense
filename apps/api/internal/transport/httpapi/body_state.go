@@ -30,6 +30,7 @@ type bodyStateFactService interface {
 // into domain models before service execution.
 type PublicServer struct {
 	bodyFacts                bodyFactApplication
+	episodes                 episodeReadApplication
 	bodyState                bodyStateFactService
 	bodyStateRoutes          bodyStateRouteService
 	healthWorkspace          healthWorkspaceService

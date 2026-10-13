@@ -83,6 +83,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
 	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
 	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
+	// Evidence-backed Episode reads; mutation/AI linkage is not a public capability.
+	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
+	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
 	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
 	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)

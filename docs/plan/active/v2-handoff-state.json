@@ -44,7 +44,7 @@
       "name": "Canonical domain-to-view-model handoff",
       "state": "in_progress",
       "next": "DS-BASE-01",
-      "details": "A typed Records/Habits ViewModel is now consumed by actual Person; bounded field/status Penpot handoff exists. Whole Episode and other domain view-models remain open."
+      "details": "Live Person Records/Habits read model plus canonical API-generated bounded Episode list/detail with auditable source/state/missing identity fields; complete Episode ViewModel and other domains still open."
     },
     {
       "id": "F-PENPOT",
@@ -85,12 +85,12 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Records/Habits BodyFactSurfaceViewModel implemented and used, with partial history and mixed-page revision guards; EpisodeState pure typed projection and handoff documented. Full Episode/Observation/Hypothesis/Concern read models still open."
+          "details": "Records/Habits in live Person; read-only Episode list/detail has canonical generated BodyEpisodePage/Record and source-backed status, tenant/availability/partial-page safeguards. Full target EpisodeDetail/relations/onset, Observation/Hypothesis/ConcernGroup and Penpot visual contract pending."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "000002..000007 additive BodyFact/answer-source/episode identity and source binding migrations tested on isolated PostgreSQL 18, native up/down/up and account cascade; Episode write API, observations, hypotheses and legacy cutover missing."
+          "details": "Migrations 000002..000007 source+Episode identity on isolated PG18; Episode owner-bound read queries use repeatable-read snapshots and respect blocked/erased evidence, cross-user denial and account cascades. Episode user-authorized command/event writes, Observation/Hypothesis and legacy cutover missing."
         },
         "design": {
           "state": "in_progress",
@@ -100,12 +100,12 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "Person Records/Habits now uses a pure typed view model; Go Episode state projector and DB identity/evidence constraints implemented. Full Episode authorized admission/read/merge/split, Observation, Hypothesis and replacement consumers still missing."
+          "details": "Authenticated strict read-only Episode GET list/detail with generated Go/TS/Zod/Postman, DB/source validation, immutable revision cursor and Go query/domain service; no public Episode write or user-authorized link, recurrence/merge/split, complete history/diagnosis/other domain replacement."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "Native PostgreSQL 18 migration v7 replay and new owner/source/primary/cascade constraints with race detection PASS; focused ViewModel/Person and Go model tests PASS. Final cross-domain and visual acceptance pending."
+          "details": "Native PG18 schema v7 up/down/up and race-enabled read/write-source/projection tests; actual Go generated HTTP→DB 200/404 and cross-user/source block; snapshot barrier test passed. Full CI exact SHA and future Episode command/E2E/Penpot/staging sign-off pending."
         }
       }
     },
@@ -373,25 +373,50 @@
         "no v2 staging/production release"
       ],
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-read-only-source-vertical",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/api/internal/repository/episode_read_repository_test.go",
+        "apps/api/internal/service/episode_read_service_test.go",
+        "apps/api/internal/transport/httpapi/episode_read_test.go",
+        "apps/api/internal/transport/httpapi/episode_read_integration_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "Read-only; no public Episode admission/record/associate/resolve/merge/split command or Python Agent Episode writer",
+        "Synthesized Episode fixture for HTTP; real user-authorized Episode association still unimplemented",
+        "No full target Episode ViewModel, relation history, Observation, user Hypothesis, ConcernGroup or verified controlled-copy erasure",
+        "Independent design worktree untouched; no editable Penpot final sign-off",
+        "No staging or production deployment"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T06:21:48Z",
+  "updatedAtUtc": "2026-10-13T08:42:00Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/V2-ViewModel-Episode-20261013",
-    "baselineHead": "57aaf8974a835964db074dda7b39f3b80f162a86",
+    "owner": "ChatGPT-Web/ENG-BS-02-EpisodeQuery-20261013",
+    "baselineHead": "a6d1c7c4c12b2c590561c4ddfec14c3511a61d5c",
     "state": "locally_verified_ci_pending",
     "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
-    "nextTickets": ["DS-BS-02", "ENG-BS-02", "PD-BASE-01", "PD-BS-01"],
+    "nextTickets": ["DS-BS-02", "ENG-BS-02", "PD-BS-01", "IR-BS-01"],
     "verification": {
       "nativeMigrationVersion": 7,
       "nativeMigrations": "full_up_down_up_passed",
-      "postgresConstraintsRace": "passed",
-      "bodyFactViewModelComponentTests": 16,
-      "goEpisodeModelTests": "passed",
-      "fullGoQuality": "passed",
-      "fullWebQuality": "passed",
-      "exactShaCI": "pending_after_push",
-      "standalonePenpotViewer": "not_performed"
+      "episodePostgresReadHttpRace": "passed",
+      "episodeConcurrentSourceBlockSnapshot": "passed",
+      "explicitMissingAndForeignDenied": "passed",
+      "fullGoQuality": "passed_all_packages_and_go_vet",
+      "fullWebQuality": "passed_70_files_421_tests_lint_typecheck_build",
+      "generatedContractExactness": "passed",
+      "exactShaCI": "pending_push",
+      "officialPenpotEditor": "not_touched",
+      "postmanAndArchitecture": "passed",
+      "planGates": "passed_5_of_5",
+      "nativePostgresHTTP": "passed_7_episode_cases_pg18_race"
     }
   }
 }

@@ -65,6 +65,58 @@ paths:
         "409": *a3
         "500": *a4
         "503": *a5
+  /api/v1/body-state/episodes:
+    get:
+      operationId: listBodyEpisodes
+      summary: Read source-backed symptom Episode identities from one BodyState revision snapshot.
+      description: Read-only. A clinical condition, inferred recovery or user-approved episode association cannot be created through this endpoint. Blocked or erased source-only identities are hidden, and negative symptoms do not imply an Episode ended.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Whole-creation-revision page of source-visible Episode identities and evidence-backed states.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodePage"
+        "400": *a1
+        "401": *a2
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}:
+    get:
+      operationId: getBodyEpisode
+      summary: Read one source-visible Episode without exposing any other owner's identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Evidence-scoped Episode detail, or not found if its original source is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRecord"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/facts:
     post:
       operationId: addBodyStateFact
@@ -3306,6 +3358,102 @@ components:
           maxItems: 400
           items:
             $ref: "#/components/schemas/BodyFactRecord"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyEpisodeFactReference:
+      type: object
+      additionalProperties: false
+      required: [fact_id, role, association_method, is_primary, linked_revision]
+      properties:
+        fact_id: *a7
+        role:
+          type: string
+          enum: [onset, observation, change, resolution]
+        association_method:
+          type: string
+          enum: [explicit, inferred, user_corrected]
+        is_primary:
+          type: boolean
+        linked_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyEpisodeStateProjection:
+      type: object
+      additionalProperties: false
+      required: [state, reason, basis_fact_ids, based_on_revision]
+      properties:
+        state:
+          type: string
+          enum: [unknown, ongoing, ended]
+        reason:
+          type: string
+          enum: [insufficient_evidence, explicit_current_report, explicit_resolution, conflicting_evidence]
+        state_as_of:
+          type: string
+          minLength: 1
+          description: Actual reported event date/timestamp, never a system-recorded time or an inferred present-day claim.
+        basis_fact_ids:
+          type: array
+          items: *a7
+        based_on_revision:
+          type: integer
+          format: int64
+          minimum: 0
+    BodyEpisodeRecord:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, symptom_type, body_region_ids, laterality, identity_status, created_revision, created_at, links, projection]
+      properties:
+        id: *a7
+        user_id: *a7
+        symptom_type:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body_region_ids:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+        laterality:
+          type: string
+          enum: [left, right, bilateral, not_applicable, unknown]
+        identity_status:
+          type: string
+          enum: [current, superseded, invalidated]
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyEpisodeFactReference"
+        projection:
+          $ref: "#/components/schemas/BodyEpisodeStateProjection"
+    BodyEpisodePage:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, episodes, has_more]
+      properties:
+        user_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        episodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyEpisodeRecord"
         has_more:
           type: boolean
         next_before_revision:
