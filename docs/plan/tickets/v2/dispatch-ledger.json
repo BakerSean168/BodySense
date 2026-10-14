@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T05:00:36Z",
+  "auditedAtUtc": "2026-10-14T06:14:14Z",
   "target": "gcp-dev-01",
   "mode": "chatgpt-web-integration; t3-writer-admission-pending",
   "integration": {
@@ -56,5 +56,35 @@
     "At an approved maintenance-safe point reload the signed Worker with the already-staged config, then verify allowed projects and read-only thread list; never bypass project denial",
     "After integration INT-001 accepted at exact CI SHA, register ticket-specific isolated T3 project roots and verify real thread cwd before admitting any writer",
     "Health-check an allowed physical model with bounded execution; max 3 noncolliding ticket writers"
-  ]
+  ],
+  "postMerge": {
+    "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+    "mainCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
+    "mainCiStatus": "SUCCESS",
+    "candidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
+    "candidateStatus": "SUCCESS_IMMUTABLE_ASSETS_IMAGES_AND_MANIFEST",
+    "stagingPromotionJob": "115708618040",
+    "stagingPromotionStatus": "SKIPPED_BY_V2_GATES",
+    "releasePublishRun": "BakerSean168/BodySense/actions/runs/38520429638",
+    "releasePromotionStatus": "SKIPPED",
+    "newWriterStartSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+    "sourceCommitsIncluded": {
+      "schema": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf",
+      "design": "a3b8db87e1ca190af08d95f648b540486022962f",
+      "react": "1c779b5e04224fb38073b15bdfc426a3ce39b9ac",
+      "observationV11": "c2076d1dd39d64afa0ec616813e722a94db657ad",
+      "observationV12": "2396b1ebb77ef62919a993f8871f2ff553f46a4d",
+      "penpot": "3597a5f29bc1085f319c91f6b51c1bdaa481f084"
+    },
+    "sourceCommitsNotExactAncestors": {
+      "domain": "e823931390cee700891b35c73cf26bc4b2374e46",
+      "qa": "a89a8090000058363b5b308a212ae0ca80dc0285"
+    },
+    "dirtyOwnerWorktrees": {
+      "domain": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-domain",
+      "backendV12": "/home/dev/projects/.chatgpt-worktrees/bodysense-observation-v12",
+      "qa": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-qa"
+    },
+    "domainReleaseApproved": false
+  }
 }
