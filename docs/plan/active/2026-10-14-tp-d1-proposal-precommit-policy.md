@@ -27,18 +27,22 @@ Checks include:
 - the Training-specific **7×24-hour** maximum expiry is checked by elapsed
   instants, independently from Diagnosis; an earlier explicit expiry is
   respected, a later deadline is invalid
-- relevant BodyState/Diagnosis/Safety context must be available and have
-  the _same upstream-attested fingerprint_; this policy never infers
-  medical safety classification or overrides a safety restriction
-- `create` may not silently target an existing plan or accepted revision
-- `update` must identify the exact persisted plan, its proposal base
+- relevant BodyState/Diagnosis/Safety context must be available,
+  explicitly bound to the same owner and have the _same upstream-attested
+  fingerprint_; this policy never infers medical safety classification
+  or overrides a safety restriction
+- `create` may not silently target an existing plan or accepted revision;
+  its current context is owner-global, not another plan's revision
+- `update` must identify the exact persisted plan in both the proposal
+  and the authoritative current context, plus its proposal base
   revision and the authenticated decision's expected revision, with the
   current accepted revision unchanged
 
 Results are identity-free codes; the decision layer performs **zero**
 network, database, medical interpretation or writes. Tests exercise
 accepted user versus Agent initiation, owner isolation, proposal replay,
-content/context changes, missing decision authorization, 7-day timeout,
+content/context changes, cross-owner evidence with coincidentally equal
+fingerprints, cross-plan revisions, missing decision authorization, 7-day timeout,
 explicit early expiry, future-dated proposals, create/update identity,
 revision conflicts and UTC/DST boundaries.
 

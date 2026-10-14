@@ -74,6 +74,11 @@ type UserAcceptance struct {
 // every *relevant* BodyState, Diagnosis, and Safety change; its construction
 // and provenance are the responsibility of a future persisted Go adapter.
 type CurrentContext struct {
+	// UserID and TargetPlanID must be obtained from trusted owner-scoped
+	// reads, not from unverified proposal or request JSON. Creating a new
+	// plan has no TargetPlanID even if other active plans already exist.
+	UserID                        uuid.UUID
+	TargetPlanID                  uuid.UUID
 	Available                     bool
 	RelevantContextFingerprint    string
 	CurrentAcceptedPlanRevisionID uuid.UUID
@@ -149,7 +154,10 @@ func EvaluateAcceptance(
 		return ContentChanged
 	}
 	if !current.Available ||
+		current.UserID == uuid.Nil || current.UserID != proposal.UserID ||
 		strings.TrimSpace(current.RelevantContextFingerprint) == "" {
+		// Never let a coincidentally equal digest from another user
+		// satisfy evidence and authorization freshness.
 		return ContextUnavailable
 	}
 	if current.RelevantContextFingerprint != proposal.RelevantContextFingerprint {
@@ -162,6 +170,12 @@ func EvaluateAcceptance(
 			decision.TargetPlanID != uuid.Nil || decision.ExpectedRevisionID != uuid.Nil {
 			return InvalidProposal
 		}
+		// The context for a new independent plan is user-global.
+		// No existing plan's identity/revision may be substituted.
+		if current.TargetPlanID != uuid.Nil ||
+			current.CurrentAcceptedPlanRevisionID != uuid.Nil {
+			return ContextUnavailable
+		}
 	case ProposalUpdate:
 		if proposal.PlanID == uuid.Nil || proposal.BasedOnRevisionID == uuid.Nil {
 			return InvalidProposal
@@ -170,7 +184,10 @@ func EvaluateAcceptance(
 			decision.ExpectedRevisionID != proposal.BasedOnRevisionID {
 			return InvalidDecision
 		}
-		if current.CurrentAcceptedPlanRevisionID != proposal.BasedOnRevisionID {
+		if current.TargetPlanID != proposal.PlanID ||
+			current.CurrentAcceptedPlanRevisionID != proposal.BasedOnRevisionID {
+			// Exact plan identity is required even when two same-owner
+			// plans happen to share an upstream context fingerprint.
 			return PlanRevisionChanged
 		}
 	}

@@ -33,6 +33,7 @@ func proposalFixture() (Proposal, UserAcceptance, CurrentContext, time.Time) {
 		IdempotencyKey:       "synthetic-decision-key",
 	}
 	current := CurrentContext{
+		UserID:                     owner,
 		Available:                  true,
 		RelevantContextFingerprint: proposal.RelevantContextFingerprint,
 	}
@@ -46,6 +47,7 @@ func updateFixture() (Proposal, UserAcceptance, CurrentContext, time.Time) {
 	proposal.BasedOnRevisionID = uuid.New()
 	decision.TargetPlanID = proposal.PlanID
 	decision.ExpectedRevisionID = proposal.BasedOnRevisionID
+	context.TargetPlanID = proposal.PlanID
 	context.CurrentAcceptedPlanRevisionID = proposal.BasedOnRevisionID
 	return proposal, decision, context, now
 }
@@ -89,12 +91,16 @@ func TestPlanProposalAdmissionRequiresExactAuthorizedDecision(t *testing.T) {
 		{"empty idempotency rejected", func(s *specimen) { s.decision.IdempotencyKey = "" }, InvalidDecision},
 		{"fingerprint mismatch denied", func(s *specimen) { s.decision.PresentedFingerprint = "changed" }, ContentChanged},
 		{"missing evidence unavailable", func(s *specimen) { s.current.Available = false }, ContextUnavailable},
+		{"cross-user evidence with same digest unavailable", func(s *specimen) { s.current.UserID = uuid.New() }, ContextUnavailable},
+		{"missing evidence owner unavailable", func(s *specimen) { s.current.UserID = uuid.Nil }, ContextUnavailable},
 		{"empty current context unavailable", func(s *specimen) { s.current.RelevantContextFingerprint = "" }, ContextUnavailable},
 		{"relevant Safety or BodyState change stale", func(s *specimen) { s.current.RelevantContextFingerprint = "new-version" }, ContextChanged},
 		{"create cannot target existing plan", func(s *specimen) { s.decision.TargetPlanID = uuid.New() }, InvalidProposal},
 		{"create cannot carry accepted base", func(s *specimen) { s.proposal.BasedOnRevisionID = uuid.New() }, InvalidProposal},
 		{"create cannot reuse a plan ID", func(s *specimen) { s.proposal.PlanID = uuid.New() }, InvalidProposal},
 		{"create decision cannot pin old revision", func(s *specimen) { s.decision.ExpectedRevisionID = uuid.New() }, InvalidProposal},
+		{"create context cannot select existing plan", func(s *specimen) { s.current.TargetPlanID = uuid.New() }, ContextUnavailable},
+		{"create context cannot carry old accepted revision", func(s *specimen) { s.current.CurrentAcceptedPlanRevisionID = uuid.New() }, ContextUnavailable},
 		{"zero current clock denied", func(s *specimen) { s.now = time.Time{} }, InvalidExpiry},
 		{"zero created at denied", func(s *specimen) { s.proposal.CreatedAt = time.Time{} }, InvalidExpiry},
 		{"zero expires at denied", func(s *specimen) { s.proposal.ExpiresAt = time.Time{} }, InvalidExpiry},
@@ -145,6 +151,8 @@ func TestPlanProposalUpdateRevisionAuthorization(t *testing.T) {
 		{"decision expected revision differs", func(s *specimen) { s.decision.ExpectedRevisionID = uuid.New() }, InvalidDecision},
 		{"decision expected revision omitted", func(s *specimen) { s.decision.ExpectedRevisionID = uuid.Nil }, InvalidDecision},
 		{"current accepted base changed", func(s *specimen) { s.current.CurrentAcceptedPlanRevisionID = uuid.New() }, PlanRevisionChanged},
+		{"current plan is a different same-owner plan", func(s *specimen) { s.current.TargetPlanID = uuid.New() }, PlanRevisionChanged},
+		{"current target plan missing", func(s *specimen) { s.current.TargetPlanID = uuid.Nil }, PlanRevisionChanged},
 		{"current accepted revision unavailable", func(s *specimen) { s.current.CurrentAcceptedPlanRevisionID = uuid.Nil }, PlanRevisionChanged},
 		{"changed context even with exact base denied", func(s *specimen) { s.current.RelevantContextFingerprint = "new-safety-revision" }, ContextChanged},
 	}
