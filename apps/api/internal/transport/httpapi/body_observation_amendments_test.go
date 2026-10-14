@@ -23,6 +23,8 @@ func TestBodyObservationGeneratedAmendmentHTTPStrictRejectsForgedSources(t *test
 	owner, target := uuid.New(), uuid.New()
 	fake := &observationHTTPFake{commit: sampleObservationReceipt(owner)}
 	fake.commit.TargetObservationID = &target
+	fake.commit.Revision = 2 // Expected revision 1 must produce the next durable revision.
+	fake.commit.IdempotencyKey = "e2e-observation-correct"
 	fake.commit.Operation = "correct"
 	fake.commit.ObservationID = uuid.New()
 	router := observationHTTPRouter(t, owner, fake)
@@ -49,6 +51,7 @@ func TestBodyObservationGeneratedAmendmentHTTPStrictRejectsForgedSources(t *test
 		t.Fatalf("correction accepted no corrective report: %d", res.Code)
 	}
 	fake.commit.Operation = "withdraw"
+	fake.commit.IdempotencyKey = "withdraw"
 	fake.commit.ObservationID = target
 	withdrawPath := "/api/v1/body-state/observation-records/" + target.String() + "/withdraw"
 	if res := performJSONAt(router, http.MethodPost, withdrawPath, `{"idempotency_key":"withdraw","expected_revision":1}`); res.Code != 200 || fake.calls != 2 {
@@ -65,10 +68,28 @@ func TestBodyObservationGeneratedAmendmentHTTPStrictRejectsForgedSources(t *test
 		t.Fatalf("no application service returned false success: %d", res.Code)
 	}
 	fake.commit.UserID = uuid.New()
+	fake.commit.IdempotencyKey = "e2e-observation-correct"
 	fake.commit.Operation = "correct"
 	fake.commit.ObservationID = uuid.New()
 	if res := performJSONAt(router, http.MethodPost, path, correctionJSON); res.Code != 500 {
 		t.Fatalf("forged foreign owner receipt confirmed: %d", res.Code)
+	}
+	fake.commit.UserID = owner
+	fake.commit.IdempotencyKey = "other-key"
+	if res := performJSONAt(router, http.MethodPost, path, correctionJSON); res.Code != 500 {
+		t.Fatalf("correction confirmed a receipt for another idempotency key: %d", res.Code)
+	}
+	fake.commit.IdempotencyKey = "e2e-observation-correct"
+	fake.commit.Revision = 1
+	if res := performJSONAt(router, http.MethodPost, path, correctionJSON); res.Code != 500 {
+		t.Fatalf("correction confirmed a receipt that did not advance the authorized revision: %d", res.Code)
+	}
+	fake.commit.Revision = 3
+	fake.commit.IdempotencyKey = "withdraw"
+	fake.commit.Operation = "withdraw"
+	fake.commit.ObservationID = target
+	if res := performJSONAt(router, http.MethodPost, withdrawPath, `{"idempotency_key":"withdraw","expected_revision":1}`); res.Code != 500 {
+		t.Fatalf("withdrawal confirmed a receipt for a different revision: %d", res.Code)
 	}
 }
 

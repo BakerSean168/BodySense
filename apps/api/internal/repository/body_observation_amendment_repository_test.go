@@ -75,6 +75,25 @@ func TestBodyObservationCorrectionAndWithdrawalImmutableSourcesPostgres(t *testi
 	if err != nil || retried.ID != withdrawn.ID || !retried.CommittedAt.Equal(withdrawn.CommittedAt) {
 		t.Fatalf("withdraw replay minted another event: %#v %v", retried, err)
 	}
+	// Exact authorized replays must not become dependent on mutable source
+	// availability. Blocking historical excerpts is separate from undoing a
+	// successfully committed user correction or withdrawal.
+	for _, sourceID := range []string{original.SourceEvidenceID.String(), saved.SourceEvidenceID.String()} {
+		if err := db.Model(&model.StatementEvidence{}).Where("user_id=? AND id=?", owner, sourceID).
+			Update("availability", "blocked").Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	correctedReplay, err := repo.CorrectDirectObservation(ctx, owner, original.ObservationID, correction)
+	if err != nil || correctedReplay == nil || correctedReplay.ID != saved.ID ||
+		!correctedReplay.CommittedAt.Equal(saved.CommittedAt) {
+		t.Fatalf("blocked historical source broke exact correction replay: %#v %v", correctedReplay, err)
+	}
+	withdrawnReplay, err := repo.WithdrawDirectObservation(ctx, owner, saved.ObservationID, withdrawal)
+	if err != nil || withdrawnReplay == nil || withdrawnReplay.ID != withdrawn.ID ||
+		!withdrawnReplay.CommittedAt.Equal(withdrawn.CommittedAt) {
+		t.Fatalf("blocked historical source broke exact withdrawal replay: %#v %v", withdrawnReplay, err)
+	}
 	page, err = repo.ListDirectObservations(ctx, owner, 0)
 	if err != nil || page.CurrentRevision != 3 || len(page.Observations) != 0 {
 		t.Fatalf("withdrawn original remains current: %#v %v", page, err)

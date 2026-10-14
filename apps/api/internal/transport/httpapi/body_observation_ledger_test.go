@@ -75,7 +75,8 @@ func observationHTTPRouter(t *testing.T, owner uuid.UUID, app bodyObservationApp
 
 func sampleObservationReceipt(owner uuid.UUID) *model.BodyObservationCommit {
 	return &model.BodyObservationCommit{
-		ID: uuid.New(), UserID: owner, ObservationID: uuid.New(), SourceEvidenceID: uuid.New(),
+		ID: uuid.New(), UserID: owner, IdempotencyKey: "weight-on-my-scale", Operation: "record",
+		ObservationID: uuid.New(), SourceEvidenceID: uuid.New(),
 		Revision: 1, RevisionID: uuid.New(), EventID: uuid.New(), CommittedAt: time.Now().UTC(),
 	}
 }
@@ -113,6 +114,16 @@ func TestBodyObservationGeneratedHTTPStrictDirectSelfReportOnly(t *testing.T) {
 	fake.commit = sampleObservationReceipt(uuid.New())
 	if forged := performJSONAt(router, http.MethodPost, path, observationJSON); forged.Code != http.StatusInternalServerError {
 		t.Fatalf("forged owner receipt accepted as save: %d", forged.Code)
+	}
+	fake.commit = sampleObservationReceipt(owner)
+	fake.commit.IdempotencyKey = "other-request"
+	if forged := performJSONAt(router, http.MethodPost, path, observationJSON); forged.Code != http.StatusInternalServerError {
+		t.Fatalf("unrelated durable idempotency receipt accepted as save: %d", forged.Code)
+	}
+	fake.commit = sampleObservationReceipt(owner)
+	fake.commit.Revision = 2
+	if forged := performJSONAt(router, http.MethodPost, path, observationJSON); forged.Code != http.StatusInternalServerError {
+		t.Fatalf("wrong-revision durable receipt accepted as save: %d", forged.Code)
 	}
 	fake.err = errors.New("backend private original health statement")
 	fake.commit = nil

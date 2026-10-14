@@ -45,6 +45,8 @@ func (s *PublicServer) RecordBodyObservation(ctx context.Context, req openapiv1.
 		return recordBodyObservationError(status, code, message), nil
 	}
 	if receipt == nil || receipt.ID == uuid.Nil || receipt.UserID != owner ||
+		receipt.IdempotencyKey != command.IdempotencyKey || receipt.Operation != "record" ||
+		receipt.TargetObservationID != nil || receipt.Revision != command.ExpectedRevision+1 ||
 		receipt.ObservationID == uuid.Nil || receipt.SourceEvidenceID == uuid.Nil ||
 		receipt.RevisionID == uuid.Nil || receipt.EventID == uuid.Nil || receipt.Revision <= 0 ||
 		receipt.CommittedAt.IsZero() {

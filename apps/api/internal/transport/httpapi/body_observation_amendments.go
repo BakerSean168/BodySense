@@ -31,7 +31,7 @@ func (s *PublicServer) CorrectBodyObservationRecord(ctx context.Context, req ope
 		status, code, message := classifyBodyObservationPublicError(err)
 		return correctBodyObservationError(status, code, message), nil
 	}
-	if !validObservationAmendmentReceipt(receipt, owner, req.Id, "correct") {
+	if !validObservationAmendmentReceipt(receipt, owner, req.Id, "correct", command.ExpectedRevision, command.IdempotencyKey) {
 		return correctBodyObservationError(500, "INVALID_OBSERVATION_COMMIT", "corrective receipt not confirmed"), nil
 	}
 	converted, err := strictOpenAPIConvert[openapiv1.BodyObservationCommit]("BodyObservationCommit", receipt)
@@ -60,7 +60,7 @@ func (s *PublicServer) WithdrawBodyObservationRecord(ctx context.Context, req op
 		status, code, message := classifyBodyObservationPublicError(err)
 		return withdrawBodyObservationError(status, code, message), nil
 	}
-	if !validObservationAmendmentReceipt(receipt, owner, req.Id, "withdraw") {
+	if !validObservationAmendmentReceipt(receipt, owner, req.Id, "withdraw", command.ExpectedRevision, command.IdempotencyKey) {
 		return withdrawBodyObservationError(500, "INVALID_OBSERVATION_COMMIT", "withdrawal receipt not confirmed"), nil
 	}
 	converted, err := strictOpenAPIConvert[openapiv1.BodyObservationCommit]("BodyObservationCommit", receipt)
@@ -69,11 +69,11 @@ func (s *PublicServer) WithdrawBodyObservationRecord(ctx context.Context, req op
 	}
 	return openapiv1.WithdrawBodyObservationRecord200JSONResponse(converted), nil
 }
-func validObservationAmendmentReceipt(rec *model.BodyObservationCommit, owner, target uuid.UUID, op string) bool {
+func validObservationAmendmentReceipt(rec *model.BodyObservationCommit, owner, target uuid.UUID, op string, expectedRevision int64, key string) bool {
 	if rec == nil || rec.UserID != owner || rec.ID == uuid.Nil || rec.TargetObservationID == nil ||
 		*rec.TargetObservationID != target || rec.Operation != op || rec.ObservationID == uuid.Nil ||
 		rec.SourceEvidenceID == uuid.Nil || rec.RevisionID == uuid.Nil || rec.EventID == uuid.Nil ||
-		rec.Revision <= 0 || rec.CommittedAt.IsZero() {
+		rec.IdempotencyKey != key || rec.Revision <= 0 || rec.Revision != expectedRevision+1 || rec.CommittedAt.IsZero() {
 		return false
 	}
 	return (op == "correct" && rec.ObservationID != target) || (op == "withdraw" && rec.ObservationID == target)
