@@ -43,3 +43,62 @@ exit 0. All 12 migrations applied, legacy mode passed with named
 constraint evidence and isolated-drop count 2; V2 mode failed with
 `TP-D1 V2 BLOCKED: legacy single-active index still exists` (expected
 negative control). Every synthetic fixture container was removed.
+
+## 2026-10-14 · Stage 1 independent-plan compatibility implementation
+
+This stage is **shipping code with a dormant V2 compatibility option**,
+not activation of the TrainingPlan V2 product or a database migration.
+
+- `apps/api/internal/service/training_service.go` accepts the explicit
+  `WithIndependentTrainingPlans()` constructor option. **No current
+  application constructor enables it**, so the legacy
+  `SupersedePlansExcept` behavior remains unchanged. When explicitly
+  selected by a future approved caller, creating or retrying a
+  projection from a pre-accepted TreatmentRevision does not supersede
+  other active plans. That existing TreatmentRevision does not itself
+  implement the full V2 PlanProposal/user-authorization protocol.
+- `apps/api/internal/repository/training_repository.go` changes the
+  legacy single-active read to a bounded owner-scoped `LIMIT 2`.
+  On multiple active records it returns the identity-free
+  `ErrMultipleActiveTrainingPlans` sentinel, **not** an arbitrary plan.
+  The old single-plan HealthWorkspace cannot represent multiple plans;
+  its consumer and the V2 UI must be upgraded to explicit Plan IDs and
+  list semantics **before any V2 mode is enabled**. Until then an
+  ambiguous legacy Workspace read intentionally fails closed.
+- `apps/api/internal/service/training_service_test.go` tests the
+  default legacy supersede path, independent projection creation,
+  response-loss idempotent retry, a pre-existing revision, and
+  unaccepted-revision rejection. The repository SQLMock tests check
+  missing user identity, zero/one/two active rows, tenant scoping,
+  identity-free errors and query-failure propagation.
+- `scripts/plan/sql/tp-d1-multi-active-forward-preview.sql` and
+  `tp-d1-multi-active-reverse-preview.sql` are **not located under**
+  `apps/api/migrations/` and never run on application startup.
+  They are future migration proposals with prerequisite checks.
+  The reverse script rejects rollback if legitimate multiple-active
+  plans still exist, and never selects or deactivates a user's plan.
+  The independent TreatmentRevision idempotency index is preserved.
+- `scripts/plan/test-tp-d1-migration-preview.sh` runs both proposals
+  in a synthetic, network-isolated, pinned PG18 Docker container. It
+  loads every canonical migration, proves two active plans coexist
+  after the forward preview, then proves the reverse fails closed
+  without changing three active plans. A separate, synthetic-only
+  operator reconciliation of one sample row permits the reverse to
+  complete and restores the old index. This is **not permission** to
+  reconcile actual users' plans.
+- `scripts/plan/v2-tp-d1-compatibility-code.test.mjs` asserts the
+  explicit opt-in, fail-closed single-plan selector and offline
+  preview/test harness boundaries.
+
+**Still required for acceptance:** The dedicated Backend/Schema
+Writer must coordinate the real migration with Treatment revision
+idempotency, atomic creation under concurrent devices, the new
+TrainingPlanRevision/Proposal runtime, owner-scoped Plan selection and
+the rollback admission plan. Track D then verifies true multi-active
+execution and no implicit status mutation with Go Race and PG18
+up/down/recovery testing. No old `superseded` plan is silently
+reactivated, and no clinical thresholds are invented.
+
+**Release:** untouched. Do not add these previews to the live
+migration chain or enable the constructor option from production
+routes without a separate reviewed change and formal gates.
