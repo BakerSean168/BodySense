@@ -143,3 +143,24 @@ INT-001's **bounded integration baseline** is therefore `done` at that exact _co
 The previous isolated local 17-test batch failed one incorrect native-option visibility assertion (`16/17` at `75fb200b9`), followed by the exact-case `1/1` zero-retry real-stack PASS after correction at `ee07c09a8`. A further full local batch suffered transient GCP loopback `net::ERR_NETWORK_CHANGED` and concurrency-related browser stalls and was cancelled with its synthetic containers cleaned. Do not claim a 17/17 local run at the newest code SHA. The GitHub exact-head Browser suite, however, is independently **PASS**.
 
 `OPS-001` is now explicitly `blocked` on authorized T3 Worker reload/model-health/checkout proof, and remains unadmitted while other Agent Fabric host jobs are active. `INT-002`, `BS-OBS-001`, `QA-001` and remaining domain slices are not implicitly accepted merely because the integration baseline passed. Track A's current dirty Training/Safety draft and the backend V12 owner's dirty HTTP test remain owned by their original writers. The unique `v2-handoff-state.json` retains its previous domain gate status. The completed ticket's accepted **code** SHA is not the later documentation-only acceptance commit SHA.
+
+## 13. Main integration staging freeze (2026-10-14)
+
+The automatic `Publish Main Candidate` workflow previously re-tagged
+`staging-latest` as soon as an exact-SHA main candidate succeeded, which
+would deploy an unfinished V2 integration baseline. PR #255 now introduces
+`scripts/delivery/v2-staging-readiness.mjs` and `staging-readiness`
+to gate **only mutable staging promotion**, while leaving exact-SHA CI,
+immutable candidate image publication, Web/CDN assets, and candidate manifests
+unaltered. Admission requires all five domain six-gate proofs, approved
+foundations, and explicit `BODYSENSE_V2_STAGING_PROMOTION_ENABLED=true`.
+The current handoff is incomplete, so the V2 Staging gate must fail closed.
+Eight deterministic positive/negative tests cover denied, malformed,
+partial, unproven, absent-opt-in and approved-with-opt-in cases.
+
+This control must land _in the PR before_ the first V2 main merge. After
+the PR is updated to the latest main commit and its exact-head CI passes,
+the integration release operator may merge under normal branch protection.
+No field in `v2-handoff-state.json` is changed just to pass a CI gate.
+Concurrent Track A/Backend/QA worktree modifications remain owned by their
+writers and are not copied into this baseline.
