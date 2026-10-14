@@ -441,16 +441,41 @@
       "acceptedSha": null
     }
   ],
-  "mainBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
-  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
-  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38553247126",
-  "baselineFrozenAtUtc": "2026-10-14T11:25:45Z",
-  "previousFrozenBaselineSha": "8859005d5d806a64d8ef95d8cf578e566480344d",
+  "mainBaselineSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38564462755",
+  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38565576350",
+  "baselineFrozenAtUtc": "2026-10-14T12:44:51Z",
+  "previousFrozenBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
   "newWriterAdmissionPolicy": "BLOCKED_UNTIL_LATEST_MAIN_CI_AND_TICKET_CWD_AUTHORIZED",
-  "auditedAtUtc": "2026-10-14T11:25:45Z",
-  "postMergeMainSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
-  "latestObservedMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+  "auditedAtUtc": "2026-10-14T12:46:08Z",
+  "postMergeMainSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+  "latestObservedMainCiRun": "BakerSean168/BodySense/actions/runs/38564462755",
   "latestObservedMainCiStatus": "SUCCESS_EXACT_MAIN",
   "mergedDomainContractPr": 264,
-  "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb"
+  "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+  "mainCandidateStatus": "SUCCESS_IMMUTABLE_CANDIDATE_STAGING_PROMOTION_SKIPPED",
+  "acceptedBoundedDeliveries": {
+    "pc001ReadonlySingleton": {
+      "pr": 266,
+      "sourceHead": "cc295803bb87cc213def387b1b0b41395be3ec1e",
+      "mergedMainSha": "17552e5cda9335b58187534ed7cc5273f5e0500b",
+      "ciRun": "BakerSean168/BodySense/actions/runs/38558686569",
+      "scope": "read_only_repository_seam_no_unique_db_constraint_no_runtime_admission"
+    },
+    "pcD8ShareRetirementGate": {
+      "pr": 267,
+      "sourceHead": "2ed788fbe703c0dec5d8c61aa63e9be093b27aef",
+      "mergedMainSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+      "ciRun": "BakerSean168/BodySense/actions/runs/38563199186",
+      "scope": "default_off_explicit_flag_only_no_share_token_erasure_or_deployment"
+    }
+  },
+  "tpD1CrossTrackBlockingReproduction": {
+    "issue": "BakerSean168/BodySense/issues/268",
+    "nativePg18Job": "gcp-dev-01::job_req_6af160737b590da17746a7507c8cc15d",
+    "verifiedAtMain": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "classification": "not_ready_schema_and_legacy_service_must_change_together",
+    "ticketBoundary": "TP-001_still_restriction_specific_Safety_only"
+  },
+  "candidateVerifiedAtUtc": "2026-10-14T12:46:08Z"
 }
