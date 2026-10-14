@@ -539,24 +539,30 @@
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-13T17:16:00Z",
+  "updatedAtUtc": "2026-10-14T10:34:27Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/ENG-BS-04-ObservationAmendments-20261013",
-    "baselineHead": "c2076d1dd39d64afa0ec616813e722a94db657ad",
-    "state": "in_progress_native_go_pg18_and_browser_pending",
-    "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
-    "nextTickets": ["DS-BS-04", "ENG-BS-04", "IR-BS-03", "PD-BS-01"],
+    "owner": "ChatGPT-Web/Integration-Execution-Reconciliation-20261014",
+    "baselineHead": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
+    "state": "bounded_owner_handoff_in_progress;V2_domain_gates_open;staging_promotion_blocked",
+    "contract": "docs/plan/active/2026-10-13-v2-parallel-master.md",
+    "nextTickets": [
+      "OPS-001",
+      "BS-HYP-001",
+      "PC-001",
+      "DX-001",
+      "TP-001",
+      "QA-001",
+      "UI-001"
+    ],
     "verification": {
-      "priorHeadExactShaCI": "c2076d1dd39d64afa0ec616813e722a94db657ad:12_of_12_SUCCESS",
-      "nativePostgres": "v12_full_up_down_v11_replay_v12_PASS;repository_HTTP_race_test_build_fix_and_rerun_pending",
-      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_110_routes_PASS",
-      "currentFullWeb": "75_files_464_tests_lint_typecheck_build_PASS_uncached",
-      "currentNativeBrowser": "17_of_17_PASS_no_retries_real_Go_Postgres18_Redis_Python_React;resources_cleaned",
-      "newExactShaCI": "pending_push",
-      "currentPlanAndCodegen": "pnpm_plan_check_and_migration_v12_checksums_final_validation_pending",
-      "independentPenpotPR": "250_not_written",
-      "stagingProduction": "not_deployed",
-      "evidenceRoot": ".runtime/schema-first-v2-evidence/"
+      "lastGreenMain": "8859005d5d806a64d8ef95d8cf578e566480344d:CI_38545400397_SUCCESS;immutable_candidate_38546571035_SUCCESS;staging_promotion_SKIPPED",
+      "newerObservedMain": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c:PR263_MERGED;CI_38549872054_IN_PROGRESS_AT_2026-10-14T10:34:27Z",
+      "backendPrivacy": "original_f2085b263fe011b2d83a3f4f708a5fbdd4b9a661_equivalent_committed_as_7d3a1e1e94dfb52d70cba64047bfc7e4a4f4645c;PR263_CI_SUCCESS;PG18_race_2_of_2_PASS",
+      "domainContract": "Track_A_owner_WIP_saved_as_605d0e403ceec11aa7ed4ee85e59d8d7cd6033c5;39_of_39_model_PASS;90_of_90_plan_PASS;PR264_final_head_ccecaf2eb7762046918e2f763c14f2a2bb9b67aa_CI_PENDING_AT_AUDIT",
+      "stackedPrCI": "INT002_PR258_exact_head_2fd44ea76a4eaeb11b59ff520181c953a1a01da5_12_of_12_CI_PASS_MERGED_b4eff04f11388a0dd0a7c08228afb6374d00c1be",
+      "qaOwner": "merge_guard_and_Diagnosis_E2E_semantics_and_focused_harness_already_present_in_main;QA_old_worktree_has_staged_script_and_untracked_venv;preserved_not_reset_or_force_merged",
+      "modelAvailability": "Qiyu_GPT61_real_assistant_reply_and_GLM53_read_only_review_verified_in_PC001_T3_project;ticket_specific_writer_cwd_not_verified",
+      "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion"
     }
   }
 }

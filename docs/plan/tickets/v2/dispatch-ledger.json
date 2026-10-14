@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T06:43:07Z",
+  "auditedAtUtc": "2026-10-14T10:34:27Z",
   "target": "gcp-dev-01",
-  "mode": "chatgpt-web-implementation; T3 project registration repaired, provider admission blocked",
+  "mode": "ChatGPT Web integration; Qiyu and GLM canaries verified, isolated ticket coding writer admission gated",
   "integration": {
     "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
-    "branch": "integration/v2-execution-20261014",
+    "branch": "ops/v2-admission-status-20261014",
     "currentWriter": "ChatGPT-Web",
     "t3ProjectRegistration": {
       "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
       "title": "BodySense V2 Integration Review",
       "registeredVia": "t3 project add",
       "gatewayProjectVisible": true,
-      "gatewayProbe": "t3_orchestrator_describe: 9 approved projects; both integration and INT-002 t3_thread_list successful",
+      "gatewayProbe": "t3_orchestrator_describe: 10 approved projects including integration INT-002 PC-001; authorized integration t3_thread_list returns empty",
       "authStatus": "normal source-approved Worker restart; both integration and INT-002 project IDs authorized",
       "hostConfigMergedSha": "a0f4f94edb7351845ab3c8a4b2515a6e3e7a5205",
       "hostConfigInstalled": true
@@ -55,6 +55,24 @@
       "readOnlyThread": "fabric:706d0329dceb5ba1054aae35091e468d266b2a2c94c98b179c1039deb56ee402",
       "readOnlyOutcome": "completed checkpoint only, no assistant reply"
     },
+    "qiyuLiveReadOnlyCanary": {
+      "provider": "codex_superqiyu",
+      "model": "gpt-6.1-sol",
+      "projectId": "80869e42-ab86-4120-b219-246ba9d5abfd",
+      "readOnlyThread": "fabric:6ba1e8752f857a4395d3b67d5f4e891d5d0df3968c5e1e2f7949989e8b7abbd2",
+      "genuineAssistantReply": "BODYSENSE_QIYU_GPT61_OK",
+      "inferenceVerified": true,
+      "limitations": "PC-001 project inference only; no per-ticket coding writer or native cwd verified"
+    },
+    "glmIndependentReadOnlyReview": {
+      "provider": "pi",
+      "model": "auto/glm-5.3",
+      "projectId": "80869e42-ab86-4120-b219-246ba9d5abfd",
+      "readOnlyThread": "fabric:74fe34cf1d19191363762f99e425d24d0cc4416474a7a543a22cafb23a3527e6",
+      "assistantReplyVerified": true,
+      "inferenceVerified": true,
+      "limitations": "PC-001 static PR261 review only; ticket-specific coding writer not verified"
+    },
     "dshOfficialDeepSeek": {
       "provider": "acpRegistry_dsh",
       "model": "[\"deepseek-official\",\"deepseek-flash\"]",
@@ -71,12 +89,26 @@
     "piModelDiscovery": "pi --list-models: No models available"
   },
   "admittedWriters": [],
-  "pilotStatus": "T3_PROJECTS_AUTHORIZED_BUT_TESTED_DEEPSEEK_INFERENCES_UNVERIFIED",
+  "pilotStatus": "QIYU_GLM_INFERENCE_VERIFIED_TICKET_WRITER_CWD_ADMISSION_PENDING",
   "next": [
-    "Resolve Pi provider auth/model registration and DSH failure through supported official paths; do not print credentials or bypass auth.",
-    "Verify one real model assistant reply and ticket cwd before allowing any independent T3 coding writer; max three disjoint writers.",
-    "Continue INT-002 PR #258 through direct ChatGPT Web implementation and exact-head CI."
+    "Qiyu GPT-6.1 Sol and GLM 5.3 have actual assistant replies in PC-001; do not treat separate DeepSeek route failures as global model outage.",
+    "Verify actual model response and isolated native cwd for each permitted ticket-specific T3 writer before admission; max three disjoint writers.",
+    "INT-002 PR258 exact-head CI passed and merged. Reconcile remaining domain, backend and QA handoffs without raising domain/staging gates."
   ],
+  "latestObserved": {
+    "atUtc": "2026-10-14T10:34:27Z",
+    "verifiedMainBaselineSha": "8859005d5d806a64d8ef95d8cf578e566480344d",
+    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38545400397",
+    "observedNewerMainSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
+    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38549872054",
+    "newerMainCiAtAudit": "in_progress",
+    "backendPrivacyPr": 263,
+    "backendPrivacyMergedSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
+    "domainContractPr": 264,
+    "domainContractHeadAtAudit": "ccecaf2eb7762046918e2f763c14f2a2bb9b67aa",
+    "qaOldCommittedAndStagedFixesAlreadyInMain": true,
+    "v2ReleaseGatesChanged": false
+  },
   "postMerge": {
     "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
     "mainCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
@@ -120,6 +152,9 @@
       "currentCandidateHead": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
       "candidatePr": 258,
       "currentCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "ciStatus": "12_OF_12_SUCCESS",
+      "mergedMainSha": "b4eff04f11388a0dd0a7c08228afb6374d00c1be",
+      "acceptedAtUtc": "2026-10-14T06:43:38Z",
       "nativeDeliveryTests": "58/58 PASS",
       "nativePlanTests": "38/38 PASS"
     }

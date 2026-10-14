@@ -39,13 +39,13 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "T3 integration and INT-002 project authorizations fixed; physical model/provider health blocked: Pi llm-pm and kunyou-free auth invalid_state, Pi models list empty, DSH DeepSeek provider error, Kunyou checkpoint without assistant response. No T3 writer admitted."
+      "blockedReason": "T3 project authorization fixed; Qiyu GPT-6.1 Sol real assistant reply verified in PC-001 read-only canary. DeepSeek Pi/DSH routes unverified. Isolated ticket cwd/writer admission not established; no coding writer admitted."
     },
     {
       "id": "INT-002",
       "title": "Make stacked PR CI and integration promotion verifiable",
       "phase": "1",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": ["INT-001"],
       "sf": "SF-90",
       "owner": "Integration CI Owner",
@@ -54,13 +54,16 @@
       "threadId": null,
       "projectId": "dec1b262-e9b8-4826-9b03-f13babd3e83e",
       "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-ci-int002",
-      "acceptedSha": null,
+      "acceptedSha": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
       "baseSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
       "executionOwner": "ChatGPT Web GPT-6",
       "implementationHead": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
       "reviewPr": 258,
       "currentCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
-      "ciAcceptance": "PENDING_EXACT_HEAD_BROWSER_CI"
+      "ciAcceptance": "EXACT_HEAD_CI_12_OF_12_SUCCESS_MERGED",
+      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "acceptedAtUtc": "2026-10-14T06:43:38Z",
+      "mergedMainSha": "b4eff04f11388a0dd0a7c08228afb6374d00c1be"
     },
     {
       "id": "BS-OBS-001",
@@ -348,10 +351,15 @@
       "acceptedSha": null
     }
   ],
-  "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
-  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
-  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
-  "baselineFrozenAtUtc": "2026-10-14T06:14:14Z",
-  "auditedAtUtc": "2026-10-14T06:43:07Z",
-  "postMergeMainSha": "1b8db6388beaa2dde57be0f4b803373ab91b2762"
+  "mainBaselineSha": "8859005d5d806a64d8ef95d8cf578e566480344d",
+  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38545400397",
+  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38546571035",
+  "baselineFrozenAtUtc": "2026-10-14T10:34:27Z",
+  "previousFrozenBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+  "newWriterAdmissionPolicy": "BLOCKED_UNTIL_LATEST_MAIN_CI_AND_TICKET_CWD_AUTHORIZED",
+  "auditedAtUtc": "2026-10-14T10:34:27Z",
+  "postMergeMainSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
+  "latestObservedMainCiRun": "BakerSean168/BodySense/actions/runs/38549872054",
+  "latestObservedMainCiStatus": "IN_PROGRESS_AT_AUDIT",
+  "pendingDomainContractPr": 264
 }
