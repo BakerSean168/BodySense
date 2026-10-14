@@ -16,6 +16,13 @@ import (
 // a single active plan. Never select a random plan when a user may have two.
 var ErrMultipleActiveTrainingPlans = errors.New("multiple active training plans require explicit plan selection")
 
+// ErrTrainingPlanOwnerLockRequiresTransaction prevents accidentally returning
+// a released row lock to an independent-plan application transaction.
+var ErrTrainingPlanOwnerLockRequiresTransaction = errors.New("training plan owner lock requires an active transaction")
+
+// ErrTrainingPlanOwnerNotFound deliberately contains no user or plan identity.
+var ErrTrainingPlanOwnerNotFound = errors.New("training plan owner not found")
+
 // TrainingRepository handles database operations for training plans and logs.
 type TrainingRepository struct {
 	db *gorm.DB
@@ -26,6 +33,31 @@ func NewTrainingRepository(db *gorm.DB) *TrainingRepository {
 }
 
 // Plan operations
+
+// LockOwnerForPlanActivation serializes accepted-plan projection operations
+// for the same owner. It must run inside the outer acceptance transaction,
+// before reading/accepting the proposal or testing projection idempotency.
+// Locking the stable users row avoids a missing-plan race and hash collisions;
+// no lock of another user's row is needed. This is dormant until a V2 owner
+// explicitly opts into independent plans.
+func (r *TrainingRepository) LockOwnerForPlanActivation(ctx context.Context, userID uuid.UUID) error {
+	if userID == uuid.Nil {
+		return ErrTrainingPlanOwnerNotFound
+	}
+	if !database.HasTransaction(ctx) {
+		return ErrTrainingPlanOwnerLockRequiresTransaction
+	}
+	var row struct{ ID uuid.UUID }
+	err := database.FromContext(ctx, r.db).Table("users").
+		Select("id").
+		Where("id = ?", userID).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrTrainingPlanOwnerNotFound
+	}
+	return err
+}
 
 func (r *TrainingRepository) CreatePlan(ctx context.Context, plan *model.TrainingPlan) error {
 	return database.FromContext(ctx, r.db).Create(plan).Error

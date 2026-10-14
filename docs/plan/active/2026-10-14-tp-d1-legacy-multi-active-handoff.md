@@ -102,3 +102,65 @@ reactivated, and no clinical thresholds are invented.
 **Release:** untouched. Do not add these previews to the live
 migration chain or enable the constructor option from production
 routes without a separate reviewed change and formal gates.
+
+## 2026-10-14 · Stage 2 dormant owner-serialized activation guard
+
+**Scope:** The source-level V2 compatibility option created in Stage 1
+is still **not enabled by any existing application constructor or HTTP
+route**. This stage adds a concurrency-safety prerequisite for future
+multi-active implementation. It does not create a V2 PlanProposal,
+TrainingPlanRevision or formal database migration.
+
+- `TrainingRepository.LockOwnerForPlanActivation` rejects missing
+  owners and use outside an application transaction. Within a real
+  GORM transaction it performs an owner-scoped `SELECT id FROM users
+WHERE id = ? FOR UPDATE`. Locking the stable owner row (rather than
+  a potentially absent Plan row) serializes concurrent accepted-plan
+  operations for that user while leaving other users unaffected. It
+  returns anonymous typed errors for missing owner/transaction;
+  database failures are not treated as successful ownership checks.
+- In `TrainingService` V2 opt-in mode, the owner lock is acquired
+  **before** proposal acceptance or accepted-revision projection
+  lookup. A package-private, owner-bound context witness is created
+  only after repository lock success. Direct V2 projection calls
+  without that witness, and attempts with another owner's witness,
+  fail before any read/mutation of a TrainingPlan. `EnsureCurrentPlan`
+  also uses a transaction, owner lock and idempotent recovery. By
+  default the legacy flow still does not acquire this new lock.
+- Go SQLMock and service Race tests verify transaction prerequisite,
+  correct `FOR UPDATE` scope, no lock leakage, missing owner,
+  database failures, the precise acceptance/lock order, cross-owner
+  refusal and legacy behavior. These tests do not independently
+  establish full V2 Treatment authorization.
+- `scripts/plan/test-tp-d1-owner-lock-pg18.sh` uses a pinned
+  disposable PG18 image, all canonical upstream migrations and the
+  already-approved **synthetic-only forward preview**. PostgreSQL
+  binds no TCP port and Docker networking is disabled. A temporary
+  Unix-socket directory is bind-mounted, allowing the actual Go
+  repository integration test to run through a real GORM transaction
+  without exposing a container or connecting to staging/prod.
+  Its native test demonstrates two concurrent devices for one owner
+  serialize their accepted-plan writes, while another owner's
+  transaction commits independently; after both commits two active
+  plans coexist without status supersession, ambiguous legacy
+  single-plan reads fail closed, and a forced rollback cannot create
+  an extra plan. The container and socket mount are removed at exit.
+
+**Native test receipt:** GCP Agent Fabric
+`gcp-dev-01::job_req_5e4be7bab737bb18511f23ba75838e17`,
+source checkout `76bc12959cfafc385ee939bd675f2aed3ee00009`
+before this implementation commit, exit 0. PG18 ran all 12
+canonical migrations, the Go `-race` integration test passed
+in 0.26 s, all four native acceptance assertions passed and no
+container remained.
+
+**Still not ready:** This lock does not make the old
+`TreatmentService.AcceptProposal` idempotent across devices; its
+original `proposed → accepted` guard may reject an already-accepted
+retry. A separately reviewed PlanProposal and TrainingPlanRevision
+command/revision/authorization model, end-to-end idempotency key,
+stable explicit Plan ID selection, live migration of the old active
+index and owner-approved reverse-migration policy remain necessary.
+No old `superseded` history is automatically reactivated. Domain,
+Schema, Training Engineering, Integration, Staging and Production
+gates must stay unapproved until native feature-wide acceptance.
