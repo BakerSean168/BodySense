@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -15,6 +16,15 @@ type ConversationRepository struct {
 	db *gorm.DB
 }
 
+// ErrLegacyMultipleLiveConversations indicates the user's historical
+// Conversations have not yet been reconciled to the approved singleton
+// contract. Callers MUST NOT select an arbitrary legacy row.
+var ErrLegacyMultipleLiveConversations = errors.New("conversation reconciliation required")
+
+// ErrInvalidConversationOwner prevents a missing auth identity from being
+// used for a tenant-scoped lookup.
+var ErrInvalidConversationOwner = errors.New("valid conversation owner required")
+
 // NewConversationRepository creates a new ConversationRepository.
 func NewConversationRepository(db *gorm.DB) *ConversationRepository {
 	return &ConversationRepository{db: db}
@@ -23,6 +33,39 @@ func NewConversationRepository(db *gorm.DB) *ConversationRepository {
 // Create creates a new conversation.
 func (r *ConversationRepository) Create(ctx context.Context, conversation *model.Conversation) error {
 	return r.db.WithContext(ctx).Create(conversation).Error
+}
+
+// GetSoleLiveByUserID is a READ-ONLY PC-D4 migration admission primitive.
+// It returns the only non-deleted Conversation of an authenticated owner,
+// nil when the owner has none (lazy creation is handled elsewhere), and
+// ErrLegacyMultipleLiveConversations when legacy multi-Conversation history
+// remains. Archived/paused status does NOT make a row disappear: only
+// deleted_at defines a non-live row. This method does not select a canonical
+// legacy ID or prevent a concurrent legacy creator. Singleton runtime still
+// requires approved history reconciliation, unique DB constraint and
+// serialized per-owner creation and Run protocol.
+func (r *ConversationRepository) GetSoleLiveByUserID(ctx context.Context, userID uuid.UUID) (*model.Conversation, error) {
+	if userID == uuid.Nil {
+		return nil, ErrInvalidConversationOwner
+	}
+	var matches []model.Conversation
+	err := database.FromContext(ctx, r.db).
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Order("created_at ASC").
+		Order("id ASC").
+		Limit(2).
+		Find(&matches).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) > 1 {
+		// Never expose either legacy ID to an API or runtime error surface.
+		return nil, ErrLegacyMultipleLiveConversations
+	}
+	if len(matches) == 0 {
+		return nil, nil
+	}
+	return &matches[0], nil
 }
 
 // GetByID retrieves a conversation by ID with ownership check.
