@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BIN="$ROOT/.tools/contracts/bin"
+# Keep bootstrap behavior pinned, verifiable and fail-closed before any
+# networked tool installation occurs.
+"$ROOT/scripts/contracts/test-go-install-retry.sh"
 "$ROOT/scripts/contracts/bootstrap-tools.sh"
 
 cd "$ROOT"
