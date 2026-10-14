@@ -86,3 +86,20 @@ Finish INT-001 reconciliation, commit the integration candidate after real tests
 - QA 7/7, focused React four files/33 tests, Web TypeScript typecheck, V2 plan 33/33 and ticket queue 8/8 passed before the final merge commit. Go race and generated contract parity are separate pending jobs; never present a candidate as accepted until their exits are verified.
 - Ticket queue currently contains 21 concrete documents and disjoint resources with a maximum three-writer admission gate. No domain gate is raised by creating these documents.
 - Native `t3 project add` registered project `67a21bd5-5929-468b-b6ea-e252a8b11e27` at the integration path, but Agent Fabric T3 gateway returned `t3_project_denied` and its authorized project listing did not include the project. The local T3 CLI build `2955` is older than service build `2994`, and reported an unknown recorded migration ID. **No T3 writer is admitted**; this access/version mismatch is OPS-001 and must be resolved via supported normal project authorization, not raw API or database bypass. Details in `docs/plan/tickets/v2/dispatch-ledger.json`.
+
+## 8. 2026-10-14 integration QA checkpoint
+
+**Passed (local evidence only, not full V2 release):**
+
+- Committed V12/React merge `6e59dd0db`; execution DAG `0563f626c`, admission guard `cbca5375c`; mobile E2E selector fix `4539f8192`. The V12 owner's uncommitted changes were never imported.
+- Native Go `-race` Model/Repository/HTTP (Observation/BodyFact/Episode/InteractionResume) **three packages PASS**, exit 0, `job_req_1418ce9e5f708ba28e4dfc221adb45c2`.
+- React BodyFact focused **33/33 PASS**; independent `BusinessWindows.test.tsx` **21/21 PASS** after a timing failure in the full suite; TypeScript check PASS.
+- `pnpm contracts:check-generated && pnpm postman:verify` **PASS**, Postman **110 operations**, exit 0, `job_req_eca8ace187f9c2397aa0575a4c79a5f8`. Plan checks, queue dependency/collision validator and QA Merge Guard pass.
+- Real isolated **PG18 + Redis + Go + Python + React + Chromium** mobile Ask User, `BODY_FACT_TEST_GREP='Ask User mobile replacement composer' BODY_FACT_TEST_RETRIES=0 bash scripts/validate-body-fact-vertical.sh`: **1/1 PASS without retry**, exit 0, `job_req_16315bfd9f7fdd9ef416b2199c9c4032`. Evidence: `.runtime/schema-first-v2-evidence/vertical-e2e-1640595/browser.log`. Synthetic containers cleaned.
+
+**Unaccepted / reproducible QA findings:**
+
+- First full React Vitest had **491/492 PASS** with one 5-second repeated-Dock test timeout under concurrent work; isolated 21/21 then passed. The subsequent full Web rerun completed **80 files / 492 tests PASS**, exit 0, job `gcp-dev-01::job_req_7f7d3af0195870e0b4e3b9dc2f214f92`. The earlier Dock timeout appears load-sensitive; exact-head CI remains independently required.
+- The first real 17-case E2E run was not successful: one Ask User foreign-owner/cancel path failed on its first attempt (composer unavailable at 8 seconds), passed on retry; the mobile test failed twice because old `.bc-business-window-title` selector ignored the accepted V2 Chat contextual title `.bc-chat-context-title`; and the Python extraction/Person Habits path ran too long in the overloaded environment. That obsolete-source batch was deliberately cancelled; its two synthetic PG18/Redis containers were inspected and removed. No green full-suite claim.
+- The mobile test fix `4539f8192` preserves narrow-screen overflow, dark/light title color, source binding, draft and true commit assertions. The reusable native harness now admits focused `BODY_FACT_TEST_GREP` and `BODY_FACT_TEST_RETRIES`, defaulting to the original full suite; all arguments use arrays, retries are validated, and termination follows cleanup.
+- `INT-001` stays **IN_PROGRESS** until a clean exact-SHA integrated CI + broad negative E2E acceptance. `OPS-001` and all new T3 writers stay gated because newly registered project ID `67a21bd5-5929-468b-b6ea-e252a8b11e27` was denied by Agent Fabric T3 (`t3_project_denied`). Do not bypass permissions, infer current model health, raise `v2-handoff-state.json` Gates, or deploy.
