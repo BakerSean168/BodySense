@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T11:25:45Z",
+  "auditedAtUtc": "2026-10-14T12:46:08Z",
   "target": "gcp-dev-01",
   "mode": "ChatGPT Web integration; Qiyu and GLM canaries verified, isolated ticket coding writer admission gated",
   "integration": {
     "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
-    "branch": "ops/v2-admission-status-20261014",
-    "currentWriter": "ChatGPT-Web",
+    "branch": "docs/v2-main-accepted-pc-tp-20261014",
+    "currentWriter": "ChatGPT-Web / bounded plan evidence",
     "t3ProjectRegistration": {
       "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
       "title": "BodySense V2 Integration Review",
@@ -96,11 +96,11 @@
     "INT-002 PR258 exact-head CI passed and merged. Reconcile remaining domain, backend and QA handoffs without raising domain/staging gates."
   ],
   "latestObserved": {
-    "atUtc": "2026-10-14T11:25:45Z",
-    "verifiedMainBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
-    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
-    "observedNewerMainSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
-    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+    "atUtc": "2026-10-14T12:44:51Z",
+    "verifiedMainBaselineSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38564462755",
+    "observedNewerMainSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38564462755",
     "newerMainCiAtAudit": "success",
     "backendPrivacyPr": 263,
     "backendPrivacyMergedSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
@@ -111,7 +111,19 @@
     "domainContractMergedAtUtc": "2026-10-14T10:48:51Z",
     "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
     "domainContractCiRun": "BakerSean168/BodySense/actions/runs/38550120817",
-    "domainContractExactHeadCi": "12_OF_12_SUCCESS"
+    "domainContractExactHeadCi": "12_OF_12_SUCCESS",
+    "pcSingletonReaderPr": 266,
+    "pcSingletonReaderMergedMainSha": "17552e5cda9335b58187534ed7cc5273f5e0500b",
+    "pcSingletonReaderCiRun": "BakerSean168/BodySense/actions/runs/38558686569",
+    "pcShareRetirementPr": 267,
+    "pcShareRetirementMergedMainSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "pcShareRetirementCiRun": "BakerSean168/BodySense/actions/runs/38563199186",
+    "pcShareRetirementMode": "explicit_opt_in_default_off_no_deployment",
+    "tpD1CrossTrackIssue": 268,
+    "tpD1Pg18ReproductionJob": "gcp-dev-01::job_req_6af160737b590da17746a7507c8cc15d",
+    "newestCandidateRun": "BakerSean168/BodySense/actions/runs/38565576350",
+    "newestCandidateStatus": "success_staging_promotion_skipped",
+    "candidateVerifiedAtUtc": "2026-10-14T12:46:08Z"
   },
   "integrationReadOnlyT3CwdCanary": {
     "recordedAtUtc": "2026-10-14T10:43:42Z",

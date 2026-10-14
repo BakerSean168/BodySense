@@ -562,10 +562,10 @@
       "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
     }
   ],
-  "updatedAtUtc": "2026-10-14T11:25:45Z",
+  "updatedAtUtc": "2026-10-14T12:46:08Z",
   "latestExecution": {
-    "owner": "ChatGPT-Web/Integration-Execution-Reconciliation-20261014",
-    "baselineHead": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "owner": "ChatGPT-Web/Integration-Execution-Reconciliation-20261014-PC-TP",
+    "baselineHead": "375e5a8215100b50f45fa78f761e4a92e6154c67",
     "state": "bounded_owner_handoff_in_progress;V2_domain_gates_open;staging_promotion_blocked",
     "contract": "docs/plan/active/2026-10-13-v2-parallel-master.md",
     "nextTickets": [
@@ -578,14 +578,17 @@
       "UI-001"
     ],
     "verification": {
-      "lastGreenMain": "945d8ef41c46c73dd222cdb8cb4007681c71babb:CI_38552185954_SUCCESS;immutable_candidate_38553247126_SUCCESS;staging_promotion_SKIPPED",
-      "newerObservedMain": "945d8ef41c46c73dd222cdb8cb4007681c71babb:PR264_MERGED;CI_38552185954_SUCCESS;candidate_38553247126_SUCCESS",
+      "lastGreenMain": "375e5a8215100b50f45fa78f761e4a92e6154c67:CI_38564462755_SUCCESS;candidate_38565576350_SUCCESS;staging_promotion_SKIPPED_BY_V2_GATES",
+      "newerObservedMain": "375e5a8215100b50f45fa78f761e4a92e6154c67:PR266_AND_PR267_MERGED;CI_38564462755_SUCCESS",
       "backendPrivacy": "original_f2085b263fe011b2d83a3f4f708a5fbdd4b9a661_equivalent_committed_as_7d3a1e1e94dfb52d70cba64047bfc7e4a4f4645c;PR263_CI_SUCCESS;PG18_race_2_of_2_PASS",
       "domainContract": "Track_A_original_staged_WIP_saved_as_605d0e403ceec11aa7ed4ee85e59d8d7cd6033c5;39_of_39_model_PASS;90_of_90_plan_PASS;PR264_exact_head_ccecaf2eb7762046918e2f763c14f2a2bb9b67aa_12_of_12_CI_SUCCESS_MERGED_945d8ef41c46c73dd222cdb8cb4007681c71babb",
       "stackedPrCI": "INT002_PR258_exact_head_2fd44ea76a4eaeb11b59ff520181c953a1a01da5_12_of_12_CI_PASS_MERGED_b4eff04f11388a0dd0a7c08228afb6374d00c1be",
       "qaOwner": "merge_guard_and_Diagnosis_E2E_semantics_and_focused_harness_already_present_in_main;QA_old_worktree_has_staged_script_and_untracked_venv;preserved_not_reset_or_force_merged",
       "modelAvailability": "Qiyu_GPT61_and_GLM53_real_responses_verified_in_PC001_T3_project;Qiyu_integration_readonly_t3_cwd_and_HEAD_f67f9dd_verified_in_thread_002313;independent_coding_writer_not_admitted",
-      "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion"
+      "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion",
+      "pcSingletonReader": "PR266_FINAL_cc295803bb87cc213def387b1b0b41395be3ec1e_CI_38558686569_SUCCESS;MERGED_17552e5cda9335b58187534ed7cc5273f5e0500b;PG18_RACE_7_PASS;NO_RUNTIME_SWITCH",
+      "pcShareRetirementGate": "PR267_FINAL_2ed788fbe703c0dec5d8c61aa63e9be093b27aef_CI_38563199186_SUCCESS;MERGED_375e5a8215100b50f45fa78f761e4a92e6154c67;DEFAULT_OFF_NO_TOKEN_ERASURE_NO_DEPLOYMENT",
+      "trainingMultiActiveBlocker": "TP-D1_CROSS_TRACK_ISSUE_268;PG18_12_MIGRATIONS_INDEX_idx_training_plans_user_active_REJECTS_SECOND_ACTIVE;ISOLATED_DROP_PERMITS_TWO;LEGACY_GO_SUPERSEDE_STILL_ACTIVE;NO_SCHEMA_CHANGE"
     }
   }
 }
