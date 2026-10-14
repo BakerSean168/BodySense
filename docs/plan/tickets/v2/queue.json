@@ -39,7 +39,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "T3 project authorization fixed; Qiyu GPT-6.1 Sol real assistant reply verified in PC-001 read-only canary. DeepSeek Pi/DSH routes unverified. Isolated ticket cwd/writer admission not established; no coding writer admitted."
+      "blockedReason": "T3 project authorization fixed; Qiyu GPT-6.1 Sol real assistant reply verified in PC-001 read-only canary. DeepSeek Pi/DSH routes unverified. Integration T3 project read-only cwd/HEAD verified on f67f9dd; ticket-specific independent coding worktree and single-Writer admission still unverified; no coding writer admitted."
     },
     {
       "id": "INT-002",

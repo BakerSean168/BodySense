@@ -89,7 +89,7 @@
     "piModelDiscovery": "pi --list-models: No models available"
   },
   "admittedWriters": [],
-  "pilotStatus": "QIYU_GLM_INFERENCE_VERIFIED_TICKET_WRITER_CWD_ADMISSION_PENDING",
+  "pilotStatus": "QIYU_GLM_INFERENCE_AND_INTEGRATION_READONLY_CWD_VERIFIED_TICKET_CODING_WRITER_NOT_ADMITTED",
   "next": [
     "Qiyu GPT-6.1 Sol and GLM 5.3 have actual assistant replies in PC-001; do not treat separate DeepSeek route failures as global model outage.",
     "Verify actual model response and isolated native cwd for each permitted ticket-specific T3 writer before admission; max three disjoint writers.",
@@ -108,6 +108,21 @@
     "domainContractHeadAtAudit": "ccecaf2eb7762046918e2f763c14f2a2bb9b67aa",
     "qaOldCommittedAndStagedFixesAlreadyInMain": true,
     "v2ReleaseGatesChanged": false
+  },
+  "integrationReadOnlyT3CwdCanary": {
+    "recordedAtUtc": "2026-10-14T10:43:42Z",
+    "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
+    "provider": "codex_superqiyu",
+    "model": "gpt-6.1-sol",
+    "threadId": "fabric:002313f1774f63e7601c6ec1c9d4964c4ca397027bf5d43e6dc38a49458b1caf",
+    "actualAssistantVerdict": "OPS001_READ_ONLY_CWD_VERIFIED",
+    "nativeCommands": ["pwd", "git rev-parse HEAD", "git status --porcelain=v1"],
+    "observedCwd": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
+    "observedHead": "f67f9dd7658fc90f459d44122837732782bb050d",
+    "gitPorcelainStatus": "",
+    "status": "READ_ONLY_CWD_VERIFIED",
+    "codingWriterAdmitted": false,
+    "limitation": "Only integration project root validated; independent ticket coding checkouts and shared-resource writer locks still require admission"
   },
   "postMerge": {
     "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",

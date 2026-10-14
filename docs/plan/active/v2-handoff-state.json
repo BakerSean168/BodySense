@@ -561,7 +561,7 @@
       "domainContract": "Track_A_owner_WIP_saved_as_605d0e403ceec11aa7ed4ee85e59d8d7cd6033c5;39_of_39_model_PASS;90_of_90_plan_PASS;PR264_final_head_ccecaf2eb7762046918e2f763c14f2a2bb9b67aa_CI_PENDING_AT_AUDIT",
       "stackedPrCI": "INT002_PR258_exact_head_2fd44ea76a4eaeb11b59ff520181c953a1a01da5_12_of_12_CI_PASS_MERGED_b4eff04f11388a0dd0a7c08228afb6374d00c1be",
       "qaOwner": "merge_guard_and_Diagnosis_E2E_semantics_and_focused_harness_already_present_in_main;QA_old_worktree_has_staged_script_and_untracked_venv;preserved_not_reset_or_force_merged",
-      "modelAvailability": "Qiyu_GPT61_real_assistant_reply_and_GLM53_read_only_review_verified_in_PC001_T3_project;ticket_specific_writer_cwd_not_verified",
+      "modelAvailability": "Qiyu_GPT61_and_GLM53_real_responses_verified_in_PC001_T3_project;Qiyu_integration_readonly_t3_cwd_and_HEAD_f67f9dd_verified_in_thread_002313;independent_coding_writer_not_admitted",
       "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion"
     }
   }
