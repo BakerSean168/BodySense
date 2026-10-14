@@ -100,11 +100,17 @@ func TestConversationSingletonPreflightNativePostgres(t *testing.T) {
 	).Error; err != nil {
 		t.Fatal(err)
 	}
-	requireID(owner, second)
+	actual, err = lookup(owner)
+	if actual != nil || !errors.Is(err, ErrLegacyConversationHistory) {
+		t.Fatalf("mixed live/deleted history got=%v err=%v; must reconcile before creation", actual, err)
+	}
 
 	// The reader must be tenant-scoped even while another owner has rows.
 	add(foreign, stranger, "active")
-	requireID(owner, second)
+	actual, err = lookup(owner)
+	if actual != nil || !errors.Is(err, ErrLegacyConversationHistory) {
+		t.Fatalf("foreign owner cannot hide old identity: got=%v err=%v", actual, err)
+	}
 	requireID(stranger, foreign)
 
 	if err := db.WithContext(ctx).Exec(
@@ -112,7 +118,10 @@ func TestConversationSingletonPreflightNativePostgres(t *testing.T) {
 	).Error; err != nil {
 		t.Fatal(err)
 	}
-	requireNone(owner)
+	actual, err = lookup(owner)
+	if actual != nil || !errors.Is(err, ErrLegacyConversationHistory) {
+		t.Fatalf("soft-deleted-only owner got=%v err=%v; should remain blocked", actual, err)
+	}
 	requireID(stranger, foreign)
 
 	var total int64
