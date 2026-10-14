@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "auditedAtUtc": "2026-10-14T02:29:34Z",
+  "target": "gcp-dev-01",
+  "mode": "chatgpt-web-integration; t3-writer-admission-pending",
+  "integration": {
+    "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
+    "branch": "integration/v2-execution-20261014",
+    "currentWriter": "ChatGPT-Web",
+    "t3ProjectRegistration": {
+      "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
+      "title": "BodySense V2 Integration Review",
+      "registeredVia": "t3 project add",
+      "gatewayProjectVisible": false,
+      "gatewayProbe": "t3_project_denied",
+      "authStatus": "blocked; do not route T3 threads until supported project access confirmed"
+    }
+  },
+  "modelPreflight": {
+    "t3PiDeepSeek": {
+      "provider": "pi",
+      "model": "llm-pm/deepseek-v4.1-flash",
+      "advertised": true,
+      "inferenceVerified": false
+    },
+    "forgeflowPiFast": {
+      "virtualModel": "forgeflow/worker:low",
+      "modelRegistered": false,
+      "availableForPlanning": false
+    },
+    "externalZcodeGLM": {
+      "model": "glm-5.3",
+      "provider": "windhub-direct",
+      "inventoryEligible": true,
+      "liveInferenceVerified": false,
+      "t3RouteVerified": false
+    }
+  },
+  "runtimeDiagnostics": {
+    "piVersion": "1.1.0",
+    "t3CliBuild": "0.0.46-nightly.20261011.2955",
+    "t3ServiceBuild": "0.0.46-nightly.20261011.2994",
+    "cliWarning": "unknown recorded PullRequestReviewGuides migration ID; do not modify database or restart server without evidence"
+  },
+  "admittedWriters": [],
+  "pilotStatus": "BLOCKED_ON_T3_PROJECT_ACCESS_AND_EXACT_BASELINE",
+  "next": [
+    "Verify supported project allowlist/registration refresh and align T3 CLI/service versions under change control",
+    "After INT-001 accepted, register one ticket-specific worktree project at a time and probe read-only status",
+    "Health-check physical model without unapproved writes; admit max 3 noncolliding writer tickets"
+  ]
+}
