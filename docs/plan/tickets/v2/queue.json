@@ -22,7 +22,8 @@
       "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
       "acceptedSha": "ee07c09a893498675c4c4a8723c69f561a1befac",
       "acceptedAtUtc": "2026-10-14T04:59:07Z",
-      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38513267022"
+      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38513267022",
+      "mergedMainSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3"
     },
     {
       "id": "OPS-001",
@@ -340,5 +341,9 @@
       "worktree": null,
       "acceptedSha": null
     }
-  ]
+  ],
+  "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
+  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
+  "baselineFrozenAtUtc": "2026-10-14T06:14:14Z"
 }

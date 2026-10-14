@@ -86,3 +86,25 @@ test("blocked admission requires a real reason", () =>
       q.tickets[1].blockedReason = "";
     }).some((x) => x.includes("blocked without reason")),
   ));
+
+test("main baseline must be a real exact immutable SHA", () =>
+  assert.ok(
+    mutate((q) => {
+      q.mainBaselineSha = "1234";
+    }).some((x) => x.includes("mainBaselineSha")),
+  ));
+
+test("new writer must start from the same frozen main baseline", () => {
+  const wrong = mutate((q) => {
+    q.tickets[2].status = "in_progress";
+    q.tickets[2].worktree = "/tmp/isolated-int002";
+    q.tickets[2].baseSha = "a".repeat(40);
+  });
+  assert.ok(wrong.some((x) => x.includes("frozen main SHA")));
+  const correct = mutate((q) => {
+    q.tickets[2].status = "in_progress";
+    q.tickets[2].worktree = "/tmp/isolated-int002";
+    q.tickets[2].baseSha = q.mainBaselineSha;
+  });
+  assert.deepEqual(correct, []);
+});

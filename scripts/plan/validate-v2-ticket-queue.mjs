@@ -21,6 +21,8 @@ export function validateQueue(queue, root = REPO_ROOT) {
     errors.push("maxParallelWriters: bounded pilot must be 1..3");
   if (!SHA.test(queue.seedSha || ""))
     errors.push("seedSha: expected exact 40-hex SHA");
+  if (!SHA.test(queue.mainBaselineSha || ""))
+    errors.push("mainBaselineSha: expected exact frozen main SHA");
   if (!queue.integrationBranch || !queue.integrationWorktree)
     errors.push("integration checkout mapping missing");
   const ids = new Set();
@@ -43,6 +45,12 @@ export function validateQueue(queue, root = REPO_ROOT) {
       errors.push(t.id + ": missing/outside ticket document");
     if (t.status === "done" && !SHA.test(t.acceptedSha || ""))
       errors.push(t.id + ": done without exact accepted SHA");
+    if (
+      t.status === "in_progress" &&
+      t.id !== "INT-001" &&
+      t.baseSha !== queue.mainBaselineSha
+    )
+      errors.push(t.id + ": active writer did not start at frozen main SHA");
     if (
       t.status === "blocked" &&
       (typeof t.blockedReason !== "string" || !t.blockedReason.trim())
