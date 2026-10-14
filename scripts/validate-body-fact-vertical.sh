@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
+# Reuse the native isolated PG18/Go/Python/React harness for bounded regression slices.
+# Unset filters retain the historical full suite; selection is passed as argv, never eval.
+PLAYWRIGHT_FOCUS=()
+if test -n "${BODY_FACT_TEST_GREP:-}"; then
+  PLAYWRIGHT_FOCUS+=(--grep "$BODY_FACT_TEST_GREP")
+fi
+if test -n "${BODY_FACT_TEST_RETRIES:-}"; then
+  if [[ ! "$BODY_FACT_TEST_RETRIES" =~ ^[0-2]$ ]]; then
+    echo "BODY_FACT_TEST_RETRIES must be 0, 1, or 2" >&2
+    exit 2
+  fi
+  PLAYWRIGHT_FOCUS+=(--retries "$BODY_FACT_TEST_RETRIES")
+fi
 EVIDENCE="$ROOT/.runtime/schema-first-v2-evidence/vertical-e2e-$$"
 mkdir -p "$EVIDENCE/uploads"
 PG="bodysense-v2-vertical-pg-$$"
@@ -21,6 +34,8 @@ cleanup() {
   printf 'BODY_FACT_VERTICAL_RESOURCES=CLEANED\nEVIDENCE=%s\n' "$EVIDENCE"
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 trap 'code=$?; echo "VERTICAL_TEST_FAILURE line=$LINENO status=$code" >&2; docker logs --tail 30 "$PG" 2>&1 || true; test ! -f "$EVIDENCE/api.log" || tail -25 "$EVIDENCE/api.log"; test ! -f "$EVIDENCE/ai.log" || tail -25 "$EVIDENCE/ai.log"' ERR
 for port in "$API_PORT" "$AI_PORT" "$WEB_PORT"; do
   if ss -ltnH | awk '{print $4}' | grep -Eq ":${port}$"; then
@@ -75,8 +90,9 @@ done
 curl -fsS "http://127.0.0.1:$API_PORT/api/health" >/dev/null
 curl -fsS "http://127.0.0.1:$AI_PORT/health" >/dev/null
 cd "$ROOT"
+printf 'BODY_FACT_VERTICAL_TEST_GREP=%s RETRIES=%s\n' "${BODY_FACT_TEST_GREP:-all}" "${BODY_FACT_TEST_RETRIES:-project-config}"
 CI=true E2E_BASE_URL="http://127.0.0.1:$WEB_PORT" E2E_API_BASE_URL="http://127.0.0.1:$API_PORT" \
   timeout 720 node node_modules/@playwright/test/cli.js test \
-  apps/web/e2e/ask-user-body-facts.spec.ts apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/body-episode-associations.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts apps/web/e2e/lifestyle-current-update.spec.ts \
-  --reporter=list | tee "$EVIDENCE/browser.log"
+  apps/web/e2e/ask-user-body-facts.spec.ts apps/web/e2e/body-fact-records.spec.ts apps/web/e2e/body-observation-records.spec.ts apps/web/e2e/body-observation-amendments.spec.ts apps/web/e2e/body-episode-associations.spec.ts apps/web/e2e/longitudinal-full-loop.spec.ts apps/web/e2e/longitudinal-health.spec.ts apps/web/e2e/lifestyle-current-update.spec.ts \
+  "${PLAYWRIGHT_FOCUS[@]}" --reporter=list | tee "$EVIDENCE/browser.log"
 echo BODY_FACT_VERTICAL_E2E=PASS

@@ -355,6 +355,11 @@ test("Ask User mobile replacement composer fits the sheet in both themes and sub
       const button = node
         .querySelector("button.ask-user-submit")
         ?.getBoundingClientRect();
+      // V2 Chat now renders a contextual title + local clock, not the generic h2.
+      const title = sheet?.querySelector(".bc-chat-context-title");
+      if (!(title instanceof HTMLElement)) {
+        throw new Error("Missing V2 Chat title in the mobile sheet");
+      }
       return {
         left: bounds.left,
         right: bounds.right,
@@ -365,9 +370,7 @@ test("Ask User mobile replacement composer fits the sheet in both themes and sub
         viewport: innerWidth,
         color: getComputedStyle(node.querySelector(".ask-user-question")!)
           .color,
-        headingColor: getComputedStyle(
-          sheet!.querySelector(".bc-business-window-title")!,
-        ).color,
+        headingColor: getComputedStyle(title).color,
       };
     });
     expect(result.left).toBeGreaterThanOrEqual(0);

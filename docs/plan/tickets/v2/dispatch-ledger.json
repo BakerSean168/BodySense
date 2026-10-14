@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "auditedAtUtc": "2026-10-14T06:14:14Z",
+  "target": "gcp-dev-01",
+  "mode": "chatgpt-web-integration; t3-writer-admission-pending",
+  "integration": {
+    "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
+    "branch": "integration/v2-execution-20261014",
+    "currentWriter": "ChatGPT-Web",
+    "t3ProjectRegistration": {
+      "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
+      "title": "BodySense V2 Integration Review",
+      "registeredVia": "t3 project add",
+      "gatewayProjectVisible": false,
+      "gatewayProbe": "t3_orchestrator_describe: 7 allowed projects; new project absent",
+      "authStatus": "source merged and host-owned config staged; active Worker not restarted because unrelated jobs are running; project is NOT authorized in live gateway",
+      "hostConfigMergedSha": "4e25ae12cbc179097335cd0c2456efad99454b1b",
+      "hostConfigInstalled": true
+    },
+    "boundedBaselineAcceptedCodeSha": "ee07c09a893498675c4c4a8723c69f561a1befac",
+    "boundedBaselineCiRun": "BakerSean168/BodySense/actions/runs/38513267022",
+    "boundedBaselineCheckCount": 12,
+    "boundedBaselineStatus": "INT-001_ACCEPTED_NOT_RELEASE_READY",
+    "draftPrNumber": 255,
+    "productReleaseApproved": false
+  },
+  "modelPreflight": {
+    "t3PiDeepSeek": {
+      "provider": "pi",
+      "model": "llm-pm/deepseek-v4.1-flash",
+      "advertised": true,
+      "inferenceVerified": false
+    },
+    "forgeflowPiFast": {
+      "virtualModel": "forgeflow/worker:low",
+      "modelRegistered": false,
+      "availableForPlanning": false
+    },
+    "externalZcodeGLM": {
+      "model": "glm-5.3",
+      "provider": "windhub-direct",
+      "inventoryEligible": true,
+      "liveInferenceVerified": false,
+      "t3RouteVerified": false
+    }
+  },
+  "runtimeDiagnostics": {
+    "piVersion": "1.1.0",
+    "t3CliBuild": "0.0.46-nightly.20261011.2955",
+    "t3ServiceBuild": "0.0.46-nightly.20261011.2994",
+    "cliWarning": "unknown recorded PullRequestReviewGuides migration ID; do not modify database or restart server without evidence"
+  },
+  "admittedWriters": [],
+  "pilotStatus": "BLOCKED_ON_ACTIVE_T3_ALLOWLIST_RECONCILIATION_AND_LIVE_MODEL_HEALTH",
+  "next": [
+    "At an approved maintenance-safe point reload the signed Worker with the already-staged config, then verify allowed projects and read-only thread list; never bypass project denial",
+    "After integration INT-001 accepted at exact CI SHA, register ticket-specific isolated T3 project roots and verify real thread cwd before admitting any writer",
+    "Health-check an allowed physical model with bounded execution; max 3 noncolliding ticket writers"
+  ],
+  "postMerge": {
+    "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+    "mainCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
+    "mainCiStatus": "SUCCESS",
+    "candidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
+    "candidateStatus": "SUCCESS_IMMUTABLE_ASSETS_IMAGES_AND_MANIFEST",
+    "stagingPromotionJob": "115708618040",
+    "stagingPromotionStatus": "SKIPPED_BY_V2_GATES",
+    "releasePublishRun": "BakerSean168/BodySense/actions/runs/38520429638",
+    "releasePromotionStatus": "SKIPPED",
+    "newWriterStartSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+    "sourceCommitsIncluded": {
+      "schema": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf",
+      "design": "a3b8db87e1ca190af08d95f648b540486022962f",
+      "react": "1c779b5e04224fb38073b15bdfc426a3ce39b9ac",
+      "observationV11": "c2076d1dd39d64afa0ec616813e722a94db657ad",
+      "observationV12": "2396b1ebb77ef62919a993f8871f2ff553f46a4d",
+      "penpot": "3597a5f29bc1085f319c91f6b51c1bdaa481f084"
+    },
+    "sourceCommitsNotExactAncestors": {
+      "domain": "e823931390cee700891b35c73cf26bc4b2374e46",
+      "qa": "a89a8090000058363b5b308a212ae0ca80dc0285"
+    },
+    "dirtyOwnerWorktrees": {
+      "domain": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-domain",
+      "backendV12": "/home/dev/projects/.chatgpt-worktrees/bodysense-observation-v12",
+      "qa": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-qa"
+    },
+    "domainReleaseApproved": false
+  }
+}

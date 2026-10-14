@@ -259,6 +259,8 @@
   border: 1px solid transparent;
   border-radius: 11px;
   color: var(--bc-secondary);
+  background: transparent;
+  padding: 0;
   transition: background .14s ease, border-color .14s ease, color .14s ease;
 }
 .bc-icon-button:hover {
@@ -579,7 +581,8 @@
   position: absolute;
   z-index: 25;
   left: 50%;
-  bottom: 86px;
+  /* Stay above the persistent four-entry Dock, including while playing. */
+  bottom: calc(var(--bc-dock-clearance) + 36px);
   transform: translateX(-50%);
   width: min(620px, calc(100vw - 500px));
   min-width: 420px;
@@ -615,7 +618,7 @@
   position: absolute;
   z-index: 20;
   left: 50%;
-  bottom: 162px;
+  bottom: calc(var(--bc-dock-clearance) + 110px);
   transform: translateX(-50%);
   color: var(--bc-muted);
   font-size: 10px;
@@ -641,34 +644,59 @@
 }
 .bc-dock {
   position: absolute;
-  z-index: 32;
+  z-index: 42;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
   padding: 6px;
   border: 1px solid var(--bc-line);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bc-paper) 93%, transparent);
-  box-shadow: 0 8px 30px rgba(33, 49, 38, .09);
+  background: color-mix(in srgb, var(--bc-paper) 94%, transparent);
+  box-shadow: 0 10px 36px rgba(33, 49, 38, .15);
   backdrop-filter: blur(18px);
 }
 .bc-dock-item {
-  min-width: 90px;
-  height: 46px;
-  display: flex;
+  position: relative;
+  background: transparent;
+  border: 0;
+  min-width: 64px;
+  min-height: 56px;
+  display: grid;
+  grid-template-rows: 26px 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 10px;
+  justify-items: center;
+  gap: 3px;
+  padding: 5px 8px;
   border-radius: 12px;
   color: var(--bc-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
+.bc-dock-icon { position: relative; display: inline-grid; place-items: center; }
+.bc-dock-count {
+  position: absolute;
+  top: -5px;
+  right: -12px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 10px;
+  color: var(--bc-paper);
+  background: var(--bc-primary);
+  font-size: 10px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bc-paper);
+}
+.bc-dock-label { white-space: nowrap; }
 .bc-dock-item:hover { background: var(--bc-subtle); color: var(--bc-ink); }
 .bc-dock-item[aria-pressed="true"] { background: var(--bc-primary-soft); color: var(--bc-primary); }
+.bc-dock-item:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
 .bc-safety-banner,
 .bc-sync-banner,
 .bc-sync-indicator {
@@ -771,7 +799,7 @@
   font-weight: 650;
 }
 .bc-chat-heading > span svg { color: var(--bc-primary); }
-.bc-chat-content { height: calc(100% - 54px); overflow: hidden; background: #171717; }
+.bc-chat-content { height: 100%; min-height: 0; flex: 1 1 auto; overflow: hidden; background: #171717; }
 .bc-chat-content > * { height: 100%; min-height: 0; }
 .bc-inventory-dialog {
   width: min(930px, calc(100vw - 36px)) !important;
@@ -968,6 +996,8 @@
   .bc-intro h1 { font-size: 27px; }
   .bc-intro > p { margin-top: 7px; font-size: 11px; }
   .bc-attention { display: none; }
+  /* Mobile motion controls occupy a dedicated row, not the title's midline. */
+  .bc-stage-motion .bc-intro { top: 76px; }
   .bc-tool-rail {
     left: 12px;
     top: auto;
@@ -981,7 +1011,8 @@
   .bc-tool-rail .bc-tool-divider,
   .bc-tool-rail button:nth-of-type(5),
   .bc-tool-rail button:nth-of-type(6) { display: none; }
-  .bc-stage-motion .bc-tool-rail { bottom: 158px; }
+  .bc-stage-motion .bc-tool-rail { bottom: 188px; }
+  .bc-stage-motion .bc-tool-hint { bottom: 248px; }
   .bc-tool-hint {
     top: auto;
     bottom: 142px;
@@ -1024,7 +1055,7 @@
     box-shadow: none;
   }
   .bc-chat-heading { height: 50px; }
-  .bc-chat-content { height: calc(100% - 50px); }
+  .bc-chat-content { height: 100%; }
   .bc-dock {
     left: 10px;
     right: 10px;
@@ -1035,19 +1066,16 @@
   }
   .bc-dock-item {
     min-width: 0;
-    flex: 1;
-    height: 54px;
-    flex-direction: column;
-    gap: 3px;
+    flex: 1 1 0;
+    min-height: 56px;
+    gap: 2px;
     padding: 4px;
-    font-size: 9px;
+    font-size: 10px;
   }
-  .bc-dock-item:nth-child(4),
-  .bc-dock-item:nth-child(5) { display: none; }
   .bc-help-entry,
   .bc-attribution { display: none; }
   .bc-motion-switch {
-    top: 102px;
+    top: 12px;
     right: auto;
     left: 50%;
     transform: translateX(-50%);
@@ -1058,7 +1086,7 @@
   .bc-playback {
     left: 12px;
     right: 12px;
-    bottom: 82px;
+    bottom: 96px;
     width: auto;
     min-width: 0;
     transform: none;
@@ -1091,7 +1119,7 @@
 @media (max-height: 650px) and (min-width: 761px) {
   .bc-intro { top: 36px; }
   .bc-attention { margin-top: 16px; }
-  .bc-playback { bottom: 72px; }
+  .bc-playback { bottom: calc(var(--bc-dock-clearance) + 36px); }
   .bc-region-card { top: 38px; max-height: calc(100% - 112px); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1106,16 +1134,14 @@
 }
 
 /* ==========================================================================
-   Business windows (Penpot V5.5)
-   Body-first stage with independently openable business windows. Geometry
-   follows the prototype (Diagnosis 420x574, TrainingPlan 420x615, Chat
-   374x528); placement adapts to the real stage instead of hardcoding the
-   prototype's fixed x=430/440 coordinates.
+   Business windows / Penpot V2 Canvas compositions.
+   The desktop canvas stays mounted under one visible 780/560px window; on
+   narrow screens the same mounted task is displayed in a 358px sheet above
+   the persistent four-entry Dock. Fixed header/footer and overflow:auto
+   content do not depend on Penpot's limited prototype scroll API.
    ========================================================================== */
 .bc-business-layer {
   position: absolute;
-  /* The layer lives inside .bc-stage, which already starts below the topbar.
-     Adding the topbar height again here would double-offset every window. */
   inset: 0;
   z-index: 36;
   pointer-events: none;
@@ -1123,31 +1149,15 @@
 .bc-business-layer > * { pointer-events: auto; }
 .bc-business-window {
   position: absolute;
-  /*
-   * Horizontal placement adapts to the real stage. The Penpot prototype froze
-   * x=430/440 so its own 878px Viewer had no clipping; production must instead
-   * keep the preferred offset while guaranteeing the window never runs off the
-   * stage or covers the Dock. clamp() falls back to the 12px minimum when the
-   * preferred offset plus the window width no longer fit.
-   */
-  left: clamp(
-    12px,
-    var(--bc-window-left, 430px),
-    calc(100% - var(--bc-window-width, 420px) - 12px)
-  );
-  top: var(--bc-window-top, 18px);
-  width: min(var(--bc-window-width, 420px), calc(100% - 24px));
-  /*
-   * Height is bounded by the Penpot window size, the preferred maximum and the
-   * space the stage actually has. The reserved bottom band keeps the Dock and
-   * the minimized-window tray reachable on short stages, so a tall window can
-   * never cover the control the user needs to switch or close windows.
-   */
+  left: clamp(16px, var(--bc-window-left, 40px), 48px);
+  top: var(--bc-window-top, 28px);
+  width: min(var(--bc-window-width, 560px), calc(100% - 32px));
   height: min(
-    var(--bc-window-height, 574px),
-    var(--bc-window-max-height, 640px),
-    calc(100% - var(--bc-window-top, 18px) - var(--bc-dock-clearance, 96px))
+    var(--bc-window-height, 680px),
+    var(--bc-window-max-height, 720px),
+    calc(100% - var(--bc-window-top, 28px) - 144px)
   );
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1157,6 +1167,12 @@
   color: var(--bc-ink);
   box-shadow: var(--bc-shadow);
 }
+.bc-business-window[data-window="diagnosis"],
+.bc-business-window[data-window="training"],
+.bc-business-window[data-window="trainer"] {
+  left: auto;
+  right: clamp(16px, 3.75vw, 48px);
+}
 .bc-business-window[data-active="false"] { box-shadow: 0 12px 34px rgba(31, 47, 37, .08); }
 .bc-business-window[hidden] { display: none; }
 .bc-business-window-header {
@@ -1165,9 +1181,11 @@
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  min-height: 63px;
-  padding: 0 12px 0 20px;
+  min-height: 64px;
+  gap: 10px;
+  padding: 0 14px 0 18px;
   border-bottom: 1px solid var(--bc-line);
+  z-index: 2;
 }
 .bc-business-window-title {
   color: var(--bc-ink);
@@ -1176,8 +1194,97 @@
   font-weight: 700;
   letter-spacing: -.02em;
 }
-.bc-business-window-controls { display: flex; align-items: center; gap: 2px; }
-.bc-sheet-handle { display: none; }
+.bc-business-window-controls { display: flex; align-items: center; gap: 3px; }
+/* V2 compact context toolbars; header, body scroll and footer are independent. */
+.bc-business-window-controls .bc-icon-button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--bc-secondary);
+}
+.bc-business-window-controls .bc-icon-button:hover {
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+}
+.bc-window-context {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--bc-ink);
+}
+.bc-window-context-caption {
+  flex: 0 0 auto;
+  color: var(--bc-muted);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.bc-window-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 280px;
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  background: var(--bc-subtle);
+}
+.bc-window-select-wrap:hover { border-color: var(--bc-secondary); }
+.bc-window-select-wrap:focus-within {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-window-context-select {
+  appearance: none;
+  min-width: 0;
+  width: 100%;
+  max-width: 280px;
+  min-height: 34px;
+  padding: 0 28px 0 11px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--bc-ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.bc-window-context-select:disabled { color: var(--bc-muted); cursor: not-allowed; }
+.bc-window-context-select option { color: var(--bc-ink); background: var(--bc-paper); }
+.bc-window-select-wrap > svg {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  color: var(--bc-secondary);
+}
+.bc-window-context-meta {
+  overflow: hidden;
+  flex: 0 1 auto;
+  color: var(--bc-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bc-chat-context { align-items: flex-start; flex-direction: column; gap: 1px; }
+.bc-chat-context-title { font-size: 15px; line-height: 20px; font-weight: 700; }
+.bc-chat-context-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--bc-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.bc-header-chat-action { flex: 0 0 auto; }
+.bc-business-window-header:has(.bc-window-context) .bc-business-window-controls {
+  margin-left: auto;
+}
+
 .bc-business-window-content {
   min-height: 0;
   flex: 1 1 auto;
@@ -1290,9 +1397,11 @@
   position: absolute;
   z-index: 5;
   left: 20px;
-  top: 66px;
-  width: 348px;
+  top: 70px;
+  width: min(380px, calc(100% - 32px));
   min-height: 184px;
+  max-height: min(432px, calc(100% - 82px));
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1321,14 +1430,15 @@
 .bc-person-tabs {
   flex: 0 0 auto;
   display: flex;
-  justify-content: center;
-  gap: 24px;
-  padding: 0 18px;
+  justify-content: stretch;
+  gap: 6px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--bc-line);
 }
 .bc-person-tabs button {
   position: relative;
-  min-width: 136px;
+  min-width: 0;
+  flex: 1 1 0;
   min-height: 46px;
   padding: 0 4px;
   color: var(--bc-muted);
@@ -1488,64 +1598,6 @@
 }
 
 /* TrainingPlan window --------------------------------------------------- */
-.bc-plan-selector { position: relative; margin-bottom: 12px; }
-.bc-plan-selector-trigger {
-  width: 100%;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px;
-  border: 1px solid var(--bc-line);
-  border-radius: 12px;
-  background: var(--bc-paper);
-  color: var(--bc-ink);
-  text-align: left;
-}
-.bc-plan-selector-trigger:hover { background: var(--bc-subtle); }
-.bc-plan-selector-name { font-size: 13px; font-weight: 650; }
-.bc-plan-selector-meta {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--bc-muted);
-  font-size: 11px;
-}
-.bc-plan-picker {
-  position: absolute;
-  z-index: 8;
-  left: 0;
-  right: 0;
-  top: calc(100% + 6px);
-  max-height: 234px;
-  overflow: auto;
-  padding: 6px;
-  border: 1px solid var(--bc-line);
-  border-radius: 13px;
-  background: var(--bc-paper);
-  box-shadow: var(--bc-shadow);
-}
-.bc-plan-option {
-  width: 100%;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 10px;
-  border-radius: 9px;
-  color: var(--bc-ink);
-  font-size: 12px;
-  text-align: left;
-}
-.bc-plan-option:hover { background: var(--bc-subtle); }
-.bc-plan-option[aria-selected="true"] { background: var(--bc-primary-soft); color: var(--bc-primary); }
-.bc-plan-option-title { font-weight: 600; }
-.bc-plan-option-badge,
-.bc-plan-option-status { color: var(--bc-muted); font-size: 10px; }
-.bc-plan-option[aria-selected="true"] .bc-plan-option-badge { color: var(--bc-primary); }
 .bc-stage-list { display: grid; gap: 16px; }
 .bc-stage-title {
   margin: 0 0 8px;
@@ -1572,20 +1624,22 @@
 /* Mobile bottom sheet ---------------------------------------------------- */
 .bc-business-sheet {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 16px;
+  right: 16px;
+  top: 16px;
   z-index: 36;
-  max-height: 88dvh;
+  height: min(704px, calc(100% - 108px));
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid var(--bc-line);
-  border-radius: 24px 24px 0 0;
+  border: 1px solid var(--bc-line);
+  border-radius: 18px;
   background: var(--bc-paper);
   color: var(--bc-ink);
-  box-shadow: 0 -18px 60px rgba(31, 47, 37, .18);
+  box-shadow: 0 18px 60px rgba(31, 47, 37, .16);
 }
+.bc-business-sheet[hidden] { display: none; }
 .bc-business-sheet-content {
   min-height: 0;
   flex: 1 1 auto;
@@ -1605,77 +1659,20 @@
 
 @media (max-width: 760px) {
   .bc-business-window-header {
-    min-height: 74px;
-    padding: 0 10px 0 18px;
+    min-height: 64px;
+    padding: 0 10px 0 16px;
   }
   .bc-business-window-title { font-size: 17px; }
-  .bc-sheet-handle {
-    display: block;
-    position: absolute;
-    left: 50%;
-    top: 10px;
-    width: 40px;
-    height: 4px;
-    transform: translateX(-50%);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--bc-muted) 45%, transparent);
-  }
   .bc-person-popover { left: 18px; right: 18px; width: auto; }
-  .bc-person-tabs { justify-content: center; gap: 9px; padding: 0 8px; }
-  .bc-person-tabs button { min-width: 66px; font-size: 11px; }
+  .bc-person-tabs { justify-content: stretch; gap: 3px; padding: 0 7px; }
+  .bc-person-tabs button { min-width: 0; padding: 0 2px; font-size: 11px; }
   .bc-person-tabs button[aria-pressed="true"]::after { width: 46px; }
+  .bc-window-context-caption, .bc-window-context-meta { display: none; }
+  .bc-window-select-wrap { max-width: min(230px, 55vw); }
+  .bc-window-context-select { max-width: min(230px, 55vw); }
   .bc-person-body { padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); }
   .bc-person-equipment { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bc-person-habits > div { grid-template-columns: 1fr; gap: 3px; }
-}
-
-/* Minimized business windows stay recoverable without covering the body. */
-.bc-minimized-tray {
-  position: absolute;
-  z-index: 34;
-  left: 50%;
-  bottom: 84px;
-  transform: translateX(-50%);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  max-width: calc(100% - 48px);
-}
-.bc-minimized-chip {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 6px 0 4px;
-  border: 1px solid var(--bc-line);
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--bc-paper) 94%, transparent);
-  box-shadow: 0 8px 26px rgba(33, 49, 38, .12);
-  backdrop-filter: blur(16px);
-}
-.bc-minimized-restore {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 8px;
-  border-radius: 9px;
-  color: var(--bc-ink);
-  font-size: 12px;
-  font-weight: 600;
-}
-.bc-minimized-restore:hover { background: var(--bc-subtle); }
-.bc-minimized-dismiss {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  color: var(--bc-muted);
-}
-.bc-minimized-dismiss:hover { background: var(--bc-subtle); color: var(--bc-ink); }
-@media (max-width: 760px) {
-  .bc-minimized-tray { bottom: 76px; }
 }
 
 /* Plan authorization: proposals are pending until the user explicitly accepts. */

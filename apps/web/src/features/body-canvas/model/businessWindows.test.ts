@@ -3,6 +3,7 @@ import {
   activeBusinessWindow,
   businessWindowReducer,
   businessWindowStackIndex,
+  BUSINESS_WINDOW_LAYOUT,
   computeBmi,
   desktopWindowOffset,
   EMPTY_BUSINESS_WINDOWS,
@@ -58,7 +59,10 @@ describe("business window lifecycle", () => {
       window: "training",
     });
     state = businessWindowReducer(state, { type: "open", window: "diagnosis" });
-    state = businessWindowReducer(state, { type: "restore", window: "training" });
+    state = businessWindowReducer(state, {
+      type: "restore",
+      window: "training",
+    });
     expect(state.order).toEqual(["diagnosis", "training"]);
     expect(visibleBusinessWindows(state)).toEqual(["training"]);
     expect(state.order).toHaveLength(2);
@@ -85,12 +89,18 @@ describe("business window lifecycle", () => {
       type: "open",
       window: "training",
     });
-    state = businessWindowReducer(state, { type: "minimize", window: "training" });
+    state = businessWindowReducer(state, {
+      type: "minimize",
+      window: "training",
+    });
     expect(isBusinessWindowOpen(state, "training")).toBe(true);
     expect(isBusinessWindowVisible(state, "training")).toBe(false);
     expect(minimizedBusinessWindows(state)).toEqual(["training"]);
     expect(activeBusinessWindow(state)).toBeNull();
-    state = businessWindowReducer(state, { type: "restore", window: "training" });
+    state = businessWindowReducer(state, {
+      type: "restore",
+      window: "training",
+    });
     expect(isBusinessWindowVisible(state, "training")).toBe(true);
     expect(activeBusinessWindow(state)).toBe("training");
     expect(state.order).toEqual(["training"]);
@@ -123,7 +133,10 @@ describe("business window lifecycle", () => {
       type: "open",
       window: "person",
     });
-    state = businessWindowReducer(state, { type: "minimize", window: "person" });
+    state = businessWindowReducer(state, {
+      type: "minimize",
+      window: "person",
+    });
     state = businessWindowReducer(state, { type: "close", window: "person" });
     expect(state).toEqual(EMPTY_BUSINESS_WINDOWS);
   });
@@ -167,8 +180,8 @@ describe("business window lifecycle", () => {
 
 describe("desktop window placement adapts instead of hardcoding the prototype frame", () => {
   it("bases the first window at the Penpot offset and cascades later ones", () => {
-    expect(desktopWindowOffset(0)).toEqual({ left: 430, top: 18 });
-    expect(desktopWindowOffset(1)).toEqual({ left: 456, top: 44 });
+    expect(desktopWindowOffset(0)).toEqual({ left: 40, top: 28 });
+    expect(desktopWindowOffset(1)).toEqual({ left: 66, top: 54 });
   });
 
   it("bounds the cascade so windows cannot walk off stage", () => {
@@ -178,10 +191,45 @@ describe("desktop window placement adapts instead of hardcoding the prototype fr
   });
 });
 
+describe("Penpot V2 business window geometry", () => {
+  it("keeps desktop window sizes aligned with the actual composed Penpot scenes", () => {
+    expect(BUSINESS_WINDOW_LAYOUT.person.desktop).toEqual({
+      width: 780,
+      height: 680,
+    });
+    expect(BUSINESS_WINDOW_LAYOUT.diagnosis.desktop).toEqual({
+      width: 560,
+      height: 680,
+    });
+    expect(BUSINESS_WINDOW_LAYOUT.training.desktop).toEqual({
+      width: 560,
+      height: 720,
+    });
+    expect(BUSINESS_WINDOW_LAYOUT.chat.desktop).toEqual({
+      width: 560,
+      height: 640,
+    });
+    expect(BUSINESS_WINDOW_LAYOUT.trainer.desktop).toEqual({
+      width: 560,
+      height: 700,
+    });
+  });
+
+  it("shares the 358 x 704 mobile reference window without hiding any module", () => {
+    for (const layout of Object.values(BUSINESS_WINDOW_LAYOUT)) {
+      expect(layout.mobile).toEqual({ width: 358, height: 704 });
+    }
+  });
+});
+
 describe("profile value formatting never invents data", () => {
   it("derives BMI only from valid height and weight", () => {
-    expect(computeBmi({ height: { value: 175 }, weight: { value: 67.5 } })).toBe(22);
-    expect(computeBmi({ height: { value: 160 }, weight: { value: 50 } })).toBe(19.5);
+    expect(
+      computeBmi({ height: { value: 175 }, weight: { value: 67.5 } }),
+    ).toBe(22);
+    expect(computeBmi({ height: { value: 160 }, weight: { value: 50 } })).toBe(
+      19.5,
+    );
   });
 
   it("prefers an explicit server BMI", () => {
@@ -191,7 +239,9 @@ describe("profile value formatting never invents data", () => {
   it("returns null for missing or invalid inputs", () => {
     expect(computeBmi(null)).toBeNull();
     expect(computeBmi({ height: { value: 175 } })).toBeNull();
-    expect(computeBmi({ height: { value: 0 }, weight: { value: 60 } })).toBeNull();
+    expect(
+      computeBmi({ height: { value: 0 }, weight: { value: 60 } }),
+    ).toBeNull();
     expect(computeBmi({ bmi: 0 })).toBeNull();
   });
 

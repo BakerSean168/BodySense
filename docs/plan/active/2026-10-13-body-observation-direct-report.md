@@ -1,0 +1,42 @@
+# BodySense V2 · DS-BS-03 / ENG-BS-03 · Direct user-reported BodyObservation
+
+Status: **BOUNDED v11 VERIFIED — GitHub exact-SHA CI 12/12 SUCCESS** (2026-10-13).
+Authority: [V2 master](./2026-10-13-v2-parallel-master.md) · [BodyState BS-D9](../../product/domain/bodystate.md#25-bodyobservationbodyhypothesisconcerngroup-与证据分级bs-d9) · [single readiness register](./v2-handoff-state.json).
+
+## Scope: user-report observations, not objectively verified measurements
+
+One authenticated user may record the exact wording of an **explicit self-reported measurement or qualitative observation**, e.g. "I weighed myself and saw 67.5 kg" or "I noticed my shoulder position had changed". This is a BodyObservation, **not** a Symptom BodyFact, Diagnosis, a clinically adjudicated measurement, or a correction of legacy BodyStateObservation.
+
+- **Canonical source:** the new row in `body_observations` FK-links to one server-assigned `statement_evidence` with `source_kind=direct_edit`, `source_version=1`, `availability=available` and the user's original statement. It intentionally does **not** store a second copy of `statement`; public `source.kind=user_report` explains _who reported_ it, rather than treating it as a device/document conclusion.
+- **Original fields:** bounded `kind` (organizational lowercase label), `statement`, optionally `raw_value`, `raw_unit`, `method`, `measurement_context`, and explicit `observed_at: FactTemporal` with accuracy/unknown supported by the same BodyFact temporal validator. Raw values are strings; there is **no automatic numeric conversion**, medical reference range, "normal", diagnosis or guessed occurrence time. A unit without the original value fails validation. Missing method/context remain absent.
+- **Strict public commands:** `POST /api/v1/body-state/observation-records` accepts only `idempotency_key`, `expected_revision` and user `observation` fields. It does NOT accept a caller-defined provenance kind/ID, clinical confidence, normalized result, AI actor identity or file/health-record reference.
+- **Atomicity / replay:** `RecordDirectObservation` locks the one `BodyState` owner/revision, checks idempotency-key fingerprint **before** freshness, and writes one evidence, one observation, one domain revision, one outbox and one ID-only `body_observation_commits` receipt atomically. Retry after source blocking/erasure returns the original receipt, not a duplicate. Stale revision and same-key changed source/value are distinct 409 denials.
+- **Source-scoped read:** `GET /api/v1/body-state/observation-records?before_revision=` reads at one repeatable-read revision, only current `asserted` reports with available original evidence. At most 20 reports per page, deterministic cursor; blocked/erased source disappears from active projection. A blank list **does not mean the user has normal measurements**. Underlying source truth is not duplicated into generic audit/outbox metadata.
+- **Migration / coexistence:** additive `000011_body_observation_direct_reports` adds `body_observations` + `body_observation_commits`; historical v1-v10 SQL and hashes remain immutable. No dual write to `body_state_observations`, `body_facts`, or legacy `BodyStateObservation`. New user-owned rows are included in account-erasure inventory and cascades. Down migration refuses to discard accepted observations.
+- **UI boundary:** the generated TypeScript/Zod `bodyObservationService` is a strict typed adapter **only**. Track B independently owns Penpot source, Observation display fields, form interactions and visual acceptance. This slice does not automatically surface a new floating window or misrepresent a recorded measurement as medically confirmed.
+
+## Verify bounded acceptance
+
+| Gate                      | Concrete proof                                                                                                                                                                                                             |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Model                     | Reject invalid kind syntax, injected clinical/device/source metadata, empty/padded original statement, unit without value, unknown precision with fabricated time and invalid revision/key                                 |
+| Schema                    | Native PG18 v11 full-up→down v10→up v11, FK ownership, privacy cascade, data-loss refusal on downgrade with user health history                                                                                            |
+| Transaction               | Single revision/source/observation/receipt/outbox; six same-key concurrent calls produce one record; changed fingerprint/stale expected revision fail; late receipt failure rolls back all rows                            |
+| Visibility                | Foreign user sees no data; blocked/erased original is absent; precise/unknown user-reported times unchanged; bounded revision pagination                                                                                   |
+| HTTP and generated client | Real PostgreSQL POST/GET and strict validator, no unknown source, device, clinical-normalization or user_id fields, no fabricated success receipt; generated TS/Zod adapter tests                                          |
+| Whole product regression  | Existing BodyFact/Episode/Consultation native PG18/race suite, Go full tests, Web lint/test/typecheck/build, generated contracts/Postman, 15 case longitudinal Go/Python/React Chromium E2E, exact submitted-SHA GitHub CI |
+
+## Non-goals and next bounded tickets
+
+This is **not** a full BodyObservation implementation: user-authorized correction/withdrawal and historical versions, self-test/device/document import, file-admission/revocation, original unit normalization, measurement method catalog, unverified OCR candidate management, training/Diagnosis evidence links and legacy migration remain open. Likewise, `BodyHypothesis`, `DerivedConcernGroup`, merge/split and controlled all-copy erasure are future independent slices. No staging/production migration or whole-domain gate promotion is warranted by this one capability.
+
+## Native acceptance checkpoint · 2026-10-13
+
+- **PostgreSQL 18** full up v11 → latest down v10 → replay up v11 **PASS**, original migration checksums unchanged. Both direct-user account cascade and populated-relation downgrade refusal verified. Evidence: `/tmp/bodysense-observation-v11-pg18-timestamp-final.log`, `/tmp/bodysense-observation-v11-migration-final.log`.
+- **Go domain/source/HTTP**: native PG repository tests include exact owner, original source, source blocking/erasure, 22 reports pagination, six-way same-key concurrent replay, same-user other-source **composite FK refusal**, late receipt failure rollback and guarded downgrade. Real generated POST/GET HTTP through PostgreSQL **PASS**.
+- **Exact response determinism**: first successful response and same-key durable replay now contain byte-identical JSON, including `committed_at`: use UTC microsecond precision before persistence, consistent with PostgreSQL. A new real-DB HTTP test detects submicrosecond disagreement.
+- **Generated contracts**: Go/TS/Zod/OpenAPI/Postman deterministic **108 operations**, `pnpm contracts:verify` **PASS**. Evidence: `/tmp/bodysense-observation-v11-contracts.log`.
+- **Web**: uncached lint/test/typecheck/build **PASS**, 74 Vitest files and **460/460** tests plus additional E2E-spec lint **PASS**. Evidence: `/tmp/bodysense-observation-v11-web-full.log`, `/tmp/bodysense-observation-v11-web-final-lint.log`.
+- **Real browser**: isolated Go/PostgreSQL 18/Redis/Python/React Chromium longitudinal plus new direct-observation test **16/16 PASS without retries**, including authenticated POST/GET, exact idempotent HTTP reply, forged provenance rejection, stale-revision denial, cross-refresh persistence, and no Fact dual-write; all synthetic resources cleaned. Evidence: `.runtime/schema-first-v2-evidence/vertical-e2e-3298738/`, `/tmp/bodysense-observation-v11-browser-exact-final.log`. No staging, production, or final Track B design acceptance.
+
+The build, PostgreSQL and browser evidence paths are transient, synthetic developer artifacts; they do not represent deployed production migrations.

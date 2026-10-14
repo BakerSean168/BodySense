@@ -574,10 +574,28 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  staging-readiness:
+    name: Enforce approved V2 staging gate
+    needs: resolve
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.readiness.outputs.eligible }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - id: readiness
+        name: Validate five-domain readiness and explicit operator opt-in
+        env:
+          BODYSENSE_V2_STAGING_PROMOTION_ENABLED: ${{ vars.BODYSENSE_V2_STAGING_PROMOTION_ENABLED }}
+        run: node scripts/delivery/v2-staging-readiness.mjs --github-output
+
   promote-staging:
     name: Promote coherent staging channel
-    needs: [resolve, candidate-manifest]
-    if: needs.resolve.outputs.is_current_main == 'true'
+    needs: [resolve, candidate-manifest, staging-readiness]
+    if: >-
+      needs.resolve.outputs.is_current_main == 'true' &&
+      needs.staging-readiness.outputs.eligible == 'true'
     runs-on: ubuntu-latest
     environment:
       name: artifact-publish

@@ -25,7 +25,7 @@ export function BodyFactAmendment({
 }: {
   record: BodyFactRecord;
   revision: number;
-  onCommitted: (message: string) => void;
+  onCommitted: (message: string, committedRevision: number) => void;
   onRefresh: () => void;
 }) {
   const [mode, setMode] = useState<"correct" | "withdraw" | null>(null);
@@ -97,6 +97,7 @@ export function BodyFactAmendment({
         attempt.mode === "correct"
           ? "更正已保存，原陈述保留在历史中。"
           : "陈述已撤回，历史保留；这不表示隐私数据已删除。",
+        receipt.revision,
       );
     } catch (cause) {
       if (!mounted.current) return;

@@ -1,39 +1,19 @@
-import { AlertTriangle, ArrowRight, LoaderCircle, MessageCircle } from "lucide-react";
+import { AlertTriangle, LoaderCircle } from "lucide-react";
 import {
   CERTAINTY_LABELS,
   type ConfirmedCondition,
   type DiagnosisView,
 } from "../model/confirmedConditions";
 
-/**
- * Diagnosis business window.
- *
- * Design contract (Penpot V5.5 / `BUSINESS_WINDOWS_IMPLEMENTATION.md`):
- * - header: single level-1 title on the left, Close on the right; no decorative
- *   business icon, no second-line subtitle, no repeat of the title as an H1;
- * - body: "已确认病情 · N 项" plus one independent entry per condition showing
- *   name, cause and handling; unconfirmed proposals are explicitly excluded and
- *   only surfaced as a pending count;
- * - no technical version numbers, revision history or version switchers;
- * - a safety block or stale analysis is stated plainly, never hidden.
- */
-
 export interface DiagnosisWindowProps {
   view: DiagnosisView;
+  /** The selector is in the shared Penpot V2 toolbar; the body follows that ID. */
+  selectedConditionId?: string | null;
   loading?: boolean;
   error?: string | null;
-  canRequestReview: boolean;
-  onRequestReview: () => void;
-  onClose: () => void;
 }
 
-function CauseRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
+function CauseRow({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
     <p className="bc-condition-row">
@@ -67,17 +47,17 @@ function ConditionCard({ condition }: { condition: ConfirmedCondition }) {
         />
       ) : null}
       {cause.informationGaps.length > 0 ? (
-        <CauseRow
-          label="尚不明确"
-          value={cause.informationGaps.join("；")}
-        />
+        <CauseRow label="尚不明确" value={cause.informationGaps.join("；")} />
       ) : null}
 
       {handling.state === "plan_level" ? (
         <div className="bc-condition-handling">
           <CauseRow label="处理方向" value={handling.summary ?? null} />
           {handling.actions && handling.actions.length > 0 ? (
-            <CauseRow label="当前计划动作" value={handling.actions.join("；")} />
+            <CauseRow
+              label="当前计划动作"
+              value={handling.actions.join("；")}
+            />
           ) : null}
           {handling.cautionNotes && handling.cautionNotes.length > 0 ? (
             <CauseRow label="注意" value={handling.cautionNotes.join("；")} />
@@ -102,16 +82,30 @@ function ConditionCard({ condition }: { condition: ConfirmedCondition }) {
   );
 }
 
+/**
+ * V2 current Diagnosis is one user-owned aggregate, with one selected adopted
+ * ConditionEntry at a time. The scroll body never exposes pending proposals as
+ * adopted conditions, and a different selection cannot mutate clinical data.
+ */
 export function DiagnosisWindow({
   view,
+  selectedConditionId = null,
   loading = false,
   error = null,
-  canRequestReview,
-  onRequestReview,
-  onClose,
 }: DiagnosisWindowProps) {
-  const { confirmed, pendingProposals, safetyBlocked, needsReview, reviewReasons } =
-    view;
+  const {
+    confirmed,
+    pendingProposals,
+    safetyBlocked,
+    needsReview,
+    reviewReasons,
+  } = view;
+  const selected =
+    confirmed.find(
+      (condition) => condition.conditionId === selectedConditionId,
+    ) ??
+    confirmed[0] ??
+    null;
 
   return (
     <section
@@ -119,7 +113,7 @@ export function DiagnosisWindow({
       aria-label="综合诊断"
       data-testid="diagnosis-window"
     >
-      <div className="bc-window-body" role="region" aria-label="已确认病情">
+      <div className="bc-window-body" role="region" aria-label="当前诊断内容">
         {error ? (
           <p role="alert" className="bc-error">
             {error}
@@ -136,16 +130,8 @@ export function DiagnosisWindow({
               当前分析因安全原因没有发布结果。请先处理安全提醒，再请求重新分析。
             </span>
           </div>
-        ) : confirmed.length === 0 ? (
-          <div className="bc-window-empty">
-            <p className="bc-window-empty-title">还没有已确认的病情</p>
-            <p className="bc-window-empty-text">
-              只有你在对话中核对确认过的结果才会出现在这里。未经确认的分析不会写入综合诊断。
-            </p>
-          </div>
-        ) : (
+        ) : selected ? (
           <>
-            <p className="bc-window-count">已确认病情 · {confirmed.length} 项</p>
             {needsReview ? (
               <p className="bc-window-note">
                 已有新的身体记录，建议重新分析后再查看结论。
@@ -153,11 +139,16 @@ export function DiagnosisWindow({
               </p>
             ) : null}
             <div className="bc-condition-list">
-              {confirmed.map((condition) => (
-                <ConditionCard key={condition.conditionId} condition={condition} />
-              ))}
+              <ConditionCard condition={selected} />
             </div>
           </>
+        ) : (
+          <div className="bc-window-empty">
+            <p className="bc-window-empty-title">还没有已确认的病情</p>
+            <p className="bc-window-empty-text">
+              只有你在对话中核对确认过的结果才会出现在这里。未经确认的分析不会写入综合诊断。
+            </p>
+          </div>
         )}
 
         {pendingProposals.length > 0 ? (
@@ -166,22 +157,6 @@ export function DiagnosisWindow({
           </p>
         ) : null}
       </div>
-
-      <footer className="bc-window-footer">
-        <button
-          type="button"
-          className="bc-button bc-primary"
-          onClick={onRequestReview}
-          disabled={!canRequestReview}
-        >
-          <MessageCircle size={16} />
-          在对话中请求复核
-          <ArrowRight size={15} />
-        </button>
-        <button type="button" className="bc-button" onClick={onClose}>
-          关闭
-        </button>
-      </footer>
     </section>
   );
 }

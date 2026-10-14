@@ -24,7 +24,7 @@ import type { MotionId } from "@/features/body-canvas/model/bodyCanvas";
 import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
-import { useHealthWorkspaceQuery } from "@/features/workspace";
+import { useHealthWorkspaceQuery } from "@/features/workspace/hooks/useHealthWorkspaceQuery";
 import { useBodyExplorerWorkspace } from "@/features/body-explorer";
 import {
   resolveWindowFromView,
@@ -40,7 +40,6 @@ const loadAssistantChatPanel = () =>
     }),
   );
 const AssistantChatPanel = lazy(loadAssistantChatPanel);
-
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -203,7 +202,8 @@ export function ConsultationPage() {
   const requestedWindow = searchParams.get("view");
   const initialWindow: BusinessWindowId | null =
     resolveWindowFromView(requestedWindow);
-  const demonstrationRequest: { motion: MotionId; revision: number } | null = null;
+  const demonstrationRequest: { motion: MotionId; revision: number } | null =
+    null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   const accountName = useAuthStore((state) => state.user?.email ?? "");

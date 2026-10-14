@@ -6,6 +6,12 @@
   "exports": {
     ".": {
       "import": "./src/index.ts"
+    },
+    "./presentation-v2": {
+      "import": "./src/presentation-v2.ts"
     }
+  },
+  "dependencies": {
+    "zod": "4.5.4"
   }
 }

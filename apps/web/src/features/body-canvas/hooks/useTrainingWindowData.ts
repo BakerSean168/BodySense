@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { trainingApi, type TrainingPlan } from "@/features/training";
+// Import the service directly: the training barrel also re-exports the large
+// execution UI, which must remain a separate authenticated lazy chunk.
+import {
+  trainingApi,
+  type TrainingPlan,
+} from "@/features/training/services/trainingService";
 
 export interface TrainingWindowData {
   plans: TrainingPlan[];

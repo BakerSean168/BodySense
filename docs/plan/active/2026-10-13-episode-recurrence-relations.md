@@ -1,6 +1,6 @@
 # BodySense V2 · DS-BS-02 / ENG-BS-02 · Authorized Episode recurrence relations
 
-Status: **LOCALLY VERIFIED / exact-SHA GitHub CI pending** · 2026-10-13.
+Status: **BOUNDED v10 VERIFIED — exact-SHA GitHub CI 12/12 SUCCESS** · 2026-10-13.
 Program: [V2 parallel master](./2026-10-13-v2-parallel-master.md) · [BodyState](../../product/domain/bodystate.md) · [accepted status evidence v9](./2026-10-13-episode-status-admission.md) · [readiness gates](./v2-handoff-state.json).
 
 ## Bounded capability and product semantics
@@ -47,4 +47,4 @@ This bounded slice cannot be marked accepted based on v9 CI alone. Record native
 - **Canonical contracts:** `pnpm contracts:verify` PASS (OpenAPI lint, generated drift, breaking, mutation, conformance), deterministic Postman parity **106 public operations**. Evidence: `.runtime/schema-first-v2-evidence/episode-recurrence-v10-contracts.log`.
 - **Web:** uncached `@bodysense/web` lint, **73 files / 456 Vitest tests**, TypeScript and production bundle all PASS; typed `reportRecurrence/listRelations` tests prove strict source-only requests and review-state decoding. Evidence: `.runtime/schema-first-v2-evidence/episode-recurrence-v10-web-full.log`.
 - **Real cross-process browser:** isolated Go + PostgreSQL 18 + Redis + Python AI stub + React in Chromium: **15/15 E2E PASS without retries**, including user/Facts, Episode association and the independent full longitudinal path; synthetic resources cleaned. Evidence: `.runtime/schema-first-v2-evidence/vertical-e2e-2871484/`. The new recurrence UI itself is not claimed as a browser flow until Track B signs off the editable Penpot interaction.
-- **Governance:** `pnpm plan:check` 5/5 and migration sequence/immutability validator PASS. Branch `refactor/schema-first-v2-20261013`, [Draft PR #247](https://github.com/BakerSean168/BodySense/pull/247). **New exact-SHA GitHub CI remains mandatory** for delivery; no staging/production deployment or all-domain gate signoff.
+- **Governance:** `pnpm plan:check` 5/5 and migration sequence/immutability validator PASS. Branch `refactor/schema-first-v2-20261013`, [Draft PR #247](https://github.com/BakerSean168/BodySense/pull/247). **Exact SHA `0e287ab128bb09a8e8fae354c16bf5e49acbe7bf`: GitHub CI 12/12 SUCCESS** ([run 38407586485](https://github.com/BakerSean168/BodySense/actions/runs/38407586485)); no staging/production deployment or all-domain gate signoff.

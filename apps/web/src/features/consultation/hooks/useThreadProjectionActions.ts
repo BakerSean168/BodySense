@@ -1,6 +1,6 @@
 import { useCallback, type RefObject } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { workspaceKeys } from "@/features/workspace";
+import { workspaceKeys } from "@/features/workspace/api/workspaceQueryOptions";
 import { consultationKeys } from "../services/consultationQueryKeys";
 import type {
   ConsultationPhase,
