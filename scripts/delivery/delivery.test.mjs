@@ -788,3 +788,103 @@ test('all registry channel/release promotions carbon-copy single-platform manife
     }
   }
 });
+
+test("stacked pull requests receive CI without broadening main candidate promotion", () => {
+  const ci = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+  const candidate = fs.readFileSync(
+    ".github/workflows/candidate-publish.yml",
+    "utf8",
+  );
+  assert.match(ci, /on:\n  push:\n    branches: \[main\]/);
+  assert.match(ci, /  pull_request:\n/);
+  assert.doesNotMatch(ci, /  pull_request:\n    branches:/);
+  assert.match(
+    ci,
+    /DELIVERY_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.event\.before \}\}/,
+  );
+  assert.match(
+    ci,
+    /DELIVERY_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/,
+  );
+  assert.match(ci, /permissions:\n  contents: read\n  actions: read/);
+  assert.match(ci, /if: github\.event_name == 'pull_request'/);
+  assert.match(candidate, /    workflows: \[CI\]/);
+  assert.match(candidate, /    branches: \[main\]/);
+  assert.match(candidate, /github\.event\.workflow_run\.event == 'push'/);
+  assert.match(candidate, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(
+    candidate,
+    /needs\.staging-readiness\.outputs\.eligible == 'true'/,
+  );
+});
+
+test("stacked PR manifest resolves moving non-main base without misclassifying parent changes", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bodysense-int002-"));
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: "CI Test",
+    GIT_COMMITTER_NAME: "CI Test",
+    GIT_AUTHOR_EMAIL: "ci-test@example.invalid",
+    GIT_COMMITTER_EMAIL: "ci-test@example.invalid",
+    GITHUB_OUTPUT: "",
+  };
+  const runGit = (...args) => {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8", env });
+    assert.equal(result.status, 0, [args.join(" "), result.stderr].join("\n"));
+    return result.stdout.trim();
+  };
+  const commitFile = (file, value) => {
+    const full = path.join(root, file);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, value);
+    runGit("add", file);
+    runGit("commit", "-qm", "test: update staged history");
+    return runGit("rev-parse", "HEAD");
+  };
+  try {
+    runGit("init", "-q", "-b", "main");
+    commitFile("README.md", "root\n");
+    runGit("checkout", "-qb", "feat/parent");
+    commitFile("apps/web/src/parent.ts", "export const parent = true;\n");
+    runGit("checkout", "-qb", "feat/child");
+    const childHead = commitFile("docs/new-feature.md", "# child\n");
+    runGit("checkout", "-q", "feat/parent");
+    const advancedParent = commitFile(
+      "apps/api/internal/model/new.go",
+      "package model\n",
+    );
+
+    const output = path.join(root, "manifest.json");
+    const generated = spawnSync(
+      "node",
+      [
+        path.resolve("scripts/delivery/generate-manifest.mjs"),
+        "--event",
+        "pull_request",
+        "--ref",
+        "refs/pull/2468/merge",
+        "--base",
+        advancedParent,
+        "--head",
+        childHead,
+        "--output",
+        output,
+      ],
+      { cwd: root, encoding: "utf8", env },
+    );
+    assert.equal(generated.status, 0, generated.stderr);
+    const manifest = JSON.parse(fs.readFileSync(output, "utf8"));
+    assert.equal(manifest.event, "pull_request");
+    assert.equal(manifest.requestedBaseSha, advancedParent);
+    assert.notEqual(manifest.baseSha, advancedParent);
+    assert.equal(manifest.headSha, childHead);
+    assert.deepEqual(manifest.changedPaths, ["docs/new-feature.md"]);
+    assert.equal(manifest.risk, "docs");
+    assert.equal(manifest.lanes.web, false);
+    assert.equal(manifest.lanes.api, false);
+    assert.equal(manifest.lanes.full, false);
+    assert.deepEqual(validateManifest(manifest), []);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
