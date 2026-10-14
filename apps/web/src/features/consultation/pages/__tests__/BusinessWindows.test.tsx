@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -163,7 +163,14 @@ function renderPage(path = "/consultation/conv-1") {
 }
 
 function openDock(name: string) {
-  return userEvent.click(screen.getByRole("button", { name }));
+  const dock = screen.getByRole("navigation", { name: "身体工作区导航" });
+  // Diagnosis gains a confirmed-count suffix; the Dock module identity stays
+  // stable and its name must not depend on an invented clinical item count.
+  return userEvent.click(
+    within(dock).getByRole("button", {
+      name: new RegExp(`^${name}(?:，.*)?$`),
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -183,6 +190,7 @@ beforeEach(() => {
     fetchUploads: vi.fn().mockResolvedValue(undefined),
   });
   mockListBodyFacts.mockReset();
+  localStorage.removeItem("bodysense.training.selectedPlanId");
   mockListBodyFacts.mockResolvedValue({
     user_id: owner,
     current_revision: 1,
@@ -254,15 +262,19 @@ describe("body-first business windows", () => {
     expect(screen.getByTestId("assistant-chat-panel")).not.toBeVisible();
   });
 
-  it("opens the Diagnosis window with a single level-1 title and Close", async () => {
+  it("opens the V2 Diagnosis selector toolbar with a single Close control", async () => {
     renderPage();
     await openDock("综合诊断");
-    const window = await screen.findByTestId("diagnosis-window");
-    expect(window).toBeInTheDocument();
+    expect(await screen.findByTestId("diagnosis-window")).toBeVisible();
     expect(
-      screen.getAllByRole("heading", { name: "综合诊断", level: 2 }),
-    ).toHaveLength(1);
-    // The window has no duplicated body title and no technical version UI.
+      screen.getByRole("combobox", { name: "选择已确认病情" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "关闭综合诊断" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "综合诊断", level: 2 }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/修订|版本号|revision/i)).not.toBeInTheDocument();
   });
 
@@ -346,8 +358,15 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("综合诊断");
     await screen.findByTestId("diagnosis-window");
-    expect(screen.getByText("已确认病情 · 1 项")).toBeInTheDocument();
-    expect(screen.getByText("上交叉综合征倾向")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "综合诊断，1 项已确认病情" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "选择已确认病情" }),
+    ).toHaveValue("cand-1");
+    expect(
+      screen.getByRole("heading", { name: "上交叉综合征倾向" }),
+    ).toBeVisible();
     expect(
       screen.getByText("长期久坐使肩胛稳定肌群持续紧张"),
     ).toBeInTheDocument();
@@ -367,8 +386,7 @@ describe("body-first business windows", () => {
     );
   });
 
-  it("renders the real plan with planId, dosage and stages, and picks by planId", async () => {
-    const user = userEvent.setup();
+  it("renders an accepted plan with real planId and dosage, excluding unaccepted alternatives", async () => {
     mockListTrainingPlans.mockResolvedValue([
       {
         id: "plan-1",
@@ -392,6 +410,15 @@ describe("body-first business windows", () => {
     ]);
     mockUseHealthWorkspaceQuery.mockReturnValue({
       data: makeWorkspace({
+        training_plan: {
+          id: "plan-1",
+          status: "active",
+          goal: "肩胛稳定训练",
+          duration_weeks: 6,
+          current_week: 1,
+          phases: [],
+          created_at: "2026-10-11T00:00:00Z",
+        },
         treatment_revisions: [
           {
             id: "rev-1",
@@ -469,75 +496,51 @@ describe("body-first business windows", () => {
     expect(screen.getByText("热身与活动度")).toBeInTheDocument();
     expect(screen.getByText("正式训练")).toBeInTheDocument();
 
-    // The picker switches plans by their real identity.
-    await user.click(
-      trainingWindow.querySelector(".bc-plan-selector-trigger")!,
-    );
-    await user.click(screen.getByRole("option", { name: /臀腿力量训练/ }));
+    // The V2 header includes the accepted plan only; an unaccepted paused
+    // plan cannot silently be selected as the current executable plan.
+    expect(trainingWindow.querySelector(".bc-plan-selector")).toBeNull();
+    const selector = screen.getByRole("combobox", { name: "选择训练计划" });
+    expect(selector).toHaveValue("plan-1");
+    expect(
+      screen.getByRole("option", { name: "肩胛稳定训练" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "臀腿力量训练" }),
+    ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe(
-        "plan-2",
+        "plan-1",
       ),
     );
   });
 
-  it("keeps exactly one Training window when plans switch repeatedly (V5.5 Dock exclusion)", async () => {
-    const user = userEvent.setup();
-    mockListTrainingPlans.mockResolvedValue([
-      {
-        id: "plan-1",
-        status: "active",
-        goal: "肩胛稳定训练",
-        duration_weeks: 6,
-        current_week: 1,
-        treatment_revision_id: "rev-1",
-        phases: [],
-        created_at: "2026-10-11T00:00:00Z",
-      },
-      {
-        id: "plan-2",
-        status: "paused",
-        goal: "臀腿力量训练",
-        duration_weeks: 4,
-        current_week: 1,
-        phases: [],
-        created_at: "2026-10-11T00:00:00Z",
-      },
-    ]);
+  it("preserves one V2 Training window when Dock closes and reopens it", async () => {
     renderPage();
     await openDock("训练计划");
-    const window = await screen.findByTestId("training-window");
-    await waitFor(() =>
-      expect(window.querySelectorAll(".bc-plan-selector-trigger")).toHaveLength(
-        1,
-      ),
-    );
-
-    for (const title of ["臀腿力量训练", "肩胛稳定训练"]) {
-      await user.click(window.querySelector(".bc-plan-selector-trigger")!);
-      await user.click(screen.getByRole("option", { name: new RegExp(title) }));
-      await waitFor(() =>
-        expect(
-          window.querySelector(".bc-plan-selector-name")?.textContent,
-        ).toBe(title),
-      );
+    const panel = await screen.findByTestId("training-window");
+    expect(panel).toBeVisible();
+    for (let i = 0; i < 3; i++) {
+      await openDock("训练计划");
+      expect(panel).not.toBeVisible();
+      await openDock("训练计划");
+      expect(panel).toBeVisible();
+      expect(screen.getAllByTestId("training-window")).toHaveLength(1);
+      expect(screen.getByTestId("training-window")).toBe(panel);
     }
-    // Only one Training window exists, and no residual variant is left behind.
-    expect(screen.getAllByTestId("training-window")).toHaveLength(1);
+    expect(document.querySelectorAll(".bc-plan-selector")).toHaveLength(0);
   });
 
-  it("closes the Training window when another window opens on demand", async () => {
-    const user = userEvent.setup();
+  it("switches Training to Diagnosis without destroying the hidden Training window", async () => {
     renderPage();
     await openDock("训练计划");
-    await screen.findByTestId("training-window");
+    const training = await screen.findByTestId("training-window");
     await openDock("综合诊断");
-    await screen.findByTestId("diagnosis-window");
-    // Close Training explicitly, mirroring the prototype's mutual exclusion.
-    await user.click(screen.getByRole("button", { name: "关闭训练计划" }));
-    // Closing keeps the window mounted but hidden; only one window is visible.
-    expect(screen.getByTestId("training-window")).not.toBeVisible();
-    expect(screen.getByTestId("diagnosis-window")).toBeVisible();
+    expect(await screen.findByTestId("diagnosis-window")).toBeVisible();
+    expect(training).not.toBeVisible();
+    await openDock("训练计划");
+    expect(training).toBeVisible();
+    expect(screen.getByTestId("diagnosis-window")).not.toBeVisible();
+    expect(screen.getByTestId("training-window")).toBe(training);
   });
 
   it("keeps the chat mounted when its window closes so in-flight state survives", async () => {
@@ -549,37 +552,40 @@ describe("body-first business windows", () => {
     expect(screen.getByTestId("assistant-chat-panel")).not.toBeVisible();
   });
 
-  it("folds and restores a window without losing its identity", async () => {
+  it("restores a hidden Diagnosis window using its Dock entry without recreating the task", async () => {
     renderPage();
     await openDock("综合诊断");
-    await screen.findByTestId("diagnosis-window");
-    await userEvent.click(
-      screen.getByRole("button", { name: "最小化综合诊断" }),
-    );
-    // Folded away but still open and recoverable.
-    expect(screen.getByTestId("diagnosis-window")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "恢复综合诊断" }));
-    expect(screen.getByTestId("diagnosis-window")).toBeVisible();
-    // Exactly one window identity survived the round trip.
+    const diagnosis = await screen.findByTestId("diagnosis-window");
+    await openDock("对话");
+    expect(diagnosis).not.toBeVisible();
+    expect(await screen.findByTestId("assistant-chat-panel")).toBeVisible();
+    await openDock("综合诊断");
+    expect(diagnosis).toBeVisible();
+    expect(screen.getByTestId("diagnosis-window")).toBe(diagnosis);
     expect(screen.getAllByTestId("diagnosis-window")).toHaveLength(1);
   });
 
-  it("keeps at most one business window visible when several are opened", async () => {
+  it("keeps at most one V2 business window visible across repeated Dock switches", async () => {
     renderPage();
     await openDock("综合诊断");
+    await screen.findByTestId("diagnosis-window");
     await openDock("训练计划");
+    await screen.findByTestId("training-window");
     await openDock("对话");
-    // Dock/Open/Active are mutually exclusive: the previously visible windows are
-    // folded, not destroyed, so they cannot overlap or steal focus.
     expect(screen.getByTestId("training-window")).not.toBeVisible();
     expect(screen.getByTestId("diagnosis-window")).not.toBeVisible();
     expect(screen.getByTestId("assistant-chat-panel")).toBeVisible();
+    expect(screen.getByRole("button", { name: "对话" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "训练计划" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(
-      screen.getByRole("button", { name: "恢复综合诊断" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "恢复训练计划" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /恢复综合诊断|恢复训练计划/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the Person window with five categories and a compact identity popover", async () => {
@@ -644,6 +650,29 @@ describe("body-first business windows", () => {
   it("opens a deep-linked window from the route", async () => {
     renderPage("/consultation/conv-1?view=training");
     expect(await screen.findByTestId("training-window")).toBeInTheDocument();
+  });
+
+  it("never mounts a Trainer execution from a deep link without explicit Start", async () => {
+    renderPage("/consultation/conv-1?view=trainer");
+    expect(await screen.findByTestId("trainer-entry-guard")).toBeVisible();
+    expect(
+      screen.queryByTestId("training-execution-panel"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /查看训练计划/ }));
+    expect(await screen.findByTestId("training-window")).toBeVisible();
+    expect(screen.getByTestId("trainer-window")).not.toBeVisible();
+  });
+
+  it("maps Person and Trainer shortcut keys without treating them as a data-write command", async () => {
+    renderPage();
+    await userEvent.keyboard("i");
+    expect(await screen.findByTestId("person-window")).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("t");
+    expect(await screen.findByTestId("trainer-entry-guard")).toBeVisible();
+    expect(
+      screen.queryByTestId("training-execution-panel"),
+    ).not.toBeInTheDocument();
   });
 
   it("resolves legacy ?view= aliases to the same business object", async () => {

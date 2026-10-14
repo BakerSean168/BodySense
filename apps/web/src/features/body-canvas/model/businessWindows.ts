@@ -20,11 +20,7 @@
  */
 
 export type BusinessWindowId =
-  | "chat"
-  | "person"
-  | "diagnosis"
-  | "training"
-  | "trainer";
+  "chat" | "person" | "diagnosis" | "training" | "trainer";
 
 export interface BusinessWindowMeta {
   id: BusinessWindowId;
@@ -43,14 +39,14 @@ export const BUSINESS_WINDOWS: readonly BusinessWindowMeta[] = [
     id: "chat",
     title: "对话",
     description: "围绕身体记录提问、核对建议并确认结果。",
-    dockLabel: "助手",
+    dockLabel: "对话",
     key: "/",
   },
   {
     id: "person",
     title: "个人档案",
     description: "当前个人资料、身体记录、器材与资料。",
-    dockLabel: "档案",
+    dockLabel: "个人",
     key: "I",
   },
   {
@@ -99,12 +95,21 @@ export function resolveWindowFromView(
   return LEGACY_WINDOW_ALIASES[value] ?? null;
 }
 
-export function getBusinessWindowMeta(id: BusinessWindowId): BusinessWindowMeta {
-  return BUSINESS_WINDOWS.find((window) => window.id === id) ?? BUSINESS_WINDOWS[0];
+export function getBusinessWindowMeta(
+  id: BusinessWindowId,
+): BusinessWindowMeta {
+  return (
+    BUSINESS_WINDOWS.find((window) => window.id === id) ?? BUSINESS_WINDOWS[0]
+  );
 }
 
-export function isBusinessWindowId(value: string | null | undefined): value is BusinessWindowId {
-  return typeof value === "string" && (BUSINESS_WINDOW_IDS as readonly string[]).includes(value);
+export function isBusinessWindowId(
+  value: string | null | undefined,
+): value is BusinessWindowId {
+  return (
+    typeof value === "string" &&
+    (BUSINESS_WINDOW_IDS as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -155,15 +160,24 @@ export function businessWindowReducer(
       // operation: focus it and fold every other visible window away.
       const order = toFront(state.order, action.window);
       const minimized = [
-        ...new Set([...without(state.minimized, action.window), ...without(state.order, action.window)]),
+        ...new Set([
+          ...without(state.minimized, action.window),
+          ...without(state.order, action.window),
+        ]),
       ];
       return { order, minimized };
     }
     case "minimize": {
-      if (!state.order.includes(action.window) || state.minimized.includes(action.window)) {
+      if (
+        !state.order.includes(action.window) ||
+        state.minimized.includes(action.window)
+      ) {
         return state;
       }
-      return { order: state.order, minimized: [...state.minimized, action.window] };
+      return {
+        order: state.order,
+        minimized: [...state.minimized, action.window],
+      };
     }
     case "close": {
       if (!state.order.includes(action.window)) return state;
@@ -176,9 +190,15 @@ export function businessWindowReducer(
       if (isBusinessWindowVisible(state, action.window)) {
         // Toggling away the active window reveals the body but keeps the window
         // mounted and recoverable rather than discarding its task state.
-        return businessWindowReducer(state, { type: "minimize", window: action.window });
+        return businessWindowReducer(state, {
+          type: "minimize",
+          window: action.window,
+        });
       }
-      return businessWindowReducer(state, { type: "open", window: action.window });
+      return businessWindowReducer(state, {
+        type: "open",
+        window: action.window,
+      });
     }
     case "closeAll":
       return state.order.length === 0 ? state : EMPTY_BUSINESS_WINDOWS;
@@ -237,10 +257,9 @@ export function topmostClosableWindow(
 }
 
 /**
- * Desktop geometry per Penpot V5.5 (Diagnosis 420x574, TrainingPlan 420x615,
- * Chat 374x528). The prototype also froze absolute x/y so its 878px Viewer had
- * no clipping; production must adapt to the real viewport, so only the preferred
- * offset is derived here and CSS clamps it into the visible stage.
+ * Current Penpot V2 combined Canvas scene dimensions (1280px design viewport).
+ * CSS bounds them to the real viewport and keeps the Dock outside the window.
+ * Mobile uses an adaptive 358px window inside the 390px reference viewport.
  */
 export interface BusinessWindowSize {
   width: number;
@@ -254,50 +273,51 @@ export interface BusinessWindowLayout {
   maxHeight: number;
 }
 
-export const BUSINESS_WINDOW_LAYOUT: Record<BusinessWindowId, BusinessWindowLayout> = {
+export const BUSINESS_WINDOW_LAYOUT: Record<
+  BusinessWindowId,
+  BusinessWindowLayout
+> = {
   chat: {
-    desktop: { width: 374, height: 528 },
-    mobile: { width: 390, height: 650 },
-    maxHeight: 560,
-  },
-  person: {
-    desktop: { width: 1060, height: 720 },
-    mobile: { width: 390, height: 650 },
-    maxHeight: 780,
-  },
-  diagnosis: {
-    desktop: { width: 420, height: 574 },
-    mobile: { width: 390, height: 548 },
-    maxHeight: 606,
-  },
-  training: {
-    desktop: { width: 420, height: 615 },
-    mobile: { width: 390, height: 650 },
+    desktop: { width: 560, height: 640 },
+    mobile: { width: 358, height: 704 },
     maxHeight: 640,
   },
+  person: {
+    desktop: { width: 780, height: 680 },
+    mobile: { width: 358, height: 704 },
+    maxHeight: 680,
+  },
+  diagnosis: {
+    desktop: { width: 560, height: 680 },
+    mobile: { width: 358, height: 704 },
+    maxHeight: 680,
+  },
+  training: {
+    desktop: { width: 560, height: 720 },
+    mobile: { width: 358, height: 704 },
+    maxHeight: 720,
+  },
   trainer: {
-    desktop: { width: 460, height: 620 },
-    mobile: { width: 390, height: 650 },
-    maxHeight: 660,
+    desktop: { width: 560, height: 700 },
+    mobile: { width: 358, height: 704 },
+    maxHeight: 700,
   },
 };
 
-export const DESKTOP_WINDOW_BASE_LEFT = 430;
-export const DESKTOP_WINDOW_BASE_TOP = 18;
+export const DESKTOP_WINDOW_BASE_LEFT = 40;
+export const DESKTOP_WINDOW_BASE_TOP = 28;
 export const DESKTOP_WINDOW_STACK_STEP = 26;
 const DESKTOP_WINDOW_MAX_STACK = 3;
 
 /**
- * Placement offset for a business window. Because Dock/Open/Active are mutually
- * exclusive there is exactly one visible window, so the offset stays at the
- * Penpot base position and no window can cover another's header. The step value
- * is retained for a future deliberate side-by-side layout, but is clamped so a
- * window can never walk off the stage.
- *
- * This is deliberately not the prototype's fixed x=430/440 absolute position:
- * the consuming CSS clamps the result against the real stage width.
+ * Penpot desktop windows use a 40px left margin for Person/Chat, and a 48px
+ * right margin for Diagnosis/Training/Trainer. CSS implements this alignment.
+ * The offset is kept for keyboard/stage positioning and future window stacking.
  */
-export function desktopWindowOffset(visibleIndex: number): { left: number; top: number } {
+export function desktopWindowOffset(visibleIndex: number): {
+  left: number;
+  top: number;
+} {
   const bounded = Number.isFinite(visibleIndex)
     ? Math.max(0, Math.min(Math.floor(visibleIndex), DESKTOP_WINDOW_MAX_STACK))
     : 0;
@@ -341,7 +361,9 @@ function finitePositive(value: unknown): number | null {
  * invalid input yields null so the UI shows a dash instead of an invented value.
  * An explicit server-provided BMI is preferred when it is numeric.
  */
-export function computeBmi(metrics: BodyMetricsInput | null | undefined): number | null {
+export function computeBmi(
+  metrics: BodyMetricsInput | null | undefined,
+): number | null {
   if (!metrics) return null;
   const explicit = finitePositive(metrics.bmi);
   if (explicit) return Math.round(explicit * 10) / 10;
@@ -360,7 +382,8 @@ export function formatMetricValue(
   unit: string,
   options: { digits?: number } = {},
 ): string {
-  const finite = typeof value === "number" && Number.isFinite(value) ? value : null;
+  const finite =
+    typeof value === "number" && Number.isFinite(value) ? value : null;
   if (finite === null) return unit ? `— ${unit}` : "—";
   const digits = options.digits ?? 0;
   return `${finite.toFixed(digits)} ${unit}`.trim();

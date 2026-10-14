@@ -57,6 +57,23 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     "true",
   );
 
+  // The Trainer shortcut is navigation, never an implicit plan execution.
+  await page.keyboard.press("t");
+  const trainerWindow = page.locator(
+    '.bc-business-window[data-window="trainer"]',
+  );
+  await expect(trainerWindow.getByTestId("trainer-entry-guard")).toBeVisible();
+  await expect(trainerWindow.getByText(/训练执行尚未就绪/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(trainerWindow).toBeHidden();
+  await page.keyboard.press("i");
+  const shortcutPerson = page.locator(
+    '.bc-business-window[data-window="person"]',
+  );
+  await expect(shortcutPerson).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(shortcutPerson).toBeHidden();
+
   await page
     .getByRole("toolbar", { name: "身体画布工具" })
     .getByRole("button", { name: "按名称选择区域" })
@@ -66,9 +83,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await regionSelect.selectOption("shoulder.right");
   await page.getByRole("button", { name: "查看已选区域" }).click();
 
-  await expect(page.getByRole("complementary", { name: "已选区域当前状况" })).toContainText(
-    "右肩",
-  );
+  await expect(
+    page.getByRole("complementary", { name: "已选区域当前状况" }),
+  ).toContainText("右肩");
   await expect(page.getByText("抬高手臂时右肩疼")).toBeVisible();
 
   await page.getByRole("button", { name: "针对这里提问" }).click();
@@ -100,7 +117,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     name: "已选区域当前状况",
   });
   await expect(brushSelection).toBeVisible();
-  await expect(brushSelection.locator(".bc-selection-chips button").first()).toBeVisible();
+  await expect(
+    brushSelection.locator(".bc-selection-chips button").first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "旋转与点选" }).click();
 
   await page.getByRole("button", { name: "动作演示" }).click();
@@ -108,10 +127,26 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await page.getByRole("button", { name: /跑步/ }).click();
   await expect(page.getByRole("slider", { name: "动作进度" })).toBeVisible();
 
+  // The V2 Dock is a persistent floating navigation surface. A motion player
+  // must never cover it, including on short desktop viewports.
+  const assertMotionDockClearance = async (minGap = 8) => {
+    const player = await page.locator(".bc-playback").boundingBox();
+    const dock = await page.locator(".bc-dock").boundingBox();
+    expect(player).not.toBeNull();
+    expect(dock).not.toBeNull();
+    expect(player!.y + player!.height + minGap).toBeLessThanOrEqual(dock!.y);
+  };
+  await assertMotionDockClearance();
+  await page.setViewportSize({ width: 1024, height: 650 });
+  await assertMotionDockClearance();
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await page.getByRole("button", { name: "询问当前动作" }).click();
   await expect(chatWindow).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "移除身体区域上下文" }).locator("xpath=.."),
+    page
+      .getByRole("button", { name: "移除身体区域上下文" })
+      .locator("xpath=.."),
   ).toContainText("跑步");
 
   await chatWindow.getByRole("button", { name: "关闭对话" }).click();
@@ -121,25 +156,36 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     "true",
   );
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "旋转与点选" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("button", { name: "旋转与点选" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
-  // TrainingPlan window: one level-1 title, no duplicated subtitle.
-  await page.locator(".bc-dock").getByRole("button", { name: "训练计划", exact: true }).click();
-  const trainingWindow = page.locator('.bc-business-window[data-window="training"]');
+  // V2 TrainingPlan: plan selector belongs to the shared header, no duplicate
+  // content selector/title and no local action mutates an unaccepted plan.
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "训练计划", exact: true })
+    .click();
+  const trainingWindow = page.locator(
+    '.bc-business-window[data-window="training"]',
+  );
   await expect(trainingWindow).toBeVisible();
   await expect(
-    trainingWindow.getByRole("heading", { name: "训练计划", level: 2 }),
+    trainingWindow.getByRole("combobox", { name: "选择训练计划" }),
   ).toBeVisible();
+  await expect(trainingWindow.locator(".bc-plan-selector")).toHaveCount(0);
   await trainingWindow.getByRole("button", { name: "关闭训练计划" }).click();
   await expect(trainingWindow).toBeHidden();
 
   // Equipment lives in the Person window; the empty state offers one clear CTA
   // that opens a real persisting form.
-  await page.locator(".bc-dock").getByRole("button", { name: "个人档案", exact: true }).click();
-  const personWindow = page.locator('.bc-business-window[data-window="person"]');
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "个人档案", exact: true })
+    .click();
+  const personWindow = page.locator(
+    '.bc-business-window[data-window="person"]',
+  );
   await expect(personWindow).toBeVisible();
   await personWindow.getByRole("button", { name: "装备", exact: true }).click();
   await expect(
@@ -176,7 +222,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await personWindow.getByRole("button", { name: "关闭个人档案" }).click();
 
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
   ).toBe(true);
 
   await page.screenshot({
@@ -185,6 +233,21 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await assertMotionDockClearance();
+  // Keep the horizontal motion switch above the mobile title rather than
+  // running it through the heading's second line.
+  const motionSwitcher = await page.locator(".bc-motion-switch").boundingBox();
+  const motionIntro = await page.locator(".bc-intro").boundingBox();
+  expect(motionSwitcher).not.toBeNull();
+  expect(motionIntro).not.toBeNull();
+  expect(motionSwitcher!.y + motionSwitcher!.height + 6).toBeLessThanOrEqual(
+    motionIntro!.y,
+  );
+  // V2 mobile retains all four module entrances, including Training.
+  await expect(page.locator(".bc-dock .bc-dock-item")).toHaveCount(4);
+  await expect(
+    page.locator(".bc-dock").getByRole("button", { name: "训练计划" }),
+  ).toBeVisible();
   // The persistent body stage survives the window close above; motion mode is
   // still active from the earlier demonstration steps.
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
@@ -193,9 +256,13 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     .getByRole("toolbar", { name: "身体画布工具" })
     .getByRole("button", { name: "按名称选择区域" })
     .click();
-  await expect(page.getByRole("complementary", { name: "区域名称选择" })).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "区域名称选择" }),
+  ).toBeVisible();
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
   ).toBe(true);
   await page.screenshot({
     path: testInfo.outputPath("body-canvas-v3-mobile.png"),
