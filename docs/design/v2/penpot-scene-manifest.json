@@ -1,0 +1,286 @@
+{
+  "fileId": "24d9d841-759d-81bc-8008-b6423250c2b8",
+  "pageId": "ed4c6ec0-8f91-80cb-8008-c1e744bad64b",
+  "baseline": "existing BodySense Product / Components / Foundations",
+  "sceneSource": "Oracle2 .tmp/bodysense-v2-window-{core,specs}.js and flow-builders.js",
+  "verification": "verified created via returned Penpot shape IDs; full business flow not signed off",
+  "components": {
+    "Action / Primary": "7b3394e6-3178-80e2-8008-c84d33d0f295",
+    "Action / Secondary": "7b3394e6-3178-80e2-8008-c84d36e63695",
+    "Action / Ghost": "7b3394e6-3178-80e2-8008-c84d38b615e7",
+    "Icon button / close": "7b3394e6-3178-80e2-8008-c84d7b026c22",
+    "Icon button / chat": "7b3394e6-3178-80e2-8008-c84d7c635eb4",
+    "Icon button / user": "7b3394e6-3178-80e2-8008-c84d7e0a4c9b",
+    "Status / Neutral": "7b3394e6-3178-80e2-8008-c84d814ef098",
+    "Status / Pending": "7b3394e6-3178-80e2-8008-c84d84aa5b16",
+    "Status / Info": "7b3394e6-3178-80e2-8008-c84d8774b637",
+    "Notice / Neutral": "7b3394e6-3178-80e2-8008-c84d8c644c2b",
+    "Notice / Attention": "7b3394e6-3178-80e2-8008-c84d91149787",
+    "Choice / Default": "7b3394e6-3178-80e2-8008-c84d95134deb",
+    "Choice / Selected": "7b3394e6-3178-80e2-8008-c84d99a449d0",
+    "Evidence / Source row": "7b3394e6-3178-80e2-8008-c84d9e858273"
+  },
+  "componentGallery": "7b3394e6-3178-80e2-8008-c84d2c02d439",
+  "scenes": [
+    {
+      "key": "Desktop / Person / Records",
+      "id": "7b3394e6-3178-80e2-8008-c84e2fd18198",
+      "origin": "initial-window",
+      "actions": {
+        "close": "7b3394e6-3178-80e2-8008-c84e33005a4d",
+        "identity": "7b3394e6-3178-80e2-8008-c84e333e17ea",
+        "tab-0": "7b3394e6-3178-80e2-8008-c84e3812dd16",
+        "tab-1": "7b3394e6-3178-80e2-8008-c84e3b8857a1",
+        "tab-2": "7b3394e6-3178-80e2-8008-c84e3e4e0a75",
+        "tab-3": "7b3394e6-3178-80e2-8008-c84e408a2981",
+        "tab-4": "7b3394e6-3178-80e2-8008-c84e431e5dcd",
+        "episode": "7b3394e6-3178-80e2-8008-c84e4cb6b0d8",
+        "primary": "7b3394e6-3178-80e2-8008-c84e54e63389",
+        "secondary": "7b3394e6-3178-80e2-8008-c84e5533b8e2"
+      }
+    },
+    {
+      "key": "Desktop / Diagnosis / Current",
+      "id": "7b3394e6-3178-80e2-8008-c84e55749067",
+      "origin": "initial-window",
+      "actions": {
+        "close": "7b3394e6-3178-80e2-8008-c84e58196a98",
+        "selector": "7b3394e6-3178-80e2-8008-c84e58432a83",
+        "chat": "7b3394e6-3178-80e2-8008-c84e5c0f1c22",
+        "primary": "7b3394e6-3178-80e2-8008-c84e6f632339",
+        "secondary": "7b3394e6-3178-80e2-8008-c84e6fb96bd3"
+      }
+    },
+    {
+      "key": "Desktop / Chat / Ask User",
+      "id": "7b3394e6-3178-80e2-8008-c84e7007b6c5",
+      "origin": "initial-window",
+      "actions": {
+        "close": "7b3394e6-3178-80e2-8008-c84e72ee2b3e",
+        "option-0": "7b3394e6-3178-80e2-8008-c84e7f144bfa",
+        "option-1": "7b3394e6-3178-80e2-8008-c84e7f837819",
+        "option-2": "7b3394e6-3178-80e2-8008-c84e7fee3667",
+        "primary": "7b3394e6-3178-80e2-8008-c84e805b6c6b",
+        "secondary": "7b3394e6-3178-80e2-8008-c84e80b1f49d"
+      }
+    },
+    {
+      "key": "Desktop / Chat / Answer selected",
+      "id": "7b3394e6-3178-80e2-8008-c84e810ab79a",
+      "origin": "initial-window",
+      "actions": {
+        "close": "7b3394e6-3178-80e2-8008-c84e8442e4f7",
+        "option-0": "7b3394e6-3178-80e2-8008-c84e90d2b56d",
+        "option-1": "7b3394e6-3178-80e2-8008-c84e914e419b",
+        "option-2": "7b3394e6-3178-80e2-8008-c84e91c899f9",
+        "primary": "7b3394e6-3178-80e2-8008-c84e92462fb2",
+        "secondary": "7b3394e6-3178-80e2-8008-c84e92c1d543"
+      }
+    },
+    {
+      "key": "Desktop / Body / Episode",
+      "id": "7b3394e6-3178-80e2-8008-c84e931281c8",
+      "origin": "initial-window",
+      "actions": {
+        "close": "7b3394e6-3178-80e2-8008-c84e960e048e",
+        "primary": "7b3394e6-3178-80e2-8008-c84ea46e4e8b",
+        "secondary": "7b3394e6-3178-80e2-8008-c84ea4c50f6c"
+      }
+    },
+    {
+      "key": "Desktop / Person / Habits",
+      "id": "7b3394e6-3178-80e2-8008-c850960cb1e7",
+      "origin": "manual-window"
+    },
+    {
+      "key": "Desktop / Person / Equipment",
+      "id": "7b3394e6-3178-80e2-8008-c850b5e6e106",
+      "origin": "manual-window"
+    },
+    {
+      "key": "Desktop / Person / Media",
+      "id": "7b3394e6-3178-80e2-8008-c8511085199a",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Person / Reports",
+      "id": "7b3394e6-3178-80e2-8008-c8513a699309",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Person / Identity",
+      "id": "7b3394e6-3178-80e2-8008-c851618bff75",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Chat / Answer retry",
+      "id": "7b3394e6-3178-80e2-8008-c8517b5aa0f3",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Chat / Running",
+      "id": "7b3394e6-3178-80e2-8008-c8519947fb77",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Diagnosis / Confirm first",
+      "id": "7b3394e6-3178-80e2-8008-c851b762b018",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Diagnosis / Confirm second",
+      "id": "7b3394e6-3178-80e2-8008-c851d6291bbd",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Diagnosis / Receipt",
+      "id": "7b3394e6-3178-80e2-8008-c851f8f86d98",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Diagnosis / History",
+      "id": "7b3394e6-3178-80e2-8008-c85213873bc3",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Diagnosis / Safety stopped",
+      "id": "7b3394e6-3178-80e2-8008-c8522f043758",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Training / Accepted",
+      "id": "7b3394e6-3178-80e2-8008-c85248b08ba0",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Training / Proposal",
+      "id": "7b3394e6-3178-80e2-8008-c8526a3ceab2",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Trainer / Recovery",
+      "id": "7b3394e6-3178-80e2-8008-c8528b3ef11b",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Trainer / In progress",
+      "id": "7b3394e6-3178-80e2-8008-c852aa2d6586",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Trainer / Set recorded",
+      "id": "7b3394e6-3178-80e2-8008-c852c5161d00",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Safety / Restricted",
+      "id": "7b3394e6-3178-80e2-8008-c852df567524",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Assets / Delete scope",
+      "id": "7b3394e6-3178-80e2-8008-c852ff0b5487",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Assets / Erasure confirm",
+      "id": "7b3394e6-3178-80e2-8008-c8531b134699",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Assets / Erasure retry",
+      "id": "7b3394e6-3178-80e2-8008-c8533888f14f",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Assets / Erasure completed",
+      "id": "7b3394e6-3178-80e2-8008-c8535284a266",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Assets / Original unavailable",
+      "id": "7b3394e6-3178-80e2-8008-c8536b8951b2",
+      "origin": "specs"
+    },
+    {
+      "key": "Desktop / Chat / Draft",
+      "id": "7b3394e6-3178-80e2-8008-c853ee2b5529",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Chat / Diagnosis request",
+      "id": "7b3394e6-3178-80e2-8008-c8541803c5be",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Diagnosis / First rejected",
+      "id": "7b3394e6-3178-80e2-8008-c854562e7374",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Diagnosis / No changes",
+      "id": "7b3394e6-3178-80e2-8008-c854857c5344",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Diagnosis / Update receipt",
+      "id": "7b3394e6-3178-80e2-8008-c854b3bef2c7",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Diagnosis / Current two",
+      "id": "7b3394e6-3178-80e2-8008-c854e0813294",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Training / Updated",
+      "id": "7b3394e6-3178-80e2-8008-c8551e363fad",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Trainer / Ended",
+      "id": "7b3394e6-3178-80e2-8008-c855620de1a1",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Desktop / Body / Region",
+      "id": "7b3394e6-3178-80e2-8008-c8558a691022",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Mobile / Person / Records",
+      "id": "7b3394e6-3178-80e2-8008-c855a6f5cd0a",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Mobile / Diagnosis / Current",
+      "id": "7b3394e6-3178-80e2-8008-c855dafd69b2",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Mobile / Chat / Ask User",
+      "id": "7b3394e6-3178-80e2-8008-c8560d035624",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Mobile / Chat / Answer selected",
+      "id": "7b3394e6-3178-80e2-8008-c85628d3bd3a",
+      "origin": "auxiliary"
+    },
+    {
+      "key": "Mobile / Training / Accepted",
+      "id": "7b3394e6-3178-80e2-8008-c856485d29d9",
+      "origin": "auxiliary"
+    }
+  ],
+  "overlayQa": {
+    "baseId": "7b3394e6-3178-80e2-8008-c855fdc60ae5",
+    "firstId": "7b3394e6-3178-80e2-8008-c855ff45bc1d",
+    "secondId": "7b3394e6-3178-80e2-8008-c85600b9029e",
+    "openId": "7b3394e6-3178-80e2-8008-c85608775b0d",
+    "nextId": "7b3394e6-3178-80e2-8008-c85608d41bec",
+    "closeId": "7b3394e6-3178-80e2-8008-c856092e3fe9",
+    "nextActions": ["close-overlay", "open-overlay"],
+    "baseIndex": 44
+  }
+}
