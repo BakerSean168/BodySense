@@ -146,6 +146,27 @@ func TestBodyObservationGeneratedAmendmentHTTPRoundTripPostgres(t *testing.T) {
 	if other := performJSONAt(observationHTTPRouter(t, foreign, app), http.MethodPost, correctionPath, correctionJSON); other.Code != 404 {
 		t.Fatalf("foreign owner amended observation: %d %s", other.Code, other.Body.String())
 	}
+	// A foreign observation must remain indistinguishable from a missing one,
+	// even when the attacker supplies an arbitrarily stale revision. Check
+	// both mutation types before revealing any optimistic revision conflict.
+	foreignRouter := observationHTTPRouter(t, foreign, app)
+	for _, attempt := range []struct{ path, payload string }{
+		{correctionPath, strings.Replace(correctionJSON, `"expected_revision":1`, `"expected_revision":999`, 1)},
+		{route + "/" + original.ObservationID.String() + "/withdraw", `{"idempotency_key":"foreign-withdraw","expected_revision":999}`},
+	} {
+		rejected := performJSONAt(foreignRouter, http.MethodPost, attempt.path, attempt.payload)
+		if rejected.Code != http.StatusNotFound {
+			t.Fatalf("foreign observation with stale revision disclosed state or accepted mutation: %d %s", rejected.Code, rejected.Body.String())
+		}
+		// Missing and foreign-owned targets must expose identical public errors.
+		// Neither a forged revision nor the HTTP error body may enumerate health history.
+		missingPath := strings.Replace(attempt.path, original.ObservationID.String(), uuid.NewString(), 1)
+		missing := performJSONAt(foreignRouter, http.MethodPost, missingPath, attempt.payload)
+		if missing.Code != rejected.Code || missing.Body.String() != rejected.Body.String() {
+			t.Fatalf("missing versus foreign observation exposed different public errors: foreign=%d %s missing=%d %s",
+				rejected.Code, rejected.Body.String(), missing.Code, missing.Body.String())
+		}
+	}
 	read := performJSONAt(router, http.MethodGet, route, "")
 	if read.Code != 200 || strings.Contains(read.Body.String(), "67.5") ||
 		!strings.Contains(read.Body.String(), `"raw_value":"65.7"`) ||
