@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T10:34:27Z",
+  "auditedAtUtc": "2026-10-14T11:25:45Z",
   "target": "gcp-dev-01",
   "mode": "ChatGPT Web integration; Qiyu and GLM canaries verified, isolated ticket coding writer admission gated",
   "integration": {
@@ -96,18 +96,22 @@
     "INT-002 PR258 exact-head CI passed and merged. Reconcile remaining domain, backend and QA handoffs without raising domain/staging gates."
   ],
   "latestObserved": {
-    "atUtc": "2026-10-14T10:34:27Z",
-    "verifiedMainBaselineSha": "8859005d5d806a64d8ef95d8cf578e566480344d",
-    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38545400397",
-    "observedNewerMainSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
-    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38549872054",
-    "newerMainCiAtAudit": "in_progress",
+    "atUtc": "2026-10-14T11:25:45Z",
+    "verifiedMainBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+    "observedNewerMainSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+    "newerMainCiAtAudit": "success",
     "backendPrivacyPr": 263,
     "backendPrivacyMergedSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
     "domainContractPr": 264,
     "domainContractHeadAtAudit": "ccecaf2eb7762046918e2f763c14f2a2bb9b67aa",
     "qaOldCommittedAndStagedFixesAlreadyInMain": true,
-    "v2ReleaseGatesChanged": false
+    "v2ReleaseGatesChanged": false,
+    "domainContractMergedAtUtc": "2026-10-14T10:48:51Z",
+    "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "domainContractCiRun": "BakerSean168/BodySense/actions/runs/38550120817",
+    "domainContractExactHeadCi": "12_OF_12_SUCCESS"
   },
   "integrationReadOnlyT3CwdCanary": {
     "recordedAtUtc": "2026-10-14T10:43:42Z",
@@ -116,7 +120,11 @@
     "model": "gpt-6.1-sol",
     "threadId": "fabric:002313f1774f63e7601c6ec1c9d4964c4ca397027bf5d43e6dc38a49458b1caf",
     "actualAssistantVerdict": "OPS001_READ_ONLY_CWD_VERIFIED",
-    "nativeCommands": ["pwd", "git rev-parse HEAD", "git status --porcelain=v1"],
+    "nativeCommands": [
+      "pwd",
+      "git rev-parse HEAD",
+      "git status --porcelain=v1"
+    ],
     "observedCwd": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
     "observedHead": "f67f9dd7658fc90f459d44122837732782bb050d",
     "gitPorcelainStatus": "",
