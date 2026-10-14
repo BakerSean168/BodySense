@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net"
@@ -35,6 +36,13 @@ func main() {
 	// Structured process logger must be installed before service initialization so startup
 	// failures and standard-library log.Printf calls share the same JSON log stream.
 	observability.ConfigureLogger()
+
+	// Reject invalid privacy-gate configuration before DB/Redis connections,
+	// migrations, background workers or external services are initialized.
+	retireChatShares, err := parseRetireChatShareFlag(os.Getenv("BODYSENSE_V2_RETIRE_CHAT_SHARES"))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Database connection
 	dbCfg := database.ConfigFromEnv()
@@ -371,15 +379,29 @@ func main() {
 		r,
 		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
-			Auth:      authMiddleware,
-			Operator:  middleware.RequireKnowledgeOperator(userRepo),
-			Validator: httpapi.RequestValidator(publicAPISpec),
+			Auth:             authMiddleware,
+			Operator:         middleware.RequireKnowledgeOperator(userRepo),
+			Validator:        httpapi.RequestValidator(publicAPISpec),
+			RetireChatShares: retireChatShares,
 		},
 	)
 
 	log.Printf("BodySense API starting on %s", listenAddress)
 	if err := r.Run(listenAddress); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// parseRetireChatShareFlag fails closed on operator typos. A missing flag
+// preserves the legacy behavior until the authorized V2 cutover.
+func parseRetireChatShareFlag(raw string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "false":
+		return false, nil
+	case "true":
+		return true, nil
+	default:
+		return false, errors.New("BODYSENSE_V2_RETIRE_CHAT_SHARES must be true or false")
 	}
 }
 
