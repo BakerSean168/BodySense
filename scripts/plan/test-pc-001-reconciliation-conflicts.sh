@@ -265,7 +265,44 @@ VALUES ('00000000-0000-4000-8000-000000005007',
 '00000000-0000-4000-8000-000000002001','00000000-0000-4000-8000-000000004002',
 '00000000-0000-4000-8000-000000003001',2,'user','completed',now(),now());
 SQL
-expect_counts wrong_run_and_projection '1|1|1|1|2|1|1|1|1|1|1'
+
+# Source provenance can match the original owner/Run/Message/Interaction but
+# forge a DIFFERENT toolCallId. This is distinct from cross-owner linkage.
+fixture_sql <<'SQL'
+INSERT INTO public.messages(id,conversation_id,turn_id,run_id,role,seq) VALUES
+('00000000-0000-4000-8000-000000005008',
+'00000000-0000-4000-8000-000000002001','00000000-0000-4000-8000-000000004001',
+'00000000-0000-4000-8000-000000003001','user',5),
+('00000000-0000-4000-8000-000000005009',
+'00000000-0000-4000-8000-000000002001','00000000-0000-4000-8000-000000004001',
+'00000000-0000-4000-8000-000000003001','assistant',6);
+INSERT INTO public.agent_interactions(id,run_id,conversation_id,tool_call_id,status)
+VALUES ('00000000-0000-4000-8000-000000006004',
+'00000000-0000-4000-8000-000000003001',
+'00000000-0000-4000-8000-000000002001','ask-original','answered');
+INSERT INTO public.interaction_resumes(interaction_id,user_id,conversation_id,run_id,
+request_id,answer_fingerprint,question_fingerprint,user_message_id,assistant_message_id,claimed_at)
+VALUES ('00000000-0000-4000-8000-000000006004',
+'00000000-0000-4000-8000-000000001001',
+'00000000-0000-4000-8000-000000002001',
+'00000000-0000-4000-8000-000000003001',
+'synthetic-forged-tool-call',repeat('e',64),repeat('f',64),
+'00000000-0000-4000-8000-000000005008',
+'00000000-0000-4000-8000-000000005009',now());
+INSERT INTO public.statement_evidence
+(id,user_id,source_kind,source_version,excerpt,availability,recorded_at,
+source_conversation_id,source_run_id,source_message_id,
+source_interaction_id,source_tool_call_id,question_excerpt)
+VALUES ('00000000-0000-4000-8000-000000007005',
+'00000000-0000-4000-8000-000000001001','structured_answer',
+1,'SYNTHETIC_PRIVATE_SENTINEL','available',now(),
+'00000000-0000-4000-8000-000000002001',
+'00000000-0000-4000-8000-000000003001',
+'00000000-0000-4000-8000-000000005008',
+'00000000-0000-4000-8000-000000006004',
+'ask-forged','synthetic question');
+SQL
+expect_counts wrong_run_and_projection '1|1|1|1|3|1|1|1|1|1|1'
 
 # Validate the SAME session settings used by the actual aggregate query.
 settings="$(sed '/^COMMIT;/i SELECT current_setting('\''transaction_isolation'\''), current_setting('\''transaction_read_only'\''), current_setting('\''statement_timeout'\'');' "$readonly_sql" |
@@ -279,7 +316,7 @@ if failure="$(sed '/^COMMIT;/i INSERT INTO public.conversations(user_id) VALUES 
   exit 1
 fi
 printf '%s\n' "$failure" | grep -Fq 'cannot execute INSERT in a read-only transaction'
-expect_counts immutable_snapshot '1|1|1|1|2|1|1|1|1|1|1'
+expect_counts immutable_snapshot '1|1|1|1|3|1|1|1|1|1|1'
 
 # Neither RLS-filtered nor denied metadata scans may be accepted as complete.
 fixture_sql <<'SQL'

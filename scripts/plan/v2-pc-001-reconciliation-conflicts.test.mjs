@@ -40,6 +40,9 @@ test("original Run, user ownership, source retention and controlled copies are a
     "public.statement_evidence", "public.interaction_resumes", "public.agent_interactions",
     "public.runs", "public.messages", "public.thread_projection_messages",
     "public.conversation_shares", "structured_answer", "source_interaction_id",
+    "e.source_tool_call_id IS DISTINCT FROM e.interaction_tool_call_id",
+    "e.interaction_tool_name IS DISTINCT FROM 'ask_user'",
+    "e.interaction_status IS DISTINCT FROM 'answered'",
     "source_message_id", "r.conversation_id IS DISTINCT FROM receipt.conversation_id",
     "i.run_id IS DISTINCT FROM receipt.run_id",
     "r.status <> 'waiting_user'", "i.status = 'answered'",
@@ -86,6 +89,8 @@ test("real PG18 harness covers positive, conflicts and fail-closed negative case
     "immutable_snapshot", "RLS/permission fail-closed",
   ]) assert.ok(shell.includes(scenario), scenario);
   assert.match(shell, /duplicate key value violates unique constraint/);
+  assert.match(shell, /ask-forged/);
+  assert.match(shell, /synthetic-forged-tool-call/);
   assert.match(shell, /cannot execute INSERT in a read-only transaction/);
   assert.match(shell, /query would be affected by row-level security policy/);
   assert.match(shell, /permission denied for table statement_evidence/);

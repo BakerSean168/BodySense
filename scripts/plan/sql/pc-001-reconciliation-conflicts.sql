@@ -62,13 +62,17 @@ multiple_projection_owners AS (
 evidence_links AS (
   SELECT e.source_kind, e.availability, e.user_id AS evidence_owner,
     e.source_conversation_id, e.source_run_id, e.source_message_id,
+    e.source_tool_call_id,
     c.id AS conversation_exists, c.user_id AS conversation_owner,
     r.id AS run_exists, r.user_id AS run_owner,
     r.conversation_id AS run_conversation_id,
     m.id AS message_exists, m.conversation_id AS message_conversation_id,
     m.run_id AS message_run_id,
     i.id AS interaction_exists, i.run_id AS interaction_run_id,
-    i.conversation_id AS interaction_conversation_id
+    i.conversation_id AS interaction_conversation_id,
+    i.tool_call_id AS interaction_tool_call_id,
+    i.tool_name AS interaction_tool_name,
+    i.status AS interaction_status
   FROM public.statement_evidence AS e
   LEFT JOIN public.conversations AS c ON c.id = e.source_conversation_id
   LEFT JOIN public.runs AS r ON r.id = e.source_run_id
@@ -88,7 +92,10 @@ evidence_identity_mismatches AS (
        OR (e.message_run_id IS NOT NULL AND e.message_run_id IS DISTINCT FROM e.source_run_id)))
     OR (e.source_kind = 'structured_answer' AND e.interaction_exists IS NOT NULL AND
       (e.interaction_run_id IS DISTINCT FROM e.source_run_id
-       OR e.interaction_conversation_id IS DISTINCT FROM e.source_conversation_id))
+       OR e.interaction_conversation_id IS DISTINCT FROM e.source_conversation_id
+       OR e.source_tool_call_id IS DISTINCT FROM e.interaction_tool_call_id
+       OR e.interaction_tool_name IS DISTINCT FROM 'ask_user'
+       OR e.interaction_status IS DISTINCT FROM 'answered'))
 ),
 unresolved_provenance AS (
   SELECT 1 FROM evidence_links AS e
