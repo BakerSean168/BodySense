@@ -91,9 +91,15 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     '.bc-business-window[data-window="diagnosis"]',
   );
   await expect(
-    diagnosisWindow.getByRole("combobox", { name: "选择已确认病情" }),
-  ).toBeDisabled();
-  await expect(diagnosisWindow.getByText("暂无已确认病情")).toBeVisible();
+    diagnosisWindow.getByRole("region", { name: "当前诊断内容" }),
+  ).toBeVisible();
+  const diagnosisPicker = diagnosisWindow.getByRole("combobox", {
+    name: "选择已确认病情",
+  });
+  await expect(diagnosisPicker).toBeDisabled();
+  // Native <option> elements have no visible bounding box when the select is
+  // closed. Assert their content, not an impossible visible-option state.
+  await expect(diagnosisPicker.locator("option")).toHaveText("暂无已确认病情");
   await expect(diagnosisWindow.getByText("还没有已确认的病情")).toBeVisible();
   await expect(
     diagnosisWindow.getByRole("button", { name: "关闭综合诊断" }),

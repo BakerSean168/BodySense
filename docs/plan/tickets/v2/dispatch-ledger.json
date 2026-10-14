@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T02:29:34Z",
+  "auditedAtUtc": "2026-10-14T04:47:39Z",
   "target": "gcp-dev-01",
   "mode": "chatgpt-web-integration; t3-writer-admission-pending",
   "integration": {
@@ -12,8 +12,10 @@
       "title": "BodySense V2 Integration Review",
       "registeredVia": "t3 project add",
       "gatewayProjectVisible": false,
-      "gatewayProbe": "t3_project_denied",
-      "authStatus": "blocked; do not route T3 threads until supported project access confirmed"
+      "gatewayProbe": "t3_orchestrator_describe: 7 allowed projects; new project absent",
+      "authStatus": "source merged and host-owned config staged; active Worker not restarted because unrelated jobs are running; project is NOT authorized in live gateway",
+      "hostConfigMergedSha": "4e25ae12cbc179097335cd0c2456efad99454b1b",
+      "hostConfigInstalled": true
     }
   },
   "modelPreflight": {
@@ -43,10 +45,10 @@
     "cliWarning": "unknown recorded PullRequestReviewGuides migration ID; do not modify database or restart server without evidence"
   },
   "admittedWriters": [],
-  "pilotStatus": "BLOCKED_ON_T3_PROJECT_ACCESS_AND_EXACT_BASELINE",
+  "pilotStatus": "BLOCKED_ON_ACTIVE_T3_ALLOWLIST_RECONCILIATION_AND_LIVE_MODEL_HEALTH",
   "next": [
-    "Verify supported project allowlist/registration refresh and align T3 CLI/service versions under change control",
-    "After INT-001 accepted, register one ticket-specific worktree project at a time and probe read-only status",
-    "Health-check physical model without unapproved writes; admit max 3 noncolliding writer tickets"
+    "At an approved maintenance-safe point reload the signed Worker with the already-staged config, then verify allowed projects and read-only thread list; never bypass project denial",
+    "After integration INT-001 accepted at exact CI SHA, register ticket-specific isolated T3 project roots and verify real thread cwd before admitting any writer",
+    "Health-check an allowed physical model with bounded execution; max 3 noncolliding ticket writers"
   ]
 }
