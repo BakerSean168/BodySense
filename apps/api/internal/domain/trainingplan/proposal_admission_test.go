@@ -168,11 +168,11 @@ func TestPlanProposalUpdateRevisionAuthorization(t *testing.T) {
 }
 
 func TestPlanProposalSevenDaysIsElapsedTimeNotCalendarDays(t *testing.T) {
-	p, d, c, at := proposalFixture()
+	p, d, c, _ := proposalFixture()
 	// DST/local calendar shifts are irrelevant: 7*24 h uses instants.
 	p.CreatedAt = time.Date(2026, 3, 8, 6, 59, 59, 0, time.UTC)
 	p.ExpiresAt = p.CreatedAt.Add(ProposalTTL)
-	at = p.ExpiresAt.Add(-time.Second)
+	at := p.ExpiresAt.Add(-time.Second)
 	if got := EvaluateAcceptance(p, d, c, at); got != EligibleForCommit {
 		t.Fatalf("before expiry: %v", got)
 	}
