@@ -74,6 +74,7 @@ describe("explicit BodyFact correction and withdrawal", () => {
     );
     expect(onCommitted).toHaveBeenCalledWith(
       expect.stringContaining("不表示隐私数据已删除"),
+      receipt.revision,
     );
   });
 
@@ -101,6 +102,7 @@ describe("explicit BodyFact correction and withdrawal", () => {
     );
     expect(onCommitted).toHaveBeenCalledWith(
       expect.stringContaining("原陈述保留"),
+      receipt.revision,
     );
   });
 

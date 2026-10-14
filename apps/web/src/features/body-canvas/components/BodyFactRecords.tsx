@@ -67,6 +67,9 @@ export function BodyFactRecords({
   const [when, setWhen] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // A durable receipt can arrive before an invalidated ledger query refetches.
+  // Do not call an older snapshot empty or use its revision for another write.
+  const [savedRevision, setSavedRevision] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const pending = useRef<{
     owner: string;
@@ -80,11 +83,14 @@ export function BodyFactRecords({
     setWhen("");
     setAdding(false);
     setNotice(null);
+    setSavedRevision(null);
     setSaveError(null);
     setSaving(false);
   }, [owner]);
 
   const page = query.data?.pages[0];
+  const snapshotBehindCommit =
+    savedRevision !== null && (page?.current_revision ?? -1) < savedRevision;
   const view = useMemo(
     () =>
       projectBodyFactSurface({
@@ -110,6 +116,7 @@ export function BodyFactRecords({
       !canEdit ||
       !page ||
       view.pagesDisagree ||
+      snapshotBehindCommit ||
       saving ||
       !statement.trim()
     )
@@ -161,6 +168,7 @@ export function BodyFactRecords({
       setStatement("");
       setWhen("");
       setAdding(false);
+      setSavedRevision(receipt.revision);
       setNotice("已保存你的陈述。");
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch (cause) {
@@ -215,13 +223,19 @@ export function BodyFactRecords({
               setAdding(true);
               setNotice(null);
             }}
-            disabled={!page || view.pagesDisagree}
+            disabled={!page || view.pagesDisagree || snapshotBehindCommit}
           >
             <Plus size={15} />
             补充记录
           </button>
         ) : null}
       </div>
+      {snapshotBehindCommit && !query.isError ? (
+        <p role="status" className="bc-person-loading">
+          <LoaderCircle size={16} className="animate-spin" />
+          正在同步已保存的记录，暂不显示旧列表
+        </p>
+      ) : null}
       {query.isPending ? (
         <p role="status" className="bc-person-loading">
           <LoaderCircle size={16} className="animate-spin" />
@@ -263,6 +277,7 @@ export function BodyFactRecords({
         </p>
       ) : null}
       {!query.isError &&
+      !snapshotBehindCommit &&
       (boundedVM.state === "empty" || boundedVM.state === "partial_empty") ? (
         <p className="bc-window-empty-text">
           {boundedVM.state === "partial_empty"
@@ -353,7 +368,7 @@ export function BodyFactRecords({
         </form>
       ) : null}
       <ul className="bc-record-list">
-        {view.records.map(
+        {(snapshotBehindCommit ? [] : view.records).map(
           ({
             id,
             record,
@@ -378,8 +393,14 @@ export function BodyFactRecords({
                   record={record}
                   revision={page.current_revision}
                   onRefresh={() => void query.refetch()}
-                  onCommitted={(message) => {
+                  onCommitted={(message, committedRevision) => {
                     if (ownerRef.current !== record.user_id) return;
+                    // A correction/withdrawal also invalidates the old live
+                    // ledger snapshot; never display a revoked assertion while
+                    // its authoritative revision is still being fetched.
+                    setSavedRevision((prev) =>
+                      Math.max(prev ?? 0, committedRevision),
+                    );
                     setNotice(message);
                     void queryClient.invalidateQueries({
                       queryKey: ["workspace"],
