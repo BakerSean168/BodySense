@@ -15,7 +15,10 @@
       "dependsOn": [],
       "sf": "SF-80",
       "owner": "ChatGPT Web Integrator",
-      "exclusiveResources": ["integration-worktree", "handoff-register"],
+      "exclusiveResources": [
+        "integration-worktree",
+        "handoff-register"
+      ],
       "document": "docs/plan/tickets/v2/INT-001.md",
       "threadId": null,
       "projectId": null,
@@ -30,38 +33,57 @@
       "title": "Verify T3 worktree isolation and model health",
       "phase": "1",
       "status": "blocked",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "none",
       "owner": "Execution Control",
-      "exclusiveResources": ["t3-project-registry"],
+      "exclusiveResources": [
+        "t3-project-registry"
+      ],
       "document": "docs/plan/tickets/v2/OPS-001.md",
       "threadId": null,
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "T3 host config approved and staged but active Agent Fabric Worker still denies project 67a21bd5-5929-468b-b6ea-e252a8b11e27; no normal safe service reload/model health verification"
+      "blockedReason": "T3 project authorization fixed; Qiyu GPT-6.1 Sol real assistant reply verified in PC-001 read-only canary. DeepSeek Pi/DSH routes unverified. Integration T3 project read-only cwd/HEAD verified on f67f9dd; ticket-specific independent coding worktree and single-Writer admission still unverified; no coding writer admitted."
     },
     {
       "id": "INT-002",
       "title": "Make stacked PR CI and integration promotion verifiable",
       "phase": "1",
-      "status": "queued",
-      "dependsOn": ["INT-001"],
+      "status": "done",
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-90",
       "owner": "Integration CI Owner",
-      "exclusiveResources": ["github-ci"],
+      "exclusiveResources": [
+        "github-ci"
+      ],
       "document": "docs/plan/tickets/v2/INT-002.md",
       "threadId": null,
-      "projectId": null,
-      "worktree": null,
-      "acceptedSha": null
+      "projectId": "dec1b262-e9b8-4826-9b03-f13babd3e83e",
+      "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-ci-int002",
+      "acceptedSha": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
+      "baseSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+      "executionOwner": "ChatGPT Web GPT-6",
+      "implementationHead": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
+      "reviewPr": 258,
+      "currentCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "ciAcceptance": "EXACT_HEAD_CI_12_OF_12_SUCCESS_MERGED",
+      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "acceptedAtUtc": "2026-10-14T06:43:38Z",
+      "mergedMainSha": "b4eff04f11388a0dd0a7c08228afb6374d00c1be"
     },
     {
       "id": "BS-OBS-001",
       "title": "Close BodyObservation V12 correction/withdrawal",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-20",
       "owner": "Backend BodyObservation Owner",
       "exclusiveResources": [
@@ -80,10 +102,14 @@
       "title": "Finalize Observation/Hypothesis/ConcernGroup projections",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-20",
       "owner": "Domain Contract Owner",
-      "exclusiveResources": ["domain-contract"],
+      "exclusiveResources": [
+        "domain-contract"
+      ],
       "document": "docs/plan/tickets/v2/BS-HYP-001.md",
       "threadId": null,
       "projectId": null,
@@ -95,10 +121,16 @@
       "title": "Connect source-bound AI suggestions to Go decisions",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["BS-OBS-001", "BS-HYP-001"],
+      "dependsOn": [
+        "BS-OBS-001",
+        "BS-HYP-001"
+      ],
       "sf": "SF-12/SF-20",
       "owner": "Go/Python Owner",
-      "exclusiveResources": ["agent-tools", "public-openapi"],
+      "exclusiveResources": [
+        "agent-tools",
+        "public-openapi"
+      ],
       "document": "docs/plan/tickets/v2/BS-AGENT-001.md",
       "threadId": null,
       "projectId": null,
@@ -110,10 +142,15 @@
       "title": "Enforce one Conversation and one serial Run",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-30",
       "owner": "Chat Runtime Owner",
-      "exclusiveResources": ["conversation-schema", "public-openapi"],
+      "exclusiveResources": [
+        "conversation-schema",
+        "public-openapi"
+      ],
       "document": "docs/plan/tickets/v2/PC-001.md",
       "threadId": null,
       "projectId": null,
@@ -125,10 +162,15 @@
       "title": "Implement three-cursor retention and controlled pruning",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["PC-001"],
+      "dependsOn": [
+        "PC-001"
+      ],
       "sf": "SF-70",
       "owner": "Chat Retention Owner",
-      "exclusiveResources": ["conversation-schema", "privacy-erasure"],
+      "exclusiveResources": [
+        "conversation-schema",
+        "privacy-erasure"
+      ],
       "document": "docs/plan/tickets/v2/PC-RET-001.md",
       "threadId": null,
       "projectId": null,
@@ -140,10 +182,14 @@
       "title": "Gate Diagnosis V2 target read and decision contracts",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-40",
       "owner": "Domain Diagnosis Owner",
-      "exclusiveResources": ["domain-contract"],
+      "exclusiveResources": [
+        "domain-contract"
+      ],
       "document": "docs/plan/tickets/v2/DX-001.md",
       "threadId": null,
       "projectId": null,
@@ -155,10 +201,15 @@
       "title": "Persist ConditionEntry and decision transaction",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["DX-001"],
+      "dependsOn": [
+        "DX-001"
+      ],
       "sf": "SF-40",
       "owner": "Diagnosis Backend Owner",
-      "exclusiveResources": ["database-migrations", "public-openapi"],
+      "exclusiveResources": [
+        "database-migrations",
+        "public-openapi"
+      ],
       "document": "docs/plan/tickets/v2/DX-002.md",
       "threadId": null,
       "projectId": null,
@@ -170,10 +221,15 @@
       "title": "Implement Diagnosis Go/Agent decision API",
       "phase": "3",
       "status": "queued",
-      "dependsOn": ["DX-002"],
+      "dependsOn": [
+        "DX-002"
+      ],
       "sf": "SF-40",
       "owner": "Diagnosis Runtime Owner",
-      "exclusiveResources": ["public-openapi", "agent-tools"],
+      "exclusiveResources": [
+        "public-openapi",
+        "agent-tools"
+      ],
       "document": "docs/plan/tickets/v2/DX-003.md",
       "threadId": null,
       "projectId": null,
@@ -185,10 +241,14 @@
       "title": "Finish restriction-specific fail-closed Safety model",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-50",
       "owner": "Training/Safety Domain Owner",
-      "exclusiveResources": ["domain-contract"],
+      "exclusiveResources": [
+        "domain-contract"
+      ],
       "document": "docs/plan/tickets/v2/TP-001.md",
       "threadId": null,
       "projectId": null,
@@ -200,10 +260,15 @@
       "title": "Migrate independent TrainingPlan/Trainer/Safety persistence",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["TP-001"],
+      "dependsOn": [
+        "TP-001"
+      ],
       "sf": "SF-50",
       "owner": "Training Backend Owner",
-      "exclusiveResources": ["database-migrations", "public-openapi"],
+      "exclusiveResources": [
+        "database-migrations",
+        "public-openapi"
+      ],
       "document": "docs/plan/tickets/v2/TP-002.md",
       "threadId": null,
       "projectId": null,
@@ -215,10 +280,15 @@
       "title": "Deliver Trainer runtime and user action receipt",
       "phase": "3",
       "status": "queued",
-      "dependsOn": ["TP-002"],
+      "dependsOn": [
+        "TP-002"
+      ],
       "sf": "SF-50",
       "owner": "Trainer Runtime Owner",
-      "exclusiveResources": ["public-openapi", "agent-tools"],
+      "exclusiveResources": [
+        "public-openapi",
+        "agent-tools"
+      ],
       "document": "docs/plan/tickets/v2/TP-003.md",
       "threadId": null,
       "projectId": null,
@@ -230,10 +300,15 @@
       "title": "Define and migrate shared UserAsset admission",
       "phase": "1",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-60",
       "owner": "Assets Domain/Backend Owner",
-      "exclusiveResources": ["domain-contract", "database-migrations"],
+      "exclusiveResources": [
+        "domain-contract",
+        "database-migrations"
+      ],
       "document": "docs/plan/tickets/v2/AS-001.md",
       "threadId": null,
       "projectId": null,
@@ -245,10 +320,16 @@
       "title": "Implement verified erasure of source and controlled copies",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["AS-001", "PC-RET-001"],
+      "dependsOn": [
+        "AS-001",
+        "PC-RET-001"
+      ],
       "sf": "SF-60/SF-70",
       "owner": "Privacy Integration Owner",
-      "exclusiveResources": ["privacy-erasure", "database-migrations"],
+      "exclusiveResources": [
+        "privacy-erasure",
+        "database-migrations"
+      ],
       "document": "docs/plan/tickets/v2/AS-002.md",
       "threadId": null,
       "projectId": null,
@@ -260,10 +341,14 @@
       "title": "Integrate V12 Person records and Episode UI states",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["BS-OBS-001"],
+      "dependsOn": [
+        "BS-OBS-001"
+      ],
       "sf": "SF-80",
       "owner": "React Person Owner",
-      "exclusiveResources": ["bodyfact-window"],
+      "exclusiveResources": [
+        "bodyfact-window"
+      ],
       "document": "docs/plan/tickets/v2/UI-001.md",
       "threadId": null,
       "projectId": null,
@@ -275,10 +360,14 @@
       "title": "Bind the Diagnosis V2 window to exact decision API",
       "phase": "3",
       "status": "queued",
-      "dependsOn": ["DX-003"],
+      "dependsOn": [
+        "DX-003"
+      ],
       "sf": "SF-80",
       "owner": "React Diagnosis Owner",
-      "exclusiveResources": ["diagnosis-ui"],
+      "exclusiveResources": [
+        "diagnosis-ui"
+      ],
       "document": "docs/plan/tickets/v2/UI-DX-001.md",
       "threadId": null,
       "projectId": null,
@@ -290,10 +379,14 @@
       "title": "Bind TrainingPlan/Trainer windows to real safety-gated API",
       "phase": "3",
       "status": "queued",
-      "dependsOn": ["TP-003"],
+      "dependsOn": [
+        "TP-003"
+      ],
       "sf": "SF-80",
       "owner": "React Training Owner",
-      "exclusiveResources": ["training-ui"],
+      "exclusiveResources": [
+        "training-ui"
+      ],
       "document": "docs/plan/tickets/v2/UI-TP-001.md",
       "threadId": null,
       "projectId": null,
@@ -305,10 +398,14 @@
       "title": "Run cross-domain exact-SHA acceptance and privacy matrix",
       "phase": "2",
       "status": "queued",
-      "dependsOn": ["INT-001"],
+      "dependsOn": [
+        "INT-001"
+      ],
       "sf": "SF-90",
       "owner": "Independent QA Owner",
-      "exclusiveResources": ["qa-runner"],
+      "exclusiveResources": [
+        "qa-runner"
+      ],
       "document": "docs/plan/tickets/v2/QA-001.md",
       "threadId": null,
       "projectId": null,
@@ -334,7 +431,9 @@
       ],
       "sf": "SF-90",
       "owner": "Release Integrator",
-      "exclusiveResources": ["release"],
+      "exclusiveResources": [
+        "release"
+      ],
       "document": "docs/plan/tickets/v2/REL-001.md",
       "threadId": null,
       "projectId": null,
@@ -342,8 +441,16 @@
       "acceptedSha": null
     }
   ],
-  "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
-  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
-  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
-  "baselineFrozenAtUtc": "2026-10-14T06:14:14Z"
+  "mainBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38553247126",
+  "baselineFrozenAtUtc": "2026-10-14T11:25:45Z",
+  "previousFrozenBaselineSha": "8859005d5d806a64d8ef95d8cf578e566480344d",
+  "newWriterAdmissionPolicy": "BLOCKED_UNTIL_LATEST_MAIN_CI_AND_TICKET_CWD_AUTHORIZED",
+  "auditedAtUtc": "2026-10-14T11:25:45Z",
+  "postMergeMainSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+  "latestObservedMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+  "latestObservedMainCiStatus": "SUCCESS_EXACT_MAIN",
+  "mergedDomainContractPr": 264,
+  "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb"
 }

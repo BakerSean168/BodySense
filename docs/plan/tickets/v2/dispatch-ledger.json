@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T06:14:14Z",
+  "auditedAtUtc": "2026-10-14T11:25:45Z",
   "target": "gcp-dev-01",
-  "mode": "chatgpt-web-integration; t3-writer-admission-pending",
+  "mode": "ChatGPT Web integration; Qiyu and GLM canaries verified, isolated ticket coding writer admission gated",
   "integration": {
     "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
-    "branch": "integration/v2-execution-20261014",
+    "branch": "ops/v2-admission-status-20261014",
     "currentWriter": "ChatGPT-Web",
     "t3ProjectRegistration": {
       "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
       "title": "BodySense V2 Integration Review",
       "registeredVia": "t3 project add",
-      "gatewayProjectVisible": false,
-      "gatewayProbe": "t3_orchestrator_describe: 7 allowed projects; new project absent",
-      "authStatus": "source merged and host-owned config staged; active Worker not restarted because unrelated jobs are running; project is NOT authorized in live gateway",
-      "hostConfigMergedSha": "4e25ae12cbc179097335cd0c2456efad99454b1b",
+      "gatewayProjectVisible": true,
+      "gatewayProbe": "t3_orchestrator_describe: 10 approved projects including integration INT-002 PC-001; authorized integration t3_thread_list returns empty",
+      "authStatus": "normal source-approved Worker restart; both integration and INT-002 project IDs authorized",
+      "hostConfigMergedSha": "a0f4f94edb7351845ab3c8a4b2515a6e3e7a5205",
       "hostConfigInstalled": true
     },
     "boundedBaselineAcceptedCodeSha": "ee07c09a893498675c4c4a8723c69f561a1befac",
@@ -29,7 +29,10 @@
       "provider": "pi",
       "model": "llm-pm/deepseek-v4.1-flash",
       "advertised": true,
-      "inferenceVerified": false
+      "inferenceVerified": false,
+      "providerAuthStatus": "invalid_state",
+      "readOnlyThread": "fabric:5e1ad98488cb45b1c454adde48955929feb41c2773a9208b4f5645fb5cb760e9",
+      "readOnlyOutcome": "failed Provider error, no assistant reply"
     },
     "forgeflowPiFast": {
       "virtualModel": "forgeflow/worker:low",
@@ -42,21 +45,93 @@
       "inventoryEligible": true,
       "liveInferenceVerified": false,
       "t3RouteVerified": false
+    },
+    "t3PiKunyouDeepSeek": {
+      "provider": "pi",
+      "model": "kunyou-free/deepseek-v4.1-flash",
+      "advertised": true,
+      "providerAuthStatus": "invalid_state",
+      "inferenceVerified": false,
+      "readOnlyThread": "fabric:706d0329dceb5ba1054aae35091e468d266b2a2c94c98b179c1039deb56ee402",
+      "readOnlyOutcome": "completed checkpoint only, no assistant reply"
+    },
+    "qiyuLiveReadOnlyCanary": {
+      "provider": "codex_superqiyu",
+      "model": "gpt-6.1-sol",
+      "projectId": "80869e42-ab86-4120-b219-246ba9d5abfd",
+      "readOnlyThread": "fabric:6ba1e8752f857a4395d3b67d5f4e891d5d0df3968c5e1e2f7949989e8b7abbd2",
+      "genuineAssistantReply": "BODYSENSE_QIYU_GPT61_OK",
+      "inferenceVerified": true,
+      "limitations": "PC-001 project inference only; no per-ticket coding writer or native cwd verified"
+    },
+    "glmIndependentReadOnlyReview": {
+      "provider": "pi",
+      "model": "auto/glm-5.3",
+      "projectId": "80869e42-ab86-4120-b219-246ba9d5abfd",
+      "readOnlyThread": "fabric:74fe34cf1d19191363762f99e425d24d0cc4416474a7a543a22cafb23a3527e6",
+      "assistantReplyVerified": true,
+      "inferenceVerified": true,
+      "limitations": "PC-001 static PR261 review only; ticket-specific coding writer not verified"
+    },
+    "dshOfficialDeepSeek": {
+      "provider": "acpRegistry_dsh",
+      "model": "[\"deepseek-official\",\"deepseek-flash\"]",
+      "inferenceVerified": false,
+      "readOnlyThread": "fabric:1ba1ba569e8408f4e67cd105d7b07441dd8e569eac624a2d44123d624920f67b",
+      "readOnlyOutcome": "failed Provider error, no assistant reply"
     }
   },
   "runtimeDiagnostics": {
     "piVersion": "1.1.0",
-    "t3CliBuild": "0.0.46-nightly.20261011.2955",
-    "t3ServiceBuild": "0.0.46-nightly.20261011.2994",
-    "cliWarning": "unknown recorded PullRequestReviewGuides migration ID; do not modify database or restart server without evidence"
+    "t3CliBuild": "0.0.46-nightly.20261014.3093",
+    "t3ServiceBuild": "0.0.46-nightly.20261014.3093",
+    "cliWarning": "unknown recorded PullRequestReviewGuides migration ID; do not modify database or restart server without evidence",
+    "piModelDiscovery": "pi --list-models: No models available"
   },
   "admittedWriters": [],
-  "pilotStatus": "BLOCKED_ON_ACTIVE_T3_ALLOWLIST_RECONCILIATION_AND_LIVE_MODEL_HEALTH",
+  "pilotStatus": "QIYU_GLM_INFERENCE_AND_INTEGRATION_READONLY_CWD_VERIFIED_TICKET_CODING_WRITER_NOT_ADMITTED",
   "next": [
-    "At an approved maintenance-safe point reload the signed Worker with the already-staged config, then verify allowed projects and read-only thread list; never bypass project denial",
-    "After integration INT-001 accepted at exact CI SHA, register ticket-specific isolated T3 project roots and verify real thread cwd before admitting any writer",
-    "Health-check an allowed physical model with bounded execution; max 3 noncolliding ticket writers"
+    "Qiyu GPT-6.1 Sol and GLM 5.3 have actual assistant replies in PC-001; do not treat separate DeepSeek route failures as global model outage.",
+    "Verify actual model response and isolated native cwd for each permitted ticket-specific T3 writer before admission; max three disjoint writers.",
+    "INT-002 PR258 exact-head CI passed and merged. Reconcile remaining domain, backend and QA handoffs without raising domain/staging gates."
   ],
+  "latestObserved": {
+    "atUtc": "2026-10-14T11:25:45Z",
+    "verifiedMainBaselineSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "verifiedMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+    "observedNewerMainSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "newerMainCiRun": "BakerSean168/BodySense/actions/runs/38552185954",
+    "newerMainCiAtAudit": "success",
+    "backendPrivacyPr": 263,
+    "backendPrivacyMergedSha": "f1eaf04f3b5589d7e4d5339df4b4885f195d4a0c",
+    "domainContractPr": 264,
+    "domainContractHeadAtAudit": "ccecaf2eb7762046918e2f763c14f2a2bb9b67aa",
+    "qaOldCommittedAndStagedFixesAlreadyInMain": true,
+    "v2ReleaseGatesChanged": false,
+    "domainContractMergedAtUtc": "2026-10-14T10:48:51Z",
+    "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
+    "domainContractCiRun": "BakerSean168/BodySense/actions/runs/38550120817",
+    "domainContractExactHeadCi": "12_OF_12_SUCCESS"
+  },
+  "integrationReadOnlyT3CwdCanary": {
+    "recordedAtUtc": "2026-10-14T10:43:42Z",
+    "projectId": "67a21bd5-5929-468b-b6ea-e252a8b11e27",
+    "provider": "codex_superqiyu",
+    "model": "gpt-6.1-sol",
+    "threadId": "fabric:002313f1774f63e7601c6ec1c9d4964c4ca397027bf5d43e6dc38a49458b1caf",
+    "actualAssistantVerdict": "OPS001_READ_ONLY_CWD_VERIFIED",
+    "nativeCommands": [
+      "pwd",
+      "git rev-parse HEAD",
+      "git status --porcelain=v1"
+    ],
+    "observedCwd": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
+    "observedHead": "f67f9dd7658fc90f459d44122837732782bb050d",
+    "gitPorcelainStatus": "",
+    "status": "READ_ONLY_CWD_VERIFIED",
+    "codingWriterAdmitted": false,
+    "limitation": "Only integration project root validated; independent ticket coding checkouts and shared-resource writer locks still require admission"
+  },
   "postMerge": {
     "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
     "mainCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
@@ -85,6 +160,26 @@
       "backendV12": "/home/dev/projects/.chatgpt-worktrees/bodysense-observation-v12",
       "qa": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-qa"
     },
-    "domainReleaseApproved": false
+    "domainReleaseApproved": false,
+    "postBaselineLedgerMergeSha": "1b8db6388beaa2dde57be0f4b803373ab91b2762",
+    "int002": {
+      "ticket": "INT-002",
+      "sourceBaseSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+      "checkout": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-ci-int002",
+      "branch": "feat/v2-int002-ci-validated-20261014",
+      "projectId": "dec1b262-e9b8-4826-9b03-f13babd3e83e",
+      "projectSourceMerge": "a0f4f94edb7351845ab3c8a4b2515a6e3e7a5205",
+      "activeWorkerProjectAuthorized": true,
+      "t3ImplementationWriterAdmitted": false,
+      "physicalProviderInferenceVerified": false,
+      "currentCandidateHead": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
+      "candidatePr": 258,
+      "currentCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "ciStatus": "12_OF_12_SUCCESS",
+      "mergedMainSha": "b4eff04f11388a0dd0a7c08228afb6374d00c1be",
+      "acceptedAtUtc": "2026-10-14T06:43:38Z",
+      "nativeDeliveryTests": "58/58 PASS",
+      "nativePlanTests": "38/38 PASS"
+    }
   }
 }
