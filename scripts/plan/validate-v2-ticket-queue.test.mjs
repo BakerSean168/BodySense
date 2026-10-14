@@ -59,3 +59,17 @@ test("ticket count cannot silently exceed pilot capacity", () =>
   assert.ok(
     mutate((q) => (q.maxParallelWriters = 8)).some((s) => s.includes("1..3")),
   ));
+
+test("cannot admit an active ticket whose prerequisite is not accepted", () =>
+  assert.ok(
+    mutate((q) => {
+      q.tickets[1].status = "in_progress";
+      q.tickets[1].worktree = "/tmp/independent";
+    }).some((x) => x.includes("prerequisite not accepted")),
+  ));
+test("active writer must have an absolute checkout", () =>
+  assert.ok(
+    mutate((q) => {
+      q.tickets[0].worktree = null;
+    }).some((x) => x.includes("missing absolute checkout")),
+  ));

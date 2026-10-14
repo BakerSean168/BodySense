@@ -69,6 +69,19 @@ export function validateQueue(queue, root = REPO_ROOT) {
   };
   const done = new Set();
   for (const id of ids) visit(id, new Set(), done);
+  for (const t of queue.tickets) {
+    if (
+      t.status === "in_progress" &&
+      (!t.worktree || !path.isAbsolute(t.worktree))
+    )
+      errors.push(t.id + ": active writer missing absolute checkout");
+    if (t.status === "in_progress" || t.status === "done") {
+      for (const dep of t.dependsOn || []) {
+        if (byId.has(dep) && byId.get(dep).status !== "done")
+          errors.push(t.id + ": prerequisite not accepted " + dep);
+      }
+    }
+  }
   const active = queue.tickets.filter((t) => t.status === "in_progress");
   if (active.length > queue.maxParallelWriters)
     errors.push("too many simultaneous active writers");
