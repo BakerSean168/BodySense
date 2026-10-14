@@ -11,7 +11,7 @@
       "id": "INT-001",
       "title": "Create an exact-SHA V2 integration baseline",
       "phase": "0",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "sf": "SF-80",
       "owner": "ChatGPT Web Integrator",
@@ -20,13 +20,15 @@
       "threadId": null,
       "projectId": null,
       "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
-      "acceptedSha": null
+      "acceptedSha": "ee07c09a893498675c4c4a8723c69f561a1befac",
+      "acceptedAtUtc": "2026-10-14T04:59:07Z",
+      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38513267022"
     },
     {
       "id": "OPS-001",
       "title": "Verify T3 worktree isolation and model health",
       "phase": "1",
-      "status": "queued",
+      "status": "blocked",
       "dependsOn": ["INT-001"],
       "sf": "none",
       "owner": "Execution Control",
@@ -35,7 +37,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "blockedReason": "T3 host config approved and staged but active Agent Fabric Worker still denies project 67a21bd5-5929-468b-b6ea-e252a8b11e27; no normal safe service reload/model health verification"
     },
     {
       "id": "INT-002",

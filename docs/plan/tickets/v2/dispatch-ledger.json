@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedAtUtc": "2026-10-14T04:47:39Z",
+  "auditedAtUtc": "2026-10-14T05:00:36Z",
   "target": "gcp-dev-01",
   "mode": "chatgpt-web-integration; t3-writer-admission-pending",
   "integration": {
@@ -16,7 +16,13 @@
       "authStatus": "source merged and host-owned config staged; active Worker not restarted because unrelated jobs are running; project is NOT authorized in live gateway",
       "hostConfigMergedSha": "4e25ae12cbc179097335cd0c2456efad99454b1b",
       "hostConfigInstalled": true
-    }
+    },
+    "boundedBaselineAcceptedCodeSha": "ee07c09a893498675c4c4a8723c69f561a1befac",
+    "boundedBaselineCiRun": "BakerSean168/BodySense/actions/runs/38513267022",
+    "boundedBaselineCheckCount": 12,
+    "boundedBaselineStatus": "INT-001_ACCEPTED_NOT_RELEASE_READY",
+    "draftPrNumber": 255,
+    "productReleaseApproved": false
   },
   "modelPreflight": {
     "t3PiDeepSeek": {

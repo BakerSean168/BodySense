@@ -37,6 +37,8 @@ test("premature done without immutable SHA is rejected", () =>
 test("active competing shared-resource writers are rejected", () =>
   assert.ok(
     mutate((q) => {
+      // INT-001 is now an accepted baseline; synthesize two active writers.
+      q.tickets[0].status = "in_progress";
       q.tickets[1].status = "in_progress";
       q.tickets[1].exclusiveResources = ["integration-worktree"];
     }).some((s) => s.includes("resource collision")),
@@ -44,6 +46,7 @@ test("active competing shared-resource writers are rejected", () =>
 test("active competing worktree writers are rejected", () =>
   assert.ok(
     mutate((q) => {
+      q.tickets[0].status = "in_progress";
       q.tickets[0].worktree = "/tmp/a";
       q.tickets[1].status = "in_progress";
       q.tickets[1].worktree = "/tmp/a";
@@ -63,6 +66,8 @@ test("ticket count cannot silently exceed pilot capacity", () =>
 test("cannot admit an active ticket whose prerequisite is not accepted", () =>
   assert.ok(
     mutate((q) => {
+      // Deliberately revoke the prerequisite's accepted state.
+      q.tickets[0].status = "in_progress";
       q.tickets[1].status = "in_progress";
       q.tickets[1].worktree = "/tmp/independent";
     }).some((x) => x.includes("prerequisite not accepted")),
@@ -70,6 +75,14 @@ test("cannot admit an active ticket whose prerequisite is not accepted", () =>
 test("active writer must have an absolute checkout", () =>
   assert.ok(
     mutate((q) => {
+      q.tickets[0].status = "in_progress";
       q.tickets[0].worktree = null;
     }).some((x) => x.includes("missing absolute checkout")),
+  ));
+
+test("blocked admission requires a real reason", () =>
+  assert.ok(
+    mutate((q) => {
+      q.tickets[1].blockedReason = "";
+    }).some((x) => x.includes("blocked without reason")),
   ));

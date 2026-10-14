@@ -43,6 +43,11 @@ export function validateQueue(queue, root = REPO_ROOT) {
       errors.push(t.id + ": missing/outside ticket document");
     if (t.status === "done" && !SHA.test(t.acceptedSha || ""))
       errors.push(t.id + ": done without exact accepted SHA");
+    if (
+      t.status === "blocked" &&
+      (typeof t.blockedReason !== "string" || !t.blockedReason.trim())
+    )
+      errors.push(t.id + ": blocked without reason");
     if (t.status === "queued" && (t.threadId || t.projectId || t.worktree))
       errors.push(t.id + ": queued but already has an active binding");
     if (t.threadId && (!t.projectId || !t.worktree))
