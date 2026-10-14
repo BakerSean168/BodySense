@@ -41,17 +41,41 @@ var ErrTrainingProjectionFailed = errors.New("failed to create executable traini
 // execution UI. TreatmentRevision is the source of truth; the training tables
 // are a transactional execution projection plus activity log.
 type TrainingService struct {
-	trainingRepo trainingRepository
-	treatment    trainingTreatmentService
-	unitOfWork   treatmentUnitOfWork
+	trainingRepo     trainingRepository
+	treatment        trainingTreatmentService
+	unitOfWork       treatmentUnitOfWork
+	independentPlans bool
+}
+
+// TrainingServiceOption configures a TrainingService without changing the
+// legacy single-active Treatment projection for existing callers.
+type TrainingServiceOption func(*TrainingService)
+
+// WithIndependentTrainingPlans opts in to preserving unrelated active plans.
+//
+// WARNING: This must not be used by production or a V2 route until the
+// coordinated multi-active database migration, explicit plan selection,
+// Treatment revision history reconciliation and rollback gates have passed.
+// The existing constructors intentionally do not enable this option.
+func WithIndependentTrainingPlans() TrainingServiceOption {
+	return func(s *TrainingService) { s.independentPlans = true }
 }
 
 func NewTrainingService(
 	trainingRepo trainingRepository,
 	treatment trainingTreatmentService,
 	unitOfWork treatmentUnitOfWork,
+	options ...TrainingServiceOption,
 ) *TrainingService {
-	return &TrainingService{trainingRepo: trainingRepo, treatment: treatment, unitOfWork: unitOfWork}
+	service := &TrainingService{
+		trainingRepo: trainingRepo, treatment: treatment, unitOfWork: unitOfWork,
+	}
+	for _, option := range options {
+		if option != nil {
+			option(service)
+		}
+	}
+	return service
 }
 
 // AcceptTreatmentAndEnsurePlan is the only activation boundary. Treatment
@@ -104,10 +128,13 @@ func (s *TrainingService) EnsurePlanForTreatment(
 	if existing, err := s.trainingRepo.GetPlanByTreatmentRevision(ctx, userID, revision.ID); err != nil {
 		return nil, err
 	} else if existing != nil {
-		// A previous request may have created the projection and failed before
-		// superseding older plans. Re-run the idempotent cleanup on every retry.
-		if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-			return nil, err
+		// Preserve the existing legacy recovery behavior by default. Future
+		// independent plans must NOT change another plan's status, even on
+		// response-loss retries of the same accepted Treatment revision.
+		if !s.independentPlans {
+			if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
+				return nil, err
+			}
 		}
 		return existing, nil
 	}
@@ -145,8 +172,13 @@ func (s *TrainingService) EnsurePlanForTreatment(
 		Status: "active", Goal: revision.Goal, DurationWeeks: revision.DurationWeeks,
 		CurrentWeek: 1, Phases: phases,
 	}
-	if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-		return nil, err
+	// Only the explicit V2 compatibility mode may preserve other active
+	// plan projections. The current database's single-active index is still
+	// authoritative until a separately reviewed schema migration.
+	if !s.independentPlans {
+		if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.trainingRepo.CreatePlan(ctx, plan); err != nil {
 		return nil, err

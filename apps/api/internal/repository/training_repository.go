@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -10,6 +11,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+// ErrMultipleActiveTrainingPlans fails closed for legacy consumers expecting
+// a single active plan. Never select a random plan when a user may have two.
+var ErrMultipleActiveTrainingPlans = errors.New("multiple active training plans require explicit plan selection")
 
 // TrainingRepository handles database operations for training plans and logs.
 type TrainingRepository struct {
@@ -47,15 +52,30 @@ func (r *TrainingRepository) ListPlansByUserID(ctx context.Context, userID uuid.
 }
 
 func (r *TrainingRepository) GetActivePlanByUserID(ctx context.Context, userID uuid.UUID) (*model.TrainingPlan, error) {
-	var plan model.TrainingPlan
+	if userID == uuid.Nil {
+		return nil, errors.New("valid training plan owner required")
+	}
+	// Keep the old one-plan Workspace API from silently selecting a wrong
+	// prescription after V2 introduces multiple active plans. Limit(2)
+	// bounds this compatibility lookup; the new V2 UI must instead list
+	// plans and select explicitly by plan ID.
+	var plans []model.TrainingPlan
 	err := database.FromContext(ctx, r.db).
 		Where("user_id = ? AND status = ?", userID, "active").
 		Order("created_at DESC").
-		First(&plan).Error
-	if err == gorm.ErrRecordNotFound {
+		Order("id DESC").
+		Limit(2).
+		Find(&plans).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(plans) > 1 {
+		return nil, ErrMultipleActiveTrainingPlans
+	}
+	if len(plans) == 0 {
 		return nil, nil
 	}
-	return &plan, err
+	return &plans[0], nil
 }
 
 // Log operations

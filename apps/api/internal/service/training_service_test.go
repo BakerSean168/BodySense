@@ -19,6 +19,7 @@ type fakeTrainingRepository struct {
 	createErr       error
 	supersedeErr    error
 	supersedeCalled bool
+	otherPlan       *model.TrainingPlan
 	log             *model.TrainingLog
 	savedLog        *model.TrainingLog
 }
@@ -49,6 +50,9 @@ func (r *fakeTrainingRepository) GetPlanByTreatmentRevision(context.Context, uui
 }
 func (r *fakeTrainingRepository) SupersedePlansExcept(context.Context, uuid.UUID, uuid.UUID) error {
 	r.supersedeCalled = true
+	if r.supersedeErr == nil && r.otherPlan != nil {
+		r.otherPlan.Status = "superseded"
+	}
 	return r.supersedeErr
 }
 func (r *fakeTrainingRepository) GetOrCreateLog(context.Context, *model.TrainingPlan, time.Time) (*model.TrainingLog, error) {
@@ -180,6 +184,84 @@ func TestEnsurePlanForTreatmentIsIdempotent(t *testing.T) {
 	}
 	if !repo.supersedeCalled {
 		t.Fatal("idempotent recovery must re-run superseding cleanup")
+	}
+}
+
+func TestIndependentTrainingProjectionPreservesOtherActivePlanAndIdempotentRetry(t *testing.T) {
+	userID := uuid.New()
+	old := &model.TrainingPlan{ID: uuid.New(), UserID: userID, Status: "active"}
+	treatment := acceptedTreatment(userID)
+	repo := &fakeTrainingRepository{active: old, otherPlan: old}
+	svc := NewTrainingService(
+		repo, &fakeTrainingTreatmentService{accepted: treatment},
+		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
+	)
+
+	first, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
+	if err != nil || first == nil || first.TreatmentRevisionID == nil ||
+		*first.TreatmentRevisionID != treatment.Current.ID {
+		t.Fatalf("independent projection failed: plan=%#v err=%v", first, err)
+	}
+	if old.Status != "active" || repo.supersedeCalled {
+		t.Fatal("independent projection must not alter another active plan")
+	}
+	second, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
+	if err != nil || second == nil || second.ID != first.ID {
+		t.Fatalf("idempotent retry changed projection: plan=%#v err=%v", second, err)
+	}
+	if old.Status != "active" || repo.supersedeCalled {
+		t.Fatal("idempotent independent retry must not supersede unrelated plans")
+	}
+}
+
+func TestIndependentTrainingProjectionSkipsLegacySupersedeFailure(t *testing.T) {
+	userID := uuid.New()
+	treatment := acceptedTreatment(userID)
+	existing := &model.TrainingPlan{
+		ID: uuid.New(), UserID: userID, Status: "active",
+		TreatmentRevisionID: &treatment.Current.ID,
+	}
+	repo := &fakeTrainingRepository{
+		byRevision: existing, supersedeErr: errors.New("legacy supersede failure"),
+	}
+	svc := NewTrainingService(
+		repo, &fakeTrainingTreatmentService{accepted: treatment},
+		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
+	)
+	plan, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
+	if err != nil || plan == nil || plan.ID != existing.ID {
+		t.Fatalf("independent existing projection should be read-only: %#v %v", plan, err)
+	}
+	if repo.supersedeCalled || repo.created != nil {
+		t.Fatal("existing independent projection must not write or supersede")
+	}
+}
+
+func TestLegacyTrainingProjectionStillSupersedesByDefault(t *testing.T) {
+	userID := uuid.New()
+	other := &model.TrainingPlan{ID: uuid.New(), UserID: userID, Status: "active"}
+	treatment := acceptedTreatment(userID)
+	repo := &fakeTrainingRepository{otherPlan: other}
+	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment}, testTreatmentUnitOfWork{})
+	if _, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment); err != nil {
+		t.Fatal(err)
+	}
+	if !repo.supersedeCalled || other.Status != "superseded" {
+		t.Fatalf("default legacy projection must preserve existing behavior: called=%v status=%s",
+			repo.supersedeCalled, other.Status)
+	}
+}
+
+func TestIndependentTrainingProjectionRejectsUnacceptedRevision(t *testing.T) {
+	userID := uuid.New()
+	treatment := acceptedTreatment(userID)
+	treatment.Current.AcceptanceState = model.TreatmentAcceptanceProposed
+	repo := &fakeTrainingRepository{}
+	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
+		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+	plan, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
+	if err == nil || plan != nil || repo.created != nil || repo.supersedeCalled {
+		t.Fatalf("unaccepted revision was projected: plan=%#v err=%v", plan, err)
 	}
 }
 
