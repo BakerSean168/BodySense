@@ -6,17 +6,30 @@ root="$(cd "$(dirname "$0")/../.." && pwd)"
 image="pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a"
 docker image inspect "$image" >/dev/null
 socket_dir="$(mktemp -d /tmp/bs-tpd1-owner-XXXXXXXX)"
-chmod 0777 "$socket_dir"
+chmod 01777 "$socket_dir"
 container="bs-tpd1-owner-lock-$$-$RANDOM"
 cleanup() {
+  local exit_code="$?"
+  trap - EXIT
   if [[ -n "$container" ]]; then
     docker rm -f "$container" >/dev/null 2>&1 || true
   fi
   if [[ -d "$socket_dir" ]]; then
-    # Only our own mktemp directory is ever touched.
-    find "$socket_dir" -mindepth 1 -maxdepth 1 -type f -delete 2>/dev/null || true
-    rmdir "$socket_dir" 2>/dev/null || true
+    # The temporary directory was created by this script. PostgreSQL may
+    # leave Unix sockets on forced container shutdown; they are type=s,
+    # not ordinary files. Remove only the exact files in our own directory.
+    if ! find "$socket_dir" -mindepth 1 -maxdepth 1 \( -type f -o -type s \) -delete; then
+      echo 'TP-D1 fixture failed to remove its temporary socket files' >&2
+      exit_code=1
+    fi
+    if ! rmdir "$socket_dir"; then
+      echo 'TP-D1 fixture failed to remove its temporary socket directory' >&2
+      exit_code=1
+    else
+      echo 'TP_D1_EPHEMERAL_SOCKET_CLEANUP=PASS'
+    fi
   fi
+  exit "$exit_code"
 }
 trap cleanup EXIT
 docker run --rm --pull never -d --name "$container" --network none \

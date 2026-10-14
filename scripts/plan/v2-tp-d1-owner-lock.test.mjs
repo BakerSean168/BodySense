@@ -83,6 +83,8 @@ test("TP-D1 native fixture never exposes TCP or uses a shared database", () => {
   assert.match(native, /pgvector\/pgvector:pg18@sha256:[0-9a-f]{64}/);
   assert.match(native, /--pull never/);
   assert.match(native, /--network none/);
+  assert.match(native, /-type s/);
+  assert.match(native, /TP_D1_EPHEMERAL_SOCKET_CLEANUP=PASS/);
   assert.match(native, /listen_addresses=''/);
   assert.match(native, /socket_dir="[^"]*\/tmp\/bs-tpd1-owner-/);
   assert.match(
