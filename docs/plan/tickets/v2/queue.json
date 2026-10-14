@@ -39,22 +39,28 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "T3 host config approved and staged but active Agent Fabric Worker still denies project 67a21bd5-5929-468b-b6ea-e252a8b11e27; no normal safe service reload/model health verification"
+      "blockedReason": "T3 integration and INT-002 project authorizations fixed; physical model/provider health blocked: Pi llm-pm and kunyou-free auth invalid_state, Pi models list empty, DSH DeepSeek provider error, Kunyou checkpoint without assistant response. No T3 writer admitted."
     },
     {
       "id": "INT-002",
       "title": "Make stacked PR CI and integration promotion verifiable",
       "phase": "1",
-      "status": "queued",
+      "status": "in_progress",
       "dependsOn": ["INT-001"],
       "sf": "SF-90",
       "owner": "Integration CI Owner",
       "exclusiveResources": ["github-ci"],
       "document": "docs/plan/tickets/v2/INT-002.md",
       "threadId": null,
-      "projectId": null,
-      "worktree": null,
-      "acceptedSha": null
+      "projectId": "dec1b262-e9b8-4826-9b03-f13babd3e83e",
+      "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-ci-int002",
+      "acceptedSha": null,
+      "baseSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
+      "executionOwner": "ChatGPT Web GPT-6",
+      "implementationHead": "2fd44ea76a4eaeb11b59ff520181c953a1a01da5",
+      "reviewPr": 258,
+      "currentCiRun": "BakerSean168/BodySense/actions/runs/38522857495",
+      "ciAcceptance": "PENDING_EXACT_HEAD_BROWSER_CI"
     },
     {
       "id": "BS-OBS-001",
@@ -345,5 +351,7 @@
   "mainBaselineSha": "6bbc36acbb7ed842776098a60e5e8479765d0ee3",
   "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38519099798",
   "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38519934344",
-  "baselineFrozenAtUtc": "2026-10-14T06:14:14Z"
+  "baselineFrozenAtUtc": "2026-10-14T06:14:14Z",
+  "auditedAtUtc": "2026-10-14T06:43:07Z",
+  "postMergeMainSha": "1b8db6388beaa2dde57be0f4b803373ab91b2762"
 }
