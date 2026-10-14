@@ -8,6 +8,12 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { clearStructuredSafetyCapture } from "./support/safety";
 
+// The genuine consultation stream explicitly permits a 60s API request.
+// Playwright's default 30s test deadline would abort that allowed request
+// on a cold shared CI browser. Match the suite's bounded 90s full-run budget;
+// do not relax individual application assertions or mask failed responses.
+test.describe.configure({ timeout: 90_000 });
+
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
 async function expectJson<T>(response: APIResponse, label: string): Promise<T> {
@@ -315,7 +321,9 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
 
   await page.goto(`/consultation/${conversationId}?view=treatment`);
   await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
-  const trainingAction = page.getByRole("button", { name: "展开训练执行" });
+  const trainingAction = page
+    .getByTestId("training-window")
+    .getByRole("button", { name: "开始训练", exact: true });
   await expect(trainingAction).toBeVisible();
   await page.reload();
   await expect(trainingAction).toBeVisible();

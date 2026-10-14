@@ -204,6 +204,12 @@ jobs:
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
 
+      - name: Verify BodyFact atomic commits and HTTP round trips
+        working-directory: apps/api
+        env:
+          BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
+        run: go test -race ./internal/repository ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode).*Postgres$' -count=1 -v
+
   recovery-migrations-child:
     name: PostgreSQL 18 vNext recovery child
     needs: scope
@@ -358,6 +364,7 @@ jobs:
           JWT_SECRET_KEY: bodysense-ci-e2e-secret
           CORS_ORIGINS: http://127.0.0.1:5173
           AI_SERVICE_URL: http://127.0.0.1:18100
+          CONSULTATION_CHAMPION_CONFIGURATION_ID: consult-config-83b6a1cc70477c82
         run: |
           go run ./cmd/server > /tmp/bodysense-api.log 2>&1 &
           echo $! > /tmp/bodysense-api.pid

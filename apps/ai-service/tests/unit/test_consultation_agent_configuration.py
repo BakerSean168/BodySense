@@ -20,7 +20,10 @@ def test_default_consultation_configuration_is_repository_versioned_and_stable()
     assert config.configuration_id.startswith("consult-config-")
     assert len(config.configuration_id) == len("consult-config-") + 16
     assert not (CONFIG_ROOT / "consultation-v1.yaml").exists()
-    assert (CONFIG_ROOT / "consultation-v2.yaml").exists()
+    assert (CONFIG_ROOT / "consultation-v2.yaml").exists()  # pinned historical runs
+    assert (CONFIG_ROOT / "consultation-v3.yaml").exists()
+    assert config.configuration_id == "consult-config-83b6a1cc70477c82"
+    assert config.intake.policy_revision == "body-fact-intake-v1"
     assert get_consultation_configuration(config.configuration_id) == config
     assert get_default_consultation_configuration().configuration_id == config.configuration_id
 

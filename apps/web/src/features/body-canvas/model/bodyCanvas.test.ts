@@ -87,10 +87,21 @@ describe("Body Canvas keyboard contract", () => {
 
   it("maps visible single-key commands", () => {
     expect(canvasShortcut(event("b"))).toEqual({ type: "tool", tool: "brush" });
-    expect(canvasShortcut(event("2"))).toEqual({ type: "motion", motion: "run" });
+    expect(canvasShortcut(event("2"))).toEqual({
+      type: "motion",
+      motion: "run",
+    });
     expect(canvasShortcut(event("p"))).toEqual({
       type: "panel",
       panel: "treatment",
+    });
+    expect(canvasShortcut(event("i"))).toEqual({
+      type: "panel",
+      panel: "state",
+    });
+    expect(canvasShortcut(event("t"))).toEqual({
+      type: "panel",
+      panel: "trainer",
     });
     expect(canvasShortcut(event("Escape"))).toEqual({ type: "escape" });
   });

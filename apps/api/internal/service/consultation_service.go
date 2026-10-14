@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+// ErrConsultationNotFound deliberately does not disclose another owner's conversation.
+var ErrConsultationNotFound = errors.New("consultation not found")
 
 type consultationRepository interface {
 	Create(ctx context.Context, session *model.ConsultationSession) error
@@ -62,7 +66,7 @@ func (s *ConsultationService) verifyOwnership(ctx context.Context, conversationI
 		return fmt.Errorf("verify ownership: %w", err)
 	}
 	if conversation == nil {
-		return fmt.Errorf("conversation not found or access denied: %s", conversationID)
+		return ErrConsultationNotFound
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package stream
 
 import (
 	"encoding/json"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/bodysense/api/internal/dto"
@@ -155,5 +156,15 @@ func TestStreamWriter_SendNew_IncrementsSeq(t *testing.T) {
 	}
 	if w.nextSeq() != 3 {
 		t.Error("expected third seq to be 3")
+	}
+}
+
+func TestResumedWriterContinuesPersistedRunSequence(t *testing.T) {
+	writer := NewRuntime().NewWriterAfter(httptest.NewRecorder(), dto.StreamEventIDs{RunID: "existing-run"}, 13)
+	for _, expected := range []int{14, 15} {
+		event, err := writer.NewEvent("stream", "stream.done", dto.StreamEventIDs{}, map[string]any{}, "")
+		if err != nil || event.Seq != expected || event.IDs.RunID != "existing-run" {
+			t.Fatalf("event=%#v err=%v", event, err)
+		}
 	}
 }

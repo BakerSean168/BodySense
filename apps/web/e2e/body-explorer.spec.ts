@@ -95,7 +95,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     .getByRole("toolbar", { name: "身体画布工具" })
     .getByRole("button", { name: "精细解剖" })
     .click();
-  const anatomyDialog = page.getByRole("dialog");
+  const anatomyDialog = page.locator(".bc-anatomy-dialog");
   const bodyExplorer = anatomyDialog.getByRole("region", {
     name: "3D 身体探索",
   });
@@ -250,25 +250,58 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await regionSelect.selectOption("");
   await regionSelect.selectOption("shoulder.right");
   const heapBeforeTabs = await readUsedJsHeap(page);
-  for (let index = 0; index < 2; index += 1) {
-    await anatomyDialog.getByRole("button", { name: "评估", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "评估与依据" })).toBeVisible();
-    await anatomyDialog.getByRole("button", { name: "关闭当前面板" }).click();
+  const chatWindow = page.locator('.bc-business-window[data-window="chat"]');
+  const openAnatomy = async () => {
     await page
       .getByRole("toolbar", { name: "身体画布工具" })
       .getByRole("button", { name: "精细解剖" })
       .click();
-    await expect(bodyExplorer.getByText("Atlas 1.4.0", { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(
+      page.locator(".bc-anatomy-dialog").getByRole("region", { name: "3D 身体探索" }),
+    ).toBeVisible({ timeout: 30_000 });
+  };
+  for (let index = 0; index < 2; index += 1) {
+    // The anatomy overlay is modal, so the Dock and the tool rail are
+    // intentionally unreachable while it is open. Closing it through its own
+    // control must return the body stage, and re-opening it must not leak a
+    // second viewer instance.
+    await page
+      .locator(".bc-anatomy-dialog")
+      .getByRole("button", { name: "关闭当前面板" })
+      .click();
+    await expect(page.locator(".bc-anatomy-dialog")).toBeHidden();
+
+    await page.locator(".bc-dock").getByRole("button", { name: "综合诊断", exact: true }).click();
+    await expect(page.getByTestId("diagnosis-window")).toBeVisible();
+    await page
+      .locator('.bc-business-window[data-window="diagnosis"]')
+      .getByRole("button", { name: "关闭综合诊断" })
+      .click();
+
+    await openAnatomy();
+    await expect(
+      page.locator(".bc-anatomy-dialog").getByText("Atlas 1.4.0", { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
   }
+  // Leave the anatomy overlay closed before exercising the Chat window.
+  await page
+    .locator(".bc-anatomy-dialog")
+    .getByRole("button", { name: "关闭当前面板" })
+    .click();
+  await expect(page.locator(".bc-anatomy-dialog")).toBeHidden();
   const heapAfterTabs = await readUsedJsHeap(page);
 
-  await expect(page.getByLabel("身体上下文助手")).toBeHidden();
-  const askButtons = bodyExplorer.getByRole("button", { name: "询问 BodySense" });
+  await expect(chatWindow).toBeHidden();
+  // Reopen the anatomy overlay: the loop above closed it, and this step verifies
+  // that asking from the overlay hands the region context to the Chat window.
+  await openAnatomy();
+  const reopenedExplorer = page
+    .locator(".bc-anatomy-dialog")
+    .getByRole("region", { name: "3D 身体探索" });
+  const askButtons = reopenedExplorer.getByRole("button", { name: "询问 BodySense" });
   await askButtons.first().click();
-  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
-  await expect(anatomyDialog).toBeHidden();
+  await expect(chatWindow).toBeVisible();
+  await expect(page.locator(".bc-anatomy-dialog")).toBeHidden();
   await expect(page.getByText(/右肩/).last()).toBeVisible();
   await expect(
     page.getByRole("button", { name: "移除身体区域上下文" }),
@@ -278,7 +311,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     path: testInfo.outputPath("body-explorer-right-shoulder.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "收起助手" }).click();
+  await chatWindow.getByRole("button", { name: "关闭对话" }).click();
 
   expect(atlasRequests.length).toBeGreaterThan(0);
   const staticRequests = [...atlasRequests, ...bodyExplorerChunkRequests];
@@ -368,7 +401,8 @@ test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
     .getByRole("button", { name: "精细解剖" })
     .click();
 
-  await expect(page.getByRole("dialog").getByText("3D 身体视图暂时不可用")).toBeVisible({
+  const anatomyDialog = page.locator(".bc-anatomy-dialog");
+  await expect(anatomyDialog.getByText("3D 身体视图暂时不可用")).toBeVisible({
     timeout: 30_000,
   });
   await expect(

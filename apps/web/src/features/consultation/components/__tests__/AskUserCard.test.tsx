@@ -34,6 +34,74 @@ const numberQuestion: AskUserQuestion = {
 };
 
 describe("AskUserCard", () => {
+  it("does not offer unadvertised custom choices", () => {
+    render(
+      <AskUserCard
+        question={{
+          question: "Which side?",
+          answer_type: "single_choice",
+          options: ["left", "right"],
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("自定义输入")).toBeNull();
+  });
+  it("does not silently omit later required fields from the question", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AskUserCard
+        question={{
+          question: "Details",
+          answer_type: "text",
+          fields: [1, 2, 3, 4].map((i) => ({
+            key: `f${i}`,
+            label: `Field ${i}`,
+            answer_type: "text",
+            required: true,
+          })),
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+    for (const i of [1, 2, 3, 4])
+      await user.type(screen.getByPlaceholderText(`Field ${i}`), `Answer ${i}`);
+    await user.click(screen.getByText("提交"));
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Field 1: Answer 1；Field 2: Answer 2；Field 3: Answer 3；Field 4: Answer 4",
+      fields: {
+        f1: "Answer 1",
+        f2: "Answer 2",
+        f3: "Answer 3",
+        f4: "Answer 4",
+      },
+    });
+  });
+
+  it("labels the response control and scopes choice groups to each question", () => {
+    const { container } = render(
+      <>
+        <AskUserCard question={textQuestion} onSubmit={vi.fn()} />
+        <AskUserCard question={singleChoiceQuestion} onSubmit={vi.fn()} />
+        <AskUserCard question={singleChoiceQuestion} onSubmit={vi.fn()} />
+      </>,
+    );
+    expect(
+      screen.getByRole("textbox", { name: textQuestion.question }),
+    ).toBeDefined();
+    const cards = container.querySelectorAll(".ask-user-card");
+    expect(cards).toHaveLength(3);
+    const firstName = cards[1]
+      .querySelector('input[type="radio"]')
+      ?.getAttribute("name");
+    const secondName = cards[2]
+      .querySelector('input[type="radio"]')
+      ?.getAttribute("name");
+    expect(firstName).toBeTruthy();
+    expect(secondName).not.toBe(firstName);
+  });
+
   it("renders question text", () => {
     render(<AskUserCard question={textQuestion} onSubmit={vi.fn()} />);
     expect(screen.getByText("你的年龄是多少？")).toBeDefined();

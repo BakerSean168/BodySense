@@ -881,7 +881,10 @@ describe("ActiveTurnReducer", () => {
 
       expect(effects).toHaveLength(1);
       expect(effects[0].type).toBe("phase_changed");
-      expect(effects[0]).toMatchObject({ from: "collecting", to: "ready_for_analysis" });
+      expect(effects[0]).toMatchObject({
+        from: "collecting",
+        to: "ready_for_analysis",
+      });
     });
   });
 });
@@ -999,5 +1002,53 @@ describe("ActiveTurnReducer deterministic replay", () => {
     expect(result.state.runId).toBe("run-lost");
     expect(result.state.error).toContain("安全回收");
     expect(result.state.pendingInteraction).toBeNull();
+  });
+});
+
+describe("same-Run Ask User continuation", () => {
+  it("starts a new response segment without copying prior text or tools", () => {
+    let state = INITIAL_ACTIVE_TURN_STATE;
+    for (const event of [
+      makeEvent("message.created", {}, { message_id: "old-response" }),
+      makeEvent("message.text.delta", { delta: "Old response" }),
+      makeEvent(
+        "tool.call",
+        { tool: "search_knowledge", args: {} },
+        { tool_call_id: "old-tool" },
+      ),
+      makeEvent("run.interrupted"),
+      makeEvent("stream.done"),
+      makeEvent("run.resumed"),
+      makeEvent("message.created", {}, { message_id: "new-response" }),
+      makeEvent("message.text.delta", { delta: "New response" }),
+    ])
+      state = reduceActiveTurnEvent(state, event).state;
+    expect(state.runId).toBe("run-1");
+    expect(state.assistantMessageId).toBe("new-response");
+    expect(state.text).toBe("New response");
+    expect(state.toolCallsById).toEqual({});
+    expect(state.finalParts).toEqual([]);
+    const stale = makeEvent("message.text.delta", { delta: "duplicate" });
+    stale.seq = state.lastSeq;
+    expect(reduceActiveTurnEvent(state, stale).state).toBe(state);
+  });
+
+  it("an old answered event does not acknowledge a different pending question", () => {
+    const pending = makeEvent("state.interaction.required", {
+      interaction_id: "new-interaction",
+      question: { question: "Describe yourself", answer_type: "text" },
+      created_at: "2026-10-13T00:00:00Z",
+    });
+    const state = reduceActiveTurnEvent(
+      INITIAL_ACTIVE_TURN_STATE,
+      pending,
+    ).state;
+    const answered = makeEvent("state.interaction.answered", {
+      interaction_id: "old-interaction",
+      answer: { text: "different answer" },
+    });
+    const result = reduceActiveTurnEvent(state, answered).state;
+    expect(result.pendingInteraction?.id).toBe("new-interaction");
+    expect(result.pendingInteraction?.status).toBe("pending");
   });
 });

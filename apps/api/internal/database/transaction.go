@@ -38,3 +38,9 @@ func FromContext(ctx context.Context, fallback *gorm.DB) *gorm.DB {
 	}
 	return fallback.WithContext(ctx)
 }
+
+// HasTransaction reports whether application work is inside a coordinated transaction.
+func HasTransaction(ctx context.Context) bool {
+	tx, ok := ctx.Value(transactionContextKey{}).(*gorm.DB)
+	return ok && tx != nil
+}

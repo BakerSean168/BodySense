@@ -197,6 +197,10 @@ func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, jso
 	return f.safetyErr
 }
 
+func (f *fakeRuntimeBodyState) RecordSafetyEventWithReceipt(context.Context, uuid.UUID, json.RawMessage) (*model.BodyStateRevision, error) {
+	return nil, f.safetyErr
+}
+
 func (f *fakeRuntimeBodyState) RecordInteractionAnswer(context.Context, uuid.UUID, uuid.UUID, string, datatypes.JSON, json.RawMessage) error {
 	return f.interactionErr
 }

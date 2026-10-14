@@ -51,6 +51,7 @@ import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
+import { AskUserCard } from "./AskUserCard";
 import { useConsultationStore } from "@/stores/consultationStore";
 import {
   Message,
@@ -198,6 +199,9 @@ export function AssistantChatPanel({
         : undefined,
       onMessagePersisted,
       onStreamFinished,
+      // Refresh durable projections when a commit arrives, even if the same
+      // run then waits for Ask User rather than finishing the stream.
+      onBodyFactCommitted: onStreamFinished,
       onActiveTurnUpdate: (state: ActiveTurnState) => {
         activeTurnRef.current?.(state);
       },
@@ -482,7 +486,7 @@ function ChatContent({
     }
   }, [conversationId, draftMessage]);
 
-  const { markInteractionAnswered, hydrateTurn } = useActiveTurnActions();
+  const { hydrateTurn } = useActiveTurnActions();
   const activeTurn = useActiveTurnState();
   const isComposerLocked = selectIsComposerLocked(activeTurn);
 
@@ -601,10 +605,9 @@ function ChatContent({
 
   const handleResume = useCallback(
     async (interactionId: string, answer: unknown) => {
-      markInteractionAnswered(interactionId);
-      onResumeInteraction(threadRuntime, interactionId, answer);
+      await onResumeInteraction(threadRuntime, interactionId, answer);
     },
-    [markInteractionAnswered, onResumeInteraction, threadRuntime],
+    [onResumeInteraction, threadRuntime],
   );
 
   const handleInteractionAnswer = useCallback(
@@ -698,7 +701,7 @@ function ChatContent({
               </h2>
               <p className="mt-2 max-w-sm text-sm leading-6 text-white/42">
                 描述不适、体态或最近的变化。BodySense
-                会把对话与右侧身体状态持续关联。
+                会把明确的本人陈述记录到你的身体档案中。
               </p>
             </div>
           </ThreadPrimitive.Empty>
@@ -710,21 +713,14 @@ function ChatContent({
             }}
           />
 
-          <StreamingAssistantTurn
-            onInteractionSubmit={
-              hasPendingInteraction ? handleInteractionAnswer : undefined
-            }
-            isInteractionSubmitting={isSubmitting}
-            interactionError={interactionError}
-            onInteractionRetry={() => setInteractionError(null)}
-          />
+          <StreamingAssistantTurn pendingInteractionInComposer />
         </div>
       </ThreadPrimitive.Viewport>
 
-      <div className="shrink-0 bg-[linear-gradient(to_top,#171717_78%,rgba(23,23,23,0))] px-4 pb-4 pt-7 sm:px-5">
+      <div className="bc-chat-composer-area shrink-0 bg-[linear-gradient(to_top,#171717_78%,rgba(23,23,23,0))] px-4 pb-4 pt-7 sm:px-5">
         <div className="mx-auto w-full max-w-[760px]">
           {canCancelRun ? (
-            <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2">
+            <div className="bc-chat-run-status mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2">
               <p className="text-xs leading-5 text-white/48">
                 {activeTurn.status === "interrupted"
                   ? "正在等待你的补充信息。"
@@ -745,25 +741,37 @@ function ChatContent({
               {cancelRunError}
             </p>
           ) : null}
-          {hasPendingInteraction ? (
-            <p className="mb-2.5 px-1 text-xs text-white/42">
-              完成上方追问后可以继续输入。
-            </p>
-          ) : null}
-          <ChatInputArea
-            inputText={inputText}
-            setInputText={setInputText}
-            isComposerLocked={isComposerLocked}
-            handleKeyDown={handleKeyDown}
-            handleSend={handleSend}
-            textareaRef={textareaRef}
-            pendingImages={pendingImages}
-            onAddImages={handleAddImages}
-            onRemoveImage={handleRemoveImage}
-            isUploadingImage={isUploadingImage}
-            spatialContext={spatialContext}
-            onClearSpatialContext={onClearSpatialContext}
-          />
+          {hasPendingInteraction && activeTurn.pendingInteraction ? (
+            <div
+              className="bc-pending-composer max-h-[48dvh] overflow-y-auto"
+              data-testid="pending-interaction-composer"
+            >
+              <AskUserCard
+                key={activeTurn.pendingInteraction.id}
+                title="请补充这条信息"
+                question={activeTurn.pendingInteraction.question}
+                onSubmit={(answer) => void handleInteractionAnswer(answer)}
+                isSubmitting={isSubmitting}
+                error={interactionError}
+                onRetry={() => setInteractionError(null)}
+              />
+            </div>
+          ) : (
+            <ChatInputArea
+              inputText={inputText}
+              setInputText={setInputText}
+              isComposerLocked={isComposerLocked}
+              handleKeyDown={handleKeyDown}
+              handleSend={handleSend}
+              textareaRef={textareaRef}
+              pendingImages={pendingImages}
+              onAddImages={handleAddImages}
+              onRemoveImage={handleRemoveImage}
+              isUploadingImage={isUploadingImage}
+              spatialContext={spatialContext}
+              onClearSpatialContext={onClearSpatialContext}
+            />
+          )}
         </div>
       </div>
     </ThreadPrimitive.Root>

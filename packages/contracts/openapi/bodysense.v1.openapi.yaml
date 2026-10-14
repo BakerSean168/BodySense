@@ -9,6 +9,394 @@ info:
 servers:
 - url: /
 paths:
+  /api/v1/body-state/records:
+    post:
+      operationId: recordBodyFacts
+      summary: Atomically record explicit direct-user statements and return the original durable commit receipt on retry.
+      description: New approved assertion ledger. Authenticated owner and direct-edit provenance are assigned server-side. This does not accept diagnoses, arbitrary source identities, training-log bindings or correction authorization.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordBodyFactsRequest"
+      responses:
+        "200":
+          description: Committed batch receipt; not a claim that downstream outbox delivery completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactCommit"
+        "400": &a1
+          $ref: "#/components/responses/InvalidRequest"
+        "401": &a2
+          $ref: "#/components/responses/Unauthorized"
+        "409": &a3
+          $ref: "#/components/responses/RevisionConflict"
+        "500": &a4
+          $ref: "#/components/responses/InternalError"
+        "503": &a5
+          $ref: "#/components/responses/ValidationUnavailable"
+    get:
+      operationId: listBodyFactRecords
+      summary: Read bounded, whole-revision pages from the new assertion ledger.
+      description: This projection contains migrated/new BodyFact records only, not the still-unconverted legacy BodyState snapshot. Sources blocked from new use are excluded.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: At most twenty complete semantic batches, with a cursor for older batches.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactRecordPage"
+        "400": *a1
+        "401": *a2
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/observation-records:
+    post:
+      operationId: recordBodyObservation
+      summary: Store one explicit user-reported observation without claiming device or clinical verification.
+      description: Authenticated direct edit only. Raw value and original unit are never normalized or interpreted as a diagnosis. Provenance, source version, revision and receipt are assigned server-side; no legacy observation dual write.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordBodyObservationRequest"
+      responses:
+        "200":
+          description: Durable source-backed observation receipt; exact retry replays the original IDs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "409": *a3
+        "500": *a4
+        "503": *a5
+    get:
+      operationId: listBodyObservationRecords
+      summary: Read current source-available user reports from one BodyState revision.
+      description: This new user-report ledger is not the legacy medical observation table; absence of reports never implies clinical normality. Device/document candidates are not admitted here.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: At most 20 source-backed direct reports with a revision cursor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationRecordPage"
+        "400": *a1
+        "401": *a2
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/observation-records/{id}/correct:
+    post:
+      operationId: correctBodyObservationRecord
+      summary: Explicitly correct exactly one current user-reported observation, preserving its old source and identity.
+      description: Authenticated direct-user correction. Stores a new original self-report and links back to the superseded record; rejects identical replacements, stale revisions and clinical/device attribution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectBodyObservationRequest"
+      responses:
+        "200":
+          description: Durable amendment receipt. This does not represent a new health event or a verified clinical value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/observation-records/{id}/withdraw:
+    post:
+      operationId: withdrawBodyObservationRecord
+      summary: Withdraw one exact user-reported observation assertion without erasing original source history.
+      description: Explicit authenticated user withdrawal removes the assertion from current source-backed reads, preserving historical audit and independently authorized source erasure semantics.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBodyObservationRequest"
+      responses:
+        "200":
+          description: One durable withdrawal receipt; exact-key replay returns its original identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyObservationCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes:
+    post:
+      operationId: createBodyEpisode
+      summary: Explicit user command creating an organizational Episode from an already-asserted positive symptom Fact.
+      description: Uses only a server-verified existing self-reported symptom and its available source. Never accepts a title, inferred status, onset/resolution claim or AI authorization.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Atomic semantic revision and original durable receipt on exact replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+    get:
+      operationId: listBodyEpisodes
+      summary: Read source-backed symptom Episode identities from one BodyState revision snapshot.
+      description: Read-only. A clinical condition, inferred recovery or user-approved episode association cannot be created through this endpoint. Blocked or erased source-only identities are hidden, and negative symptoms do not imply an Episode ended.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Whole-creation-revision page of source-visible Episode identities and evidence-backed states.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodePage"
+        "400": *a1
+        "401": *a2
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}:
+    get:
+      operationId: getBodyEpisode
+      summary: Read one source-visible Episode without exposing any other owner's identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Evidence-scoped Episode detail, or not found if its original source is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRecord"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/facts:
+    post:
+      operationId: linkBodyEpisodeFact
+      summary: Explicitly associate one compatible symptom Fact to the specified current Episode.
+      description: Creates only an observation link after owner, availability, type, side, region, revision and unique-primary checks. No implicit disease state, resolution, merge, split or recurrence.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Committed source association; exact retry returns original IDs and revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/status:
+    post:
+      operationId: admitBodyEpisodeStatus
+      summary: User-authorized explicit symptom course evidence from one already-linked Fact.
+      description: The exact self-reported symptom Fact must still have an available original source and contain a typed explicit course report consistent with user-reported presence. Ordinary absence and unknown times do not automatically imply recovery. This command admits evidence, not an inferred medical diagnosis or guaranteed status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeAssociationRequest"
+      responses:
+        "200":
+          description: Evidence committed; reread projection, which may remain unknown if times conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeCommandReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/recurrences:
+    post:
+      operationId: reportBodyEpisodeRecurrence
+      summary: Direct user report that a distinct new Episode recurred after a source-backed completed Episode.
+      description: Requires original completed Episode and a distinct currently source-visible new Episode with exact primary user-authored positive symptom Fact; creates an organizational relation only, never clinical etiology or old Episode reopening.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BodyEpisodeRecurrenceRequest"
+      responses:
+        "200":
+          description: Durable and exactly replayable source-authorized historical relation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRecurrenceReceipt"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/episodes/{id}/relations:
+    get:
+      operationId: listBodyEpisodeRelations
+      summary: Source-visible authorized recurrence links touching one Episode at a stable BodyState revision.
+      description: Hide relations with blocked or withdrawn new basis Fact, and mark the old course needs_review if its explicit ending evidence was invalidated. This read never implies shared clinical cause.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: before_revision
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Revision-scoped, minimally sourced relation page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyEpisodeRelationPage"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/facts:
     post:
       operationId: addBodyStateFact
@@ -2432,6 +2820,82 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/body-state/records/{id}/correct:
+    post:
+      operationId: correctBodyFactRecord
+      summary: Correct one explicit user assertion while retaining its original provenance.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectBodyFactRecordRequest"
+      responses:
+        "200":
+          description: An actual atomic amendment receipt. Withdrawal does not erase historical evidence or resolve symptoms.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactCommit"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
+  /api/v1/body-state/records/{id}/withdraw:
+    post:
+      operationId: withdrawBodyFactRecord
+      summary: Withdraw one user assertion without claiming privacy erasure or symptom resolution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBodyFactRecordRequest"
+      responses:
+        "200":
+          description: An actual atomic amendment receipt. Withdrawal does not erase historical evidence or resolve symptoms.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyFactCommit"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
 components:
   parameters:
     ConversationId:
@@ -2520,6 +2984,1046 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    BodyFactTemporal:
+      type: object
+      additionalProperties: false
+      required:
+        - precision
+      properties:
+        precision:
+          type: string
+          enum:
+            - exact
+            - day
+            - range
+            - approximate
+            - unknown
+        start:
+          type: string
+          maxLength: 64
+        end:
+          type: string
+          maxLength: 64
+        original_expression:
+          type: string
+          maxLength: 500
+        timezone:
+          type: string
+          maxLength: 128
+    BodyFactSeverity:
+      type: object
+      additionalProperties: false
+      required:
+        - raw_value
+      properties:
+        raw_value:
+          type: string
+          minLength: 1
+          maxLength: 100
+        scale:
+          type: string
+          maxLength: 100
+        unit:
+          type: string
+          maxLength: 100
+    BodyFactSymptomDetails:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        symptom_type:
+          type: string
+          maxLength: 200
+        presence:
+          type: string
+          enum:
+            - present
+            - absent
+        laterality:
+          type: string
+          enum:
+            - left
+            - right
+            - bilateral
+            - not_applicable
+            - unknown
+        severity:
+          $ref: "#/components/schemas/BodyFactSeverity"
+        pattern:
+          type: string
+          enum:
+            - continuous
+            - intermittent
+            - unknown
+        triggers: &a1
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 300
+        relieving_factors: *a1
+        occurrence_context:
+          type: string
+          maxLength: 500
+        episode_course_report:
+          type: string
+          description: Explicit user-authored report about this symptom course. Not inferred from a generic present/absent statement; admitted separately by a user-authorized Episode command.
+          enum:
+            - explicit_current_report
+            - explicit_resolution
+    BodyFactHealthHistoryDetails:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        history_kind:
+          type: string
+          maxLength: 200
+        event_description:
+          type: string
+          maxLength: 500
+        outcome:
+          type: string
+          maxLength: 500
+        source_context:
+          type: string
+          maxLength: 500
+    BodyFactActivityDetails:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        activity_type:
+          type: string
+          maxLength: 200
+        duration:
+          type: string
+          maxLength: 200
+        volume:
+          type: string
+          maxLength: 200
+        intensity:
+          type: string
+          maxLength: 200
+    BodyFactLifestyleDetails:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        habit_type:
+          type: string
+          maxLength: 200
+        frequency:
+          type: string
+          maxLength: 200
+        pattern:
+          type: string
+          maxLength: 200
+        typical_duration:
+          type: string
+          maxLength: 200
+    BodyFactTrainingFeedbackDetails:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        feedback_kind:
+          type: string
+          maxLength: 200
+    RecordSymptomFactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+      properties:
+        kind: &a2
+          type: string
+          enum:
+            - symptom
+        statement: &a3
+          type: string
+          minLength: 1
+          maxLength: 2000
+        body_region_ids: &a4
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        temporal: &a5
+          $ref: "#/components/schemas/BodyFactTemporal"
+        details: &a6
+          $ref: "#/components/schemas/BodyFactSymptomDetails"
+    SymptomBodyFactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+        - id
+        - user_id
+        - subject
+        - source_evidence_id
+        - assertion_status
+        - created_revision
+        - recorded_at
+      properties:
+        kind: *a2
+        statement: *a3
+        body_region_ids: *a4
+        temporal: *a5
+        details: *a6
+        id: &a7
+          type: string
+          format: uuid
+        user_id: *a7
+        subject:
+          type: string
+          enum:
+            - self
+        source_evidence_id: *a7
+        assertion_status:
+          type: string
+          enum:
+            - asserted
+            - superseded
+            - withdrawn
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
+    RecordHealthHistoryFactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+      properties:
+        kind: &a8
+          type: string
+          enum:
+            - health_history
+        statement: &a9
+          type: string
+          minLength: 1
+          maxLength: 2000
+        body_region_ids: &a10
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        temporal: &a11
+          $ref: "#/components/schemas/BodyFactTemporal"
+        details: &a12
+          $ref: "#/components/schemas/BodyFactHealthHistoryDetails"
+    HealthHistoryBodyFactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+        - id
+        - user_id
+        - subject
+        - source_evidence_id
+        - assertion_status
+        - created_revision
+        - recorded_at
+      properties:
+        kind: *a8
+        statement: *a9
+        body_region_ids: *a10
+        temporal: *a11
+        details: *a12
+        id: *a7
+        user_id: *a7
+        subject:
+          type: string
+          enum:
+            - self
+        source_evidence_id: *a7
+        assertion_status:
+          type: string
+          enum:
+            - asserted
+            - superseded
+            - withdrawn
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
+    RecordActivityFactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+      properties:
+        kind: &a13
+          type: string
+          enum:
+            - activity
+        statement: &a14
+          type: string
+          minLength: 1
+          maxLength: 2000
+        body_region_ids: &a15
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        temporal: &a16
+          $ref: "#/components/schemas/BodyFactTemporal"
+        details: &a17
+          $ref: "#/components/schemas/BodyFactActivityDetails"
+    ActivityBodyFactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+        - id
+        - user_id
+        - subject
+        - source_evidence_id
+        - assertion_status
+        - created_revision
+        - recorded_at
+      properties:
+        kind: *a13
+        statement: *a14
+        body_region_ids: *a15
+        temporal: *a16
+        details: *a17
+        id: *a7
+        user_id: *a7
+        subject:
+          type: string
+          enum:
+            - self
+        source_evidence_id: *a7
+        assertion_status:
+          type: string
+          enum:
+            - asserted
+            - superseded
+            - withdrawn
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
+    RecordLifestyleFactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+      properties:
+        kind: &a18
+          type: string
+          enum:
+            - lifestyle
+        statement: &a19
+          type: string
+          minLength: 1
+          maxLength: 2000
+        body_region_ids: &a20
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        temporal: &a21
+          $ref: "#/components/schemas/BodyFactTemporal"
+        details: &a22
+          $ref: "#/components/schemas/BodyFactLifestyleDetails"
+    LifestyleBodyFactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+        - id
+        - user_id
+        - subject
+        - source_evidence_id
+        - assertion_status
+        - created_revision
+        - recorded_at
+      properties:
+        kind: *a18
+        statement: *a19
+        body_region_ids: *a20
+        temporal: *a21
+        details: *a22
+        id: *a7
+        user_id: *a7
+        subject:
+          type: string
+          enum:
+            - self
+        source_evidence_id: *a7
+        assertion_status:
+          type: string
+          enum:
+            - asserted
+            - superseded
+            - withdrawn
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
+    RecordTrainingFeedbackFactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+      properties:
+        kind: &a23
+          type: string
+          enum:
+            - training_feedback
+        statement: &a24
+          type: string
+          minLength: 1
+          maxLength: 2000
+        body_region_ids: &a25
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        temporal: &a26
+          $ref: "#/components/schemas/BodyFactTemporal"
+        details: &a27
+          $ref: "#/components/schemas/BodyFactTrainingFeedbackDetails"
+    TrainingFeedbackBodyFactRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - statement
+        - body_region_ids
+        - temporal
+        - details
+        - id
+        - user_id
+        - subject
+        - source_evidence_id
+        - assertion_status
+        - created_revision
+        - recorded_at
+      properties:
+        kind: *a23
+        statement: *a24
+        body_region_ids: *a25
+        temporal: *a26
+        details: *a27
+        id: *a7
+        user_id: *a7
+        subject:
+          type: string
+          enum:
+            - self
+        source_evidence_id: *a7
+        assertion_status:
+          type: string
+          enum:
+            - asserted
+            - superseded
+            - withdrawn
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+          description: Previous assertion replaced by an explicit correction; not a symptom recurrence or privacy erasure.
+    RecordBodyFactInput:
+      oneOf:
+        - $ref: "#/components/schemas/RecordSymptomFactInput"
+        - $ref: "#/components/schemas/RecordHealthHistoryFactInput"
+        - $ref: "#/components/schemas/RecordActivityFactInput"
+        - $ref: "#/components/schemas/RecordLifestyleFactInput"
+        - $ref: "#/components/schemas/RecordTrainingFeedbackFactInput"
+      discriminator:
+        propertyName: kind
+        mapping:
+          symptom: "#/components/schemas/RecordSymptomFactInput"
+          health_history: "#/components/schemas/RecordHealthHistoryFactInput"
+          activity: "#/components/schemas/RecordActivityFactInput"
+          lifestyle: "#/components/schemas/RecordLifestyleFactInput"
+          training_feedback: "#/components/schemas/RecordTrainingFeedbackFactInput"
+    BodyFactRecord:
+      oneOf:
+        - $ref: "#/components/schemas/SymptomBodyFactRecord"
+        - $ref: "#/components/schemas/HealthHistoryBodyFactRecord"
+        - $ref: "#/components/schemas/ActivityBodyFactRecord"
+        - $ref: "#/components/schemas/LifestyleBodyFactRecord"
+        - $ref: "#/components/schemas/TrainingFeedbackBodyFactRecord"
+      discriminator:
+        propertyName: kind
+        mapping:
+          symptom: "#/components/schemas/SymptomBodyFactRecord"
+          health_history: "#/components/schemas/HealthHistoryBodyFactRecord"
+          activity: "#/components/schemas/ActivityBodyFactRecord"
+          lifestyle: "#/components/schemas/LifestyleBodyFactRecord"
+          training_feedback: "#/components/schemas/TrainingFeedbackBodyFactRecord"
+    CorrectBodyFactRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+        - replacement
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: "#/components/schemas/RecordBodyFactInput"
+    WithdrawBodyFactRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+    RecordBodyFactsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+        - facts
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        facts:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/RecordBodyFactInput"
+    BodyFactCommit:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - revision
+        - revision_id
+        - event_id
+        - fact_ids
+        - committed_at
+      properties:
+        id: *a7
+        user_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        fact_ids:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyFactRecordPage:
+      type: object
+      additionalProperties: false
+      required:
+        - user_id
+        - current_revision
+        - facts
+        - has_more
+      properties:
+        user_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        facts:
+          type: array
+          maxItems: 400
+          items:
+            $ref: "#/components/schemas/BodyFactRecord"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    RecordBodyObservationInput:
+      type: object
+      additionalProperties: false
+      required: [kind, statement, observed_at]
+      properties:
+        kind:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: "^[a-z][a-z0-9_]{1,63}$"
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        raw_value:
+          type: string
+          maxLength: 120
+        raw_unit:
+          type: string
+          maxLength: 48
+        method:
+          type: string
+          maxLength: 240
+        measurement_context:
+          type: string
+          maxLength: 500
+        observed_at:
+          $ref: "#/components/schemas/BodyFactTemporal"
+    RecordBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, observation]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        observation:
+          $ref: "#/components/schemas/RecordBodyObservationInput"
+    CorrectBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, replacement]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: "#/components/schemas/RecordBodyObservationInput"
+    WithdrawBodyObservationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+    BodyObservationCommit:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, observation_id, source_evidence_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        observation_id: *a7
+        source_evidence_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyObservationSource:
+      type: object
+      additionalProperties: false
+      required: [kind, id, version]
+      properties:
+        kind:
+          type: string
+          enum: [user_report]
+        id: *a7
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyObservationRecord:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, kind, statement, observed_at, source, assertion_status, created_revision, recorded_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        kind:
+          type: string
+          minLength: 2
+          maxLength: 64
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        raw_value:
+          type: string
+          maxLength: 120
+        raw_unit:
+          type: string
+          maxLength: 48
+        method:
+          type: string
+          maxLength: 240
+        measurement_context:
+          type: string
+          maxLength: 500
+        observed_at:
+          $ref: "#/components/schemas/BodyFactTemporal"
+        source:
+          $ref: "#/components/schemas/BodyObservationSource"
+        assertion_status:
+          type: string
+          enum: [asserted]
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+    BodyObservationRecordPage:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, observations, has_more]
+      properties:
+        user_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        observations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/BodyObservationRecord"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyEpisodeRecurrenceRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, new_episode_id, fact_id]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: "^\\S(?:.*\\S)?$"
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        new_episode_id: *a7
+        fact_id: *a7
+    BodyEpisodeRecurrenceReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, relation_id, from_episode_id, to_episode_id, fact_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        relation_id: *a7
+        from_episode_id: *a7
+        to_episode_id: *a7
+        fact_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyEpisodeRelationReference:
+      type: object
+      additionalProperties: false
+      required: [id, from_episode_id, to_episode_id, kind, basis_fact_id, authorization_id, created_revision, review_state]
+      properties:
+        id: *a7
+        from_episode_id: *a7
+        to_episode_id: *a7
+        kind:
+          type: string
+          enum: [recurrence_reported]
+        basis_fact_id: *a7
+        authorization_id: *a7
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        review_state:
+          type: string
+          enum: [supported, needs_review]
+    BodyEpisodeRelationPage:
+      type: object
+      additionalProperties: false
+      required: [user_id, episode_id, current_revision, relations, has_more]
+      properties:
+        user_id: *a7
+        episode_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        relations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/BodyEpisodeRelationReference"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyEpisodeAssociationRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, fact_id]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: "^\\S(?:.*\\S)?$"
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        fact_id: *a7
+    BodyEpisodeCommandReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, operation, episode_id, fact_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id: *a7
+        user_id: *a7
+        operation:
+          type: string
+          enum: [create, link, status, recurrence]
+        episode_id: *a7
+        fact_id: *a7
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id: *a7
+        event_id: *a7
+        committed_at:
+          type: string
+          format: date-time
+    BodyEpisodeFactReference:
+      type: object
+      additionalProperties: false
+      required: [fact_id, role, association_method, is_primary, linked_revision]
+      properties:
+        fact_id: *a7
+        role:
+          type: string
+          enum: [onset, observation, change, resolution]
+        association_method:
+          type: string
+          enum: [explicit, inferred, user_corrected]
+        is_primary:
+          type: boolean
+        linked_revision:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyEpisodeStateProjection:
+      type: object
+      additionalProperties: false
+      required: [state, reason, basis_fact_ids, based_on_revision]
+      properties:
+        state:
+          type: string
+          enum: [unknown, ongoing, ended]
+        reason:
+          type: string
+          enum: [insufficient_evidence, explicit_current_report, explicit_resolution, conflicting_evidence]
+        state_as_of:
+          type: string
+          minLength: 1
+          description: Actual reported event date/timestamp, never a system-recorded time or an inferred present-day claim.
+        basis_fact_ids:
+          type: array
+          items: *a7
+        based_on_revision:
+          type: integer
+          format: int64
+          minimum: 0
+    BodyEpisodeRecord:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, symptom_type, body_region_ids, laterality, identity_status, created_revision, created_at, links, projection]
+      properties:
+        id: *a7
+        user_id: *a7
+        symptom_type:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body_region_ids:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+        laterality:
+          type: string
+          enum: [left, right, bilateral, not_applicable, unknown]
+        identity_status:
+          type: string
+          enum: [current, superseded, invalidated]
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyEpisodeFactReference"
+        projection:
+          $ref: "#/components/schemas/BodyEpisodeStateProjection"
+    BodyEpisodePage:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, episodes, has_more]
+      properties:
+        user_id: *a7
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        episodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyEpisodeRecord"
+        has_more:
+          type: boolean
+        next_before_revision:
+          type: integer
+          format: int64
+          minimum: 1
     AssessmentEvidenceSource:
       type: string
       enum: [body_state, report, posture_analysis]
@@ -5246,9 +6750,13 @@ components:
           $ref: '#/components/schemas/JsonValue'
         status: {type: string, enum: [running, succeeded, failed]}
         result:
-          $ref: '#/components/schemas/JsonValue'
+          anyOf:
+          - $ref: '#/components/schemas/JsonValue'
+          - type: 'null'
         error:
-          $ref: '#/components/schemas/JsonValue'
+          anyOf:
+          - $ref: '#/components/schemas/JsonValue'
+          - type: 'null'
         created_at: {type: string, format: date-time}
         started_at: {type: string, format: date-time}
         finished_at:

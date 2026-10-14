@@ -201,8 +201,11 @@ func TestCurrentConfigurationResolversRemainCanonical(t *testing.T) {
 	if got, err := AssessmentDecisionPolicyRevisionForConfiguration(defaultAssessmentConfigurationID); err != nil || got != AssessmentDecisionPolicyV2 {
 		t.Fatalf("Assessment policy=%q err=%v", got, err)
 	}
-	if got, err := ConsultationDecisionPolicyRevisionForConfiguration(defaultConsultationConfigurationID); err != nil || got != ConsultationDecisionPolicyV2 {
+	if got, err := ConsultationDecisionPolicyRevisionForConfiguration(defaultConsultationConfigurationID); err != nil || got != ConsultationDecisionPolicyV3 {
 		t.Fatalf("Consultation policy=%q err=%v", got, err)
+	}
+	if got, err := ConsultationDecisionPolicyRevisionForConfiguration("consult-config-7feb8ca2d5bfad5a"); err != nil || got != ConsultationDecisionPolicyV2 {
+		t.Fatalf("historical Consultation v2 policy=%q err=%v", got, err)
 	}
 	if got, err := PostureDecisionPolicyRevisionForConfiguration(defaultPostureConfigurationID); err != nil || got != PostureDecisionPolicyV1 {
 		t.Fatalf("Posture policy=%q err=%v", got, err)

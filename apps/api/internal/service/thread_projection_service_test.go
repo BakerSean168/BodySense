@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -189,5 +190,43 @@ func TestBuildInteractionHistoryExcludesPendingInteractions(t *testing.T) {
 	}
 	if history[0].ToolCallID != "tc-answered" {
 		t.Fatalf("expected answered tool call tc-answered, got %s", history[0].ToolCallID)
+	}
+}
+
+func TestBuildThreadProjectionScopesProviderToolIDToItsRun(t *testing.T) {
+	conversation, firstRun, secondRun := uuid.New(), uuid.New(), uuid.New()
+	messageA, messageB := uuid.New(), uuid.New()
+	at := time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)
+	event := func(run, message uuid.UUID, kind string, result any, offset int) model.RuntimeEvent {
+		ids, _ := json.Marshal(dto.StreamEventIDs{ConversationID: conversation.String(), RunID: run.String(), MessageID: message.String(), ToolCallID: "provider-call-1"})
+		payload := map[string]any{"tool": "search_knowledge"}
+		if kind == "tool.call" {
+			payload["args"] = map[string]any{"query": run.String()}
+		} else {
+			payload["result"] = result
+		}
+		raw, _ := json.Marshal(payload)
+		return model.RuntimeEvent{ConversationID: conversation, RunID: run, Type: kind, IDs: datatypes.JSON(ids), Payload: datatypes.JSON(raw), CreatedAt: at.Add(time.Duration(offset) * time.Second)}
+	}
+	events := []model.RuntimeEvent{
+		event(firstRun, messageA, "tool.call", nil, 0),
+		event(secondRun, messageB, "tool.call", nil, 1),
+		event(firstRun, messageA, "tool.result", map[string]any{"answer": "first only"}, 2),
+		event(secondRun, messageB, "tool.result", map[string]any{"error": "second run failed"}, 3),
+	}
+	calls := buildThreadProjectionToolCallsFromEvents(events)
+	if len(calls) != 2 {
+		t.Fatalf("same provider ID merged different runs: got %d rows", len(calls))
+	}
+	if calls[0].RunID != firstRun || calls[0].Status != "succeeded" || calls[0].MessageID == nil || *calls[0].MessageID != messageA {
+		t.Fatalf("first run overwritten: %#v", calls[0])
+	}
+	if calls[1].RunID != secondRun || calls[1].Status != "failed" || calls[1].MessageID == nil || *calls[1].MessageID != messageB {
+		t.Fatalf("second run rebound: %#v", calls[1])
+	}
+	for _, call := range calls {
+		if call.ToolCallID != "provider-call-1" {
+			t.Fatal("provider/tool resume identity was rewritten")
+		}
 	}
 }

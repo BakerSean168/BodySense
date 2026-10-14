@@ -60,49 +60,89 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
 
   await page.goto(`/consultation/${conversationData.conversations[0].id}`);
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await expect(page.getByLabel("身体上下文助手")).toBeHidden();
+  // Body-first: no business window is open until the user opens one, and that
+  // choice is mirrored into the route.
+  await expect(page.getByTestId("diagnosis-window")).toBeHidden();
 
-  await page.getByRole("button", { name: "打开身体助手" }).click();
-  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "对话", exact: true })
+    .click();
+  await expect(page).toHaveURL(/view=chat/);
   await page.reload();
-  await expect(page.getByLabel("身体上下文助手")).toBeVisible();
-  await page.getByRole("button", { name: "收起助手" }).click();
+  await expect(page).toHaveURL(/view=chat/);
+  await expect(
+    page.locator('.bc-business-window[data-window="chat"]'),
+  ).toBeVisible();
+  await page
+    .locator('.bc-business-window[data-window="chat"]')
+    .getByRole("button", { name: "关闭对话" })
+    .click();
 
-  await page.getByRole("button", { name: "评估与依据" }).click();
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "综合诊断", exact: true })
+    .click();
   await expect(page).toHaveURL(/view=diagnosis/);
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "评估与依据" })).toBeVisible();
-  await expect(page.getByText("还没有分析结果")).toBeVisible();
+  await expect(page.getByTestId("diagnosis-window")).toBeVisible();
+  // Penpot V2 replaces the old heading with a toolbar selector. Verify the
+  // actual labeled business window and the empty, non-clinical state.
+  const diagnosisWindow = page.locator(
+    '.bc-business-window[data-window="diagnosis"]',
+  );
+  await expect(
+    diagnosisWindow.getByRole("region", { name: "当前诊断内容" }),
+  ).toBeVisible();
+  const diagnosisPicker = diagnosisWindow.getByRole("combobox", {
+    name: "选择已确认病情",
+  });
+  await expect(diagnosisPicker).toBeDisabled();
+  // Native <option> elements have no visible bounding box when the select is
+  // closed. Assert their content, not an impossible visible-option state.
+  await expect(diagnosisPicker.locator("option")).toHaveText("暂无已确认病情");
+  await expect(diagnosisWindow.getByText("还没有已确认的病情")).toBeVisible();
+  await expect(
+    diagnosisWindow.getByRole("button", { name: "关闭综合诊断" }),
+  ).toBeVisible();
 
-  await page.getByRole("dialog").getByRole("button", { name: "身体" }).click();
-  await expect(page).toHaveURL(/view=state/);
-  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "个人档案", exact: true })
+    .click();
+  await expect(page).toHaveURL(/view=person/);
+  // The tab is the only place the category name appears.
+  await expect(page.getByRole("heading", { name: "身体记录" })).toBeHidden();
 
-  await page.getByRole("button", { name: "添加记录" }).click();
-  await page.getByPlaceholder("身体区域，例如：颈部、左肩、右肩").fill("颈部");
-  await page.getByPlaceholder("记录内容").fill("久坐后颈肩酸胀");
+  await page
+    .getByTestId("body-fact-records")
+    .getByRole("button", { name: "补充记录" })
+    .click();
+  await page.getByLabel("你的描述").fill("久坐后颈肩酸胀");
   await page.getByRole("button", { name: "保存记录" }).click();
 
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 
-  const bodyStateResponse = await request.get(`${apiBase}/api/v1/body-state`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const bodyStateResponse = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
   expect(bodyStateResponse.ok()).toBeTruthy();
   const bodyState = (await bodyStateResponse.json()) as {
     current_revision: number;
-    facts: Array<{ value: string }>;
+    facts: Array<{ statement: string }>;
   };
   expect(bodyState.current_revision).toBe(1);
   expect(bodyState.facts).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ value: "久坐后颈肩酸胀" }),
+      expect.objectContaining({ statement: "久坐后颈肩酸胀" }),
     ]),
   );
 
   await page.reload();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "我的身体状态" })).toBeVisible();
+  // The deep link reopens the same business window after a full reload.
+  await expect(page.getByTestId("person-window")).toBeVisible();
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 });
 
@@ -407,7 +447,9 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
 
   await page.goto(`/consultation/${conversationId}?view=treatment`);
   await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
-  const trainingAction = page.getByRole("button", { name: "展开训练执行" });
+  const trainingAction = page
+    .getByTestId("training-window")
+    .getByRole("button", { name: "开始训练", exact: true });
   await expect(trainingAction).toBeVisible();
   await page.reload();
   await expect(trainingAction).toBeVisible();

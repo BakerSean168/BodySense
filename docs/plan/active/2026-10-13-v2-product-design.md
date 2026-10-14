@@ -6,7 +6,13 @@ Status: ACTIVE / TRACK B. [Primary program](./2026-10-13-v2-parallel-master.md) 
 
 Product semantics are owned by [requirements](../../product/requirements.md), [interface](../../product/interface.md), [domain](../../product/domain/README.md) and [acceptance](../../product/acceptance.md), **not** by pixels or earlier UI code. Visual baseline is the editable [BodySense · Product Design Penpot Product page](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) (file `24d9d841-759d-81bc-8008-b6423250c2b8`, page `ed4c6ec0-8f91-80cb-8008-c1e744bad64b`).
 
-Preserve the 3D body as a persistent underlying canvas and floating Chat/Person/Diagnosis/TrainingPlan/Trainer windows; no return to the old left/right fixed split. [UI PR #244](https://github.com/BakerSean168/BodySense/pull/244), worktree `/home/dev/projects/bodysense-penpot-ui`, contains design-related source work but currently fails Governance and browser E2E. It is **a review candidate, not an accepted implementation**. At this checkpoint no new Penpot edits, screenshots or browser parity checks have been performed by this track.
+Preserve the 3D body as a persistent underlying canvas and floating Chat/Person/Diagnosis/TrainingPlan/Trainer windows; no return to the old left/right fixed split. [UI PR #244](https://github.com/BakerSean168/BodySense/pull/244), worktree `/home/dev/projects/bodysense-penpot-ui`, contains design-related source work but currently fails Governance and browser E2E. It is **a review candidate, not an accepted implementation**. The paragraph above describes the initial track baseline; the latest V2 Penpot implementation and limited Viewer sign-off evidence are in [Penpot live handoff](../../design/v2/penpot-handoff-checkpoint.md).
+
+## 2026-10-13 · Live Track B checkpoint (OPEN, not released)
+
+Official Penpot Product readback now confirms **36 shared Body Canvas scenes (27 desktop, 9 mobile), 162 saved local navigation actions, 18 Flow starts, 1 shared Person identity popover and 14 explicitly server-gated domain controls**. Penpot Viewer real clicks passed **17 cases / 48 navigation steps**, plus two identity overlay open/close steps. A bounded design-coordinate audit confirms 1280px desktop and 390px mobile window placement; it does **not** establish a full 390px device/browser visual pass. Nine right-side windows were repositioned to avoid 1280px overflow. For exact source IDs, click traces, unresolved problems and reproducible validators, see [editable-scene handoff](../../design/v2/penpot-handoff-checkpoint.md) and [live scene manifest](../../design/v2/penpot-live-scenes-manifest.json).
+
+All domain write and deployment gates **remain OPEN**: no synthetic Penpot interaction can stand in for an authorized Diagnosis commit, Training set completion, Chat Run acknowledgement or verified asset erasure. Pixel-accurate layout, independent scrolling, keyboard/focus and complete mobile Viewer QA remain pending.
 
 ## Parallel handoff and definition of done
 
@@ -58,3 +64,11 @@ Cross-window design obligations: active body-region selection; body model remain
 ## Design QA and checkpoint
 
 Initial status: existing Penpot base available, but **no V2 domain design gate is signed off**. PD-BASE-01 may proceed in parallel with DS-BS-01; PD-BS-01 can prototype early but only close after typed contract review and a real viewer walkthrough. Final visual polish (spacing, motion, icon consistency and broad responsive tuning) belongs to Track D **after** workflow and technical-state behavior are proven, not before.
+
+### Same-Run Ask User checkpoint
+
+The actual React pending question now replaces normal input; the same shared AskUserCard supports retry/draft, accessible labels, separate choice groups and all required fields. Desktop and 390px light/dark sheet screenshots were inspected; canvas tokens and the dark heading were corrected. This is implementation visual evidence, not editable Penpot V2 sign-off or a whole-Chat theme rewrite. See [bounded contract, acceptance and test evidence](./2026-10-13-ask-user-source-contract.md). The latest execution registry is [v2-handoff-state.json](./v2-handoff-state.json); all whole-domain/release gates remain open.
+
+### 2026-10-13 · Explicit Penpot kickoff handoff (not a Viewer sign-off)
+
+[BodyState ViewModel and Episode design brief](./2026-10-13-bodystate-viewmodel-episode-handoff.md) now lists the actual Records/Habits fields and all seven read states, plus Episode uncertain/evidence-backed states. It is sufficient to start editing the existing Product / Components / Foundations page without awaiting all migrations. The React window now consumes the bounded ViewModel and has component regressions for partial Habits history and inconsistent revision pages. **PD-BASE-01 and PD-BS-01 remain OPEN** until actual editable Penpot frames/flows, visual review and contract-to-frame acceptance; this code change did not modify the official Penpot design file.

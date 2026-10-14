@@ -49,6 +49,7 @@
     "static:publish:atlas": "node scripts/static-assets/publish-atlas-r2.mjs",
     "test:static-assets": "node --test scripts/static-assets/*.test.mjs",
     "test:delivery": "node --test scripts/delivery/*.test.mjs",
+    "test:body-fact-ledger": "bash scripts/validate-body-fact-ledger.sh",
     "plan:check": "node scripts/plan/validate-v2-parallel.mjs && node --test scripts/plan/*.test.mjs",
     "test:validation-lifecycle": "node --test scripts/validation/*.test.mjs",
     "curriculum:validate": "node scripts/learning/validate-curriculum.mjs && node scripts/learning/validate-placement.mjs",
@@ -76,7 +77,8 @@
     "quality:capacity": "bash scripts/quality/check-validation-capacity.sh",
     "quality:capacity:test": "bash scripts/quality/test-validation-capacity.sh",
     "quality:verify": "pnpm quality:architecture && pnpm quality:architecture:test && pnpm quality:capacity:test",
-    "curriculum:lab:graphql": "node --test scripts/learning/labs/part8-graphql-lab.test.mjs"
+    "curriculum:lab:graphql": "node --test scripts/learning/labs/part8-graphql-lab.test.mjs",
+    "test:body-fact-vertical": "bash scripts/validate-body-fact-vertical.sh"
   },
   "devDependencies": {
     "@apollo/client": "4.3.1",

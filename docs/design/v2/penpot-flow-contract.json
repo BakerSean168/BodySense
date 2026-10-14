@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "fileId": "24d9d841-759d-81bc-8008-b6423250c2b8",
+  "pageId": "ed4c6ec0-8f91-80cb-8008-c1e744bad64b",
+  "status": "DESIGN_FLOW_SPEC_NOT_PENPOT_VIEWER_SIGNOFF",
+  "rules": [
+    "All transitions involving persistence are conditional on an authoritative server acknowledgement",
+    "No unconditional navigation from selection or tool progress to medical or erasure success",
+    "The authoritative window underlay is the existing 3D body Canvas and Dock",
+    "Person media and reports share one UserAsset identity",
+    "All examples in these scenes are synthetic"
+  ],
+  "flows": [
+    {
+      "id": "PD-BASE-01",
+      "name": "Floating shell and dock",
+      "start": "Desktop / Person / Records",
+      "steps": [
+        {
+          "from": "Desktop / Person / Records",
+          "to": "Desktop / Diagnosis / Current",
+          "trigger": "open Diagnosis dock",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Diagnosis / Current",
+          "to": "Desktop / Training / Accepted",
+          "trigger": "open Training dock",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Training / Accepted",
+          "to": "Desktop / Chat / Draft",
+          "trigger": "open Chat dock",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Chat / Draft",
+          "to": "Desktop / Person / Records",
+          "trigger": "open Person dock",
+          "kind": "local"
+        }
+      ]
+    },
+    {
+      "id": "PD-BS-01",
+      "name": "Person records and episode",
+      "start": "Desktop / Person / Records",
+      "steps": [
+        {
+          "from": "Desktop / Person / Records",
+          "to": "Desktop / Body / Episode",
+          "trigger": "open symptom episode",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Body / Episode",
+          "to": "Desktop / Chat / Draft",
+          "trigger": "ask about episode",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Person / Habits",
+          "to": "Desktop / Person / Records",
+          "trigger": "switch Records tab",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Person / Records",
+          "to": "Desktop / Person / Habits",
+          "trigger": "switch Habits tab",
+          "kind": "local"
+        }
+      ],
+      "gaps": [
+        "Empty/loading/stale/error Person scenes and source unavailable Episode variants need separate reusable state variations before sign-off"
+      ]
+    },
+    {
+      "id": "PD-PC-01",
+      "name": "Single Chat and same-Run Ask User",
+      "start": "Desktop / Chat / Draft",
+      "steps": [
+        {
+          "from": "Desktop / Chat / Draft",
+          "to": "Desktop / Chat / Ask User",
+          "trigger": "run requests clarification",
+          "kind": "conditional",
+          "requires": "chat.current.run.state=waiting_for_user; identical Run id"
+        },
+        {
+          "from": "Desktop / Chat / Ask User",
+          "to": "Desktop / Chat / Answer selected",
+          "trigger": "select option without submitting",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Chat / Answer selected",
+          "to": "Desktop / Chat / Running",
+          "trigger": "submit bound answer",
+          "kind": "command",
+          "command": "chat.answer",
+          "requires": "backend acknowledged response; original run_id and interaction_id retained"
+        },
+        {
+          "from": "Desktop / Chat / Answer selected",
+          "to": "Desktop / Chat / Answer retry",
+          "trigger": "network failure while submitting",
+          "kind": "conditional",
+          "requires": "chat.current.composer.interaction.state=failed; draft retained"
+        },
+        {
+          "from": "Desktop / Chat / Answer retry",
+          "to": "Desktop / Chat / Running",
+          "trigger": "retry same answer",
+          "kind": "command",
+          "command": "chat.answer",
+          "requires": "same interaction id and idempotency key acknowledged; no new Run"
+        }
+      ],
+      "gaps": [
+        "Cannot hardwire chat.send to Ask User: Run may finish without asking; conditional branch only",
+        "Closing Chat must not cancel Run"
+      ]
+    },
+    {
+      "id": "PD-DX-01",
+      "name": "Diagnosis serial proposals and atomic commit",
+      "start": "Desktop / Diagnosis / Current",
+      "steps": [
+        {
+          "from": "Desktop / Diagnosis / Current",
+          "to": "Desktop / Chat / Diagnosis request",
+          "trigger": "open contextual Chat",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Chat / Diagnosis request",
+          "to": "Desktop / Diagnosis / Confirm first",
+          "trigger": "analysis yielded proposals",
+          "kind": "conditional",
+          "requires": "diagnosis.confirmation.state=awaiting_decision; no domain write yet"
+        },
+        {
+          "from": "Desktop / Diagnosis / Confirm first",
+          "to": "Desktop / Diagnosis / Confirm second",
+          "trigger": "record first acceptance",
+          "kind": "command",
+          "command": "diagnosis.decide_proposal",
+          "requires": "decision_recorded; no diagnosis commit"
+        },
+        {
+          "from": "Desktop / Diagnosis / Confirm first",
+          "to": "Desktop / Diagnosis / First rejected",
+          "trigger": "record first rejection",
+          "kind": "command",
+          "command": "diagnosis.decide_proposal",
+          "requires": "decision_recorded; rejected is not medical exclusion"
+        },
+        {
+          "from": "Desktop / Diagnosis / Confirm second",
+          "to": "Desktop / Diagnosis / Receipt",
+          "trigger": "finish accepted batch",
+          "kind": "conditional",
+          "requires": "diagnosis.confirmation.state=committed; real Diagnosis DomainCommitReceipt"
+        },
+        {
+          "from": "Desktop / Diagnosis / First rejected",
+          "to": "Desktop / Diagnosis / Update receipt",
+          "trigger": "finish update after rejection",
+          "kind": "conditional",
+          "requires": "diagnosis.confirmation.state=committed; real DomainCommitReceipt"
+        },
+        {
+          "from": "Desktop / Diagnosis / First rejected",
+          "to": "Desktop / Diagnosis / No changes",
+          "trigger": "close without adopted change",
+          "kind": "conditional",
+          "requires": "diagnosis.confirmation.state=closed_without_change; no commit"
+        },
+        {
+          "from": "Desktop / Diagnosis / Receipt",
+          "to": "Desktop / Diagnosis / Current two",
+          "trigger": "refresh after receipt",
+          "kind": "conditional",
+          "requires": "diagnosis.current.adoptedConditionCount=2 from fresh query"
+        },
+        {
+          "from": "Desktop / Diagnosis / Safety stopped",
+          "to": "Desktop / Safety / Restricted",
+          "trigger": "review active restriction",
+          "kind": "local"
+        }
+      ],
+      "gaps": [
+        "No proposal-to-receipt navigation from click alone",
+        "Q-19 final user sign-off remains pending",
+        "Do not give Diagnosis proposals Training's 7-day TTL"
+      ]
+    },
+    {
+      "id": "PD-TP-01",
+      "name": "Accepted plan, trainer and safety",
+      "start": "Desktop / Training / Accepted",
+      "steps": [
+        {
+          "from": "Desktop / Training / Accepted",
+          "to": "Desktop / Training / Proposal",
+          "trigger": "inspect plan proposal",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Training / Proposal",
+          "to": "Desktop / Training / Updated",
+          "trigger": "accept plan proposal",
+          "kind": "command",
+          "command": "training.decide_proposal",
+          "requires": "accepted-plan receipt verified; current accepted revision refreshed"
+        },
+        {
+          "from": "Desktop / Training / Accepted",
+          "to": "Desktop / Trainer / In progress",
+          "trigger": "start session",
+          "kind": "command",
+          "command": "trainer.start",
+          "requires": "session created AND server safety gate allows execution"
+        },
+        {
+          "from": "Desktop / Trainer / In progress",
+          "to": "Desktop / Trainer / Set recorded",
+          "trigger": "complete actual set",
+          "kind": "command",
+          "command": "trainer.complete_set",
+          "requires": "server records bound planExerciseId/setNumber completion receipt"
+        },
+        {
+          "from": "Desktop / Trainer / In progress",
+          "to": "Desktop / Trainer / Recovery",
+          "trigger": "pause/recover",
+          "kind": "command",
+          "command": "trainer.pause",
+          "requires": "persisted session remains in paused state; no synthetic elapsed time"
+        },
+        {
+          "from": "Desktop / Trainer / Recovery",
+          "to": "Desktop / Trainer / In progress",
+          "trigger": "resume after safety recheck",
+          "kind": "command",
+          "command": "trainer.resume",
+          "requires": "fresh safety gate and server resume acknowledgement"
+        },
+        {
+          "from": "Desktop / Trainer / Set recorded",
+          "to": "Desktop / Trainer / Ended",
+          "trigger": "finish actual session",
+          "kind": "command",
+          "command": "trainer.finish",
+          "requires": "server ended reason and last verified action history"
+        },
+        {
+          "from": "Desktop / Training / Accepted",
+          "to": "Desktop / Safety / Restricted",
+          "trigger": "scoped restriction detected",
+          "kind": "conditional",
+          "requires": "safety.current.gate.result=block or unavailable; cannot start"
+        }
+      ],
+      "gaps": [
+        "No auto-completion when navigating between sets",
+        "Pending training preview cannot be used as SessionLog",
+        "Safety is independent from plan status"
+      ]
+    },
+    {
+      "id": "PD-ASSET-01",
+      "name": "Asset identity, deletion and verified erasure",
+      "start": "Desktop / Person / Reports",
+      "steps": [
+        {
+          "from": "Desktop / Person / Media",
+          "to": "Desktop / Person / Reports",
+          "trigger": "switch classification facet",
+          "kind": "local"
+        },
+        {
+          "from": "Desktop / Person / Reports",
+          "to": "Desktop / Assets / Delete scope",
+          "trigger": "preview deletion scopes",
+          "kind": "command",
+          "command": "asset.preview_deletion",
+          "requires": "server returned exact scope with fingerprint"
+        },
+        {
+          "from": "Desktop / Assets / Delete scope",
+          "to": "Desktop / Assets / Original unavailable",
+          "trigger": "remove original only",
+          "kind": "command",
+          "command": "asset.remove_original",
+          "requires": "server confirms original unavailable; retained evidence distinguished"
+        },
+        {
+          "from": "Desktop / Assets / Delete scope",
+          "to": "Desktop / Assets / Erasure confirm",
+          "trigger": "review related health-data deletion",
+          "kind": "local",
+          "requires": "scope details available; no deletion"
+        },
+        {
+          "from": "Desktop / Assets / Erasure confirm",
+          "to": "Desktop / Assets / Erasure retry",
+          "trigger": "retryable incomplete cleanup",
+          "kind": "conditional",
+          "requires": "erasureJob.state=retryable_failed AND newUseBlocked=true"
+        },
+        {
+          "from": "Desktop / Assets / Erasure retry",
+          "to": "Desktop / Assets / Erasure completed",
+          "trigger": "retry succeeded",
+          "kind": "command",
+          "command": "asset.retry_erasure",
+          "requires": "erasureJob.state=completed; all scoped categories verified; verification receipt"
+        },
+        {
+          "from": "Desktop / Assets / Erasure completed",
+          "to": "Desktop / Person / Reports",
+          "trigger": "return to list",
+          "kind": "local"
+        }
+      ],
+      "gaps": [
+        "Erasure pending/propagating intermediary view is missing",
+        "Never route confirmation directly to completed state",
+        "Independent-source evidence must not be erased by association"
+      ]
+    }
+  ]
+}

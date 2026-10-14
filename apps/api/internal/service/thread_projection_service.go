@@ -259,8 +259,14 @@ func buildThreadProjectionMessages(messages []model.Message) []model.ThreadProje
 }
 
 func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []model.ThreadProjectionToolCall {
-	projectedByID := make(map[string]*model.ThreadProjectionToolCall)
-	orderedIDs := make([]string, 0)
+	// Raw provider IDs may repeat across runs. The durable event's server-owned
+	// RunID, not a model-supplied identity, completes the projection key.
+	type toolKey struct {
+		RunID      uuid.UUID
+		ToolCallID string
+	}
+	projectedByID := make(map[toolKey]*model.ThreadProjectionToolCall)
+	orderedIDs := make([]toolKey, 0)
 
 	for _, event := range events {
 		switch event.Type {
@@ -270,7 +276,8 @@ func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []mod
 				continue
 			}
 
-			entry, exists := projectedByID[ids.ToolCallID]
+			key := toolKey{RunID: event.RunID, ToolCallID: ids.ToolCallID}
+			entry, exists := projectedByID[key]
 			if !exists {
 				entry = &model.ThreadProjectionToolCall{
 					ToolCallID:     ids.ToolCallID,
@@ -284,8 +291,8 @@ func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []mod
 					StartedAt:      event.CreatedAt,
 					Metadata:       datatypes.JSON(`{}`),
 				}
-				projectedByID[ids.ToolCallID] = entry
-				orderedIDs = append(orderedIDs, ids.ToolCallID)
+				projectedByID[key] = entry
+				orderedIDs = append(orderedIDs, key)
 				continue
 			}
 
@@ -303,7 +310,8 @@ func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []mod
 				continue
 			}
 
-			entry, exists := projectedByID[ids.ToolCallID]
+			key := toolKey{RunID: event.RunID, ToolCallID: ids.ToolCallID}
+			entry, exists := projectedByID[key]
 			if !exists {
 				entry = &model.ThreadProjectionToolCall{
 					ToolCallID:     ids.ToolCallID,
@@ -316,8 +324,8 @@ func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []mod
 					StartedAt:      event.CreatedAt,
 					Metadata:       datatypes.JSON(`{}`),
 				}
-				projectedByID[ids.ToolCallID] = entry
-				orderedIDs = append(orderedIDs, ids.ToolCallID)
+				projectedByID[key] = entry
+				orderedIDs = append(orderedIDs, key)
 			}
 
 			entry.FinishedAt = &event.CreatedAt

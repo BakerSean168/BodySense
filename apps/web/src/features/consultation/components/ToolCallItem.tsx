@@ -5,11 +5,13 @@
  * StreamingTurnToolCalls (within the active turn, pre-normalized by selectors).
  */
 
+import { readBodyFactCommit } from "@/features/profile/services/bodyFactReceipt";
 import type { ToolCallInfo } from "../types/consultation";
 
 const TOOL_LABELS: Record<string, string> = {
   search_knowledge: "搜索知识库",
   extract_symptom_info: "提取症状信息",
+  record_body_state: "身体记录",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,6 +39,26 @@ export function ToolCallItem({ toolCall: tc }: ToolCallItemProps) {
   const label = TOOL_LABELS[tc.tool] || tc.tool;
   const summary = getToolSummary(tc.tool, tc.args);
   const isRunning = tc.status === "running";
+
+  if (tc.tool === "record_body_state") {
+    const receipt = readBodyFactCommit(tc.result);
+    return (
+      <div
+        className="flex items-center gap-2 text-xs"
+        role="status"
+        data-testid="body-fact-tool-status"
+      >
+        <span aria-hidden="true">{isRunning ? "…" : receipt ? "✓" : "!"}</span>
+        <span>
+          {isRunning
+            ? "正在核验身体记录"
+            : receipt
+              ? "身体记录已保存"
+              : "身体记录尚未确认保存"}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2 text-xs">

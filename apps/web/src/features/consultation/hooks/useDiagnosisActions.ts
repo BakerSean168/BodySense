@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { workspaceKeys } from "@/features/workspace";
+import { workspaceKeys } from "@/features/workspace/api/workspaceQueryOptions";
 import { errorMessage } from "@/lib/api-client";
 import { consultationApi } from "../services/consultationService";
 import { consultationKeys } from "../services/consultationQueryKeys";

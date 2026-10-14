@@ -36,29 +36,29 @@
       "id": "F-BODYFACT",
       "name": "Additive BodyFact ledger and typed API",
       "state": "in_progress",
-      "next": "ENG-BS-01",
-      "details": "Migrations 000002/000003 and generated API verified but not a full domain read/write vertical"
+      "next": "ENG-BS-02",
+      "details": "True Go/Python/Postgres/Person accepted user statement and direct amendments, plus source-bound Episode v8 manually authorized create/observation-link transactions; full BodyState/status/observation/hypothesis and legacy cutover open."
     },
     {
       "id": "F-CONTRACT",
       "name": "Canonical domain-to-view-model handoff",
       "state": "in_progress",
       "next": "DS-BASE-01",
-      "details": "Authoritative owners known; complete per-window read models not accepted"
+      "details": "Actual Person Records/Habits and typed source-backed Episode read plus exact direct-user create/link commit receipt contract. Complete medical/condition and other domain ViewModel remains open."
     },
     {
       "id": "F-PENPOT",
       "name": "Editable UI source and flow inventory",
       "state": "in_progress",
       "next": "PD-BASE-01",
-      "details": "Source exists; current code PR 244 has failed checks and requires review"
+      "details": "Reusable existing Penpot source and concrete BodyState view-model-to-component handoff available; no official Penpot Product edits or V2 Viewer sign-off in this execution."
     },
     {
       "id": "F-ACCEPTANCE",
       "name": "Per-domain executable integration matrix",
-      "state": "not_started",
+      "state": "in_progress",
       "next": "IR-BASE-01",
-      "details": "Existing product acceptance exists; cross-track E2E matrix not yet established"
+      "details": "Bounded BodyFact/Chat evidence matrix and actual E2E/concurrency cases established; other domain acceptance remains pending."
     },
     {
       "id": "F-RELEASE",
@@ -85,27 +85,27 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "GET/POST records is typed; complete Person Records/Habits/Episode projection and error contract not accepted"
+          "details": "Person Records/Habits live and provisional Episode source-selection UI, v9 explicit-status, v10 recurrence source relation. V11 adds whole-revision source-available user-report BodyObservation read contract and typed client without any final Penpot Observation UI; no completed all-domain ViewModel or hypothesis/ConcernGroup."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "Migration 000002 ledger plus 000003 message source tested; Episode and legacy cutover not implemented"
+          "details": "v1-v11 immutable SQL, v11 direct-user Observation owner-source composite FK and atomic receipts verified exact-SHA GitHub CI on c2076d1dd39d64afa0ec616813e722a94db657ad (12/12). New additive v12 amends exact user source-backed observation correction/withdrawal: server-owned operation/target owner FK, guarded data-loss down, immutable supersession source; PG18 v12 up/down-v11/replay-v12 PASS; real repo/HTTP/race rerun pending. Device/file admission, Hypothesis, ConcernGroup and all-domain schema OPEN."
         },
         "design": {
           "state": "in_progress",
           "next": "PD-BS-01",
-          "details": "Penpot shell exists; view-model-linked Records/Habits states and Viewer sign-off missing"
+          "details": "Official editable Penpot Product/components and navigation independently developed on PR #250; this engineering slice adds a deliberately provisional disclosure inside existing Person Records and no edits to design PR worktree. Pixel-level Episode UI/Viewer sign-off pending."
         },
         "engineering": {
           "state": "in_progress",
-          "next": "ENG-BS-01",
-          "details": "Source binding and typed browser adapter implemented; actual Python tool and Person window consumption pending"
+          "next": "ENG-BS-02",
+          "details": "v11 direct-user BodyObservation source/original capture, generated OpenAPI Go/TS/Zod and browser adapter exact-SHA GitHub CI 12/12 PASS. v12 adds strict correct/withdraw current direct observation with per-user idempotency, source-preserving successor and rollback, typed client; canonical OpenAPI/Postman 110 operations PASS, Web 75 files/464 Vitest tests, lint/typecheck/build PASS. Native PG18 and 17 browser tests PENDING. No final editable Penpot Observation UI, AI interpretation or global domain signoff."
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "No whole Python-to-Go-to-Person acceptance"
+          "details": "PR #253 exact SHA c2076d1dd39d64afa0ec616813e722a94db657ad CI 12/12 SUCCESS. v12 add two user-authorized observation amendment endpoints and PG18 migration v12 up/down/replay PASS; OpenAPI Go/TS/Zod Postman 110 operations PASS; Web 75 files/464 tests lint/typecheck/build PASS; native Go/PG18 and real browser v12 amendment flow pending. Staging/production and V2 whole-domain gates remain OPEN."
         }
       }
     },
@@ -123,29 +123,29 @@
           ]
         },
         "view_model": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-PC-01",
-          "details": "One Conversation, active Run, Ask User and retention projection not yet generated for V2"
+          "details": "Existing canonical answer and stream contracts now support original-Run sequenced continuation and a replacement composer. Singleton Conversation and retention projection still pending."
         },
         "database": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-PC-01",
-          "details": "Legacy multi-conversation storage remains; V2 singleton/retention migration pending"
+          "details": "000006 adds one exact accepted-answer resume receipt and durable source binding; ten new PostgreSQL race/rollback/tenant/pruning tests pass. Multi-conversation legacy tables and full retention still remain."
         },
         "design": {
           "state": "in_progress",
           "next": "PD-PC-01",
-          "details": "Chat prototype baseline exists; one-session/Ask User replacement states not accepted"
+          "details": "Shared AskUserCard replaces ordinary input; retry/draft, all fields, accessibility and 390px light/dark canvas styles tested/inspected. Editable Penpot single-session and complete Chat theme parity remain open."
         },
         "engineering": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "ENG-PC-01",
-          "details": "V2 one-Conversation/Ask User implementation pending"
+          "details": "V3 continues original Run from stored native interrupt; atomic answer/message/lease/milestones, stable retries and exact-source facts implemented. Singleton Conversation, full recovery and controlled raw history pruning remain open."
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-PC-01",
-          "details": "No singleton Chat V2 E2E"
+          "details": "Actual native LangGraph checkpoint test plus four real-server browser paths cover reload/answer/negative/forged/foreign/cancel/retry/mobile. No singleton Chat or complete retention acceptance claimed."
         }
       }
     },
@@ -273,5 +273,290 @@
         }
       }
     }
-  ]
+  ],
+  "boundedSlices": [
+    {
+      "id": "body-fact-ordinary-statement-vertical",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-vertical-contract.md",
+      "tests": [
+        "apps/web/e2e/body-fact-records.spec.ts",
+        "apps/api/internal/consultation/body_fact_test.go",
+        "apps/api/internal/repository/body_fact_message_repository_test.go",
+        "apps/ai-service/tests/unit/test_body_fact_capture.py"
+      ],
+      "configurationId": "consult-config-83b6a1cc70477c82",
+      "limits": [
+        "short contextual answer interpretation pending (full self-statements supported)",
+        "Episode/Observation/Hypothesis pending",
+        "full source-erasure and event consumers pending",
+        "final Penpot visual review pending",
+        "no staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-fact-explicit-amendments",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-vertical-contract.md",
+      "tests": [
+        "apps/api/internal/repository/body_fact_amendment_repository_test.go",
+        "apps/api/internal/transport/httpapi/body_fact_amendments_test.go",
+        "apps/api/internal/transport/httpapi/body_fact_thread_test.go",
+        "apps/web/src/features/body-canvas/components/BodyFactAmendment.test.tsx",
+        "apps/web/e2e/body-fact-records.spec.ts",
+        "apps/web/e2e/lifestyle-current-update.spec.ts"
+      ],
+      "limits": [
+        "Agent structured correction authorization pending",
+        "Episode/Observation/Hypothesis pending",
+        "withdrawal preserves history and is not erasure",
+        "fresh exact-SHA CI and production qualification required"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "run-scoped-tool-projection",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodyfact-integration-matrix.md",
+      "tests": [
+        "apps/api/internal/service/thread_projection_service_test.go",
+        "apps/api/internal/repository/thread_projection_repository_test.go",
+        "apps/web/src/features/consultation/runtime/threadMessageMapping.test.ts"
+      ],
+      "limits": [
+        "does not complete single Conversation migration",
+        "retention and short contextual answer interpretation remain open",
+        "exact-SHA CI required"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "v3-same-run-ask-user-source",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-ask-user-source-contract.md",
+      "tests": [
+        "apps/api/internal/model/interaction_resume_test.go",
+        "apps/api/internal/consultation/interaction_resume_postgres_test.go",
+        "apps/api/internal/consultation/body_fact_test.go",
+        "apps/ai-service/tests/unit/test_body_fact_answer_resume.py",
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts",
+        "apps/web/src/features/consultation/components/__tests__/AskUserCard.test.tsx",
+        "apps/web/e2e/ask-user-body-facts.spec.ts"
+      ],
+      "limits": [
+        "complete literal self-statements only; contextual answers are not promoted to health facts",
+        "singleton Conversation and three retention cursors pending",
+        "Episode/Observation/Hypothesis and exact Agent amendment decisions pending",
+        "full cross-domain erasure and scoped Safety V2 remain open",
+        "editable Penpot final sign-off and full Chat palette parity not claimed",
+        "no staging/production promotion; exact new-head CI pending"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "person-bodyfact-vm-episode-v7-foundation",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/model/bodyFactViewModel.test.ts",
+        "apps/web/src/features/body-canvas/components/BodyFactRecords.test.tsx",
+        "apps/api/internal/model/episode_test.go",
+        "apps/api/internal/repository/episode_constraints_postgres_test.go",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "Historical v7 foundation; subsequent bounded Episode read and manual source-validated create/link paths now separately tracked.",
+        "episode relations, merge/split, explicit user authorization and recurrence actions pending",
+        "Observation, user Hypothesis, ConcernGroup, legacy cleanup pending",
+        "Penpot editable V2 review not yet performed; handoff is a specification",
+        "no v2 staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-read-only-source-vertical",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/api/internal/repository/episode_read_repository_test.go",
+        "apps/api/internal/service/episode_read_service_test.go",
+        "apps/api/internal/transport/httpapi/episode_read_test.go",
+        "apps/api/internal/transport/httpapi/episode_read_integration_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "This historical read-only slice did not itself authorize mutations; separate direct-user create/link added later as episode-direct-user-association-v8.",
+        "Synthesized Episode fixture for HTTP; real user-authorized Episode association still unimplemented",
+        "No full target Episode ViewModel, relation history, Observation, user Hypothesis, ConcernGroup or verified controlled-copy erasure",
+        "Independent design worktree untouched; no editable Penpot final sign-off",
+        "No staging or production deployment"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-direct-user-association-v8",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-bodystate-viewmodel-episode-handoff.md",
+      "tests": [
+        "apps/api/internal/repository/episode_command_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_command_test.go",
+        "apps/api/internal/transport/httpapi/episode_command_integration_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh"
+      ],
+      "limits": [
+        "Direct authenticated user command only; AI High and Ask User contextual authorization not implemented",
+        "Only new positive-symptom identity and compatible observation link; never an ongoing/ended status or inferred onset/time",
+        "Browser typed adapter exists, but actual Person Episode create/link UI is not wired",
+        "Merge/split/unlink/recurrence relations and source-affecting status-claim admission still pending",
+        "Observation/Hypothesis/ConcernGroup/legacy replacement and full controlled-copy erasure pending",
+        "No Penpot editable official sign-off or staging/production release"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "person-episode-functional-ui-v1",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/model/bodyEpisodeAssociations.test.ts",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeSymptomDraft.test.ts",
+        "apps/web/src/features/body-canvas/components/BodyEpisodeAssociations.test.tsx",
+        "apps/web/e2e/body-episode-associations.spec.ts",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Functional Person Records disclosure is provisional; official Episode window/visual design is independently authored on PR #250",
+        "User-entered positive or negative symptom Fact is saved separately from explicitly authorized Episode create/link; no automatic AI association or recovery inference",
+        "No explicit ongoing/ended claim admission, recurrence, merge/split/unlink, full Episode relation/history/Observation/Hypothesis/ConcernGroup or legacy retirement",
+        "No staging/production deployment, full controlled-copy erasure sign-off or official Penpot final Viewer acceptance"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-person-read-error-retry-hardening",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-person-ui-integration.md",
+      "tests": [
+        "apps/web/src/features/body-canvas/components/BodyEpisodeAssociations.test.tsx",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeAssociations.test.ts",
+        "apps/web/src/features/body-canvas/model/bodyEpisodeSymptomDraft.test.ts",
+        "apps/web/e2e/body-episode-associations.spec.ts",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "4 red-before-green regressions cover initial fetch failure, cached stale fetch failure, immutable unknown Episode command and immutable unknown Fact command",
+        "Hook owns generated read/mutation transport, views are stateless; independent PR #250 owns final Episode Penpot screen",
+        "Full native/browser/CI acceptance remains pending on new commit; no schema or endpoint changes",
+        "No V2 wide-domain, legacy retirement, final visual or production release claim"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-explicit-status-source-admission-v9",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-status-admission.md",
+      "tests": [
+        "apps/api/internal/model/body_fact_test.go",
+        "apps/api/internal/repository/episode_status_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_status_http_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Explicit source report only in existing self symptom Fact; independent exact user POST required to admit to Episode status evidence; generic negative and unreviewed Chat interpretation denied",
+        "PostgreSQL v9 expands existing receipt operation; existing episode_state_evidence remains sole status basis, derived state not stored by client",
+        "Current Episode can project ongoing/ended as of source business time, but recurrence linking/authorization, long-term relations and conflict adjudication remain incomplete",
+        "The production Person/Penpot UI does not yet expose a signed-off status-admission flow; typed generated Web adapter exists only",
+        "Full domain Schema/ViewModel, Observation/Hypothesis/ConcernGroup, legacy retirement, cross-domain release and staging/production are not accepted"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "episode-direct-user-recurrence-relations-v10",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-episode-recurrence-relations.md",
+      "tests": [
+        "apps/api/internal/repository/episode_recurrence_repository_test.go",
+        "apps/api/internal/transport/httpapi/episode_recurrence_http_test.go",
+        "apps/web/src/features/profile/services/bodyEpisodeService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Only authenticated direct user can link a SOURCE-VERIFIED ended old Episode and a separate new current-source Episode; no implicit AI High or medical etiology",
+        "Both Episode IDs remain independent; no merge, split, implicit status transition, or copied symptom Fact",
+        "Old end withdrawal downgrades review; blocked/withdrawn new original source hides active relations; exact durable authorization and per-user revision remain immutable",
+        "Final Penpot V2 Episode recurrence interaction is separately authored under design PR #250; strict generated browser adapter is not UI signoff",
+        "Complete Episode reorganization and temporal resolution, Observation/Hypothesis/ConcernGroup, legacy retirement, controlled erasure and V2 production launch remain open"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-observation-direct-user-report-v11",
+      "status": "locally_verified",
+      "contract": "docs/plan/active/2026-10-13-body-observation-direct-report.md",
+      "tests": [
+        "apps/api/internal/model/body_observation_test.go",
+        "apps/api/internal/repository/body_observation_repository_test.go",
+        "apps/api/internal/transport/httpapi/body_observation_ledger_test.go",
+        "apps/web/src/features/profile/services/bodyObservationService.openapi.test.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Direct user self-reported original observation only; device/document/file/AI-origin, clinical verification, normalized measurement and diagnosis are deliberately unimplemented",
+        "One source-backed direct-edit record+id-only commit/revision/outbox, not a duplicate source in legacy body_state_observations or body_facts",
+        "Correction/withdrawal, historical versions, controlled original-source erasure and cross-domain evidence references are not yet user-facing v11 capabilities",
+        "Canonical generated Web adapter is not a Penpot UI; Track B editable design PR #250 remains independent",
+        "Full BodyState observation/hypothesis/ConcernGroup, safety, diagnosis, all-domain integration and staging/production gates remain open"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    },
+    {
+      "id": "body-observation-direct-amendments-v12",
+      "status": "in_progress",
+      "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
+      "tests": [
+        "apps/api/internal/repository/body_observation_amendment_repository_test.go",
+        "apps/api/internal/repository/body_observation_amendment_guards_test.go",
+        "apps/api/internal/transport/httpapi/body_observation_amendments_test.go",
+        "apps/web/src/features/profile/services/bodyObservationService.amendments.openapi.test.ts",
+        "apps/web/e2e/body-observation-amendments.spec.ts",
+        "scripts/validate-body-fact-ledger.sh",
+        "scripts/validate-body-fact-vertical.sh"
+      ],
+      "limits": [
+        "Direct user command only; correction of the old report and withdrawal of one exact assertion are not a later measurement or clinical recovery",
+        "Correction supersedes original source-linked row; withdrawal only hides current assertion, not private historical erasure",
+        "Global per-user exact idempotency and BodyState revision shared with v11 write",
+        "Only generated TS/Zod browser adapter; Penpot Track B UI independently owned",
+        "No device/document/lab/OCR admission, measurement normalization, BodyHypothesis, ConcernGroup, legacy retirement or production deployment"
+      ],
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+    }
+  ],
+  "updatedAtUtc": "2026-10-13T17:16:00Z",
+  "latestExecution": {
+    "owner": "ChatGPT-Web/ENG-BS-04-ObservationAmendments-20261013",
+    "baselineHead": "c2076d1dd39d64afa0ec616813e722a94db657ad",
+    "state": "in_progress_native_go_pg18_and_browser_pending",
+    "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
+    "nextTickets": ["DS-BS-04", "ENG-BS-04", "IR-BS-03", "PD-BS-01"],
+    "verification": {
+      "priorHeadExactShaCI": "c2076d1dd39d64afa0ec616813e722a94db657ad:12_of_12_SUCCESS",
+      "nativePostgres": "v12_full_up_down_v11_replay_v12_PASS;repository_HTTP_race_test_build_fix_and_rerun_pending",
+      "postmanAndGeneratedContracts": "pnpm_contracts_verify_POSTMAN_110_routes_PASS",
+      "currentFullWeb": "75_files_464_tests_lint_typecheck_build_PASS_uncached",
+      "currentNativeBrowser": "17_of_17_PASS_no_retries_real_Go_Postgres18_Redis_Python_React;resources_cleaned",
+      "newExactShaCI": "pending_push",
+      "currentPlanAndCodegen": "pnpm_plan_check_and_migration_v12_checksums_final_validation_pending",
+      "independentPenpotPR": "250_not_written",
+      "stagingProduction": "not_deployed",
+      "evidenceRoot": ".runtime/schema-first-v2-evidence/"
+    }
+  }
 }

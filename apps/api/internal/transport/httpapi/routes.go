@@ -78,7 +78,27 @@ func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInt
 }
 
 func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
-	// Longitudinal BodyState (ADR 0004).
+	// Approved assertion ledger, protected by the same authenticated owner boundary.
+	protected.POST("/body-state/records", wrapper.RecordBodyFacts)
+	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
+	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
+	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
+	// New source-backed BodyObservation ledger, distinct from legacy observations.
+	protected.POST("/body-state/observation-records", wrapper.RecordBodyObservation)
+	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)
+	protected.POST("/body-state/observation-records/:id/correct", wrapper.CorrectBodyObservationRecord)
+	protected.POST("/body-state/observation-records/:id/withdraw", wrapper.WithdrawBodyObservationRecord)
+	// Owner-authorized explicit Episode mutations and source-backed reads;
+	// AI-driven high-confidence association has no public bypass route.
+	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)
+	protected.POST("/body-state/episodes/:id/facts", wrapper.LinkBodyEpisodeFact)
+	protected.POST("/body-state/episodes/:id/status", wrapper.AdmitBodyEpisodeStatus)
+	protected.POST("/body-state/episodes/:id/recurrences", wrapper.ReportBodyEpisodeRecurrence)
+	protected.GET("/body-state/episodes/:id/relations", wrapper.ListBodyEpisodeRelations)
+	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
+	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
+
+	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
 	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
 	protected.GET("/body-state", wrapper.GetBodyState)
 	protected.POST("/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)

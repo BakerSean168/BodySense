@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
+import { readBodyFactCommit } from "@/features/profile/services/bodyFactReceipt";
 import {
   useLocalRuntime,
   type ChatModelAdapter,
@@ -72,6 +74,7 @@ export interface ConsultationAdapterOptions {
   onActiveTurnUpdate?: (state: ActiveTurnState) => void;
   /** Called when the stream has fully completed or errored/aborted. */
   onStreamFinished?: () => void;
+  onBodyFactCommitted?: () => void;
 }
 
 export function useAssistantChatRuntime(
@@ -86,11 +89,13 @@ export function useAssistantChatRuntime(
   // Ref to stabilize resumeInteraction — avoids re-creating on every render
   type StreamRunFn = (
     startRequest: () => Promise<Response>,
+    preserveUnstartedState?: boolean,
   ) => AsyncGenerator<ChatModelRunResult>;
   const streamConsultationRunRef = useRef<StreamRunFn | null>(null);
 
   async function* streamConsultationRun(
     startRequest: () => Promise<Response>,
+    preserveUnstartedState = false,
   ): AsyncGenerator<ChatModelRunResult> {
     let streamError: Error | null = null;
     let streamFinished = false;
@@ -191,7 +196,22 @@ export function useAssistantChatRuntime(
       }
     }
 
+    const receivedFactCommits = new Set<string>();
     function dispatch(event: StreamEvent) {
+      if (
+        event.type === "tool.result" &&
+        event.payload.tool === "record_body_state"
+      ) {
+        const receipt = readBodyFactCommit(event.payload.result);
+        if (
+          receipt &&
+          receipt.user_id === useAuthStore.getState().user?.id &&
+          !receivedFactCommits.has(receipt.id)
+        ) {
+          receivedFactCommits.add(receipt.id);
+          optionsRef.current.onBodyFactCommitted?.();
+        }
+      }
       if (typeof event.seq === "number") {
         maxSeq = Math.max(maxSeq, event.seq);
       }
@@ -508,7 +528,7 @@ export function useAssistantChatRuntime(
       optionsRef.current.onStreamFinished?.();
       if (
         reducerState.status === "completed" ||
-        reducerState.status === "idle"
+        (reducerState.status === "idle" && !preserveUnstartedState)
       ) {
         optionsRef.current.onActiveTurnUpdate?.(resetActiveTurnState());
       }
@@ -583,33 +603,66 @@ export function useAssistantChatRuntime(
     initialMessages,
   });
 
+  const resumeRequest = useRef<{
+    conversationId: string;
+    interactionId: string;
+    content: string;
+    requestId: string;
+  } | null>(null);
+
   const resumeInteraction = useCallback(
     (
       threadRuntime: ConsultationThreadController,
       interactionId: string,
       answer: unknown,
-    ) => {
+    ): Promise<void> => {
+      const content = JSON.stringify(answer);
+      if (
+        resumeRequest.current?.conversationId !== conversationId ||
+        resumeRequest.current.interactionId !== interactionId ||
+        resumeRequest.current.content !== content
+      ) {
+        resumeRequest.current = {
+          conversationId,
+          interactionId,
+          content,
+          requestId: crypto.randomUUID(),
+        };
+      }
+      const requestId = resumeRequest.current.requestId;
       setIsStreaming(true);
-      threadRuntime.resumeRun({
-        parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
-        stream: async function* () {
-          const runFn = streamConsultationRunRef.current;
-          if (!runFn) {
-            throw new Error(
-              "streamConsultationRun not initialized — resumeInteraction called before first render",
-            );
-          }
-          yield* runFn(() =>
-            consultationApi.resumeInteractionStream(
-              conversationId,
-              interactionId,
-              {
-                requestId: crypto.randomUUID(),
-                answer,
-              },
-            ),
-          );
-        },
+      return new Promise<void>((resolve, reject) => {
+        try {
+          threadRuntime.resumeRun({
+            parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
+            stream: async function* () {
+              try {
+                const runFn = streamConsultationRunRef.current;
+                if (!runFn)
+                  throw new Error("Conversation runtime is not ready.");
+                yield* runFn(
+                  () =>
+                    consultationApi.resumeInteractionStream(
+                      conversationId,
+                      interactionId,
+                      { requestId, answer },
+                    ),
+                  true,
+                );
+                resolve();
+              } catch (error) {
+                // The pending composer owns retry feedback. An unacknowledged
+                // HTTP failure must not fabricate an answered interaction.
+                reject(error);
+              } finally {
+                setIsStreaming(false);
+              }
+            },
+          });
+        } catch (error) {
+          setIsStreaming(false);
+          reject(error);
+        }
       });
     },
     [conversationId],

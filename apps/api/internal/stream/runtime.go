@@ -25,8 +25,14 @@ type StreamWriter struct {
 
 // NewWriter creates a StreamWriter bound to an HTTP response and base IDs.
 func (r *Runtime) NewWriter(w http.ResponseWriter, baseIDs dto.StreamEventIDs) *StreamWriter {
+	return r.NewWriterAfter(w, baseIDs, 0)
+}
+
+// NewWriterAfter continues the same Run after committed resume milestones.
+// Previously persisted events keep their sequence; new events start after it.
+func (r *Runtime) NewWriterAfter(w http.ResponseWriter, baseIDs dto.StreamEventIDs, lastSeq int) *StreamWriter {
 	sse := NewSSEWriter(w)
-	outSeq := 0
+	outSeq := max(0, lastSeq)
 	nextSeq := func() int {
 		outSeq++
 		return outSeq

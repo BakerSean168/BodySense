@@ -172,17 +172,17 @@ The digest is computed over a canonical representation excluding the `digest` fi
 
 Initial policy classes:
 
-| Risk | Typical changes | PR policy |
-| --- | --- | --- |
-| `docs` | `docs/**`, prose-only metadata | governance only |
-| `web` | React/UI/static frontend code | Web + contracts as required |
-| `api` | Go service/application/domain | API + contracts |
-| `ai` | Python Agent/runtime/prompts/evals | AI + contracts/eval |
-| `database` | migrations, durable schemas, storage semantics | API + database + required cross-service tests |
-| `runtime` | Docker, deployment, model gateway, shared config | full |
-| `contract` | shared API/SSE/tool/domain contracts | Web + API + AI + experience |
-| `root` | lockfiles, Nx/toolchain, CI control plane | full |
-| `release` | release/deploy/runtime packaging | full + release contract validation |
+| Risk       | Typical changes                                  | PR policy                                     |
+| ---------- | ------------------------------------------------ | --------------------------------------------- |
+| `docs`     | `docs/**`, prose-only metadata                   | governance only                               |
+| `web`      | React/UI/static frontend code                    | Web + contracts as required                   |
+| `api`      | Go service/application/domain                    | API + contracts                               |
+| `ai`       | Python Agent/runtime/prompts/evals               | AI + contracts/eval                           |
+| `database` | migrations, durable schemas, storage semantics   | API + database + required cross-service tests |
+| `runtime`  | Docker, deployment, model gateway, shared config | full                                          |
+| `contract` | shared API/SSE/tool/domain contracts             | Web + API + AI + experience                   |
+| `root`     | lockfiles, Nx/toolchain, CI control plane        | full                                          |
+| `release`  | release/deploy/runtime packaging                 | full + release contract validation            |
 
 Multiple categories collapse upward to the safest applicable risk.
 
@@ -267,15 +267,15 @@ required evidence existence
 
 Truth table:
 
-| Policy | Child | Oracle |
-| --- | --- | --- |
-| disabled | skipped/not-created | PASS |
-| enabled | success | PASS |
-| enabled | failure | FAIL |
-| enabled | cancelled | FAIL |
-| enabled | skipped | FAIL |
-| enabled | missing | FAIL |
-| detector/manifest invalid | any | FAIL |
+| Policy                    | Child               | Oracle |
+| ------------------------- | ------------------- | ------ |
+| disabled                  | skipped/not-created | PASS   |
+| enabled                   | success             | PASS   |
+| enabled                   | failure             | FAIL   |
+| enabled                   | cancelled           | FAIL   |
+| enabled                   | skipped             | FAIL   |
+| enabled                   | missing             | FAIL   |
+| detector/manifest invalid | any                 | FAIL   |
 
 The first migration stage runs Oracles in shadow mode while existing required checks remain authoritative.
 
@@ -344,6 +344,35 @@ Retagging/promotion must preserve digest identity. A release workflow must not s
 After candidate publication and complete main success, a staging promotion moves all four `staging-latest` pointers to that candidate set.
 
 Partial registry pointer updates may occur transiently. The staging watcher treats any mixed revision set as ineligible and waits.
+
+### 8.1.1 V2 staging-promotion admission (2026-10-14)
+
+**Main integration is not an authorization to deploy an unfinished V2 product.**
+`Publish Main Candidate` still runs after an exact-SHA successful main CI and
+publishes the immutable revision-scoped atlas/Web assets and all four candidate
+images/manifests. The separate `staging-readiness` job evaluates the
+**same checkout's** `docs/plan/active/v2-handoff-state.json` with
+`scripts/delivery/v2-staging-readiness.mjs`. Its `eligible` output gates **only**
+`promote-staging`, the job that changes the four mutable `staging-latest`
+tags. The existing exact-main freshness recheck remains in place as a second
+independent guard.
+
+Promotion requires **both** (a) all five approved V2 domains' six gates
+(`business/view_model/database/design/engineering/integration`) marked
+`ready` with reproducible proof, plus the non-circular Product/BodyFact/
+Contract/Penpot/Acceptance foundations, and (b) the explicit repository
+Actions variable `BODYSENSE_V2_STAGING_PROMOTION_ENABLED=true`. Undefined,
+malformed, partial, or not-approved status **fails closed**. Do not enable the
+variable until the unique handoff register has been independently accepted
+and the actual GCP staging resources and rollback are qualified.
+
+A successful PR/main CI or `main` merge **does not** flip that variable or
+promote staging. To re-enable future promotion, complete the approved domain
+acceptance and repository review, then set the explicit Actions variable.
+Before such a change, inspect the exact-SHA CI and candidate manifest; never
+temporarily bypass the readiness job or re-tag `staging-latest` out-of-band.
+Production remains governed by its separate published Release and explicit
+`Deploy Production` workflow.
 
 ### 8.2 GCP watcher
 

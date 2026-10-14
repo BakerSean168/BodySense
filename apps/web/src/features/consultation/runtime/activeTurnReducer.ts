@@ -130,8 +130,8 @@ export function reduceActiveTurnEvent(
   event: StreamEvent,
 ): ReduceResult {
   // Public seq has one owner (Go StreamWriter / transactional OOB allocator).
-  // Compare only within the same run; a resumed run has a new run_id and starts
-  // again at seq=1 while the logical LangGraph thread may continue.
+  // Compare only within the same Run. V3 resumes keep the Run ID and continue
+  // its sequence; explicit historical continuations may still have a new ID.
   const eventRunId = event.ids.run_id || current.runId;
   const sameSequenceRun =
     eventRunId !== null && eventRunId === current.sequenceRunId;
@@ -226,7 +226,23 @@ export function reduceActiveTurnEvent(
 
     case "message.created": {
       const messageId = event.ids.message_id || "";
-      next = { ...current, assistantMessageId: messageId, status: "streaming" };
+      // A resumed Run can own several response segments. Never concatenate the
+      // prior segment's text, tools or sources into the new assistant message.
+      const newSegment = current.assistantMessageId !== messageId;
+      next = {
+        ...current,
+        ...(newSegment
+          ? {
+              text: "",
+              toolCallsById: {},
+              citationsByKey: {},
+              knowledgeGapsByKey: {},
+              finalParts: [],
+            }
+          : {}),
+        assistantMessageId: messageId,
+        status: "streaming",
+      };
       break;
     }
 
@@ -387,13 +403,14 @@ export function reduceActiveTurnEvent(
       const payload = event.payload;
       next = {
         ...current,
-        pendingInteraction: current.pendingInteraction
-          ? {
-              ...current.pendingInteraction,
-              status: "answered",
-              answer: payload.answer,
-            }
-          : null,
+        pendingInteraction:
+          current.pendingInteraction?.id === payload.interaction_id
+            ? {
+                ...current.pendingInteraction,
+                status: "answered",
+                answer: payload.answer,
+              }
+            : current.pendingInteraction,
       };
       effects.push({
         type: "interaction_answered",

@@ -29,6 +29,10 @@ type bodyStateFactService interface {
 // HTTP transport types. Generated OpenAPI models stop here and are translated
 // into domain models before service execution.
 type PublicServer struct {
+	bodyFacts                bodyFactApplication
+	bodyObservations         bodyObservationApplication
+	episodes                 episodeReadApplication
+	episodeCommands          episodeCommandApplication
 	bodyState                bodyStateFactService
 	bodyStateRoutes          bodyStateRouteService
 	healthWorkspace          healthWorkspaceService

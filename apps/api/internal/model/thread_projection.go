@@ -69,7 +69,7 @@ func (ThreadProjectionMessage) TableName() string {
 type ThreadProjectionToolCall struct {
 	ToolCallID     string         `gorm:"column:tool_call_id;type:text;primaryKey" json:"tool_call_id"`
 	ConversationID uuid.UUID      `gorm:"type:uuid;not null;index" json:"conversation_id"`
-	RunID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"run_id"`
+	RunID          uuid.UUID      `gorm:"type:uuid;not null;index;primaryKey" json:"run_id"`
 	MessageID      *uuid.UUID     `gorm:"type:uuid" json:"message_id,omitempty"`
 	ToolName       string         `gorm:"type:text;not null" json:"tool_name"`
 	Arguments      datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"arguments"`

@@ -5,7 +5,10 @@
     "types": ["vite/client"],
     "paths": {
       "@/*": ["./src/*"],
-      "@bodysense/contracts": ["../../packages/contracts/src/index.ts"]
+      "@bodysense/contracts": ["../../packages/contracts/src/index.ts"],
+      "@bodysense/contracts/presentation-v2": [
+        "../../packages/contracts/src/presentation-v2.ts"
+      ]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.test.ts"],

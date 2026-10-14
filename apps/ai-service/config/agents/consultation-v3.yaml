@@ -1,0 +1,20 @@
+role: consultation
+manifest_revision: consultation-agent-v3
+logical_model: bodysense-consultation
+model_group_revision: consultation-model-group-v1
+prompt_revision: consultation-prompt-v3
+tool_policy_revision: consultation-tools-v3
+governance_policy_revision: consultation-governance-v1
+decision_policy_revision: consultation-go-runtime-v3
+generation:
+  temperature: 0.5
+  max_tokens: 2048
+intake:
+  logical_model: bodysense-structured
+  model_group_revision: consultation-intake-model-group-v1
+  prompt_revision: body-fact-intake-prompt-v1
+  output_schema_revision: body-fact-intake-output-v1
+  policy_revision: body-fact-intake-v1
+  generation:
+    temperature: 0.1
+    max_tokens: 2000

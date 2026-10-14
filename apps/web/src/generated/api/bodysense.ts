@@ -12,7 +12,16 @@ import {
   AssessmentReplayReport,
   AssessmentReportV2,
   AuthSession,
+  BodyEpisodeCommandReceipt,
+  BodyEpisodePage,
+  BodyEpisodeRecord,
+  BodyEpisodeRecurrenceReceipt,
+  BodyEpisodeRelationPage,
+  BodyFactCommit,
+  BodyFactRecordPage,
   BodyMetricsSnapshot,
+  BodyObservationCommit,
+  BodyObservationRecordPage,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
   BodyStateHypothesisMutationResponse,
@@ -86,7 +95,18 @@ import type {
   AuthLoginRequest,
   AuthRegisterRequest,
   AuthSessionOutput,
+  BodyEpisodeAssociationRequest,
+  BodyEpisodeCommandReceiptOutput,
+  BodyEpisodePageOutput,
+  BodyEpisodeRecordOutput,
+  BodyEpisodeRecurrenceReceiptOutput,
+  BodyEpisodeRecurrenceRequest,
+  BodyEpisodeRelationPageOutput,
+  BodyFactCommitOutput,
+  BodyFactRecordPageOutput,
   BodyMetricsSnapshotOutput,
+  BodyObservationCommitOutput,
+  BodyObservationRecordPageOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
   BodyStateHypothesisInput,
@@ -109,6 +129,8 @@ import type {
   ConversationRunListResponseOutput,
   ConversationTitleRequest,
   ConversationUpdateRequest,
+  CorrectBodyFactRecordRequest,
+  CorrectBodyObservationRequest,
   CorrectBodyStateFactRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
@@ -136,6 +158,10 @@ import type {
   KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListBodyEpisodeRelationsParams,
+  ListBodyEpisodesParams,
+  ListBodyFactRecordsParams,
+  ListBodyObservationRecordsParams,
   ListConversationsParams,
   ListDiagnosisAnalysesParams,
   ListOutcomesParams,
@@ -151,6 +177,8 @@ import type {
   PrivacyErasureAcceptedOutput,
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
+  RecordBodyFactsRequest,
+  RecordBodyObservationRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
@@ -187,8 +215,676 @@ import type {
   UploadListResponseOutput,
   UpsertBodyStateFactRequest,
   UserProfileResponseOutput,
-  UserUploadOutput
+  UserUploadOutput,
+  WithdrawBodyFactRecordRequest,
+  WithdrawBodyObservationRequest
 } from './model';
+
+export const getRecordBodyFactsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/records`
+}
+
+/**
+ * New approved assertion ledger. Authenticated owner and direct-edit provenance are assigned server-side. This does not accept diagnoses, arbitrary source identities, training-log bindings or correction authorization.
+ * @summary Atomically record explicit direct-user statements and return the original durable commit receipt on retry.
+ */
+export const recordBodyFacts = async (recordBodyFactsRequest: RecordBodyFactsRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyFactsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyFactsRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyFactRecordsUrl = (params?: ListBodyFactRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/records?${stringifiedParams}` : `/api/v1/body-state/records`
+}
+
+/**
+ * This projection contains migrated/new BodyFact records only, not the still-unconverted legacy BodyState snapshot. Sources blocked from new use are excluded.
+ * @summary Read bounded, whole-revision pages from the new assertion ledger.
+ */
+export const listBodyFactRecords = async (params?: ListBodyFactRecordsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactRecordPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyFactRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactRecordPage, status?: number} = new globalThis.Error();
+    const data : BodyFactRecordPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordBodyObservationUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/observation-records`
+}
+
+/**
+ * Authenticated direct edit only. Raw value and original unit are never normalized or interpreted as a diagnosis. Provenance, source version, revision and receipt are assigned server-side; no legacy observation dual write.
+ * @summary Store one explicit user-reported observation without claiming device or clinical verification.
+ */
+export const recordBodyObservation = async (recordBodyObservationRequest: RecordBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyObservationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyObservationRecordsUrl = (params?: ListBodyObservationRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/observation-records?${stringifiedParams}` : `/api/v1/body-state/observation-records`
+}
+
+/**
+ * This new user-report ledger is not the legacy medical observation table; absence of reports never implies clinical normality. Device/document candidates are not admitted here.
+ * @summary Read current source-available user reports from one BodyState revision.
+ */
+export const listBodyObservationRecords = async (params?: ListBodyObservationRecordsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationRecordPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyObservationRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationRecordPage, status?: number} = new globalThis.Error();
+    const data : BodyObservationRecordPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationRecordPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCorrectBodyObservationRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/observation-records/${id}/correct`
+}
+
+/**
+ * Authenticated direct-user correction. Stores a new original self-report and links back to the superseded record; rejects identical replacements, stale revisions and clinical/device attribution.
+ * @summary Explicitly correct exactly one current user-reported observation, preserving its old source and identity.
+ */
+export const correctBodyObservationRecord = async (id: string,
+    correctBodyObservationRequest: CorrectBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCorrectBodyObservationRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(correctBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyObservationRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/observation-records/${id}/withdraw`
+}
+
+/**
+ * Explicit authenticated user withdrawal removes the assertion from current source-backed reads, preserving historical audit and independently authorized source erasure semantics.
+ * @summary Withdraw one exact user-reported observation assertion without erasing original source history.
+ */
+export const withdrawBodyObservationRecord = async (id: string,
+    withdrawBodyObservationRequest: WithdrawBodyObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyObservationCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyObservationRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyObservationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyObservationCommit, status?: number} = new globalThis.Error();
+    const data : BodyObservationCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateBodyEpisodeUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/episodes`
+}
+
+/**
+ * Uses only a server-verified existing self-reported symptom and its available source. Never accepts a title, inferred status, onset/resolution claim or AI authorization.
+ * @summary Explicit user command creating an organizational Episode from an already-asserted positive symptom Fact.
+ */
+export const createBodyEpisode = async (bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreateBodyEpisodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyEpisodesUrl = (params?: ListBodyEpisodesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/episodes?${stringifiedParams}` : `/api/v1/body-state/episodes`
+}
+
+/**
+ * Read-only. A clinical condition, inferred recovery or user-approved episode association cannot be created through this endpoint. Blocked or erased source-only identities are hidden, and negative symptoms do not imply an Episode ended.
+ * @summary Read source-backed symptom Episode identities from one BodyState revision snapshot.
+ */
+export const listBodyEpisodes = async (params?: ListBodyEpisodesParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodePageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyEpisodesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodePage, status?: number} = new globalThis.Error();
+    const data : BodyEpisodePage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodePage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetBodyEpisodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}`
+}
+
+/**
+ * @summary Read one source-visible Episode without exposing any other owner's identity.
+ */
+export const getBodyEpisode = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetBodyEpisodeUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRecord, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLinkBodyEpisodeFactUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/facts`
+}
+
+/**
+ * Creates only an observation link after owner, availability, type, side, region, revision and unique-primary checks. No implicit disease state, resolution, merge, split or recurrence.
+ * @summary Explicitly associate one compatible symptom Fact to the specified current Episode.
+ */
+export const linkBodyEpisodeFact = async (id: string,
+    bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getLinkBodyEpisodeFactUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAdmitBodyEpisodeStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/status`
+}
+
+/**
+ * The exact self-reported symptom Fact must still have an available original source and contain a typed explicit course report consistent with user-reported presence. Ordinary absence and unknown times do not automatically imply recovery. This command admits evidence, not an inferred medical diagnosis or guaranteed status.
+ * @summary User-authorized explicit symptom course evidence from one already-linked Fact.
+ */
+export const admitBodyEpisodeStatus = async (id: string,
+    bodyEpisodeAssociationRequest: BodyEpisodeAssociationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeCommandReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAdmitBodyEpisodeStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeAssociationRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeCommandReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeCommandReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeCommandReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReportBodyEpisodeRecurrenceUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/episodes/${id}/recurrences`
+}
+
+/**
+ * Requires original completed Episode and a distinct currently source-visible new Episode with exact primary user-authored positive symptom Fact; creates an organizational relation only, never clinical etiology or old Episode reopening.
+ * @summary Direct user report that a distinct new Episode recurred after a source-backed completed Episode.
+ */
+export const reportBodyEpisodeRecurrence = async (id: string,
+    bodyEpisodeRecurrenceRequest: BodyEpisodeRecurrenceRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRecurrenceReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReportBodyEpisodeRecurrenceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyEpisodeRecurrenceRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRecurrenceReceipt, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRecurrenceReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRecurrenceReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyEpisodeRelationsUrl = (id: string,
+    params?: ListBodyEpisodeRelationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-state/episodes/${id}/relations?${stringifiedParams}` : `/api/v1/body-state/episodes/${id}/relations`
+}
+
+/**
+ * Hide relations with blocked or withdrawn new basis Fact, and mark the old course needs_review if its explicit ending evidence was invalidated. This read never implies shared clinical cause.
+ * @summary Source-visible authorized recurrence links touching one Episode at a stable BodyState revision.
+ */
+export const listBodyEpisodeRelations = async (id: string,
+    params?: ListBodyEpisodeRelationsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyEpisodeRelationPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyEpisodeRelationsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyEpisodeRelationPage, status?: number} = new globalThis.Error();
+    const data : BodyEpisodeRelationPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyEpisodeRelationPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
 
 export const getAddBodyStateFactUrl = () => {
 
@@ -4523,5 +5219,113 @@ export const getKnowledgeStats = async ( options?: RequestInit, fetchFn?: typeof
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? KnowledgeStats.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCorrectBodyFactRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/records/${id}/correct`
+}
+
+/**
+ * @summary Correct one explicit user assertion while retaining its original provenance.
+ */
+export const correctBodyFactRecord = async (id: string,
+    correctBodyFactRecordRequest: CorrectBodyFactRecordRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCorrectBodyFactRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(correctBodyFactRecordRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyFactRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/records/${id}/withdraw`
+}
+
+/**
+ * @summary Withdraw one user assertion without claiming privacy erasure or symptom resolution.
+ */
+export const withdrawBodyFactRecord = async (id: string,
+    withdrawBodyFactRecordRequest: WithdrawBodyFactRecordRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyFactCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyFactRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyFactRecordRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyFactCommit, status?: number} = new globalThis.Error();
+    const data : BodyFactCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyFactCommit.parse(parsedBody) : parsedBody
   return data
 }

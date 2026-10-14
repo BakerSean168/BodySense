@@ -33,7 +33,7 @@ func consultationReplayTestRun() *model.Run {
 		Model:                "bodysense-consultation",
 		StartedAt:            now,
 		AgentConfigurationID: defaultConsultationConfigurationID,
-		AgentConfiguration:   datatypes.JSON(`{"id":"consult-config-7feb8ca2d5bfad5a","role":"consultation"}`),
+		AgentConfiguration:   datatypes.JSON([]byte(`{"id":"` + defaultConsultationConfigurationID + `","role":"consultation"}`)),
 		ExecutionProvenance:  datatypes.JSON(`{"status":"executed","runtime":"langgraph"}`),
 		ReplayInput:          datatypes.JSON(replayJSON),
 	}
@@ -52,7 +52,7 @@ func TestConsultationReplayRecomputesCurrentDecisionAuthorityWithoutModel(t *tes
 	if decision.SourceConfigurationID != defaultConsultationConfigurationID {
 		t.Fatalf("unexpected source config: %q", decision.SourceConfigurationID)
 	}
-	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV2 {
+	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV3 {
 		t.Fatalf("unexpected policy revision: %q", decision.DecisionPolicyRevision)
 	}
 	if !decision.ConfigurationIdentityMatch {
@@ -86,5 +86,30 @@ func TestConsultationCounterfactualReplayRejectsUnknownConfiguration(t *testing.
 
 	if _, err := svc.CounterfactualReplay(context.Background(), run.UserID, run.ID, "consult-config-does-not-exist"); err == nil {
 		t.Fatal("expected unknown configuration rejection")
+	}
+}
+
+func TestConsultationReplayKeepsHistoricalV2DecisionAuthority(t *testing.T) {
+	repo := &mockRunRepo{runs: map[uuid.UUID]*model.Run{}}
+	run := consultationReplayTestRun()
+	run.AgentConfigurationID = "consult-config-7feb8ca2d5bfad5a"
+	run.AgentConfiguration = datatypes.JSON(`{"id":"consult-config-7feb8ca2d5bfad5a","role":"consultation"}`)
+	var input ConsultationReplayInput
+	if err := json.Unmarshal(run.ReplayInput, &input); err != nil {
+		t.Fatal(err)
+	}
+	input.ConfigurationID = run.AgentConfigurationID
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run.ReplayInput = encoded
+	repo.runs[run.ID] = run
+	decision, err := NewConsultationReplayService(repo).HistoricalReplay(context.Background(), run.UserID, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV2 || decision.SourceConfigurationID != run.AgentConfigurationID || !decision.ReplayInputFrozen {
+		t.Fatalf("old run adopted the new default: %#v", decision)
 	}
 }

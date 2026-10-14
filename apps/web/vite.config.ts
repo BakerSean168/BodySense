@@ -190,6 +190,10 @@ export function createBodySenseViteConfig({
     resolve: {
       alias: {
         "@": path.resolve(webRoot, "src"),
+        "@bodysense/contracts/presentation-v2": path.resolve(
+          webRoot,
+          "../../packages/contracts/src/presentation-v2.ts",
+        ),
         "@bodysense/contracts": path.resolve(
           webRoot,
           "../../packages/contracts/src/index.ts",

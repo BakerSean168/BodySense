@@ -27,6 +27,7 @@ import { FailedRunStatusCard } from "./FailedRunStatusCard";
 import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
 
 interface StreamingAssistantTurnProps {
+  pendingInteractionInComposer?: boolean;
   onInteractionSubmit?: (answer: unknown) => void;
   isInteractionSubmitting?: boolean;
   interactionError?: string | null;
@@ -34,6 +35,7 @@ interface StreamingAssistantTurnProps {
 }
 
 export function StreamingAssistantTurn({
+  pendingInteractionInComposer = false,
   onInteractionSubmit,
   isInteractionSubmitting = false,
   interactionError = null,
@@ -66,14 +68,20 @@ export function StreamingAssistantTurn({
 
   return (
     <div className="flex flex-col gap-4">
-      {vm.pendingInteraction ? (
+      {vm.pendingInteraction &&
+      !(
+        pendingInteractionInComposer &&
+        vm.pendingInteraction.status === "pending"
+      ) ? (
         <AskUserStatusCard interaction={vm.pendingInteraction} />
       ) : null}
 
       {vm.isFailed ? <FailedRunStatusCard message={vm.error} /> : null}
       {vm.isCancelled ? <CancelledRunStatusCard /> : null}
 
-      {vm.pendingInteraction?.status === "pending" && onInteractionSubmit ? (
+      {!pendingInteractionInComposer &&
+      vm.pendingInteraction?.status === "pending" &&
+      onInteractionSubmit ? (
         <div className="w-full max-w-[620px]">
           <AskUserCard
             title={

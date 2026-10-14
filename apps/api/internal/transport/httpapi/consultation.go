@@ -386,14 +386,14 @@ func (s *PublicServer) GetConsultationThread(
 	if s.consultationThreads == nil || s.consultationBodyState == nil {
 		return consultationHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "CONSULTATION_UNAVAILABLE", message: "consultation thread service is not configured"}, nil
 	}
-	projection, messages, toolCalls, activeTurnRunID, activeTurnEvents, err := s.consultationThreads.RefreshAndGetThread(ctx, request.Id, uid)
+	projection, messages, toolCalls, activeTurnRunID, activeTurnEvents, err := s.consultationThreads.RefreshAndGetThread(applicationRequestContext(ctx), request.Id, uid)
 	if err != nil {
 		return internalConsultationError("failed to get consultation thread"), nil
 	}
 	if projection == nil {
 		return consultationHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: "consultation thread not found"}, nil
 	}
-	bodyState, _ := s.consultationBodyState.GetSnapshot(ctx, uid, 20)
+	bodyState, _ := s.consultationBodyState.GetSnapshot(applicationRequestContext(ctx), uid, 20)
 	wire := consultationThreadWire{
 		ConversationID: projection.ConversationID,
 		Conversation: consultationThreadConversationWire{
