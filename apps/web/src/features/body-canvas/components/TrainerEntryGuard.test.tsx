@@ -71,12 +71,12 @@ describe("V2 Trainer entry admission", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("only mounts execution after an exact accepted, permitted and explicit launch", () => {
+  it("only mounts execution after an exact accepted, permitted and explicit launch", async () => {
     const { rerender } = render(<TrainerEntryGuard {...allowed} />);
     expect(screen.queryByTestId("trainer-entry-guard")).not.toBeInTheDocument();
-    expect(screen.getByTestId("training-execution-panel")).toHaveTextContent(
-      "accepted-1",
-    );
+    expect(
+      await screen.findByTestId("training-execution-panel"),
+    ).toHaveTextContent("accepted-1");
     rerender(<TrainerEntryGuard {...allowed} planId="accepted-2" />);
     expect(
       screen.queryByTestId("training-execution-panel"),
@@ -88,8 +88,8 @@ describe("V2 Trainer entry admission", () => {
         launchedPlanId="accepted-2"
       />,
     );
-    expect(screen.getByTestId("training-execution-panel")).toHaveTextContent(
-      "accepted-2",
-    );
+    expect(
+      await screen.findByTestId("training-execution-panel"),
+    ).toHaveTextContent("accepted-2");
   });
 });

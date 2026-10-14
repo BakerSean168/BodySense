@@ -33,9 +33,8 @@ vi.mock("../../hooks/useConsultationThreadQuery", () => ({
     mockUseConsultationThreadQuery(conversationId),
 }));
 
-vi.mock("@/features/workspace", () => ({
+vi.mock("@/features/workspace/hooks/useHealthWorkspaceQuery", () => ({
   useHealthWorkspaceQuery: () => mockUseHealthWorkspaceQuery(),
-  workspaceKeys: { all: ["workspace"] },
 }));
 
 function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
@@ -56,7 +55,9 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
   };
 }
 
-function makeThread(overrides: Partial<ConsultationThread> = {}): ConsultationThread {
+function makeThread(
+  overrides: Partial<ConsultationThread> = {},
+): ConsultationThread {
   const conversation = makeConversation(overrides.conversation);
   return {
     conversation,
@@ -119,7 +120,9 @@ describe("ConsultationPage", () => {
 
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
     expect(screen.getByText("BodySense")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "我的身体" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "我的身体" }),
+    ).toBeInTheDocument();
     // Body-first: a loading thread must not force a business window open.
     expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
     expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();

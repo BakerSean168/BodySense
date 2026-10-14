@@ -79,10 +79,10 @@ test("direct-user BodyObservation keeps raw source, exact replay and isolation a
   expect(forged.status()).toBe(400);
 
   await page.reload();
-  const renewedToken = await refreshBrowserAccessToken(page, api);
-  const list = await request.get(route, {
-    headers: { Authorization: `Bearer ${renewedToken}` },
-  });
+  // Reload may already rotate the HttpOnly refresh cookie in the browser.
+  // Reusing the still-valid JWT avoids a second competing refresh, without
+  // bypassing Go's authenticated owner checks.
+  const list = await request.get(route, { headers });
   expect(list.status()).toBe(200);
   const pageData = await list.json();
   expect(pageData).toMatchObject({
@@ -112,7 +112,7 @@ test("direct-user BodyObservation keeps raw source, exact replay and isolation a
   expect(wrongOwner.status()).toBe(401);
 
   const legacyFacts = await request.get(`${api}/api/v1/body-state/records`, {
-    headers: { Authorization: `Bearer ${renewedToken}` },
+    headers,
   });
   expect(legacyFacts.status()).toBe(200);
   expect((await legacyFacts.json()).facts).toEqual([]);

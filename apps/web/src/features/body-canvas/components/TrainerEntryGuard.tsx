@@ -1,5 +1,13 @@
+import { lazy, Suspense } from "react";
 import { AlertTriangle, ArrowRight } from "lucide-react";
-import { TrainingExecutionPanel } from "@/features/training/components/TrainingExecutionPanel";
+
+// The legacy training player and its dependencies must not join the main
+// ConsultationPage chunk or load until Go permission, plan and Safety gates pass.
+const TrainingExecutionPanel = lazy(() =>
+  import("@/features/training/components/TrainingExecutionPanel").then(
+    ({ TrainingExecutionPanel }) => ({ default: TrainingExecutionPanel }),
+  ),
+);
 
 /**
  * A Trainer window can be opened by deep link or keyboard, but opening a
@@ -60,7 +68,9 @@ export function TrainerEntryGuard({
       data-testid="trainer-window"
     >
       {canRenderExecution ? (
-        <TrainingExecutionPanel key={planId} planId={planId} />
+        <Suspense fallback={<p role="status">正在加载训练执行界面</p>}>
+          <TrainingExecutionPanel key={planId} planId={planId} />
+        </Suspense>
       ) : (
         <div
           className="bc-window-empty bc-trainer-guard"

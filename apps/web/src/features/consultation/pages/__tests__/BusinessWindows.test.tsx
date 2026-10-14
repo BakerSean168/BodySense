@@ -29,12 +29,13 @@ vi.mock("../../hooks/useConsultationThreadQuery", () => ({
   useConsultationThreadQuery: (conversationId: string | null) =>
     mockUseConsultationThreadQuery(conversationId),
 }));
-vi.mock("@/features/workspace", () => ({
+vi.mock("@/features/workspace/hooks/useHealthWorkspaceQuery", () => ({
   useHealthWorkspaceQuery: () => mockUseHealthWorkspaceQuery(),
-  workspaceKeys: { all: ["workspace"] },
 }));
-vi.mock("@/features/training", () => ({
+vi.mock("@/features/training/services/trainingService", () => ({
   trainingApi: { listPlans: () => mockListTrainingPlans() },
+}));
+vi.mock("@/features/training/components/TrainingExecutionPanel", () => ({
   TrainingExecutionPanel: ({ planId }: { planId: string }) => (
     <div data-testid="training-execution-panel">{planId}</div>
   ),

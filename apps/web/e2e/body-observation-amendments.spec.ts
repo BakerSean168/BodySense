@@ -110,10 +110,9 @@ test("v12 actual user corrects original observation then withdraws exact success
   expect(await repeated.json()).toEqual(removed);
 
   await page.reload();
-  const freshToken = await refreshBrowserAccessToken(page, api);
-  const hidden = await request.get(observations, {
-    headers: { Authorization: `Bearer ${freshToken}` },
-  });
+  // Reusing the still-valid owner JWT after browser reload prevents a second
+  // refresh-cookie rotation racing the browser's auth bootstrap.
+  const hidden = await request.get(observations, { headers });
   expect(hidden.status()).toBe(200);
   expect(await hidden.json()).toMatchObject({
     current_revision: 3,
@@ -122,9 +121,7 @@ test("v12 actual user corrects original observation then withdraws exact success
 
   const noResolutionFact = await request.get(
     `${api}/api/v1/body-state/records`,
-    {
-      headers: { Authorization: `Bearer ${freshToken}` },
-    },
+    { headers },
   );
   expect(noResolutionFact.status()).toBe(200);
   expect((await noResolutionFact.json()).facts).toEqual([]);

@@ -85,11 +85,19 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     .click();
   await expect(page).toHaveURL(/view=diagnosis/);
   await expect(page.getByTestId("diagnosis-window")).toBeVisible();
-  // The design allows exactly one level-1 title per window and no subtitle.
+  // Penpot V2 replaces the old heading with a toolbar selector. Verify the
+  // actual labeled business window and the empty, non-clinical state.
+  const diagnosisWindow = page.locator(
+    '.bc-business-window[data-window="diagnosis"]',
+  );
   await expect(
-    page.getByRole("heading", { name: "综合诊断", level: 2 }),
+    diagnosisWindow.getByRole("combobox", { name: "选择已确认病情" }),
+  ).toBeDisabled();
+  await expect(diagnosisWindow.getByText("暂无已确认病情")).toBeVisible();
+  await expect(diagnosisWindow.getByText("还没有已确认的病情")).toBeVisible();
+  await expect(
+    diagnosisWindow.getByRole("button", { name: "关闭综合诊断" }),
   ).toBeVisible();
-  await expect(page.getByText("还没有已确认的病情")).toBeVisible();
 
   await page
     .locator(".bc-dock")
