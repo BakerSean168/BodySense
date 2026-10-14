@@ -3,8 +3,10 @@ name: CI
 on:
   push:
     branches: [main]
+  # Run the same manifest-scoped read-only checks against stacked PR targets.
+  # Without this, a PR targeting a non-main branch silently has no CI checks.
+  # Candidate/release publication remains restricted to successful main push.
   pull_request:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
