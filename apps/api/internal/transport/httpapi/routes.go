@@ -134,8 +134,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
 	protected.POST("/body-state/observations", wrapper.AddBodyStateObservation)
 	protected.PATCH("/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
-	protected.POST("/body-state/hypotheses", wrapper.AddBodyStateHypothesis)
-	protected.PATCH("/body-state/hypotheses/:id/lifecycle", wrapper.UpdateBodyStateHypothesisLifecycle)
 	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
 	protected.POST("/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
 

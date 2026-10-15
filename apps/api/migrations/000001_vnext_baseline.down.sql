@@ -15,7 +15,6 @@ DROP TABLE IF EXISTS
     public.body_observations,
     public.body_state_evidence,
     public.body_state_facts,
-    public.body_state_hypotheses,
     public.body_state_observations,
     public.body_state_outbox,
     public.body_state_revisions,

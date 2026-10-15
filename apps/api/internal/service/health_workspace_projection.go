@@ -32,7 +32,6 @@ type HealthWorkspaceBodyState struct {
 	PendingFacts        []model.BodyStateFact        `json:"pending_facts"`
 	Observations        []model.BodyStateObservation `json:"observations"`
 	PendingObservations []model.BodyStateObservation `json:"pending_observations"`
-	Hypotheses          []model.BodyStateHypothesis  `json:"hypotheses"`
 	RecentRevisions     []model.BodyStateRevision    `json:"recent_revisions"`
 }
 

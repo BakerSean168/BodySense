@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -129,148 +127,4 @@ func (r *BodyStateRepository) GetEvidenceByIDs(
 		Where("user_id = ? AND id IN ?", userID, ids).
 		Find(&items).Error
 	return items, err
-}
-
-// AddHypothesis commits an AI explanation into the Hypothesis collection, never
-// into Facts. The mutation itself advances BodyState because hypotheses are part
-// of the durable longitudinal reasoning state.
-func (r *BodyStateRepository) AddHypothesis(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	hypothesis model.BodyStateHypothesis,
-	source string,
-) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	var stored model.BodyStateHypothesis
-	var committed *model.BodyStateRevision
-	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
-		if err != nil {
-			return err
-		}
-		hypothesis.ID = uuid.New()
-		hypothesis.UserID = userID
-		hypothesis.ConcernKey = bodyStateDefaultString(hypothesis.ConcernKey, "general")
-		hypothesis.Statement = strings.TrimSpace(hypothesis.Statement)
-		if hypothesis.Statement == "" {
-			return errors.New("hypothesis statement is required")
-		}
-		hypothesis.LifecycleState = bodyStateDefaultString(hypothesis.LifecycleState, "active")
-		if !bodyStateAllowedHypothesisState(hypothesis.LifecycleState) {
-			return errors.New("invalid hypothesis lifecycle state")
-		}
-		bodyStateNormalizeHypothesisJSON(&hypothesis)
-		hypothesis.CreatedRevision = next
-		hypothesis.UpdatedRevision = next
-		now := time.Now().UTC()
-		hypothesis.CreatedAt = now
-		hypothesis.UpdatedAt = now
-		if err := tx.WithContext(ctx).Create(&hypothesis).Error; err != nil {
-			return err
-		}
-		stored = hypothesis
-		committed, err = bodyStatePersistRevision(
-			ctx,
-			tx,
-			state,
-			next,
-			"hypothesis.added",
-			source,
-			map[string]any{"hypothesis": hypothesis},
-		)
-		return err
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	return &stored, committed, nil
-}
-
-func (r *BodyStateRepository) UpdateHypothesisLifecycle(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	hypothesisID uuid.UUID,
-	lifecycleState string,
-	counterevidenceIDs datatypes.JSON,
-	source string,
-) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	var stored model.BodyStateHypothesis
-	var committed *model.BodyStateRevision
-	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
-		if err != nil {
-			return err
-		}
-		var before model.BodyStateHypothesis
-		if err := tx.WithContext(ctx).
-			Where("id = ? AND user_id = ?", hypothesisID, userID).
-			First(&before).Error; err != nil {
-			return err
-		}
-		lifecycleState = bodyStateDefaultString(lifecycleState, before.LifecycleState)
-		if !bodyStateAllowedHypothesisState(lifecycleState) {
-			return errors.New("invalid hypothesis lifecycle state")
-		}
-		if len(counterevidenceIDs) == 0 {
-			counterevidenceIDs = before.CounterevidenceIDs
-		}
-		if before.LifecycleState == lifecycleState && string(before.CounterevidenceIDs) == string(counterevidenceIDs) {
-			stored = before
-			return nil
-		}
-		if err := tx.WithContext(ctx).Model(&model.BodyStateHypothesis{}).
-			Where("id = ? AND user_id = ?", hypothesisID, userID).
-			Updates(map[string]any{
-				"lifecycle_state":     lifecycleState,
-				"counterevidence_ids": counterevidenceIDs,
-				"updated_revision":    next,
-				"updated_at":          time.Now().UTC(),
-			}).Error; err != nil {
-			return err
-		}
-		if err := tx.WithContext(ctx).Where("id = ?", hypothesisID).First(&stored).Error; err != nil {
-			return err
-		}
-		committed, err = bodyStatePersistRevision(
-			ctx,
-			tx,
-			state,
-			next,
-			"hypothesis.lifecycle_changed",
-			source,
-			map[string]any{"hypothesis_id": hypothesisID, "before": before, "after": stored},
-		)
-		return err
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	return &stored, committed, nil
-}
-
-func bodyStateAllowedHypothesisState(value string) bool {
-	switch value {
-	case "active", "strengthened", "weakened", "unsupported", "retired":
-		return true
-	default:
-		return false
-	}
-}
-
-func bodyStateNormalizeHypothesisJSON(hypothesis *model.BodyStateHypothesis) {
-	fields := []*datatypes.JSON{
-		&hypothesis.SupportingFactIDs,
-		&hypothesis.SupportingObservationIDs,
-		&hypothesis.SupportingEvidenceIDs,
-		&hypothesis.CounterevidenceIDs,
-	}
-	for _, field := range fields {
-		if len(*field) == 0 || !json.Valid(*field) {
-			*field = datatypes.JSON(`[]`)
-		}
-	}
-	if len(hypothesis.Provenance) == 0 || !json.Valid(hypothesis.Provenance) {
-		hypothesis.Provenance = datatypes.JSON(`{}`)
-	}
 }

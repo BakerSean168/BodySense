@@ -61,7 +61,6 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "body_state_observations", table: "body_state_observations", column: "user_id"},
 	{name: "body_state_revisions", table: "body_state_revisions", column: "user_id"},
 	{name: "body_state_evidence", table: "body_state_evidence", column: "user_id"},
-	{name: "body_state_hypotheses", table: "body_state_hypotheses", column: "user_id"},
 	{name: "diagnosis_analyses", table: "diagnosis_analyses", column: "user_id"},
 	{name: "diagnosis_candidate_assessments", table: "diagnosis_candidate_assessments", column: "user_id"},
 	{name: "diagnosis_freshness", table: "diagnosis_analysis_freshness", column: "user_id"},

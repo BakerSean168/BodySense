@@ -201,14 +201,6 @@ func (r *fakeBodyStateRepository) ListEvidence(context.Context, uuid.UUID, int) 
 func (r *fakeBodyStateRepository) GetEvidenceByIDs(context.Context, uuid.UUID, []uuid.UUID) ([]model.BodyStateEvidence, error) {
 	return nil, nil
 }
-func (r *fakeBodyStateRepository) AddHypothesis(_ context.Context, userID uuid.UUID, _ *int64, hypothesis model.BodyStateHypothesis, _ string) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	hypothesis.ID = uuid.New()
-	hypothesis.UserID = userID
-	return &hypothesis, &model.BodyStateRevision{Revision: 1}, nil
-}
-func (r *fakeBodyStateRepository) UpdateHypothesisLifecycle(_ context.Context, userID uuid.UUID, _ *int64, hypothesisID uuid.UUID, lifecycleState string, counterevidenceIDs datatypes.JSON, _ string) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	return &model.BodyStateHypothesis{ID: hypothesisID, UserID: userID, LifecycleState: lifecycleState, CounterevidenceIDs: counterevidenceIDs}, &model.BodyStateRevision{Revision: 2}, nil
-}
 
 func (r *fakeBodyStateRepository) RecordSafetyScreen(_ context.Context, userID uuid.UUID, _ model.AnswerFactSource, command model.SafetyScreenCommand) (*model.SafetyScreen, error) {
 	r.screens = append(r.screens, command)
@@ -328,7 +320,7 @@ func TestBodyStateSnapshotNormalizesEmptyCollections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
-	if snapshot.Facts == nil || snapshot.Observations == nil || snapshot.Hypotheses == nil || snapshot.RecentRevisions == nil {
+	if snapshot.Facts == nil || snapshot.Observations == nil || snapshot.RecentRevisions == nil {
 		t.Fatalf("BodyState JSON collections must be empty arrays, not nil: %#v", snapshot)
 	}
 	pending, err := svc.ListReviewableObservations(context.Background(), repo.current.UserID, 50)

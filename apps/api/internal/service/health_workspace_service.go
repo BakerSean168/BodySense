@@ -120,7 +120,7 @@ func (s *HealthWorkspaceService) Get(
 		CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState,
 		Facts: snapshot.Facts, PendingFacts: pendingFacts, Observations: snapshot.Observations,
 		PendingObservations: pendingObservations,
-		Hypotheses:          snapshot.Hypotheses, RecentRevisions: snapshot.RecentRevisions,
+		RecentRevisions:     snapshot.RecentRevisions,
 	}
 
 	analysis, err := s.diagnosis.GetLatest(ctx, userID)

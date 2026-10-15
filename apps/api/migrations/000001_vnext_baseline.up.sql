@@ -387,31 +387,6 @@ CREATE TABLE public.body_state_facts (
 
 
 --
--- Name: body_state_hypotheses; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.body_state_hypotheses (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    concern_key character varying(120) DEFAULT 'general'::character varying NOT NULL,
-    statement text NOT NULL,
-    lifecycle_state character varying(30) DEFAULT 'active'::character varying NOT NULL,
-    confidence character varying(20),
-    supporting_fact_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    supporting_observation_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    supporting_evidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    counterevidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    source_analysis_id uuid,
-    provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_revision bigint NOT NULL,
-    updated_revision bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT body_state_hypotheses_lifecycle_state_check CHECK (((lifecycle_state)::text = ANY (ARRAY[('active'::character varying)::text, ('strengthened'::character varying)::text, ('weakened'::character varying)::text, ('unsupported'::character varying)::text, ('retired'::character varying)::text])))
-);
-
-
---
 -- Name: body_state_observations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1811,14 +1786,6 @@ ALTER TABLE ONLY public.body_state_facts
 
 
 --
--- Name: body_state_hypotheses body_state_hypotheses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_pkey PRIMARY KEY (id);
-
-
---
 -- Name: body_state_observations body_state_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2738,20 +2705,6 @@ CREATE INDEX idx_body_state_facts_user_current ON public.body_state_facts USING 
 --
 
 CREATE UNIQUE INDEX idx_body_state_facts_user_source_key ON public.body_state_facts USING btree (user_id, source_key) WHERE (source_key <> ''::text);
-
-
---
--- Name: idx_body_state_hypotheses_concern; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_hypotheses_concern ON public.body_state_hypotheses USING btree (user_id, concern_key);
-
-
---
--- Name: idx_body_state_hypotheses_user_state; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_hypotheses_user_state ON public.body_state_hypotheses USING btree (user_id, lifecycle_state, updated_at DESC);
 
 
 --
@@ -3814,22 +3767,6 @@ ALTER TABLE ONLY public.body_state_facts
 
 ALTER TABLE ONLY public.body_state_facts
     ADD CONSTRAINT body_state_facts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: body_state_hypotheses body_state_hypotheses_source_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_source_analysis_id_fkey FOREIGN KEY (source_analysis_id) REFERENCES public.diagnosis_analyses(id) ON DELETE SET NULL;
-
-
---
--- Name: body_state_hypotheses body_state_hypotheses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

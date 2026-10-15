@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -296,5 +297,49 @@ func TestPersistHistoricalEvidenceGapDiagnosisRequiresConsistentAvailabilityTrac
 	}`)
 	if _, err := svc.PersistAIResult(context.Background(), uuid.New(), 18, invalid); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
 		t.Fatalf("expected Go trust boundary to reject status drift, got %v", err)
+	}
+}
+
+func TestPersistDiagnosisAnalysisKeepsAgentHypothesesInAuditOnly(t *testing.T) {
+	repo := &fakeDiagnosisAnalysisRepository{}
+	svc := NewDiagnosisAnalysisService(repo)
+	raw := json.RawMessage(`{"status":"completed","scope":"full_body","summary":"s","candidates":[` +
+		`{"concern_key":"region:neck","name":"颈部肌筋膜紧张","confidence":"中","basis":"b","basis_fact_ids":["fact-a"],"counterevidence_ids":["ev-x"],"reasoning_summary":"r1"},` +
+		`{"name":"姿势相关","confidence":"低","basis":"b"}]}`)
+
+	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 7, raw)
+	if err != nil {
+		t.Fatalf("PersistAIResult: %v", err)
+	}
+	var trace struct {
+		AgentHypotheses []map[string]any `json:"agent_hypotheses"`
+	}
+	if err := json.Unmarshal(repo.createdAnalysis.DecisionTrace, &trace); err != nil {
+		t.Fatalf("decode decision trace: %v", err)
+	}
+	if len(trace.AgentHypotheses) != 2 {
+		t.Fatalf("expected 2 agent hypotheses in audit, got %d", len(trace.AgentHypotheses))
+	}
+	first := trace.AgentHypotheses[0]
+	if first["candidate_id"] != analysis.Candidates[0].ID.String() || first["statement"] != "颈部肌筋膜紧张" ||
+		first["confidence"] != "中" || first["source_actor"] != "diagnosis_agent" || first["body_state_authority"] != "none" {
+		t.Fatalf("unexpected agent hypothesis snapshot: %#v", first)
+	}
+	if facts, ok := first["basis_fact_ids"].([]any); !ok || len(facts) != 1 || facts[0] != "fact-a" {
+		t.Fatalf("basis_fact_ids not preserved: %#v", first["basis_fact_ids"])
+	}
+	if second, ok := trace.AgentHypotheses[1]["counterevidence_ids"].([]any); !ok || len(second) != 0 {
+		t.Fatalf("missing id lists must default to []: %#v", trace.AgentHypotheses[1])
+	}
+
+	empty, err := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{}).PersistAIResult(
+		context.Background(), uuid.New(), 8,
+		json.RawMessage(`{"status":"safety_blocked","scope":"full_body","candidates":[]}`),
+	)
+	if err != nil {
+		t.Fatalf("PersistAIResult safety_blocked: %v", err)
+	}
+	if !json.Valid(empty.DecisionTrace) || !strings.Contains(string(empty.DecisionTrace), `"agent_hypotheses":[]`) {
+		t.Fatalf("blocked analysis must record an empty agent_hypotheses snapshot: %s", empty.DecisionTrace)
 	}
 }

@@ -23,8 +23,6 @@ type bodyStateRouteService interface {
 	ReviewFact(context.Context, uuid.UUID, *int64, uuid.UUID, string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	AddObservation(context.Context, uuid.UUID, *int64, model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	ReviewObservation(context.Context, uuid.UUID, *int64, uuid.UUID, string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	AddHypothesis(context.Context, uuid.UUID, *int64, model.BodyStateHypothesis) (*model.BodyStateHypothesis, *model.BodyStateRevision, error)
-	UpdateHypothesisLifecycle(context.Context, uuid.UUID, *int64, uuid.UUID, string, json.RawMessage) (*model.BodyStateHypothesis, *model.BodyStateRevision, error)
 	ListEvidence(context.Context, uuid.UUID, int) ([]model.BodyStateEvidence, error)
 	ResolveSafetyState(context.Context, uuid.UUID, *int64, string, string) (*model.BodyStateRevision, error)
 }
@@ -187,62 +185,6 @@ func (s *PublicServer) ReviewBodyStateObservation(
 	return openapiv1.ReviewBodyStateObservation200JSONResponse(response), nil
 }
 
-func (s *PublicServer) AddBodyStateHypothesis(
-	ctx context.Context,
-	request openapiv1.AddBodyStateHypothesisRequestObject,
-) (openapiv1.AddBodyStateHypothesisResponseObject, error) {
-	userID, authErr := authenticatedUserID(ctx)
-	if authErr != nil {
-		return addBodyStateHypothesisError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.bodyStateRoutes == nil || request.Body == nil {
-		return addBodyStateHypothesisError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	hypothesis, err := hypothesisFromOpenAPI(*request.Body)
-	if err != nil {
-		return addBodyStateHypothesisError(http.StatusBadRequest, "INVALID_REQUEST", "hypothesis JSON fields are invalid"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	stored, revision, err := s.bodyStateRoutes.AddHypothesis(ctx, userID, &expected, hypothesis)
-	if err != nil {
-		return addBodyStateHypothesisClassifiedError(err), nil
-	}
-	response, err := hypothesisMutationResponseToOpenAPI(stored, revision)
-	if err != nil {
-		return addBodyStateHypothesisError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state response"), nil
-	}
-	return openapiv1.AddBodyStateHypothesis201JSONResponse(response), nil
-}
-
-func (s *PublicServer) UpdateBodyStateHypothesisLifecycle(
-	ctx context.Context,
-	request openapiv1.UpdateBodyStateHypothesisLifecycleRequestObject,
-) (openapiv1.UpdateBodyStateHypothesisLifecycleResponseObject, error) {
-	userID, authErr := authenticatedUserID(ctx)
-	if authErr != nil {
-		return updateBodyStateHypothesisLifecycleError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.bodyStateRoutes == nil || request.Body == nil {
-		return updateBodyStateHypothesisLifecycleError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	counterevidence, err := stringArrayJSON(request.Body.CounterevidenceIds)
-	if err != nil {
-		return updateBodyStateHypothesisLifecycleError(http.StatusBadRequest, "INVALID_REQUEST", "counterevidence_ids are invalid"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	stored, revision, err := s.bodyStateRoutes.UpdateHypothesisLifecycle(
-		ctx, userID, &expected, request.Id, string(request.Body.LifecycleState), json.RawMessage(counterevidence),
-	)
-	if err != nil {
-		return updateBodyStateHypothesisLifecycleClassifiedError(err), nil
-	}
-	response, err := hypothesisMutationResponseToOpenAPI(stored, revision)
-	if err != nil {
-		return updateBodyStateHypothesisLifecycleError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state response"), nil
-	}
-	return openapiv1.UpdateBodyStateHypothesisLifecycle200JSONResponse(response), nil
-}
-
 func (s *PublicServer) ListBodyStateEvidence(
 	ctx context.Context,
 	_ openapiv1.ListBodyStateEvidenceRequestObject,
@@ -315,38 +257,6 @@ func observationFromOpenAPI(input openapiv1.BodyStateObservationInput) (model.Bo
 	}, nil
 }
 
-func hypothesisFromOpenAPI(input openapiv1.BodyStateHypothesisInput) (model.BodyStateHypothesis, error) {
-	factIDs, err := stringArrayJSON(input.SupportingFactIds)
-	if err != nil {
-		return model.BodyStateHypothesis{}, err
-	}
-	observationIDs, err := stringArrayJSON(input.SupportingObservationIds)
-	if err != nil {
-		return model.BodyStateHypothesis{}, err
-	}
-	evidenceIDs, err := stringArrayJSON(input.SupportingEvidenceIds)
-	if err != nil {
-		return model.BodyStateHypothesis{}, err
-	}
-	counterevidenceIDs, err := stringArrayJSON(input.CounterevidenceIds)
-	if err != nil {
-		return model.BodyStateHypothesis{}, err
-	}
-	provenance, err := jsonObjectToDatatypes(input.Provenance)
-	if err != nil {
-		return model.BodyStateHypothesis{}, err
-	}
-	var lifecycle string
-	if input.LifecycleState != nil {
-		lifecycle = string(*input.LifecycleState)
-	}
-	return model.BodyStateHypothesis{
-		ConcernKey: stringValue(input.ConcernKey), Statement: input.Statement, LifecycleState: lifecycle,
-		Confidence: input.Confidence, SupportingFactIDs: factIDs, SupportingObservationIDs: observationIDs,
-		SupportingEvidenceIDs: evidenceIDs, CounterevidenceIDs: counterevidenceIDs, Provenance: provenance,
-	}, nil
-}
-
 func stringArrayJSON(value *openapiv1.StringArray) (datatypes.JSON, error) {
 	items := []string{}
 	if value != nil {
@@ -372,24 +282,6 @@ func observationMutationResponseToOpenAPI(
 		return openapiv1.BodyStateObservationMutationResponse{}, err
 	}
 	return openapiv1.BodyStateObservationMutationResponse{Observation: publicObservation, Revision: publicRevision}, nil
-}
-
-func hypothesisMutationResponseToOpenAPI(
-	hypothesis *model.BodyStateHypothesis,
-	revision *model.BodyStateRevision,
-) (openapiv1.BodyStateHypothesisMutationResponse, error) {
-	if hypothesis == nil {
-		return openapiv1.BodyStateHypothesisMutationResponse{}, errors.New("missing hypothesis result")
-	}
-	publicHypothesis, err := strictOpenAPIConvert[openapiv1.BodyStateHypothesis]("BodyStateHypothesis", hypothesis)
-	if err != nil {
-		return openapiv1.BodyStateHypothesisMutationResponse{}, err
-	}
-	publicRevision, err := optionalRevisionToOpenAPI(revision)
-	if err != nil {
-		return openapiv1.BodyStateHypothesisMutationResponse{}, err
-	}
-	return openapiv1.BodyStateHypothesisMutationResponse{Hypothesis: publicHypothesis, Revision: publicRevision}, nil
 }
 
 func optionalRevisionToOpenAPI(revision *model.BodyStateRevision) (*openapiv1.BodyStateRevision, error) {
@@ -549,50 +441,6 @@ func reviewBodyStateObservationError(status int, code, message string) openapiv1
 		return openapiv1.ReviewBodyStateObservation503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
 	default:
 		return openapiv1.ReviewBodyStateObservation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
-}
-
-func addBodyStateHypothesisClassifiedError(err error) openapiv1.AddBodyStateHypothesisResponseObject {
-	e := classifyBodyStatePublicError(err)
-	return addBodyStateHypothesisError(e.status, e.code, e.message)
-}
-func addBodyStateHypothesisError(status int, code, message string) openapiv1.AddBodyStateHypothesisResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.AddBodyStateHypothesis400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.AddBodyStateHypothesis401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.AddBodyStateHypothesis404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.AddBodyStateHypothesis409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	case http.StatusServiceUnavailable:
-		return openapiv1.AddBodyStateHypothesis503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
-	default:
-		return openapiv1.AddBodyStateHypothesis500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
-}
-
-func updateBodyStateHypothesisLifecycleClassifiedError(err error) openapiv1.UpdateBodyStateHypothesisLifecycleResponseObject {
-	e := classifyBodyStatePublicError(err)
-	return updateBodyStateHypothesisLifecycleError(e.status, e.code, e.message)
-}
-func updateBodyStateHypothesisLifecycleError(status int, code, message string) openapiv1.UpdateBodyStateHypothesisLifecycleResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	case http.StatusServiceUnavailable:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
-	default:
-		return openapiv1.UpdateBodyStateHypothesisLifecycle500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
 	}
 }
 

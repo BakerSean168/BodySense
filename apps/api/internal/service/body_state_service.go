@@ -38,8 +38,6 @@ type bodyStateRepository interface {
 	UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error)
 	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
 	GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error)
-	AddHypothesis(ctx context.Context, userID uuid.UUID, expectedRevision *int64, hypothesis model.BodyStateHypothesis, source string) (*model.BodyStateHypothesis, *model.BodyStateRevision, error)
-	UpdateHypothesisLifecycle(ctx context.Context, userID uuid.UUID, expectedRevision *int64, hypothesisID uuid.UUID, lifecycleState string, counterevidenceIDs datatypes.JSON, source string) (*model.BodyStateHypothesis, *model.BodyStateRevision, error)
 }
 
 // BodyStateSnapshot is the stable business context shared with Consultation and
@@ -50,7 +48,6 @@ type BodyStateSnapshot struct {
 	SafetyState     json.RawMessage              `json:"safety_state"`
 	Facts           []model.BodyStateFact        `json:"facts"`
 	Observations    []model.BodyStateObservation `json:"observations"`
-	Hypotheses      []model.BodyStateHypothesis  `json:"hypotheses"`
 	RecentRevisions []model.BodyStateRevision    `json:"recent_revisions,omitempty"`
 	// SafetyScreens feed the Go Safety envelope only; they are not sent to
 	// agents or browsers as raw rows.
@@ -98,10 +95,6 @@ func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, hi
 	if observations == nil {
 		observations = []model.BodyStateObservation{}
 	}
-	hypotheses := state.Hypotheses
-	if hypotheses == nil {
-		hypotheses = []model.BodyStateHypothesis{}
-	}
 	if revisions == nil {
 		revisions = []model.BodyStateRevision{}
 	}
@@ -111,7 +104,6 @@ func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, hi
 		SafetyState:     safety,
 		Facts:           facts,
 		Observations:    observations,
-		Hypotheses:      hypotheses,
 		RecentRevisions: revisions,
 	}
 	current, err := loadBodyContext(ctx, s.repo, userID)
@@ -375,18 +367,6 @@ func (s *BodyStateService) ListEvidence(ctx context.Context, userID uuid.UUID, l
 
 func (s *BodyStateService) GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error) {
 	return s.repo.GetEvidenceByIDs(ctx, userID, ids)
-}
-
-func (s *BodyStateService) AddHypothesis(ctx context.Context, userID uuid.UUID, expectedRevision *int64, hypothesis model.BodyStateHypothesis) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	return s.repo.AddHypothesis(ctx, userID, expectedRevision, hypothesis, "user_review")
-}
-
-func (s *BodyStateService) AddDiagnosisHypothesis(ctx context.Context, userID uuid.UUID, hypothesis model.BodyStateHypothesis) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	return s.repo.AddHypothesis(ctx, userID, nil, hypothesis, "diagnosis")
-}
-
-func (s *BodyStateService) UpdateHypothesisLifecycle(ctx context.Context, userID uuid.UUID, expectedRevision *int64, hypothesisID uuid.UUID, lifecycleState string, counterevidenceIDs json.RawMessage) (*model.BodyStateHypothesis, *model.BodyStateRevision, error) {
-	return s.repo.UpdateHypothesisLifecycle(ctx, userID, expectedRevision, hypothesisID, lifecycleState, datatypes.JSON(counterevidenceIDs), "user_review")
 }
 
 // RecordOutcome turns accepted intervention feedback into an explicit BodyState

@@ -26,7 +26,6 @@ import {
   BodyObservationRecordPage,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
-  BodyStateHypothesisMutationResponse,
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
@@ -114,8 +113,6 @@ import type {
   BodyObservationRecordPageOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
-  BodyStateHypothesisInput,
-  BodyStateHypothesisMutationResponseOutput,
   BodyStateObservationInput,
   BodyStateObservationMutationResponseOutput,
   BodyStateRevisionMutationResponseOutput,
@@ -214,7 +211,6 @@ import type {
   TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
-  UpdateBodyStateHypothesisLifecycleRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
@@ -1477,113 +1473,6 @@ const res = await (fetchFn ?? fetch)(getReviewBodyStateObservationUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateHypothesisUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses`
-}
-
-/**
- * @summary Add a BodyState hypothesis.
- */
-export const addBodyStateHypothesis = async (bodyStateHypothesisInput: BodyStateHypothesisInput, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateHypothesisUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(bodyStateHypothesisInput)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getUpdateBodyStateHypothesisLifecycleUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses/${id}/lifecycle`
-}
-
-/**
- * @summary Update hypothesis lifecycle/counterevidence.
- */
-export const updateBodyStateHypothesisLifecycle = async (id: string,
-    updateBodyStateHypothesisLifecycleRequest: UpdateBodyStateHypothesisLifecycleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getUpdateBodyStateHypothesisLifecycleUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateBodyStateHypothesisLifecycleRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
   return data
 }
 

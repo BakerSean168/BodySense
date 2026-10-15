@@ -7,7 +7,6 @@
  */
 import * as zod from 'zod/mini';
 import { BodyStateFact } from './bodyStateFact.zod';
-import { BodyStateHypothesis } from './bodyStateHypothesis.zod';
 import { BodyStateObservation } from './bodyStateObservation.zod';
 import { BodyStateRevision } from './bodyStateRevision.zod';
 import { JsonObject } from './jsonObject.zod';
@@ -22,7 +21,6 @@ export const BodyStateSnapshot = /*#__PURE__*/ zod.strictObject({
   "safety_state": JsonObject,
   "facts": /*#__PURE__*/ zod.array(BodyStateFact),
   "observations": /*#__PURE__*/ zod.array(BodyStateObservation),
-  "hypotheses": /*#__PURE__*/ zod.array(BodyStateHypothesis),
   "recent_revisions": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(BodyStateRevision))
 });
 

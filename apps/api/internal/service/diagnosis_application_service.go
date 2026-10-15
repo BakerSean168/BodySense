@@ -237,9 +237,8 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to persist diagnosis analysis", err)
 	}
 	s.observeRollout(ctx, userID, analysis, route)
-	if hypothesisErr := s.commitHypotheses(ctx, userID, analysis); hypothesisErr != nil {
-		log.Printf("failed to project Diagnosis hypotheses for analysis %s: %v", analysis.ID, hypothesisErr)
-	}
+	// Agent hypotheses stay in the analysis audit (decision_trace.agent_hypotheses,
+	// written by PersistAIResultWithReplayInput). They never enter BodyState.
 
 	payload := s.publicPayload(ctx, userID, analysis)
 	return payload, nil
@@ -453,36 +452,6 @@ func (s *DiagnosisApplicationService) persistEvidence(
 		parsed["candidates"] = candidates
 	}
 	return json.Marshal(parsed)
-}
-
-func (s *DiagnosisApplicationService) commitHypotheses(
-	ctx context.Context,
-	userID uuid.UUID,
-	analysis *model.DiagnosisAnalysisRecord,
-) error {
-	if s.bodyState == nil || analysis == nil {
-		return nil
-	}
-	for _, candidate := range analysis.Candidates {
-		confidence := candidate.Confidence
-		_, _, err := s.bodyState.AddDiagnosisHypothesis(ctx, userID, model.BodyStateHypothesis{
-			ConcernKey: candidate.ConcernKey, Statement: candidate.Name,
-			LifecycleState: "active", Confidence: &confidence,
-			SupportingFactIDs:        candidate.BasisFactIDs,
-			SupportingObservationIDs: candidate.BasisObservationIDs,
-			SupportingEvidenceIDs:    candidate.SupportingEvidenceIDs,
-			CounterevidenceIDs:       candidate.CounterevidenceIDs,
-			SourceAnalysisID:         &analysis.ID,
-			Provenance: datatypes.JSON(mustDiagnosisApplicationJSON(map[string]any{
-				"source_type": "diagnosis_analysis", "analysis_id": analysis.ID,
-				"candidate_id": candidate.ID, "reasoning_summary": candidate.ReasoningSummary,
-			})),
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func firstDiagnosisApplicationString(values map[string]any, keys ...string) string {

@@ -740,73 +740,6 @@ paths:
         in: path
         required: true
         schema: *id001
-  /api/v1/body-state/hypotheses:
-    post:
-      operationId: addBodyStateHypothesis
-      summary: Add a BodyState hypothesis.
-      security:
-      - bearerAuth: []
-      responses:
-        '201':
-          description: Successful BodyState operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '503':
-          $ref: '#/components/responses/ValidationUnavailable'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BodyStateHypothesisInput'
-  /api/v1/body-state/hypotheses/{id}/lifecycle:
-    patch:
-      operationId: updateBodyStateHypothesisLifecycle
-      summary: Update hypothesis lifecycle/counterevidence.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successful BodyState operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '503':
-          $ref: '#/components/responses/ValidationUnavailable'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateBodyStateHypothesisLifecycleRequest'
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema: *id001
   /api/v1/body-state/evidence:
     get:
       operationId: listBodyStateEvidence
@@ -5044,49 +4977,6 @@ components:
           type: string
           format: date-time
         updated_at: *id006
-    BodyStateHypothesis:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - user_id
-      - concern_key
-      - statement
-      - lifecycle_state
-      - supporting_fact_ids
-      - supporting_observation_ids
-      - supporting_evidence_ids
-      - counterevidence_ids
-      - provenance
-      - created_revision
-      - updated_revision
-      - created_at
-      - updated_at
-      properties:
-        id: *id003
-        user_id: *id003
-        concern_key: *id004
-        statement: *id004
-        lifecycle_state: *id004
-        confidence:
-          type: string
-        supporting_fact_ids:
-          $ref: '#/components/schemas/StringArray'
-        supporting_observation_ids:
-          $ref: '#/components/schemas/StringArray'
-        supporting_evidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        counterevidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        source_analysis_id:
-          type: string
-          format: uuid
-        provenance:
-          $ref: '#/components/schemas/JsonObject'
-        created_revision: *id005
-        updated_revision: *id005
-        created_at: *id006
-        updated_at: *id006
     HealthWorkspaceBodyState:
       type: object
       additionalProperties: false
@@ -5097,7 +4987,6 @@ components:
       - pending_facts
       - observations
       - pending_observations
-      - hypotheses
       - recent_revisions
       properties:
         current_revision: *id005
@@ -5119,10 +5008,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BodyStateObservation'
-        hypotheses:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateHypothesis'
         recent_revisions:
           type: array
           items:
@@ -6129,7 +6014,6 @@ components:
       - safety_state
       - facts
       - observations
-      - hypotheses
       properties:
         user_id: *id001
         current_revision:
@@ -6146,10 +6030,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BodyStateObservation'
-        hypotheses:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateHypothesis'
         recent_revisions:
           type: array
           items:
@@ -6270,75 +6150,6 @@ components:
           - unverified
           - confirmed
           - rejected
-    BodyStateHypothesisInput:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_revision
-      - statement
-      properties:
-        expected_revision:
-          type: integer
-          format: int64
-          minimum: 0
-        concern_key:
-          type: string
-        statement:
-          type: string
-          minLength: 1
-        lifecycle_state:
-          type: string
-          enum:
-          - active
-          - strengthened
-          - weakened
-          - unsupported
-          - retired
-        confidence:
-          type:
-          - string
-          - 'null'
-        supporting_fact_ids:
-          $ref: '#/components/schemas/StringArray'
-        supporting_observation_ids:
-          $ref: '#/components/schemas/StringArray'
-        supporting_evidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        counterevidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        provenance:
-          $ref: '#/components/schemas/JsonObject'
-    BodyStateHypothesisMutationResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - hypothesis
-      - revision
-      properties:
-        hypothesis:
-          $ref: '#/components/schemas/BodyStateHypothesis'
-        revision: *id008
-    UpdateBodyStateHypothesisLifecycleRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_revision
-      - lifecycle_state
-      properties:
-        expected_revision:
-          type: integer
-          format: int64
-          minimum: 0
-        lifecycle_state:
-          type: string
-          enum:
-          - active
-          - strengthened
-          - weakened
-          - unsupported
-          - retired
-        counterevidence_ids:
-          $ref: '#/components/schemas/StringArray'
     BodyStateEvidence:
       type: object
       additionalProperties: false
