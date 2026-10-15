@@ -47,6 +47,7 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "body_fact_commits", table: "body_fact_commits", column: "user_id"},
 	{name: "body_observations", table: "body_observations", column: "user_id"},
 	{name: "body_observation_commits", table: "body_observation_commits", column: "user_id"},
+	{name: "safety_screens", table: "safety_screens", column: "user_id"},
 	{name: "symptom_episodes", table: "symptom_episodes", column: "user_id"},
 	{name: "episode_fact_links", table: "episode_fact_links", column: "user_id"},
 	{name: "episode_state_evidence", table: "episode_state_evidence", column: "user_id"},

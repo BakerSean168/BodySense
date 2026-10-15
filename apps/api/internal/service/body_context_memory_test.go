@@ -18,7 +18,12 @@ type memoryBodyContextLedger struct {
 	revision     int64
 	facts        []model.BodyFact
 	observations []model.BodyObservationRecord
+	screens      []model.SafetyScreen
 	commands     int
+}
+
+func (m *memoryBodyContextLedger) ListSafetyScreens(context.Context, uuid.UUID) ([]model.SafetyScreen, error) {
+	return append([]model.SafetyScreen{}, m.screens...), nil
 }
 
 func (m *memoryBodyContextLedger) guard(expected int64) error {

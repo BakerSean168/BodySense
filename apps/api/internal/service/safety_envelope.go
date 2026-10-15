@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/model"
+	"github.com/google/uuid"
 )
 
 const (
@@ -60,8 +61,8 @@ const (
 type SafetySourceKindV1 string
 
 const (
-	SafetyBodyStateFact   SafetySourceKindV1 = "body_state_fact"
-	SafetyLegacyStateFact SafetySourceKindV1 = "legacy_safety_state"
+	SafetyStructuredScreen SafetySourceKindV1 = "safety_screen"
+	SafetyLegacyStateFact  SafetySourceKindV1 = "legacy_safety_state"
 )
 
 type SafetyBlockerReasonV1 string
@@ -118,6 +119,15 @@ var structuredSafetyDetails = []struct {
 }
 
 // ProjectSafetyEnvelopeV2 is a pure projection over one pinned BodyState snapshot.
+//
+// Coverage: every active asserted symptom (V2 symptom statements projected as
+// discomfort facts; presence=absent is not a complaint) is covered iff a
+// complete safety screen was recorded at a revision >= the symptom's created
+// revision. No symptom means no coverage (fail-closed).
+//
+// Assertions: each safety screen contributes one confirmed current assertion
+// per concept. A positive concept is an active blocker until an explicit Go
+// safety resolution (ResolveSafetyState) is recorded after that screen.
 func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, error) {
 	envelope := SafetyEnvelopeV2{SchemaRevision: SafetyEnvelopeSchemaV2, PolicyRevision: SafetyEnvelopePolicyV1, Assertions: []SafetyAssertionV1{}, ActiveBlockers: []SafetyBlockerV1{}}
 	envelope.Coverage = SafetyCoverageV1{Revision: SafetyCoverageRevisionV1, CaptureRevision: SafetyCaptureRevisionV1, RequiredConcepts: []string{"trauma", "radiating_pain", "numbness", "weakness", "dizziness"}, CoveredSourceRefs: []string{}, IncompleteSourceRefs: []string{}}
@@ -136,64 +146,83 @@ func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, err
 			envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: assertion.Concept, SourceRef: assertion.SourceRef, SourceKind: assertion.SourceKind, Reason: SafetyLegacyActiveState})
 		}
 	}
+	resolvedAt := legacySafetyResolvedAt(snapshot.SafetyState)
+
+	screens := make([]model.SafetyScreen, 0, len(snapshot.SafetyScreens))
+	latestScreenRevision := int64(0)
+	for _, screen := range snapshot.SafetyScreens {
+		if screen.ID == uuid.Nil || screen.UserID != snapshot.UserID || screen.BodyStateRevision <= 0 || screen.BodyStateRevision > snapshot.CurrentRevision {
+			continue
+		}
+		screens = append(screens, screen)
+		if screen.BodyStateRevision > latestScreenRevision {
+			latestScreenRevision = screen.BodyStateRevision
+		}
+	}
+	sort.Slice(screens, func(i, j int) bool { return screens[i].ID.String() < screens[j].ID.String() })
 
 	facts := append([]model.BodyStateFact(nil), snapshot.Facts...)
 	sort.Slice(facts, func(i, j int) bool { return facts[i].ID.String() < facts[j].ID.String() })
 	for _, fact := range facts {
-		if fact.LifecycleState != "active" || fact.ExcludedFromReasoning || (fact.ReviewState != "confirmed" && fact.ReviewState != "unverified") {
+		if fact.Kind != "discomfort" || fact.LifecycleState != "active" || fact.ExcludedFromReasoning || (fact.ReviewState != "confirmed" && fact.ReviewState != "unverified") {
+			continue
+		}
+		var details struct {
+			Presence string `json:"presence"`
+		}
+		if len(fact.Details) > 0 && json.Unmarshal(fact.Details, &details) == nil && details.Presence == "absent" {
 			continue
 		}
 		ref := "body-state:fact:" + fact.ID.String()
-		var details map[string]json.RawMessage
-		if len(fact.Details) > 0 {
-			_ = json.Unmarshal(fact.Details, &details)
+		if fact.CreatedRevision > 0 && latestScreenRevision >= fact.CreatedRevision {
+			envelope.Coverage.CoveredSourceRefs = append(envelope.Coverage.CoveredSourceRefs, ref)
+		} else {
+			envelope.Coverage.IncompleteSourceRefs = append(envelope.Coverage.IncompleteSourceRefs, ref)
 		}
-		if fact.Kind == "discomfort" {
-			covered := details != nil
-			var marker string
-			if covered {
-				covered = json.Unmarshal(details["safety_capture_revision"], &marker) == nil && marker == SafetyCaptureRevisionV1
-			}
-			for _, field := range structuredSafetyDetails {
-				var value bool
-				if _, exists := details[field.key]; !exists || json.Unmarshal(details[field.key], &value) != nil {
-					covered = false
-				}
-			}
-			if covered {
-				envelope.Coverage.CoveredSourceRefs = append(envelope.Coverage.CoveredSourceRefs, ref)
-			} else {
-				envelope.Coverage.IncompleteSourceRefs = append(envelope.Coverage.IncompleteSourceRefs, ref)
-			}
-		}
-		if details == nil {
-			continue
+	}
+
+	for _, screen := range screens {
+		ref := "body-state:safety-screen:" + screen.ID.String()
+		recordedAt := screen.RecordedAt
+		values := map[SafetyConceptV1]bool{
+			SafetyTrauma: screen.Trauma, SafetyRadiatingPain: screen.RadiatingPain, SafetyNumbness: screen.Numbness,
+			SafetyWeakness: screen.Weakness, SafetyDizziness: screen.Dizziness,
 		}
 		for _, field := range structuredSafetyDetails {
-			raw, exists := details[field.key]
-			if !exists {
-				continue
-			}
-			var value bool
-			if err := json.Unmarshal(raw, &value); err != nil {
-				continue
-			} // Free-form details have no authority.
-			if fact.ID.String() == "00000000-0000-0000-0000-000000000000" {
-				continue
-			}
-			polarity := SafetyAbsent
-			if value {
+			polarity, temporality := SafetyAbsent, SafetyCurrent
+			if values[field.concept] {
 				polarity = SafetyPresent
+				if resolvedAt != nil && resolvedAt.After(recordedAt) {
+					temporality = SafetyResolved
+				}
 			}
-			envelope.Assertions = append(envelope.Assertions, SafetyAssertionV1{Concept: field.concept, Polarity: polarity, Temporality: SafetyCurrent, ReviewState: SafetyReviewStateV1(fact.ReviewState), SourceRef: ref, SourceKind: SafetyBodyStateFact, ObservedAt: fact.ObservedAt})
-			if value {
-				envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: field.concept, SourceRef: ref, SourceKind: SafetyBodyStateFact, Reason: SafetyStructuredCurrentSignal})
+			envelope.Assertions = append(envelope.Assertions, SafetyAssertionV1{Concept: field.concept, Polarity: polarity, Temporality: temporality, ReviewState: SafetyConfirmed, SourceRef: ref, SourceKind: SafetyStructuredScreen, ObservedAt: &recordedAt})
+			if polarity == SafetyPresent && temporality == SafetyCurrent {
+				envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: field.concept, SourceRef: ref, SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal})
 			}
 		}
 	}
 	envelope.Coverage.Complete = len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0
 	envelope.RequiresReview = len(envelope.ActiveBlockers) > 0
 	return envelope, nil
+}
+
+// legacySafetyResolvedAt returns when the current safety state was explicitly
+// resolved through ResolveSafetyState, or nil. Detector output never resolves.
+func legacySafetyResolvedAt(raw json.RawMessage) *time.Time {
+	var state struct {
+		Status     string     `json:"status"`
+		ResolvedAt *time.Time `json:"resolved_at"`
+	}
+	if len(bytes.TrimSpace(raw)) == 0 || json.Unmarshal(raw, &state) != nil || state.ResolvedAt == nil {
+		return nil
+	}
+	switch strings.TrimSpace(state.Status) {
+	case "resolved", "cleared_by_review", "monitoring":
+		return state.ResolvedAt
+	default:
+		return nil
+	}
 }
 
 func adaptLegacySafetyState(raw json.RawMessage) ([]SafetyAssertionV1, bool, bool, error) {

@@ -42,6 +42,7 @@ type bodyContextLedger interface {
 	WithdrawDirectFact(ctx context.Context, owner, target uuid.UUID, command model.AmendBodyFactCommand) (*model.BodyFactCommit, error)
 	ListDirectObservations(ctx context.Context, owner uuid.UUID, beforeRevision int64) (*model.BodyObservationPage, error)
 	RecordDirectObservation(ctx context.Context, owner uuid.UUID, command model.RecordBodyObservationCommand) (*model.BodyObservationCommit, error)
+	ListSafetyScreens(ctx context.Context, owner uuid.UUID) ([]model.SafetyScreen, error)
 }
 
 // BodyContext is the current projection of the user's reported context.
@@ -51,6 +52,10 @@ type BodyContext struct {
 	Weight    *model.BodyObservationRecord
 	Injury    *model.BodyFact
 	Lifestyle map[string]*model.BodyFact
+	// Symptoms are all currently asserted V2 symptom statements, newest first.
+	Symptoms []model.BodyFact
+	// SafetyScreens are the owner's structured safety screens, newest first.
+	SafetyScreens []model.SafetyScreen
 }
 
 // BodyContextUpdate is one semantic edit. Nil fields are untouched; an empty
@@ -77,6 +82,10 @@ func loadBodyContext(ctx context.Context, ledger bodyContextLedger, owner uuid.U
 		}
 		for index := range facts.Facts {
 			fact := facts.Facts[index]
+			if fact.Kind == "symptom" && fact.AssertionStatus == "asserted" {
+				out.Symptoms = append(out.Symptoms, fact)
+				continue
+			}
 			key := bodyContextFactKey(fact)
 			if key == "" || seen[key] {
 				continue
@@ -130,6 +139,11 @@ func loadBodyContext(ctx context.Context, ledger bodyContextLedger, owner uuid.U
 		}
 		before = *observations.NextBeforeRevision
 	}
+	screens, err := ledger.ListSafetyScreens(ctx, owner)
+	if err != nil {
+		return nil, fmt.Errorf("list safety screens: %w", err)
+	}
+	out.SafetyScreens = screens
 	return out, nil
 }
 
@@ -335,6 +349,37 @@ func projectBodyContextIntoSnapshot(snapshot *BodyStateSnapshot, current *BodyCo
 		if fact := current.Lifestyle[section]; fact != nil {
 			appendFact(bodyContextLegacyLifestyleKind[section], "lifestyle:"+section, fact)
 		}
+	}
+	// V2 symptom statements reach legacy snapshot readers (assessment,
+	// diagnosis, treatment, workspace) as discomfort facts keyed by their V2
+	// fact id. A user-reported absence is not a complaint and is not projected.
+	for index := range current.Symptoms {
+		fact := current.Symptoms[index]
+		var details model.SymptomFactDetails
+		if json.Unmarshal(fact.Details, &details) != nil || details.Presence == "absent" {
+			continue
+		}
+		var regions []string
+		_ = json.Unmarshal(fact.BodyRegionIDs, &regions)
+		concern, region := "general", ""
+		var regionID *string
+		if len(regions) > 0 {
+			region = regions[0]
+			regionID = &regions[0]
+			concern = "region:" + region
+		}
+		provenance, _ := json.Marshal(map[string]any{"source_type": "body_fact_ledger", "body_fact_id": fact.ID})
+		facts = append(facts, model.BodyStateFact{
+			ID: fact.ID, UserID: fact.UserID, ConcernKey: concern, Kind: "discomfort", BodyRegion: region, BodyRegionID: regionID,
+			Value: fact.Statement, Details: fact.Details, Origin: "user_reported", ReviewState: "confirmed", LifecycleState: "active",
+			Trend: "unknown", Provenance: datatypes.JSON(provenance), ValidFrom: bodyContextFactTemporalStart(&fact),
+			CreatedRevision: fact.CreatedRevision, UpdatedRevision: fact.CreatedRevision,
+			CreatedAt: fact.RecordedAt, UpdatedAt: fact.RecordedAt,
+		})
+	}
+	snapshot.SafetyScreens = current.SafetyScreens
+	if snapshot.SafetyScreens == nil {
+		snapshot.SafetyScreens = []model.SafetyScreen{}
 	}
 	appendObservation := func(kind string, record *model.BodyObservationRecord) {
 		metric := bodyContextMetric(record)

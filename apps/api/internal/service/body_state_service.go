@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -52,6 +53,9 @@ type BodyStateSnapshot struct {
 	Observations    []model.BodyStateObservation `json:"observations"`
 	Hypotheses      []model.BodyStateHypothesis  `json:"hypotheses"`
 	RecentRevisions []model.BodyStateRevision    `json:"recent_revisions,omitempty"`
+	// SafetyScreens feed the Go Safety envelope only; they are not sent to
+	// agents or browsers as raw rows.
+	SafetyScreens []model.SafetyScreen `json:"-"`
 }
 
 // BodyStateService is the application boundary around the user-scoped aggregate.
@@ -146,112 +150,106 @@ func (s *BodyStateService) ListReviewableObservations(
 	return items, nil
 }
 
-// UpsertExtractedSymptom converts the Consultation intake event into a durable
-// review candidate without making ConsultationSession the new truth source.
-func (s *BodyStateService) UpsertExtractedSymptom(
+// RecordStructuredIntakeAnswer turns a Go-validated, runtime-bound symptom
+// intake answer into the V2 ledger: one structured_answer symptom statement
+// (the user's own answer text) and, when the bounded safety checklist was
+// answered, a safety screen, committed in one BodyState revision. Any other
+// interaction answer, including a model-authored ask_user without the runtime
+// binding, creates nothing.
+func (s *BodyStateService) RecordStructuredIntakeAnswer(
 	ctx context.Context,
 	userID uuid.UUID,
-	runID uuid.UUID,
-	info json.RawMessage,
+	source model.AnswerFactSource,
+	interaction *model.AgentInteraction,
 ) error {
-	var raw map[string]any
-	if len(info) == 0 || json.Unmarshal(info, &raw) != nil {
+	if interaction == nil {
 		return nil
 	}
-	bodyRegion := bodyStateString(raw["body_part"])
-	symptom := bodyStateString(raw["symptom_type"])
-	if bodyRegion == "" || symptom == "" {
+	symptom, captureID, matched, err := bodyStateBoundSymptomAnswer(interaction.ToolCallID, interaction.Question, json.RawMessage(interaction.Answer))
+	if !matched {
 		return nil
 	}
-
-	detailsJSON := bodyStateSymptomDetails(raw, false)
-	durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(bodyRegion)
-	captureID := strings.ToLower(bodyStateString(raw["capture_id"]))
-	sourceKey := "consultation:" + runID.String() + ":symptom:" + bodyStateHash(bodyRegion+"|"+symptom)
-	if bodyStateValidCaptureID(captureID) {
-		sourceKey = "consultation:capture:" + captureID
+	if err != nil {
+		return err
 	}
-	provenanceRaw := make(map[string]any, len(raw))
-	for key, value := range raw {
-		provenanceRaw[key] = value
+	ledger, ok := s.repo.(structuredIntakeLedger)
+	if !ok {
+		return errors.New("structured intake ledger is not configured")
 	}
-	delete(provenanceRaw, "safety_capture_revision")
-	for _, field := range structuredSafetyDetails {
-		delete(provenanceRaw, field.key)
+	_, answerText, err := model.ValidateInteractionAnswer(interaction.Question, interaction.Answer)
+	if err != nil {
+		return err
 	}
-	provenanceJSON, _ := json.Marshal(map[string]any{
-		"source_type": "consultation_intake",
-		"run_id":      runID,
-		"capture_id":  captureID,
-		"raw":         provenanceRaw,
-	})
-
-	// Model-mediated extraction is durable and visible for review, but cannot
-	// enter current reasoning until an explicit structured answer or review
-	// promotes this exact source-keyed candidate.
-	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		ConcernKey:            bodyStateConcernKey(durableRegion),
-		Kind:                  "discomfort",
-		BodyRegion:            durableRegion,
-		BodyRegionID:          durableRegionID,
-		Value:                 symptom,
-		Details:               detailsJSON,
-		Origin:                "ai_extracted",
-		ReviewState:           "unverified",
-		LifecycleState:        "active",
-		Trend:                 "unknown",
-		SourceKey:             sourceKey,
-		Provenance:            datatypes.JSON(provenanceJSON),
-		ExcludedFromReasoning: true,
-	}, "consultation")
+	command, err := bodyStateStructuredIntakeCommand(symptom, captureID, answerText)
+	if err != nil {
+		return err
+	}
+	if regions := command.Fact.BodyRegionIDs; len(regions) > 0 && s.bodyRegionIDValidator != nil && !s.bodyRegionIDValidator.IsValidBodyRegionID(regions[0]) {
+		command.Fact.BodyRegionIDs = []string{}
+	}
+	_, err = ledger.RecordStructuredIntake(ctx, userID, source, command)
 	return err
 }
 
-// RecordInteractionAnswer projects only runtime-owned structured symptom intake
-// into BodyState. Other interaction answers remain durable in the interaction/message
-// event model but cannot create health facts without an explicit state binding.
-func (s *BodyStateService) RecordInteractionAnswer(
-	ctx context.Context,
-	userID uuid.UUID,
-	interactionID uuid.UUID,
-	toolCallID string,
-	question datatypes.JSON,
-	answer json.RawMessage,
-) error {
-	if symptom, captureID, matched, err := bodyStateBoundSymptomAnswer(toolCallID, question, answer); matched {
-		if err != nil {
-			return err
-		}
-		bodyRegion := bodyStateString(symptom["body_part"])
-		durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(bodyRegion)
-		symptomType := bodyStateString(symptom["symptom_type"])
-		provenanceJSON, _ := json.Marshal(map[string]any{
-			"source_type":    "structured_symptom_intake",
-			"interaction_id": interactionID,
-			"tool_call_id":   toolCallID,
-			"capture_id":     captureID,
-			"question":       json.RawMessage(question),
-			"answer":         json.RawMessage(answer),
-		})
-		_, _, err = s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-			ConcernKey:            bodyStateConcernKey(durableRegion),
-			Kind:                  "discomfort",
-			BodyRegion:            durableRegion,
-			BodyRegionID:          durableRegionID,
-			Value:                 symptomType,
-			Details:               bodyStateSymptomDetails(symptom, true),
-			Origin:                "structured_answer",
-			ReviewState:           "confirmed",
-			LifecycleState:        "active",
-			Trend:                 "unknown",
-			SourceKey:             "consultation:capture:" + captureID,
-			Provenance:            datatypes.JSON(provenanceJSON),
-			ExcludedFromReasoning: false,
-		}, "consultation")
-		return err
-	}
+type structuredIntakeLedger interface {
+	RecordStructuredIntake(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, command model.StructuredIntakeCommand) (*model.BodyFactCommit, error)
+}
 
-	return nil
+func bodyStateStructuredIntakeCommand(symptom map[string]any, captureID, answerText string) (model.StructuredIntakeCommand, error) {
+	answerText = strings.TrimSpace(answerText)
+	if answerText == "" || utf8.RuneCountInString(answerText) > 2000 {
+		return model.StructuredIntakeCommand{}, errors.New("structured symptom intake answer text is empty or too long")
+	}
+	details := model.SymptomFactDetails{
+		SymptomType: bodyStateString(symptom["symptom_type"]),
+		Presence:    "present",
+	}
+	if severity := bodyStateString(symptom["severity"]); severity != "" {
+		details.Severity = &model.FactSeverity{RawValue: severity}
+	}
+	for _, trigger := range strings.Split(bodyStateString(symptom["trigger"]), "，") {
+		if trigger = strings.TrimSpace(trigger); trigger != "" {
+			details.Triggers = append(details.Triggers, trigger)
+		}
+	}
+	if relief := bodyStateString(symptom["relief"]); relief != "" {
+		details.RelievingFactors = []string{relief}
+	}
+	detailsJSON, err := json.Marshal(details)
+	if err != nil {
+		return model.StructuredIntakeCommand{}, err
+	}
+	temporal := model.FactTemporal{Precision: "unknown"}
+	if duration := bodyStateString(symptom["duration"]); duration != "" && utf8.RuneCountInString(duration) <= 500 {
+		temporal.OriginalExpression = duration
+	}
+	regions := []string{}
+	if _, regionID := bodyStateCanonicalRegionProjection(bodyStateString(symptom["body_part"])); regionID != nil {
+		regions = append(regions, *regionID)
+	}
+	command := model.StructuredIntakeCommand{
+		CaptureID: captureID,
+		Fact: model.BodyFactInput{
+			Kind: "symptom", Statement: answerText, BodyRegionIDs: regions,
+			Temporal: temporal, Details: detailsJSON,
+		},
+	}
+	if symptom["safety_capture_revision"] == SafetyCaptureRevisionV1 {
+		answers := model.SafetyScreenAnswers{}
+		targets := map[string]*bool{
+			"trauma": &answers.Trauma, "radiating_pain": &answers.RadiatingPain, "numbness": &answers.Numbness,
+			"weakness": &answers.Weakness, "dizziness": &answers.Dizziness,
+		}
+		for _, field := range structuredSafetyDetails {
+			value, ok := symptom[field.key].(bool)
+			if !ok {
+				return model.StructuredIntakeCommand{}, errors.New("structured safety checklist is incomplete")
+			}
+			*targets[field.key] = value
+		}
+		command.Screen = &answers
+	}
+	return command, nil
 }
 
 // ApplyCurrentContextPatch is the application boundary for a semantically
@@ -398,79 +396,6 @@ func (s *BodyStateService) SetCurrentObservation(
 		}
 	}
 	return nil, revision, nil
-}
-
-// RecordLifestyleContext accepts only explicit user-reported lifestyle context
-// normalized by the consultation runtime. It never infers a lifestyle fact from
-// symptoms or external knowledge.
-func (s *BodyStateService) RecordLifestyleContext(
-	ctx context.Context,
-	userID uuid.UUID,
-	runID uuid.UUID,
-	payload json.RawMessage,
-) error {
-	var raw struct {
-		Section string         `json:"section"`
-		Summary string         `json:"summary"`
-		Details map[string]any `json:"details"`
-	}
-	if len(payload) == 0 || json.Unmarshal(payload, &raw) != nil {
-		return nil
-	}
-	section := strings.TrimSpace(raw.Section)
-	kind, ok := lifestyleFactKind(section)
-	if !ok || strings.TrimSpace(raw.Summary) == "" {
-		return nil
-	}
-	details, _ := json.Marshal(raw.Details)
-	provenance, _ := json.Marshal(map[string]any{
-		"source_type": "consultation_lifestyle_extraction",
-		"run_id":      runID,
-		"raw":         json.RawMessage(payload),
-	})
-	// This is model-mediated extraction, not a deterministic structured answer.
-	// Persist it durably but keep it out of current reasoning until the user
-	// accepts it from the Lifestyle projection.
-	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		ConcernKey:            "lifestyle:" + section,
-		Kind:                  kind,
-		Value:                 strings.TrimSpace(raw.Summary),
-		Details:               datatypes.JSON(bodyStateRawOr(details, `{}`)),
-		Origin:                "ai_extracted",
-		ReviewState:           "unverified",
-		LifecycleState:        "active",
-		Trend:                 "unknown",
-		SourceKey:             "consultation:" + runID.String() + ":lifestyle:" + section,
-		Provenance:            datatypes.JSON(provenance),
-		ExcludedFromReasoning: true,
-	}, "consultation")
-	return err
-}
-
-func bodyStateRawOr(value []byte, fallback string) []byte {
-	if len(value) == 0 || string(value) == "null" {
-		return []byte(fallback)
-	}
-	return value
-}
-
-func lifestyleFactKind(section string) (string, bool) {
-	switch section {
-	case "activity":
-		return model.BodyStateFactKindLifestyleActivity, true
-	case "sleep":
-		return model.BodyStateFactKindLifestyleSleep, true
-	case "exercise":
-		return model.BodyStateFactKindLifestyleExercise, true
-	case "nutrition":
-		return model.BodyStateFactKindLifestyleNutrition, true
-	case "substances":
-		return model.BodyStateFactKindLifestyleSubstances, true
-	case "recovery":
-		return model.BodyStateFactKindLifestyleRecovery, true
-	default:
-		return "", false
-	}
 }
 
 func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
@@ -718,33 +643,6 @@ func (s *BodyStateService) RecordSafetyEventWithReceipt(ctx context.Context, use
 	return revision, nil
 }
 
-func bodyStateSymptomDetails(raw map[string]any, trustedSafety bool) datatypes.JSON {
-	details := map[string]any{}
-	for _, key := range []string{
-		"duration", "trigger", "relief", "severity", "radiation",
-		"functional_impact", "neurological_signs", "onset", "additional_notes",
-	} {
-		if value := bodyStateString(raw[key]); value != "" {
-			details[key] = value
-		}
-	}
-	if trustedSafety && raw["safety_capture_revision"] == SafetyCaptureRevisionV1 {
-		valid := true
-		for _, field := range structuredSafetyDetails {
-			if _, ok := raw[field.key].(bool); !ok {
-				valid = false
-			}
-		}
-		if valid {
-			details["safety_capture_revision"] = SafetyCaptureRevisionV1
-			for _, field := range structuredSafetyDetails {
-				details[field.key] = raw[field.key]
-			}
-		}
-	}
-	return datatypes.JSON(bodyStateMustJSON(details))
-}
-
 var bodyStateSafetySignalOptions = []struct{ option, concept string }{
 	{"外伤或创伤", "trauma"}, {"放射痛", "radiating_pain"}, {"麻木", "numbness"},
 	{"无力", "weakness"}, {"头晕", "dizziness"},
@@ -861,7 +759,7 @@ func bodyStateBoundSymptomAnswer(
 		if !allowed[target] {
 			continue
 		}
-		if value := bodyStateString(payload.Fields[answerKey]); value != "" {
+		if value := bodyStateAnswerString(payload.Fields[answerKey]); value != "" {
 			symptom[target] = value
 		}
 	}
@@ -904,6 +802,22 @@ func bodyStateString(value any) string {
 		return ""
 	}
 	return strings.TrimSpace(fmt.Sprint(value))
+}
+
+// bodyStateAnswerString renders a scalar or multi-choice answer value; a
+// multi-choice selection keeps the canonical "，" join used for answer text.
+func bodyStateAnswerString(value any) string {
+	items, ok := value.([]any)
+	if !ok {
+		return bodyStateString(value)
+	}
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		if text := bodyStateString(item); text != "" {
+			parts = append(parts, text)
+		}
+	}
+	return strings.Join(parts, "，")
 }
 
 func bodyStateMustJSON(value any) []byte {

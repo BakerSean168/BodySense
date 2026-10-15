@@ -47,6 +47,7 @@ DROP TABLE IF EXISTS
     public.privacy_erasure_requests,
     public.runs,
     public.runtime_events,
+    public.safety_screens,
     public.statement_evidence,
     public.symptom_episodes,
     public.thread_projection_messages,
