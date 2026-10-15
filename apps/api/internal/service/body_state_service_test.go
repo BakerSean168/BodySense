@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -30,7 +29,7 @@ type fakeBodyStateRepository struct {
 	safetyExpectedRevisions  []*int64
 	returnExistingFact       bool
 	returnExistingObs        bool
-	intakes                  []model.StructuredIntakeCommand
+	screens                  []model.SafetyScreenCommand
 }
 
 func (r *fakeBodyStateRepository) Ensure(context.Context, uuid.UUID) error { return nil }
@@ -211,113 +210,9 @@ func (r *fakeBodyStateRepository) UpdateHypothesisLifecycle(_ context.Context, u
 	return &model.BodyStateHypothesis{ID: hypothesisID, UserID: userID, LifecycleState: lifecycleState, CounterevidenceIDs: counterevidenceIDs}, &model.BodyStateRevision{Revision: 2}, nil
 }
 
-func (r *fakeBodyStateRepository) RecordStructuredIntake(_ context.Context, userID uuid.UUID, source model.AnswerFactSource, command model.StructuredIntakeCommand) (*model.BodyFactCommit, error) {
-	r.intakes = append(r.intakes, command)
-	return &model.BodyFactCommit{ID: uuid.New(), UserID: userID, Revision: 1}, nil
-}
-
-const testIntakeCapture = "0123456789abcdef01234567"
-
-const testIntakeQuestion = `{"question":"请补全下面信息：","answer_type":"text","purpose":"symptom_intake",
-"fields":[
- {"key":"safety_signals","label":"安全信号","answer_type":"multi_choice","required":true,"options":["外伤或创伤","放射痛","麻木","无力","头晕","以上均无"],"exclusive_options":["以上均无"]},
- {"key":"duration","label":"持续多久","answer_type":"single_choice","required":true,"options":["今天或24小时内","2–7天","1–4周","超过1个月"]},
- {"key":"trigger","label":"诱因","answer_type":"multi_choice","required":false,"options":["久坐或久站","弯腰或转身"]}],
-"state_binding":{"revision":"symptom-intake-binding-v1","capture_id":"0123456789abcdef01234567",
- "seed_info":{"body_part":"右臀","symptom_type":"疼痛","severity":"中度（5–6/10）"},
- "field_map":{"safety_signals":"safety_signals","duration":"duration","trigger":"trigger"}}}`
-
-func testIntakeInteraction(question, answer string) *model.AgentInteraction {
-	return &model.AgentInteraction{ID: uuid.New(), ToolName: "ask_user", ToolCallID: "intake-" + testIntakeCapture, Question: datatypes.JSON(question), Answer: datatypes.JSON(answer)}
-}
-
-func TestStructuredIntakeAnswerBuildsSymptomStatementAndSafetyScreen(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	answer := `{"fields":{"safety_signals":["放射痛","麻木"],"duration":"1–4周","trigger":["久坐或久站","弯腰或转身"]}}`
-	if err := svc.RecordStructuredIntakeAnswer(context.Background(), uuid.New(), model.AnswerFactSource{RunID: uuid.New(), InteractionID: uuid.New(), MessageID: uuid.New()}, testIntakeInteraction(testIntakeQuestion, answer)); err != nil {
-		t.Fatal(err)
-	}
-	if len(repo.intakes) != 1 {
-		t.Fatalf("expected one intake command, got %#v", repo.intakes)
-	}
-	command := repo.intakes[0]
-	if command.CaptureID != testIntakeCapture || command.Fact.Kind != "symptom" {
-		t.Fatalf("unexpected intake identity: %#v", command)
-	}
-	// The statement is the user's canonical answer text, never seed or model prose.
-	if command.Fact.Statement != "安全信号: 放射痛，麻木；持续多久: 1–4周；诱因: 久坐或久站，弯腰或转身" {
-		t.Fatalf("statement is not the user's answer text: %q", command.Fact.Statement)
-	}
-	if err := (model.RecordBodyFactsCommand{IdempotencyKey: "k", Facts: []model.BodyFactInput{command.Fact}}).Validate(); err != nil {
-		t.Fatalf("intake fact does not satisfy the BodyFact contract: %v", err)
-	}
-	var details model.SymptomFactDetails
-	if err := json.Unmarshal(command.Fact.Details, &details); err != nil {
-		t.Fatal(err)
-	}
-	if details.SymptomType != "疼痛" || details.Presence != "present" || details.Severity == nil || details.Severity.RawValue != "中度（5–6/10）" ||
-		strings.Join(details.Triggers, "|") != "久坐或久站|弯腰或转身" || command.Fact.Temporal.OriginalExpression != "1–4周" {
-		t.Fatalf("bound fields were not mapped: %#v %#v", details, command.Fact.Temporal)
-	}
-	if command.Screen == nil || *command.Screen != (model.SafetyScreenAnswers{RadiatingPain: true, Numbness: true}) {
-		t.Fatalf("unexpected safety screen: %#v", command.Screen)
-	}
-}
-
-func TestStructuredIntakeSafetyScreenRequiresValidBoundChecklist(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		question string
-		answer   string
-		screen   *model.SafetyScreenAnswers
-		wantErr  bool
-	}{
-		{"none", testIntakeQuestion, `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, &model.SafetyScreenAnswers{}, false},
-		{"selected", testIntakeQuestion, `{"fields":{"safety_signals":["外伤或创伤","头晕"],"duration":"1–4周"}}`, &model.SafetyScreenAnswers{Trauma: true, Dizziness: true}, false},
-		{"missing-exclusivity", strings.Replace(testIntakeQuestion, `,"exclusive_options":["以上均无"]`, "", 1), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil, false},
-		{"wrong-exclusivity", strings.Replace(testIntakeQuestion, `"exclusive_options":["以上均无"]`, `"exclusive_options":["麻木"]`, 1), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil, false},
-		{"unmapped-checklist", strings.Replace(testIntakeQuestion, `"safety_signals":"safety_signals",`, "", 1), `{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`, nil, false},
-		{"contradictory", testIntakeQuestion, `{"fields":{"safety_signals":["以上均无","麻木"],"duration":"1–4周"}}`, nil, true},
-		{"unknown", testIntakeQuestion, `{"fields":{"safety_signals":["未知"],"duration":"1–4周"}}`, nil, true},
-		{"missing", testIntakeQuestion, `{"fields":{"duration":"1–4周"}}`, nil, true},
-		{"forged-marker", testIntakeQuestion, `{"fields":{"duration":"1–4周","safety_signals":["以上均无"],"trauma":false}}`, nil, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			repo := &fakeBodyStateRepository{}
-			err := NewBodyStateService(repo).RecordStructuredIntakeAnswer(context.Background(), uuid.New(), model.AnswerFactSource{RunID: uuid.New(), InteractionID: uuid.New(), MessageID: uuid.New()}, testIntakeInteraction(tc.question, tc.answer))
-			if tc.wantErr {
-				if err == nil || len(repo.intakes) != 0 {
-					t.Fatalf("invalid answer must record nothing: err=%v intakes=%#v", err, repo.intakes)
-				}
-				return
-			}
-			if err != nil || len(repo.intakes) != 1 {
-				t.Fatalf("err=%v intakes=%#v", err, repo.intakes)
-			}
-			got := repo.intakes[0].Screen
-			if (got == nil) != (tc.screen == nil) || (got != nil && *got != *tc.screen) {
-				t.Fatalf("screen = %#v, want %#v", got, tc.screen)
-			}
-		})
-	}
-}
-
-func TestModelAuthoredAskUserCannotRecordStructuredIntake(t *testing.T) {
-	for name, interaction := range map[string]*model.AgentInteraction{
-		"model-tool-call": {ToolCallID: "model-tool-call", Question: datatypes.JSON(testIntakeQuestion), Answer: datatypes.JSON(`{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`)},
-		"wrong-capture":   {ToolCallID: "intake-ffffffffffffffffffffffff", Question: datatypes.JSON(testIntakeQuestion), Answer: datatypes.JSON(`{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`)},
-		"other-purpose":   {ToolCallID: "intake-" + testIntakeCapture, Question: datatypes.JSON(strings.Replace(testIntakeQuestion, `"purpose":"symptom_intake"`, `"purpose":"other"`, 1)), Answer: datatypes.JSON(`{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`)},
-		"wrong-revision":  {ToolCallID: "intake-" + testIntakeCapture, Question: datatypes.JSON(strings.Replace(testIntakeQuestion, `symptom-intake-binding-v1`, `symptom-intake-binding-v0`, 1)), Answer: datatypes.JSON(`{"fields":{"safety_signals":["以上均无"],"duration":"1–4周"}}`)},
-	} {
-		repo := &fakeBodyStateRepository{}
-		if err := NewBodyStateService(repo).RecordStructuredIntakeAnswer(context.Background(), uuid.New(), model.AnswerFactSource{RunID: uuid.New(), InteractionID: uuid.New(), MessageID: uuid.New()}, interaction); err != nil {
-			t.Fatalf("%s: unbound answer must be ignored, got %v", name, err)
-		}
-		if len(repo.intakes) != 0 {
-			t.Fatalf("%s: unbound ask_user created facts: %#v", name, repo.intakes)
-		}
-	}
+func (r *fakeBodyStateRepository) RecordSafetyScreen(_ context.Context, userID uuid.UUID, _ model.AnswerFactSource, command model.SafetyScreenCommand) (*model.SafetyScreen, error) {
+	r.screens = append(r.screens, command)
+	return &model.SafetyScreen{ID: uuid.New(), UserID: userID, CaptureID: command.CaptureID, BodyFactID: command.BodyFactID}, nil
 }
 
 func TestResolveSafetyStatePreservesExpectedRevision(t *testing.T) {

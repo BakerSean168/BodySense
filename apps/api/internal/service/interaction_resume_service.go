@@ -19,17 +19,17 @@ type InteractionResumeResult struct {
 	Events   []dto.StreamEvent
 }
 
-// StructuredIntakeRecorder commits a runtime-bound symptom intake answer to the
-// BodyFact ledger inside the claim transaction.
+// StructuredIntakeRecorder records the safety screen of a Go-bound symptom
+// intake answer inside the claim transaction.
 type StructuredIntakeRecorder interface {
 	RecordStructuredIntakeAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) error
 }
 
 // InteractionResumeService coordinates one Chat transaction. Ordinary answers
 // commit no domain facts here; facts follow from source-bound extraction. The
-// one exception is the Go-validated structured symptom intake, whose symptom
-// statement and safety screen commit atomically with the claim so the Agent is
-// never resumed from an unrecorded intake answer.
+// one exception is the Go-bound structured symptom intake, whose safety screen
+// commits atomically with the claim so the Agent is never resumed from an
+// unrecorded intake answer.
 type InteractionResumeService struct {
 	repo         interactionResumeRepository
 	transactions interactionTransactionManager
@@ -97,7 +97,7 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 			if err := s.intake.RecordStructuredIntakeAnswer(txCtx, command.UserID, source, envelope.Interaction); err != nil {
 				return fmt.Errorf("record structured intake: %w", err)
 			}
-		} else if _, _, bound, _ := bodyStateBoundSymptomAnswer(envelope.Interaction.ToolCallID, envelope.Interaction.Question, json.RawMessage(envelope.Interaction.Answer)); bound {
+		} else if IsBoundSymptomIntake(envelope.Interaction.ToolCallID, json.RawMessage(envelope.Interaction.Question)) {
 			return model.ErrInteractionResumeUnavailable
 		}
 		ids := dto.StreamEventIDs{ConversationID: command.ConversationID.String(), RunID: envelope.Run.ID.String(), TurnID: envelope.Run.TurnID.String(), InteractionID: command.InteractionID.String(), ToolCallID: envelope.Interaction.ToolCallID}

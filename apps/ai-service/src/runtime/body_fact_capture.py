@@ -12,6 +12,7 @@ from ..ai.errors import GatewayUnavailableError
 from ..configuration.consultation_agent_config import ConsultationAgentManifest
 from ..models.body_fact_intake import body_fact_proposal
 from ..services.body_fact_intake_service import BodyFactIntakeService
+from ..services.consultation_state_acquisition import build_safety_screen_question
 
 
 async def acquire_body_fact_turn(
@@ -42,6 +43,7 @@ async def acquire_body_fact_turn(
         return {"intake_result": {"capture_status": "unavailable"}, "intake_question": None}
 
     result = {"turn_kind": output.turn_kind, "capture_status": "not_applicable"}
+    question = None
     if output.facts:
         tool_id = f"bodyfact-intake-v1:{run_id}"
         answer_scope = state.get("answer_interaction_id")
@@ -59,7 +61,23 @@ async def acquire_body_fact_turn(
             {"type": "tool_result", "id": tool_id, "tool": "record_body_state", "result": proposal}
         )
         result["capture_status"] = "proposed"
-    question = None
+        # Every non-absent symptom needs a safety screen before Diagnosis may
+        # rely on it. Ask the bounded checklist for the first one; a screen
+        # committed after this proposal covers every symptom of this batch.
+        symptom_index = next(
+            (
+                index
+                for index, fact in enumerate(output.facts)
+                if fact.kind == "symptom" and fact.presence != "absent"
+            ),
+            None,
+        )
+        if symptom_index is not None:
+            question = build_safety_screen_question(
+                fact_tool_call_id=tool_id,
+                fact_index=symptom_index,
+                statement=output.facts[symptom_index].statement,
+            )
     if output.turn_kind == "ambiguous":
         question = {
             "question": output.clarification or "这条身体描述指的是你本人吗？",

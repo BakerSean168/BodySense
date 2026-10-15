@@ -1,6 +1,7 @@
 package consultation
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -1020,6 +1021,9 @@ type streamResult struct {
 	GovernanceResult     datatypes.JSON
 	ExecutionIdentity    ConsultationExecutionIdentity
 	OwnedSafetyRevisions []model.BodyStateRevision
+	// CommittedFacts are the BodyFacts Go committed in this stream; a symptom
+	// intake question may bind only to one of them.
+	CommittedFacts []service.CommittedBodyFact
 }
 
 func projectConsultationRuntimeEvent(event service.ConsultationRuntimeEvent) (dto.StreamEvent, error) {
@@ -1247,13 +1251,14 @@ func (r *Runtime) handleAIEvent(
 	case service.ConsultationRuntimeToolResultPayload:
 		var captureErr error
 		if payload.Tool == "record_body_state" {
-			committed, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result, result.OwnedSafetyRevisions...)
+			committed, facts, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result, result.OwnedSafetyRevisions...)
 			captureErr = err
 			if err != nil {
 				log.Printf("BodyFact proposal rejected: %v", err)
 				payload.Result = json.RawMessage(`{"status":"rejected","error":"身体记录尚未确认保存，请刷新记录后重试。"}`)
 			} else {
 				payload.Result = committed
+				result.CommittedFacts = append(result.CommittedFacts, facts...)
 			}
 			// Only a receipt or explicit rejection crosses the browser boundary.
 			publicEvent.Payload, _ = json.Marshal(payload)
@@ -1389,6 +1394,23 @@ func (r *Runtime) handleInteractionRequired(
 ) bool {
 	policy, _ := service.ConsultationDecisionPolicyRevisionForConfiguration(state.ExpectedConfigurationID)
 	sameRunResume := policy == service.ConsultationDecisionPolicyV3
+	// Go owns the symptom intake binding: only a reference to a symptom fact
+	// committed in this stream (v3 only) becomes a bound question; every
+	// other binding is stripped so its answer can record nothing.
+	var committedFacts []service.CommittedBodyFact
+	if sameRunResume {
+		committedFacts = result.CommittedFacts
+	}
+	question, bound, err := service.BindSymptomIntakeQuestion(payload.Question, event.IDs.ToolCallID, committedFacts)
+	if err != nil {
+		log.Printf("rejected interaction question for run %s: %v", state.Run.ID, err)
+		r.failActiveStream(ctx, sw, state, "invalid user interaction")
+		return true
+	}
+	if !bound && bytes.Contains(payload.Question, []byte(`"state_binding"`)) {
+		log.Printf("stripped unbound symptom intake binding for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
+	}
+	payload.Question = question
 	var nativeIDs []string
 	if sameRunResume {
 		nativeIDs = []string{payload.InteractionID}

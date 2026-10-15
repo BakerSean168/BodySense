@@ -17,6 +17,58 @@ SAFETY_SIGNAL_OPTIONS = {
     "头晕": "dizziness",
 }
 NO_SAFETY_SIGNALS = "以上均无"
+SYMPTOM_INTAKE_BINDING_REVISION = "symptom-intake-binding-v2"
+SAFETY_SIGNALS_LABEL = "请选出目前出现的所有安全信号（可多选）；若五项都没有，请只选“以上均无”。"
+
+
+def safety_screen_capture_id(fact_tool_call_id: str, index: int) -> str:
+    """Capture identity of the intake for one committed record_body_state fact.
+
+    Go derives the same value and only binds a question whose capture matches
+    the fact reference, so a capture can never be re-pointed at another fact.
+    """
+    material = f"symptom-intake\x00{fact_tool_call_id}\x00{index}"
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:CAPTURE_ID_LENGTH]
+
+
+def build_safety_screen_question(
+    *, fact_tool_call_id: str, fact_index: int, statement: str
+) -> dict[str, Any]:
+    """Ask the bounded safety checklist for a symptom this turn proposed.
+
+    The question only references the proposal (producer call + fact index).
+    Go binds it to the fact it actually committed for that reference and
+    records the answer as a safety screen of that fact; it never seeds or
+    creates a second symptom fact. The quoted text is the user's own excerpt.
+    """
+    capture_id = safety_screen_capture_id(fact_tool_call_id, fact_index)
+    excerpt = statement.strip()
+    if len(excerpt) > 80:
+        excerpt = excerpt[:80] + "…"
+    return {
+        "question": f"我已记录你提到的“{excerpt}”。为了安全分层，请先确认：",
+        "reason": "complete_symptom_safety_screen",
+        "context": "这五项会直接决定下一步是否需要尽快就医；只有你的选择会被记录。",
+        "answer_type": "text",
+        "required": True,
+        "fields": [
+            {
+                "key": "safety_signals",
+                "label": SAFETY_SIGNALS_LABEL,
+                "answer_type": "multi_choice",
+                "options": [*SAFETY_SIGNAL_OPTIONS, NO_SAFETY_SIGNALS],
+                "exclusive_options": [NO_SAFETY_SIGNALS],
+                "required": True,
+            }
+        ],
+        "purpose": "symptom_intake",
+        "state_binding": {
+            "revision": SYMPTOM_INTAKE_BINDING_REVISION,
+            "capture_id": capture_id,
+            "fact_ref": {"tool_call_id": fact_tool_call_id, "index": fact_index},
+            "field_map": {"safety_signals": "safety_signals"},
+        },
+    }
 
 
 def symptom_capture_id(

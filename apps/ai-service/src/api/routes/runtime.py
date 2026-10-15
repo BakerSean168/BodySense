@@ -49,54 +49,24 @@ from ..runtime_proto_adapter import (
 
 logger = logging.getLogger(__name__)
 
-E2E_SYMPTOM_INTAKE = "E2E_SYMPTOM_INTAKE"
-_E2E_INTAKE_SEED = {
-    "body_part": "颈部",
-    "symptom_type": "酸胀",
-    "severity": "轻度（0–2/10）",
-    "trigger": "久坐或久站",
-    "functional_impact": "基本不影响",
-    "neurological_signs": "没有",
-}
 
-
-async def _e2e_symptom_intake_question(run_id: str, text: str) -> tuple[str, dict[str, Any]]:
-    """Build the runtime-bound intake exactly as production would normalize it."""
+async def _e2e_safety_screen_question(question: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Normalize the production intake question exactly as the runtime does."""
     from ...services.agent.tools.ask_user import handle_ask_user
-    from ...services.consultation_state_acquisition import (
-        build_symptom_intake_question,
-        symptom_capture_id,
-    )
 
-    capture_id = symptom_capture_id(
-        run_id=run_id,
-        latest_user_message=text,
-        index=0,
-        body_part=_E2E_INTAKE_SEED["body_part"],
-        symptom_type=_E2E_INTAKE_SEED["symptom_type"],
-    )
-    question = build_symptom_intake_question({**_E2E_INTAKE_SEED, "capture_id": capture_id})
-    if question is None:
-        raise RuntimeError("E2E symptom intake produced no question")
     normalized = await handle_ask_user(question)
-    if not isinstance(normalized.content, dict):
+    if not isinstance(normalized.content, dict) or "state_binding" not in normalized.content:
         raise RuntimeError("E2E symptom intake was not normalized")
-    return f"intake-{capture_id}", normalized.content
+    return f"intake-{normalized.content['state_binding']['capture_id']}", normalized.content
 
 
 def _e2e_intake_tool_id(run_id: str, answer: dict[str, Any]) -> str:
+    """The pending E2E interrupt's tool call: the safety screen for a form answer."""
     if not isinstance(answer.get("fields"), dict):
         return f"ask-bodyfact:{run_id}"
-    from ...services.consultation_state_acquisition import symptom_capture_id
+    from ...services.consultation_state_acquisition import safety_screen_capture_id
 
-    capture_id = symptom_capture_id(
-        run_id=run_id,
-        latest_user_message=E2E_SYMPTOM_INTAKE,
-        index=0,
-        body_part=_E2E_INTAKE_SEED["body_part"],
-        symptom_type=_E2E_INTAKE_SEED["symptom_type"],
-    )
-    return f"intake-{capture_id}"
+    return f"intake-{safety_screen_capture_id(f'bodyfact-intake-v1:{run_id}', 0)}"
 
 
 def _e2e_stub_enabled() -> bool:
@@ -233,15 +203,19 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 ),
             )
             seq += 1
+            intake_question: dict[str, Any] | None = None
             if manifest.intake and manifest.intake.policy_revision == "body-fact-intake-v1":
                 from ...testing_support.body_fact_fixture import body_fact_fixture_events
 
-                for item in await body_fact_fixture_events(
+                fixture_events, turn_question = await body_fact_fixture_events(
                     request.input.text,
                     request.business_context.body_state,
                     manifest,
                     request.run_id,
-                ):
+                )
+                if turn_question and turn_question.get("purpose") == "symptom_intake":
+                    intake_question = turn_question
+                for item in fixture_events:
                     if item["type"] == "tool_call":
                         event = ToolCallRuntimeEvent(tool=item["tool"], args=item["args"])
                     elif item["type"] == "tool_result":
@@ -256,10 +230,9 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                         tool_call_id=item.get("id"),
                     )
                     seq += 1
-            if request.input.text in {
+            if intake_question is not None or request.input.text in {
                 "E2E_BODYFACT_ASK_SELF",
                 "E2E_BODYFACT_ASK_CHOICE",
-                E2E_SYMPTOM_INTAKE,
             }:
                 native_id = uuid5(NAMESPACE_URL, f"bodysense:e2e:ask:{request.run_id}").hex
                 tool_id = f"ask-bodyfact:{request.run_id}"
@@ -271,10 +244,10 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 }
                 if choice:
                     question["options"] = ["left", "right"]
-                if request.input.text == E2E_SYMPTOM_INTAKE:
-                    tool_id, question = await _e2e_symptom_intake_question(
-                        request.run_id, request.input.text
-                    )
+                if intake_question is not None:
+                    # The production node asked the safety screen for the
+                    # symptom it just proposed; Go binds it to the commit.
+                    tool_id, question = await _e2e_safety_screen_question(intake_question)
                 yield _stub_event(
                     seq=seq,
                     run_id=request.run_id,
@@ -432,13 +405,18 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
             seq += 1
             from ...testing_support.body_fact_fixture import body_fact_fixture_events
 
-            for item in await body_fact_fixture_events(
-                str(request.answer.get("text", "")),
-                request.business_context.body_state,
-                manifest,
-                request.run_id,
-                interrupt_id=request.interrupt_id,
-            ):
+            # A safety-screen form answer is not a free-text statement; like the
+            # production resume, it skips statement extraction.
+            answer_events: list[dict[str, Any]] = []
+            if not isinstance(request.answer.get("fields"), dict):
+                answer_events, _ = await body_fact_fixture_events(
+                    str(request.answer.get("text", "")),
+                    request.business_context.body_state,
+                    manifest,
+                    request.run_id,
+                    interrupt_id=request.interrupt_id,
+                )
+            for item in answer_events:
                 if item["type"] == "tool_call":
                     event = ToolCallRuntimeEvent(tool=item["tool"], args=item["args"])
                 elif item["type"] == "tool_result":

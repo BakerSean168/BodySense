@@ -8,12 +8,14 @@ import (
 
 // SafetyScreen is the user's answer to the Go-validated five-concept safety
 // checklist of one structured symptom intake. Rows exist only for a complete
-// checklist bound to an accepted interaction answer; no model output, seed
-// text or free-form detail can create one.
+// checklist bound to an accepted interaction answer and to the committed V2
+// symptom fact Go named in that question; no model output or free-form detail
+// can create one.
 type SafetyScreen struct {
 	ID                   uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID               uuid.UUID `gorm:"type:uuid;not null" json:"user_id"`
 	CaptureID            string    `gorm:"not null" json:"capture_id"`
+	BodyFactID           uuid.UUID `gorm:"type:uuid;not null" json:"body_fact_id"`
 	SourceConversationID uuid.UUID `gorm:"type:uuid;not null" json:"source_conversation_id"`
 	SourceRunID          uuid.UUID `gorm:"type:uuid;not null" json:"source_run_id"`
 	SourceMessageID      uuid.UUID `gorm:"type:uuid;not null" json:"source_message_id"`
@@ -40,11 +42,10 @@ type SafetyScreenAnswers struct {
 	Dizziness     bool
 }
 
-// StructuredIntakeCommand is the Go-built result of one bound symptom intake
-// answer: exactly one symptom statement and, when the checklist was complete,
-// its safety screen. Both commit in one BodyState revision or not at all.
-type StructuredIntakeCommand struct {
-	CaptureID string
-	Fact      BodyFactInput
-	Screen    *SafetyScreenAnswers
+// SafetyScreenCommand is the Go-parsed result of one bound symptom intake
+// answer: the complete checklist for the exact committed symptom fact.
+type SafetyScreenCommand struct {
+	CaptureID  string
+	BodyFactID uuid.UUID
+	Answers    SafetyScreenAnswers
 }

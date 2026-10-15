@@ -1,9 +1,10 @@
 import { expect, type APIRequestContext } from "@playwright/test";
 
 /**
- * Structured safety coverage is recorded only from the runtime-bound symptom
- * intake. Run the deterministic E2E intake in the given conversation and
- * answer its checklist with "none of the above".
+ * Structured safety coverage is recorded only from the Go-bound symptom
+ * intake. Report a present symptom in the given conversation (the v3 runtime
+ * commits it and asks the safety screen for it) and answer the checklist with
+ * "none of the above".
  */
 export async function completeStructuredSafetyIntake(
   request: APIRequestContext,
@@ -19,7 +20,7 @@ export async function completeStructuredSafetyIntake(
       requestId: crypto.randomUUID(),
       message: {
         role: "user",
-        parts: [{ type: "text", text: "E2E_SYMPTOM_INTAKE" }],
+        parts: [{ type: "text", text: "我昨天肩膀不舒服。" }],
       },
     },
     timeout: 60_000,
@@ -46,7 +47,7 @@ export async function completeStructuredSafetyIntake(
       data: {
         requestId: crypto.randomUUID(),
         answer: {
-          fields: { safety_signals: ["以上均无"], duration: "2–7天" },
+          fields: { safety_signals: ["以上均无"] },
         },
       },
       timeout: 60_000,

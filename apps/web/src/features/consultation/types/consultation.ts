@@ -399,12 +399,12 @@ export interface AskUserQuestion {
   context?: string;
   /** Optional multi-field form. When present, UI collects all fields once. */
   fields?: AskUserField[];
-  /** Runtime-owned intake metadata. Never authored by ordinary UI input. */
+  /** Go-owned safety screen binding. Never authored by ordinary UI input. */
   purpose?: "symptom_intake" | string;
   state_binding?: {
     revision: string;
     capture_id: string;
-    seed_info: Record<string, unknown>;
+    body_fact_id: string;
     field_map: Record<string, string>;
   };
 }

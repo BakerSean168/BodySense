@@ -403,7 +403,7 @@ func TestInteractionResumeSafetyFirstCaptureDoesNotRebaseOverOtherWritesPostgres
 			state := streamState{UID: f.owner, ConversationID: e.Run.ConversationID, Run: e.Run, ExpectedConfigurationID: service.BodyFactConsultationConfigurationID, AnswerSource: &model.AnswerFactSource{RunID: e.Run.ID, InteractionID: e.Interaction.ID, MessageID: e.UserMessage.ID}}
 			runtime := &Runtime{bodyFacts: service.NewBodyFactService(ledger, service.NewCanonicalBodyRegionIDValidator())}
 			proposal := json.RawMessage(strings.Replace(string(proposedFacts()), `"expected_revision":2`, `"expected_revision":0`, 1))
-			receipt, err := runtime.commitBodyFactProposal(context.Background(), state, "answer-capture", proposal, *revision)
+			receipt, _, err := runtime.commitBodyFactProposal(context.Background(), state, "answer-capture", proposal, *revision)
 			if racing {
 				if err == nil || receipt != nil {
 					t.Fatal("external change silently rebased")

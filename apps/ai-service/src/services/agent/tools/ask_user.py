@@ -181,12 +181,38 @@ def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
 
 
 def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
-    """Keep only the deterministic runtime-owned symptom binding envelope."""
+    """Keep only a deterministic runtime-owned symptom binding envelope.
+
+    The v3 safety screen references a committed record_body_state fact
+    (``fact_ref``); Go resolves it and writes the canonical binding, stripping
+    anything it cannot resolve. The legacy seed binding is ephemeral runtime
+    state for the pre-v3 runtime only and never reaches Go persistence.
+    """
     if not isinstance(raw, dict):
         return None
     capture_id = str(raw.get("capture_id") or "").strip().lower()
     if not re.fullmatch(r"[a-f0-9]{24}", capture_id):
         return None
+    fact_ref = raw.get("fact_ref")
+    if fact_ref is not None:
+        if not isinstance(fact_ref, dict):
+            return None
+        tool_call_id = fact_ref.get("tool_call_id")
+        index = fact_ref.get("index")
+        if (
+            not isinstance(tool_call_id, str)
+            or not tool_call_id.strip()
+            or isinstance(index, bool)
+            or not isinstance(index, int)
+            or not 0 <= index < 20
+        ):
+            return None
+        return {
+            "revision": "symptom-intake-binding-v2",
+            "capture_id": capture_id,
+            "fact_ref": {"tool_call_id": tool_call_id, "index": index},
+            "field_map": {"safety_signals": "safety_signals"},
+        }
     seed_info = raw.get("seed_info")
     field_map = raw.get("field_map")
     if not isinstance(seed_info, dict) or not isinstance(field_map, dict):
