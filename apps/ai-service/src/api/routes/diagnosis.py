@@ -52,7 +52,17 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             for item in observations
             if isinstance(item, dict) and item.get("id")
         ]
-        primary_fact = next((item for item in facts if isinstance(item, dict)), {})
+        # Deterministic stub: prefer a region-scoped statement so an unlocalized
+        # newer symptom (e.g. the safety-intake turn) does not mask it.
+        fact_dicts = [item for item in facts if isinstance(item, dict)]
+        primary_fact = next(
+            (
+                item
+                for item in fact_dicts
+                if str(item.get("concern_key") or "").startswith("region:")
+            ),
+            fact_dicts[0] if fact_dicts else {},
+        )
         primary_observation = next((item for item in observations if isinstance(item, dict)), {})
         concern_key = str(
             primary_fact.get("concern_key") or primary_observation.get("concern_key") or "general"
