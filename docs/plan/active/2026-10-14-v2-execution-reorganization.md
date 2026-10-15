@@ -164,3 +164,13 @@ the integration release operator may merge under normal branch protection.
 No field in `v2-handoff-state.json` is changed just to pass a CI gate.
 Concurrent Track A/Backend/QA worktree modifications remain owned by their
 writers and are not copied into this baseline.
+
+## 14. 2026-10-15 alignment checkpoint and re-ordered wave
+
+Independent read-only audit, recorded in [`2026-10-15-v2-implementation-alignment-audit.md`](./2026-10-15-v2-implementation-alignment-audit.md):
+
+- Frozen writer baseline moved from `375e5a821` to main `e4160a9c755455ffe9277af2caba88f62df1a032` (#270/#271/#272/#273 merged after the previous freeze).
+- Queue now records the merged TP-D1 dormant compatibility work as `TP-D1-001` (done, dormant only) and PR #274 as `TP-PROP-001` (in review, exact-head CI green on executed lanes, PG18 children skipped). `TP-002` depends on both.
+- `BS-OBS-001` and `PC-001` are `blocked` with concrete reasons instead of `queued`: the V12 owner checkout predates the frozen baseline and holds unpushed commits; PC-001's next patch sits staged in the Track D checkout because platform safety control denied commit and PG18 starts.
+- **Re-ordered wave:** P0 = land V12 (rebase/push/PR/exact-head CI incl. PG18), unblock Track D writes, merge #274, keep queue/handoff synchronized at every merge. P1 = A: BS-HYP-001 → DX-001; B: UI-001; C: TP-001 → TP-002 (including the owner-lock `FOR NO KEY UPDATE` fix); D: PC-001 remainder + QA-001.
+- No domain gate was raised; no scheduler, writer checkout, lock, PR state or deployment channel was changed by this audit.

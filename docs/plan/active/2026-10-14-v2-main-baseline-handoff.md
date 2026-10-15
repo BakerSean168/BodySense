@@ -1,6 +1,6 @@
 # BodySense V2 · Frozen Main Baseline and Writer Admission
 
-Status: **MAIN BASELINE VERIFIED; V2 DOMAIN/RELEASE GATES STILL OPEN.**
+Status: **SUPERSEDED BASELINE (2026-10-15).** The frozen writer baseline is now `e4160a9c755455ffe9277af2caba88f62df1a032` as recorded in `docs/plan/tickets/v2/queue.json` and the [2026-10-15 alignment audit](./2026-10-15-v2-implementation-alignment-audit.md). The admission rules below still apply; only the SHA moved. V2 domain/release gates remain open.
 Owner: ChatGPT Web, GCP Agent Fabric. Observed on 2026-10-14 UTC.
 
 ## 1. Immutable execution base
