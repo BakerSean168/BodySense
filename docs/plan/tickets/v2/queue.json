@@ -69,7 +69,7 @@
       "id": "BS-OBS-001",
       "title": "Close BodyObservation V12 correction/withdrawal",
       "phase": "1",
-      "status": "blocked",
+      "status": "done",
       "dependsOn": ["INT-001"],
       "sf": "SF-20",
       "owner": "Backend BodyObservation Owner",
@@ -81,11 +81,12 @@
       "document": "docs/plan/tickets/v2/BS-OBS-001.md",
       "threadId": null,
       "projectId": null,
-      "worktree": null,
-      "acceptedSha": null,
-      "blockedReason": "Owner worktree .chatgpt-worktrees/bodysense-observation-v12 (writer lock ENG-BS-04) predates the frozen main baseline (78 commits behind) and holds 3 unpushed test commits ending 850791384b2be16ad5640ff721a314f20981524e (cross-tenant idempotency/parallel replay; go test -race repository/httpapi/consultation exit 0 at 2026-10-15T02:16Z). Close-out requires rebase onto mainBaselineSha, push, PR and exact-head CI incl. PG18 children; then native browser E2E for correction/withdrawal.",
-      "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-observation-v12",
-      "ownerHeadObserved": "850791384b2be16ad5640ff721a314f20981524e"
+      "worktree": "/home/dev/projects/.hark-worktrees/bodysense-observation-v12-landing",
+      "acceptedSha": "26eeb5034ef1cfe3b8ecd7ee31e0b62075100807",
+      "acceptedAtUtc": "Thu 2026-10-15 11:52 AM CST (UTC+08:00)",
+      "acceptanceCiRun": "BakerSean168/BodySense/actions/runs/38677616354",
+      "mergedMainSha": "ee4dd2c7f821f5625d486577ba762fb738c67c8d",
+      "acceptanceNote": "PR #276 (user-authorized Hark takeover of V12 owner commits cc749e6b4/b807da7fe/850791384; f2085b263 already on main). Exact-head CI green incl. browser E2E; CI PG18 children skipped (no migration change). Native PG18 at merged main ee4dd2c7f: all migrations up, 000012/000011 down, re-up, then go test -race BodyObservation repository+httpapi 11 PASS. Writer lock released."
     },
     {
       "id": "BS-HYP-001",
