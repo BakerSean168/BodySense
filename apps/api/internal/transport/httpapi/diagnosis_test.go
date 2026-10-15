@@ -33,7 +33,7 @@ func newDiagnosisRouteTestRouter(t *testing.T, application diagnosisApplication)
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	server := NewPublicServer(nil).WithDiagnosis(application, nil, nil, nil)
+	server := NewPublicServer().WithDiagnosis(application, nil, nil, nil)
 	RegisterRoutes(r, StrictHandler(server), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			c.Set("user_id", uuid.NewString())

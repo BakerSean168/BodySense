@@ -63,7 +63,7 @@ func episodeCommandRouter(t *testing.T, owner uuid.UUID, application episodeComm
 		t.Fatal(err)
 	}
 	engine := gin.New()
-	RegisterRoutes(engine, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithEpisodeCommands(application)), RouteSecurity{
+	RegisterRoutes(engine, StrictHandler(NewPublicServer().WithEpisodeCommands(application)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			if owner != uuid.Nil {
 				c.Set("user_id", owner.String())

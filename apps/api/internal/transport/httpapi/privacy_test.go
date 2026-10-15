@@ -51,7 +51,7 @@ func newPrivacyOpenAPIRouter(t *testing.T, privacy privacyErasureApplication, se
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	server := NewPublicServer(&fakeBodyStateFactService{}).WithPrivacy(privacy, auth.DefaultRefreshCookieName, secure)
+	server := NewPublicServer().WithPrivacy(privacy, auth.DefaultRefreshCookieName, secure)
 	openapiv1.RegisterHandlers(g, StrictHandler(server))
 	return r
 }

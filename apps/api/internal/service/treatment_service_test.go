@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -1234,5 +1235,57 @@ func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
 	}
 	if observer.calls != 0 {
 		t.Fatalf("Champion-only stage must not execute a paired shadow, calls=%d", observer.calls)
+	}
+}
+
+type fakeTreatmentEquipment struct {
+	assets []model.EquipmentAsset
+	owner  uuid.UUID
+}
+
+func (f *fakeTreatmentEquipment) ListUsable(_ context.Context, owner uuid.UUID, _ time.Time) ([]model.EquipmentAsset, error) {
+	f.owner = owner
+	return f.assets, nil
+}
+
+func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	}
+	notes := "medium"
+	equipment := &fakeTreatmentEquipment{assets: []model.EquipmentAsset{{DisplayName: "弹力带", Notes: &notes, AccessKind: "owned", Availability: "available"}}}
+	var captured TreatmentRecommendationRequest
+	svc := NewTreatmentService(
+		&fakeTreatmentRepo{},
+		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
+		nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
+			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}],
+			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
+		}`), capture: &captured},
+		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
+	)
+	svc.AttachEquipment(equipment)
+	callerConstraints := map[string]any{"time_per_day": "20m"}
+	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID, UserConstraints: callerConstraints})
+	if err != nil {
+		t.Fatalf("GenerateProposal returned error: %v", err)
+	}
+	want := json.RawMessage(`{"time_per_day":"20m","available_equipment":[{"name":"弹力带","access_kind":"owned","notes":"medium"}]}`)
+	if equipment.owner != userID || !jsonBytesEqual(captured.UserConstraints, want) || !jsonBytesEqual(json.RawMessage(revision.UserConstraints), want) {
+		t.Fatalf("equipment constraint: captured=%s stored=%s", captured.UserConstraints, revision.UserConstraints)
+	}
+	if _, mutated := callerConstraints["available_equipment"]; mutated {
+		t.Fatal("caller constraints must not be mutated")
+	}
+	frozen, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
+	if err != nil || !jsonBytesEqual(frozen.UserConstraints, want) {
+		t.Fatalf("replay input must freeze the equipment constraint: %v %s", err, frozen.UserConstraints)
 	}
 }

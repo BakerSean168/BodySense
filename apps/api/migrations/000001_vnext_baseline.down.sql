@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS
     public.episode_fact_links,
     public.episode_relations,
     public.episode_state_evidence,
+    public.equipment_assets,
     public.interaction_resumes,
     public.interventions,
     public.job_events,

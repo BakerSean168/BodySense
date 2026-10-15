@@ -784,6 +784,35 @@ CREATE TABLE public.episode_state_evidence (
 
 
 --
+-- Name: equipment_assets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.equipment_assets (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    display_name text NOT NULL,
+    notes text,
+    access_kind text NOT NULL,
+    availability text NOT NULL,
+    valid_from timestamp with time zone,
+    valid_until timestamp with time zone,
+    revision bigint DEFAULT 1 NOT NULL,
+    create_idempotency_key text NOT NULL,
+    create_request_digest text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT equipment_assets_access_kind_check CHECK ((access_kind = ANY (ARRAY['owned'::text, 'borrowed'::text, 'facility_access'::text]))),
+    CONSTRAINT equipment_assets_availability_check CHECK ((availability = ANY (ARRAY['available'::text, 'unavailable'::text, 'retired'::text]))),
+    CONSTRAINT equipment_assets_create_idempotency_key_check CHECK (((char_length(create_idempotency_key) >= 1) AND (char_length(create_idempotency_key) <= 128))),
+    CONSTRAINT equipment_assets_create_request_digest_check CHECK ((create_request_digest ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT equipment_assets_display_name_check CHECK ((((char_length(display_name) >= 1) AND (char_length(display_name) <= 80)) AND (display_name = btrim(display_name)))),
+    CONSTRAINT equipment_assets_notes_check CHECK (((notes IS NULL) OR (((char_length(notes) >= 1) AND (char_length(notes) <= 240)) AND (notes = btrim(notes))))),
+    CONSTRAINT equipment_assets_revision_check CHECK ((revision > 0)),
+    CONSTRAINT equipment_assets_validity_check CHECK (((valid_from IS NULL) OR (valid_until IS NULL) OR (valid_until >= valid_from)))
+);
+
+
+--
 -- Name: interaction_resumes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2026,6 +2055,30 @@ ALTER TABLE ONLY public.episode_state_evidence
 
 
 --
+-- Name: equipment_assets equipment_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_create_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_create_idempotency_key_key UNIQUE (user_id, create_idempotency_key);
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_id_key UNIQUE (user_id, id);
+
+
+--
 -- Name: interaction_resumes interaction_resumes_assistant_message_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2572,6 +2625,20 @@ CREATE INDEX episode_relations_owner_from ON public.episode_relations USING btre
 --
 
 CREATE INDEX episode_relations_owner_to ON public.episode_relations USING btree (user_id, to_episode_id, created_revision DESC);
+
+
+--
+-- Name: equipment_assets_owner_current; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX equipment_assets_owner_current ON public.equipment_assets USING btree (user_id, created_at DESC, id DESC) WHERE (availability <> 'retired'::text);
+
+
+--
+-- Name: equipment_assets_owner_current_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX equipment_assets_owner_current_name ON public.equipment_assets USING btree (user_id, lower(display_name)) WHERE (availability <> 'retired'::text);
 
 
 --
@@ -4095,6 +4162,14 @@ ALTER TABLE ONLY public.episode_state_evidence
 
 ALTER TABLE ONLY public.episode_state_evidence
     ADD CONSTRAINT episode_state_evidence_user_id_episode_id_fact_id_source_e_fkey FOREIGN KEY (user_id, episode_id, fact_id, source_evidence_id) REFERENCES public.episode_fact_links(user_id, episode_id, fact_id, basis_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

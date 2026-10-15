@@ -74,7 +74,7 @@ func newAuthTestRouter(t *testing.T, accounts authAccountApplication, security a
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	RegisterRoutes(r, StrictHandler(NewPublicServer(nil).WithAuth(accounts, security)), RouteSecurity{
+	RegisterRoutes(r, StrictHandler(NewPublicServer().WithAuth(accounts, security)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			c.Set("user_id", "11111111-1111-1111-1111-111111111111")
 			c.Set("email", "user@example.com")
@@ -380,7 +380,7 @@ func TestAuthRoutesStayPublicWhileProtectedRoutesRequireAuthentication(t *testin
 
 	var authSeen *gin.Context
 	r := gin.New()
-	RegisterRoutes(r, StrictHandler(NewPublicServer(nil).WithAuth(accounts, security)), RouteSecurity{
+	RegisterRoutes(r, StrictHandler(NewPublicServer().WithAuth(accounts, security)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			authSeen = c
 			c.AbortWithStatus(http.StatusTeapot)
@@ -430,7 +430,7 @@ func TestRegisterRoutesRegistersEverySpecOperationExactlyOnce(t *testing.T) {
 		t.Fatalf("load spec: %v", err)
 	}
 	r := gin.New()
-	RegisterRoutes(r, StrictHandler(NewPublicServer(nil).WithAuth(&fakeAuthAccountService{}, security)), RouteSecurity{
+	RegisterRoutes(r, StrictHandler(NewPublicServer().WithAuth(&fakeAuthAccountService{}, security)), RouteSecurity{
 		Auth:      func(c *gin.Context) { c.Next() },
 		Operator:  func(c *gin.Context) { c.Next() },
 		Validator: RequestValidator(spec),

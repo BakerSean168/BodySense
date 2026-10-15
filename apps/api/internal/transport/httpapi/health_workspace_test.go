@@ -63,7 +63,7 @@ func newWorkspaceOpenAPIRouter(t *testing.T, service healthWorkspaceService) *gi
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithHealthWorkspace(service)))
+	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer().WithHealthWorkspace(service)))
 	return r
 }
 

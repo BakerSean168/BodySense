@@ -47,7 +47,7 @@ func TestPCD8RetiredChatSharingBlocksReadsAndCreatesButAllowsRevocation(t *testi
 	spy := &retirementShareSpy{}
 	r := gin.New()
 	RegisterRoutes(r,
-		StrictHandler(NewPublicServer(nil).WithConversations(
+		StrictHandler(NewPublicServer().WithConversations(
 			&fakeConversationApplication{}, spy, &fakeRuntimeEventApplication{},
 		)),
 		RouteSecurity{

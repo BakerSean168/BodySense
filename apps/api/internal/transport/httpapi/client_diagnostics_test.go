@@ -13,7 +13,7 @@ import (
 
 func newClientDiagnosticOpenAPIRouter(t *testing.T) *gin.Engine {
 	t.Helper()
-	return newOpenAPITestRouter(t, &fakeBodyStateFactService{})
+	return newOpenAPITestRouter(t)
 }
 
 func TestClientDiagnosticOpenAPIRejectsNestedAttributes(t *testing.T) {
