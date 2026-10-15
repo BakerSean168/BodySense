@@ -555,7 +555,7 @@
       "limits": [
         "no production constructor enables WithIndependentTrainingPlans",
         "legacy single-active index still live",
-        "owner lock uses FOR UPDATE on users: review finding Q1 recommends FOR NO KEY UPDATE before wiring",
+        "owner lock switched to FOR NO KEY UPDATE on users (review finding Q1 resolved 2026-10-15; native PG18 FK child insert not blocked)",
         "no PlanProposal/TrainingPlanRevision runtime",
         "no UI",
         "not gate evidence"
