@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 var ErrInvalidOnboardingContext = errors.New("invalid onboarding context")
@@ -20,7 +18,7 @@ type onboardingProfileWriter interface {
 }
 
 type onboardingBodyStateWriter interface {
-	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
+	UpdateBodyContext(ctx context.Context, userID uuid.UUID, expectedRevision *int64, update BodyContextUpdate) (int64, error)
 }
 
 type onboardingTransactionManager interface {
@@ -72,24 +70,22 @@ func (s *OnboardingContextService) Submit(
 		return nil, fmt.Errorf("%w: body metrics are outside the supported range", ErrInvalidOnboardingContext)
 	}
 
-	now := time.Now().UTC()
-	patch := buildOnboardingBodyStatePatch(request, now)
+	update := buildOnboardingBodyContext(request)
 	profile := &model.UserProfile{
 		Gender:    &gender,
 		BirthDate: &birthDate,
 	}
-	var committed *model.BodyStateRevision
+	var committed int64
 	err = s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
 		if err := s.profiles.CreateOrUpdateProfile(txCtx, userID, profile); err != nil {
 			return fmt.Errorf("persist stable onboarding profile: %w", err)
 		}
 		var err error
-		committed, err = s.bodyState.ApplyCurrentContextPatch(
+		committed, err = s.bodyState.UpdateBodyContext(
 			txCtx,
 			userID,
 			request.ExpectedBodyStateRevision,
-			patch,
-			"onboarding",
+			update,
 		)
 		if err != nil {
 			return fmt.Errorf("persist onboarding BodyState context: %w", err)
@@ -101,75 +97,27 @@ func (s *OnboardingContextService) Submit(
 	}
 
 	result := &OnboardingContextResult{}
-	if committed != nil {
-		revision := committed.Revision
+	if committed > 0 {
+		revision := committed
 		result.BodyStateRevision = &revision
 	}
 	return result, nil
 }
 
-func buildOnboardingBodyStatePatch(
-	request OnboardingContextRequest,
-	effectiveAt time.Time,
-) model.BodyStateCurrentContextPatch {
-	lifestyle := UpdateLifestyleRequest{
-		Activity:   &request.Lifestyle.Activity,
-		Sleep:      &request.Lifestyle.Sleep,
-		Exercise:   &request.Lifestyle.Exercise,
-		Nutrition:  &request.Lifestyle.Nutrition,
-		Substances: &request.Lifestyle.Substances,
-		Recovery:   &request.Lifestyle.Recovery,
-	}
-	patch := buildLifestyleContextPatch(lifestyle, effectiveAt, "user_reported", "onboarding")
-	patch.Observations = append(
-		patch.Observations,
-		metricMutationAt(
-			model.BodyStateObservationKindHeight,
-			*request.BodyMetrics.HeightCm,
-			"cm",
-			effectiveAt,
-			"onboarding",
-		),
-		metricMutationAt(
-			model.BodyStateObservationKindWeight,
-			*request.BodyMetrics.WeightKg,
-			"kg",
-			effectiveAt,
-			"onboarding",
-		),
-	)
-	patch.Facts = append(patch.Facts, injuryHistoryMutation(
-		request.InjuryHistory,
-		effectiveAt,
-		"user_reported",
-		"onboarding",
-	))
-	return patch
-}
-
-func injuryHistoryMutation(
-	summary string,
-	effectiveAt time.Time,
-	origin string,
-	sourceType string,
-) model.BodyStateCurrentFactMutation {
-	summary = strings.TrimSpace(summary)
-	var replacement *model.BodyStateFact
-	if summary != "" {
-		provenance, _ := json.Marshal(map[string]any{"source_type": sourceType})
-		replacement = &model.BodyStateFact{
-			ConcernKey:     "history:injury",
-			Kind:           model.BodyStateFactKindInjuryHistory,
-			Value:          summary,
-			Details:        datatypes.JSON(`{}`),
-			Origin:         origin,
-			ReviewState:    "confirmed",
-			LifecycleState: "active",
-			Trend:          "unknown",
-			Provenance:     datatypes.JSON(provenance),
-		}
-	}
-	return model.BodyStateCurrentFactMutation{
-		Kind: model.BodyStateFactKindInjuryHistory, Replacement: replacement, EffectiveAt: effectiveAt,
+func buildOnboardingBodyContext(request OnboardingContextRequest) BodyContextUpdate {
+	injury := request.InjuryHistory
+	return BodyContextUpdate{
+		HeightCm: request.BodyMetrics.HeightCm,
+		WeightKg: request.BodyMetrics.WeightKg,
+		Injury:   &injury,
+		Lifestyle: map[string]*LifestyleSectionInput{
+			"activity":   {Summary: request.Lifestyle.Activity.Summary, Details: request.Lifestyle.Activity.Details},
+			"sleep":      {Summary: request.Lifestyle.Sleep.Summary, Details: request.Lifestyle.Sleep.Details},
+			"exercise":   {Summary: request.Lifestyle.Exercise.Summary, Details: request.Lifestyle.Exercise.Details},
+			"nutrition":  {Summary: request.Lifestyle.Nutrition.Summary, Details: request.Lifestyle.Nutrition.Details},
+			"substances": {Summary: request.Lifestyle.Substances.Summary, Details: request.Lifestyle.Substances.Details},
+			"recovery":   {Summary: request.Lifestyle.Recovery.Summary, Details: request.Lifestyle.Recovery.Details},
+		},
+		Context: "onboarding",
 	}
 }

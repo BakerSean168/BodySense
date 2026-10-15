@@ -17,6 +17,7 @@ import (
 // SQL/repository transaction details are intentionally separate from service
 // semantics such as projection identity and producer mapping.
 type fakeBodyStateRepository struct {
+	memoryBodyContextLedger
 	current                  *model.BodyState
 	revisions                []model.BodyStateRevision
 	upsertedFacts            []model.BodyStateFact

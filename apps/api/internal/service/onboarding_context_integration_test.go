@@ -49,7 +49,7 @@ func newOnboardingIntegrationService(db *gorm.DB) *OnboardingContextService {
 	)
 }
 
-func TestOnboardingContextCommitsProfileAndOneBodyStateRevisionPostgres(t *testing.T) {
+func TestOnboardingContextCommitsProfileAndV2LedgerPostgres(t *testing.T) {
 	db := openOnboardingContextIntegrationDB(t)
 	userID := seedOnboardingContextUser(t, db)
 	svc := newOnboardingIntegrationService(db)
@@ -58,8 +58,9 @@ func TestOnboardingContextCommitsProfileAndOneBodyStateRevisionPostgres(t *testi
 	if err != nil {
 		t.Fatalf("Submit: %v", err)
 	}
-	if result.BodyStateRevision == nil || *result.BodyStateRevision != 1 {
-		t.Fatalf("body state revision=%v, want exactly R1", result.BodyStateRevision)
+	// One fact batch (six lifestyle + injury) plus one observation per metric.
+	if result.BodyStateRevision == nil || *result.BodyStateRevision != 3 {
+		t.Fatalf("body state revision=%v, want R3", result.BodyStateRevision)
 	}
 
 	var profile model.UserProfile
@@ -69,26 +70,28 @@ func TestOnboardingContextCommitsProfileAndOneBodyStateRevisionPostgres(t *testi
 	if profile.BirthDate == nil || profile.Gender == nil || *profile.Gender != "male" {
 		t.Fatalf("unexpected profile: %#v", profile)
 	}
-	var factCount int64
-	if err := db.Model(&model.BodyStateFact{}).Where("user_id = ?", userID).Count(&factCount).Error; err != nil {
-		t.Fatalf("count BodyState facts: %v", err)
+	count := func(table string) int64 {
+		var n int64
+		if err := db.Table(table).Where("user_id = ?", userID).Count(&n).Error; err != nil {
+			t.Fatalf("count %s: %v", table, err)
+		}
+		return n
 	}
-	if factCount != 7 {
-		t.Fatalf("BodyState facts=%d, want 6 lifestyle + injury", factCount)
+	if got := count("body_facts"); got != 7 {
+		t.Fatalf("body_facts=%d, want 6 lifestyle + injury", got)
 	}
-	var observationCount int64
-	if err := db.Model(&model.BodyStateObservation{}).Where("user_id = ?", userID).Count(&observationCount).Error; err != nil {
-		t.Fatalf("count BodyState observations: %v", err)
+	if got := count("body_observations"); got != 2 {
+		t.Fatalf("body_observations=%d, want height + weight", got)
 	}
-	if observationCount != 2 {
-		t.Fatalf("BodyState observations=%d, want height + weight", observationCount)
+	if got := count("body_state_facts") + count("body_state_observations"); got != 0 {
+		t.Fatalf("onboarding must not write retired body_state_* rows, got %d", got)
 	}
-	var revisionCount int64
-	if err := db.Model(&model.BodyStateRevision{}).Where("user_id = ?", userID).Count(&revisionCount).Error; err != nil {
-		t.Fatalf("count revisions: %v", err)
+	current, err := NewBodyStateService(repository.NewBodyStateRepository(db)).CurrentBodyContext(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("CurrentBodyContext: %v", err)
 	}
-	if revisionCount != 1 {
-		t.Fatalf("onboarding revisions=%d, want one semantic revision", revisionCount)
+	if current.Height == nil || current.Height.RawValue != "178.5" || current.Injury == nil || current.Injury.Statement != "两年前左膝轻微拉伤" || len(current.Lifestyle) != 6 {
+		t.Fatalf("unexpected ledger projection: %#v", current)
 	}
 }
 

@@ -2,44 +2,33 @@ package service
 
 import (
 	"context"
-	"time"
 
-	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
 
-type healthHistoryBodyState interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
-	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
-}
-
-// HealthHistoryService exposes durable health-history projections while
-// retaining BodyState as the sole source of truth.
+// HealthHistoryService projects the user's injury-history statement from the
+// V2 BodyFact ledger (health_history, history_kind=injury_summary).
 type HealthHistoryService struct {
-	bodyState healthHistoryBodyState
+	bodyState bodyContextStore
 }
 
-func NewHealthHistoryService(bodyState healthHistoryBodyState) *HealthHistoryService {
+func NewHealthHistoryService(bodyState bodyContextStore) *HealthHistoryService {
 	return &HealthHistoryService{bodyState: bodyState}
 }
 
 func (s *HealthHistoryService) GetInjuryHistory(ctx context.Context, userID uuid.UUID) (*InjuryHistorySnapshot, error) {
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
+	current, err := s.bodyState.CurrentBodyContext(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	result := &InjuryHistorySnapshot{CurrentRevision: snapshot.CurrentRevision}
-	for index := range snapshot.Facts {
-		fact := snapshot.Facts[index]
-		if fact.Kind != model.BodyStateFactKindInjuryHistory || fact.ReviewState != "confirmed" || fact.LifecycleState != "active" || fact.ExcludedFromReasoning {
-			continue
-		}
-		updatedAt := fact.UpdatedAt
-		result.FactID = &fact.ID
-		result.Summary = fact.Value
-		result.ValidFrom = fact.ValidFrom
-		result.UpdatedAt = &updatedAt
-		break
+	result := &InjuryHistorySnapshot{CurrentRevision: current.Revision}
+	if fact := current.Injury; fact != nil {
+		id := fact.ID
+		recordedAt := fact.RecordedAt
+		result.FactID = &id
+		result.Summary = fact.Statement
+		result.ValidFrom = bodyContextFactTemporalStart(fact)
+		result.UpdatedAt = &recordedAt
 	}
 	return result, nil
 }
@@ -49,19 +38,10 @@ func (s *HealthHistoryService) UpdateInjuryHistory(
 	userID uuid.UUID,
 	request UpdateInjuryHistoryRequest,
 ) (*InjuryHistorySnapshot, error) {
-	mutation := injuryHistoryMutation(
-		request.Summary,
-		time.Now().UTC(),
-		"user_edited",
-		"health_history_editor",
-	)
-	if _, err := s.bodyState.ApplyCurrentContextPatch(
-		ctx,
-		userID,
-		request.ExpectedRevision,
-		model.BodyStateCurrentContextPatch{Facts: []model.BodyStateCurrentFactMutation{mutation}},
-		"health_history_editor",
-	); err != nil {
+	summary := request.Summary
+	if _, err := s.bodyState.UpdateBodyContext(ctx, userID, request.ExpectedRevision, BodyContextUpdate{
+		Injury: &summary, Context: "health_history_editor",
+	}); err != nil {
 		return nil, err
 	}
 	return s.GetInjuryHistory(ctx, userID)
