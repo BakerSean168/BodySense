@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"os"
-	"strings"
 	"sync"
 	"testing"
 
@@ -210,15 +208,5 @@ func TestBodyObservationCompetingExplicitAmendmentsAndGuardedDowngradePostgres(t
 		if !errors.Is(err, ErrBodyStateRevisionConflict) {
 			t.Fatalf("non-winning competing command must be stale: %v", err)
 		}
-	}
-	raw, err := os.ReadFile("../../migrations/000012_body_observation_amendments.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(raw)).Error; err == nil ||
-		!strings.Contains(err.Error(), "cannot downgrade: accepted BodyObservation amendments exist") {
-		t.Fatalf("downgrade erased accepted user withdrawal history: %v", err)
 	}
 }

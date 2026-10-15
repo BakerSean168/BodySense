@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -181,14 +180,5 @@ func TestThreadProjectionDowngradeRefusesLossOfDistinctRunHistoryPostgres(t *tes
 	}
 	if err := repo.UpsertSnapshot(context.Background(), second, messages2, tools2); err != nil {
 		t.Fatal(err)
-	}
-	down, err := os.ReadFile("../../migrations/000005_run_scoped_tool_projection.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "Cannot restore global tool identity") {
-		t.Fatalf("downgrade discarded distinct runs: %v", err)
 	}
 }

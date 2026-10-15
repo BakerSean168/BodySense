@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -280,15 +279,6 @@ func TestSymptomEpisodeRecurrenceV10GuardedDownAndAccountCascadePostgres(t *test
 	f := prepareRecurrenceFixture(t, db, "2026-10-08")
 	if _, err := f.repo.ReportEpisodeRecurrence(context.Background(), f.owner, f.old, recurrenceCommand(f, "durable-down-guard")); err != nil {
 		t.Fatal(err)
-	}
-	down, err := os.ReadFile("../../migrations/000010_episode_recurrence_links.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "cannot downgrade: accepted Episode recurrence relations exist") {
-		t.Fatalf("v10 downgraded user-accepted relation without protection: %v", err)
 	}
 	// Account cascade removes authorized relation and associated proof IDs.
 	if err := db.Exec("DELETE FROM users WHERE id=?", f.owner).Error; err != nil {

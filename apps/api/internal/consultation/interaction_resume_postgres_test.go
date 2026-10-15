@@ -355,14 +355,6 @@ func TestInteractionResumeDowngradeRefusesAcceptedHistoryPostgres(t *testing.T) 
 	if _, err := f.resumes.Claim(context.Background(), f.command("I feel well")); err != nil {
 		t.Fatal(err)
 	}
-	sql, err := os.ReadFile("../../migrations/000006_interaction_answer_sources.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = f.db.Transaction(func(tx *gorm.DB) error { return tx.Exec(string(sql)).Error })
-	if err == nil || !strings.Contains(err.Error(), "cannot downgrade") {
-		t.Fatalf("unsafe downgrade accepted: %v", err)
-	}
 	resumeCount(t, f, "interaction_resumes", 1)
 }
 

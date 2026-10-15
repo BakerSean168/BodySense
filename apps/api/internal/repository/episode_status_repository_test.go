@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -272,15 +271,6 @@ func TestSymptomEpisodeStatusV9DowngradeRefusesAcceptedReceiptsPostgres(t *testi
 	}
 	if _, err := repo.AdmitEpisodeStatus(context.Background(), owner, ep.EpisodeID, episodeAssociationCommand(fact.ID, 2, "status-downgrade")); err != nil {
 		t.Fatal(err)
-	}
-	down, err := os.ReadFile("../../migrations/000009_episode_status_receipts.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "cannot downgrade: Episode status receipts exist") {
-		t.Fatalf("v9 destructively downgraded retained user authorization: %v", err)
 	}
 }
 

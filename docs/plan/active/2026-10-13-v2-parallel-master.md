@@ -2,6 +2,16 @@
 
 Status: ACTIVE / PRIMARY PROGRAM. Baseline audited 2026-10-13 (UTC). Execution owner: ChatGPT Web; Agent Fabric is the authorized transport, not a second implementation writer. The original single hourly continuation automation is disabled; per-track automations are recorded in the [active index](./README.md) (2026-10-15: Track C/D enabled, Track A/B disabled) and this plan does not change scheduler state. Latest verified alignment: [2026-10-15 audit](./2026-10-15-v2-implementation-alignment-audit.md).
 
+## 0. 2026-10-15 user decision · Big-bang V2 rebuild (supersedes conflicting rules below)
+
+The owner confirmed on 2026-10-15 that **no runtime database holds user data that must be preserved**. Staging and production databases may be wiped and rebuilt at V2 deployment. Therefore:
+
+- **No data migration, no rollback.** The vNext chain `000001`-`000012` is folded into a single `000001_vnext_baseline` (schema-equivalent on PG18). Until the first real V2 release, domain work edits that baseline directly instead of adding migrations. Downgrade guards, v11/v12 rollback proofs and forward-preview fixtures are no longer acceptance requirements.
+- **No compatibility layers or dormant switches.** The target behavior becomes the only behavior (e.g. independent TrainingPlans, one Conversation per user, retired public sharing). Old tables, routes, React pages and the JS reference model are deleted when their replacement lands, not kept in parallel.
+- **One writer, one vertical PR per domain.** Hark is the sole writer (`.git/bodysense-v2-writer.lock`); Track A-D hourly automations must stay paused. Order: BodyState -> Conversation/Person -> Diagnosis -> Training/Safety -> Person assets. Each PR carries schema + Go + API + React + E2E and merges when exact-head CI is green.
+- **Lean evidence.** CI and the PR description are the evidence. `queue.json` / `v2-handoff-state.json` are updated once per domain at merge; no per-ticket audit documents.
+- **Unchanged product invariants:** tenant/owner isolation, Go-owned medical authority, fail-closed Safety, user-confirmed writes, no invented clinical thresholds or Q-17 TTL. Staging/production deploy happens once, after all domains, by explicit release.
+
 ## 0. Decision and outcome
 
 Implement the approved BodySense V2 business contracts using **one domain-contract foundation, two parallel delivery tracks (Product Design and Engineering), and continuous domain-by-domain integration**. Do not wait for all database tables to be complete before designing the first domain; do not use a table schema as a UI specification. Do not wait for all UI polish before implementing backend services.
