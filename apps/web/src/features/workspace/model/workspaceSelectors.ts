@@ -9,7 +9,6 @@ export interface WorkspaceSummary {
   activeFactCount: number;
   confirmedObservationCount: number;
   pendingObservationCount: number;
-  activeHypothesisCount: number;
   proposedTreatmentCount: number;
   hasCurrentTreatment: boolean;
   canExecuteTreatment: boolean;
@@ -36,7 +35,6 @@ export function selectWorkspaceSummary(
         .length ?? 0,
     confirmedObservationCount: bodyState?.observations.length ?? 0,
     pendingObservationCount: bodyState?.pending_observations?.length ?? 0,
-    activeHypothesisCount: bodyState?.hypotheses?.length ?? 0,
     proposedTreatmentCount: workspace
       ? selectProposedTreatmentRevisions(workspace).length
       : 0,

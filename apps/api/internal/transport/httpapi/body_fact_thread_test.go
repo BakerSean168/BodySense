@@ -33,7 +33,7 @@ func TestBodyFactThreadWirePreservesCommittedToolAndUserMessages(t *testing.T) {
 		ConversationID: conversation,
 		Conversation:   consultationThreadConversationWire{ID: conversation, Title: "synthetic", TitleStatus: "generated", Status: "active", Metadata: json.RawMessage(`{}`), MessageCount: 2, CreatedAt: now, UpdatedAt: now},
 		Phase:          "collecting", ExtractedInfo: json.RawMessage(`[]`), PendingInteractions: json.RawMessage(`[]`), InteractionHistory: json.RawMessage(`[]`),
-		BodyState:        &service.BodyStateSnapshot{UserID: owner, CurrentRevision: 1, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyStateFact{}, Observations: []model.BodyStateObservation{}, Hypotheses: []model.BodyStateHypothesis{}, RecentRevisions: []model.BodyStateRevision{}},
+		BodyState:        &service.BodyStateSnapshot{UserID: owner, CurrentRevision: 1, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyStateFact{}, Observations: []model.BodyStateObservation{}, RecentRevisions: []model.BodyStateRevision{}},
 		ActiveTurnEvents: []threadRuntimeEventWire{},
 		Messages: []model.ThreadProjectionMessage{
 			{MessageID: uuid.New(), ConversationID: conversation, TurnID: turn, Seq: 1, Role: "user", Status: "completed", Parts: datatypes.JSON(`[{"type":"text","text":"I have no shoulder pain"}]`), Metadata: datatypes.JSON(`{}`), CreatedAt: now, UpdatedAt: now},

@@ -44,7 +44,7 @@ type BodyStateCurrentContextPatch struct {
 // BodyState is the user-scoped durable health aggregate introduced by ADR 0004.
 //
 // It intentionally owns only aggregate identity/current revision plus cross-cutting
-// state such as safety. Facts, observations, hypotheses and immutable revisions live
+// state such as safety. Facts, observations and immutable revisions live
 // in their own tables so that current projection reads stay simple without forcing full
 // event replay on every request.
 type BodyState struct {
@@ -57,7 +57,6 @@ type BodyState struct {
 	// Projection-only fields populated by BodyStateRepository.GetCurrent.
 	Facts        []BodyStateFact        `gorm:"-" json:"facts"`
 	Observations []BodyStateObservation `gorm:"-" json:"observations"`
-	Hypotheses   []BodyStateHypothesis  `gorm:"-" json:"hypotheses"`
 }
 
 func (BodyState) TableName() string { return "body_states" }

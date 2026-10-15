@@ -40,7 +40,6 @@ func minimalWorkspace() *service.HealthWorkspace {
 			PendingFacts:        []model.BodyStateFact{},
 			Observations:        []model.BodyStateObservation{},
 			PendingObservations: []model.BodyStateObservation{},
-			Hypotheses:          []model.BodyStateHypothesis{},
 			RecentRevisions:     []model.BodyStateRevision{},
 		},
 		TreatmentRevisions: []model.TreatmentRevision{},

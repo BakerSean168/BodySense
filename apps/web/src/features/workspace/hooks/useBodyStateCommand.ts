@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import { ApiRequestError } from "@/lib/api-client";
 import type {
   AddFactInput,
-  BodyStateHypothesisLifecycleState,
   BodyStateReviewState,
   BodyStateSafetyResolution,
   LifestyleSectionKey,
@@ -39,12 +38,6 @@ export type BodyStateCommand =
       observationId: string;
       expectedRevision: number;
       reviewState: BodyStateReviewState;
-    }
-  | {
-      type: "updateHypothesisLifecycle";
-      hypothesisId: string;
-      expectedRevision: number;
-      lifecycleState: BodyStateHypothesisLifecycleState;
     }
   | {
       type: "resolveSafety";
@@ -87,12 +80,6 @@ export async function executeBodyStateCommand(command: BodyStateCommand) {
         command.observationId,
         command.expectedRevision,
         command.reviewState,
-      );
-    case "updateHypothesisLifecycle":
-      return workspaceApi.updateHypothesisLifecycle(
-        command.hypothesisId,
-        command.expectedRevision,
-        command.lifecycleState,
       );
     case "resolveSafety":
       return workspaceApi.resolveSafety(

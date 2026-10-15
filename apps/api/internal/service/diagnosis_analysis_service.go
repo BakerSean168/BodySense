@@ -118,9 +118,6 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 	}
 	execution := diagnosisJSON(payload.ExecutionProvenance, `{}`)
 	evidenceTrace := diagnosisJSON(payload.EvidenceAcquisition, `{}`)
-	decisionTrace := buildDiagnosisDecisionTrace(
-		bodyStateRevision, payload, configuration, execution, evidenceTrace,
-	)
 	analysis := &model.DiagnosisAnalysisRecord{
 		ID: uuid.New(), UserID: userID, BodyStateRevision: bodyStateRevision,
 		Status: payload.Status, Scope: payload.Scope, Summary: payload.Summary,
@@ -131,7 +128,6 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 		Governance:               diagnosisJSON(payload.Governance, `{}`),
 		AgentConfigurationID:     configurationID,
 		AgentConfiguration:       configuration,
-		DecisionTrace:            decisionTrace,
 		ExecutionProvenance:      execution,
 		EvidenceAcquisitionTrace: evidenceTrace,
 		ReplayInput:              diagnosisJSON(replayInput, `{}`),
@@ -161,6 +157,9 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 			CreatedAt:             now,
 		})
 	}
+	analysis.DecisionTrace = buildDiagnosisDecisionTrace(
+		bodyStateRevision, payload, configuration, execution, evidenceTrace, candidates,
+	)
 	if err := s.repo.Create(ctx, analysis, candidates); err != nil {
 		return nil, fmt.Errorf("persist diagnosis analysis: %w", err)
 	}
@@ -291,6 +290,7 @@ func buildDiagnosisDecisionTrace(
 	configuration datatypes.JSON,
 	execution datatypes.JSON,
 	evidence datatypes.JSON,
+	candidates []model.DiagnosisCandidateRecord,
 ) datatypes.JSON {
 	decisionAuthority := diagnosisJSON(payload.DecisionAuthority, `{}`)
 	trace, _ := json.Marshal(map[string]any{
@@ -303,8 +303,34 @@ func buildDiagnosisDecisionTrace(
 		"rollout_provenance":   json.RawMessage(diagnosisJSON(payload.RolloutProvenance, `{}`)),
 		"agent_governance":     json.RawMessage(diagnosisJSON(payload.Governance, `{}`)),
 		"decision_authority":   json.RawMessage(decisionAuthority),
+		"agent_hypotheses":     diagnosisAgentHypotheses(candidates),
 	})
 	return datatypes.JSON(trace)
+}
+
+// diagnosisAgentHypotheses is the creation-time snapshot of the Agent's
+// hypotheses (ConditionAnalysisRun.agentHypotheses). It is append-only audit
+// inside the immutable analysis row: no lifecycle, no clinical authority, and
+// never written to BodyState (user BodyHypotheses live in body_hypotheses).
+func diagnosisAgentHypotheses(candidates []model.DiagnosisCandidateRecord) []map[string]any {
+	hypotheses := make([]map[string]any, 0, len(candidates))
+	for _, candidate := range candidates {
+		hypotheses = append(hypotheses, map[string]any{
+			"candidate_id":            candidate.ID,
+			"ordinal":                 candidate.Ordinal,
+			"concern_key":             candidate.ConcernKey,
+			"statement":               candidate.Name,
+			"confidence":              candidate.Confidence,
+			"basis_fact_ids":          json.RawMessage(diagnosisJSON(json.RawMessage(candidate.BasisFactIDs), `[]`)),
+			"basis_observation_ids":   json.RawMessage(diagnosisJSON(json.RawMessage(candidate.BasisObservationIDs), `[]`)),
+			"supporting_evidence_ids": json.RawMessage(diagnosisJSON(json.RawMessage(candidate.SupportingEvidenceIDs), `[]`)),
+			"counterevidence_ids":     json.RawMessage(diagnosisJSON(json.RawMessage(candidate.CounterevidenceIDs), `[]`)),
+			"reasoning_summary":       candidate.ReasoningSummary,
+			"source_actor":            "diagnosis_agent",
+			"body_state_authority":    "none",
+		})
+	}
+	return hypotheses
 }
 
 func diagnosisJSON(raw json.RawMessage, fallback string) datatypes.JSON {

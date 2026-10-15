@@ -11,7 +11,6 @@ import {
   reviewBodyStateFact,
   reviewBodyStateObservation,
   updateBodyStateFactTemporal,
-  updateBodyStateHypothesisLifecycle,
   updateLifestyle,
 } from "@/generated/api/bodysense";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
@@ -43,8 +42,6 @@ export type LifestyleSectionKey =
   "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
 
 export type BodyStateReviewState = "unverified" | "confirmed" | "rejected";
-export type BodyStateHypothesisLifecycleState =
-  "active" | "strengthened" | "weakened" | "unsupported" | "retired";
 export type BodyStateSafetyResolution =
   "resolved" | "cleared_by_review" | "monitoring";
 
@@ -189,24 +186,6 @@ export const workspaceApi = {
       await reviewBodyStateObservation(
         observationId,
         { expected_revision: expectedRevision, review_state: reviewState },
-        undefined,
-        openApiAuthFetch,
-      );
-    }),
-
-  updateHypothesisLifecycle: async (
-    hypothesisId: string,
-    expectedRevision: number,
-    lifecycleState: BodyStateHypothesisLifecycleState,
-  ): Promise<void> =>
-    withOpenApiError(async () => {
-      await updateBodyStateHypothesisLifecycle(
-        hypothesisId,
-        {
-          expected_revision: expectedRevision,
-          lifecycle_state: lifecycleState,
-          counterevidence_ids: [],
-        },
         undefined,
         openApiAuthFetch,
       );

@@ -17,7 +17,6 @@ const validWorkspaceResponse = {
     pending_facts: [],
     observations: [],
     pending_observations: [],
-    hypotheses: [],
     recent_revisions: [],
   },
   treatment_revisions: [],

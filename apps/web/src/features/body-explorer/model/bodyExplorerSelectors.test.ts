@@ -14,7 +14,6 @@ function snapshot(): BodyStateSnapshot {
     facts: [],
     observations: [],
     pending_observations: [],
-    hypotheses: [],
     recent_revisions: [],
   };
 }
@@ -105,7 +104,7 @@ describe("Body Explorer BodyState selectors", () => {
     );
   });
 
-  it("uses confirmed and pending observations as observed without painting hypotheses", () => {
+  it("uses confirmed and pending observations as observed", () => {
     const state = snapshot();
     state.observations = [
       {
@@ -129,21 +128,6 @@ describe("Body Explorer BodyState selectors", () => {
         updated_revision: 9,
       },
     ];
-    state.hypotheses = [
-      {
-        id: "h1",
-        concern_key: "region:右肩",
-        statement: "possible explanation",
-        lifecycle_state: "active",
-        supporting_fact_ids: [],
-        supporting_observation_ids: [],
-        supporting_evidence_ids: [],
-        counterevidence_ids: [],
-        created_revision: 9,
-        updated_revision: 9,
-      },
-    ];
-
     expect(selectBodyRegionVisualState(state, "knee.left")).toBe("observed");
     expect(selectBodyRegionVisualState(state, "neck")).toBe("observed");
     expect(selectBodyRegionVisualState(state, "shoulder.right")).toBe("none");

@@ -4,7 +4,6 @@ import {
   Check,
   CirclePlus,
   History,
-  Lightbulb,
   PencilLine,
   RefreshCw,
   ShieldCheck,
@@ -85,14 +84,6 @@ const trendLabels: Record<string, string> = {
   stable: "基本稳定",
   improving: "正在改善",
   worsening: "正在加重",
-};
-
-const hypothesisStateLabels: Record<string, string> = {
-  active: "待验证",
-  strengthened: "更有可能",
-  weakened: "可能性降低",
-  unsupported: "证据不足",
-  retired: "不再考虑",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -312,7 +303,6 @@ export function BodyStateWorkbench({
     }
   };
 
-  const hypotheses = snapshot.hypotheses ?? [];
   const pendingFacts = snapshot.pending_facts ?? [];
   const pendingObservations = snapshot.pending_observations ?? [];
   const activeFacts = snapshot.facts.filter(
@@ -903,71 +893,6 @@ export function BodyStateWorkbench({
           </>
         )}
       </section>
-
-      {hypotheses.length > 0 && (
-        <details className="border-t border-border/55 pt-4" open>
-          <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <Lightbulb className="h-3.5 w-3.5" />
-              可能解释 · {hypotheses.length}
-            </span>
-          </summary>
-          <div className="mt-3 space-y-2">
-            {hypotheses.map((hypothesis) => (
-              <div
-                key={hypothesis.id}
-                className="border-b border-border/45 py-2.5 text-xs last:border-b-0"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium text-foreground">
-                    {hypothesis.statement}
-                  </p>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-muted-foreground">
-                    {hypothesisStateLabels[hypothesis.lifecycle_state] ||
-                      "待验证"}
-                  </span>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  这只是当前的可能解释，会随着新信息增加或降低可信度。
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {(
-                    [
-                      "strengthened",
-                      "weakened",
-                      "unsupported",
-                      "retired",
-                    ] as const
-                  ).map((state) => (
-                    <Button
-                      key={state}
-                      size="xs"
-                      variant="ghost"
-                      isLoading={
-                        busyKey === `hypothesis:${hypothesis.id}:${state}`
-                      }
-                      onClick={() =>
-                        mutate(
-                          `hypothesis:${hypothesis.id}:${state}`,
-                          {
-                            type: "updateHypothesisLifecycle",
-                            hypothesisId: hypothesis.id,
-                            expectedRevision: snapshot.current_revision,
-                            lifecycleState: state,
-                          },
-                          `可能解释已更新为${hypothesisStateLabels[state] || state}`,
-                        )
-                      }
-                    >
-                      {hypothesisStateLabels[state] || state}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
 
       {(visibleObservations.length > 0 ||
         visibleHistoricalFacts.length > 0) && (

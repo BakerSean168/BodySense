@@ -19,12 +19,13 @@ import {
   BodyEpisodeRelationPage,
   BodyFactCommit,
   BodyFactRecordPage,
+  BodyHypothesisCommit,
+  BodyHypothesisRecordList,
   BodyMetricsSnapshot,
   BodyObservationCommit,
   BodyObservationRecordPage,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
-  BodyStateHypothesisMutationResponse,
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
@@ -38,6 +39,7 @@ import {
   ConversationRunListResponse,
   CurrentTreatmentResponse,
   CurrentUser,
+  DerivedConcernGroupList,
   DiagnosisAnalysisListResponse,
   DiagnosisCandidateAssessmentResponse,
   DiagnosisReplayReport,
@@ -104,13 +106,13 @@ import type {
   BodyEpisodeRelationPageOutput,
   BodyFactCommitOutput,
   BodyFactRecordPageOutput,
+  BodyHypothesisCommitOutput,
+  BodyHypothesisRecordListOutput,
   BodyMetricsSnapshotOutput,
   BodyObservationCommitOutput,
   BodyObservationRecordPageOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
-  BodyStateHypothesisInput,
-  BodyStateHypothesisMutationResponseOutput,
   BodyStateObservationInput,
   BodyStateObservationMutationResponseOutput,
   BodyStateRevisionMutationResponseOutput,
@@ -135,6 +137,7 @@ import type {
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
   CurrentUserOutput,
+  DerivedConcernGroupListOutput,
   DiagnosisAnalysisListResponseOutput,
   DiagnosisCandidateAssessmentRequest,
   DiagnosisCandidateAssessmentResponseOutput,
@@ -178,6 +181,7 @@ import type {
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
   RecordBodyFactsRequest,
+  RecordBodyHypothesisRequest,
   RecordBodyObservationRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
@@ -207,7 +211,6 @@ import type {
   TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
-  UpdateBodyStateHypothesisLifecycleRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
@@ -217,6 +220,7 @@ import type {
   UserProfileResponseOutput,
   UserUploadOutput,
   WithdrawBodyFactRecordRequest,
+  WithdrawBodyHypothesisRequest,
   WithdrawBodyObservationRequest
 } from './model';
 
@@ -527,6 +531,194 @@ const res = await (fetchFn ?? fetch)(getWithdrawBodyObservationRecordUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordBodyHypothesisUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records`
+}
+
+/**
+ * Direct user edit only. A BodyHypothesis carries no confidence, clinical status or AI provenance; Agent/Diagnosis hypotheses never enter this ledger. Owner, source and revision are assigned server-side. Related facts must be the owner's current asserted BodyFacts. Exact retry with the same idempotency key replays the original receipt.
+ * @summary Record the authenticated user's own guess about a cause or possible condition.
+ */
+export const recordBodyHypothesis = async (recordBodyHypothesisRequest: RecordBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyHypothesisUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyHypothesisRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisCommit, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyHypothesisRecordsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records`
+}
+
+/**
+ * Bounded to 100 newest-first records. related_fact_ids lists only facts that are still asserted. Withdrawn hypotheses are excluded.
+ * @summary Read the user's current (asserted, source-available) hypotheses from one BodyState revision.
+ */
+export const listBodyHypothesisRecords = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisRecordListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyHypothesisRecordsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisRecordList, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisRecordList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisRecordList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyHypothesisRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records/${id}/withdraw`
+}
+
+/**
+ * @summary Withdraw one of the user's own current hypotheses without erasing its history or touching linked facts.
+ */
+export const withdrawBodyHypothesisRecord = async (id: string,
+    withdrawBodyHypothesisRequest: WithdrawBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyHypothesisRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyHypothesisRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisCommit, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListDerivedConcernGroupsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/concern-groups`
+}
+
+/**
+ * Computed on read, never stored. Hypothesis–fact links and episode–fact links form an undirected graph; every connected component containing at least one hypothesis or episode is one group. Group ids are provisional display ids (UUIDv5 of the earliest member) that may change on merge/split and must never be used as a foreign key or a clinical conclusion.
+ * @summary Read the derived, non-authoritative ConcernGroup organisation of one BodyState revision.
+ */
+export const listDerivedConcernGroups = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DerivedConcernGroupListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListDerivedConcernGroupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DerivedConcernGroupList, status?: number} = new globalThis.Error();
+    const data : DerivedConcernGroupList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DerivedConcernGroupList.parse(parsedBody) : parsedBody
   return data
 }
 
@@ -1281,113 +1473,6 @@ const res = await (fetchFn ?? fetch)(getReviewBodyStateObservationUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateHypothesisUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses`
-}
-
-/**
- * @summary Add a BodyState hypothesis.
- */
-export const addBodyStateHypothesis = async (bodyStateHypothesisInput: BodyStateHypothesisInput, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateHypothesisUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(bodyStateHypothesisInput)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getUpdateBodyStateHypothesisLifecycleUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses/${id}/lifecycle`
-}
-
-/**
- * @summary Update hypothesis lifecycle/counterevidence.
- */
-export const updateBodyStateHypothesisLifecycle = async (id: string,
-    updateBodyStateHypothesisLifecycleRequest: UpdateBodyStateHypothesisLifecycleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getUpdateBodyStateHypothesisLifecycleUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateBodyStateHypothesisLifecycleRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
   return data
 }
 

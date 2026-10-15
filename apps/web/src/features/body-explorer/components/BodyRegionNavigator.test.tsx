@@ -23,7 +23,6 @@ const snapshot = {
   ],
   observations: [],
   pending_observations: [],
-  hypotheses: [],
 };
 
 describe("BodyRegionNavigator", () => {

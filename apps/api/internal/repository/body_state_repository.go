@@ -57,12 +57,6 @@ func (r *BodyStateRepository) GetCurrent(ctx context.Context, userID uuid.UUID) 
 		Find(&state.Observations).Error; err != nil {
 		return nil, err
 	}
-	if err := database.FromContext(ctx, r.db).
-		Where("user_id = ? AND lifecycle_state IN ?", userID, []string{"active", "strengthened", "weakened"}).
-		Order("updated_at ASC").
-		Find(&state.Hypotheses).Error; err != nil {
-		return nil, err
-	}
 	return &state, nil
 }
 

@@ -41,7 +41,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -96,7 +95,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -148,7 +146,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -237,7 +234,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -305,7 +301,6 @@ describe("BodyStateWorkbench observation review", () => {
                 updated_revision: 5,
               },
             ],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -353,7 +348,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -413,7 +407,6 @@ describe("BodyStateWorkbench observation review", () => {
             ],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -456,7 +449,6 @@ describe("BodyStateWorkbench observation review", () => {
             facts: [],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />
@@ -492,7 +484,6 @@ describe("BodyStateWorkbench observation review", () => {
             facts: [],
             observations: [],
             pending_observations: [],
-            hypotheses: [],
             recent_revisions: [],
           }}
         />

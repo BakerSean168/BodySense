@@ -317,7 +317,7 @@ type ConditionDirectEdit = {
 
 - [DiagnosisAnalysisRecord](../../../apps/api/internal/model/diagnosis_analysis.go) 仍是按一次分析形成的旧历史工件；并不等价于一个用户一份 Diagnosis + 具名 ConditionEntry + 可重放 Run/Proposal/Decision 的目标聚合。
 - [DiagnosisCandidateRecord](../../../apps/api/internal/model/diagnosis_analysis.go) 的 Confidence/Assessment 等旧字段不等于本模型的 AI 证据级别与独立采纳决定。
-- [DiagnosisApplicationService](../../../apps/api/internal/service/diagnosis_application_service.go) 旧的 commitHypotheses 流程把 Agent 假设写入 BodyStateHypothesis，与本模型的领域归属冲突（IG-05）。
+- [DiagnosisAnalysisService](../../../apps/api/internal/service/diagnosis_analysis_service.go) 在分析行的 `decision_trace.agent_hypotheses` 中保存 Agent 假设的创建快照（只审计，不写 BodyState）；旧 commitHypotheses / BodyStateHypothesis 已删除（IG-05 已解决）。
 - 旧的 description-only 条目、single source、clinical_diagnosis、用户按钮控制 likely、lifecycle 与 endTarget 必须作为兼容迁移对象处理，不能宣称当前运行时已遵循 V2。
 - 具体持久表、DTO、事件迁移与回归测试应单独实施；本文只批准业务逻辑，不批准未评审的破坏性数据迁移。
 
