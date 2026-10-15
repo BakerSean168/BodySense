@@ -22,7 +22,8 @@ async def body_fact_fixture_events(
     run_id: str,
     *,
     interrupt_id: str | None = None,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Return the production node's events and, for a turn, its intake question."""
     corpus = {
         "我每晚睡七小时。": ("lifestyle", "unknown"),
         "我昨天肩膀不舒服。": ("symptom", "present"),
@@ -44,13 +45,15 @@ async def body_fact_fixture_events(
         }
     service = BodyFactIntakeService(model_resolver=lambda _: TestModel(custom_output_args=args))
     events: list[dict[str, Any]] = []
+    question: dict[str, Any] | None = None
     if interrupt_id is None:
-        await acquire_body_fact_turn(
+        acquired = await acquire_body_fact_turn(
             {"latest_user_message": text, "body_state": body_state, "run_id": run_id},
             writer=events.append,
             manifest=manifest,
             intake_service=service,
         )
+        question = acquired["intake_question"]
     else:
         await acquire_body_fact_answer(
             run_id=run_id,
@@ -61,4 +64,4 @@ async def body_fact_fixture_events(
             manifest=manifest,
             intake_service=service,
         )
-    return events
+    return events, question

@@ -1113,6 +1113,13 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
         }
 
     if tool_name == "ask_user":
+        # Only the runtime-owned intake node may ask a bound symptom intake; a
+        # model-authored ask_user never carries purpose or state binding.
+        arguments = {
+            key: value
+            for key, value in arguments.items()
+            if key not in {"purpose", "state_binding"}
+        }
         result = await executor.execute(tool_call_id, tool_name, arguments)
         if result.status != ToolStatus.INTERRUPTED:
             writer(
@@ -1443,6 +1450,7 @@ async def resume_thread_interrupt(
     body_fact_resume = bool(
         manifest.intake and manifest.intake.policy_revision == BODY_FACT_INTAKE_POLICY
     )
+    safety_screen_resume = False
     if body_fact_resume:
         if not interrupt_id or checkpoint_values.get("run_id") != run_id:
             raise ValueError(
@@ -1451,6 +1459,14 @@ async def resume_thread_interrupt(
         pending = getattr(checkpoint, "interrupts", ())
         if len(pending) != 1 or UUID(str(pending[0].id)).hex != UUID(interrupt_id).hex:
             raise ValueError("Resume does not match the pending native interrupt")
+        pending_value = getattr(pending[0], "value", None)
+        pending_question = (
+            pending_value.get("question") if isinstance(pending_value, dict) else None
+        )
+        safety_screen_resume = (
+            isinstance(pending_question, dict)
+            and pending_question.get("purpose") == "symptom_intake"
+        )
 
     yield _runtime_agent_configuration_event(factory, manifest=manifest, run_id=run_id)
     answer_safety: dict[str, Any] | None = None
@@ -1468,7 +1484,11 @@ async def resume_thread_interrupt(
                 run_id=run_id,
             )
     answer_intake: dict[str, Any] | None = None
-    if body_fact_resume and interrupt_id:
+    # A safety-screen checklist answer is recorded by Go as the screen of the
+    # already committed symptom; it is not a free-text self statement, so it
+    # never goes through statement extraction (the red-flag screen above
+    # still ran on it).
+    if body_fact_resume and interrupt_id and not safety_screen_resume:
         capture_events: list[dict[str, Any]] = []
         answer_intake = await acquire_body_fact_answer(
             run_id=run_id,
