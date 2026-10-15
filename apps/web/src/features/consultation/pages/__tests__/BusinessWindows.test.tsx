@@ -21,6 +21,24 @@ const mockListBodyFacts = vi.fn();
 vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
   bodyFactRecordsService: { list: () => mockListBodyFacts(), record: vi.fn() },
 }));
+const mockListEquipment = vi.fn();
+const mockUpdateEquipment = vi.fn();
+vi.mock("@/features/profile/services/equipmentService", () => ({
+  equipmentKeys: { all: ["equipment"] },
+  equipmentService: {
+    list: () => mockListEquipment(),
+    create: vi.fn(),
+    update: (id: string, input: unknown) => mockUpdateEquipment(id, input),
+  },
+  availabilityChange: (
+    asset: { revision: number; display_name: string },
+    availability: string,
+  ) => ({
+    expected_revision: asset.revision,
+    display_name: asset.display_name,
+    availability,
+  }),
+}));
 
 vi.mock("../../hooks/useConversationsQuery", () => ({
   useConversationsQuery: () => mockUseConversationsQuery(),
@@ -180,6 +198,9 @@ beforeEach(() => {
   mockListTrainingPlans.mockReset();
   mockGetBodyMetrics.mockReset();
   mockGetLifestyle.mockReset();
+  mockListEquipment.mockReset();
+  mockListEquipment.mockResolvedValue({ items: [] });
+  mockUpdateEquipment.mockReset();
   const owner = "11111111-1111-4111-8111-111111111111";
   useAuthStore.setState({
     user: { id: owner, email: "synthetic@example.test" },
@@ -616,13 +637,51 @@ describe("body-first business windows", () => {
     await screen.findByTestId("person-window");
     await userEvent.click(screen.getByRole("button", { name: "装备" }));
     expect(
-      screen.getByText("添加个人器材，帮助 AI 更好规划训练项目"),
+      await screen.findByText("添加个人器材，帮助 AI 更好规划训练项目"),
     ).toBeInTheDocument();
+    expect(mockListEquipment).toHaveBeenCalled();
     expect(
       screen.getByRole("button", { name: /添加个人器材/ }),
     ).toBeInTheDocument();
     // No fixed slot ceiling is displayed.
     expect(screen.queryByText(/\/\s*12/)).not.toBeInTheDocument();
+  });
+
+  it("lists EquipmentAsset items and marks one unavailable without touching BodyState", async () => {
+    const asset = {
+      id: "eq-1",
+      user_id: "11111111-1111-4111-8111-111111111111",
+      display_name: "弹力带",
+      notes: "中等阻力",
+      access_kind: "owned",
+      availability: "available",
+      valid_from: null,
+      valid_until: null,
+      revision: 2,
+      created_at: "2026-10-15T08:00:00Z",
+      updated_at: "2026-10-15T08:00:00Z",
+    };
+    mockListEquipment.mockResolvedValue({ items: [asset] });
+    mockUpdateEquipment.mockResolvedValue({
+      ...asset,
+      availability: "unavailable",
+      revision: 3,
+    });
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await userEvent.click(screen.getByRole("button", { name: "装备" }));
+    expect(await screen.findByText("弹力带")).toBeInTheDocument();
+    expect(screen.getByText("中等阻力")).toBeInTheDocument();
+    expect(screen.getByText("当前可用")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "标记暂不可用" }));
+    await waitFor(() =>
+      expect(mockUpdateEquipment).toHaveBeenCalledWith("eq-1", {
+        expected_revision: 2,
+        display_name: "弹力带",
+        availability: "unavailable",
+      }),
+    );
   });
 
   it("renders real habit values and marks unrecorded ones as missing", async () => {

@@ -321,7 +321,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             identity={identity}
             identityInfoOpen={personInfoOpen}
             onIdentityInfoOpenChange={setPersonInfoOpen}
-            bodyState={props.bodyState}
             canEdit={props.workspace?.capabilities.can_edit_body_state === true}
             onEditProfile={props.onOpenProfile}
           />

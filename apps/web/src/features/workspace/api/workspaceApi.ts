@@ -1,6 +1,5 @@
 import {
   acceptTreatmentRevision,
-  addBodyStateFact,
   correctBodyFactRecord,
   generateTreatmentProposal,
   getHealthWorkspace,
@@ -24,22 +23,6 @@ import type {
   TreatmentRevision,
   TrainingExecutionPlan,
 } from "../types/workspace";
-
-// Legacy BodyState writer, kept only for the equipment inventory until
-// EquipmentAsset replaces it. Body statements use recordSymptom (V2 ledger).
-export interface AddFactInput {
-  concern_key?: string;
-  kind: "equipment.available";
-  body_region?: string;
-  body_region_id?: string | null;
-  value: string;
-  details?: Record<string, unknown>;
-  origin?: string;
-  review_state?: string;
-  lifecycle_state?: string;
-  trend?: string;
-  observed_at?: string;
-}
 
 // A user-typed symptom statement for the V2 BodyFact ledger. The server
 // assigns the direct_edit source; Safety stays fail-closed until screened.
@@ -128,19 +111,6 @@ export const workspaceApi = {
         capabilities: response.capabilities,
         actions: response.actions,
       };
-    }),
-
-  addFact: async (
-    expectedRevision: number,
-    fact: AddFactInput,
-  ): Promise<{ fact: BodyStateFact }> =>
-    withOpenApiError(async () => {
-      const response = await addBodyStateFact(
-        { expected_revision: expectedRevision, fact },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { fact: response.fact };
     }),
 
   reviewFact: async (

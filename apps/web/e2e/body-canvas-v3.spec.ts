@@ -200,21 +200,25 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(personWindow.getByText("弹力带", { exact: true })).toBeVisible();
   await expect(personWindow.getByText("当前可用")).toBeVisible();
 
-  const equipmentStateResponse = await request.get(
-    `${apiBase}/api/v1/body-state`,
-    { headers },
-  );
-  const equipmentStateBody = await equipmentStateResponse.text();
-  expect(equipmentStateResponse.ok(), equipmentStateBody).toBeTruthy();
-  const equipmentState = JSON.parse(equipmentStateBody) as {
-    facts: Array<{ kind: string; value: string; review_state: string }>;
+  // Equipment is its own owner-scoped EquipmentAsset, never a BodyState fact.
+  const equipmentResponse = await request.get(`${apiBase}/api/v1/equipment`, {
+    headers,
+  });
+  const equipmentBody = await equipmentResponse.text();
+  expect(equipmentResponse.ok(), equipmentBody).toBeTruthy();
+  const equipment = JSON.parse(equipmentBody) as {
+    items: Array<{
+      display_name: string;
+      notes: string | null;
+      availability: string;
+    }>;
   };
-  expect(equipmentState.facts).toEqual(
+  expect(equipment.items).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        kind: "equipment.available",
-        value: "弹力带",
-        review_state: "confirmed",
+        display_name: "弹力带",
+        notes: "中等阻力",
+        availability: "available",
       }),
     ]),
   );
