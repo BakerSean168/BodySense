@@ -49,6 +49,55 @@ from ..runtime_proto_adapter import (
 
 logger = logging.getLogger(__name__)
 
+E2E_SYMPTOM_INTAKE = "E2E_SYMPTOM_INTAKE"
+_E2E_INTAKE_SEED = {
+    "body_part": "颈部",
+    "symptom_type": "酸胀",
+    "severity": "轻度（0–2/10）",
+    "trigger": "久坐或久站",
+    "functional_impact": "基本不影响",
+    "neurological_signs": "没有",
+}
+
+
+async def _e2e_symptom_intake_question(run_id: str, text: str) -> tuple[str, dict[str, Any]]:
+    """Build the runtime-bound intake exactly as production would normalize it."""
+    from ...services.agent.tools.ask_user import handle_ask_user
+    from ...services.consultation_state_acquisition import (
+        build_symptom_intake_question,
+        symptom_capture_id,
+    )
+
+    capture_id = symptom_capture_id(
+        run_id=run_id,
+        latest_user_message=text,
+        index=0,
+        body_part=_E2E_INTAKE_SEED["body_part"],
+        symptom_type=_E2E_INTAKE_SEED["symptom_type"],
+    )
+    question = build_symptom_intake_question({**_E2E_INTAKE_SEED, "capture_id": capture_id})
+    if question is None:
+        raise RuntimeError("E2E symptom intake produced no question")
+    normalized = await handle_ask_user(question)
+    if not isinstance(normalized.content, dict):
+        raise RuntimeError("E2E symptom intake was not normalized")
+    return f"intake-{capture_id}", normalized.content
+
+
+def _e2e_intake_tool_id(run_id: str, answer: dict[str, Any]) -> str:
+    if not isinstance(answer.get("fields"), dict):
+        return f"ask-bodyfact:{run_id}"
+    from ...services.consultation_state_acquisition import symptom_capture_id
+
+    capture_id = symptom_capture_id(
+        run_id=run_id,
+        latest_user_message=E2E_SYMPTOM_INTAKE,
+        index=0,
+        body_part=_E2E_INTAKE_SEED["body_part"],
+        symptom_type=_E2E_INTAKE_SEED["symptom_type"],
+    )
+    return f"intake-{capture_id}"
+
 
 def _e2e_stub_enabled() -> bool:
     environment = os.getenv("ENVIRONMENT", "development").lower()
@@ -207,7 +256,11 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                         tool_call_id=item.get("id"),
                     )
                     seq += 1
-            if request.input.text in {"E2E_BODYFACT_ASK_SELF", "E2E_BODYFACT_ASK_CHOICE"}:
+            if request.input.text in {
+                "E2E_BODYFACT_ASK_SELF",
+                "E2E_BODYFACT_ASK_CHOICE",
+                E2E_SYMPTOM_INTAKE,
+            }:
                 native_id = uuid5(NAMESPACE_URL, f"bodysense:e2e:ask:{request.run_id}").hex
                 tool_id = f"ask-bodyfact:{request.run_id}"
                 choice = request.input.text.endswith("CHOICE")
@@ -218,6 +271,10 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 }
                 if choice:
                     question["options"] = ["left", "right"]
+                if request.input.text == E2E_SYMPTOM_INTAKE:
+                    tool_id, question = await _e2e_symptom_intake_question(
+                        request.run_id, request.input.text
+                    )
                 yield _stub_event(
                     seq=seq,
                     run_id=request.run_id,
@@ -400,7 +457,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
                 seq=seq,
                 run_id=request.run_id,
                 conversation_id=request.conversation_id,
-                tool_call_id=f"ask-bodyfact:{request.run_id}",
+                tool_call_id=_e2e_intake_tool_id(request.run_id, request.answer),
                 event=ToolResultRuntimeEvent(tool="ask_user", result={"answer": request.answer}),
             )
             yield _stub_event(
