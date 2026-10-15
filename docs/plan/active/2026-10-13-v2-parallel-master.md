@@ -1,6 +1,6 @@
 # BodySense V2 · Parallel Full-Stack Rebuild Master Plan
 
-Status: ACTIVE / PRIMARY PROGRAM. Baseline audited 2026-10-13 (UTC). Execution owner: ChatGPT Web; Agent Fabric is the authorized transport, not a second implementation writer. The hourly continuation automation has been disabled at the user's request; this plan does not reactivate it.
+Status: ACTIVE / PRIMARY PROGRAM. Baseline audited 2026-10-13 (UTC). Execution owner: ChatGPT Web; Agent Fabric is the authorized transport, not a second implementation writer. The original single hourly continuation automation is disabled; per-track automations are recorded in the [active index](./README.md) (2026-10-15: Track C/D enabled, Track A/B disabled) and this plan does not change scheduler state. Latest verified alignment: [2026-10-15 audit](./2026-10-15-v2-implementation-alignment-audit.md).
 
 ## 0. Decision and outcome
 
