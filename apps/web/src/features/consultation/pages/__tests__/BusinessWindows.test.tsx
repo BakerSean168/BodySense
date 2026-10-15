@@ -122,7 +122,6 @@ function makeWorkspace(
       observations: [],
       pending_facts: [],
       pending_observations: [],
-      hypotheses: [],
       recent_revisions: [],
     },
     treatment_revisions: [],

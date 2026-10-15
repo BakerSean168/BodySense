@@ -202,25 +202,6 @@ export interface BodyStateObservation {
   updated_revision: number;
 }
 
-export interface BodyStateHypothesis {
-  id: string;
-  concern_key: string;
-  statement: string;
-  lifecycle_state:
-    "active" | "strengthened" | "weakened" | "unsupported" | "retired" | string;
-  confidence?: string | null;
-  supporting_fact_ids: string[];
-  supporting_observation_ids: string[];
-  supporting_evidence_ids: string[];
-  counterevidence_ids: string[];
-  source_analysis_id?: string | null;
-  provenance?: Record<string, unknown>;
-  created_revision: number;
-  updated_revision: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface BodyStateRevision {
   id: string;
   revision: number;
@@ -237,7 +218,6 @@ export interface BodyStateProjection {
   pending_facts?: BodyStateFact[];
   observations: BodyStateObservation[];
   pending_observations?: BodyStateObservation[];
-  hypotheses?: BodyStateHypothesis[];
   recent_revisions?: BodyStateRevision[];
 }
 

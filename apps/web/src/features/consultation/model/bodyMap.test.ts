@@ -22,7 +22,6 @@ function snapshot(): BodyStateSnapshot {
     ],
     observations: [],
     pending_observations: [],
-    hypotheses: [],
     recent_revisions: [],
   };
 }

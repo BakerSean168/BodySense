@@ -1,6 +1,5 @@
 import type {
   BodyStateFact,
-  BodyStateHypothesis,
   BodyStateObservation,
   BodyStateProjection,
   BodyStateRevision,
@@ -163,7 +162,6 @@ export interface WorkspaceAction {
 export interface WorkspaceBodyState extends BodyStateProjection {
   pending_facts: BodyStateFact[];
   pending_observations: BodyStateObservation[];
-  hypotheses: BodyStateHypothesis[];
   recent_revisions: BodyStateRevision[];
 }
 

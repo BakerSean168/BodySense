@@ -14,7 +14,6 @@ const workspace = {
     ],
     observations: [{ id: "o1" }],
     pending_observations: [{ id: "o2" }],
-    hypotheses: [{ id: "h1" }],
   },
   treatment_revisions: [
     { id: "r1", acceptance_state: "proposed" },
@@ -36,7 +35,6 @@ describe("workspace selectors", () => {
       activeFactCount: 1,
       confirmedObservationCount: 1,
       pendingObservationCount: 1,
-      activeHypothesisCount: 1,
       proposedTreatmentCount: 1,
       hasCurrentTreatment: true,
       canExecuteTreatment: true,
