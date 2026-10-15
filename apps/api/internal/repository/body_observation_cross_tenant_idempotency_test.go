@@ -10,8 +10,8 @@ import (
 )
 
 // Reusing one command key across different authenticated users must never
-// replay another tenant's commit, even if that tenant's payload or revision
-// differs. All three direct-user operations share the observation receipt
+// replay another tenant's commit, even if that tenant's payload and revision
+// are identical. All three direct-user operations share the observation receipt
 // table, so exercise their complete lifecycle against real PostgreSQL.
 func TestBodyObservationSharedIdempotencyKeysIsolatedAcrossTenantsPostgres(t *testing.T) {
 	db := openBodyStateContextIntegrationDB(t)
@@ -27,11 +27,17 @@ func TestBodyObservationSharedIdempotencyKeysIsolatedAcrossTenantsPostgres(t *te
 			withdraw model.AmendBodyObservationCommand
 		}
 	}
-	var users [2]lifecycle
+	// Tenant 2 deliberately repeats tenant 0's entire request body and key;
+	// tenant 1 uses the same key with a different payload.
+	var users [3]lifecycle
 	for i := range users {
 		user := &users[i]
 		user.owner = seedBodyStateContextUser(t, db)
-		user.commands.record = observationDirectCommand(0, "shared-record", fmt.Sprintf("User %d reported 67.5 kg", i))
+		payloadTenant := i
+		if i == 2 {
+			payloadTenant = 0
+		}
+		user.commands.record = observationDirectCommand(0, "shared-record", fmt.Sprintf("User %d reported 67.5 kg", payloadTenant))
 		initial, err := repo.RecordDirectObservation(ctx, user.owner, user.commands.record)
 		if err != nil || initial == nil {
 			t.Fatalf("tenant %d record: %#v %v", i, initial, err)
@@ -39,8 +45,8 @@ func TestBodyObservationSharedIdempotencyKeysIsolatedAcrossTenantsPostgres(t *te
 		user.receipts[0] = initial
 
 		replacement := user.commands.record.Observation
-		replacement.Statement = fmt.Sprintf("User %d corrected the original scale reading", i)
-		replacement.RawValue = fmt.Sprintf("%d.5", 65+i)
+		replacement.Statement = fmt.Sprintf("User %d corrected the original scale reading", payloadTenant)
+		replacement.RawValue = fmt.Sprintf("%d.5", 65+payloadTenant)
 		user.commands.correct = model.AmendBodyObservationCommand{
 			IdempotencyKey: "shared-correct", ExpectedRevision: 1, Replacement: &replacement,
 		}
@@ -97,13 +103,18 @@ func TestBodyObservationSharedIdempotencyKeysIsolatedAcrossTenantsPostgres(t *te
 				t.Fatalf("tenant %d %s replay not exact: original=%#v replay=%#v err=%v",
 					i, operations[step], original, replay, err)
 			}
-			foreign := users[1-i].receipts[step]
-			if foreign.UserID == original.UserID || foreign.ID == original.ID ||
-				foreign.EventID == original.EventID || foreign.RevisionID == original.RevisionID ||
-				foreign.ObservationID == original.ObservationID ||
-				foreign.SourceEvidenceID == original.SourceEvidenceID {
-				t.Fatalf("tenant %d %s reused foreign identity: owner=%#v foreign=%#v",
-					i, operations[step], original, foreign)
+			for otherIndex, other := range users {
+				if otherIndex == i {
+					continue
+				}
+				foreign := other.receipts[step]
+				if foreign.UserID == original.UserID || foreign.ID == original.ID ||
+					foreign.EventID == original.EventID || foreign.RevisionID == original.RevisionID ||
+					foreign.ObservationID == original.ObservationID ||
+					foreign.SourceEvidenceID == original.SourceEvidenceID {
+					t.Fatalf("tenant %d %s reused tenant %d identity: owner=%#v foreign=%#v",
+						i, operations[step], otherIndex, original, foreign)
+				}
 			}
 		}
 		page, err := repo.ListDirectObservations(ctx, user.owner, 0)
