@@ -183,6 +183,99 @@ paths:
         "409": *a3
         "500": *a4
         "503": *a5
+  /api/v1/body-state/hypothesis-records:
+    post:
+      operationId: recordBodyHypothesis
+      summary: Record the authenticated user's own guess about a cause or possible condition.
+      description: Direct user edit only. A BodyHypothesis carries no confidence, clinical status or AI provenance; Agent/Diagnosis hypotheses never enter this ledger. Owner, source and revision are assigned server-side. Related facts must be the owner's current asserted BodyFacts. Exact retry with the same idempotency key replays the original receipt.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordBodyHypothesisRequest"
+      responses:
+        "200":
+          description: Id-only durable receipt; the statement is never echoed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyHypothesisCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+    get:
+      operationId: listBodyHypothesisRecords
+      summary: Read the user's current (asserted, source-available) hypotheses from one BodyState revision.
+      description: Bounded to 100 newest-first records. related_fact_ids lists only facts that are still asserted. Withdrawn hypotheses are excluded.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active user-authored hypotheses pinned to current_revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyHypothesisRecordList"
+        "401": *a2
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/hypothesis-records/{id}/withdraw:
+    post:
+      operationId: withdrawBodyHypothesisRecord
+      summary: Withdraw one of the user's own current hypotheses without erasing its history or touching linked facts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBodyHypothesisRequest"
+      responses:
+        "200":
+          description: One durable withdrawal receipt; exact-key replay returns its original identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyHypothesisCommit"
+        "400": *a1
+        "401": *a2
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409": *a3
+        "500": *a4
+        "503": *a5
+  /api/v1/body-state/concern-groups:
+    get:
+      operationId: listDerivedConcernGroups
+      summary: Read the derived, non-authoritative ConcernGroup organisation of one BodyState revision.
+      description: Computed on read, never stored. Hypothesis–fact links and episode–fact links form an undirected graph; every connected component containing at least one hypothesis or episode is one group. Group ids are provisional display ids (UUIDv5 of the earliest member) that may change on merge/split and must never be used as a foreign key or a clinical conclusion.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Deterministically ordered derived groups for current_revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DerivedConcernGroupList"
+        "401": *a2
+        "500": *a4
+        "503": *a5
   /api/v1/body-state/episodes:
     post:
       operationId: createBodyEpisode
@@ -3793,6 +3886,205 @@ components:
         recorded_at:
           type: string
           format: date-time
+    RecordBodyHypothesisRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision, statement]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        related_fact_ids:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+    WithdrawBodyHypothesisRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, expected_revision]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 500
+    BodyHypothesisCommit:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, operation, hypothesis_id, source_evidence_id, revision, revision_id, event_id, committed_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum: [record, withdraw]
+        hypothesis_id:
+          type: string
+          format: uuid
+        source_evidence_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        revision_id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        committed_at:
+          type: string
+          format: date-time
+    BodyHypothesisSource:
+      type: object
+      additionalProperties: false
+      required: [actor, kind, id, version]
+      properties:
+        actor:
+          type: string
+          enum: [user]
+        kind:
+          type: string
+          enum: [direct_edit]
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    BodyHypothesisRecord:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, statement, source, related_fact_ids, assertion_status, created_revision, recorded_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        source:
+          $ref: "#/components/schemas/BodyHypothesisSource"
+        related_fact_ids:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            format: uuid
+        assertion_status:
+          type: string
+          enum: [asserted]
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        recorded_at:
+          type: string
+          format: date-time
+    BodyHypothesisRecordList:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, hypotheses]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        hypotheses:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/BodyHypothesisRecord"
+    DerivedConcernGroup:
+      type: object
+      additionalProperties: false
+      description: Read-only derived organisation of linked hypotheses, facts and episodes. Not a diagnosis, not persisted, carries no authority.
+      required: [id, display_title, latest_revision, related_hypothesis_ids, related_fact_ids, related_episode_ids, related_observation_ids]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Provisional deterministic display id (UUIDv5 of the earliest member by created_revision, id). Non-authoritative; may change on merge/split.
+        display_title:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Newest member hypothesis statement, else newest member episode symptom label.
+        latest_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        related_hypothesis_ids:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: uuid
+        related_fact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        related_episode_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        related_observation_ids:
+          type: array
+          maxItems: 0
+          description: Not implemented; no V2 observation link exists yet.
+          items:
+            type: string
+            format: uuid
+    DerivedConcernGroupList:
+      type: object
+      additionalProperties: false
+      required: [user_id, current_revision, groups]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/DerivedConcernGroup"
     BodyObservationRecordPage:
       type: object
       additionalProperties: false

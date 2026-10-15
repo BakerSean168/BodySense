@@ -110,6 +110,12 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)
 	protected.POST("/body-state/observation-records/:id/correct", wrapper.CorrectBodyObservationRecord)
 	protected.POST("/body-state/observation-records/:id/withdraw", wrapper.WithdrawBodyObservationRecord)
+	// V2 user-authored BodyHypothesis (direct edit only; no AI write path) and
+	// the derived, non-authoritative ConcernGroup read projection.
+	protected.POST("/body-state/hypothesis-records", wrapper.RecordBodyHypothesis)
+	protected.GET("/body-state/hypothesis-records", wrapper.ListBodyHypothesisRecords)
+	protected.POST("/body-state/hypothesis-records/:id/withdraw", wrapper.WithdrawBodyHypothesisRecord)
+	protected.GET("/body-state/concern-groups", wrapper.ListDerivedConcernGroups)
 	// Owner-authorized explicit Episode mutations and source-backed reads;
 	// AI-driven high-confidence association has no public bypass route.
 	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)

@@ -15,6 +15,7 @@ type bodyHypothesisLedger interface {
 	RecordBodyHypothesis(context.Context, uuid.UUID, model.RecordBodyHypothesisCommand) (*model.BodyHypothesisCommit, error)
 	WithdrawBodyHypothesis(context.Context, uuid.UUID, uuid.UUID, model.WithdrawBodyHypothesisCommand) (*model.BodyHypothesisCommit, error)
 	ListActiveBodyHypotheses(context.Context, uuid.UUID) (*model.BodyHypothesisList, error)
+	ReadConcernGroupSnapshot(context.Context, uuid.UUID) (*model.ConcernGroupSnapshot, error)
 }
 
 type BodyHypothesisService struct{ ledger bodyHypothesisLedger }
@@ -48,4 +49,21 @@ func (s *BodyHypothesisService) ListActiveBodyHypotheses(ctx context.Context, ow
 		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyHypothesis)
 	}
 	return s.ledger.ListActiveBodyHypotheses(ctx, owner)
+}
+
+// ListDerivedConcernGroups computes the read-only ConcernGroup organisation
+// from one owner-scoped BodyState revision. Nothing is persisted and the
+// result carries no clinical authority.
+func (s *BodyHypothesisService) ListDerivedConcernGroups(ctx context.Context, owner uuid.UUID) (*model.DerivedConcernGroupList, error) {
+	if owner == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyHypothesis)
+	}
+	snap, err := s.ledger.ReadConcernGroupSnapshot(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+	if snap == nil || snap.UserID != owner {
+		return nil, fmt.Errorf("%w: concern group snapshot owner mismatch", model.ErrInvalidBodyHypothesis)
+	}
+	return model.DeriveConcernGroups(*snap), nil
 }

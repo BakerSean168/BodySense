@@ -24,6 +24,24 @@ func (f *fakeHypothesisLedger) ListActiveBodyHypotheses(context.Context, uuid.UU
 	return &model.BodyHypothesisList{}, nil
 }
 
+func (f *fakeHypothesisLedger) ReadConcernGroupSnapshot(_ context.Context, owner uuid.UUID) (*model.ConcernGroupSnapshot, error) {
+	f.calls++
+	return &model.ConcernGroupSnapshot{UserID: owner}, nil
+}
+
+func TestBodyHypothesisServiceConcernGroupsOwnerGuard(t *testing.T) {
+	ledger := &fakeHypothesisLedger{}
+	svc := NewBodyHypothesisService(ledger)
+	if _, err := svc.ListDerivedConcernGroups(context.Background(), uuid.Nil); !errors.Is(err, model.ErrInvalidBodyHypothesis) || ledger.calls != 0 {
+		t.Fatalf("nil owner reached ledger: %v", err)
+	}
+	owner := uuid.New()
+	got, err := svc.ListDerivedConcernGroups(context.Background(), owner)
+	if err != nil || got.UserID != owner || got.Groups == nil || len(got.Groups) != 0 {
+		t.Fatalf("empty projection: %#v %v", got, err)
+	}
+}
+
 func TestBodyHypothesisServiceRejectsBeforeLedger(t *testing.T) {
 	ledger := &fakeHypothesisLedger{}
 	svc := NewBodyHypothesisService(ledger)
