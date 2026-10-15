@@ -249,10 +249,6 @@ func mapTrainingLogFeedback(body openapiv1.TrainingLogUpdateRequest) service.Tra
 		ConcernKey:      stringOrEmpty(body.ConcernKey),
 		Trend:           stringOrEmpty(body.Trend),
 	}
-	if body.FactId != nil {
-		value := uuid.UUID(*body.FactId)
-		feedback.FactID = &value
-	}
 	if body.Exercises != nil {
 		items := mapTrainingExercises(*body.Exercises)
 		feedback.Exercises = &items
@@ -268,10 +264,6 @@ func mapTrainingFeedback(body openapiv1.TrainingFeedbackInput) service.TrainingF
 		BodyRegion:      stringOrEmpty(body.BodyRegion),
 		ConcernKey:      stringOrEmpty(body.ConcernKey),
 		Trend:           stringOrEmpty(body.Trend),
-	}
-	if body.FactId != nil {
-		value := uuid.UUID(*body.FactId)
-		feedback.FactID = &value
 	}
 	return feedback
 }

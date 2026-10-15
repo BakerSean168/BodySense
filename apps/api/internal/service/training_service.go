@@ -371,7 +371,6 @@ type TrainingFeedbackInput struct {
 	BodyRegion      string
 	ConcernKey      string
 	Trend           string
-	FactID          *uuid.UUID
 }
 
 func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises []TrainingExerciseLogInput) (map[string]any, error) {
@@ -417,9 +416,6 @@ func (s *TrainingService) UpdateLogWithFeedback(
 		kind = "symptom_change"
 		value["description"] = strings.TrimSpace(feedback.SymptomChanges)
 		value["trend"] = feedback.Trend
-		if feedback.FactID != nil {
-			value["fact_id"] = feedback.FactID.String()
-		}
 	}
 	payloadHash := bodyStateHash(string(rawJSON(map[string]any{"notes": feedback.Notes, "value": value}, `{}`)))
 	outcome, _, err := s.treatment.RecordOutcome(ctx, userID, model.Outcome{

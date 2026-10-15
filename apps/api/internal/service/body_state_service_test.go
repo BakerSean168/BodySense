@@ -242,33 +242,49 @@ func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
 	}
 }
 
-func TestBodyStateRecordOutcomeReturnsExistingFactRevisionForIdempotentReplay(t *testing.T) {
-	repo := &fakeBodyStateRepository{returnExistingFact: true}
+func TestRecordOutcomeSymptomRecordsOnlyUserWordsAsV2Symptom(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)
-	revision, err := svc.RecordOutcome(context.Background(), uuid.New(), model.Outcome{
-		ID: uuid.New(), SourceType: "training_feedback", SourceKey: "same",
-		Kind: "symptom_change", Value: datatypes.JSON(`{"description":"better"}`),
+	owner := uuid.New()
+	revision, err := svc.RecordOutcomeSymptom(context.Background(), owner, model.Outcome{
+		ID: uuid.New(), SourceType: "web_checkin", SourceKey: "k", Kind: "symptom_change", BodyRegion: "右肩",
+		Value: datatypes.JSON(`{"description":"  抬手时右肩还是疼  ","trend":"stable"}`), Notes: "not promoted",
 	})
-	if err != nil {
-		t.Fatalf("RecordOutcome returned error: %v", err)
+	if err != nil || revision == nil || revision.Revision != 1 {
+		t.Fatalf("user-authored outcome symptom must commit one V2 revision: rev=%#v err=%v", revision, err)
 	}
-	if revision == nil || revision.Revision != 17 {
-		t.Fatalf("idempotent replay must recover existing fact revision, got %#v", revision)
+	if len(repo.facts) != 1 || len(repo.upsertedFacts) != 0 || len(repo.upsertedObservations) != 0 {
+		t.Fatalf("only one V2 fact and no legacy writes expected: v2=%d legacyFacts=%d legacyObs=%d", len(repo.facts), len(repo.upsertedFacts), len(repo.upsertedObservations))
+	}
+	fact := repo.facts[0]
+	if fact.Kind != "symptom" || fact.Statement != "抬手时右肩还是疼" || fact.UserID != owner || string(fact.Details) != `{}` {
+		t.Fatalf("fact must carry the user's exact words without inferred details: %#v", fact)
+	}
+	if string(fact.BodyRegionIDs) != `["shoulder.right"]` {
+		t.Fatalf("canonical region expected, got %s", fact.BodyRegionIDs)
+	}
+	if len(repo.screens) != 0 {
+		t.Fatal("outcome symptom must stay unscreened (Safety fail-closed)")
 	}
 }
 
-func TestBodyStateRecordOutcomeReturnsExistingObservationRevisionForIdempotentReplay(t *testing.T) {
-	repo := &fakeBodyStateRepository{returnExistingObs: true}
-	svc := NewBodyStateService(repo)
-	revision, err := svc.RecordOutcome(context.Background(), uuid.New(), model.Outcome{
-		ID: uuid.New(), SourceType: "training_checkin", SourceKey: "same",
-		Kind: "training_adherence", Value: datatypes.JSON(`{"checked_in":true}`),
-	})
-	if err != nil {
-		t.Fatalf("RecordOutcome returned error: %v", err)
+func TestRecordOutcomeSymptomDropsNonUserAuthoredOutcomes(t *testing.T) {
+	cases := map[string]model.Outcome{
+		"adherence":          {Kind: "training_adherence", Value: datatypes.JSON(`{"checked_in":true}`)},
+		"feeling only":       {Kind: "training_feedback", Value: datatypes.JSON(`{"training_feeling":"tired"}`), Notes: "sore"},
+		"symptom notes only": {Kind: "symptom_change", Value: datatypes.JSON(`{"trend":"improving"}`), Notes: "better"},
+		"blank description":  {Kind: "new_discomfort", Value: datatypes.JSON(`{"description":"   "}`)},
+		"non-string":         {Kind: "new_discomfort", Value: datatypes.JSON(`{"description":7}`)},
 	}
-	if revision == nil || revision.Revision != 18 {
-		t.Fatalf("idempotent replay must recover existing observation revision, got %#v", revision)
+	for name, outcome := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := &fakeBodyStateRepository{}
+			outcome.ID = uuid.New()
+			revision, err := NewBodyStateService(repo).RecordOutcomeSymptom(context.Background(), uuid.New(), outcome)
+			if err != nil || revision != nil || len(repo.facts) != 0 || len(repo.upsertedFacts) != 0 || len(repo.upsertedObservations) != 0 {
+				t.Fatalf("no BodyState write expected: rev=%#v err=%v", revision, err)
+			}
+		})
 	}
 }
 

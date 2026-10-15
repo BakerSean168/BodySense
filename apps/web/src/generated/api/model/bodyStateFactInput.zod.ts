@@ -8,12 +8,9 @@
 import * as zod from 'zod/mini';
 import { JsonObject } from './jsonObject.zod';
 
-
-
-
 export const BodyStateFactInput = /*#__PURE__*/ zod.strictObject({
   "concern_key": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "kind": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
+  "kind": /*#__PURE__*/ zod.enum(['equipment.available']),
   "body_region": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "body_region_id": /*#__PURE__*/ zod.nullish(/*#__PURE__*/ zod.string()),
   "value": /*#__PURE__*/ zod.string(),

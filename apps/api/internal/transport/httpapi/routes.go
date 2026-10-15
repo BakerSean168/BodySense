@@ -129,7 +129,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
 	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
 	protected.GET("/body-state", wrapper.GetBodyState)
-	protected.POST("/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)
 	protected.PATCH("/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
 	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
 	protected.POST("/body-state/observations", wrapper.AddBodyStateObservation)

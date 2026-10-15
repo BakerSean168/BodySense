@@ -203,50 +203,42 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(conversationId).toBeTruthy();
 
   const factResponse = await request.post(
-    `${apiBase}/api/v1/body-state/facts`,
+    `${apiBase}/api/v1/body-state/records`,
     {
       headers,
       data: {
+        idempotency_key: `e2e-fact-${Date.now()}`,
         expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "久坐后颈肩酸胀",
-          details: {
-            trigger: "久坐",
-            severity: "中度",
+        facts: [
+          {
+            kind: "symptom",
+            statement: "久坐后颈肩酸胀",
+            body_region_ids: ["neck"],
+            temporal: { precision: "unknown" },
+            details: {},
           },
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "stable",
-          source_key: `e2e-fact-${Date.now()}`,
-        },
+        ],
       },
     },
   );
   expect(factResponse.ok()).toBeTruthy();
 
   const staleRevisionWrite = await request.post(
-    `${apiBase}/api/v1/body-state/facts`,
+    `${apiBase}/api/v1/body-state/records`,
     {
       headers,
       data: {
+        idempotency_key: `e2e-stale-${Date.now()}`,
         expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "stale concurrent write",
-          details: {},
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          source_key: `e2e-stale-${Date.now()}`,
-        },
+        facts: [
+          {
+            kind: "symptom",
+            statement: "stale concurrent write",
+            body_region_ids: ["neck"],
+            temporal: { precision: "unknown" },
+            details: {},
+          },
+        ],
       },
     },
   );

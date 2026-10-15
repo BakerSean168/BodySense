@@ -47,7 +47,7 @@ type treatmentBodyStateSource interface {
 	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
 	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
-	RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error)
+	RecordOutcomeSymptom(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error)
 }
 
 type treatmentFreshnessSource interface {
@@ -411,7 +411,7 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		if revisionErr != nil {
 			return nil, revisionErr
 		}
-		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions)
+		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions, treatmentReviewContextFromSnapshot(snapshot))
 	}
 	acceptanceDecision := EvaluateTreatmentDecision(
 		TreatmentDecisionPolicyV1,
@@ -483,8 +483,9 @@ func (s *TreatmentService) ListOutcomes(ctx context.Context, userID uuid.UUID, l
 }
 
 // RecordOutcome closes the feedback loop with idempotent source identity. The
-// Outcome is persisted first, then its accepted semantic effect creates a
-// BodyState revision and may recommend review of the current plan.
+// Outcome is persisted first; only a user-authored symptom description becomes
+// a V2 symptom BodyFact (linked via body_state_revision). Other outcomes write
+// no BodyState and leave body_state_revision empty.
 func (s *TreatmentService) RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.Outcome, bool, error) {
 	outcome.UserID = userID
 	if outcome.SourceType == "" || strings.TrimSpace(outcome.SourceKey) == "" || outcome.Kind == "" {
@@ -525,16 +526,18 @@ func (s *TreatmentService) RecordOutcome(ctx context.Context, userID uuid.UUID, 
 			return nil
 		}
 
-		revision, projectionErr := s.bodyState.RecordOutcome(txCtx, userID, *stored)
+		revision, projectionErr := s.bodyState.RecordOutcomeSymptom(txCtx, userID, *stored)
 		if projectionErr != nil {
 			return projectionErr
 		}
-		if revision == nil || revision.Revision <= 0 {
-			return errors.New("outcome projection did not produce a BodyState revision")
-		}
-		stored.BodyStateRevision = &revision.Revision
-		if updateErr := s.repo.UpdateOutcomeBodyStateRevision(txCtx, stored.ID, userID, revision.Revision); updateErr != nil {
-			return updateErr
+		if revision != nil {
+			if revision.Revision <= 0 {
+				return errors.New("outcome symptom fact has no BodyState revision")
+			}
+			stored.BodyStateRevision = &revision.Revision
+			if updateErr := s.repo.UpdateOutcomeBodyStateRevision(txCtx, stored.ID, userID, revision.Revision); updateErr != nil {
+				return updateErr
+			}
 		}
 		_, reviewErr := s.EvaluateCurrentReview(txCtx, userID)
 		return reviewErr
@@ -592,8 +595,37 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	if err != nil {
 		return "", nil, err
 	}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions)
+	outcomes, err := s.repo.ListOutcomes(ctx, userID, 200)
+	if err != nil {
+		return "", nil, err
+	}
+	reviewContext := treatmentReviewContextFromSnapshot(snapshot)
+	for _, outcome := range outcomes {
+		if outcome.BodyStateRevision != nil && outcome.TreatmentID != nil && *outcome.TreatmentID == current.ID {
+			reviewContext.OutcomeRevisions[*outcome.BodyStateRevision] = true
+		}
+	}
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, reviewContext)
 	return status, reasons, nil
+}
+
+// TreatmentReviewContext resolves V2 ledger revisions, which carry ids only,
+// to the facts they recorded. FactConcerns maps a V2 fact id to its projected
+// concern key; OutcomeRevisions marks revisions committed by a user-authored
+// Outcome symptom reported against the current Treatment.
+type TreatmentReviewContext struct {
+	FactConcerns     map[string]string
+	OutcomeRevisions map[int64]bool
+}
+
+func treatmentReviewContextFromSnapshot(snapshot *BodyStateSnapshot) TreatmentReviewContext {
+	review := TreatmentReviewContext{FactConcerns: map[string]string{}, OutcomeRevisions: map[int64]bool{}}
+	if snapshot != nil {
+		for _, fact := range snapshot.Facts {
+			review.FactConcerns[fact.ID.String()] = fact.ConcernKey
+		}
+	}
+	return review
 }
 
 func decodeTreatmentReviewReasons(raw json.RawMessage) []TreatmentReviewReason {
@@ -613,6 +645,7 @@ type TreatmentReviewReason struct {
 func EvaluateTreatmentReviewPolicy(
 	analysis *model.DiagnosisAnalysisRecord,
 	revisions []model.BodyStateRevision,
+	v2 TreatmentReviewContext,
 ) (model.TreatmentStatus, []TreatmentReviewReason) {
 	if len(revisions) == 0 {
 		return model.TreatmentStatusActive, []TreatmentReviewReason{}
@@ -640,6 +673,33 @@ func EvaluateTreatmentReviewPolicy(
 		}
 		var changes map[string]any
 		_ = json.Unmarshal(revision.Changes, &changes)
+		if revision.ChangeType == "facts.recorded" {
+			if v2.OutcomeRevisions[revision.Revision] {
+				status = model.TreatmentStatusReviewRecommended
+				reasons = append(reasons, TreatmentReviewReason{
+					Code: "outcome_reported_symptom", Revision: revision.Revision, ChangeType: revision.ChangeType,
+					Message: "你在执行当前方案后报告了身体变化，建议审核而不是自动改写方案。",
+				})
+				continue
+			}
+			factIDs, _ := changes["fact_ids"].([]any)
+			for _, raw := range factIDs {
+				factID := valueString(raw)
+				concernKey := v2.FactConcerns[factID]
+				_, referenced := referencedFacts[factID]
+				_, related := concerns[concernKey]
+				if referenced || related {
+					status = model.TreatmentStatusReviewRecommended
+					reasons = append(reasons, TreatmentReviewReason{
+						Code: "material_related_body_state_change", Revision: revision.Revision,
+						ChangeType: revision.ChangeType, ConcernKey: concernKey,
+						Message: "与当前方案相关的身体状态发生变化，建议审核而不是自动改写方案。",
+					})
+					break
+				}
+			}
+			continue
+		}
 		concernKey := ""
 		itemID := ""
 		switch revision.ChangeType {

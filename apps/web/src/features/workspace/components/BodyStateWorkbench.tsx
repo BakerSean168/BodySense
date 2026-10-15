@@ -147,7 +147,6 @@ export function BodyStateWorkbench({
   const bodyStateCommand = useBodyStateCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [kind, setKind] = useState("discomfort");
   const [bodyRegion, setBodyRegion] = useState("");
   const [value, setValue] = useState("");
   const [correction, setCorrection] = useState<{
@@ -208,25 +207,16 @@ export function BodyStateWorkbench({
     }
 
     const bodyRegionId = regionResolution?.id ?? null;
-    const effectiveBodyRegion = bodyRegionId
-      ? getBodyRegionDefinition(bodyRegionId).labels["zh-CN"]
-      : "";
+    // Symptoms are V2 ledger statements in the user's own words; other body
+    // context (lifestyle, history, metrics) has its own V2 editors.
     const saved = await mutate(
       "add-fact",
       {
-        type: "addFact",
+        type: "recordSymptom",
         expectedRevision: snapshot.current_revision,
-        fact: {
-          kind,
-          body_region: effectiveBodyRegion,
-          body_region_id: bodyRegionId,
-          concern_key: bodyRegionId ? `region:${bodyRegionId}` : "general",
-          value: value.trim(),
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "unknown",
-          observed_at: new Date().toISOString(),
+        input: {
+          statement: value.trim(),
+          body_region_ids: bodyRegionId ? [bodyRegionId] : [],
         },
       },
       "身体记录已添加",
@@ -243,21 +233,13 @@ export function BodyStateWorkbench({
     const saved = await mutate(
       `correct:${fact.id}`,
       {
-        type: "correctFact",
+        type: "correctSymptom",
         factId: fact.id,
         expectedRevision: snapshot.current_revision,
         replacement: {
-          concern_key: fact.concern_key || "general",
-          kind: fact.kind,
-          body_region: fact.body_region || "",
-          body_region_id: fact.body_region_id ?? null,
-          value: correction.value.trim(),
+          statement: correction.value.trim(),
+          body_region_ids: fact.body_region_id ? [fact.body_region_id] : [],
           details: fact.details || {},
-          origin: "user_edited",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: fact.trend || "unknown",
-          observed_at: fact.observed_at || new Date().toISOString(),
         },
       },
       "已保留原记录，并保存纠正后的内容",
@@ -414,23 +396,12 @@ export function BodyStateWorkbench({
 
       {showAdd && (
         <div className="grid gap-2 rounded-xl border border-border bg-muted/30 p-3 sm:grid-cols-2">
-          <select
-            value={kind}
-            onChange={(event) => setKind(event.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            {Object.entries(factKindLabels).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
           <input
             value={bodyRegion}
             onChange={(event) => setBodyRegion(event.target.value)}
             list="body-region-options"
             placeholder="身体区域，例如：颈部、左肩、右肩"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
           />
           <datalist id="body-region-options">
             {bodyRegionDefinitions.map((definition) => (
@@ -529,14 +500,6 @@ export function BodyStateWorkbench({
                   >
                     <X className="h-3 w-3" />
                     不是这样
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => setCorrection({ fact, value: fact.value })}
-                  >
-                    <PencilLine className="h-3 w-3" />
-                    纠正后保存
                   </Button>
                 </div>
               </div>
@@ -794,17 +757,19 @@ export function BodyStateWorkbench({
                         </Button>
                       </>
                     )}
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setCurrentUpdate(null);
-                        setCorrection({ fact, value: fact.value });
-                      }}
-                    >
-                      <PencilLine className="h-3 w-3" />
-                      纠正记录
-                    </Button>
+                    {fact.kind === "discomfort" ? (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => {
+                          setCurrentUpdate(null);
+                          setCorrection({ fact, value: fact.value });
+                        }}
+                      >
+                        <PencilLine className="h-3 w-3" />
+                        纠正记录
+                      </Button>
+                    ) : null}
                     {isLifestyleFact(fact.kind) ? (
                       <Button
                         size="xs"

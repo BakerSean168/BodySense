@@ -5,6 +5,7 @@ import type {
   BodyStateReviewState,
   BodyStateSafetyResolution,
   LifestyleSectionKey,
+  SymptomStatementInput,
 } from "../api/workspaceApi";
 import { workspaceApi } from "../api/workspaceApi";
 import { useWorkspaceInvalidation } from "./useWorkspaceInvalidation";
@@ -18,10 +19,15 @@ export type BodyStateCommand =
       reviewState: BodyStateReviewState;
     }
   | {
-      type: "correctFact";
+      type: "recordSymptom";
+      expectedRevision: number;
+      input: SymptomStatementInput;
+    }
+  | {
+      type: "correctSymptom";
       factId: string;
       expectedRevision: number;
-      replacement: AddFactInput;
+      replacement: SymptomStatementInput;
     }
   | {
       type: "updateFactTemporal";
@@ -63,8 +69,13 @@ export async function executeBodyStateCommand(command: BodyStateCommand) {
         command.expectedRevision,
         command.reviewState,
       );
-    case "correctFact":
-      return workspaceApi.correctFact(
+    case "recordSymptom":
+      return workspaceApi.recordSymptom(
+        command.expectedRevision,
+        command.input,
+      );
+    case "correctSymptom":
+      return workspaceApi.correctSymptom(
         command.factId,
         command.expectedRevision,
         command.replacement,

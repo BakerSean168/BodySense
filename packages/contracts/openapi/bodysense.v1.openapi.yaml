@@ -493,7 +493,8 @@ paths:
   /api/v1/body-state/facts:
     post:
       operationId: addBodyStateFact
-      summary: Add a durable BodyState fact with optimistic revision checking.
+      summary: Add an available-equipment inventory entry to the legacy BodyState store.
+      description: Legacy equipment-only writer kept until EquipmentAsset lands. Symptoms and every other body statement are recorded only through /api/v1/body-state/records (V2 ledger); this operation rejects any other kind.
       security:
       - bearerAuth: []
       requestBody:
@@ -563,44 +564,6 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-  /api/v1/body-state/facts/{id}/correct:
-    post:
-      operationId: correctBodyStateFact
-      summary: Correct a fact that was previously wrong.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successful BodyState operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BodyStateFactMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '503':
-          $ref: '#/components/responses/ValidationUnavailable'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CorrectBodyStateFactRequest'
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema: &id001
-          type: string
-          format: uuid
   /api/v1/body-state/facts/{id}/temporal:
     patch:
       operationId: updateBodyStateFactTemporal
@@ -636,7 +599,9 @@ paths:
       - name: id
         in: path
         required: true
-        schema: *id001
+        schema: &id001
+          type: string
+          format: uuid
   /api/v1/body-state/facts/{id}/review:
     patch:
       operationId: reviewBodyStateFact
@@ -4744,7 +4709,7 @@ components:
           type: string
         kind:
           type: string
-          minLength: 1
+          enum: [equipment.available]
         body_region:
           type: string
         body_region_id:
@@ -5692,7 +5657,6 @@ components:
         body_region: {type: string}
         concern_key: {type: string}
         trend: {type: string}
-        fact_id: {type: string, format: uuid}
     TrainingLogUpdateRequest:
       type: object
       additionalProperties: false
@@ -5705,7 +5669,6 @@ components:
         body_region: {type: string}
         concern_key: {type: string}
         trend: {type: string}
-        fact_id: {type: string, format: uuid}
     TrainingFeedbackResult:
       type: object
       additionalProperties: false
@@ -6034,19 +5997,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BodyStateRevision'
-    CorrectBodyStateFactRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_revision
-      - replacement
-      properties:
-        expected_revision:
-          type: integer
-          format: int64
-          minimum: 0
-        replacement:
-          $ref: '#/components/schemas/BodyStateFactInput'
     UpdateBodyStateFactTemporalRequest:
       type: object
       additionalProperties: false

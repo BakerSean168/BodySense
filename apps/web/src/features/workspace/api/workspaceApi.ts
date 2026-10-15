@@ -1,9 +1,10 @@
 import {
   acceptTreatmentRevision,
   addBodyStateFact,
-  correctBodyStateFact,
+  correctBodyFactRecord,
   generateTreatmentProposal,
   getHealthWorkspace,
+  recordBodyFacts,
   recordOutcome,
   rejectTreatmentRevision,
   resolveBodyStateSafety,
@@ -24,9 +25,11 @@ import type {
   TrainingExecutionPlan,
 } from "../types/workspace";
 
+// Legacy BodyState writer, kept only for the equipment inventory until
+// EquipmentAsset replaces it. Body statements use recordSymptom (V2 ledger).
 export interface AddFactInput {
   concern_key?: string;
-  kind: string;
+  kind: "equipment.available";
   body_region?: string;
   body_region_id?: string | null;
   value: string;
@@ -36,6 +39,14 @@ export interface AddFactInput {
   lifecycle_state?: string;
   trend?: string;
   observed_at?: string;
+}
+
+// A user-typed symptom statement for the V2 BodyFact ledger. The server
+// assigns the direct_edit source; Safety stays fail-closed until screened.
+export interface SymptomStatementInput {
+  statement: string;
+  body_region_ids: string[];
+  details?: Record<string, unknown>;
 }
 
 export type LifestyleSectionKey =
@@ -147,19 +158,54 @@ export const workspaceApi = {
       return { fact: response.fact };
     }),
 
-  correctFact: async (
-    factId: string,
+  recordSymptom: async (
     expectedRevision: number,
-    replacement: AddFactInput,
-  ): Promise<{ fact: BodyStateFact }> =>
+    input: SymptomStatementInput,
+  ): Promise<{ revision: number }> =>
     withOpenApiError(async () => {
-      const response = await correctBodyStateFact(
-        factId,
-        { expected_revision: expectedRevision, replacement },
+      const response = await recordBodyFacts(
+        {
+          idempotency_key: crypto.randomUUID(),
+          expected_revision: expectedRevision,
+          facts: [
+            {
+              kind: "symptom",
+              statement: input.statement,
+              body_region_ids: input.body_region_ids,
+              temporal: { precision: "unknown" },
+              details: input.details ?? {},
+            },
+          ],
+        },
         undefined,
         openApiAuthFetch,
       );
-      return { fact: response.fact };
+      return { revision: response.revision };
+    }),
+
+  correctSymptom: async (
+    factId: string,
+    expectedRevision: number,
+    replacement: SymptomStatementInput,
+  ): Promise<{ revision: number }> =>
+    withOpenApiError(async () => {
+      const response = await correctBodyFactRecord(
+        factId,
+        {
+          idempotency_key: crypto.randomUUID(),
+          expected_revision: expectedRevision,
+          replacement: {
+            kind: "symptom",
+            statement: replacement.statement,
+            body_region_ids: replacement.body_region_ids,
+            temporal: { precision: "unknown" },
+            details: replacement.details ?? {},
+          },
+        },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { revision: response.revision };
     }),
 
   updateFactTemporal: async (

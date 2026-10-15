@@ -70,7 +70,7 @@ func performJSONAt(r http.Handler, method, path, body string) *httptest.Response
 
 func TestAddBodyStateFactOpenAPIRejectsMissingExpectedRevisionBeforeService(t *testing.T) {
 	svc := &fakeBodyStateFactService{}
-	rec := performJSON(newOpenAPITestRouter(t, svc), `{"fact":{"kind":"symptom","value":"pain"}}`)
+	rec := performJSON(newOpenAPITestRouter(t, svc), `{"fact":{"kind":"equipment.available","value":"band"}}`)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
 	}
@@ -82,7 +82,7 @@ func TestAddBodyStateFactOpenAPIRejectsMissingExpectedRevisionBeforeService(t *t
 
 func TestAddBodyStateFactOpenAPIRejectsUnknownFieldBeforeService(t *testing.T) {
 	svc := &fakeBodyStateFactService{}
-	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":3,"fact":{"kind":"symptom","value":"pain","unexpected":true}}`)
+	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":3,"fact":{"kind":"equipment.available","value":"band","unexpected":true}}`)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
 	}
@@ -113,14 +113,14 @@ func TestAddBodyStateFactAllowsIdempotentNilRevision(t *testing.T) {
 	now := time.Date(2026, 9, 13, 7, 0, 0, 0, time.UTC)
 	svc := &fakeBodyStateFactService{
 		resultFact: &model.BodyStateFact{
-			ID: uuid.New(), UserID: uuid.New(), Kind: "symptom", Value: "pain",
+			ID: uuid.New(), UserID: uuid.New(), Kind: "equipment.available", Value: "band",
 			Details: []byte(`{}`), Origin: "user_reported", ReviewState: "confirmed",
 			LifecycleState: "active", Trend: "unknown", Provenance: []byte(`{}`),
 			CreatedRevision: 4, UpdatedRevision: 4, CreatedAt: now, UpdatedAt: now,
 		},
 		resultRevision: nil,
 	}
-	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":4,"fact":{"kind":"symptom","value":"pain"}}`)
+	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":4,"fact":{"kind":"equipment.available","value":"band"}}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d want=200 body=%s", rec.Code, rec.Body.String())
 	}
@@ -141,7 +141,7 @@ func TestAddBodyStateFactOpenAPIMappingAndResponse(t *testing.T) {
 	regionID := "region:neck"
 	svc := &fakeBodyStateFactService{
 		resultFact: &model.BodyStateFact{
-			ID: factID, UserID: userID, Kind: "symptom", BodyRegionID: &regionID, Value: "pain",
+			ID: factID, UserID: userID, Kind: "equipment.available", BodyRegionID: &regionID, Value: "band",
 			Details: []byte(`{"severity":4}`), Origin: "user_reported", ReviewState: "confirmed",
 			LifecycleState: "active", Trend: "unknown", Provenance: []byte(`{}`),
 			CreatedRevision: 4, UpdatedRevision: 4, CreatedAt: now, UpdatedAt: now,
@@ -151,14 +151,14 @@ func TestAddBodyStateFactOpenAPIMappingAndResponse(t *testing.T) {
 			Changes: []byte(`{"fact_id":"` + factID.String() + `"}`), CreatedAt: now,
 		},
 	}
-	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":3,"fact":{"kind":"symptom","value":"pain","body_region_id":"region:neck","details":{"severity":4}}}`)
+	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":3,"fact":{"kind":"equipment.available","value":"band","body_region_id":"region:neck","details":{"severity":4}}}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d want=200 body=%s", rec.Code, rec.Body.String())
 	}
 	if svc.calls != 1 || svc.expectedRevision == nil || *svc.expectedRevision != 3 {
 		t.Fatalf("service call mismatch: calls=%d expectedRevision=%v", svc.calls, svc.expectedRevision)
 	}
-	if svc.fact.BodyRegionID == nil || *svc.fact.BodyRegionID != regionID || svc.fact.Kind != "symptom" || svc.fact.Value != "pain" {
+	if svc.fact.BodyRegionID == nil || *svc.fact.BodyRegionID != regionID || svc.fact.Kind != "equipment.available" || svc.fact.Value != "band" {
 		t.Fatalf("mapped fact=%+v", svc.fact)
 	}
 	var response openapiv1.BodyStateFactMutationResponse
@@ -167,6 +167,25 @@ func TestAddBodyStateFactOpenAPIMappingAndResponse(t *testing.T) {
 	}
 	if response.Revision.Revision != 4 || response.Fact.Id != factID {
 		t.Fatalf("response=%+v", response)
+	}
+}
+
+func TestAddBodyStateFactRejectsBodyStatementsBeforeService(t *testing.T) {
+	for _, kind := range []string{"discomfort", "symptom", "lifestyle.sleep", "history.injury"} {
+		svc := &fakeBodyStateFactService{}
+		rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":0,"fact":{"kind":"`+kind+`","value":"neck pain"}}`)
+		if rec.Code != http.StatusBadRequest || svc.calls != 0 {
+			t.Fatalf("kind %s: legacy writer must reject body statements: status=%d calls=%d", kind, rec.Code, svc.calls)
+		}
+		assertErrorCode(t, rec, "INVALID_REQUEST")
+	}
+}
+
+func TestLegacyFactCorrectionRouteIsGone(t *testing.T) {
+	rec := performJSONAt(newOpenAPITestRouter(t, &fakeBodyStateFactService{}), http.MethodPost,
+		"/api/v1/body-state/facts/"+uuid.NewString()+"/correct", `{"expected_revision":1,"replacement":{"kind":"discomfort","value":"x"}}`)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("legacy correction route must not exist: status=%d", rec.Code)
 	}
 }
 

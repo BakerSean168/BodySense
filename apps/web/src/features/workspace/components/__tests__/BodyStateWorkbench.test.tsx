@@ -60,8 +60,8 @@ describe("BodyStateWorkbench observation review", () => {
     ).not.toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", { name: "纠正记录" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "纠正记录" }),
+    ).not.toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: "更新现状" }),
@@ -364,9 +364,9 @@ describe("BodyStateWorkbench observation review", () => {
   });
 
   it("filters records by selected canonical region and preserves the canonical id when adding", async () => {
-    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
-      fact: {} as never,
-    });
+    const recordSymptom = vi
+      .spyOn(workspaceApi, "recordSymptom")
+      .mockResolvedValue({ revision: 1 });
     const user = userEvent.setup();
     const queryClient = new QueryClient({
       defaultOptions: { mutations: { retry: false } },
@@ -420,21 +420,16 @@ describe("BodyStateWorkbench observation review", () => {
     await user.type(screen.getByPlaceholderText("记录内容"), "右肩今天更轻松");
     await user.click(screen.getByRole("button", { name: "保存记录" }));
 
-    expect(addFact).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({
-        body_region: "右肩",
-        body_region_id: "shoulder.right",
-        concern_key: "region:shoulder.right",
-        value: "右肩今天更轻松",
-      }),
-    );
+    expect(recordSymptom).toHaveBeenCalledWith(7, {
+      statement: "右肩今天更轻松",
+      body_region_ids: ["shoulder.right"],
+    });
   });
 
   it("rejects ambiguous free-text body regions before durable submission", async () => {
-    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
-      fact: {} as never,
-    });
+    const recordSymptom = vi
+      .spyOn(workspaceApi, "recordSymptom")
+      .mockResolvedValue({ revision: 1 });
     const user = userEvent.setup();
     const queryClient = new QueryClient({
       defaultOptions: { mutations: { retry: false } },
@@ -463,13 +458,13 @@ describe("BodyStateWorkbench observation review", () => {
     await user.type(screen.getByPlaceholderText("记录内容"), "久坐后颈肩酸胀");
     await user.click(screen.getByRole("button", { name: "保存记录" }));
 
-    expect(addFact).not.toHaveBeenCalled();
+    expect(recordSymptom).not.toHaveBeenCalled();
   });
 
   it("canonicalizes deterministic body-region aliases before durable submission", async () => {
-    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
-      fact: {} as never,
-    });
+    const recordSymptom = vi
+      .spyOn(workspaceApi, "recordSymptom")
+      .mockResolvedValue({ revision: 1 });
     const user = userEvent.setup();
     const queryClient = new QueryClient({
       defaultOptions: { mutations: { retry: false } },
@@ -499,15 +494,10 @@ describe("BodyStateWorkbench observation review", () => {
     await user.click(screen.getByRole("button", { name: "保存记录" }));
 
     await waitFor(() =>
-      expect(addFact).toHaveBeenCalledWith(
-        4,
-        expect.objectContaining({
-          body_region: "颈部",
-          body_region_id: "neck",
-          concern_key: "region:neck",
-          value: "久坐后酸胀",
-        }),
-      ),
+      expect(recordSymptom).toHaveBeenCalledWith(4, {
+        statement: "久坐后酸胀",
+        body_region_ids: ["neck"],
+      }),
     );
   });
 });

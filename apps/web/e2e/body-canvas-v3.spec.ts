@@ -26,22 +26,21 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  const fact = await request.post(`${apiBase}/api/v1/body-state/facts`, {
+  // Symptoms enter BodyState only through the V2 records ledger.
+  const fact = await request.post(`${apiBase}/api/v1/body-state/records`, {
     headers,
     data: {
+      idempotency_key: `e2e-symptom-${crypto.randomUUID()}`,
       expected_revision: 0,
-      fact: {
-        concern_key: "region:shoulder.right",
-        kind: "discomfort",
-        body_region: "右肩",
-        body_region_id: "shoulder.right",
-        value: "抬高手臂时右肩疼",
-        details: {},
-        origin: "user_reported",
-        review_state: "confirmed",
-        lifecycle_state: "active",
-        trend: "stable",
-      },
+      facts: [
+        {
+          kind: "symptom",
+          statement: "抬高手臂时右肩疼",
+          body_region_ids: ["shoulder.right"],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
     },
   });
   expect(fact.ok(), await fact.text()).toBeTruthy();
@@ -82,10 +81,11 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await regionSelect.selectOption("shoulder.right");
   await page.getByRole("button", { name: "查看已选区域" }).click();
 
-  await expect(
-    page.getByRole("complementary", { name: "已选区域当前状况" }),
-  ).toContainText("右肩");
-  await expect(page.getByText("抬高手臂时右肩疼")).toBeVisible();
+  const selectedRegionPanel = page.getByRole("complementary", {
+    name: "已选区域当前状况",
+  });
+  await expect(selectedRegionPanel).toContainText("右肩");
+  await expect(selectedRegionPanel.getByText("抬高手臂时右肩疼")).toBeVisible();
 
   await page.getByRole("button", { name: "针对这里提问" }).click();
   const chatWindow = page.locator('.bc-business-window[data-window="chat"]');

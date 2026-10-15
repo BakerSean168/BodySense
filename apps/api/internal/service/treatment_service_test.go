@@ -137,10 +137,13 @@ func (f *fakeTreatmentBodyState) ListRevisionsAfter(context.Context, uuid.UUID, 
 func (f *fakeTreatmentBodyState) ListEvidence(context.Context, uuid.UUID, int) ([]model.BodyStateEvidence, error) {
 	return nil, nil
 }
-func (f *fakeTreatmentBodyState) RecordOutcome(context.Context, uuid.UUID, model.Outcome) (*model.BodyStateRevision, error) {
+func (f *fakeTreatmentBodyState) RecordOutcomeSymptom(_ context.Context, _ uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error) {
 	f.recordOutcomeCalls++
 	if f.recordOutcomeErr != nil {
 		return nil, f.recordOutcomeErr
+	}
+	if outcome.Kind != "symptom_change" && outcome.Kind != "new_discomfort" {
+		return nil, nil
 	}
 	revision := f.recordOutcomeRev
 	if revision == 0 {
@@ -456,7 +459,7 @@ func TestTreatmentReviewUnrelatedChangeDoesNotRewritePlan(t *testing.T) {
 	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{{
 		Revision: 4, ChangeType: "fact.added",
 		Changes: datatypes.JSON(`{"fact":{"concern_key":"region:sleep","kind":"lifestyle"}}`),
-	}})
+	}}, TreatmentReviewContext{})
 	if status != model.TreatmentStatusActive || len(reasons) != 0 {
 		t.Fatalf("unrelated change should keep active plan: status=%s reasons=%#v", status, reasons)
 	}
@@ -467,9 +470,29 @@ func TestTreatmentReviewRelatedChangeRecommendsReview(t *testing.T) {
 	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{{
 		Revision: 5, ChangeType: "fact.added",
 		Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`),
-	}})
+	}}, TreatmentReviewContext{})
 	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 {
 		t.Fatalf("related change should recommend review: status=%s reasons=%#v", status, reasons)
+	}
+}
+
+func TestTreatmentReviewV2FactsRecordedUsesProjectedConcernAndOutcomeLink(t *testing.T) {
+	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
+	neck, sleep := uuid.NewString(), uuid.NewString()
+	revision := func(n int64, id string) model.BodyStateRevision {
+		return model.BodyStateRevision{Revision: n, ChangeType: "facts.recorded", Changes: datatypes.JSON(`{"fact_ids":["` + id + `"]}`)}
+	}
+	review := TreatmentReviewContext{FactConcerns: map[string]string{neck: "region:neck", sleep: "general"}, OutcomeRevisions: map[int64]bool{}}
+	if status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(6, sleep)}, review); status != model.TreatmentStatusActive || len(reasons) != 0 {
+		t.Fatalf("unrelated V2 fact must not recommend review: %s %#v", status, reasons)
+	}
+	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(7, neck)}, review); status != model.TreatmentStatusReviewRecommended {
+		t.Fatalf("related V2 symptom must recommend review, got %s", status)
+	}
+	review.OutcomeRevisions[8] = true
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(8, sleep)}, review)
+	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 || reasons[0].Code != "outcome_reported_symptom" {
+		t.Fatalf("outcome-reported symptom on this plan must recommend review: %s %#v", status, reasons)
 	}
 }
 
@@ -710,6 +733,25 @@ func TestRecordOutcomeRepairsDuplicateWithoutBodyStateLink(t *testing.T) {
 	}
 }
 
+func TestRecordOutcomeWithoutUserSymptomLeavesBodyStateUnlinked(t *testing.T) {
+	repo := &fakeTreatmentRepo{}
+	bodyState := &fakeTreatmentBodyState{}
+	svc := NewTreatmentService(
+		repo, &fakeTreatmentDiagnosis{}, bodyState, nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
+	)
+	stored, created, err := svc.RecordOutcome(context.Background(), uuid.New(), model.Outcome{
+		SourceType: "training_checkin", SourceKey: "log-2", Kind: "training_adherence",
+		Value: datatypes.JSON(`{"checked_in":true}`),
+	})
+	if err != nil || !created {
+		t.Fatalf("adherence outcome must persist: created=%v err=%v", created, err)
+	}
+	if stored.BodyStateRevision != nil || repo.updateOutcomeCalls != 0 {
+		t.Fatalf("non-symptom outcome must not link a BodyState revision: %#v updates=%d", stored.BodyStateRevision, repo.updateOutcomeCalls)
+	}
+}
+
 func TestRecordOutcomeSkipsAlreadyAppliedDuplicate(t *testing.T) {
 	userID := uuid.New()
 	revision := int64(12)
@@ -854,7 +896,7 @@ func TestTreatmentReviewTemporalChangePayloadFromOutcomeRecommendsReview(t *test
 		}`),
 	}
 
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision})
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision}, TreatmentReviewContext{})
 	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 {
 		t.Fatalf("temporal outcome change should recommend review: status=%s reasons=%#v", status, reasons)
 	}

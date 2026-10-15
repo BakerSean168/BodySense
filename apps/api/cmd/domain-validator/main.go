@@ -101,7 +101,7 @@ func main() {
 	}
 	fmt.Println("TREATMENT_ACTIVATION_ATOMICITY=PASS")
 
-	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID, trainingPlan, fact.ID); err != nil {
+	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID, trainingPlan); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("OUTCOME_FEEDBACK_ATOMICITY=PASS")
@@ -526,7 +526,6 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	ctx context.Context,
 	userID uuid.UUID,
 	plan *model.TrainingPlan,
-	factID uuid.UUID,
 ) error {
 	if err := v.installOutcomeFailureTrigger(ctx); err != nil {
 		return err
@@ -540,7 +539,8 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		Kind:                "symptom_change",
 		ConcernKey:          "region:neck",
 		BodyRegion:          "left neck",
-		Value:               datatypes.JSON([]byte(fmt.Sprintf(`{"description":"improving","trend":"improving","fact_id":%q}`, factID.String()))),
+		// The user's own words become a V2 symptom fact; no legacy fact is touched.
+		Value:               datatypes.JSON(`{"description":"neck feels better after the session","trend":"improving"}`),
 		Notes:               "forced transactional retry",
 		CausalityLevel:      "association_only",
 		OccurredAt:          time.Now().UTC(),
@@ -576,6 +576,20 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	if linked.BodyStateRevision == nil || *linked.BodyStateRevision != *stored.BodyStateRevision {
 		return fmt.Errorf("persisted Outcome lost BodyState revision: %#v", linked)
 	}
+	var symptom model.BodyFact
+	if err := v.db.WithContext(ctx).Where("user_id = ? AND created_revision = ?", userID, *stored.BodyStateRevision).First(&symptom).Error; err != nil {
+		return fmt.Errorf("outcome symptom fact missing: %w", err)
+	}
+	if symptom.Kind != "symptom" || symptom.Statement != "neck feels better after the session" || symptom.AssertionStatus != "asserted" {
+		return fmt.Errorf("outcome symptom is not the user's exact V2 statement: %#v", symptom)
+	}
+	var screens int64
+	if err := v.db.WithContext(ctx).Model(&model.SafetyScreen{}).Where("user_id = ? AND body_state_revision >= ?", userID, *stored.BodyStateRevision).Count(&screens).Error; err != nil {
+		return fmt.Errorf("count safety screens: %w", err)
+	}
+	if screens != 0 {
+		return fmt.Errorf("outcome symptom must stay unscreened (fail-closed), found %d covering screens", screens)
+	}
 	return nil
 }
 
@@ -599,8 +613,8 @@ func (v *validator) installOutcomeFailureTrigger(ctx context.Context) error {
 	return v.db.WithContext(ctx).Exec(`
 CREATE OR REPLACE FUNCTION domain_validator_fail_outcome() RETURNS trigger AS $$
 BEGIN
-    IF NEW.source = 'outcome' THEN
-        RAISE EXCEPTION 'forced outcome projection failure';
+    IF NEW.change_type = 'facts.recorded' THEN
+        RAISE EXCEPTION 'forced outcome symptom fact failure';
     END IF;
     RETURN NEW;
 END;

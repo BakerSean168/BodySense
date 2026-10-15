@@ -92,6 +92,12 @@ func (s *PublicServer) AddBodyStateFact(
 	if err != nil {
 		return addFactError400("INVALID_REQUEST", "fact JSON fields are invalid"), nil
 	}
+	// Symptoms and all other body statements are V2-ledger only
+	// (/body-state/records). This legacy writer survives solely for the
+	// equipment inventory until EquipmentAsset replaces it.
+	if fact.Kind != model.BodyStateFactKindEquipmentAvailable {
+		return addFactError400("INVALID_REQUEST", "only equipment.available is accepted; record body statements via /api/v1/body-state/records"), nil
+	}
 	expectedRevision := request.Body.ExpectedRevision
 	created, revision, err := s.bodyState.UpsertFact(ctx, userID, &expectedRevision, fact)
 	if err != nil {
@@ -128,7 +134,7 @@ func factFromOpenAPI(input openapiv1.BodyStateFactInput) (model.BodyStateFact, e
 	}
 	return model.BodyStateFact{
 		ConcernKey:     stringValue(input.ConcernKey),
-		Kind:           input.Kind,
+		Kind:           string(input.Kind),
 		BodyRegion:     stringValue(input.BodyRegion),
 		BodyRegionID:   input.BodyRegionId,
 		Value:          input.Value,

@@ -18,7 +18,6 @@ import (
 
 type bodyStateRouteService interface {
 	GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error)
-	CorrectFact(context.Context, uuid.UUID, *int64, uuid.UUID, model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	UpdateFactTemporal(context.Context, uuid.UUID, *int64, uuid.UUID, string, string, *time.Time) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	ReviewFact(context.Context, uuid.UUID, *int64, uuid.UUID, string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	AddObservation(context.Context, uuid.UUID, *int64, model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
@@ -52,33 +51,6 @@ func (s *PublicServer) GetBodyState(
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "body state violates the public contract"), nil
 	}
 	return openapiv1.GetBodyState200JSONResponse(response), nil
-}
-
-func (s *PublicServer) CorrectBodyStateFact(
-	ctx context.Context,
-	request openapiv1.CorrectBodyStateFactRequestObject,
-) (openapiv1.CorrectBodyStateFactResponseObject, error) {
-	userID, authErr := authenticatedUserID(ctx)
-	if authErr != nil {
-		return correctBodyStateFactError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.bodyStateRoutes == nil || request.Body == nil {
-		return correctBodyStateFactError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	replacement, err := factFromOpenAPI(request.Body.Replacement)
-	if err != nil {
-		return correctBodyStateFactError(http.StatusBadRequest, "INVALID_REQUEST", "replacement JSON fields are invalid"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	fact, revision, err := s.bodyStateRoutes.CorrectFact(ctx, userID, &expected, request.Id, replacement)
-	if err != nil {
-		return correctBodyStateFactClassifiedError(err), nil
-	}
-	response, err := factMutationResponseToOpenAPI(fact, revision)
-	if err != nil {
-		return correctBodyStateFactError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state response"), nil
-	}
-	return openapiv1.CorrectBodyStateFact200JSONResponse(response), nil
 }
 
 func (s *PublicServer) ReviewBodyStateFact(
@@ -332,28 +304,6 @@ func listBodyStateEvidenceError(status int, code, message string) openapiv1.List
 		return openapiv1.ListBodyStateEvidence401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
 	}
 	return openapiv1.ListBodyStateEvidence500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-}
-
-func correctBodyStateFactClassifiedError(err error) openapiv1.CorrectBodyStateFactResponseObject {
-	e := classifyBodyStatePublicError(err)
-	return correctBodyStateFactError(e.status, e.code, e.message)
-}
-func correctBodyStateFactError(status int, code, message string) openapiv1.CorrectBodyStateFactResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.CorrectBodyStateFact400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.CorrectBodyStateFact401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.CorrectBodyStateFact404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.CorrectBodyStateFact409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	case http.StatusServiceUnavailable:
-		return openapiv1.CorrectBodyStateFact503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
-	default:
-		return openapiv1.CorrectBodyStateFact500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
 }
 
 func reviewBodyStateFactClassifiedError(err error) openapiv1.ReviewBodyStateFactResponseObject {
