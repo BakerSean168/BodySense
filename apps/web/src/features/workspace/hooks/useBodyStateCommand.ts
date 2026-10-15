@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiRequestError } from "@/lib/api-client";
 import type {
-  AddFactInput,
   BodyStateReviewState,
   BodyStateSafetyResolution,
   LifestyleSectionKey,
@@ -11,7 +10,6 @@ import { workspaceApi } from "../api/workspaceApi";
 import { useWorkspaceInvalidation } from "./useWorkspaceInvalidation";
 
 export type BodyStateCommand =
-  | { type: "addFact"; expectedRevision: number; fact: AddFactInput }
   | {
       type: "reviewFact";
       factId: string;
@@ -61,8 +59,6 @@ export type BodyStateCommand =
 
 export async function executeBodyStateCommand(command: BodyStateCommand) {
   switch (command.type) {
-    case "addFact":
-      return workspaceApi.addFact(command.expectedRevision, command.fact);
     case "reviewFact":
       return workspaceApi.reviewFact(
         command.factId,

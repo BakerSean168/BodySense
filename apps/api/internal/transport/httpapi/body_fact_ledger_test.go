@@ -51,7 +51,7 @@ func bodyFactHTTPRouter(t *testing.T, owner uuid.UUID, application bodyFactAppli
 		t.Fatal(err)
 	}
 	r := gin.New()
-	RegisterRoutes(r, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithBodyFacts(application)), RouteSecurity{
+	RegisterRoutes(r, StrictHandler(NewPublicServer().WithBodyFacts(application)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			if owner != uuid.Nil {
 				c.Set("user_id", owner.String())

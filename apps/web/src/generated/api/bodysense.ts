@@ -45,6 +45,8 @@ import {
   DiagnosisReplayReport,
   DiagnosisWorkspaceProjection,
   DocumentIndicatorReviewRecord,
+  EquipmentAsset,
+  EquipmentAssetList,
   HealthDocumentReviewContext,
   HealthDocumentReviewListResponse,
   HealthWorkspace,
@@ -133,6 +135,7 @@ import type {
   ConversationUpdateRequest,
   CorrectBodyFactRecordRequest,
   CorrectBodyObservationRequest,
+  CreateEquipmentAssetRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
   CurrentUserOutput,
@@ -144,6 +147,8 @@ import type {
   DiagnosisReplayRequest,
   DiagnosisWorkspaceProjectionOutput,
   DocumentIndicatorReviewRecordOutput,
+  EquipmentAssetListOutput,
+  EquipmentAssetOutput,
   HealthDocumentReviewContextOutput,
   HealthDocumentReviewListResponseOutput,
   HealthWorkspaceOutput,
@@ -210,12 +215,12 @@ import type {
   TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
+  UpdateEquipmentAssetRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
   UploadDeleteResponseOutput,
   UploadListResponseOutput,
-  UpsertBodyStateFactRequest,
   UserProfileResponseOutput,
   UserUploadOutput,
   WithdrawBodyFactRecordRequest,
@@ -1072,60 +1077,6 @@ export const listBodyEpisodeRelations = async (id: string,
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyEpisodeRelationPage.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateFactUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/facts`
-}
-
-/**
- * Legacy equipment-only writer kept until EquipmentAsset lands. Symptoms and every other body statement are recorded only through /api/v1/body-state/records (V2 ledger); this operation rejects any other kind.
- * @summary Add an available-equipment inventory entry to the legacy BodyState store.
- */
-export const addBodyStateFact = async (upsertBodyStateFactRequest: UpsertBodyStateFactRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateFactUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(upsertBodyStateFactRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
   return data
 }
 
@@ -2079,6 +2030,155 @@ const res = await (fetchFn ?? fetch)(getUpdateUserProfileUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? UserProfileResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListEquipmentAssetsUrl = () => {
+
+
+
+
+  return `/api/v1/equipment`
+}
+
+/**
+ * EquipmentAsset (PC-D2) states which training resources the user can use. It is not BodyState and never rewrites an accepted plan. Bounded to 200 items.
+ * @summary List the user's current (not retired) equipment assets, newest first.
+ */
+export const listEquipmentAssets = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListEquipmentAssetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAssetList, status?: number} = new globalThis.Error();
+    const data : EquipmentAssetList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAssetList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateEquipmentAssetUrl = () => {
+
+
+
+
+  return `/api/v1/equipment`
+}
+
+/**
+ * Direct user edit only. Owner and revision are server-assigned. An exact retry with the same idempotency_key returns the original asset; the same key with different fields is 409. A second current asset with the same name (case-insensitive) is 409.
+ * @summary Add an equipment asset the user owns, borrows or can access.
+ */
+export const createEquipmentAsset = async (createEquipmentAssetRequest: CreateEquipmentAssetRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreateEquipmentAssetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createEquipmentAssetRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAsset, status?: number} = new globalThis.Error();
+    const data : EquipmentAsset = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAsset.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateEquipmentAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/equipment/${id}`
+}
+
+/**
+ * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+ * @summary Edit an equipment asset, mark it unavailable, or retire it.
+ */
+export const updateEquipmentAsset = async (id: string,
+    updateEquipmentAssetRequest: UpdateEquipmentAssetRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateEquipmentAssetUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateEquipmentAssetRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAsset, status?: number} = new globalThis.Error();
+    const data : EquipmentAsset = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAsset.parse(parsedBody) : parsedBody
   return data
 }
 

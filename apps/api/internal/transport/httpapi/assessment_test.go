@@ -81,7 +81,7 @@ func newAssessmentOpenAPIRouter(t *testing.T, assessment assessmentApplication, 
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	server := NewPublicServer(&fakeBodyStateFactService{}).WithAssessment(assessment, replay)
+	server := NewPublicServer().WithAssessment(assessment, replay)
 	openapiv1.RegisterHandlers(g, StrictHandler(server))
 	return r
 }

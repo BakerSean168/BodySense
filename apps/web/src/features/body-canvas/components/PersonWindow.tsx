@@ -8,22 +8,22 @@ import {
   Plus,
 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import type {
-  BodyStateFact,
-  BodyStateProjection,
-} from "@/features/consultation/types/consultation";
-import { useBodyStateCommand } from "@/features/workspace/hooks/useBodyStateCommand";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  availabilityChange,
+  equipmentKeys,
+  equipmentService,
+  type EquipmentAsset,
+} from "@/features/profile/services/equipmentService";
 import { BodyFactRecords } from "./BodyFactRecords";
 import { BodyEpisodeAssociations } from "./BodyEpisodeAssociations";
 import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
-import { errorMessage } from "@/lib/api-client";
+import { ApiRequestError, errorMessage } from "@/lib/api-client";
 import {
   formatFileSize,
   formatOcrStatus,
   getProfileCategoryMeta,
   PROFILE_CATEGORIES,
-  AVAILABLE_EQUIPMENT_KIND,
-  selectAvailableEquipment,
   selectUploadsByCategory,
   type ProfileCategoryId,
   type ProfileUploadLike,
@@ -62,7 +62,6 @@ export interface PersonProfileIdentity {
 
 export interface PersonWindowProps {
   identity: PersonProfileIdentity;
-  bodyState: BodyStateProjection | null;
   canEdit: boolean;
   onEditProfile: () => void;
   /** Popover state is owned by the header that renders the identity trigger. */
@@ -232,43 +231,71 @@ function EmptyState({
 }
 
 /**
- * Equipment is a real, user-owned inventory stored as confirmed BodyState facts
- * of kind `equipment.available`. The category has no fixed slot ceiling: cards
- * grow with the data (4 columns desktop / 2 columns mobile). The list never
- * asserts that an item is suitable for the user's current condition.
+ * Equipment is the user's own EquipmentAsset inventory (PC-D2), read from
+ * /api/v1/equipment — not BodyState. The category has no fixed slot ceiling:
+ * cards grow with the data (4 columns desktop / 2 columns mobile). Marking an
+ * item unavailable or removing it never edits an accepted plan, and the list
+ * never asserts that an item is suitable for the user's current condition.
  */
 function EquipmentCategory({
-  bodyState,
   canEdit,
   onAddEquipment,
 }: {
-  bodyState: BodyStateProjection | null;
   canEdit: boolean;
   /** Opens the inline add form; there is no separate selector route yet. */
   onAddEquipment?: () => void;
 }) {
-  const equipment = selectAvailableEquipment(bodyState);
-  const command = useBodyStateCommand();
+  const queryClient = useQueryClient();
+  const inventory = useQuery({
+    queryKey: equipmentKeys.all,
+    queryFn: equipmentService.list,
+  });
+  const equipment = inventory.data?.items ?? [];
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: equipmentKeys.all });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
+  // One key per add attempt, so a network retry replays instead of duplicating.
+  const createKey = useRef<string | null>(null);
+  const onConflict = (cause: unknown) => {
+    if (cause instanceof ApiRequestError && cause.status === 409) {
+      void refresh();
+    }
+  };
+  const create = useMutation({
+    mutationFn: equipmentService.create,
+    onSuccess: refresh,
+    onError: onConflict,
+  });
+  const update = useMutation({
+    mutationFn: ({
+      asset,
+      availability,
+    }: {
+      asset: EquipmentAsset;
+      availability: EquipmentAsset["availability"];
+    }) =>
+      equipmentService.update(
+        asset.id,
+        availabilityChange(asset, availability),
+      ),
+    onSuccess: refresh,
+    onError: onConflict,
+  });
+  const pending = create.isPending || update.isPending;
 
-  const remove = async (fact: BodyStateFact) => {
-    if (!bodyState || !canEdit || command.isPending) return;
-    setBusyId(fact.id);
+  const changeAvailability = async (
+    asset: EquipmentAsset,
+    availability: EquipmentAsset["availability"],
+  ) => {
+    if (!canEdit || pending) return;
+    setBusyId(asset.id);
     setError(null);
     try {
-      await command.mutateAsync({
-        type: "updateFactTemporal",
-        factId: fact.id,
-        expectedRevision: bodyState.current_revision,
-        input: {
-          lifecycle_state: "inactive",
-          valid_until: new Date().toISOString(),
-        },
-      });
+      await update.mutateAsync({ asset, availability });
     } catch (cause) {
       setError(errorMessage(cause, "器材状态没有保存，请重试。"));
     } finally {
@@ -276,40 +303,37 @@ function EquipmentCategory({
     }
   };
 
+  const resetForm = () => {
+    setAdding(false);
+    setName("");
+    setNotes("");
+    createKey.current = null;
+  };
+
   const add = async () => {
     const trimmed = name.trim();
-    if (!bodyState || !canEdit || !trimmed || command.isPending) return;
+    if (!canEdit || !trimmed || pending) return;
     setError(null);
     if (
       equipment.some(
-        (fact) =>
-          fact.value.trim().toLocaleLowerCase() === trimmed.toLocaleLowerCase(),
+        (asset) =>
+          asset.display_name.toLocaleLowerCase() ===
+          trimmed.toLocaleLowerCase(),
       )
     ) {
       setError("这件器材已经在当前清单中。");
       return;
     }
+    createKey.current ??= crypto.randomUUID();
     try {
-      await command.mutateAsync({
-        type: "addFact",
-        expectedRevision: bodyState.current_revision,
-        fact: {
-          concern_key: "resources:equipment",
-          kind: AVAILABLE_EQUIPMENT_KIND,
-          value: trimmed,
-          details: { notes: notes.trim(), source: "user_inventory" },
-          origin: "user_reported",
-          // The user is stating their own inventory, so it is durable evidence
-          // immediately rather than a pending candidate.
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "unknown",
-          observed_at: new Date().toISOString(),
-        },
+      await create.mutateAsync({
+        idempotency_key: createKey.current,
+        display_name: trimmed,
+        notes: notes.trim() || null,
+        access_kind: "owned",
+        availability: "available",
       });
-      setName("");
-      setNotes("");
-      setAdding(false);
+      resetForm();
     } catch (cause) {
       setError(errorMessage(cause, "器材没有保存，请重试。"));
     }
@@ -327,10 +351,13 @@ function EquipmentCategory({
         设备名称
         <input
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            setName(event.target.value);
+            createKey.current = null;
+          }}
           maxLength={80}
           placeholder="例如：弹力带"
-          disabled={!canEdit || command.isPending}
+          disabled={!canEdit || pending}
           autoFocus
         />
       </label>
@@ -338,18 +365,21 @@ function EquipmentCategory({
         规格或备注<span className="bc-optional">可选</span>
         <input
           value={notes}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => {
+            setNotes(event.target.value);
+            createKey.current = null;
+          }}
           maxLength={240}
           placeholder="阻力、重量或使用限制"
-          disabled={!canEdit || command.isPending}
+          disabled={!canEdit || pending}
         />
       </label>
       <button
         type="submit"
         className="bc-button bc-primary"
-        disabled={!canEdit || command.isPending || !name.trim()}
+        disabled={!canEdit || pending || !name.trim()}
       >
-        {command.isPending ? (
+        {create.isPending ? (
           <LoaderCircle size={17} className="animate-spin" />
         ) : (
           <Plus size={17} />
@@ -359,17 +389,29 @@ function EquipmentCategory({
       <button
         type="button"
         className="bc-button"
-        disabled={command.isPending}
-        onClick={() => {
-          setAdding(false);
-          setName("");
-          setNotes("");
-        }}
+        disabled={pending}
+        onClick={resetForm}
       >
         取消
       </button>
     </form>
   );
+
+  if (inventory.isPending) {
+    return (
+      <p role="status" className="bc-person-loading">
+        <LoaderCircle size={16} className="animate-spin" />
+        正在读取器材
+      </p>
+    );
+  }
+  if (inventory.isError) {
+    return (
+      <p role="alert" className="bc-error">
+        {errorMessage(inventory.error, "器材清单暂时无法读取。")}
+      </p>
+    );
+  }
 
   if (equipment.length === 0 && !adding) {
     return (
@@ -397,35 +439,52 @@ function EquipmentCategory({
     <div className="bc-person-category">
       {equipment.length === 0 ? null : (
         <>
-          <p className="bc-person-count">已确认 {equipment.length} 件器材</p>
+          <p className="bc-person-count">已登记 {equipment.length} 件器材</p>
           <ul className="bc-person-equipment">
-            {equipment.map((fact) => (
-              <li key={fact.id}>
-                <span className="bc-person-equipment-symbol" aria-hidden="true">
-                  <Backpack size={20} />
-                </span>
-                <strong>{fact.value}</strong>
-                {typeof fact.details?.notes === "string" &&
-                fact.details.notes ? (
-                  <p>{fact.details.notes}</p>
-                ) : null}
-                <span className="bc-status">
-                  <Check size={13} />
-                  当前可用
-                </span>
-                <button
-                  type="button"
-                  className="bc-text-button"
-                  disabled={!canEdit || command.isPending || busyId === fact.id}
-                  onClick={() => void remove(fact)}
-                >
-                  {busyId === fact.id ? (
-                    <LoaderCircle size={14} className="animate-spin" />
-                  ) : null}
-                  暂不可用
-                </button>
-              </li>
-            ))}
+            {equipment.map((asset) => {
+              const available = asset.availability === "available";
+              const busy = busyId === asset.id;
+              return (
+                <li key={asset.id}>
+                  <span
+                    className="bc-person-equipment-symbol"
+                    aria-hidden="true"
+                  >
+                    <Backpack size={20} />
+                  </span>
+                  <strong>{asset.display_name}</strong>
+                  {asset.notes ? <p>{asset.notes}</p> : null}
+                  <span className="bc-status">
+                    {available ? <Check size={13} /> : null}
+                    {available ? "当前可用" : "暂不可用"}
+                  </span>
+                  <button
+                    type="button"
+                    className="bc-text-button"
+                    disabled={!canEdit || pending || busy}
+                    onClick={() =>
+                      void changeAvailability(
+                        asset,
+                        available ? "unavailable" : "available",
+                      )
+                    }
+                  >
+                    {busy ? (
+                      <LoaderCircle size={14} className="animate-spin" />
+                    ) : null}
+                    {available ? "标记暂不可用" : "恢复可用"}
+                  </button>
+                  <button
+                    type="button"
+                    className="bc-text-button"
+                    disabled={!canEdit || pending || busy}
+                    onClick={() => void changeAvailability(asset, "retired")}
+                  >
+                    移除
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}
@@ -493,7 +552,6 @@ function UploadsCategory({
 
 export function PersonWindow({
   identity,
-  bodyState,
   canEdit,
   onEditProfile,
   identityInfoOpen: infoOpen,
@@ -566,7 +624,6 @@ export function PersonWindow({
           </p>
         ) : category === "equipment" ? (
           <EquipmentCategory
-            bodyState={bodyState}
             canEdit={canEdit}
             onAddEquipment={() => setCategory("equipment")}
           />

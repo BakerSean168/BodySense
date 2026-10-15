@@ -83,7 +83,7 @@ func newConsultationRouteTestRouter(t *testing.T, runtime consultationRuntimeApp
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	server := NewPublicServer(nil).WithConsultation(
+	server := NewPublicServer().WithConsultation(
 		runtime,
 		&fakeConsultationSessions{},
 		&fakeConsultationInteractions{},

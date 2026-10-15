@@ -60,7 +60,7 @@ func observationHTTPRouter(t *testing.T, owner uuid.UUID, app bodyObservationApp
 		t.Fatal(err)
 	}
 	router := gin.New()
-	RegisterRoutes(router, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithBodyObservations(app)), RouteSecurity{
+	RegisterRoutes(router, StrictHandler(NewPublicServer().WithBodyObservations(app)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			if owner != uuid.Nil {
 				c.Set("user_id", owner.String())

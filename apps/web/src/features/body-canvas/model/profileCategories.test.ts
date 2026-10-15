@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { BodyStateFact, BodyStateProjection } from "@/features/consultation/types/consultation";
 import {
-  AVAILABLE_EQUIPMENT_KIND,
   formatFileSize,
   formatOcrStatus,
   hasHabitValue,
   PROFILE_CATEGORIES,
-  selectAvailableEquipment,
   selectProfileRecords,
   selectUploadsByCategory,
 } from "./profileCategories";
@@ -47,22 +45,6 @@ describe("profile categories", () => {
     ]);
   });
 
-  it("keeps equipment out of records so a category is not shown twice", () => {
-    const data = snapshot([
-      fact({ id: "record-1" }),
-      fact({
-        id: "equipment-1",
-        kind: AVAILABLE_EQUIPMENT_KIND,
-        value: "弹力带",
-        concern_key: "resources:equipment",
-      }),
-    ]);
-    expect(selectProfileRecords(data).map((item) => item.id)).toEqual(["record-1"]);
-    expect(selectAvailableEquipment(data).map((item) => item.id)).toEqual([
-      "equipment-1",
-    ]);
-  });
-
   it("excludes rejected and inactive records", () => {
     const data = snapshot([
       fact({ id: "keep" }),
@@ -72,30 +54,8 @@ describe("profile categories", () => {
     expect(selectProfileRecords(data).map((item) => item.id)).toEqual(["keep"]);
   });
 
-  it("only treats confirmed, active equipment as available", () => {
-    const data = snapshot([
-      fact({ id: "confirmed", kind: AVAILABLE_EQUIPMENT_KIND, concern_key: "resources:equipment" }),
-      fact({
-        id: "unverified",
-        kind: AVAILABLE_EQUIPMENT_KIND,
-        concern_key: "resources:equipment",
-        review_state: "unverified",
-      }),
-      fact({
-        id: "excluded",
-        kind: AVAILABLE_EQUIPMENT_KIND,
-        concern_key: "resources:equipment",
-        excluded_from_reasoning: true,
-      }),
-    ]);
-    expect(selectAvailableEquipment(data).map((item) => item.id)).toEqual([
-      "confirmed",
-    ]);
-  });
-
   it("returns empty selections for a missing snapshot", () => {
     expect(selectProfileRecords(null)).toEqual([]);
-    expect(selectAvailableEquipment(undefined)).toEqual([]);
   });
 
   it("splits uploads into media and reports by file type", () => {

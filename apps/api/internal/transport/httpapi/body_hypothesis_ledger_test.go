@@ -61,7 +61,7 @@ func hypothesisHTTPRouter(t *testing.T, owner uuid.UUID, app bodyHypothesisAppli
 		t.Fatal(err)
 	}
 	router := gin.New()
-	server := NewPublicServer(&fakeBodyStateFactService{})
+	server := NewPublicServer()
 	if app != nil {
 		server = server.WithBodyHypotheses(app)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -87,6 +88,7 @@ type TreatmentService struct {
 	unitOfWork treatmentUnitOfWork
 	deployment treatmentDeploymentPolicy
 	rollout    treatmentRolloutObserver
+	equipment  treatmentEquipmentSource
 }
 
 func NewTreatmentService(
@@ -104,6 +106,54 @@ func NewTreatmentService(
 		freshness: freshness, profiles: profiles, reasoner: reasoner,
 		unitOfWork: unitOfWork, deployment: deployment,
 	}
+}
+
+// treatmentEquipmentSource reads the user's currently usable EquipmentAsset
+// inventory (PC-D2). Equipment is a user-stated resource, not BodyState.
+type treatmentEquipmentSource interface {
+	ListUsable(ctx context.Context, owner uuid.UUID, now time.Time) ([]model.EquipmentAsset, error)
+}
+
+// AttachEquipment lets Treatment generation read available equipment as a
+// user constraint. Equipment changes never edit an accepted Treatment.
+func (s *TreatmentService) AttachEquipment(source treatmentEquipmentSource) {
+	if s != nil {
+		s.equipment = source
+	}
+}
+
+// treatmentConstraintsWithEquipment returns a copy of the caller constraints
+// with the usable equipment under "available_equipment" (oldest first), unless
+// the caller already set that key or the user listed none. Go assembles it; the
+// Agent only reads it.
+func (s *TreatmentService) treatmentConstraintsWithEquipment(ctx context.Context, userID uuid.UUID, constraints map[string]any) (map[string]any, error) {
+	if s.equipment == nil {
+		return constraints, nil
+	}
+	if _, set := constraints["available_equipment"]; set {
+		return constraints, nil
+	}
+	assets, err := s.equipment.ListUsable(ctx, userID, time.Now().UTC())
+	if err != nil {
+		return nil, fmt.Errorf("read available equipment: %w", err)
+	}
+	if len(assets) == 0 {
+		return constraints, nil
+	}
+	equipment := make([]map[string]any, 0, len(assets))
+	for _, asset := range assets {
+		item := map[string]any{"name": asset.DisplayName, "access_kind": asset.AccessKind}
+		if asset.Notes != nil {
+			item["notes"] = *asset.Notes
+		}
+		equipment = append(equipment, item)
+	}
+	merged := make(map[string]any, len(constraints)+1)
+	for key, value := range constraints {
+		merged[key] = value
+	}
+	merged["available_equipment"] = equipment
+	return merged, nil
 }
 
 func (s *TreatmentService) AttachRolloutObserver(observer treatmentRolloutObserver) {
@@ -238,7 +288,11 @@ func (s *TreatmentService) GenerateProposal(
 	bodyStatePayload := rawJSON(snapshot, `{}`)
 	diagnosisPayload := rawJSON(s.diagnosis.PublicPayload(analysis), `{}`)
 	assessmentsPayload := rawJSON(assessments, `[]`)
-	constraintsPayload := rawJSON(input.UserConstraints, `{}`)
+	constraints, err := s.treatmentConstraintsWithEquipment(ctx, userID, input.UserConstraints)
+	if err != nil {
+		return nil, err
+	}
+	constraintsPayload := rawJSON(constraints, `{}`)
 	evidencePayload := rawJSON(evidence, `[]`)
 	replayInput, err := EncodeTreatmentReplayInput(
 		snapshot.CurrentRevision,
@@ -315,7 +369,7 @@ func (s *TreatmentService) GenerateProposal(
 		Goal:                      plan.Goal,
 		DurationWeeks:             plan.DurationWeeks,
 		Plan:                      datatypes.JSON(rawJSON(plan, `{}`)),
-		UserConstraints:           datatypes.JSON(rawJSON(input.UserConstraints, `{}`)),
+		UserConstraints:           datatypes.JSON(constraintsPayload),
 		EvidenceIDs:               datatypes.JSON(rawJSON(evidenceIDs, `[]`)),
 		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
 		AgentConfigurationID:      configurationID,

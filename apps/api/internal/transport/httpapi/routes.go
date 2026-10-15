@@ -127,7 +127,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
 	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
-	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
 	protected.GET("/body-state", wrapper.GetBodyState)
 	protected.PATCH("/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
 	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
@@ -135,6 +134,11 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.PATCH("/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
 	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
 	protected.POST("/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
+
+	// Owner-scoped EquipmentAsset inventory (PC-D2); not BodyState.
+	protected.GET("/equipment", wrapper.ListEquipmentAssets)
+	protected.POST("/equipment", wrapper.CreateEquipmentAsset)
+	protected.PUT("/equipment/:id", wrapper.UpdateEquipmentAsset)
 
 	// Continuous health workspace.
 	protected.GET("/health-workspace", wrapper.GetHealthWorkspace)

@@ -31,6 +31,7 @@ type privacyCountSpec struct {
 // documented in the retention matrix rather than duplicated in this report.
 var privacyCountSpecs = []privacyCountSpec{
 	{name: "identity_profile", table: "user_profiles", column: "user_id"},
+	{name: "equipment_assets", table: "equipment_assets", column: "user_id"},
 	{name: "conversations", table: "conversations", column: "user_id"},
 	{name: "runs", table: "runs", column: "user_id"},
 	{name: "interaction_resumes", table: "interaction_resumes", column: "user_id"},

@@ -115,23 +115,19 @@ describe("workspaceApi OpenAPI boundary", () => {
       }),
     );
 
-    const result = await workspaceApi.addFact(3, {
-      kind: "equipment.available",
-      value: "pain",
-      body_region_id: "region:neck",
-    });
+    const result = await workspaceApi.reviewFact(
+      "4df4fc34-371e-49a3-8e74-06bad9dbe64e",
+      3,
+      "confirmed",
+    );
 
     expect(authFetchMock).toHaveBeenCalledWith(
-      "/api/v1/body-state/facts",
+      "/api/v1/body-state/facts/4df4fc34-371e-49a3-8e74-06bad9dbe64e/review",
       expect.objectContaining({
-        method: "POST",
+        method: "PATCH",
         body: JSON.stringify({
           expected_revision: 3,
-          fact: {
-            kind: "equipment.available",
-            value: "pain",
-            body_region_id: "region:neck",
-          },
+          review_state: "confirmed",
         }),
       }),
     );
@@ -149,10 +145,11 @@ describe("workspaceApi OpenAPI boundary", () => {
       ),
     );
 
-    const result = await workspaceApi.addFact(4, {
-      kind: "equipment.available",
-      value: "pain",
-    });
+    const result = await workspaceApi.reviewFact(
+      "4df4fc34-371e-49a3-8e74-06bad9dbe64e",
+      4,
+      "confirmed",
+    );
 
     expect(result.fact.updated_revision).toBe(4);
   });
@@ -236,7 +233,11 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     await expect(
-      workspaceApi.addFact(3, { kind: "equipment.available", value: "pain" }),
+      workspaceApi.reviewFact(
+        "4df4fc34-371e-49a3-8e74-06bad9dbe64e",
+        3,
+        "confirmed",
+      ),
     ).rejects.toMatchObject({
       name: "ApiRequestError",
       status: 409,
@@ -254,7 +255,11 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     await expect(
-      workspaceApi.addFact(3, { kind: "equipment.available", value: "pain" }),
+      workspaceApi.reviewFact(
+        "4df4fc34-371e-49a3-8e74-06bad9dbe64e",
+        3,
+        "confirmed",
+      ),
     ).rejects.toThrow();
   });
 

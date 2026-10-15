@@ -16,15 +16,6 @@ import (
 // implementation beyond the transport package.
 type authConfig = auth.SecurityConfig
 
-type bodyStateFactService interface {
-	UpsertFact(
-		ctx context.Context,
-		userID uuid.UUID,
-		expectedRevision *int64,
-		fact model.BodyStateFact,
-	) (*model.BodyStateFact, *model.BodyStateRevision, error)
-}
-
 // PublicServer is the handwritten application adapter behind generated public
 // HTTP transport types. Generated OpenAPI models stop here and are translated
 // into domain models before service execution.
@@ -34,7 +25,6 @@ type PublicServer struct {
 	bodyHypotheses           bodyHypothesisApplication
 	episodes                 episodeReadApplication
 	episodeCommands          episodeCommandApplication
-	bodyState                bodyStateFactService
 	bodyStateRoutes          bodyStateRouteService
 	healthWorkspace          healthWorkspaceService
 	lifestyle                lifestyleApplication
@@ -70,48 +60,11 @@ type PublicServer struct {
 	knowledgeSources         knowledgeSourceApplication
 	knowledgeIngestion       knowledgeIngestionApplication
 	knowledgeQuery           knowledgeQueryApplication
+	equipment                equipmentApplication
 }
 
-func NewPublicServer(bodyState bodyStateFactService) *PublicServer {
-	return &PublicServer{bodyState: bodyState}
-}
-
-func (s *PublicServer) AddBodyStateFact(
-	ctx context.Context,
-	request openapiv1.AddBodyStateFactRequestObject,
-) (openapiv1.AddBodyStateFactResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return addFactError401("UNAUTHORIZED", "authentication required"), nil
-	}
-	if request.Body == nil {
-		return addFactError400("INVALID_REQUEST", "request body is required"), nil
-	}
-
-	fact, err := factFromOpenAPI(request.Body.Fact)
-	if err != nil {
-		return addFactError400("INVALID_REQUEST", "fact JSON fields are invalid"), nil
-	}
-	// Symptoms and all other body statements are V2-ledger only
-	// (/body-state/records). This legacy writer survives solely for the
-	// equipment inventory until EquipmentAsset replaces it.
-	if fact.Kind != model.BodyStateFactKindEquipmentAvailable {
-		return addFactError400("INVALID_REQUEST", "only equipment.available is accepted; record body statements via /api/v1/body-state/records"), nil
-	}
-	expectedRevision := request.Body.ExpectedRevision
-	created, revision, err := s.bodyState.UpsertFact(ctx, userID, &expectedRevision, fact)
-	if err != nil {
-		return bodyStateFactErrorResponse(err), nil
-	}
-	if created == nil {
-		return addFactError500("INTERNAL_ERROR", "failed to update body state"), nil
-	}
-
-	response, err := factMutationResponseToOpenAPI(created, revision)
-	if err != nil {
-		return addFactError500("INTERNAL_ERROR", "failed to encode body state response"), nil
-	}
-	return openapiv1.AddBodyStateFact200JSONResponse(response), nil
+func NewPublicServer() *PublicServer {
+	return &PublicServer{}
 }
 
 func authenticatedUserID(ctx context.Context) (uuid.UUID, error) {
@@ -121,34 +74,6 @@ func authenticatedUserID(ctx context.Context) (uuid.UUID, error) {
 		return uuid.Nil, errors.New("missing authenticated user")
 	}
 	return uuid.Parse(text)
-}
-
-func factFromOpenAPI(input openapiv1.BodyStateFactInput) (model.BodyStateFact, error) {
-	details, err := jsonObjectToDatatypes(input.Details)
-	if err != nil {
-		return model.BodyStateFact{}, err
-	}
-	provenance, err := jsonObjectToDatatypes(input.Provenance)
-	if err != nil {
-		return model.BodyStateFact{}, err
-	}
-	return model.BodyStateFact{
-		ConcernKey:     stringValue(input.ConcernKey),
-		Kind:           string(input.Kind),
-		BodyRegion:     stringValue(input.BodyRegion),
-		BodyRegionID:   input.BodyRegionId,
-		Value:          input.Value,
-		Details:        details,
-		Origin:         stringValue(input.Origin),
-		ReviewState:    stringValue(input.ReviewState),
-		LifecycleState: stringValue(input.LifecycleState),
-		Trend:          stringValue(input.Trend),
-		SourceKey:      stringValue(input.SourceKey),
-		Provenance:     provenance,
-		ObservedAt:     input.ObservedAt,
-		ValidFrom:      input.ValidFrom,
-		ValidUntil:     input.ValidUntil,
-	}, nil
 }
 
 func factMutationResponseToOpenAPI(
@@ -252,60 +177,6 @@ func optionalString(value string) *string {
 	return &value
 }
 
-func bodyStateFactErrorResponse(err error) openapiv1.AddBodyStateFactResponseObject {
-	classified := classifyBodyStatePublicError(err)
-	switch classified.status {
-	case 400:
-		return addFactError400(classified.code, classified.message)
-	case 401:
-		return addFactError401(classified.code, classified.message)
-	case 404:
-		return addFactError404(classified.code, classified.message)
-	case 409:
-		return addFactError409(classified.code, classified.message)
-	case 503:
-		return addFactError503(classified.code, classified.message)
-	default:
-		return addFactError500(classified.code, classified.message)
-	}
-}
-
 func errorEnvelope(code, message string) openapiv1.ErrorEnvelope {
 	return openapiv1.ErrorEnvelope{Error: openapiv1.ErrorDetail{Code: code, Message: message}}
-}
-
-func addFactError400(code, message string) openapiv1.AddBodyStateFact400JSONResponse {
-	return openapiv1.AddBodyStateFact400JSONResponse{
-		InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message)),
-	}
-}
-
-func addFactError401(code, message string) openapiv1.AddBodyStateFact401JSONResponse {
-	return openapiv1.AddBodyStateFact401JSONResponse{
-		UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message)),
-	}
-}
-
-func addFactError404(code, message string) openapiv1.AddBodyStateFact404JSONResponse {
-	return openapiv1.AddBodyStateFact404JSONResponse{
-		NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message)),
-	}
-}
-
-func addFactError409(code, message string) openapiv1.AddBodyStateFact409JSONResponse {
-	return openapiv1.AddBodyStateFact409JSONResponse{
-		RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(errorEnvelope(code, message)),
-	}
-}
-
-func addFactError500(code, message string) openapiv1.AddBodyStateFact500JSONResponse {
-	return openapiv1.AddBodyStateFact500JSONResponse{
-		InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message)),
-	}
-}
-
-func addFactError503(code, message string) openapiv1.AddBodyStateFact503JSONResponse {
-	return openapiv1.AddBodyStateFact503JSONResponse{
-		ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(errorEnvelope(code, message)),
-	}
 }
