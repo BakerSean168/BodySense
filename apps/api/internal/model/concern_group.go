@@ -103,8 +103,7 @@ func DeriveConcernGroups(s ConcernGroupSnapshot) *DerivedConcernGroupList {
 	add(concernHypothesis, s.Hypotheses)
 	add(concernFact, s.Facts)
 	add(concernEpisode, s.Episodes)
-	var find func(concernNodeKey) concernNodeKey
-	find = func(k concernNodeKey) concernNodeKey {
+	find := func(k concernNodeKey) concernNodeKey {
 		for parent[k] != k {
 			parent[k] = parent[parent[k]]
 			k = parent[k]
