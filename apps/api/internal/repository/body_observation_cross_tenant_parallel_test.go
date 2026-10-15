@@ -132,7 +132,7 @@ func TestBodyObservationConcurrentCrossTenantExactReplayPostgres(t *testing.T) {
 		} {
 			var got int64
 			if err := db.Table(table).Where("user_id = ?", owner).Count(&got).Error; err != nil || got != want {
-				t.Fatal(fmt.Sprintf("tenant %d %s count=%d want=%d err=%v", i, table, got, want, err))
+				t.Fatalf("tenant %d %s count=%d want=%d err=%v", i, table, got, want, err)
 			}
 		}
 	}
