@@ -136,7 +136,6 @@ export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
   extracted_info: ExtractedInfo[];
-  body_state?: BodyStateSnapshot | null;
   diagnosis: DiagnosisAnalysis | null;
   pending_interactions?: PendingInteraction[];
   interaction_history?: InteractionHistoryItem[];

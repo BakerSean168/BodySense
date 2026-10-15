@@ -110,8 +110,7 @@ export function ConsultationPage() {
   const messages = displayedThread?.messages ?? [];
   const extractedInfo = displayedThread?.extracted_info ?? [];
   const workspace = workspaceQuery.data;
-  const bodyState =
-    workspace?.body_state ?? displayedThread?.body_state ?? null;
+  const bodyState = workspace?.body_state ?? null;
   const handleAskSpatialContext = useCallback(
     (context: ConsultationSpatialContext) => {
       setChatSpatialContext(context);
