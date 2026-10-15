@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -45,7 +44,7 @@ type treatmentDiagnosisSource interface {
 }
 
 type treatmentBodyStateSource interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
+	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
 	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
 	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
@@ -90,7 +89,6 @@ type TreatmentService struct {
 	unitOfWork treatmentUnitOfWork
 	deployment treatmentDeploymentPolicy
 	rollout    treatmentRolloutObserver
-	equipment  treatmentEquipmentSource
 }
 
 func NewTreatmentService(
@@ -110,40 +108,19 @@ func NewTreatmentService(
 	}
 }
 
-// treatmentEquipmentSource reads the user's currently usable EquipmentAsset
-// inventory (PC-D2). Equipment is a user-stated resource, not BodyState.
-type treatmentEquipmentSource interface {
-	ListUsable(ctx context.Context, owner uuid.UUID, now time.Time) ([]model.EquipmentAsset, error)
-}
-
-// AttachEquipment lets Treatment generation read available equipment as a
-// user constraint. Equipment changes never edit an accepted Treatment.
-func (s *TreatmentService) AttachEquipment(source treatmentEquipmentSource) {
-	if s != nil {
-		s.equipment = source
-	}
-}
-
 // treatmentConstraintsWithEquipment returns a copy of the caller constraints
-// with the usable equipment under "available_equipment" (oldest first), unless
-// the caller already set that key or the user listed none. Go assembles it; the
-// Agent only reads it.
-func (s *TreatmentService) treatmentConstraintsWithEquipment(ctx context.Context, userID uuid.UUID, constraints map[string]any) (map[string]any, error) {
-	if s.equipment == nil {
-		return constraints, nil
+// with user_constraints.available_equipment taken from the pinned agent view's
+// usable EquipmentAssets (PC-D2), unless the caller stated equipment itself.
+// Equipment is a user-stated resource; it never edits an accepted Treatment.
+func treatmentConstraintsWithEquipment(view *AgentBodyContext, constraints map[string]any) map[string]any {
+	if view == nil || len(view.Equipment) == 0 {
+		return constraints
 	}
 	if _, set := constraints["available_equipment"]; set {
-		return constraints, nil
+		return constraints
 	}
-	assets, err := s.equipment.ListUsable(ctx, userID, time.Now().UTC())
-	if err != nil {
-		return nil, fmt.Errorf("read available equipment: %w", err)
-	}
-	if len(assets) == 0 {
-		return constraints, nil
-	}
-	equipment := make([]map[string]any, 0, len(assets))
-	for _, asset := range assets {
+	equipment := make([]map[string]any, 0, len(view.Equipment))
+	for _, asset := range view.Equipment {
 		item := map[string]any{"name": asset.DisplayName, "access_kind": asset.AccessKind}
 		if asset.Notes != nil {
 			item["notes"] = *asset.Notes
@@ -155,7 +132,7 @@ func (s *TreatmentService) treatmentConstraintsWithEquipment(ctx context.Context
 		merged[key] = value
 	}
 	merged["available_equipment"] = equipment
-	return merged, nil
+	return merged
 }
 
 func (s *TreatmentService) AttachRolloutObserver(observer treatmentRolloutObserver) {
@@ -253,12 +230,12 @@ func (s *TreatmentService) GenerateProposal(
 		}
 	}
 
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 50)
+	bodyView, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	facts.SafetyState = snapshot.SafetyState
-	facts.CurrentBodyStateRevision = snapshot.CurrentRevision
+	facts.SafetyState = bodyView.SafetyState
+	facts.CurrentBodyStateRevision = bodyView.CurrentRevision
 	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
 		return nil, treatmentDecisionError(decision)
 	}
@@ -287,17 +264,14 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
-	bodyStatePayload := rawJSON(snapshot, `{}`)
+	bodyStatePayload := rawJSON(bodyView, `{}`)
 	diagnosisPayload := rawJSON(s.diagnosis.PublicPayload(analysis), `{}`)
 	assessmentsPayload := rawJSON(assessments, `[]`)
-	constraints, err := s.treatmentConstraintsWithEquipment(ctx, userID, input.UserConstraints)
-	if err != nil {
-		return nil, err
-	}
+	constraints := treatmentConstraintsWithEquipment(bodyView, input.UserConstraints)
 	constraintsPayload := rawJSON(constraints, `{}`)
 	evidencePayload := rawJSON(evidence, `[]`)
 	replayInput, err := EncodeTreatmentReplayInput(
-		snapshot.CurrentRevision,
+		bodyView.CurrentRevision,
 		bodyStatePayload,
 		diagnosisPayload,
 		assessmentsPayload,
@@ -313,7 +287,7 @@ func (s *TreatmentService) GenerateProposal(
 	raw, err := s.reasoner.RecommendTreatment(ctx, TreatmentRecommendationRequest{
 		UserID:               userID.String(),
 		ConfigurationID:      configurationID,
-		BodyStateRevision:    snapshot.CurrentRevision,
+		BodyStateRevision:    bodyView.CurrentRevision,
 		BodyState:            bodyStatePayload,
 		DiagnosisAnalysis:    diagnosisPayload,
 		CandidateAssessments: assessmentsPayload,
@@ -366,7 +340,7 @@ func (s *TreatmentService) GenerateProposal(
 		configurationID,
 	)
 	_, revision, err := s.repo.CreateProposal(ctx, userID, model.TreatmentRevision{
-		SourceBodyStateRevision:   snapshot.CurrentRevision,
+		SourceBodyStateRevision:   bodyView.CurrentRevision,
 		SourceDiagnosisAnalysisID: analysis.ID,
 		Goal:                      plan.Goal,
 		DurationWeeks:             plan.DurationWeeks,

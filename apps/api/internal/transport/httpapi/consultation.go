@@ -41,24 +41,18 @@ type consultationThreadApplication interface {
 	RefreshAndGetThread(context.Context, uuid.UUID, uuid.UUID) (*model.ThreadProjection, []model.ThreadProjectionMessage, []model.ThreadProjectionToolCall, *uuid.UUID, []model.RuntimeEvent, error)
 }
 
-type consultationBodyStateApplication interface {
-	GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error)
-}
-
 func (s *PublicServer) WithConsultation(
 	runtime consultationRuntimeApplication,
 	sessions consultationSessionApplication,
 	interactions consultationInteractionApplication,
 	replay consultationReplayApplication,
 	threads consultationThreadApplication,
-	bodyState consultationBodyStateApplication,
 ) *PublicServer {
 	s.consultationRuntime = runtime
 	s.consultationSessions = sessions
 	s.consultationInteractions = interactions
 	s.consultationReplay = replay
 	s.consultationThreads = threads
-	s.consultationBodyState = bodyState
 	return s
 }
 
@@ -383,7 +377,7 @@ func (s *PublicServer) GetConsultationThread(
 	if authErr != nil {
 		return consultationHTTPErrorResponse{status: http.StatusUnauthorized, code: "UNAUTHORIZED", message: "missing authenticated user"}, nil
 	}
-	if s.consultationThreads == nil || s.consultationBodyState == nil {
+	if s.consultationThreads == nil {
 		return consultationHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "CONSULTATION_UNAVAILABLE", message: "consultation thread service is not configured"}, nil
 	}
 	projection, messages, toolCalls, activeTurnRunID, activeTurnEvents, err := s.consultationThreads.RefreshAndGetThread(applicationRequestContext(ctx), request.Id, uid)
@@ -393,7 +387,6 @@ func (s *PublicServer) GetConsultationThread(
 	if projection == nil {
 		return consultationHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: "consultation thread not found"}, nil
 	}
-	bodyState, _ := s.consultationBodyState.GetSnapshot(applicationRequestContext(ctx), uid, 20)
 	wire := consultationThreadWire{
 		ConversationID: projection.ConversationID,
 		Conversation: consultationThreadConversationWire{
@@ -412,7 +405,6 @@ func (s *PublicServer) GetConsultationThread(
 		},
 		Phase:               string(projection.Phase),
 		ExtractedInfo:       rawJSONArray(projection.ExtractedInfo),
-		BodyState:           bodyState,
 		PendingInteractions: rawJSONArray(projection.PendingInteractions),
 		InteractionHistory:  rawJSONArray(projection.InteractionHistory),
 		ActiveTurnRunID:     activeTurnRunID,
@@ -450,7 +442,6 @@ type consultationThreadWire struct {
 	Conversation        consultationThreadConversationWire `json:"conversation"`
 	Phase               string                             `json:"phase"`
 	ExtractedInfo       json.RawMessage                    `json:"extracted_info"`
-	BodyState           *service.BodyStateSnapshot         `json:"body_state"`
 	PendingInteractions json.RawMessage                    `json:"pending_interactions"`
 	InteractionHistory  json.RawMessage                    `json:"interaction_history"`
 	ActiveTurnRunID     *uuid.UUID                         `json:"active_turn_run_id"`

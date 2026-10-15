@@ -16,7 +16,6 @@ import (
 
 type runtimeBodyFactService interface {
 	RecordRunFacts(context.Context, uuid.UUID, uuid.UUID, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
-	ListFacts(context.Context, uuid.UUID, int64) (*model.BodyFactPage, error)
 }
 
 // AttachBodyFactService makes the ledger available without altering the stable

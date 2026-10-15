@@ -19,7 +19,17 @@ type memoryBodyContextLedger struct {
 	facts        []model.BodyFact
 	observations []model.BodyObservationRecord
 	screens      []model.SafetyScreen
+	episodes     []model.EpisodeRecord
+	hypotheses   []model.BodyHypothesisRecord
 	commands     int
+}
+
+func (m *memoryBodyContextLedger) ListEpisodes(_ context.Context, owner uuid.UUID, _ int64) (*model.EpisodePage, error) {
+	return &model.EpisodePage{UserID: owner, CurrentRevision: m.revision, Episodes: append([]model.EpisodeRecord{}, m.episodes...)}, nil
+}
+
+func (m *memoryBodyContextLedger) ListActiveBodyHypotheses(_ context.Context, owner uuid.UUID) (*model.BodyHypothesisList, error) {
+	return &model.BodyHypothesisList{UserID: owner, CurrentRevision: m.revision, Hypotheses: append([]model.BodyHypothesisRecord{}, m.hypotheses...)}, nil
 }
 
 func (m *memoryBodyContextLedger) ListSafetyScreens(context.Context, uuid.UUID) ([]model.SafetyScreen, error) {

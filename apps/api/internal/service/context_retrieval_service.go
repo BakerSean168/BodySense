@@ -36,7 +36,7 @@ func (s *ContextRetrievalService) Retrieve(
 	ctx context.Context,
 	userID, conversationID uuid.UUID,
 	queryText string,
-	bodyState *BodyStateSnapshot,
+	bodyState *AgentBodyContext,
 ) ([]ConsultationHistoricalMessage, error) {
 	terms := BuildHistoricalContextTerms(queryText, bodyState)
 	messages, err := s.repo.SearchRelevant(ctx, userID, conversationID, terms, 24, 8)
@@ -67,7 +67,7 @@ func (s *ContextRetrievalService) Retrieve(
 // BuildHistoricalContextTerms combines current-turn language with durable active
 // BodyState anchors. Generic filler words are discarded and the search remains
 // intentionally bounded.
-func BuildHistoricalContextTerms(queryText string, bodyState *BodyStateSnapshot) []string {
+func BuildHistoricalContextTerms(queryText string, bodyState *AgentBodyContext) []string {
 	seen := map[string]struct{}{}
 	terms := make([]string, 0, 12)
 	add := func(value string) {
@@ -90,13 +90,8 @@ func BuildHistoricalContextTerms(queryText string, bodyState *BodyStateSnapshot)
 	}
 	if bodyState != nil {
 		for _, fact := range bodyState.Facts {
-			add(fact.BodyRegion)
-			add(fact.Value)
+			add(fact.Statement)
 			add(fact.ConcernKey)
-		}
-		for _, observation := range bodyState.Observations {
-			add(observation.BodyRegion)
-			add(observation.ConcernKey)
 		}
 	}
 	if len(terms) > 12 {

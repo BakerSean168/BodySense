@@ -112,7 +112,7 @@ func newValidator(db *gorm.DB) *validator {
 	bodyRepo := repository.NewBodyStateRepository(db)
 	bodyService := service.NewBodyStateService(bodyRepo).WithBodyRegionIDValidator(
 		service.NewCanonicalBodyRegionIDValidator(),
-	)
+	).WithAgentContextSources(database.NewTransactionManager(db), repository.NewEquipmentAssetRepository(db))
 	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
 	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
 	freshnessRepo := repository.NewDiagnosisFreshnessRepository(db)
@@ -540,11 +540,11 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		ConcernKey:          "region:neck",
 		BodyRegion:          "left neck",
 		// The user's own words become a V2 symptom fact; no legacy fact is touched.
-		Value:               datatypes.JSON(`{"description":"neck feels better after the session","trend":"improving"}`),
-		Notes:               "forced transactional retry",
-		CausalityLevel:      "association_only",
-		OccurredAt:          time.Now().UTC(),
-		Provenance:          datatypes.JSON(`{"source_type":"domain_validator"}`),
+		Value:          datatypes.JSON(`{"description":"neck feels better after the session","trend":"improving"}`),
+		Notes:          "forced transactional retry",
+		CausalityLevel: "association_only",
+		OccurredAt:     time.Now().UTC(),
+		Provenance:     datatypes.JSON(`{"source_type":"domain_validator"}`),
 	}
 	if _, _, err := v.treatment.RecordOutcome(ctx, userID, outcome); err == nil {
 		return errors.New("forced BodyState projection failure unexpectedly succeeded")

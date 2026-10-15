@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -123,14 +122,23 @@ func (f *fakeTreatmentDiagnosis) PublicPayload(analysis *model.DiagnosisAnalysis
 
 type fakeTreatmentBodyState struct {
 	snapshot           *BodyStateSnapshot
+	equipment          []AgentEquipmentItem
+	viewOwner          uuid.UUID
 	revisions          []model.BodyStateRevision
 	recordOutcomeCalls int
 	recordOutcomeErr   error
 	recordOutcomeRev   int64
 }
 
-func (f *fakeTreatmentBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*BodyStateSnapshot, error) {
-	return f.snapshot, nil
+func (f *fakeTreatmentBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*AgentBodyContext, error) {
+	f.viewOwner = owner
+	return &AgentBodyContext{
+		Schema: AgentBodyContextSchemaV1, UserID: owner, CurrentRevision: f.snapshot.CurrentRevision, RecordsAvailable: true,
+		Facts: []AgentBodyFact{}, Observations: []AgentBodyObservation{}, Episodes: []AgentSymptomEpisode{},
+		UserHypotheses: []AgentUserHypothesis{}, Equipment: append([]AgentEquipmentItem{}, f.equipment...),
+		Safety:      AgentSafetySummary{Status: AgentSafetyNoCurrentSymptoms, ActiveBlockers: []string{}, UnscreenedFactIDs: []uuid.UUID{}},
+		SafetyState: f.snapshot.SafetyState,
+	}, nil
 }
 func (f *fakeTreatmentBodyState) GetBodyStateHead(context.Context, uuid.UUID) (*model.BodyStateHead, error) {
 	return &model.BodyStateHead{UserID: f.snapshot.UserID, CurrentRevision: f.snapshot.CurrentRevision, SafetyState: f.snapshot.SafetyState}, nil
@@ -1236,16 +1244,6 @@ func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
 	}
 }
 
-type fakeTreatmentEquipment struct {
-	assets []model.EquipmentAsset
-	owner  uuid.UUID
-}
-
-func (f *fakeTreatmentEquipment) ListUsable(_ context.Context, owner uuid.UUID, _ time.Time) ([]model.EquipmentAsset, error) {
-	f.owner = owner
-	return f.assets, nil
-}
-
 func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
@@ -1253,12 +1251,15 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	notes := "medium"
-	equipment := &fakeTreatmentEquipment{assets: []model.EquipmentAsset{{DisplayName: "弹力带", Notes: &notes, AccessKind: "owned", Availability: "available"}}}
+	bodyState := &fakeTreatmentBodyState{
+		snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)},
+		equipment: []AgentEquipmentItem{{ID: uuid.New(), DisplayName: "弹力带", Notes: &notes, AccessKind: "owned"}},
+	}
 	var captured TreatmentRecommendationRequest
 	svc := NewTreatmentService(
 		&fakeTreatmentRepo{},
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)}},
+		bodyState,
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -1269,14 +1270,13 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 		testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
 	)
-	svc.AttachEquipment(equipment)
 	callerConstraints := map[string]any{"time_per_day": "20m"}
 	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID, UserConstraints: callerConstraints})
 	if err != nil {
 		t.Fatalf("GenerateProposal returned error: %v", err)
 	}
 	want := json.RawMessage(`{"time_per_day":"20m","available_equipment":[{"name":"弹力带","access_kind":"owned","notes":"medium"}]}`)
-	if equipment.owner != userID || !jsonBytesEqual(captured.UserConstraints, want) || !jsonBytesEqual(json.RawMessage(revision.UserConstraints), want) {
+	if bodyState.viewOwner != userID || !jsonBytesEqual(captured.UserConstraints, want) || !jsonBytesEqual(json.RawMessage(revision.UserConstraints), want) {
 		t.Fatalf("equipment constraint: captured=%s stored=%s", captured.UserConstraints, revision.UserConstraints)
 	}
 	if _, mutated := callerConstraints["available_equipment"]; mutated {
@@ -1285,6 +1285,20 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 	frozen, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
 	if err != nil || !jsonBytesEqual(frozen.UserConstraints, want) {
 		t.Fatalf("replay input must freeze the equipment constraint: %v %s", err, frozen.UserConstraints)
+	}
+	// The agent BodyState input is the native V2 view, frozen as sent.
+	var sent struct {
+		Schema          string               `json:"schema"`
+		CurrentRevision int64                `json:"current_revision"`
+		Equipment       []AgentEquipmentItem `json:"equipment"`
+		SafetyState     json.RawMessage      `json:"safety_state"`
+	}
+	if err := json.Unmarshal(captured.BodyState, &sent); err != nil || sent.Schema != AgentBodyContextSchemaV1 ||
+		sent.CurrentRevision != 9 || len(sent.Equipment) != 1 || sent.SafetyState != nil {
+		t.Fatalf("Treatment agent BodyState must be the V2 view without Go safety state: %v %s", err, captured.BodyState)
+	}
+	if !jsonBytesEqual(frozen.BodyState, captured.BodyState) {
+		t.Fatalf("replay must freeze the exact agent BodyState: %s", frozen.BodyState)
 	}
 }
 

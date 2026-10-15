@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"gorm.io/gorm"
 )
@@ -28,6 +29,19 @@ func (m *TransactionManager) WithinTransaction(
 	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(context.WithValue(ctx, transactionContextKey{}, tx))
 	})
+}
+
+// WithinReadSnapshot executes fn in one read-only REPEATABLE READ transaction,
+// so reads across several repositories observe one committed database
+// snapshot (one BodyState revision). Repository transactions opened inside fn
+// become savepoints of this snapshot.
+func (m *TransactionManager) WithinReadSnapshot(
+	ctx context.Context,
+	fn func(context.Context) error,
+) error {
+	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(context.WithValue(ctx, transactionContextKey{}, tx))
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 }
 
 // FromContext returns the transaction bound by TransactionManager, or fallback
