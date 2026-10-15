@@ -222,6 +222,65 @@ CREATE TABLE public.body_facts (
 
 
 --
+-- Name: body_hypotheses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_hypotheses (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    statement text NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    assertion_status text NOT NULL,
+    created_revision bigint NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    withdrawn_at timestamp with time zone,
+    withdrawn_revision bigint,
+    withdrawal_reason text,
+    CONSTRAINT body_hypotheses_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'withdrawn'::text]))),
+    CONSTRAINT body_hypotheses_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT body_hypotheses_statement_check CHECK ((((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (statement = btrim(statement)))),
+    CONSTRAINT body_hypotheses_withdrawal_check CHECK ((((assertion_status = 'asserted'::text) AND (withdrawn_at IS NULL) AND (withdrawn_revision IS NULL) AND (withdrawal_reason IS NULL)) OR ((assertion_status = 'withdrawn'::text) AND (withdrawn_at IS NOT NULL) AND (withdrawn_revision > created_revision)))),
+    CONSTRAINT body_hypotheses_withdrawal_reason_check CHECK (((withdrawal_reason IS NULL) OR (((char_length(withdrawal_reason) >= 1) AND (char_length(withdrawal_reason) <= 500)) AND (withdrawal_reason = btrim(withdrawal_reason)))))
+);
+
+
+--
+-- Name: body_hypothesis_commits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_hypothesis_commits (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    idempotency_key character varying(128) NOT NULL,
+    fingerprint character(64) NOT NULL,
+    operation text NOT NULL,
+    hypothesis_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    committed_at timestamp with time zone NOT NULL,
+    CONSTRAINT body_hypothesis_commits_fingerprint_check CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT body_hypothesis_commits_idempotency_key_check CHECK ((((char_length((idempotency_key)::text) >= 1) AND (char_length((idempotency_key)::text) <= 128)) AND ((idempotency_key)::text = btrim((idempotency_key)::text)))),
+    CONSTRAINT body_hypothesis_commits_operation_check CHECK ((operation = ANY (ARRAY['record'::text, 'withdraw'::text]))),
+    CONSTRAINT body_hypothesis_commits_revision_check CHECK ((revision > 0))
+);
+
+
+--
+-- Name: body_hypothesis_fact_links; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_hypothesis_fact_links (
+    user_id uuid NOT NULL,
+    hypothesis_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    ordinal smallint NOT NULL,
+    CONSTRAINT body_hypothesis_fact_links_ordinal_check CHECK (((ordinal >= 0) AND (ordinal < 20)))
+);
+
+
+--
 -- Name: body_observation_commits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1632,6 +1691,62 @@ ALTER TABLE ONLY public.body_facts
 
 
 --
+-- Name: body_hypotheses body_hypotheses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_id_source_evidence_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_id_source_evidence_id_key UNIQUE (user_id, id, source_evidence_id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_idempotency_key_key UNIQUE (user_id, idempotency_key);
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_pkey PRIMARY KEY (user_id, hypothesis_id, fact_id);
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_user_id_hypothesis_id_ordinal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_user_id_hypothesis_id_ordinal_key UNIQUE (user_id, hypothesis_id, ordinal);
+
+
+--
 -- Name: body_observation_commits body_observation_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2385,6 +2500,34 @@ CREATE INDEX body_facts_source ON public.body_facts USING btree (user_id, source
 --
 
 CREATE INDEX body_facts_user_revision ON public.body_facts USING btree (user_id, created_revision DESC, id);
+
+
+--
+-- Name: body_hypotheses_owner_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypotheses_owner_active ON public.body_hypotheses USING btree (user_id, created_revision DESC, id) WHERE (assertion_status = 'asserted'::text);
+
+
+--
+-- Name: body_hypotheses_owner_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypotheses_owner_source ON public.body_hypotheses USING btree (user_id, source_evidence_id);
+
+
+--
+-- Name: body_hypothesis_commits_owner_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypothesis_commits_owner_rev ON public.body_hypothesis_commits USING btree (user_id, revision DESC);
+
+
+--
+-- Name: body_hypothesis_fact_links_owner_fact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypothesis_fact_links_owner_fact ON public.body_hypothesis_fact_links USING btree (user_id, fact_id);
 
 
 --
@@ -3479,6 +3622,94 @@ ALTER TABLE ONLY public.body_facts
 
 ALTER TABLE ONLY public.body_facts
     ADD CONSTRAINT body_facts_user_id_source_evidence_id_fkey FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_withdrawn_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_withdrawn_revision_fkey FOREIGN KEY (user_id, withdrawn_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_source_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_source_evidence_id_fkey FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.body_state_revisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_event_id_fkey FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_hypothesis_source_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_hypothesis_source_owner_fk FOREIGN KEY (user_id, hypothesis_id, source_evidence_id) REFERENCES public.body_hypotheses(user_id, id, source_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_hypothesis_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_hypothesis_owner_fk FOREIGN KEY (user_id, hypothesis_id) REFERENCES public.body_hypotheses(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_fact_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_fact_owner_fk FOREIGN KEY (user_id, fact_id) REFERENCES public.body_facts(user_id, id) ON DELETE CASCADE;
 
 
 --
