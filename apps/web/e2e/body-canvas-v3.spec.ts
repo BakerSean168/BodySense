@@ -81,10 +81,11 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await regionSelect.selectOption("shoulder.right");
   await page.getByRole("button", { name: "查看已选区域" }).click();
 
-  await expect(
-    page.getByRole("complementary", { name: "已选区域当前状况" }),
-  ).toContainText("右肩");
-  await expect(page.getByText("抬高手臂时右肩疼")).toBeVisible();
+  const selectedRegionPanel = page.getByRole("complementary", {
+    name: "已选区域当前状况",
+  });
+  await expect(selectedRegionPanel).toContainText("右肩");
+  await expect(selectedRegionPanel.getByText("抬高手臂时右肩疼")).toBeVisible();
 
   await page.getByRole("button", { name: "针对这里提问" }).click();
   const chatWindow = page.locator('.bc-business-window[data-window="chat"]');
