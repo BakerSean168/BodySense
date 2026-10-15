@@ -487,6 +487,7 @@
     },
     "SafetySourceKindV1": {
       "enum": [
+        "safety_screen",
         "body_state_fact",
         "legacy_safety_state"
       ],

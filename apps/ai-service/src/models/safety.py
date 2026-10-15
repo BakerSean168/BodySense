@@ -39,6 +39,10 @@ class SafetyReviewStateV1(StrEnum):
 
 
 class SafetySourceKindV1(StrEnum):
+    # Go projects structured safety only from user-answered safety screens.
+    SAFETY_SCREEN = "safety_screen"
+    # Frozen diagnosis qualification datasets predate safety screens; Go no
+    # longer emits this kind.
     BODY_STATE_FACT = "body_state_fact"
     LEGACY_SAFETY_STATE = "legacy_safety_state"
 
