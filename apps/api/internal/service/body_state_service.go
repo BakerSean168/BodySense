@@ -19,6 +19,8 @@ import (
 // declares only the persistence capabilities required by BodyState workflows.
 type bodyStateRepository interface {
 	bodyContextLedger
+	bodyFactLookup
+	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.BodyState, error)
 	ListRecentRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateRevision, error)
 	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)

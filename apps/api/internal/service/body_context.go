@@ -361,12 +361,11 @@ func projectBodyContextIntoSnapshot(snapshot *BodyStateSnapshot, current *BodyCo
 		}
 		var regions []string
 		_ = json.Unmarshal(fact.BodyRegionIDs, &regions)
-		concern, region := "general", ""
+		concern, region := bodyFactConcernKey(fact), ""
 		var regionID *string
 		if len(regions) > 0 {
 			region = regions[0]
 			regionID = &regions[0]
-			concern = "region:" + region
 		}
 		provenance, _ := json.Marshal(map[string]any{"source_type": "body_fact_ledger", "body_fact_id": fact.ID})
 		facts = append(facts, model.BodyStateFact{
