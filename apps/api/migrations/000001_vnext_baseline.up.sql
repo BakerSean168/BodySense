@@ -4338,5 +4338,3 @@ ALTER TABLE ONLY public.user_uploads
 --
 -- PostgreSQL database dump complete
 --
-
-
