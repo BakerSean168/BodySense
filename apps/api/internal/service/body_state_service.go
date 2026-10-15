@@ -18,6 +18,7 @@ import (
 // bodyStateRepository is deliberately consumer-owned: the application service
 // declares only the persistence capabilities required by BodyState workflows.
 type bodyStateRepository interface {
+	bodyContextLedger
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.BodyState, error)
 	ListRecentRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateRevision, error)
 	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)
@@ -101,7 +102,7 @@ func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, hi
 	if revisions == nil {
 		revisions = []model.BodyStateRevision{}
 	}
-	return &BodyStateSnapshot{
+	snapshot := &BodyStateSnapshot{
 		UserID:          userID,
 		CurrentRevision: state.CurrentRevision,
 		SafetyState:     safety,
@@ -109,7 +110,25 @@ func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, hi
 		Observations:    observations,
 		Hypotheses:      hypotheses,
 		RecentRevisions: revisions,
-	}, nil
+	}
+	current, err := loadBodyContext(ctx, s.repo, userID)
+	if err != nil {
+		return nil, err
+	}
+	projectBodyContextIntoSnapshot(snapshot, current)
+	return snapshot, nil
+}
+
+// CurrentBodyContext returns the user's reported metrics, injury history and
+// lifestyle from the V2 ledger.
+func (s *BodyStateService) CurrentBodyContext(ctx context.Context, userID uuid.UUID) (*BodyContext, error) {
+	return loadBodyContext(ctx, s.repo, userID)
+}
+
+// UpdateBodyContext appends the user's edited context statements to the V2
+// ledger and returns the resulting BodyState revision.
+func (s *BodyStateService) UpdateBodyContext(ctx context.Context, userID uuid.UUID, expectedRevision *int64, update BodyContextUpdate) (int64, error) {
+	return applyBodyContextUpdate(ctx, s.repo, userID, expectedRevision, update, time.Now())
 }
 
 func (s *BodyStateService) ListReviewableObservations(
