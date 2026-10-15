@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -18,8 +17,9 @@ type diagnosisFreshnessStore interface {
 }
 
 type diagnosisFreshnessRevisionSource interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
+	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
+	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
 }
 
 // DiagnosisFreshnessService classifies an immutable analysis against later
@@ -53,7 +53,7 @@ func (s *DiagnosisFreshnessService) Preview(
 	if analysis == nil || analysis.UserID != userID {
 		return nil, fmt.Errorf("diagnosis analysis not found")
 	}
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
+	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +61,16 @@ func (s *DiagnosisFreshnessService) Preview(
 	if err != nil {
 		return nil, err
 	}
-	state, reasons := EvaluateDiagnosisFreshnessPolicy(analysis, revisions)
+	facts, err := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
+	if err != nil {
+		return nil, err
+	}
+	state, reasons := EvaluateDiagnosisFreshnessPolicy(analysis, revisions, facts)
 	return &model.DiagnosisAnalysisFreshness{
 		AnalysisID:               analysis.ID,
 		UserID:                   userID,
 		State:                    state,
-		EvaluatedAgainstRevision: snapshot.CurrentRevision,
+		EvaluatedAgainstRevision: head.CurrentRevision,
 		Reasons:                  datatypes.JSON(mustJSON(reasons, `[]`)),
 		CheckedAt:                time.Now().UTC(),
 	}, nil
@@ -99,11 +103,11 @@ func (s *DiagnosisFreshnessService) GetOrEvaluate(
 	if err != nil {
 		return nil, err
 	}
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
+	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if stored != nil && stored.EvaluatedAgainstRevision == snapshot.CurrentRevision {
+	if stored != nil && stored.EvaluatedAgainstRevision == head.CurrentRevision {
 		return stored, nil
 	}
 	return s.Evaluate(ctx, userID, analysis)
@@ -128,147 +132,81 @@ func (s *DiagnosisFreshnessService) PreviewMany(
 }
 
 // EvaluateDiagnosisFreshnessPolicy is pure and deterministic so product rules can
-// be characterized without a database or model call.
+// be characterized without a database or model call. It reads V2 revisions
+// (ids only) and resolves fact ids through facts. An analysis is stale when
+// Safety changed or a fact/observation it cites was corrected or withdrawn;
+// it is potentially stale when the user recorded, corrected or withdrew a
+// statement in a concern it covers, or regrouped such a statement into an
+// episode. Unrelated revisions never invalidate it.
 func EvaluateDiagnosisFreshnessPolicy(
 	analysis *model.DiagnosisAnalysisRecord,
 	revisions []model.BodyStateRevision,
+	facts BodyStateFactIndex,
 ) (string, []DiagnosisFreshnessReason) {
 	if analysis == nil || len(revisions) == 0 {
 		return model.DiagnosisFreshnessFresh, []DiagnosisFreshnessReason{}
 	}
-
-	referencedFacts := map[string]struct{}{}
-	referencedObservations := map[string]struct{}{}
-	concerns := map[string]struct{}{}
-	for _, candidate := range analysis.Candidates {
-		if key := strings.TrimSpace(candidate.ConcernKey); key != "" && key != "general" {
-			concerns[key] = struct{}{}
-		}
-		for _, id := range decodeStringList(candidate.BasisFactIDs) {
-			referencedFacts[id] = struct{}{}
-		}
-		for _, id := range decodeStringList(candidate.BasisObservationIDs) {
-			referencedObservations[id] = struct{}{}
-		}
-	}
-
+	basis := newDiagnosisBasis(analysis)
 	state := model.DiagnosisFreshnessFresh
 	reasons := make([]DiagnosisFreshnessReason, 0)
+	stale := func(change bodyStateChange, code, itemID, concernKey, message string) {
+		state = model.DiagnosisFreshnessStale
+		reasons = append(reasons, freshnessReason(change, code, itemID, concernKey, message))
+	}
+	potentially := func(change bodyStateChange, code, itemID, concernKey, message string) {
+		state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
+		reasons = append(reasons, freshnessReason(change, code, itemID, concernKey, message))
+	}
 	for _, revision := range revisions {
-		var changes map[string]any
-		_ = json.Unmarshal(revision.Changes, &changes)
-		changeType := revision.ChangeType
-
-		if strings.HasPrefix(changeType, "safety.") || changeType == "safety.changed" {
-			state = model.DiagnosisFreshnessStale
-			reasons = append(reasons, freshnessReason(revision, "safety_state_changed", "", "", "安全状态发生变化，旧分析需要重新审核。"))
-			continue
-		}
-
-		switch changeType {
-		case "fact.corrected":
-			itemID := valueString(changes["corrected_fact_id"])
-			if _, referenced := referencedFacts[itemID]; referenced {
-				state = model.DiagnosisFreshnessStale
-				reasons = append(reasons, freshnessReason(revision, "referenced_fact_corrected", itemID, mapConcern(changes["replacement"]), "分析引用的事实被纠正。"))
-			} else if concernMatches(concerns, mapConcern(changes["replacement"])) {
-				state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
-				reasons = append(reasons, freshnessReason(revision, "related_fact_corrected", itemID, mapConcern(changes["replacement"]), "同一关注区域的事实被纠正。"))
+		change := decodeBodyStateChange(revision)
+		switch change.Kind {
+		case bodyStateChangeSafety:
+			stale(change, "safety_state_changed", "", "", "安全状态发生变化，旧分析需要重新审核。")
+		case bodyStateChangeFactsRecorded:
+			if itemID, concernKey, ok := basis.firstRelatedFact(change.FactIDs, facts); ok {
+				potentially(change, "new_related_fact", itemID, concernKey, "同一关注区域出现了新的事实。")
 			}
-		case "fact.temporal_changed", "fact.updated":
-			itemID := valueString(changes["fact_id"])
-			after := mapValue(changes["after"])
-			concernKey := valueString(after["concern_key"])
-			kind := valueString(after["kind"])
-			lifecycle := valueString(after["lifecycle_state"])
-			_, referenced := referencedFacts[itemID]
-			if isSafetyKind(kind) {
-				state = model.DiagnosisFreshnessStale
-				reasons = append(reasons, freshnessReason(revision, "safety_fact_changed", itemID, concernKey, "安全相关事实发生变化。"))
-			} else if referenced && (lifecycle == "inactive" || lifecycle == "resolved") {
-				state = model.DiagnosisFreshnessStale
-				reasons = append(reasons, freshnessReason(revision, "referenced_fact_no_longer_active", itemID, concernKey, "分析引用的事实已不再处于当前有效状态。"))
-			} else if referenced || concernMatches(concerns, concernKey) {
-				state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
-				reasons = append(reasons, freshnessReason(revision, "related_fact_changed", itemID, concernKey, "分析相关事实发生变化。"))
+		case bodyStateChangeFactCorrected:
+			concernKey := facts.concern(change.TargetID)
+			if len(change.FactIDs) > 0 && facts.concern(change.FactIDs[0]) != "" {
+				concernKey = facts.concern(change.FactIDs[0])
 			}
-		case "fact.added":
-			fact := mapValue(changes["fact"])
-			itemID := valueString(fact["id"])
-			concernKey := valueString(fact["concern_key"])
-			kind := valueString(fact["kind"])
-			if isSafetyKind(kind) {
-				state = model.DiagnosisFreshnessStale
-				reasons = append(reasons, freshnessReason(revision, "new_safety_fact", itemID, concernKey, "新增了安全相关事实。"))
-			} else if concernMatches(concerns, concernKey) {
-				state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
-				reasons = append(reasons, freshnessReason(revision, "new_related_fact", itemID, concernKey, "同一关注区域出现了新的事实。"))
+			if basis.citesFact(change.TargetID) {
+				stale(change, "referenced_fact_corrected", change.TargetID, concernKey, "分析引用的事实被纠正。")
+			} else if _, replacementConcern, ok := basis.firstRelatedFact(change.FactIDs, facts); ok {
+				potentially(change, "related_fact_corrected", change.TargetID, replacementConcern, "同一关注区域的事实被纠正。")
+			} else if basis.relatedConcern(facts.concern(change.TargetID)) {
+				potentially(change, "related_fact_corrected", change.TargetID, facts.concern(change.TargetID), "同一关注区域的事实被纠正。")
 			}
-		case "observation.updated":
-			itemID := valueString(changes["observation_id"])
-			after := mapValue(changes["after"])
-			concernKey := valueString(after["concern_key"])
-			_, referenced := referencedObservations[itemID]
-			if referenced || concernMatches(concerns, concernKey) {
-				state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
-				reasons = append(reasons, freshnessReason(revision, "related_observation_changed", itemID, concernKey, "分析相关观察结果发生变化。"))
+		case bodyStateChangeFactWithdrawn:
+			concernKey := facts.concern(change.TargetID)
+			if basis.citesFact(change.TargetID) {
+				stale(change, "referenced_fact_withdrawn", change.TargetID, concernKey, "分析引用的事实已被撤回。")
+			} else if basis.relatedConcern(concernKey) {
+				potentially(change, "related_fact_withdrawn", change.TargetID, concernKey, "同一关注区域的事实被撤回。")
 			}
-		case "observation.added":
-			observation := mapValue(changes["observation"])
-			itemID := valueString(observation["id"])
-			concernKey := valueString(observation["concern_key"])
-			if concernMatches(concerns, concernKey) {
-				state = maxFreshness(state, model.DiagnosisFreshnessPotentiallyStale)
-				reasons = append(reasons, freshnessReason(revision, "new_related_observation", itemID, concernKey, "同一关注区域出现了新的观察结果。"))
+		case bodyStateChangeObservationCorrected:
+			if basis.citesObservation(change.TargetID) {
+				stale(change, "referenced_observation_corrected", change.TargetID, "", "分析引用的观察结果被纠正。")
+			}
+		case bodyStateChangeObservationWithdrawn:
+			if basis.citesObservation(change.TargetID) {
+				stale(change, "referenced_observation_withdrawn", change.TargetID, "", "分析引用的观察结果已被撤回。")
+			}
+		case bodyStateChangeEpisode:
+			if itemID, concernKey, ok := basis.firstRelatedFact(change.FactIDs, facts); ok {
+				potentially(change, "related_episode_changed", itemID, concernKey, "分析相关症状的病程归组发生变化。")
 			}
 		}
 	}
 	return state, reasons
 }
 
-func freshnessReason(revision model.BodyStateRevision, code, itemID, concernKey, message string) DiagnosisFreshnessReason {
+func freshnessReason(change bodyStateChange, code, itemID, concernKey, message string) DiagnosisFreshnessReason {
 	return DiagnosisFreshnessReason{
-		Code: code, Revision: revision.Revision, ChangeType: revision.ChangeType,
+		Code: code, Revision: change.Revision, ChangeType: change.ChangeType,
 		ItemID: itemID, ConcernKey: concernKey, Message: message,
 	}
-}
-
-func decodeStringList(raw datatypes.JSON) []string {
-	var values []string
-	_ = json.Unmarshal(raw, &values)
-	return values
-}
-
-func mapValue(value any) map[string]any {
-	result, _ := value.(map[string]any)
-	return result
-}
-
-func mapConcern(value any) string {
-	return valueString(mapValue(value)["concern_key"])
-}
-
-func valueString(value any) string {
-	switch typed := value.(type) {
-	case string:
-		return strings.TrimSpace(typed)
-	case fmt.Stringer:
-		return typed.String()
-	default:
-		return ""
-	}
-}
-
-func concernMatches(concerns map[string]struct{}, concernKey string) bool {
-	if concernKey == "" || concernKey == "general" || len(concerns) == 0 {
-		return false
-	}
-	_, ok := concerns[concernKey]
-	return ok
-}
-
-func isSafetyKind(kind string) bool {
-	return kind == "red_flags" || kind == "safety_finding"
 }
 
 func maxFreshness(current, candidate string) string {

@@ -39,6 +39,12 @@ func (r *fakeBodyStateRepository) GetCurrent(context.Context, uuid.UUID) (*model
 	}
 	return r.current, nil
 }
+func (r *fakeBodyStateRepository) GetBodyStateHead(_ context.Context, owner uuid.UUID) (*model.BodyStateHead, error) {
+	if r.current == nil {
+		return &model.BodyStateHead{UserID: owner, SafetyState: []byte(`{}`)}, nil
+	}
+	return &model.BodyStateHead{UserID: owner, CurrentRevision: r.current.CurrentRevision, SafetyState: []byte(r.current.SafetyState)}, nil
+}
 func (r *fakeBodyStateRepository) ListRecentRevisions(context.Context, uuid.UUID, int) ([]model.BodyStateRevision, error) {
 	return r.revisions, nil
 }

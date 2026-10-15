@@ -26,6 +26,20 @@ func (m *memoryBodyContextLedger) ListSafetyScreens(context.Context, uuid.UUID) 
 	return append([]model.SafetyScreen{}, m.screens...), nil
 }
 
+func (m *memoryBodyContextLedger) GetBodyFactsByIDs(_ context.Context, owner uuid.UUID, ids []uuid.UUID) ([]model.BodyFact, error) {
+	wanted := map[uuid.UUID]bool{}
+	for _, id := range ids {
+		wanted[id] = true
+	}
+	out := []model.BodyFact{}
+	for _, fact := range m.facts {
+		if fact.UserID == owner && wanted[fact.ID] {
+			out = append(out, fact)
+		}
+	}
+	return out, nil
+}
+
 func (m *memoryBodyContextLedger) guard(expected int64) error {
 	if expected != m.revision {
 		return fmt.Errorf("%w: expected %d current %d", repository.ErrBodyStateRevisionConflict, expected, m.revision)

@@ -46,7 +46,9 @@ type treatmentDiagnosisSource interface {
 
 type treatmentBodyStateSource interface {
 	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
+	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
+	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
 	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
 	RecordOutcomeSymptom(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error)
 }
@@ -404,16 +406,16 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		return nil, fmt.Errorf("only proposed treatment revisions can be accepted")
 	}
 
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
+	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	facts := TreatmentDecisionFacts{
-		SafetyState:              snapshot.SafetyState,
+		SafetyState:              head.SafetyState,
 		CandidateAssessmentReady: true,
 		ProposalAcceptanceState:  revision.AcceptanceState,
 		SourceBodyStateRevision:  revision.SourceBodyStateRevision,
-		CurrentBodyStateRevision: snapshot.CurrentRevision,
+		CurrentBodyStateRevision: head.CurrentRevision,
 		MaterialReviewStatus:     model.TreatmentStatusActive,
 		MaterialReviewReasons:    []TreatmentReviewReason{},
 		DiagnosisStatus:          "completed",
@@ -460,12 +462,17 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		return nil, treatmentDecisionError(decision)
 	}
 
-	if snapshot.CurrentRevision > revision.SourceBodyStateRevision {
+	if head.CurrentRevision > revision.SourceBodyStateRevision {
 		revisions, revisionErr := s.bodyState.ListRevisionsAfter(ctx, userID, revision.SourceBodyStateRevision, 500)
 		if revisionErr != nil {
 			return nil, revisionErr
 		}
-		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions, treatmentReviewContextFromSnapshot(snapshot))
+		revisionFacts, resolveErr := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		review := TreatmentReviewContext{Facts: revisionFacts, OutcomeRevisions: map[int64]bool{}}
+		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions, review)
 	}
 	acceptanceDecision := EvaluateTreatmentDecision(
 		TreatmentDecisionPolicyV1,
@@ -486,7 +493,7 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		ctx,
 		userID,
 		revisionID,
-		snapshot.CurrentRevision,
+		head.CurrentRevision,
 		acceptanceTrace,
 	)
 	if err != nil {
@@ -631,11 +638,11 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	if current.Status == model.TreatmentStatusCompleted || current.Status == model.TreatmentStatusSuperseded {
 		return current.Status, decodeTreatmentReviewReasons(json.RawMessage(current.StatusReasons)), nil
 	}
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
+	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
 	if err != nil {
 		return "", nil, err
 	}
-	if bodyStateRequiresSafetyReview(snapshot.SafetyState) {
+	if bodyStateRequiresSafetyReview(head.SafetyState) {
 		return model.TreatmentStatusPaused, []TreatmentReviewReason{{
 			Code:    "active_safety_state",
 			Message: "当前安全状态要求暂停普通干预并优先审核。",
@@ -653,7 +660,11 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	if err != nil {
 		return "", nil, err
 	}
-	reviewContext := treatmentReviewContextFromSnapshot(snapshot)
+	revisionFacts, err := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
+	if err != nil {
+		return "", nil, err
+	}
+	reviewContext := TreatmentReviewContext{Facts: revisionFacts, OutcomeRevisions: map[int64]bool{}}
 	for _, outcome := range outcomes {
 		if outcome.BodyStateRevision != nil && outcome.TreatmentID != nil && *outcome.TreatmentID == current.ID {
 			reviewContext.OutcomeRevisions[*outcome.BodyStateRevision] = true
@@ -663,23 +674,13 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	return status, reasons, nil
 }
 
-// TreatmentReviewContext resolves V2 ledger revisions, which carry ids only,
-// to the facts they recorded. FactConcerns maps a V2 fact id to its projected
-// concern key; OutcomeRevisions marks revisions committed by a user-authored
-// Outcome symptom reported against the current Treatment.
+// TreatmentReviewContext resolves V2 ledger revisions, which carry ids only.
+// Facts maps the fact ids the revisions name to their kind and concern;
+// OutcomeRevisions marks revisions committed by a user-authored Outcome
+// symptom reported against the current Treatment.
 type TreatmentReviewContext struct {
-	FactConcerns     map[string]string
+	Facts            BodyStateFactIndex
 	OutcomeRevisions map[int64]bool
-}
-
-func treatmentReviewContextFromSnapshot(snapshot *BodyStateSnapshot) TreatmentReviewContext {
-	review := TreatmentReviewContext{FactConcerns: map[string]string{}, OutcomeRevisions: map[int64]bool{}}
-	if snapshot != nil {
-		for _, fact := range snapshot.Facts {
-			review.FactConcerns[fact.ID.String()] = fact.ConcernKey
-		}
-	}
-	return review
 }
 
 func decodeTreatmentReviewReasons(raw json.RawMessage) []TreatmentReviewReason {
@@ -696,6 +697,12 @@ type TreatmentReviewReason struct {
 	Message    string `json:"message"`
 }
 
+// EvaluateTreatmentReviewPolicy derives the review state of the current plan
+// from V2 BodyState revisions after its source revision. A Safety change
+// pauses the plan for review; a user statement related to the plan (an
+// Outcome-reported symptom on this plan, or a recorded/corrected/withdrawn
+// fact or episode change in a concern it covers or a fact/observation it
+// cites) only recommends review. The plan content is never changed here.
 func EvaluateTreatmentReviewPolicy(
 	analysis *model.DiagnosisAnalysisRecord,
 	revisions []model.BodyStateRevision,
@@ -704,87 +711,50 @@ func EvaluateTreatmentReviewPolicy(
 	if len(revisions) == 0 {
 		return model.TreatmentStatusActive, []TreatmentReviewReason{}
 	}
-	concerns := map[string]struct{}{}
-	referencedFacts := map[string]struct{}{}
-	if analysis != nil {
-		for _, candidate := range analysis.Candidates {
-			if candidate.ConcernKey != "" && candidate.ConcernKey != "general" {
-				concerns[candidate.ConcernKey] = struct{}{}
-			}
-			for _, id := range decodeStringList(candidate.BasisFactIDs) {
-				referencedFacts[id] = struct{}{}
-			}
-		}
-	}
+	basis := newDiagnosisBasis(analysis)
 	reasons := make([]TreatmentReviewReason, 0)
 	status := model.TreatmentStatusActive
+	material := func(change bodyStateChange, concernKey string) {
+		status = model.TreatmentStatusReviewRecommended
+		reasons = append(reasons, TreatmentReviewReason{
+			Code: "material_related_body_state_change", Revision: change.Revision,
+			ChangeType: change.ChangeType, ConcernKey: concernKey,
+			Message: "与当前方案相关的身体状态发生变化，建议审核而不是自动改写方案。",
+		})
+	}
 	for _, revision := range revisions {
-		if strings.HasPrefix(revision.ChangeType, "safety.") {
+		change := decodeBodyStateChange(revision)
+		switch change.Kind {
+		case bodyStateChangeSafety:
 			return model.TreatmentStatusPaused, []TreatmentReviewReason{{
-				Code: "safety_state_changed", Revision: revision.Revision,
-				ChangeType: revision.ChangeType, Message: "安全状态变化要求暂停并审核当前方案。",
+				Code: "safety_state_changed", Revision: change.Revision,
+				ChangeType: change.ChangeType, Message: "安全状态变化要求暂停并审核当前方案。",
 			}}
-		}
-		var changes map[string]any
-		_ = json.Unmarshal(revision.Changes, &changes)
-		if revision.ChangeType == "facts.recorded" {
-			if v2.OutcomeRevisions[revision.Revision] {
+		case bodyStateChangeFactsRecorded:
+			if v2.OutcomeRevisions[change.Revision] {
 				status = model.TreatmentStatusReviewRecommended
 				reasons = append(reasons, TreatmentReviewReason{
-					Code: "outcome_reported_symptom", Revision: revision.Revision, ChangeType: revision.ChangeType,
+					Code: "outcome_reported_symptom", Revision: change.Revision, ChangeType: change.ChangeType,
 					Message: "你在执行当前方案后报告了身体变化，建议审核而不是自动改写方案。",
 				})
 				continue
 			}
-			factIDs, _ := changes["fact_ids"].([]any)
-			for _, raw := range factIDs {
-				factID := valueString(raw)
-				concernKey := v2.FactConcerns[factID]
-				_, referenced := referencedFacts[factID]
-				_, related := concerns[concernKey]
-				if referenced || related {
-					status = model.TreatmentStatusReviewRecommended
-					reasons = append(reasons, TreatmentReviewReason{
-						Code: "material_related_body_state_change", Revision: revision.Revision,
-						ChangeType: revision.ChangeType, ConcernKey: concernKey,
-						Message: "与当前方案相关的身体状态发生变化，建议审核而不是自动改写方案。",
-					})
-					break
-				}
+			if _, concernKey, ok := basis.firstRelatedFact(change.FactIDs, v2.Facts); ok {
+				material(change, concernKey)
 			}
-			continue
-		}
-		concernKey := ""
-		itemID := ""
-		switch revision.ChangeType {
-		case "fact.added":
-			fact := mapValue(changes["fact"])
-			concernKey = valueString(fact["concern_key"])
-			if isSafetyKind(valueString(fact["kind"])) {
-				return model.TreatmentStatusPaused, []TreatmentReviewReason{{Code: "new_safety_fact", Revision: revision.Revision, ChangeType: revision.ChangeType, ConcernKey: concernKey, Message: "新增安全相关事实要求暂停当前方案。"}}
+		case bodyStateChangeFactCorrected, bodyStateChangeFactWithdrawn:
+			ids := append([]string{change.TargetID}, change.FactIDs...)
+			if _, concernKey, ok := basis.firstRelatedFact(ids, v2.Facts); ok {
+				material(change, concernKey)
 			}
-		case "fact.updated", "fact.temporal_changed":
-			itemID = valueString(changes["fact_id"])
-			concernKey = valueString(mapValue(changes["after"])["concern_key"])
-		case "fact.corrected":
-			itemID = valueString(changes["corrected_fact_id"])
-			concernKey = mapConcern(changes["replacement"])
-		case "observation.added":
-			concernKey = mapConcern(changes["observation"])
-		case "observation.updated":
-			concernKey = mapConcern(changes["after"])
-		default:
-			continue
-		}
-		_, referenced := referencedFacts[itemID]
-		_, related := concerns[concernKey]
-		if referenced || related {
-			status = model.TreatmentStatusReviewRecommended
-			reasons = append(reasons, TreatmentReviewReason{
-				Code: "material_related_body_state_change", Revision: revision.Revision,
-				ChangeType: revision.ChangeType, ConcernKey: concernKey,
-				Message: "与当前方案相关的身体状态发生变化，建议审核而不是自动改写方案。",
-			})
+		case bodyStateChangeObservationCorrected, bodyStateChangeObservationWithdrawn:
+			if basis.citesObservation(change.TargetID) {
+				material(change, "")
+			}
+		case bodyStateChangeEpisode:
+			if _, concernKey, ok := basis.firstRelatedFact(change.FactIDs, v2.Facts); ok {
+				material(change, concernKey)
+			}
 		}
 	}
 	return status, reasons

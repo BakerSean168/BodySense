@@ -132,6 +132,12 @@ type fakeTreatmentBodyState struct {
 func (f *fakeTreatmentBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*BodyStateSnapshot, error) {
 	return f.snapshot, nil
 }
+func (f *fakeTreatmentBodyState) GetBodyStateHead(context.Context, uuid.UUID) (*model.BodyStateHead, error) {
+	return &model.BodyStateHead{UserID: f.snapshot.UserID, CurrentRevision: f.snapshot.CurrentRevision, SafetyState: f.snapshot.SafetyState}, nil
+}
+func (f *fakeTreatmentBodyState) ResolveRevisionFacts(_ context.Context, _ uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error) {
+	return testRevisionFacts(revisions), nil
+}
 func (f *fakeTreatmentBodyState) ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error) {
 	return f.revisions, nil
 }
@@ -457,10 +463,8 @@ func TestTreatmentGenerationBlockedBySafetyState(t *testing.T) {
 
 func TestTreatmentReviewUnrelatedChangeDoesNotRewritePlan(t *testing.T) {
 	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{{
-		Revision: 4, ChangeType: "fact.added",
-		Changes: datatypes.JSON(`{"fact":{"concern_key":"region:sleep","kind":"lifestyle"}}`),
-	}}, TreatmentReviewContext{})
+	revisions := []model.BodyStateRevision{testFactRecorded(4, "lifestyle:sleep")}
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
 	if status != model.TreatmentStatusActive || len(reasons) != 0 {
 		t.Fatalf("unrelated change should keep active plan: status=%s reasons=%#v", status, reasons)
 	}
@@ -468,32 +472,62 @@ func TestTreatmentReviewUnrelatedChangeDoesNotRewritePlan(t *testing.T) {
 
 func TestTreatmentReviewRelatedChangeRecommendsReview(t *testing.T) {
 	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{{
-		Revision: 5, ChangeType: "fact.added",
-		Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`),
-	}}, TreatmentReviewContext{})
-	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 {
+	revisions := []model.BodyStateRevision{testFactRecorded(5, "region:neck")}
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
+	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 || reasons[0].ConcernKey != "region:neck" {
 		t.Fatalf("related change should recommend review: status=%s reasons=%#v", status, reasons)
 	}
 }
 
-func TestTreatmentReviewV2FactsRecordedUsesProjectedConcernAndOutcomeLink(t *testing.T) {
+func TestTreatmentReviewV2FactsRecordedUsesResolvedConcernAndOutcomeLink(t *testing.T) {
 	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	neck, sleep := uuid.NewString(), uuid.NewString()
-	revision := func(n int64, id string) model.BodyStateRevision {
-		return model.BodyStateRevision{Revision: n, ChangeType: "facts.recorded", Changes: datatypes.JSON(`{"fact_ids":["` + id + `"]}`)}
-	}
-	review := TreatmentReviewContext{FactConcerns: map[string]string{neck: "region:neck", sleep: "general"}, OutcomeRevisions: map[int64]bool{}}
-	if status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(6, sleep)}, review); status != model.TreatmentStatusActive || len(reasons) != 0 {
+	review := TreatmentReviewContext{OutcomeRevisions: map[int64]bool{}}
+	sleep, neck := testFactRecorded(6, "general"), testFactRecorded(7, "region:neck")
+	review.Facts = testRevisionFacts([]model.BodyStateRevision{sleep, neck})
+	if status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{sleep}, review); status != model.TreatmentStatusActive || len(reasons) != 0 {
 		t.Fatalf("unrelated V2 fact must not recommend review: %s %#v", status, reasons)
 	}
-	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(7, neck)}, review); status != model.TreatmentStatusReviewRecommended {
+	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{neck}, review); status != model.TreatmentStatusReviewRecommended {
 		t.Fatalf("related V2 symptom must recommend review, got %s", status)
 	}
-	review.OutcomeRevisions[8] = true
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision(8, sleep)}, review)
+	review.OutcomeRevisions[6] = true
+	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{sleep}, review)
 	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 || reasons[0].Code != "outcome_reported_symptom" {
 		t.Fatalf("outcome-reported symptom on this plan must recommend review: %s %#v", status, reasons)
+	}
+	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{neck}, TreatmentReviewContext{}); status != model.TreatmentStatusActive {
+		t.Fatalf("an unresolved fact id has no concern and must not recommend review, got %s", status)
+	}
+}
+
+func TestTreatmentReviewV2AmendmentsAndEpisodes(t *testing.T) {
+	cited := testFactID("region:neck")
+	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{
+		ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`["` + cited.String() + `"]`),
+		BasisObservationIDs: datatypes.JSON(`["obs-1"]`),
+	}}}
+	sleep := testFactID("lifestyle:sleep")
+	cases := []struct {
+		name     string
+		revision model.BodyStateRevision
+		want     model.TreatmentStatus
+	}{
+		{"cited fact withdrawn", testRevision(8, "facts.withdrawn", `{"target_fact_id":"`+cited.String()+`","fact_ids":[]}`), model.TreatmentStatusReviewRecommended},
+		{"unrelated fact corrected", testRevision(9, "facts.corrected", `{"target_fact_id":"`+sleep.String()+`","fact_ids":["`+sleep.String()+`"]}`), model.TreatmentStatusActive},
+		{"correction moves statement into neck", testRevision(10, "facts.corrected", `{"target_fact_id":"`+sleep.String()+`","fact_ids":["`+cited.String()+`"]}`), model.TreatmentStatusReviewRecommended},
+		{"cited observation corrected", testRevision(11, "observation.corrected", `{"target_observation_id":"obs-1"}`), model.TreatmentStatusReviewRecommended},
+		{"other observation withdrawn", testRevision(12, "observation.withdrawn", `{"target_observation_id":"obs-2"}`), model.TreatmentStatusActive},
+		{"neck symptom regrouped", testRevision(13, "episode.associate", `{"fact_id":"`+cited.String()+`"}`), model.TreatmentStatusReviewRecommended},
+		{"user hypothesis is not plan evidence", testRevision(14, "hypothesis.recorded", `{"related_fact_ids":["`+cited.String()+`"]}`), model.TreatmentStatusActive},
+		{"legacy fact change types are ignored", testRevision(15, "fact.added", `{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`), model.TreatmentStatusActive},
+		{"safety screen pauses", testRevision(16, "safety.screened", `{"safety_screen_id":"x"}`), model.TreatmentStatusPaused},
+	}
+	for _, tc := range cases {
+		revisions := []model.BodyStateRevision{tc.revision}
+		status, _ := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
+		if status != tc.want {
+			t.Fatalf("%s: status=%s want %s", tc.name, status, tc.want)
+		}
 	}
 }
 
@@ -594,7 +628,7 @@ func TestTreatmentAcceptRejectsRelatedBodyStateChange(t *testing.T) {
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
 		&fakeTreatmentBodyState{
 			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{Revision: 8, ChangeType: "fact.added", Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`)}},
+			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:neck")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
@@ -625,7 +659,7 @@ func TestTreatmentAcceptAllowsUnrelatedChangeAndPinsCheckedRevision(t *testing.T
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
 		&fakeTreatmentBodyState{
 			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{Revision: 8, ChangeType: "fact.added", Changes: datatypes.JSON(`{"fact":{"concern_key":"region:sleep","kind":"lifestyle"}}`)}},
+			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:sleep")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
@@ -800,11 +834,8 @@ func TestTreatmentGetCurrentIsPure(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot: &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{
-				Revision: 5, ChangeType: "fact.added",
-				Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`),
-			}},
+			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -830,11 +861,8 @@ func TestTreatmentPreviewDerivesReviewWithoutWriting(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot: &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{
-				Revision: 5, ChangeType: "fact.added",
-				Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`),
-			}},
+			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -860,11 +888,8 @@ func TestTreatmentExplicitReviewPersistsDerivedStatus(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot: &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{
-				Revision: 5, ChangeType: "fact.added",
-				Changes: datatypes.JSON(`{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`),
-			}},
+			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -876,33 +901,6 @@ func TestTreatmentExplicitReviewPersistsDerivedStatus(t *testing.T) {
 	}
 	if repo.statusUpdates != 1 {
 		t.Fatalf("explicit review should persist exactly once, updates=%d", repo.statusUpdates)
-	}
-}
-
-func TestTreatmentReviewTemporalChangePayloadFromOutcomeRecommendsReview(t *testing.T) {
-	factID := "82cb44cb-4648-43bb-a27b-271b189da53e"
-	analysis := &model.DiagnosisAnalysisRecord{
-		Candidates: []model.DiagnosisCandidateRecord{{
-			ConcernKey:   "region:颈肩",
-			BasisFactIDs: datatypes.JSON(`[]`),
-		}},
-	}
-	revision := model.BodyStateRevision{
-		Revision:   4,
-		ChangeType: "fact.temporal_changed",
-		Changes: datatypes.JSON(`{
-			"fact_id":"` + factID + `",
-			"before":{"id":"` + factID + `","concern_key":"region:颈肩","kind":"discomfort","trend":"stable"},
-			"after":{"id":"` + factID + `","concern_key":"region:颈肩","kind":"discomfort","trend":"improving"}
-		}`),
-	}
-
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{revision}, TreatmentReviewContext{})
-	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 {
-		t.Fatalf("temporal outcome change should recommend review: status=%s reasons=%#v", status, reasons)
-	}
-	if reasons[0].ConcernKey != "region:颈肩" || reasons[0].ChangeType != "fact.temporal_changed" {
-		t.Fatalf("unexpected temporal review reason: %#v", reasons[0])
 	}
 }
 
@@ -1092,7 +1090,7 @@ func TestTreatmentAcceptancePersistsDecisionTraceWithCheckedRevision(t *testing.
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
 		&fakeTreatmentBodyState{
 			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 16, SafetyState: json.RawMessage(`{}`)},
-			revisions: []model.BodyStateRevision{{Revision: 16, ChangeType: "fact.added", Changes: datatypes.JSON(`{"fact":{"concern_key":"region:sleep","kind":"lifestyle"}}`)}},
+			revisions: []model.BodyStateRevision{testFactRecorded(16, "region:sleep")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{},
@@ -1288,4 +1286,34 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 	if err != nil || !jsonBytesEqual(frozen.UserConstraints, want) {
 		t.Fatalf("replay input must freeze the equipment constraint: %v %s", err, frozen.UserConstraints)
 	}
+}
+
+// testConcerns are the concerns test facts can belong to; testFactID derives
+// a stable fact id per concern so fakes resolve ids without shared state.
+var testConcerns = []string{"region:neck", "region:sleep", "region:颈肩", "lifestyle:sleep", "general"}
+
+func testFactID(concern string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte("test-fact:"+concern))
+}
+
+func testRevision(n int64, changeType, changes string) model.BodyStateRevision {
+	return model.BodyStateRevision{Revision: n, ChangeType: changeType, Changes: datatypes.JSON(changes)}
+}
+
+func testFactRecorded(n int64, concern string) model.BodyStateRevision {
+	return testRevision(n, "facts.recorded", `{"fact_ids":["`+testFactID(concern).String()+`"]}`)
+}
+
+func testRevisionFacts(revisions []model.BodyStateRevision) BodyStateFactIndex {
+	known := map[uuid.UUID]string{}
+	for _, concern := range testConcerns {
+		known[testFactID(concern)] = concern
+	}
+	index := BodyStateFactIndex{}
+	for _, id := range bodyStateRevisionFactIDs(revisions) {
+		if concern, ok := known[id]; ok {
+			index[id.String()] = BodyStateFactRef{Kind: "symptom", ConcernKey: concern}
+		}
+	}
+	return index
 }
