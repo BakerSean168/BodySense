@@ -134,10 +134,14 @@ GET  /api/v1/consultations/:id/thread
 POST /api/v1/consultations/:id/diagnosis
 
 GET  /api/v1/body-state
-POST /api/v1/body-state/facts
+POST /api/v1/body-state/records
 POST /api/v1/body-state/observations
-POST /api/v1/body-state/hypotheses
+POST /api/v1/body-state/hypothesis-records
 POST /api/v1/body-state/safety/resolve
+
+GET  /api/v1/equipment
+POST /api/v1/equipment
+PUT  /api/v1/equipment/:id
 
 GET  /api/v1/diagnosis-analyses
 PUT  /api/v1/diagnosis-analyses/:analysisId/assessment
