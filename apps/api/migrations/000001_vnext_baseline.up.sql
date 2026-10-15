@@ -1195,6 +1195,7 @@ CREATE TABLE public.safety_screens (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     capture_id text NOT NULL,
+    body_fact_id uuid NOT NULL,
     source_conversation_id uuid NOT NULL,
     source_run_id uuid NOT NULL,
     source_message_id uuid NOT NULL,
@@ -4198,6 +4199,14 @@ ALTER TABLE ONLY public.runtime_events
 
 ALTER TABLE ONLY public.runtime_events
     ADD CONSTRAINT runtime_events_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: safety_screens safety_screens_user_id_body_fact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_body_fact_id_fkey FOREIGN KEY (user_id, body_fact_id) REFERENCES public.body_facts(user_id, id) ON DELETE CASCADE;
 
 
 --

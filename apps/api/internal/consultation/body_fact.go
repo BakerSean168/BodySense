@@ -34,25 +34,25 @@ type bodyFactProposal struct {
 	Facts            []model.BodyFactInput `json:"facts"`
 }
 
-func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage, ownedSafetyRevisions ...model.BodyStateRevision) (json.RawMessage, error) {
+func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage, ownedSafetyRevisions ...model.BodyStateRevision) (json.RawMessage, []service.CommittedBodyFact, error) {
 	if r.bodyFacts == nil || state.Run == nil || state.UID == uuid.Nil || state.Run.ID == uuid.Nil || state.Run.UserID != state.UID || state.Run.ConversationID != state.ConversationID {
-		return nil, fmt.Errorf("BodyFact persistence or authenticated run is unavailable")
+		return nil, nil, fmt.Errorf("BodyFact persistence or authenticated run is unavailable")
 	}
 	policy, err := service.ConsultationDecisionPolicyRevisionForConfiguration(state.ExpectedConfigurationID)
 	if err != nil || policy != service.ConsultationDecisionPolicyV3 {
-		return nil, fmt.Errorf("BodyFact proposal requires the registered v3 runtime")
+		return nil, nil, fmt.Errorf("BodyFact proposal requires the registered v3 runtime")
 	}
 	if strings.TrimSpace(toolCallID) == "" || len(toolCallID) > 256 || len(raw) > 65536 {
-		return nil, fmt.Errorf("invalid BodyFact tool identity or payload size")
+		return nil, nil, fmt.Errorf("invalid BodyFact tool identity or payload size")
 	}
 	var proposal bodyFactProposal
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&proposal); err != nil {
-		return nil, fmt.Errorf("invalid BodyFact proposal contract")
+		return nil, nil, fmt.Errorf("invalid BodyFact proposal contract")
 	}
 	if decoder.Decode(new(any)) != io.EOF || proposal.Status != "proposed" || proposal.ExpectedRevision == nil {
-		return nil, fmt.Errorf("only a proposed statement batch with an expected revision is accepted")
+		return nil, nil, fmt.Errorf("only a proposed statement batch with an expected revision is accepted")
 	}
 	// Stable producer call + server Run define retry identity. No source identity
 	// or retry token can be invented/rebound by the model.
@@ -74,38 +74,52 @@ func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState,
 		}
 	}
 	if err := command.Validate(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var receipt *model.BodyFactCommit
 	if state.AnswerSource != nil {
 		source := *state.AnswerSource
 		if source.RunID != state.Run.ID {
-			return nil, fmt.Errorf("answer does not belong to the active Run")
+			return nil, nil, fmt.Errorf("answer does not belong to the active Run")
 		}
 		ledger, ok := r.bodyFacts.(interface {
 			RecordAnswerFacts(context.Context, uuid.UUID, model.AnswerFactSource, model.RecordBodyFactsCommand) (*model.BodyFactCommit, error)
 		})
 		if !ok {
-			return nil, fmt.Errorf("accepted-answer persistence unavailable")
+			return nil, nil, fmt.Errorf("accepted-answer persistence unavailable")
 		}
 		receipt, err = ledger.RecordAnswerFacts(ctx, state.UID, source, command)
 	} else {
 		receipt, err = r.bodyFacts.RecordRunFacts(ctx, state.UID, state.Run.ID, command)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if receipt == nil || receipt.UserID != state.UID || receipt.ID == uuid.Nil || receipt.EventID == uuid.Nil || receipt.RevisionID == uuid.Nil || receipt.Revision <= 0 {
-		return nil, fmt.Errorf("BodyFact commit receipt is missing or does not match its owner")
+		return nil, nil, fmt.Errorf("BodyFact commit receipt is missing or does not match its owner")
 	}
 	var ids []uuid.UUID
 	if err := json.Unmarshal(receipt.FactIDs, &ids); err != nil || len(ids) != len(command.Facts) {
-		return nil, fmt.Errorf("BodyFact commit receipt does not account for the complete batch")
+		return nil, nil, fmt.Errorf("BodyFact commit receipt does not account for the complete batch")
 	}
-	return json.Marshal(struct {
+	// Committed facts, addressed by producer call + index, are what a later
+	// symptom intake question in this stream may bind to.
+	committed := make([]service.CommittedBodyFact, 0, len(ids))
+	for index, input := range command.Facts {
+		var details struct {
+			Presence string `json:"presence"`
+		}
+		_ = json.Unmarshal(input.Details, &details)
+		committed = append(committed, service.CommittedBodyFact{ToolCallID: toolCallID, Index: index, FactID: ids[index], Kind: input.Kind, Presence: details.Presence})
+	}
+	encoded, err := json.Marshal(struct {
 		Status  string                `json:"status"`
 		Receipt *model.BodyFactCommit `json:"receipt"`
 	}{Status: "persisted", Receipt: receipt})
+	if err != nil {
+		return nil, nil, err
+	}
+	return encoded, committed, nil
 }
 
 // The new version has exactly one fact-write boundary. A stale/malformed

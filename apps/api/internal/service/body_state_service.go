@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -148,108 +147,6 @@ func (s *BodyStateService) ListReviewableObservations(
 		items = []model.BodyStateObservation{}
 	}
 	return items, nil
-}
-
-// RecordStructuredIntakeAnswer turns a Go-validated, runtime-bound symptom
-// intake answer into the V2 ledger: one structured_answer symptom statement
-// (the user's own answer text) and, when the bounded safety checklist was
-// answered, a safety screen, committed in one BodyState revision. Any other
-// interaction answer, including a model-authored ask_user without the runtime
-// binding, creates nothing.
-func (s *BodyStateService) RecordStructuredIntakeAnswer(
-	ctx context.Context,
-	userID uuid.UUID,
-	source model.AnswerFactSource,
-	interaction *model.AgentInteraction,
-) error {
-	if interaction == nil {
-		return nil
-	}
-	symptom, captureID, matched, err := bodyStateBoundSymptomAnswer(interaction.ToolCallID, interaction.Question, json.RawMessage(interaction.Answer))
-	if !matched {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	ledger, ok := s.repo.(structuredIntakeLedger)
-	if !ok {
-		return errors.New("structured intake ledger is not configured")
-	}
-	_, answerText, err := model.ValidateInteractionAnswer(interaction.Question, interaction.Answer)
-	if err != nil {
-		return err
-	}
-	command, err := bodyStateStructuredIntakeCommand(symptom, captureID, answerText)
-	if err != nil {
-		return err
-	}
-	if regions := command.Fact.BodyRegionIDs; len(regions) > 0 && s.bodyRegionIDValidator != nil && !s.bodyRegionIDValidator.IsValidBodyRegionID(regions[0]) {
-		command.Fact.BodyRegionIDs = []string{}
-	}
-	_, err = ledger.RecordStructuredIntake(ctx, userID, source, command)
-	return err
-}
-
-type structuredIntakeLedger interface {
-	RecordStructuredIntake(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, command model.StructuredIntakeCommand) (*model.BodyFactCommit, error)
-}
-
-func bodyStateStructuredIntakeCommand(symptom map[string]any, captureID, answerText string) (model.StructuredIntakeCommand, error) {
-	answerText = strings.TrimSpace(answerText)
-	if answerText == "" || utf8.RuneCountInString(answerText) > 2000 {
-		return model.StructuredIntakeCommand{}, errors.New("structured symptom intake answer text is empty or too long")
-	}
-	details := model.SymptomFactDetails{
-		SymptomType: bodyStateString(symptom["symptom_type"]),
-		Presence:    "present",
-	}
-	if severity := bodyStateString(symptom["severity"]); severity != "" {
-		details.Severity = &model.FactSeverity{RawValue: severity}
-	}
-	for _, trigger := range strings.Split(bodyStateString(symptom["trigger"]), "，") {
-		if trigger = strings.TrimSpace(trigger); trigger != "" {
-			details.Triggers = append(details.Triggers, trigger)
-		}
-	}
-	if relief := bodyStateString(symptom["relief"]); relief != "" {
-		details.RelievingFactors = []string{relief}
-	}
-	detailsJSON, err := json.Marshal(details)
-	if err != nil {
-		return model.StructuredIntakeCommand{}, err
-	}
-	temporal := model.FactTemporal{Precision: "unknown"}
-	if duration := bodyStateString(symptom["duration"]); duration != "" && utf8.RuneCountInString(duration) <= 500 {
-		temporal.OriginalExpression = duration
-	}
-	regions := []string{}
-	if _, regionID := bodyStateCanonicalRegionProjection(bodyStateString(symptom["body_part"])); regionID != nil {
-		regions = append(regions, *regionID)
-	}
-	command := model.StructuredIntakeCommand{
-		CaptureID: captureID,
-		Fact: model.BodyFactInput{
-			Kind: "symptom", Statement: answerText, BodyRegionIDs: regions,
-			Temporal: temporal, Details: detailsJSON,
-		},
-	}
-	if symptom["safety_capture_revision"] == SafetyCaptureRevisionV1 {
-		answers := model.SafetyScreenAnswers{}
-		targets := map[string]*bool{
-			"trauma": &answers.Trauma, "radiating_pain": &answers.RadiatingPain, "numbness": &answers.Numbness,
-			"weakness": &answers.Weakness, "dizziness": &answers.Dizziness,
-		}
-		for _, field := range structuredSafetyDetails {
-			value, ok := symptom[field.key].(bool)
-			if !ok {
-				return model.StructuredIntakeCommand{}, errors.New("structured safety checklist is incomplete")
-			}
-			*targets[field.key] = value
-		}
-		command.Screen = &answers
-	}
-	return command, nil
 }
 
 // ApplyCurrentContextPatch is the application boundary for a semantically
@@ -643,135 +540,6 @@ func (s *BodyStateService) RecordSafetyEventWithReceipt(ctx context.Context, use
 	return revision, nil
 }
 
-var bodyStateSafetySignalOptions = []struct{ option, concept string }{
-	{"外伤或创伤", "trauma"}, {"放射痛", "radiating_pain"}, {"麻木", "numbness"},
-	{"无力", "weakness"}, {"头晕", "dizziness"},
-}
-
-func bodyStateSafetySelection(value any) (map[string]any, bool) {
-	items, ok := value.([]any)
-	if !ok || len(items) == 0 {
-		return nil, false
-	}
-	selected := map[string]bool{}
-	for _, item := range items {
-		option, ok := item.(string)
-		if !ok || selected[option] {
-			return nil, false
-		}
-		selected[option] = true
-	}
-	if selected["以上均无"] && len(selected) != 1 {
-		return nil, false
-	}
-	result := map[string]any{"safety_capture_revision": SafetyCaptureRevisionV1}
-	for _, item := range bodyStateSafetySignalOptions {
-		result[item.concept] = selected[item.option]
-		delete(selected, item.option)
-	}
-	delete(selected, "以上均无")
-	return result, len(selected) == 0
-}
-
-func bodyStateValidCaptureID(value string) bool {
-	if len(value) != 24 || strings.ToLower(value) != value {
-		return false
-	}
-	decoded, err := hex.DecodeString(value)
-	return err == nil && len(decoded) == 12
-}
-
-func bodyStateBoundSymptomAnswer(
-	toolCallID string,
-	question datatypes.JSON,
-	answer json.RawMessage,
-) (map[string]any, string, bool, error) {
-	var envelope struct {
-		Purpose string `json:"purpose"`
-		Fields  []struct {
-			Key              string   `json:"key"`
-			AnswerType       string   `json:"answer_type"`
-			Options          []string `json:"options"`
-			ExclusiveOptions []string `json:"exclusive_options"`
-			Required         bool     `json:"required"`
-		} `json:"fields"`
-		StateBinding struct {
-			Revision  string            `json:"revision"`
-			CaptureID string            `json:"capture_id"`
-			SeedInfo  map[string]any    `json:"seed_info"`
-			FieldMap  map[string]string `json:"field_map"`
-		} `json:"state_binding"`
-	}
-	if len(question) == 0 || json.Unmarshal(question, &envelope) != nil || envelope.Purpose != "symptom_intake" {
-		return nil, "", false, nil
-	}
-	captureID := strings.ToLower(strings.TrimSpace(envelope.StateBinding.CaptureID))
-	if envelope.StateBinding.Revision != "symptom-intake-binding-v1" ||
-		!bodyStateValidCaptureID(captureID) ||
-		toolCallID != "intake-"+captureID {
-		// A model-authored ask_user call is not allowed to promote BodyState.
-		return nil, "", false, nil
-	}
-
-	var payload struct {
-		Fields map[string]any `json:"fields"`
-	}
-	if len(answer) == 0 || json.Unmarshal(answer, &payload) != nil || len(payload.Fields) == 0 {
-		return nil, captureID, true, errors.New("structured symptom intake answer has no fields")
-	}
-	allowed := map[string]bool{
-		"duration": true, "trigger": true, "relief": true, "severity": true,
-		"radiation": true, "functional_impact": true, "neurological_signs": true,
-		"onset": true, "additional_notes": true,
-	}
-	// Only the runtime's bounded select-all checklist can establish complete
-	// safety capture. Seed text and unrelated answer fields cannot supply it.
-	var safetyCapture map[string]any
-	if envelope.StateBinding.FieldMap["safety_signals"] == "safety_signals" {
-		for _, field := range envelope.Fields {
-			if field.Key != "safety_signals" || field.AnswerType != "multi_choice" || !field.Required || len(field.Options) != 6 || len(field.ExclusiveOptions) != 1 || field.ExclusiveOptions[0] != "以上均无" {
-				continue
-			}
-			validOptions := true
-			for i, option := range bodyStateSafetySignalOptions {
-				if field.Options[i] != option.option {
-					validOptions = false
-				}
-			}
-			if validOptions && field.Options[5] == "以上均无" {
-				if safety, valid := bodyStateSafetySelection(payload.Fields["safety_signals"]); valid {
-					safetyCapture = safety
-				}
-			}
-			break
-		}
-	}
-	symptom := map[string]any{}
-	for _, key := range []string{
-		"body_part", "symptom_type", "duration", "trigger", "relief", "severity",
-		"radiation", "functional_impact", "neurological_signs", "onset", "additional_notes",
-	} {
-		if value := bodyStateString(envelope.StateBinding.SeedInfo[key]); value != "" {
-			symptom[key] = value
-		}
-	}
-	for answerKey, target := range envelope.StateBinding.FieldMap {
-		if !allowed[target] {
-			continue
-		}
-		if value := bodyStateAnswerString(payload.Fields[answerKey]); value != "" {
-			symptom[target] = value
-		}
-	}
-	for key, value := range safetyCapture {
-		symptom[key] = value
-	}
-	if bodyStateString(symptom["body_part"]) == "" || bodyStateString(symptom["symptom_type"]) == "" {
-		return nil, captureID, true, errors.New("structured symptom intake binding is missing symptom identity")
-	}
-	return symptom, captureID, true, nil
-}
-
 func bodyStateCanonicalRegionProjection(display string) (string, *string) {
 	display = strings.TrimSpace(display)
 	if display == "" {
@@ -802,22 +570,6 @@ func bodyStateString(value any) string {
 		return ""
 	}
 	return strings.TrimSpace(fmt.Sprint(value))
-}
-
-// bodyStateAnswerString renders a scalar or multi-choice answer value; a
-// multi-choice selection keeps the canonical "，" join used for answer text.
-func bodyStateAnswerString(value any) string {
-	items, ok := value.([]any)
-	if !ok {
-		return bodyStateString(value)
-	}
-	parts := make([]string, 0, len(items))
-	for _, item := range items {
-		if text := bodyStateString(item); text != "" {
-			parts = append(parts, text)
-		}
-	}
-	return strings.Join(parts, "，")
 }
 
 func bodyStateMustJSON(value any) []byte {

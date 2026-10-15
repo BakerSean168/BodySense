@@ -24,7 +24,7 @@ import (
 // aggregate. This is deliberately not an Upsert: changing a statement requires a
 // new command and correction authorization, never reuse of an idempotency key.
 func (r *BodyStateRepository) RecordDirectFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand) (*model.BodyFactCommit, error) {
-	return r.recordFacts(ctx, userID, command, nil, nil, nil)
+	return r.recordFacts(ctx, userID, command, nil, nil)
 }
 
 // RecordMessageFacts only accepts literal excerpts from a user-authored message
@@ -34,7 +34,7 @@ func (r *BodyStateRepository) RecordMessageFacts(ctx context.Context, userID uui
 	if source.RunID == uuid.Nil || source.MessageID == uuid.Nil {
 		return nil, fmt.Errorf("%w: run and user message identities are required", model.ErrInvalidBodyFact)
 	}
-	return r.recordFacts(ctx, userID, command, &source, nil, nil)
+	return r.recordFacts(ctx, userID, command, &source, nil)
 }
 
 // RecordRunFacts resolves the original user message from the Go-owned turn.
@@ -44,18 +44,10 @@ func (r *BodyStateRepository) RecordRunFacts(ctx context.Context, userID, runID 
 	if runID == uuid.Nil {
 		return nil, fmt.Errorf("%w: run identity required", model.ErrInvalidBodyFact)
 	}
-	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: runID}, nil, nil)
+	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: runID}, nil)
 }
 
-// structuredIntake marks a server-built symptom intake commit. It follows the
-// owner's current revision (no client expected revision exists) and, when the
-// checklist was complete, writes the safety screen in the same revision.
-type structuredIntake struct {
-	captureID string
-	screen    *model.SafetyScreenAnswers
-}
-
-func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource, answerSource *model.AnswerFactSource, intake *structuredIntake) (*model.BodyFactCommit, error) {
+func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID, command model.RecordBodyFactsCommand, source *model.MessageFactSource, answerSource *model.AnswerFactSource) (*model.BodyFactCommit, error) {
 	if userID == uuid.Nil {
 		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyFact)
 	}
@@ -72,18 +64,6 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 			Source  model.AnswerFactSource       `json:"source"`
 			Command model.RecordBodyFactsCommand `json:"command"`
 		}{Kind: "structured_answer", Source: *answerSource, Command: command})
-	}
-	if intake != nil {
-		if answerSource == nil {
-			return nil, fmt.Errorf("%w: structured intake requires an accepted answer", model.ErrInvalidBodyFact)
-		}
-		fingerprint, err = bodyFactFingerprintValue(struct {
-			Kind    string                       `json:"source_kind"`
-			Source  model.AnswerFactSource       `json:"source"`
-			Capture string                       `json:"capture_id"`
-			Screen  *model.SafetyScreenAnswers   `json:"screen"`
-			Command model.RecordBodyFactsCommand `json:"command"`
-		}{Kind: "structured_intake", Source: *answerSource, Capture: intake.captureID, Screen: intake.screen, Command: command})
 	}
 	if err != nil {
 		return nil, err
@@ -108,7 +88,7 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		if intake == nil && state.CurrentRevision != command.ExpectedRevision {
+		if state.CurrentRevision != command.ExpectedRevision {
 			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 
@@ -152,9 +132,6 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 				answerInteraction, questionExcerpt, err = verifyBodyFactAnswer(tx, userID, *answerSource, userMessage)
 				if err != nil {
 					return err
-				}
-				if intake != nil && answerInteraction.ToolCallID != "intake-"+intake.captureID {
-					return fmt.Errorf("%w: structured intake is not bound to its runtime question", model.ErrInvalidBodyFact)
 				}
 				sourceKind = "structured_answer"
 			} else {
@@ -212,18 +189,6 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 		// Revision and outbox carry identifiers only. Raw health text remains in
 		// its owning rows and can be erased without retaining hidden audit copies.
 		metadata := map[string]any{"commit_id": commitID, "fact_ids": factIDs, "source_evidence_ids": evidenceIDs}
-		var screen *model.SafetyScreen
-		if intake != nil && intake.screen != nil {
-			answers := *intake.screen
-			screen = &model.SafetyScreen{
-				ID: uuid.New(), UserID: userID, CaptureID: intake.captureID,
-				SourceConversationID: sourceConversationID, SourceRunID: source.RunID, SourceMessageID: sourceMessageID,
-				SourceInteractionID: answerInteraction.ID, SourceToolCallID: answerInteraction.ToolCallID,
-				Trauma: answers.Trauma, RadiatingPain: answers.RadiatingPain, Numbness: answers.Numbness,
-				Weakness: answers.Weakness, Dizziness: answers.Dizziness, BodyStateRevision: next, RecordedAt: now,
-			}
-			metadata["safety_screen_id"] = screen.ID
-		}
 		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "facts.recorded", sourceKind, metadata)
 		if err != nil {
 			return err
@@ -233,11 +198,6 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 		}
 		if err := tx.Create(&facts).Error; err != nil {
 			return err
-		}
-		if screen != nil {
-			if err := tx.Create(screen).Error; err != nil {
-				return err
-			}
 		}
 		payload, err := json.Marshal(metadata)
 		if err != nil {
