@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ func (r *BodyStateRepository) RecordAnswerFacts(ctx context.Context, userID uuid
 	if source.RunID == uuid.Nil || source.InteractionID == uuid.Nil || source.MessageID == uuid.Nil {
 		return nil, fmt.Errorf("%w: accepted answer identity required", model.ErrInvalidBodyFact)
 	}
-	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: source.RunID, MessageID: source.MessageID}, &source)
+	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: source.RunID, MessageID: source.MessageID}, &source, nil)
 }
 
 func verifyBodyFactAnswer(tx *gorm.DB, owner uuid.UUID, source model.AnswerFactSource, message model.Message) (*model.AgentInteraction, string, error) {
@@ -60,4 +61,34 @@ func verifyBodyFactAnswer(tx *gorm.DB, owner uuid.UUID, source model.AnswerFactS
 		questionRunes = questionRunes[:2000]
 	}
 	return &interaction, string(questionRunes), nil
+}
+
+// RecordStructuredIntake commits one Go-built symptom intake answer: a
+// structured_answer symptom statement and, for a complete checklist, its
+// safety screen, in a single BodyState revision.
+func (r *BodyStateRepository) RecordStructuredIntake(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, command model.StructuredIntakeCommand) (*model.BodyFactCommit, error) {
+	if source.RunID == uuid.Nil || source.InteractionID == uuid.Nil || source.MessageID == uuid.Nil {
+		return nil, fmt.Errorf("%w: accepted answer identity required", model.ErrInvalidBodyFact)
+	}
+	if len(command.CaptureID) != 24 || strings.Trim(command.CaptureID, "0123456789abcdef") != "" {
+		return nil, fmt.Errorf("%w: invalid structured intake capture", model.ErrInvalidBodyFact)
+	}
+	facts := model.RecordBodyFactsCommand{IdempotencyKey: "intake:" + command.CaptureID, Facts: []model.BodyFactInput{command.Fact}}
+	return r.recordFacts(ctx, userID, facts, &model.MessageFactSource{RunID: source.RunID, MessageID: source.MessageID}, &source, &structuredIntake{captureID: command.CaptureID, screen: command.Screen})
+}
+
+// ListSafetyScreens returns every safety screen of the owner, newest first.
+// It is deliberately unbounded: an unresolved positive concept in an old
+// screen must keep blocking, so truncation would fail open.
+func (r *BodyStateRepository) ListSafetyScreens(ctx context.Context, userID uuid.UUID) ([]model.SafetyScreen, error) {
+	screens := []model.SafetyScreen{}
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: authenticated owner required", model.ErrInvalidBodyFact)
+	}
+	err := database.FromContext(ctx, r.db).Where("user_id = ?", userID).
+		Order("body_state_revision DESC, id ASC").Find(&screens).Error
+	if err != nil {
+		return nil, err
+	}
+	return screens, nil
 }

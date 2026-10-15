@@ -10,6 +10,7 @@ from src.services.diagnosis_service import DiagnosisService
 
 CONFIG_ID = "diag-config-62d312942b76a154"
 REF = "body-state:fact:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+SCREEN_REF = "body-state:safety-screen:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 BODY = {
     "current_revision": 12,
     "facts": [
@@ -47,8 +48,8 @@ def envelope(*, complete: bool = True, blocked: bool = False) -> SafetyEnvelopeV
                 "polarity": "present",
                 "temporality": "current",
                 "review_state": "confirmed",
-                "source_ref": REF,
-                "source_kind": "body_state_fact",
+                "source_ref": SCREEN_REF,
+                "source_kind": "safety_screen",
             }
         ]
         if blocked
@@ -58,8 +59,8 @@ def envelope(*, complete: bool = True, blocked: bool = False) -> SafetyEnvelopeV
         [
             {
                 "concept": "dizziness",
-                "source_ref": REF,
-                "source_kind": "body_state_fact",
+                "source_ref": SCREEN_REF,
+                "source_kind": "safety_screen",
                 "reason": "structured_current_signal",
             }
         ]

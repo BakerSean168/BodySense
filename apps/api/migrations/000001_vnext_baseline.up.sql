@@ -1188,6 +1188,32 @@ CREATE TABLE public.runtime_events (
 
 
 --
+-- Name: safety_screens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.safety_screens (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capture_id text NOT NULL,
+    source_conversation_id uuid NOT NULL,
+    source_run_id uuid NOT NULL,
+    source_message_id uuid NOT NULL,
+    source_interaction_id uuid NOT NULL,
+    source_tool_call_id text NOT NULL,
+    trauma boolean NOT NULL,
+    radiating_pain boolean NOT NULL,
+    numbness boolean NOT NULL,
+    weakness boolean NOT NULL,
+    dizziness boolean NOT NULL,
+    body_state_revision bigint NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    CONSTRAINT safety_screens_body_state_revision_check CHECK ((body_state_revision > 0)),
+    CONSTRAINT safety_screens_capture_id_check CHECK ((capture_id ~ '^[0-9a-f]{24}$'::text)),
+    CONSTRAINT safety_screens_tool_call_binding_check CHECK ((source_tool_call_id = ('intake-'::text || capture_id)))
+);
+
+
+--
 -- Name: statement_evidence; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2154,6 +2180,30 @@ ALTER TABLE ONLY public.runtime_events
 
 ALTER TABLE ONLY public.runtime_events
     ADD CONSTRAINT runtime_events_run_id_seq_key UNIQUE (run_id, seq);
+
+
+--
+-- Name: safety_screens safety_screens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: safety_screens safety_screens_user_id_capture_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_capture_id_key UNIQUE (user_id, capture_id);
+
+
+--
+-- Name: safety_screens safety_screens_user_id_source_interaction_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_source_interaction_id_key UNIQUE (user_id, source_interaction_id);
 
 
 --
@@ -3212,6 +3262,13 @@ CREATE INDEX interaction_resumes_run ON public.interaction_resumes USING btree (
 
 
 --
+-- Name: safety_screens_user_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX safety_screens_user_revision ON public.safety_screens USING btree (user_id, body_state_revision DESC, id);
+
+
+--
 -- Name: statement_evidence_source_interaction; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4141,6 +4198,22 @@ ALTER TABLE ONLY public.runtime_events
 
 ALTER TABLE ONLY public.runtime_events
     ADD CONSTRAINT runtime_events_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: safety_screens safety_screens_user_id_body_state_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_body_state_revision_fkey FOREIGN KEY (user_id, body_state_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: safety_screens safety_screens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

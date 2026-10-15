@@ -339,8 +339,8 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 				Complete:          true,
 			},
 			Assertions: []SafetyAssertionV1{
-				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
-				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
 			},
 			ActiveBlockers: []SafetyBlockerV1{},
 			RequiresReview: false,
@@ -401,8 +401,8 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyPreAgentSafetyFalsePosi
 				Complete:          true,
 			},
 			Assertions: []SafetyAssertionV1{
-				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
-				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
 			},
 			ActiveBlockers: []SafetyBlockerV1{},
 			RequiresReview: false,
@@ -503,15 +503,15 @@ func TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage(t *test
 			CoveredSourceRefs: []string{"body-state:fact:a", "body-state:fact:b"},
 		},
 		Assertions: []SafetyAssertionV1{
-			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:a", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:b", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:a", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:safety-screen:b", SourceKind: SafetyStructuredScreen},
 		},
 	}
 	got := replayConfirmedAbsentConcepts(envelope)
 	if !slices.Equal(got, []string{"trauma"}) {
-		t.Fatalf("only concepts confirmed absent across every covered source are authoritative: %#v", got)
+		t.Fatalf("only concepts every safety screen confirms absent are authoritative: %#v", got)
 	}
 }
 

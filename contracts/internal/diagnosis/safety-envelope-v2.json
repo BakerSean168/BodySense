@@ -3,31 +3,93 @@
     {
       "name": "clear-confirmed-absent",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 12,
         "safety_state": {},
         "facts": [
           {
             "id": "11111111-1111-1111-1111-111111111111",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000001",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000001",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000001",
+          "source_tool_call_id": "intake-000000000000000000000001",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 6,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
         "body_state_revision": 12,
         "assertions": [
           {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [],
@@ -43,63 +105,173 @@
             "weakness",
             "dizziness"
           ],
-          "covered_source_refs": [],
+          "covered_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
           "incomplete_source_refs": [],
-          "complete": false
+          "complete": true
         }
       }
     },
     {
-      "name": "separate-sources-positive-wins",
+      "name": "separate-screens-positive-wins",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 13,
         "safety_state": {},
         "facts": [
           {
             "id": "11111111-1111-1111-1111-111111111111",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "dizziness": false
-            }
-          },
-          {
-            "id": "22222222-2222-2222-2222-222222222222",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
-            "details": {
-              "dizziness": true
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000001",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000001",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000001",
+          "source_tool_call_id": "intake-000000000000000000000001",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 6,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        },
+        {
+          "id": "5c000000-0000-0000-0000-000000000002",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000002",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000002",
+          "source_tool_call_id": "intake-000000000000000000000002",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": true,
+          "body_state_revision": 7,
+          "recorded_at": "2026-10-15T09:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
         "body_state_revision": 13,
         "assertions": [
           {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
           },
           {
             "concept": "dizziness",
             "polarity": "present",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:22222222-2222-2222-2222-222222222222",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
           }
         ],
         "active_blockers": [
           {
             "concept": "dizziness",
-            "source_ref": "body-state:fact:22222222-2222-2222-2222-222222222222",
-            "source_kind": "body_state_fact",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000002",
+            "source_kind": "safety_screen",
             "reason": "structured_current_signal"
           }
         ],
@@ -115,15 +287,18 @@
             "weakness",
             "dizziness"
           ],
-          "covered_source_refs": [],
+          "covered_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
           "incomplete_source_refs": [],
-          "complete": false
+          "complete": true
         }
       }
     },
     {
       "name": "legacy-active-absence-does-not-clear",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 14,
         "safety_state": {
           "has_red_flags": true,
@@ -137,14 +312,38 @@
         "facts": [
           {
             "id": "11111111-1111-1111-1111-111111111111",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000001",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000001",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000001",
+          "source_tool_call_id": "intake-000000000000000000000001",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 6,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -159,12 +358,49 @@
             "source_kind": "legacy_safety_state"
           },
           {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [
@@ -187,37 +423,111 @@
             "weakness",
             "dizziness"
           ],
-          "covered_source_refs": [],
+          "covered_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
           "incomplete_source_refs": [],
-          "complete": false
+          "complete": true
         }
       }
     },
     {
-      "name": "resolved-and-historical-nonblocking",
+      "name": "resolved-after-screen-nonblocking",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 15,
         "safety_state": {
           "has_red_flags": false,
           "status": "resolved",
-          "flags": []
+          "flags": [],
+          "resolved_at": "2026-10-15T09:00:00Z"
         },
         "facts": [
           {
             "id": "11111111-1111-1111-1111-111111111111",
-            "lifecycle_state": "resolved",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
+            "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "dizziness": true
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000001",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000001",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000001",
+          "source_tool_call_id": "intake-000000000000000000000001",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": true,
+          "body_state_revision": 6,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
         "body_state_revision": 15,
-        "assertions": [],
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "present",
+            "temporality": "resolved",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          }
+        ],
         "active_blockers": [],
         "requires_review": false,
         "legacy_state_present": true,
@@ -231,15 +541,143 @@
             "weakness",
             "dizziness"
           ],
-          "covered_source_refs": [],
+          "covered_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
           "incomplete_source_refs": [],
-          "complete": false
+          "complete": true
+        }
+      }
+    },
+    {
+      "name": "resolution-before-screen-keeps-blocking",
+      "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
+        "current_revision": 15,
+        "safety_state": {
+          "has_red_flags": false,
+          "status": "resolved",
+          "flags": [],
+          "resolved_at": "2026-10-15T08:00:00Z"
+        },
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
+          }
+        ]
+      },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000001",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000001",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000001",
+          "source_tool_call_id": "intake-000000000000000000000001",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": true,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 6,
+          "recorded_at": "2026-10-15T09:00:00Z"
+        }
+      ],
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 15,
+        "assertions": [
+          {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "present",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          },
+          {
+            "concept": "dizziness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T09:00:00Z"
+          }
+        ],
+        "active_blockers": [
+          {
+            "concept": "numbness",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+            "source_kind": "safety_screen",
+            "reason": "structured_current_signal"
+          }
+        ],
+        "requires_review": true,
+        "legacy_state_present": true,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
+          "incomplete_source_refs": [],
+          "complete": true
         }
       }
     },
     {
       "name": "malformed-legacy-fails-closed",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 16,
         "safety_state": {
           "has_red_flags": "yes",
@@ -247,11 +685,13 @@
         },
         "facts": []
       },
+      "safety_screens": [],
       "error": true
     },
     {
       "name": "legacy-monitoring-preserves-evidence",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 17,
         "safety_state": {
           "has_red_flags": true,
@@ -267,6 +707,7 @@
         },
         "facts": []
       },
+      "safety_screens": [],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -311,6 +752,7 @@
     {
       "name": "non-authority-details-ignored",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 18,
         "safety_state": {},
         "facts": [
@@ -319,10 +761,7 @@
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "value": "trauma and dizziness",
-            "details": [
-              "not",
-              "an object"
-            ]
+            "details": ["not", "an object"]
           },
           {
             "id": "44444444-4444-4444-4444-444444444444",
@@ -343,9 +782,29 @@
               "dizziness": true
             },
             "excluded_from_reasoning": true
+          },
+          {
+            "id": "66666666-6666-6666-6666-666666666666",
+            "kind": "discomfort",
+            "value": "已排除",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {},
+            "created_revision": 3,
+            "excluded_from_reasoning": true
+          },
+          {
+            "id": "77777777-7777-7777-7777-777777777777",
+            "kind": "discomfort",
+            "value": "已缓解",
+            "lifecycle_state": "resolved",
+            "review_state": "confirmed",
+            "details": {},
+            "created_revision": 3
           }
         ]
       },
+      "safety_screens": [],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -371,40 +830,88 @@
       }
     },
     {
-      "name": "unverified-positive",
+      "name": "screen-positive-blocks-without-symptom",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 19,
         "safety_state": {},
-        "facts": [
-          {
-            "id": "66666666-6666-6666-6666-666666666666",
-            "lifecycle_state": "active",
-            "review_state": "unverified",
-            "details": {
-              "dizziness": true
-            }
-          }
-        ]
+        "facts": []
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000003",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000003",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000003",
+          "source_tool_call_id": "intake-000000000000000000000003",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": true,
+          "body_state_revision": 4,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
         "body_state_revision": 19,
         "assertions": [
           {
+            "concept": "trauma",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "radiating_pain",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "numbness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
             "concept": "dizziness",
             "polarity": "present",
             "temporality": "current",
-            "review_state": "unverified",
-            "source_ref": "body-state:fact:66666666-6666-6666-6666-666666666666",
-            "source_kind": "body_state_fact"
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [
           {
             "concept": "dizziness",
-            "source_ref": "body-state:fact:66666666-6666-6666-6666-666666666666",
-            "source_kind": "body_state_fact",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000003",
+            "source_kind": "safety_screen",
             "reason": "structured_current_signal"
           }
         ],
@@ -427,27 +934,113 @@
       }
     },
     {
+      "name": "screen-from-future-revision-ignored",
+      "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
+        "current_revision": 19,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 5
+          }
+        ]
+      },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000003",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000003",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000003",
+          "source_tool_call_id": "intake-000000000000000000000003",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 20,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 19,
+        "assertions": [],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [
+            "body-state:fact:11111111-1111-1111-1111-111111111111"
+          ],
+          "complete": false
+        }
+      }
+    },
+    {
       "name": "coverage-complete-single-source",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 50,
         "safety_state": {},
         "facts": [
           {
             "id": "00000700-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "safety_capture_revision": "body-state-safety-capture-v1",
-              "trauma": false,
-              "radiating_pain": false,
-              "numbness": false,
-              "weakness": false,
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 40
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000004",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000004",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000004",
+          "source_tool_call_id": "intake-000000000000000000000004",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 41,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -458,40 +1051,45 @@
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "radiating_pain",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "numbness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "weakness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000700-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [],
@@ -518,34 +1116,57 @@
     {
       "name": "coverage-two-sources-one-incomplete",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 50,
         "safety_state": {},
         "facts": [
           {
             "id": "00000701-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "safety_capture_revision": "body-state-safety-capture-v1",
-              "trauma": false,
-              "radiating_pain": false,
-              "numbness": false,
-              "weakness": false,
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 40
           },
           {
             "id": "00000702-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 45
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000004",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000004",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000004",
+          "source_tool_call_id": "intake-000000000000000000000004",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 42,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -556,48 +1177,45 @@
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "radiating_pain",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "numbness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "weakness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000701-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
-          },
-          {
-            "concept": "dizziness",
-            "polarity": "absent",
-            "temporality": "current",
-            "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000702-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [],
@@ -626,25 +1244,40 @@
     {
       "name": "coverage-no-discomfort",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 50,
         "safety_state": {},
         "facts": [
           {
             "id": "00000703-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "self_measurement",
             "lifecycle_state": "active",
             "review_state": "confirmed",
-            "details": {
-              "safety_capture_revision": "body-state-safety-capture-v1",
-              "trauma": false,
-              "radiating_pain": false,
-              "numbness": false,
-              "weakness": false,
-              "dizziness": false
-            }
+            "details": {},
+            "created_revision": 40
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000004",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000004",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000004",
+          "source_tool_call_id": "intake-000000000000000000000004",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 41,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -655,40 +1288,45 @@
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "radiating_pain",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "numbness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "weakness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000703-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [],
@@ -711,26 +1349,46 @@
       }
     },
     {
-      "name": "coverage-marker-missing-key",
+      "name": "coverage-screen-before-symptom",
       "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
         "current_revision": 50,
         "safety_state": {},
         "facts": [
           {
             "id": "00000704-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "discomfort",
+            "value": "我腰疼三天了",
             "lifecycle_state": "active",
             "review_state": "confirmed",
             "details": {
-              "safety_capture_revision": "body-state-safety-capture-v1",
-              "trauma": false,
-              "radiating_pain": false,
-              "numbness": false,
-              "dizziness": false
-            }
+              "symptom_type": "腰疼",
+              "presence": "present"
+            },
+            "created_revision": 45
           }
         ]
       },
+      "safety_screens": [
+        {
+          "id": "5c000000-0000-0000-0000-000000000004",
+          "user_id": "00000000-0000-0000-0000-0000000000aa",
+          "capture_id": "000000000000000000000004",
+          "source_conversation_id": "c0000000-0000-0000-0000-000000000001",
+          "source_run_id": "a0000000-0000-0000-0000-000000000001",
+          "source_message_id": "e0000000-0000-0000-0000-000000000001",
+          "source_interaction_id": "1a000000-0000-0000-0000-000000000004",
+          "source_tool_call_id": "intake-000000000000000000000004",
+          "trauma": false,
+          "radiating_pain": false,
+          "numbness": false,
+          "weakness": false,
+          "dizziness": false,
+          "body_state_revision": 44,
+          "recorded_at": "2026-10-15T08:00:00Z"
+        }
+      ],
       "envelope": {
         "schema_revision": "body-state-safety-envelope-v2",
         "policy_revision": "body-state-safety-policy-v1",
@@ -741,32 +1399,45 @@
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "radiating_pain",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "numbness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
+          },
+          {
+            "concept": "weakness",
+            "polarity": "absent",
+            "temporality": "current",
+            "review_state": "confirmed",
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           },
           {
             "concept": "dizziness",
             "polarity": "absent",
             "temporality": "current",
             "review_state": "confirmed",
-            "source_ref": "body-state:fact:00000704-0000-0000-0000-000000000000",
-            "source_kind": "body_state_fact"
+            "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000004",
+            "source_kind": "safety_screen",
+            "observed_at": "2026-10-15T08:00:00Z"
           }
         ],
         "active_blockers": [],
@@ -789,6 +1460,53 @@
           "complete": false
         }
       }
+    },
+    {
+      "name": "coverage-absent-symptom-is-not-a-complaint",
+      "snapshot": {
+        "user_id": "00000000-0000-0000-0000-0000000000aa",
+        "current_revision": 50,
+        "safety_state": {},
+        "facts": [
+          {
+            "id": "00000705-0000-0000-0000-000000000000",
+            "user_id": "00000000-0000-0000-0000-0000000000aa",
+            "kind": "discomfort",
+            "value": "我腰疼三天了",
+            "lifecycle_state": "active",
+            "review_state": "confirmed",
+            "details": {
+              "symptom_type": "腰疼",
+              "presence": "absent"
+            },
+            "created_revision": 45
+          }
+        ]
+      },
+      "safety_screens": [],
+      "envelope": {
+        "schema_revision": "body-state-safety-envelope-v2",
+        "policy_revision": "body-state-safety-policy-v1",
+        "body_state_revision": 50,
+        "assertions": [],
+        "active_blockers": [],
+        "requires_review": false,
+        "legacy_state_present": false,
+        "coverage": {
+          "revision": "body-state-safety-coverage-v1",
+          "capture_revision": "body-state-safety-capture-v1",
+          "required_concepts": [
+            "trauma",
+            "radiating_pain",
+            "numbness",
+            "weakness",
+            "dizziness"
+          ],
+          "covered_source_refs": [],
+          "incomplete_source_refs": [],
+          "complete": false
+        }
+      }
     }
   ],
   "provenance_round_trip": {
@@ -801,8 +1519,8 @@
         "polarity": "absent",
         "temporality": "current",
         "review_state": "confirmed",
-        "source_ref": "body-state:fact:11111111-1111-1111-1111-111111111111",
-        "source_kind": "body_state_fact",
+        "source_ref": "body-state:safety-screen:5c000000-0000-0000-0000-000000000001",
+        "source_kind": "safety_screen",
         "provenance": {
           "capture_channel": "intake_form",
           "evidence_version": 1

@@ -213,7 +213,7 @@ func main() {
 		bodyStateService,
 	)
 	consultationRuntime.AttachBodyFactService(bodyFactService)
-	consultationRuntime.AttachInteractionResumeService(service.NewInteractionResumeService(consultationRepo, database.NewTransactionManager(database.DB), runtimeEventService))
+	consultationRuntime.AttachInteractionResumeService(service.NewInteractionResumeService(consultationRepo, database.NewTransactionManager(database.DB), runtimeEventService).WithStructuredIntake(bodyStateService))
 	consultationRuntime.AttachLongitudinalContextServices(
 		contextRetrievalService,
 		diagnosisAnalysisService,

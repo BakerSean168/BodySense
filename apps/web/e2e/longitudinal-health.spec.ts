@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
+import { completeStructuredSafetyIntake } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -217,7 +217,6 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
           details: {
             trigger: "久坐",
             severity: "中度",
-            ...clearStructuredSafetyCapture,
           },
           origin: "user_reported",
           review_state: "confirmed",
@@ -242,9 +241,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
           body_region: "颈部",
           body_region_id: "neck",
           value: "stale concurrent write",
-          details: {
-            ...clearStructuredSafetyCapture,
-          },
+          details: {},
           origin: "user_reported",
           review_state: "confirmed",
           lifecycle_state: "active",
@@ -273,6 +270,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     concurrentResponses.map((response) => response.status()).sort(),
   ).toEqual([200, 409]);
   await Promise.all(concurrentResponses.map((response) => response.text()));
+
+  // Safety coverage comes only from the user's structured intake answer.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    headers,
+    String(conversationId),
+  );
 
   const diagnosisResponse = await request.post(
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,

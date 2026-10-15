@@ -31,7 +31,7 @@ func TestDiagnosisDecisionPolicyV2DenyOverrides(t *testing.T) {
 		{"normal ignores prose and legacy flags", func(*SafetyEnvelopeV2, map[string]any) {}, DiagnosisAllowNormal, ""},
 		{"blocker", func(e *SafetyEnvelopeV2, _ map[string]any) {
 			e.RequiresReview = true
-			e.ActiveBlockers = []SafetyBlockerV1{{Concept: SafetyDizziness, SourceRef: "body-state:fact:x", SourceKind: SafetyBodyStateFact, Reason: SafetyStructuredCurrentSignal}}
+			e.ActiveBlockers = []SafetyBlockerV1{{Concept: SafetyDizziness, SourceRef: "body-state:fact:x", SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal}}
 		}, DiagnosisBlock, "active_structured_safety_blocker"},
 		{"coverage incomplete", func(e *SafetyEnvelopeV2, _ map[string]any) {
 			e.Coverage.Complete = false
@@ -85,7 +85,7 @@ func TestStructuredDiagnosisPreflightBypassesIncompleteAndBlocked(t *testing.T) 
 		}, DiagnosisAbstain, "insufficient_information"},
 		{"blocked", func(e *SafetyEnvelopeV2) {
 			e.RequiresReview = true
-			e.ActiveBlockers = []SafetyBlockerV1{{Concept: SafetyDizziness, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact, Reason: SafetyStructuredCurrentSignal}}
+			e.ActiveBlockers = []SafetyBlockerV1{{Concept: SafetyDizziness, SourceRef: "body-state:fact:a", SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal}}
 		}, DiagnosisBlock, "safety_blocked"},
 	} {
 		t.Run(test.name, func(t *testing.T) {

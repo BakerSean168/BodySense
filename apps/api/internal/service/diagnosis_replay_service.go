@@ -464,17 +464,11 @@ func diagnosisReplayAuthorityEndpoint(payload map[string]any) DiagnosisReplayAut
 	}
 }
 
+// replayConfirmedAbsentConcepts lists required concepts that every structured
+// safety screen in a complete envelope confirms absent. A positive, resolved,
+// or unconfirmed screen answer for a concept disqualifies it.
 func replayConfirmedAbsentConcepts(envelope *SafetyEnvelopeV2) []string {
 	if envelope == nil || !envelope.Coverage.Complete || len(envelope.Coverage.CoveredSourceRefs) == 0 {
-		return nil
-	}
-	covered := map[string]struct{}{}
-	for _, sourceRef := range envelope.Coverage.CoveredSourceRefs {
-		if value := strings.TrimSpace(sourceRef); value != "" {
-			covered[value] = struct{}{}
-		}
-	}
-	if len(covered) == 0 {
 		return nil
 	}
 	required := map[string]struct{}{}
@@ -483,23 +477,21 @@ func replayConfirmedAbsentConcepts(envelope *SafetyEnvelopeV2) []string {
 			required[value] = struct{}{}
 		}
 	}
-	absentByConcept := map[string]map[string]struct{}{}
+	absent, disqualified := map[string]bool{}, map[string]bool{}
 	for _, assertion := range envelope.Assertions {
 		concept := string(assertion.Concept)
-		if _, ok := required[concept]; !ok || assertion.Polarity != SafetyAbsent || assertion.Temporality != SafetyCurrent || assertion.ReviewState != SafetyConfirmed {
+		if _, ok := required[concept]; !ok || assertion.SourceKind != SafetyStructuredScreen {
 			continue
 		}
-		if _, ok := covered[assertion.SourceRef]; !ok {
-			continue
+		if assertion.Polarity == SafetyAbsent && assertion.Temporality == SafetyCurrent && assertion.ReviewState == SafetyConfirmed {
+			absent[concept] = true
+		} else {
+			disqualified[concept] = true
 		}
-		if absentByConcept[concept] == nil {
-			absentByConcept[concept] = map[string]struct{}{}
-		}
-		absentByConcept[concept][assertion.SourceRef] = struct{}{}
 	}
 	result := []string{}
 	for concept := range required {
-		if len(absentByConcept[concept]) == len(covered) {
+		if absent[concept] && !disqualified[concept] {
 			result = append(result, concept)
 		}
 	}

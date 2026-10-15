@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -37,7 +36,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
         body_region: "右肩",
         body_region_id: "shoulder.right",
         value: "抬高手臂时右肩疼",
-        details: { ...clearStructuredSafetyCapture },
+        details: {},
         origin: "user_reported",
         review_state: "confirmed",
         lifecycle_state: "active",

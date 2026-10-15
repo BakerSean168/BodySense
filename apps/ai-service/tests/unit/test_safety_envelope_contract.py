@@ -73,7 +73,14 @@ def test_mismatched_typed_blocker_rejected(change: dict) -> None:
 )
 def test_blocker_requires_current_positive_assertion(change: dict) -> None:
     blocked = deepcopy(json.loads(FIXTURE.read_text())["cases"][1]["envelope"])
-    blocked["assertions"][1].update(change)
+    blocker = blocked["active_blockers"][0]
+    matching = next(
+        assertion
+        for assertion in blocked["assertions"]
+        if assertion["concept"] == blocker["concept"]
+        and assertion["source_ref"] == blocker["source_ref"]
+    )
+    matching.update(change)
     with pytest.raises(ValidationError):
         SafetyEnvelopeV2.model_validate(blocked)
 

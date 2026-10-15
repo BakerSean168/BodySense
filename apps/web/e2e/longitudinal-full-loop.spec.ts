@@ -6,7 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
+import { completeStructuredSafetyIntake } from "./support/safety";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -116,7 +116,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
             duration: "2周",
             trigger: "久坐",
             severity: "轻度",
-            ...clearStructuredSafetyCapture,
           },
           origin: "user_reported",
           review_state: "confirmed",
@@ -132,6 +131,13 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   );
   expect(factResponse.revision.revision).toBe(1);
   expect(factResponse.fact.concern_key).toBe("region:neck");
+  // Safety coverage comes only from the user's structured intake answer.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    authHeaders,
+    conversationId,
+  );
 
   const diagnosis = await expectJson<{
     analysis_id: string;
