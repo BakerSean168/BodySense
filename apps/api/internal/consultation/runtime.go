@@ -52,7 +52,7 @@ type HTTPError struct {
 }
 
 type runtimeBodyStateService interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*service.BodyStateSnapshot, error)
+	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*service.AgentBodyContext, error)
 	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
 	RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error)
 }
@@ -909,42 +909,22 @@ func (r *Runtime) buildBusinessContext(
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
 		},
 	}
-	var bodyStateSnapshot *service.BodyStateSnapshot
+	// The native V2 agent view (facts, observations, episodes, user
+	// hypotheses, Safety digest, usable equipment) pinned to one revision. A
+	// read failure is explicit (records_available=false) so the turn cannot
+	// invent revision zero, claim capture, or present symptoms as screened.
+	var bodyContext *service.AgentBodyContext
 	if r.bodyStateService != nil {
-		if snapshot, err := r.bodyStateService.GetSnapshot(ctx, uid, 20); err != nil {
-			log.Printf("body state context load failed for user %s: %v", uid, err)
+		if view, err := r.bodyStateService.GetAgentBodyContext(ctx, uid); err != nil {
+			log.Printf("agent body context load failed for user %s: %v", uid, err)
 		} else {
-			bodyStateSnapshot = snapshot
-			if raw, marshalErr := json.Marshal(snapshot); marshalErr == nil {
-				bc.BodyState = raw
-			}
+			bodyContext = view
 		}
-	}
-	// A bounded new-ledger projection is distinct from legacy observations.
-	// Read failure is explicit so v3 cannot invent revision zero and claim capture.
-	if r.bodyFacts != nil {
-		combined := map[string]any{}
-		if len(bc.BodyState) > 0 {
-			_ = json.Unmarshal(bc.BodyState, &combined)
-		}
-		if page, err := r.bodyFacts.ListFacts(ctx, uid, 0); err == nil && page != nil && page.UserID == uid {
-			combined["current_revision"] = page.CurrentRevision
-			records := page.Facts
-			if len(records) > 40 {
-				records = records[:40]
-			}
-			combined["records"] = records
-			combined["records_available"] = true
-		} else {
-			combined["records_available"] = false
-		}
-		if raw, err := json.Marshal(combined); err == nil {
-			bc.BodyState = raw
-		}
+		bc.BodyState = consultationBodyStatePayload(bodyContext, r.bodyFacts != nil)
 	}
 	if r.contextRetrievalService != nil {
 		if history, err := r.contextRetrievalService.Retrieve(
-			ctx, uid, conversationID, queryText, bodyStateSnapshot,
+			ctx, uid, conversationID, queryText, bodyContext,
 		); err != nil {
 			log.Printf("historical context retrieval failed for conversation %s: %v", conversationID, err)
 		} else {
@@ -992,6 +972,22 @@ func (r *Runtime) buildBusinessContext(
 		bc.PostureAnalysis = raw
 	}
 	return bc
+}
+
+// consultationBodyStatePayload encodes the agent view for the turn. Capture is
+// available only when the view loaded and the run can commit BodyFacts.
+func consultationBodyStatePayload(view *service.AgentBodyContext, captureAvailable bool) json.RawMessage {
+	if view == nil {
+		raw, _ := json.Marshal(map[string]any{"schema": service.AgentBodyContextSchemaV1, "records_available": false})
+		return raw
+	}
+	payload := *view
+	payload.RecordsAvailable = view.RecordsAvailable && captureAvailable
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		raw, _ = json.Marshal(map[string]any{"schema": service.AgentBodyContextSchemaV1, "records_available": false})
+	}
+	return raw
 }
 
 type streamState struct {

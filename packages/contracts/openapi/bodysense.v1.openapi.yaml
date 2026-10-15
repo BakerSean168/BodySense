@@ -6939,7 +6939,6 @@ components:
       - conversation
       - phase
       - extracted_info
-      - body_state
       - pending_interactions
       - interaction_history
       - active_turn_run_id
@@ -6957,10 +6956,6 @@ components:
         extracted_info:
           type: array
           items: {$ref: '#/components/schemas/JsonObject'}
-        body_state:
-          anyOf:
-          - {$ref: '#/components/schemas/BodyStateSnapshot'}
-          - {type: 'null'}
         pending_interactions:
           type: array
           items: {$ref: '#/components/schemas/AgentInteraction'}

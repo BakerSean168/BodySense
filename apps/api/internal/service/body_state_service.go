@@ -19,6 +19,7 @@ import (
 // declares only the persistence capabilities required by BodyState workflows.
 type bodyStateRepository interface {
 	bodyContextLedger
+	agentBodyContextLedger
 	bodyFactLookup
 	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.BodyState, error)
@@ -62,6 +63,8 @@ type BodyStateSnapshot struct {
 type BodyStateService struct {
 	repo                  bodyStateRepository
 	bodyRegionIDValidator BodyRegionIDValidator
+	readSnapshots         agentReadSnapshotRunner
+	equipment             agentEquipmentSource
 }
 
 func NewBodyStateService(repo bodyStateRepository) *BodyStateService {

@@ -178,8 +178,8 @@ type fakeRuntimeBodyState struct {
 	safetyErr error
 }
 
-func (f *fakeRuntimeBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error) {
-	return &service.BodyStateSnapshot{}, nil
+func (f *fakeRuntimeBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*service.AgentBodyContext, error) {
+	return &service.AgentBodyContext{Schema: service.AgentBodyContextSchemaV1, UserID: owner, RecordsAvailable: true}, nil
 }
 
 func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, json.RawMessage) error {
