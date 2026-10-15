@@ -58,22 +58,21 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  const fact = await request.post(`${apiBase}/api/v1/body-state/facts`, {
+  // Symptoms enter BodyState only through the V2 records ledger.
+  const fact = await request.post(`${apiBase}/api/v1/body-state/records`, {
     headers,
     data: {
+      idempotency_key: `e2e-symptom-${crypto.randomUUID()}`,
       expected_revision: 0,
-      fact: {
-        concern_key: "region:shoulder.right",
-        kind: "discomfort",
-        body_region: "右肩",
-        body_region_id: "shoulder.right",
-        value: "抬高手臂时右肩疼",
-        details: {},
-        origin: "user_reported",
-        review_state: "confirmed",
-        lifecycle_state: "active",
-        trend: "worsening",
-      },
+      facts: [
+        {
+          kind: "symptom",
+          statement: "抬高手臂时右肩疼",
+          body_region_ids: ["shoulder.right"],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
     },
   });
   expect(fact.ok(), await fact.text()).toBeTruthy();

@@ -99,7 +99,6 @@ export * from './conversationTitleRequest.zod';
 export * from './conversationUpdateRequest.zod';
 export * from './correctBodyFactRecordRequest.zod';
 export * from './correctBodyObservationRequest.zod';
-export * from './correctBodyStateFactRequest.zod';
 export * from './createUploadRequest.zod';
 export * from './currentTreatmentResponse.zod';
 export * from './currentUser.zod';

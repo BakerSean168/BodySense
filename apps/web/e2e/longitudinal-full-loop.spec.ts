@@ -99,38 +99,29 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   const conversationId = conversations.conversations[0].id;
 
   const factResponse = await expectJson<{
-    fact: { id: string; concern_key: string; trend: string };
-    revision: { revision: number };
+    revision: number;
+    fact_ids: string[];
   }>(
-    await request.post(`${apiBase}/api/v1/body-state/facts`, {
+    await request.post(`${apiBase}/api/v1/body-state/records`, {
       headers: authHeaders,
       data: {
+        idempotency_key: `e2e-fact-${crypto.randomUUID()}`,
         expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "久坐后颈肩酸胀",
-          details: {
-            duration: "2周",
-            trigger: "久坐",
-            severity: "轻度",
+        facts: [
+          {
+            kind: "symptom",
+            statement: "久坐后颈肩酸胀",
+            body_region_ids: ["neck"],
+            temporal: { precision: "unknown" },
+            details: {},
           },
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "stable",
-          source_key: `e2e-fact-${crypto.randomUUID()}`,
-          provenance: { source_type: "playwright-e2e" },
-          observed_at: new Date().toISOString(),
-        },
+        ],
       },
     }),
     "create BodyState fact",
   );
-  expect(factResponse.revision.revision).toBe(1);
-  expect(factResponse.fact.concern_key).toBe("region:neck");
+  expect(factResponse.revision).toBe(1);
+  expect(factResponse.fact_ids).toHaveLength(1);
   // Safety coverage comes only from the user's structured intake answer.
   await completeStructuredSafetyIntake(
     request,
@@ -367,7 +358,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
           body_region: "颈部",
           concern_key: "region:neck",
           trend: "improving",
-          fact_id: factResponse.fact.id,
         },
       },
     ),
@@ -382,7 +372,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   const finalWorkspace = await expectJson<{
     body_state: {
       current_revision: number;
-      facts: Array<{ id: string; trend: string }>;
     };
     treatment: { status: string };
     capabilities: {
@@ -403,11 +392,30 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(finalWorkspace.body_state.current_revision).toBeGreaterThan(
     diagnosis.body_state_revision,
   );
+  // The user's own symptom wording became a new V2 symptom statement at the
+  // Outcome's revision; the original statement is untouched (no legacy trend).
+  const records = await expectJson<{
+    facts: Array<{
+      id: string;
+      kind: string;
+      statement: string;
+      created_revision: number;
+    }>;
+  }>(
+    await request.get(`${apiBase}/api/v1/body-state/records`, {
+      headers: authHeaders,
+    }),
+    "list V2 body facts",
+  );
   expect(
-    finalWorkspace.body_state.facts.find(
-      (fact) => fact.id === factResponse.fact.id,
-    )?.trend,
-  ).toBe("improving");
+    records.facts.find((fact) => fact.statement === "久坐后的颈肩酸胀有所改善"),
+  ).toMatchObject({
+    kind: "symptom",
+    created_revision: feedback.result.outcome.body_state_revision,
+  });
+  expect(
+    records.facts.some((fact) => fact.id === factResponse.fact_ids[0]),
+  ).toBe(true);
   expect(finalWorkspace.treatment.status).toBe("review_recommended");
   expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);

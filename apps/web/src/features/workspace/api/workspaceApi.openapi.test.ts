@@ -116,7 +116,7 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     const result = await workspaceApi.addFact(3, {
-      kind: "symptom",
+      kind: "equipment.available",
       value: "pain",
       body_region_id: "region:neck",
     });
@@ -128,7 +128,7 @@ describe("workspaceApi OpenAPI boundary", () => {
         body: JSON.stringify({
           expected_revision: 3,
           fact: {
-            kind: "symptom",
+            kind: "equipment.available",
             value: "pain",
             body_region_id: "region:neck",
           },
@@ -150,11 +150,53 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     const result = await workspaceApi.addFact(4, {
-      kind: "symptom",
+      kind: "equipment.available",
       value: "pain",
     });
 
     expect(result.fact.updated_revision).toBe(4);
+  });
+
+  it("records a user-typed symptom only through the V2 records ledger", async () => {
+    authFetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "11111111-1111-4111-8111-111111111111",
+          user_id: "55555555-5555-4555-8555-555555555555",
+          revision: 5,
+          revision_id: "22222222-2222-4222-8222-222222222222",
+          event_id: "33333333-3333-4333-8333-333333333333",
+          fact_ids: ["44444444-4444-4444-8444-444444444444"],
+          committed_at: "2026-10-15T08:00:00Z",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await workspaceApi.recordSymptom(4, {
+      statement: "抬手时右肩疼",
+      body_region_ids: ["shoulder.right"],
+    });
+
+    expect(authFetchMock).toHaveBeenCalledWith(
+      "/api/v1/body-state/records",
+      expect.objectContaining({ method: "POST" }),
+    );
+    const body = JSON.parse(authFetchMock.mock.calls[0][1].body as string);
+    expect(body).toMatchObject({
+      expected_revision: 4,
+      facts: [
+        {
+          kind: "symptom",
+          statement: "抬手时右肩疼",
+          body_region_ids: ["shoulder.right"],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
+    });
+    expect(typeof body.idempotency_key).toBe("string");
+    expect(result.revision).toBe(5);
   });
 
   it("sends expected_revision when resolving safety through the generated boundary", async () => {
@@ -194,7 +236,7 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     await expect(
-      workspaceApi.addFact(3, { kind: "symptom", value: "pain" }),
+      workspaceApi.addFact(3, { kind: "equipment.available", value: "pain" }),
     ).rejects.toMatchObject({
       name: "ApiRequestError",
       status: 409,
@@ -212,7 +254,7 @@ describe("workspaceApi OpenAPI boundary", () => {
     );
 
     await expect(
-      workspaceApi.addFact(3, { kind: "symptom", value: "pain" }),
+      workspaceApi.addFact(3, { kind: "equipment.available", value: "pain" }),
     ).rejects.toThrow();
   });
 
