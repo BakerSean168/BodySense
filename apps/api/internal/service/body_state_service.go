@@ -369,103 +369,71 @@ func (s *BodyStateService) GetEvidenceByIDs(ctx context.Context, userID uuid.UUI
 	return s.repo.GetEvidenceByIDs(ctx, userID, ids)
 }
 
-// RecordOutcome turns accepted intervention feedback into an explicit BodyState
-// mutation. Subjective symptom feedback becomes a Fact; measurements/adherence
-// become Observations. The Outcome remains a separate durable record either way.
-func (s *BodyStateService) RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error) {
+// RecordOutcomeSymptom is the only BodyState effect of an intervention
+// Outcome. A symptom_change/new_discomfort Outcome whose value carries the
+// user's own description becomes one V2 symptom BodyFact (direct_edit source,
+// statement = the user's exact words). Every other Outcome (adherence,
+// training feeling, measurements, system-authored text) stays only in the
+// outcomes table and returns nil: no legacy fact/observation is written.
+//
+// The fact is deliberately left unscreened: Safety coverage for it is
+// incomplete (fail-closed) until a later safety_screens row covers its
+// revision. Replays are idempotent through the outcome-derived command key.
+func (s *BodyStateService) RecordOutcomeSymptom(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error) {
+	statement, ok := outcomeUserSymptomStatement(outcome)
+	if !ok {
+		return nil, nil
+	}
+	if userID == uuid.Nil || outcome.ID == uuid.Nil {
+		return nil, fmt.Errorf("%w: outcome owner and identity required", model.ErrInvalidBodyFact)
+	}
+	regions := []string{}
+	if id, resolved := ResolveCanonicalBodyRegionID(strings.TrimSpace(outcome.BodyRegion)); resolved {
+		if s.bodyRegionIDValidator == nil || s.bodyRegionIDValidator.IsValidBodyRegionID(id) {
+			regions = append(regions, id)
+		}
+	}
+	expected := int64(0)
+	state, err := s.repo.GetCurrent(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if state != nil {
+		expected = state.CurrentRevision
+	}
+	commit, err := s.repo.RecordDirectFacts(ctx, userID, model.RecordBodyFactsCommand{
+		IdempotencyKey:   "outcome:" + outcome.ID.String(),
+		ExpectedRevision: expected,
+		Facts: []model.BodyFactInput{{
+			Kind: "symptom", Statement: statement, BodyRegionIDs: regions,
+			Temporal: model.FactTemporal{Precision: "unknown"}, Details: json.RawMessage(`{}`),
+		}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if commit == nil || commit.Revision <= 0 {
+		return nil, errors.New("outcome symptom fact commit has no revision")
+	}
+	return &model.BodyStateRevision{ID: commit.RevisionID, UserID: userID, Revision: commit.Revision}, nil
+}
+
+// outcomeUserSymptomStatement returns the user's own symptom wording carried
+// by an Outcome. Notes, defaults and other free text are never promoted.
+func outcomeUserSymptomStatement(outcome model.Outcome) (string, bool) {
+	if outcome.Kind != "symptom_change" && outcome.Kind != "new_discomfort" {
+		return "", false
+	}
 	var value map[string]any
-	_ = json.Unmarshal(outcome.Value, &value)
-	provenance := datatypes.JSON(bodyStateMustJSON(map[string]any{
-		"source_type": "outcome",
-		"outcome_id":  outcome.ID,
-		"source_key":  outcome.SourceKey,
-		"occurred_at": outcome.OccurredAt,
-		"causality":   outcome.CausalityLevel,
-		"association": outcome.AssociationStatement,
-	}))
-
-	if outcome.Kind == "symptom_change" || outcome.Kind == "new_discomfort" {
-		if factID, err := uuid.Parse(bodyStateString(value["fact_id"])); err == nil {
-			lifecycle := bodyStateString(value["lifecycle_state"])
-			trend := bodyStateString(value["trend"])
-			fact, revision, updateErr := s.repo.UpdateFactTemporal(ctx, userID, nil, factID, lifecycle, trend, nil, "outcome")
-			if updateErr != nil || revision != nil {
-				return revision, updateErr
-			}
-			if fact != nil && fact.UpdatedRevision > 0 {
-				return &model.BodyStateRevision{Revision: fact.UpdatedRevision}, nil
-			}
-			return nil, errors.New("existing fact projection has no revision")
-		}
-		durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(outcome.BodyRegion)
-		details := map[string]any{
-			"outcome_kind":         outcome.Kind,
-			"notes":                outcome.Notes,
-			"value":                value,
-			"reported_body_region": strings.TrimSpace(outcome.BodyRegion),
-		}
-		description := bodyStateString(value["description"])
-		if description == "" {
-			description = bodyStateString(value["symptom"])
-		}
-		if description == "" {
-			description = strings.TrimSpace(outcome.Notes)
-		}
-		if description == "" {
-			description = "干预后的症状变化"
-		}
-		trend := bodyStateDefault(bodyStateString(value["trend"]), "unknown")
-		fact, revision, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-			ConcernKey:     bodyStateDefault(outcome.ConcernKey, bodyStateConcernKey(durableRegion)),
-			Kind:           "discomfort",
-			BodyRegion:     durableRegion,
-			BodyRegionID:   durableRegionID,
-			Value:          description,
-			Details:        datatypes.JSON(bodyStateMustJSON(details)),
-			Origin:         "user_reported",
-			ReviewState:    "confirmed",
-			LifecycleState: bodyStateDefault(bodyStateString(value["lifecycle_state"]), "active"),
-			Trend:          trend,
-			SourceKey:      "outcome:" + outcome.ID.String(),
-			Provenance:     provenance,
-			ObservedAt:     &outcome.OccurredAt,
-		}, "outcome")
-		if err != nil || revision != nil {
-			return revision, err
-		}
-		if fact != nil && fact.UpdatedRevision > 0 {
-			return &model.BodyStateRevision{Revision: fact.UpdatedRevision}, nil
-		}
-		return nil, errors.New("existing fact projection has no revision")
+	if len(outcome.Value) == 0 || json.Unmarshal(outcome.Value, &value) != nil {
+		return "", false
 	}
-
-	observationKind := outcome.Kind
-	if observationKind == "" {
-		observationKind = "intervention_outcome"
+	for _, key := range []string{"description", "symptom"} {
+		if text, isString := value[key].(string); isString && strings.TrimSpace(text) != "" {
+			return strings.TrimSpace(text), true
+		}
 	}
-	durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(outcome.BodyRegion)
-	observation, revision, err := s.repo.UpsertObservation(ctx, userID, nil, model.BodyStateObservation{
-		ConcernKey:            bodyStateDefault(outcome.ConcernKey, bodyStateConcernKey(durableRegion)),
-		Kind:                  observationKind,
-		BodyRegion:            durableRegion,
-		BodyRegionID:          durableRegionID,
-		Method:                outcome.SourceType,
-		Value:                 outcome.Value,
-		Condition:             datatypes.JSON(bodyStateMustJSON(map[string]any{"notes": outcome.Notes})),
-		SourceKey:             "outcome:" + outcome.ID.String(),
-		Provenance:            provenance,
-		ObservedAt:            &outcome.OccurredAt,
-		ReviewState:           "confirmed",
-		LifecycleState:        "active",
-		ExcludedFromReasoning: false,
-	}, "outcome")
-	if err != nil || revision != nil {
-		return revision, err
-	}
-	if observation != nil && observation.UpdatedRevision > 0 {
-		return &model.BodyStateRevision{Revision: observation.UpdatedRevision}, nil
-	}
-	return nil, errors.New("existing observation projection has no revision")
+	return "", false
 }
 
 // RecordSafetyEvent promotes a positive runtime safety signal into durable
