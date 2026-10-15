@@ -33,12 +33,12 @@ func TestTrainingOwnerLockRejectsOutsideTransactionWithoutSQL(t *testing.T) {
 	}
 }
 
-func TestTrainingOwnerLockUsesScopedUserRowForUpdate(t *testing.T) {
+func TestTrainingOwnerLockUsesScopedUserRowForNoKeyUpdate(t *testing.T) {
 	repo, mock := setupActiveTrainingSelectionMock(t)
 	userID := uuid.New()
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR UPDATE",
+		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR NO KEY UPDATE",
 	)).WithArgs(userID, 1).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectCommit()
 	manager := database.NewTransactionManager(repo.db)
@@ -58,7 +58,7 @@ func TestTrainingOwnerLockFailsClosedForMissingOwnerInTransaction(t *testing.T) 
 	owner := uuid.New()
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR UPDATE",
+		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR NO KEY UPDATE",
 	)).WithArgs(owner, 1).WillReturnRows(sqlmock.NewRows([]string{"id"}))
 	mock.ExpectRollback()
 	err := database.NewTransactionManager(repo.db).WithinTransaction(
@@ -80,7 +80,7 @@ func TestTrainingOwnerLockPropagatesDatabaseFailures(t *testing.T) {
 	sentinel := errors.New("synthetic owner lock database failure")
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR UPDATE",
+		"SELECT \"id\" FROM \"users\" WHERE id = $1 LIMIT $2 FOR NO KEY UPDATE",
 	)).WithArgs(owner, 1).WillReturnError(sentinel)
 	mock.ExpectRollback()
 	err := database.NewTransactionManager(repo.db).WithinTransaction(
