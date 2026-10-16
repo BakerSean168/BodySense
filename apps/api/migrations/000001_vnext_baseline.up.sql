@@ -4534,16 +4534,47 @@ CREATE TABLE public.safety_restrictions (
     safety_screen_id uuid NOT NULL,
     concept text NOT NULL CHECK (concept IN ('trauma','radiating_pain','numbness','weakness','dizziness')),
     policy_revision text NOT NULL CHECK (policy_revision = 'safety-screen-restriction-v1'),
-    risk_level text NOT NULL CHECK (risk_level = 'restricted'),
-    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
-    lift_policy text NOT NULL CHECK (lift_policy = 'professional_clearance'),
+    risk_level text NOT NULL CHECK (risk_level IN ('advisory','restricted','urgent')),
+    scope_kind text NOT NULL CHECK (scope_kind IN ('all_training','plan','exercise')),
+    plan_id uuid,
+    lift_policy text NOT NULL CHECK (lift_policy IN ('on_expiry','user_reverification','professional_clearance')),
     reason text NOT NULL CHECK (length(btrim(reason)) > 0),
     created_revision bigint NOT NULL,
     valid_from timestamptz NOT NULL,
+    -- on_expiry: the real end of validity; any other policy: only a review point.
+    valid_until timestamptz,
     PRIMARY KEY (user_id, id),
     UNIQUE (user_id, safety_screen_id, concept),
+    CONSTRAINT safety_restrictions_scope_plan CHECK (
+        (scope_kind = 'all_training' AND plan_id IS NULL)
+        OR (scope_kind = 'plan' AND plan_id IS NOT NULL)
+        OR scope_kind = 'exercise'),
+    CONSTRAINT safety_restrictions_expiry CHECK (
+        (lift_policy <> 'on_expiry' OR valid_until IS NOT NULL)
+        AND (valid_until IS NULL OR valid_until > valid_from)),
+    -- urgent blocks all training and is never auto-expired or self-cleared.
+    CONSTRAINT safety_restrictions_urgent CHECK (
+        risk_level <> 'urgent'
+        OR (scope_kind = 'all_training' AND lift_policy = 'professional_clearance')),
+    -- Each Go policy revision owns exactly its approved mapping. The structured
+    -- screen policy never classifies urgency, scopes or self-lifts (B4b); a
+    -- later reviewed policy must add its own revision and mapping here.
+    CONSTRAINT safety_restrictions_screen_policy CHECK (
+        policy_revision <> 'safety-screen-restriction-v1'
+        OR (risk_level = 'restricted' AND scope_kind = 'all_training' AND plan_id IS NULL
+            AND lift_policy = 'professional_clearance' AND valid_until IS NULL)),
     FOREIGN KEY (user_id, safety_screen_id, created_revision) REFERENCES public.safety_screens(user_id, id, body_state_revision) DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- Exercise-scoped coverage by standard exercise concept id (or a stable custom
+-- exercise id), never a display name or plan-local planExerciseId. Immutable.
+CREATE TABLE public.safety_restriction_exercises (
+    user_id uuid NOT NULL,
+    restriction_id uuid NOT NULL,
+    exercise_id text NOT NULL CHECK (length(exercise_id) BETWEEN 1 AND 128 AND exercise_id = btrim(exercise_id)),
+    PRIMARY KEY (user_id, restriction_id, exercise_id),
+    FOREIGN KEY (user_id, restriction_id) REFERENCES public.safety_restrictions(user_id, id) ON DELETE CASCADE
 );
 
 

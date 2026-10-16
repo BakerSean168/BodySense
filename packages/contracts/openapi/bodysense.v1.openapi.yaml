@@ -5830,10 +5830,13 @@ components:
         - policy_revision
         - risk_level
         - scope_kind
+        - plan_id
+        - exercise_ids
         - lift_policy
         - reason
         - created_revision
         - valid_from
+        - valid_until
         - resolution
         - clearance_available
         - active
@@ -5855,13 +5858,26 @@ components:
           enum: [safety-screen-restriction-v1]
         risk_level:
           type: string
-          enum: [restricted]
+          enum: [advisory, restricted, urgent]
         scope_kind:
           type: string
-          enum: [all_training]
+          enum: [all_training, plan, exercise]
+        plan_id:
+          description: Required for plan scope, optional for exercise scope, null for all_training.
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+        exercise_ids:
+          description: Standard exercise concept ids (or stable custom ids); non-empty only for exercise scope.
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         lift_policy:
           type: string
-          enum: [professional_clearance]
+          enum: [on_expiry, user_reverification, professional_clearance]
         reason:
           type: string
           minLength: 1
@@ -5872,6 +5888,12 @@ components:
         valid_from:
           type: string
           format: date-time
+        valid_until:
+          description: End of validity for on_expiry; only a review point for other lift policies.
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
         resolution:
           anyOf:
             - $ref: "#/components/schemas/SafetyResolution"

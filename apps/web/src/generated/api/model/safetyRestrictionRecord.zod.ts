@@ -8,6 +8,8 @@
 import * as zod from 'zod/mini';
 import { SafetyResolution } from './safetyResolution.zod';
 
+export const safetyRestrictionRecordExerciseIdsItemMax = 128;
+
 
 
 
@@ -18,12 +20,15 @@ export const SafetyRestrictionRecord = /*#__PURE__*/ zod.strictObject({
   "safety_screen_id": /*#__PURE__*/ zod.uuid(),
   "concept": /*#__PURE__*/ zod.enum(['trauma', 'radiating_pain', 'numbness', 'weakness', 'dizziness']),
   "policy_revision": /*#__PURE__*/ zod.enum(['safety-screen-restriction-v1']),
-  "risk_level": /*#__PURE__*/ zod.enum(['restricted']),
-  "scope_kind": /*#__PURE__*/ zod.enum(['all_training']),
-  "lift_policy": /*#__PURE__*/ zod.enum(['professional_clearance']),
+  "risk_level": /*#__PURE__*/ zod.enum(['advisory', 'restricted', 'urgent']),
+  "scope_kind": /*#__PURE__*/ zod.enum(['all_training', 'plan', 'exercise']),
+  "plan_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]).check(/*#__PURE__*/ zod.describe('Required for plan scope, optional for exercise scope, null for all_training.')),
+  "exercise_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(safetyRestrictionRecordExerciseIdsItemMax))).check(/*#__PURE__*/ zod.describe('Standard exercise concept ids (or stable custom ids); non-empty only for exercise scope.')),
+  "lift_policy": /*#__PURE__*/ zod.enum(['on_expiry', 'user_reverification', 'professional_clearance']),
   "reason": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "created_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "valid_from": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
+  "valid_until": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.iso.datetime({"offset":true}),/*#__PURE__*/ zod.null()]).check(/*#__PURE__*/ zod.describe('End of validity for on_expiry; only a review point for other lift policies.')),
   "resolution": /*#__PURE__*/ zod.union([SafetyResolution,/*#__PURE__*/ zod.null()]),
   "clearance_available": /*#__PURE__*/ zod.boolean(),
   "active": /*#__PURE__*/ zod.boolean()
