@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -217,15 +216,6 @@ func TestBodyObservationCursorAndGuardedDowngradePostgres(t *testing.T) {
 	}
 	if _, err := repo.ListDirectObservations(ctx, uuid.Nil, 0); !errors.Is(err, model.ErrInvalidBodyObservation) {
 		t.Fatalf("anonymous read should fail: %v", err)
-	}
-	down, err := os.ReadFile("../../migrations/000011_body_observation_direct_reports.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "cannot downgrade: accepted BodyObservation records exist") {
-		t.Fatalf("downgrade erased user measurements: %v", err)
 	}
 }
 

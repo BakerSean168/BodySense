@@ -227,64 +227,100 @@ def _user_content_with_images(
     return blocks
 
 
-def _format_body_state_context(body_state: dict[str, Any]) -> str:
-    """Render a compact durable BodyState projection for the consultation model.
+_SAFETY_STATUS_LABELS = {
+    "requires_review": "需复核：存在当前安全信号，不得给出训练或自我处理建议",
+    "screening_incomplete": "未完成：有症状尚未完成安全筛查，不得视为已排除危险信号",
+    "screened": "已完成：当前症状均已完成结构化安全筛查",
+    "no_current_symptoms": "无当前症状陈述",
+    "unavailable": "无法确认：按未筛查处理",
+}
+_SYMPTOM_SCREEN_LABELS = {
+    "screened": "已筛查",
+    "unscreened": "未筛查",
+    "not_required": "用户否认该症状",
+}
 
-    We intentionally pass structured current truth instead of replaying the full
-    historical transcript. Recent revision summaries are included only as bounded
-    temporal context; detailed old messages can be retrieved separately when a
-    future use case actually needs them.
+
+def _format_body_state_context(body_state: dict[str, Any]) -> str:
+    """Render the Go-owned V2 agent body context (``agent-body-context-v1``).
+
+    Every statement is the user's own report; user hypotheses are labelled as the
+    user's guesses, never facts. Safety status comes from Go and stays
+    fail-closed: an unscreened symptom is shown as unscreened.
     """
     if not body_state:
         return ""
 
     lines = [f"## 当前长期身体状态（revision {body_state.get('current_revision', 0)}）"]
-    for fact in body_state.get("facts", []) or []:
-        if not isinstance(fact, dict):
-            continue
-        if fact.get("review_state") != "confirmed" or bool(fact.get("excluded_from_reasoning")):
-            continue
-        region = str(fact.get("body_region") or "全身/一般")
-        value = str(fact.get("value") or "").strip()
-        if not value:
-            continue
-        lines.append(
-            f"- [事实/{fact.get('kind', 'unknown')}] {region}：{value}"
-            f"；状态={fact.get('lifecycle_state', 'active')}；趋势={fact.get('trend', 'unknown')}"
-        )
+    if body_state.get("records_available") is not True:
+        lines.append("- 身体记录暂时无法完整读取：不得假设没有症状，也不得假设已完成安全筛查。")
 
-    for record in (body_state.get("records") or [])[:40]:
-        if (
-            not isinstance(record, dict)
-            or record.get("subject") != "self"
-            or record.get("assertion_status") != "asserted"
-        ):
-            continue
-        lines.append(
-            f"- [本人陈述/{record.get('kind', 'unknown')}] "
-            f"{record.get('statement', '')}（非临床确诊）"
-        )
+    safety = body_state.get("safety")
+    if isinstance(safety, dict) and safety.get("status"):
+        status = str(safety.get("status"))
+        label = _SAFETY_STATUS_LABELS.get(status, f"{status}（按未筛查处理）")
+        line = f"- [安全筛查/Go 判定] {label}"
+        blockers = [str(item) for item in safety.get("active_blockers") or []]
+        if blockers:
+            line += f"；当前信号={'、'.join(blockers)}"
+        unscreened = safety.get("unscreened_fact_ids") or []
+        if unscreened:
+            line += f"；未筛查症状 {len(unscreened)} 条"
+        lines.append(line)
+    elif body_state.get("records_available") is True:
+        lines.append(f"- [安全筛查/Go 判定] {_SAFETY_STATUS_LABELS['unavailable']}")
 
-    for observation in body_state.get("observations", []) or []:
+    for fact in body_state.get("facts") or []:
+        if not isinstance(fact, dict) or fact.get("authorship") != "user_reported":
+            continue
+        statement = str(fact.get("statement") or "").strip()
+        if not statement:
+            continue
+        kind = fact.get("kind", "unknown")
+        subject = "" if fact.get("subject", "self") == "self" else f"（关于{fact.get('subject')}）"
+        line = f"- [本人陈述/{kind}]{subject} {statement}（非临床确诊）"
+        regions = [str(item) for item in fact.get("body_region_ids") or []]
+        if regions:
+            line += f"；部位={','.join(regions)}"
+        if kind == "symptom":
+            screen = str(fact.get("safety_screen") or "unscreened")
+            line += f"；安全筛查={_SYMPTOM_SCREEN_LABELS.get(screen, '未筛查')}"
+        lines.append(line)
+
+    for observation in body_state.get("observations") or []:
         if not isinstance(observation, dict):
             continue
-        if observation.get("review_state") != "confirmed" or bool(
-            observation.get("excluded_from_reasoning")
-        ):
-            continue
-        region = str(observation.get("body_region") or "全身/一般")
-        value = observation.get("value") or {}
-        observation_kind = observation.get("kind", "unknown")
-        observation_value = json.dumps(value, ensure_ascii=False)
-        lines.append(f"- [观察/{observation_kind}] {region}：{observation_value}")
+        statement = str(observation.get("statement") or "").strip()
+        if statement:
+            lines.append(f"- [本人测量/{observation.get('kind', 'unknown')}] {statement}")
 
-    revisions = body_state.get("recent_revisions", []) or []
-    if revisions:
-        lines.append("### 最近状态变化")
-        for revision in revisions[:5]:
-            if not isinstance(revision, dict):
+    for episode in body_state.get("episodes") or []:
+        if not isinstance(episode, dict):
+            continue
+        linked = len(episode.get("fact_ids") or [])
+        lines.append(
+            f"- [症状发作/{episode.get('symptom_type') or 'unknown'}] "
+            f"状态={episode.get('state') or 'unknown'}；关联陈述 {linked} 条"
+        )
+
+    for hypothesis in body_state.get("user_hypotheses") or []:
+        if not isinstance(hypothesis, dict) or hypothesis.get("authorship") != "user_authored":
+            continue
+        statement = str(hypothesis.get("statement") or "").strip()
+        if statement:
+            lines.append(f"- [用户本人的猜测，不是事实或诊断] {statement}")
+
+    equipment = [item for item in body_state.get("equipment") or [] if isinstance(item, dict)]
+    if equipment:
+        lines.append("### 当前可用器械（用户提供）")
+        for item in equipment:
+            name = str(item.get("display_name") or "").strip()
+            if not name:
                 continue
-            lines.append(f"- R{revision.get('revision', '?')} {revision.get('change_type', '')}")
+            line = f"- {name}（{item.get('access_kind') or 'unknown'}）"
+            if item.get("notes"):
+                line += f"：{item.get('notes')}"
+            lines.append(line)
     return "\n".join(lines)
 
 
@@ -1113,6 +1149,13 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
         }
 
     if tool_name == "ask_user":
+        # Only the runtime-owned intake node may ask a bound symptom intake; a
+        # model-authored ask_user never carries purpose or state binding.
+        arguments = {
+            key: value
+            for key, value in arguments.items()
+            if key not in {"purpose", "state_binding"}
+        }
         result = await executor.execute(tool_call_id, tool_name, arguments)
         if result.status != ToolStatus.INTERRUPTED:
             writer(
@@ -1443,6 +1486,7 @@ async def resume_thread_interrupt(
     body_fact_resume = bool(
         manifest.intake and manifest.intake.policy_revision == BODY_FACT_INTAKE_POLICY
     )
+    safety_screen_resume = False
     if body_fact_resume:
         if not interrupt_id or checkpoint_values.get("run_id") != run_id:
             raise ValueError(
@@ -1451,6 +1495,14 @@ async def resume_thread_interrupt(
         pending = getattr(checkpoint, "interrupts", ())
         if len(pending) != 1 or UUID(str(pending[0].id)).hex != UUID(interrupt_id).hex:
             raise ValueError("Resume does not match the pending native interrupt")
+        pending_value = getattr(pending[0], "value", None)
+        pending_question = (
+            pending_value.get("question") if isinstance(pending_value, dict) else None
+        )
+        safety_screen_resume = (
+            isinstance(pending_question, dict)
+            and pending_question.get("purpose") == "symptom_intake"
+        )
 
     yield _runtime_agent_configuration_event(factory, manifest=manifest, run_id=run_id)
     answer_safety: dict[str, Any] | None = None
@@ -1468,7 +1520,11 @@ async def resume_thread_interrupt(
                 run_id=run_id,
             )
     answer_intake: dict[str, Any] | None = None
-    if body_fact_resume and interrupt_id:
+    # A safety-screen checklist answer is recorded by Go as the screen of the
+    # already committed symptom; it is not a free-text self statement, so it
+    # never goes through statement extraction (the red-flag screen above
+    # still ran on it).
+    if body_fact_resume and interrupt_id and not safety_screen_resume:
         capture_events: list[dict[str, Any]] = []
         answer_intake = await acquire_body_fact_answer(
             run_id=run_id,

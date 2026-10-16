@@ -60,7 +60,7 @@ func observationHTTPRouter(t *testing.T, owner uuid.UUID, app bodyObservationApp
 		t.Fatal(err)
 	}
 	router := gin.New()
-	RegisterRoutes(router, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithBodyObservations(app)), RouteSecurity{
+	RegisterRoutes(router, StrictHandler(NewPublicServer().WithBodyObservations(app)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			if owner != uuid.Nil {
 				c.Set("user_id", owner.String())
@@ -233,11 +233,6 @@ func TestBodyObservationHTTPRealRoundTripPostgres(t *testing.T) {
 	hidden := performJSONAt(router, http.MethodGet, route, "")
 	if hidden.Code != http.StatusOK || strings.Contains(hidden.Body.String(), receipt.ObservationID.String()) {
 		t.Fatalf("blocked source disclosed observation: %d %s", hidden.Code, hidden.Body.String())
-	}
-	// The v11 write never modifies the legacy table as a second source.
-	var oldCount int64
-	if err := db.Table("body_state_observations").Where("user_id=?", owner).Count(&oldCount).Error; err != nil || oldCount != 0 {
-		t.Fatalf("unreviewed legacy observation dual-write: %d %v", oldCount, err)
 	}
 	var facts int64
 	if err := db.Table("body_facts").Where("user_id=?", owner).Count(&facts).Error; err != nil || facts != 0 {

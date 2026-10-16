@@ -1,6 +1,6 @@
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { useCallback, useMemo } from "react";
 import type {
-  BodyStateProjection,
   ConsultationSpatialContext,
 } from "@/features/consultation/types/consultation";
 import type { BodyExplorerSemanticBridge } from "../components/BodyExplorer";
@@ -24,7 +24,7 @@ export interface BodyExplorerWorkspaceController {
 }
 
 export function useBodyExplorerWorkspace(
-  snapshot: BodyStateProjection | null,
+  snapshot: BodyRecords | null,
   onAskContext?: (context: ConsultationSpatialContext) => void,
 ): BodyExplorerWorkspaceController {
   const mode = useBodyExplorerStore((state) => state.mode);

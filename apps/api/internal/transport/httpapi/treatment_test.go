@@ -48,7 +48,7 @@ func newTreatmentRouteTestRouter(t *testing.T, training treatmentTrainingApplica
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	server := NewPublicServer(nil).WithTreatment(nil, training, nil)
+	server := NewPublicServer().WithTreatment(nil, training, nil)
 	RegisterRoutes(r, StrictHandler(server), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			c.Set("user_id", userID.String())

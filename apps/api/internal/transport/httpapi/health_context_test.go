@@ -6,9 +6,8 @@ import (
 )
 
 func TestLifestyleOpenAPIRequiresExpectedRevisionBeforeAdapter(t *testing.T) {
-	svc := &fakeBodyStateFactService{}
 	rec := performJSONAt(
-		newOpenAPITestRouter(t, svc),
+		newOpenAPITestRouter(t),
 		http.MethodPut,
 		"/api/v1/lifestyle",
 		`{"activity":{"summary":"walks daily"}}`,
@@ -20,9 +19,8 @@ func TestLifestyleOpenAPIRequiresExpectedRevisionBeforeAdapter(t *testing.T) {
 }
 
 func TestBodyMetricsOpenAPIRejectsOutOfRangeHeightBeforeAdapter(t *testing.T) {
-	svc := &fakeBodyStateFactService{}
 	rec := performJSONAt(
-		newOpenAPITestRouter(t, svc),
+		newOpenAPITestRouter(t),
 		http.MethodPut,
 		"/api/v1/body-metrics",
 		`{"expected_revision":4,"height_cm":300}`,
@@ -34,9 +32,8 @@ func TestBodyMetricsOpenAPIRejectsOutOfRangeHeightBeforeAdapter(t *testing.T) {
 }
 
 func TestOnboardingOpenAPIRequiresInitialBodyStateRevision(t *testing.T) {
-	svc := &fakeBodyStateFactService{}
 	rec := performJSONAt(
-		newOpenAPITestRouter(t, svc),
+		newOpenAPITestRouter(t),
 		http.MethodPut,
 		"/api/v1/onboarding/context",
 		`{"profile":{"gender":"male","birth_date":"2004-01-01"},"body_metrics":{"height_cm":175,"weight_kg":65},"lifestyle":{"activity":{"summary":""},"sleep":{"summary":""},"exercise":{"summary":""},"nutrition":{"summary":""},"substances":{"summary":""},"recovery":{"summary":""}},"injury_history":""}`,

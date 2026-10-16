@@ -83,7 +83,7 @@ def test_explicit_review_can_make_exact_relation_ready_for_claim_review(tmp_path
 
     review_path = tmp_path / "review.json"
     review_path.write_text(
-        '''{
+        """{
           "schema_version": "bodysense.external-evidence-review.v1",
           "review_id": "review-pilot",
           "snapshot_git_commit": "abc123",
@@ -106,7 +106,7 @@ def test_explicit_review_can_make_exact_relation_ready_for_claim_review(tmp_path
             "support_scope": "direct",
             "review_status": "reviewed"
           }]
-        }''',
+        }""",
         encoding="utf-8",
     )
     manifest = load_external_evidence_review(review_path)
@@ -139,7 +139,7 @@ def test_review_does_not_apply_to_different_claim_content_hash(tmp_path) -> None
 
     review_path = tmp_path / "review.json"
     review_path.write_text(
-        '''{
+        """{
           "schema_version": "bodysense.external-evidence-review.v1",
           "review_id": "review-pilot",
           "snapshot_git_commit": "abc123",
@@ -162,7 +162,7 @@ def test_review_does_not_apply_to_different_claim_content_hash(tmp_path) -> None
             "support_scope": "direct",
             "review_status": "reviewed"
           }]
-        }''',
+        }""",
         encoding="utf-8",
     )
     manifest = load_external_evidence_review(review_path)

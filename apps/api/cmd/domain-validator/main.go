@@ -87,6 +87,11 @@ func main() {
 	}
 	fmt.Println("BODY_REGION_ID_ROUNDTRIP=PASS")
 
+	if err := v.seedSyntheticSafetyScreen(ctx, userID, fact.ID, revision); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("NATIVE_SAFETY_COVERAGE=PASS")
+
 	analysis, err := v.createDiagnosis(ctx, userID, revision, fact.ID)
 	if err != nil {
 		log.Fatal(err)
@@ -101,7 +106,7 @@ func main() {
 	}
 	fmt.Println("TREATMENT_ACTIVATION_ATOMICITY=PASS")
 
-	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID, trainingPlan, fact.ID); err != nil {
+	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID, trainingPlan); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("OUTCOME_FEEDBACK_ATOMICITY=PASS")
@@ -112,7 +117,7 @@ func newValidator(db *gorm.DB) *validator {
 	bodyRepo := repository.NewBodyStateRepository(db)
 	bodyService := service.NewBodyStateService(bodyRepo).WithBodyRegionIDValidator(
 		service.NewCanonicalBodyRegionIDValidator(),
-	)
+	).WithAgentContextSources(database.NewTransactionManager(db), repository.NewEquipmentAssetRepository(db))
 	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
 	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
 	freshnessRepo := repository.NewDiagnosisFreshnessRepository(db)
@@ -160,214 +165,99 @@ func (v *validator) createUser(ctx context.Context) (uuid.UUID, func(), error) {
 	return user.ID, cleanup, nil
 }
 
-func (v *validator) validateBodyStateSemantics(
-	ctx context.Context,
-	userID uuid.UUID,
-) (*model.BodyStateFact, int64, error) {
-	expected := int64(0)
-	input := model.BodyStateFact{
-		ConcernKey:     "region:neck",
-		Kind:           "discomfort",
-		BodyRegion:     "neck",
-		Value:          "discomfort after prolonged sitting",
-		Details:        datatypes.JSON(`{"severity":"mild","trigger":"sitting"}`),
-		Origin:         "user_reported",
-		ReviewState:    "confirmed",
-		LifecycleState: "active",
-		Trend:          "stable",
-		SourceKey:      "domain-validator:fact:neck",
-		Provenance:     datatypes.JSON(`{"source_type":"domain_validator"}`),
-	}
-	fact, firstRevision, err := v.bodyRepo.UpsertFact(ctx, userID, &expected, input, "domain_validator")
-	if err != nil {
-		return nil, 0, fmt.Errorf("create initial fact: %w", err)
-	}
-	if firstRevision == nil || firstRevision.Revision != 1 {
-		return nil, 0, fmt.Errorf("expected initial BodyState revision 1, got %#v", firstRevision)
-	}
+func validatorFact(statement string, regions ...string) model.BodyFactInput {
+	return model.BodyFactInput{Kind: "symptom", Statement: statement, BodyRegionIDs: regions, Temporal: model.FactTemporal{Precision: "unknown"}, Details: json.RawMessage(`{}`)}
+}
 
-	replayed, duplicateRevision, err := v.bodyRepo.UpsertFact(ctx, userID, nil, input, "domain_validator")
+func (v *validator) validateBodyStateSemantics(ctx context.Context, owner uuid.UUID) (*model.BodyFact, int64, error) {
+	command := model.RecordBodyFactsCommand{IdempotencyKey: "validator:neck", Facts: []model.BodyFactInput{validatorFact("discomfort after prolonged sitting", "neck")}}
+	first, err := v.bodyRepo.RecordDirectFacts(ctx, owner, command)
 	if err != nil {
-		return nil, 0, fmt.Errorf("replay fact: %w", err)
+		return nil, 0, err
 	}
-	if replayed.ID != fact.ID || duplicateRevision != nil {
-		return nil, 0, fmt.Errorf("source-key replay created a semantic change: fact=%s replay=%s revision=%#v", fact.ID, replayed.ID, duplicateRevision)
-	}
-
-	staleExpected := int64(0)
-	_, _, err = v.bodyRepo.UpsertFact(ctx, userID, &staleExpected, model.BodyStateFact{
-		ConcernKey: "region:sleep", Kind: "lifestyle", Value: "late bedtime",
-		Origin: "user_reported", ReviewState: "confirmed", LifecycleState: "active",
-		Trend: "unknown", SourceKey: "domain-validator:fact:stale",
-	}, "domain_validator")
-	if !errors.Is(err, repository.ErrBodyStateRevisionConflict) {
-		return nil, 0, fmt.Errorf("stale revision did not conflict: %v", err)
-	}
-
-	expected = 1
-	temporal, temporalRevision, err := v.bodyRepo.UpdateFactTemporal(
-		ctx, userID, &expected, fact.ID, "active", "improving", nil, "domain_validator",
-	)
+	replay, err := v.bodyRepo.RecordDirectFacts(ctx, owner, command)
 	if err != nil {
-		return nil, 0, fmt.Errorf("update fact temporal state: %w", err)
+		return nil, 0, err
 	}
-	if temporal.ID != fact.ID || temporalRevision == nil || temporalRevision.Revision != 2 || temporal.Trend != "improving" {
-		return nil, 0, fmt.Errorf("temporal change rewrote identity or revision: fact=%#v revision=%#v", temporal, temporalRevision)
+	if first.Revision != 1 || replay.RevisionID != first.RevisionID || string(replay.FactIDs) != string(first.FactIDs) {
+		return nil, 0, errors.New("native fact replay changed identity")
 	}
-
-	expected = 2
-	replacement, correctionRevision, err := v.bodyRepo.CorrectFact(
-		ctx,
-		userID,
-		&expected,
-		fact.ID,
-		model.BodyStateFact{
-			ConcernKey: "region:neck", Kind: "discomfort", BodyRegion: "left neck",
-			Value:   "left-sided discomfort after prolonged sitting",
-			Details: datatypes.JSON(`{"severity":"mild","trigger":"sitting"}`),
-			Origin:  "user_edited", ReviewState: "confirmed", LifecycleState: "active",
-			Trend: "stable", SourceKey: "domain-validator:fact:neck:corrected",
-			Provenance: datatypes.JSON(`{"source_type":"domain_validator"}`),
-		},
-		"domain_validator",
-	)
+	firstID, err := validatorCommitFactID(first)
 	if err != nil {
-		return nil, 0, fmt.Errorf("correct fact: %w", err)
+		return nil, 0, err
 	}
-	if replacement.ID == fact.ID || replacement.SupersedesFactID == nil || *replacement.SupersedesFactID != fact.ID || correctionRevision == nil || correctionRevision.Revision != 3 {
-		return nil, 0, fmt.Errorf("correction did not preserve historical identity: replacement=%#v revision=%#v", replacement, correctionRevision)
+	replacement := validatorFact("left-sided discomfort after prolonged sitting", "neck")
+	corrected, err := v.bodyRepo.CorrectDirectFact(ctx, owner, firstID, model.AmendBodyFactCommand{IdempotencyKey: "validator:correct", ExpectedRevision: 1, Replacement: &replacement})
+	if err != nil {
+		return nil, 0, err
 	}
-	var previous model.BodyStateFact
-	if err := v.db.WithContext(ctx).Where("id = ?", fact.ID).First(&previous).Error; err != nil {
-		return nil, 0, fmt.Errorf("reload corrected fact: %w", err)
+	var previous model.BodyFact
+	if err := v.db.WithContext(ctx).First(&previous, "id = ? AND user_id = ?", firstID, owner).Error; err != nil {
+		return nil, 0, err
 	}
-	if previous.LifecycleState != "inactive" || previous.ReviewState != "corrected" {
-		return nil, 0, fmt.Errorf("corrected fact remained current: %#v", previous)
+	correctedID, err := validatorCommitFactID(corrected)
+	if err != nil {
+		return nil, 0, err
 	}
-	return replacement, correctionRevision.Revision, nil
+	var current model.BodyFact
+	if err := v.db.WithContext(ctx).First(&current, "id = ? AND user_id = ?", correctedID, owner).Error; err != nil {
+		return nil, 0, err
+	}
+	if previous.AssertionStatus != "superseded" || previous.Statement != command.Facts[0].Statement || corrected.Revision != 2 || correctedID == previous.ID {
+		return nil, 0, errors.New("native correction lost immutable history")
+	}
+	return &current, corrected.Revision, nil
 }
 
 func (v *validator) validateBodyRegionIdentity(ctx context.Context) error {
-	userID, cleanup, err := v.createUser(ctx)
+	owner, cleanup, err := v.createUser(ctx)
 	if err != nil {
-		return fmt.Errorf("create body-region validator user: %w", err)
+		return err
 	}
 	defer cleanup()
-
-	// Ambiguous display text is not a durable region identity in vNext. It must
-	// fail before persistence instead of creating a free-text/null-ID fact.
-	expected := int64(0)
-	_, _, err = v.body.UpsertFact(ctx, userID, &expected, model.BodyStateFact{
-		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "肩部", Value: "tightness",
-		Origin: "user_reported", ReviewState: "confirmed", LifecycleState: "active", Trend: "stable",
-		SourceKey: "domain-validator:body-region:ambiguous",
-	})
-	if !errors.Is(err, service.ErrBodyRegionIDRequired) {
-		return fmt.Errorf("ambiguous body region did not fail closed: %v", err)
+	facts := service.NewBodyFactService(v.bodyRepo, service.NewCanonicalBodyRegionIDValidator())
+	command := model.RecordBodyFactsCommand{IdempotencyKey: "validator:region", Facts: []model.BodyFactInput{validatorFact("pain when raising arm", "shoulder.middle")}}
+	if _, err := facts.RecordDirectFacts(ctx, owner, command); !errors.Is(err, service.ErrUnknownBodyRegionID) {
+		return fmt.Errorf("invalid region accepted: %v", err)
 	}
-
-	// A unique ontology alias may omit the id on the wire; the service resolves
-	// and persists the canonical identity before the repository sees the fact.
-	right, rightRevision, err := v.body.UpsertFact(ctx, userID, &expected, model.BodyStateFact{
-		ConcernKey: "region:shoulder.right", Kind: "discomfort", BodyRegion: "右肩",
-		Value: "pain when raising arm", Origin: "user_reported", ReviewState: "confirmed",
-		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder",
-	})
+	command.Facts[0].BodyRegionIDs = []string{"shoulder.right"}
+	first, err := facts.RecordDirectFacts(ctx, owner, command)
 	if err != nil {
-		return fmt.Errorf("persist canonical right shoulder: %w", err)
+		return err
 	}
-	if rightRevision == nil || rightRevision.Revision != 1 || right.BodyRegionID == nil || *right.BodyRegionID != "shoulder.right" {
-		return fmt.Errorf("canonical right shoulder did not round-trip: fact=%#v revision=%#v", right, rightRevision)
-	}
-
-	invalidID := "shoulder.middle"
-	expected = 1
-	_, _, err = v.body.UpsertFact(ctx, userID, &expected, model.BodyStateFact{
-		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "肩部", BodyRegionID: &invalidID,
-		Value: "invalid identity", Origin: "user_reported", ReviewState: "confirmed",
-		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:invalid",
-	})
-	if !errors.Is(err, service.ErrUnknownBodyRegionID) {
-		return fmt.Errorf("unknown canonical body region did not fail closed: %v", err)
-	}
-
-	// Repeating the same source-key with the same unambiguous display alias is
-	// normalized to the same canonical ID and remains idempotent.
-	replayed, replayRevision, err := v.body.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		ConcernKey: "region:shoulder.right", Kind: "discomfort", BodyRegion: "右肩",
-		Value: "pain when raising arm", Origin: "user_reported", ReviewState: "confirmed",
-		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder",
-	})
+	replay, err := facts.RecordDirectFacts(ctx, owner, command)
 	if err != nil {
-		return fmt.Errorf("canonical source-key replay: %w", err)
+		return err
 	}
-	if replayRevision != nil || replayed.ID != right.ID || replayed.BodyRegionID == nil || *replayed.BodyRegionID != "shoulder.right" {
-		return fmt.Errorf("canonical replay changed identity or revision: fact=%#v revision=%#v", replayed, replayRevision)
+	if replay.RevisionID != first.RevisionID {
+		return errors.New("region replay changed revision")
 	}
-
-	expected = 1
-	temporal, temporalRevision, err := v.body.UpdateFactTemporal(
-		ctx, userID, &expected, right.ID, "active", "improving", nil,
-	)
+	firstID, err := validatorCommitFactID(first)
 	if err != nil {
-		return fmt.Errorf("temporal change with canonical region: %w", err)
+		return err
 	}
-	if temporalRevision == nil || temporalRevision.Revision != 2 || temporal.ID != right.ID || temporal.BodyRegionID == nil || *temporal.BodyRegionID != "shoulder.right" {
-		return fmt.Errorf("temporal change lost canonical region identity: fact=%#v revision=%#v", temporal, temporalRevision)
-	}
-
-	expected = 2
-	retained, retainedRevision, err := v.body.CorrectFact(ctx, userID, &expected, right.ID, model.BodyStateFact{
-		ConcernKey: "region:shoulder.right", Kind: "discomfort", BodyRegion: "右肩",
-		Value: "pain only above shoulder height", Origin: "user_edited", ReviewState: "confirmed",
-		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder:wording",
-	})
+	replacement := validatorFact("pain only above shoulder height", "shoulder.left")
+	corrected, err := facts.CorrectDirectFact(ctx, owner, firstID, model.AmendBodyFactCommand{IdempotencyKey: "validator:laterality", ExpectedRevision: 1, Replacement: &replacement})
 	if err != nil {
-		return fmt.Errorf("correction retaining canonical region: %w", err)
+		return err
 	}
-	if retainedRevision == nil || retainedRevision.Revision != 3 || retained.BodyRegionID == nil || *retained.BodyRegionID != "shoulder.right" {
-		return fmt.Errorf("same-region correction did not retain canonical identity: fact=%#v revision=%#v", retained, retainedRevision)
-	}
-
-	expected = 3
-	corrected, correctionRevision, err := v.body.CorrectFact(ctx, userID, &expected, retained.ID, model.BodyStateFact{
-		ConcernKey: "region:shoulder.left", Kind: "discomfort", BodyRegion: "左肩",
-		Value: "pain only above shoulder height", Origin: "user_edited", ReviewState: "confirmed",
-		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:left-shoulder",
-	})
+	correctedID, err := validatorCommitFactID(corrected)
 	if err != nil {
-		return fmt.Errorf("correction replacing canonical region: %w", err)
+		return err
 	}
-	if correctionRevision == nil || correctionRevision.Revision != 4 || corrected.BodyRegionID == nil || *corrected.BodyRegionID != "shoulder.left" {
-		return fmt.Errorf("laterality correction did not replace canonical identity: fact=%#v revision=%#v", corrected, correctionRevision)
+	var current model.BodyFact
+	if err := v.db.WithContext(ctx).First(&current, "id = ? AND user_id = ?", correctedID, owner).Error; err != nil {
+		return err
 	}
-	if corrected.SupersedesFactID == nil || *corrected.SupersedesFactID != retained.ID {
-		return fmt.Errorf("laterality correction lost correction history: %#v", corrected)
+	if string(current.BodyRegionIDs) != `["shoulder.left"]` {
+		return errors.New("canonical laterality lost")
 	}
-
-	var previous model.BodyStateFact
-	if err := v.db.WithContext(ctx).Where("id = ?", retained.ID).First(&previous).Error; err != nil {
-		return fmt.Errorf("reload superseded right-shoulder fact: %w", err)
+	var previous model.BodyFact
+	if err := v.db.WithContext(ctx).First(&previous, "id = ? AND user_id = ?", firstID, owner).Error; err != nil {
+		return err
 	}
-	if previous.BodyRegionID == nil || *previous.BodyRegionID != "shoulder.right" || previous.LifecycleState != "inactive" || previous.ReviewState != "corrected" {
-		return fmt.Errorf("correction rewrote historical right-shoulder identity: %#v", previous)
-	}
-
-	state, err := v.bodyRepo.GetCurrent(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("reload body-region projection: %w", err)
-	}
-	var sawLeft bool
-	for _, fact := range state.Facts {
-		if fact.BodyRegion != "" && fact.BodyRegionID == nil {
-			return fmt.Errorf("localized current fact has no canonical region identity: %#v", fact)
-		}
-		if fact.ID == corrected.ID {
-			sawLeft = fact.BodyRegionID != nil && *fact.BodyRegionID == "shoulder.left" && fact.BodyRegion == "左肩"
-		}
-	}
-	if !sawLeft {
-		return fmt.Errorf("current projection lost canonical left-shoulder region: state=%#v", state.Facts)
+	if string(previous.BodyRegionIDs) != `["shoulder.right"]` || previous.AssertionStatus != "superseded" {
+		return errors.New("historical laterality rewritten")
 	}
 	return nil
 }
@@ -526,7 +416,6 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	ctx context.Context,
 	userID uuid.UUID,
 	plan *model.TrainingPlan,
-	factID uuid.UUID,
 ) error {
 	if err := v.installOutcomeFailureTrigger(ctx); err != nil {
 		return err
@@ -540,11 +429,12 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		Kind:                "symptom_change",
 		ConcernKey:          "region:neck",
 		BodyRegion:          "left neck",
-		Value:               datatypes.JSON([]byte(fmt.Sprintf(`{"description":"improving","trend":"improving","fact_id":%q}`, factID.String()))),
-		Notes:               "forced transactional retry",
-		CausalityLevel:      "association_only",
-		OccurredAt:          time.Now().UTC(),
-		Provenance:          datatypes.JSON(`{"source_type":"domain_validator"}`),
+		// The user's own words become a V2 symptom fact; no legacy fact is touched.
+		Value:          datatypes.JSON(`{"description":"neck feels better after the session","trend":"improving"}`),
+		Notes:          "forced transactional retry",
+		CausalityLevel: "association_only",
+		OccurredAt:     time.Now().UTC(),
+		Provenance:     datatypes.JSON(`{"source_type":"domain_validator"}`),
 	}
 	if _, _, err := v.treatment.RecordOutcome(ctx, userID, outcome); err == nil {
 		return errors.New("forced BodyState projection failure unexpectedly succeeded")
@@ -576,6 +466,20 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	if linked.BodyStateRevision == nil || *linked.BodyStateRevision != *stored.BodyStateRevision {
 		return fmt.Errorf("persisted Outcome lost BodyState revision: %#v", linked)
 	}
+	var symptom model.BodyFact
+	if err := v.db.WithContext(ctx).Where("user_id = ? AND created_revision = ?", userID, *stored.BodyStateRevision).First(&symptom).Error; err != nil {
+		return fmt.Errorf("outcome symptom fact missing: %w", err)
+	}
+	if symptom.Kind != "symptom" || symptom.Statement != "neck feels better after the session" || symptom.AssertionStatus != "asserted" {
+		return fmt.Errorf("outcome symptom is not the user's exact V2 statement: %#v", symptom)
+	}
+	var screens int64
+	if err := v.db.WithContext(ctx).Model(&model.SafetyScreen{}).Where("user_id = ? AND body_state_revision >= ?", userID, *stored.BodyStateRevision).Count(&screens).Error; err != nil {
+		return fmt.Errorf("count safety screens: %w", err)
+	}
+	if screens != 0 {
+		return fmt.Errorf("outcome symptom must stay unscreened (fail-closed), found %d covering screens", screens)
+	}
 	return nil
 }
 
@@ -599,8 +503,8 @@ func (v *validator) installOutcomeFailureTrigger(ctx context.Context) error {
 	return v.db.WithContext(ctx).Exec(`
 CREATE OR REPLACE FUNCTION domain_validator_fail_outcome() RETURNS trigger AS $$
 BEGIN
-    IF NEW.source = 'outcome' THEN
-        RAISE EXCEPTION 'forced outcome projection failure';
+    IF NEW.change_type = 'facts.recorded' THEN
+        RAISE EXCEPTION 'forced outcome symptom fact failure';
     END IF;
     RETURN NEW;
 END;
@@ -618,6 +522,53 @@ func (v *validator) removeFailureTrigger(ctx context.Context, functionName, tabl
 	)
 	if err := v.db.WithContext(ctx).Exec(statement).Error; err != nil {
 		return fmt.Errorf("remove validator failure trigger %s: %w", functionName, err)
+	}
+	return nil
+}
+
+func validatorCommitFactID(commit *model.BodyFactCommit) (uuid.UUID, error) {
+	var ids []uuid.UUID
+	if err := json.Unmarshal(commit.FactIDs, &ids); err != nil {
+		return uuid.Nil, err
+	}
+	if len(ids) != 1 {
+		return uuid.Nil, errors.New("expected one committed fact")
+	}
+	return ids[0], nil
+}
+
+// This validator owns a disposable synthetic user. The all-negative screen is
+// fixture data, never a production command or an AI authority path. Prove that
+// its absence blocks before installing it for treatment transaction probes.
+func (v *validator) seedSyntheticSafetyScreen(ctx context.Context, owner, factID uuid.UUID, revision int64) error {
+	snapshot, err := v.body.GetBodyState(ctx, owner, 10)
+	if err != nil {
+		return err
+	}
+	envelope, err := service.ProjectSafetyEnvelopeV2(snapshot)
+	if err != nil {
+		return err
+	}
+	if envelope.Coverage.Complete {
+		return errors.New("unscreened native symptom was treated as covered")
+	}
+	capture := "0123456789abcdef01234567"
+	screen := model.SafetyScreen{ID: uuid.New(), UserID: owner, CaptureID: capture, BodyFactID: factID,
+		SourceConversationID: uuid.New(), SourceRunID: uuid.New(), SourceMessageID: uuid.New(), SourceInteractionID: uuid.New(),
+		SourceToolCallID: "intake-" + capture, BodyStateRevision: revision, RecordedAt: time.Now().UTC()}
+	if err := v.db.WithContext(ctx).Create(&screen).Error; err != nil {
+		return err
+	}
+	snapshot, err = v.body.GetBodyState(ctx, owner, 10)
+	if err != nil {
+		return err
+	}
+	envelope, err = service.ProjectSafetyEnvelopeV2(snapshot)
+	if err != nil {
+		return err
+	}
+	if !envelope.Coverage.Complete {
+		return errors.New("synthetic native screen did not cover exact symptom")
 	}
 	return nil
 }

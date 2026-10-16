@@ -55,15 +55,10 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
         assert groups[logical_model]["model"] == "openai/gemini-3.7-flash"
         assert groups[logical_model]["api_base"] == "os.environ/PRIMARY_LLM_BASE_URL"
         assert groups[logical_model]["api_key"] == "os.environ/PRIMARY_LLM_API_KEY"
-    assert groups["bodysense-general-fallback"]["model"] == (
-        "openrouter/deepseek/deepseek-chat"
-    )
+    assert groups["bodysense-general-fallback"]["model"] == ("openrouter/deepseek/deepseek-chat")
     assert groups["bodysense-general-fallback"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
-    assert groups["bodysense-posture"]["model"] == (
-        "openrouter/qwen/qwen2.5-vl-72b-instruct"
-    )
+    assert groups["bodysense-posture"]["model"] == ("openrouter/qwen/qwen2.5-vl-72b-instruct")
     assert config["general_settings"]["master_key"] == "os.environ/LITELLM_MASTER_KEY"
-
 
 
 def test_staging_diagnosis_uses_fixed_gemini_provider_profile() -> None:
@@ -72,12 +67,8 @@ def test_staging_diagnosis_uses_fixed_gemini_provider_profile() -> None:
     assert set(_groups(staging)) == set(_groups(production))
     assert staging["router_settings"]["fallbacks"] == production["router_settings"]["fallbacks"]
 
-    prod_groups = {
-        item["model_name"]: item["litellm_params"] for item in production["model_list"]
-    }
-    staging_groups = {
-        item["model_name"]: item["litellm_params"] for item in staging["model_list"]
-    }
+    prod_groups = {item["model_name"]: item["litellm_params"] for item in production["model_list"]}
+    staging_groups = {item["model_name"]: item["litellm_params"] for item in staging["model_list"]}
 
     diagnosis = staging_groups["bodysense-diagnosis"]
     assert diagnosis["model"] == "openai/gemini-3.7-flash"
@@ -97,13 +88,13 @@ def test_staging_diagnosis_uses_fixed_gemini_provider_profile() -> None:
         assert staging_groups[logical_model]["api_key"] == "os.environ/GROQ_API_KEY"
         assert "api_base" not in staging_groups[logical_model]
 
-    assert staging_groups["bodysense-diagnosis-fallback"] == prod_groups[
-        "bodysense-diagnosis-fallback"
-    ]
-    assert staging_groups["bodysense-general-fallback"] == prod_groups[
-        "bodysense-general-fallback"
-    ]
+    assert (
+        staging_groups["bodysense-diagnosis-fallback"]
+        == prod_groups["bodysense-diagnosis-fallback"]
+    )
+    assert staging_groups["bodysense-general-fallback"] == prod_groups["bodysense-general-fallback"]
     assert staging_groups["bodysense-posture"] == prod_groups["bodysense-posture"]
+
 
 def test_smoke_config_preserves_complete_gateway_routing_graph() -> None:
     production = _load(CONFIG)

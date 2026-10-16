@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -16,6 +17,85 @@ type fakeDiagnosisAnalysisRepository struct {
 	createdCandidates []model.DiagnosisCandidateRecord
 	byID              *model.DiagnosisAnalysisRecord
 	assessments       []model.DiagnosisCandidateAssessment
+}
+
+func TestDiagnosisEvidenceAuditUsesFrozenNativeSources(t *testing.T) {
+	owner, factID, sourceID, observationID, observationSourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	body := BodyStateReadModel{UserID: owner, CurrentRevision: 7,
+		Facts:        []model.BodyFact{{ID: factID, UserID: owner, SourceEvidenceID: sourceID, CreatedRevision: 3, AssertionStatus: "asserted"}},
+		Observations: []model.BodyObservationRecord{{ID: observationID, UserID: owner, CreatedRevision: 5, AssertionStatus: "asserted", Source: model.BodyObservationSource{ID: observationSourceID, Version: 2}}},
+	}
+	frozen, err := EncodeDiagnosisReplayInput(7, rawJSON(body, `{}`), nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := json.RawMessage(`{"status":"completed","candidates":[{"name":"hypothesis","confidence":"中"}],"citations":[{"evidence_id":"knowledge-1","summary":"external knowledge"}],"evidence":{"body_state_refs":[{"evidence_id":"forged"}]}}`)
+	analysis, err := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{}).PersistAIResultWithReplayInput(context.Background(), owner, 7, raw, frozen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var trace struct {
+		Evidence struct {
+			Authority string `json:"body_state_authority"`
+			Refs      []struct {
+				ID      uuid.UUID `json:"evidence_id"`
+				Kind    string    `json:"evidence_type"`
+				Version int64     `json:"version"`
+				Source  uuid.UUID `json:"statement_evidence_id"`
+			} `json:"body_state_refs"`
+			Citations []map[string]any `json:"citations"`
+		} `json:"evidence"`
+	}
+	if err := json.Unmarshal(analysis.DecisionTrace, &trace); err != nil {
+		t.Fatal(err)
+	}
+	if trace.Evidence.Authority != "none" || len(trace.Evidence.Refs) != 2 {
+		t.Fatalf("missing native audit: %s", analysis.DecisionTrace)
+	}
+	if got := trace.Evidence.Refs[0]; got.ID != factID || got.Kind != "body_fact" || got.Version != 3 || got.Source != sourceID {
+		t.Fatalf("wrong fact reference: %+v", got)
+	}
+	if got := trace.Evidence.Refs[1]; got.ID != observationID || got.Kind != "body_observation" || got.Version != 5 || got.Source != observationSourceID {
+		t.Fatalf("wrong observation reference: %+v", got)
+	}
+	if len(trace.Evidence.Citations) != 1 || trace.Evidence.Citations[0]["evidence_id"] != "knowledge-1" {
+		t.Fatalf("citation identity changed: %s", analysis.DecisionTrace)
+	}
+}
+
+func TestDiagnosisEvidenceAuditRejectsInvalidFrozenSourcesBeforePersistence(t *testing.T) {
+	owner := uuid.New()
+	for _, name := range []string{"head owner", "fact owner", "observation owner", "head revision", "future fact", "missing source"} {
+		t.Run(name, func(t *testing.T) {
+			body := BodyStateReadModel{UserID: owner, CurrentRevision: 7,
+				Facts:        []model.BodyFact{{ID: uuid.New(), UserID: owner, SourceEvidenceID: uuid.New(), CreatedRevision: 3}},
+				Observations: []model.BodyObservationRecord{{ID: uuid.New(), UserID: owner, CreatedRevision: 5, Source: model.BodyObservationSource{ID: uuid.New(), Version: 1}}},
+			}
+			switch name {
+			case "head owner":
+				body.UserID = uuid.New()
+			case "fact owner":
+				body.Facts[0].UserID = uuid.New()
+			case "observation owner":
+				body.Observations[0].UserID = uuid.New()
+			case "head revision":
+				body.CurrentRevision = 8
+			case "future fact":
+				body.Facts[0].CreatedRevision = 8
+			case "missing source":
+				body.Facts[0].SourceEvidenceID = uuid.Nil
+			}
+			frozen, err := EncodeDiagnosisReplayInput(7, rawJSON(body, `{}`), nil, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			repo := &fakeDiagnosisAnalysisRepository{}
+			_, err = NewDiagnosisAnalysisService(repo).PersistAIResultWithReplayInput(context.Background(), owner, 7, json.RawMessage(`{"status":"insufficient_information"}`), frozen)
+			if err == nil || repo.createdAnalysis != nil {
+				t.Fatalf("invalid frozen source persisted: err=%v", err)
+			}
+		})
+	}
 }
 
 func (r *fakeDiagnosisAnalysisRepository) Create(_ context.Context, analysis *model.DiagnosisAnalysisRecord, candidates []model.DiagnosisCandidateRecord) error {
@@ -229,10 +309,11 @@ func TestPersistAndPublicPayloadUseDedicatedDiagnosisProvenance(t *testing.T) {
 func TestPersistDiagnosisAnalysisFreezesReplayInputWithoutExposingItOnNormalReadModel(t *testing.T) {
 	repo := &fakeDiagnosisAnalysisRepository{}
 	svc := NewDiagnosisAnalysisService(repo)
-	input := replayTestInput(t, 12)
+	owner := uuid.New()
+	input := replayTestInput(t, 12, owner)
 	raw := replayTestRaw(diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck")
 
-	analysis, err := svc.PersistAIResultWithReplayInput(context.Background(), uuid.New(), 12, raw, input)
+	analysis, err := svc.PersistAIResultWithReplayInput(context.Background(), owner, 12, raw, input)
 	if err != nil {
 		t.Fatalf("PersistAIResultWithReplayInput: %v", err)
 	}
@@ -296,5 +377,49 @@ func TestPersistHistoricalEvidenceGapDiagnosisRequiresConsistentAvailabilityTrac
 	}`)
 	if _, err := svc.PersistAIResult(context.Background(), uuid.New(), 18, invalid); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
 		t.Fatalf("expected Go trust boundary to reject status drift, got %v", err)
+	}
+}
+
+func TestPersistDiagnosisAnalysisKeepsAgentHypothesesInAuditOnly(t *testing.T) {
+	repo := &fakeDiagnosisAnalysisRepository{}
+	svc := NewDiagnosisAnalysisService(repo)
+	raw := json.RawMessage(`{"status":"completed","scope":"full_body","summary":"s","candidates":[` +
+		`{"concern_key":"region:neck","name":"颈部肌筋膜紧张","confidence":"中","basis":"b","basis_fact_ids":["fact-a"],"counterevidence_ids":["ev-x"],"reasoning_summary":"r1"},` +
+		`{"name":"姿势相关","confidence":"低","basis":"b"}]}`)
+
+	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 7, raw)
+	if err != nil {
+		t.Fatalf("PersistAIResult: %v", err)
+	}
+	var trace struct {
+		AgentHypotheses []map[string]any `json:"agent_hypotheses"`
+	}
+	if err := json.Unmarshal(repo.createdAnalysis.DecisionTrace, &trace); err != nil {
+		t.Fatalf("decode decision trace: %v", err)
+	}
+	if len(trace.AgentHypotheses) != 2 {
+		t.Fatalf("expected 2 agent hypotheses in audit, got %d", len(trace.AgentHypotheses))
+	}
+	first := trace.AgentHypotheses[0]
+	if first["candidate_id"] != analysis.Candidates[0].ID.String() || first["statement"] != "颈部肌筋膜紧张" ||
+		first["confidence"] != "中" || first["source_actor"] != "diagnosis_agent" || first["body_state_authority"] != "none" {
+		t.Fatalf("unexpected agent hypothesis snapshot: %#v", first)
+	}
+	if facts, ok := first["basis_fact_ids"].([]any); !ok || len(facts) != 1 || facts[0] != "fact-a" {
+		t.Fatalf("basis_fact_ids not preserved: %#v", first["basis_fact_ids"])
+	}
+	if second, ok := trace.AgentHypotheses[1]["counterevidence_ids"].([]any); !ok || len(second) != 0 {
+		t.Fatalf("missing id lists must default to []: %#v", trace.AgentHypotheses[1])
+	}
+
+	empty, err := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{}).PersistAIResult(
+		context.Background(), uuid.New(), 8,
+		json.RawMessage(`{"status":"safety_blocked","scope":"full_body","candidates":[]}`),
+	)
+	if err != nil {
+		t.Fatalf("PersistAIResult safety_blocked: %v", err)
+	}
+	if !json.Valid(empty.DecisionTrace) || !strings.Contains(string(empty.DecisionTrace), `"agent_hypotheses":[]`) {
+		t.Fatalf("blocked analysis must record an empty agent_hypotheses snapshot: %s", empty.DecisionTrace)
 	}
 }

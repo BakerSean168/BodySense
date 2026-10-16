@@ -72,10 +72,9 @@ def test_resume_proto_boundary_rejects_interrupt_path_mismatch() -> None:
             command,
         )
 
+
 def _typed_event_from_proto_fixture(value: dict) -> tuple[str, ConsultationRuntimeEvent]:
-    variant = next(
-        key for key in value if key not in {"version", "seq", "ids"}
-    )
+    variant = next(key for key in value if key not in {"version", "seq", "ids"})
     payload = value[variant]
 
     if variant == "agent_configuration":
@@ -107,9 +106,7 @@ def _typed_event_from_proto_fixture(value: dict) -> tuple[str, ConsultationRunti
     elif variant == "citation_added":
         event_payload = CitationAddedRuntimeEvent(citation=payload["citation"])
     elif variant == "answer_attribution_added":
-        event_payload = AnswerAttributionAddedRuntimeEvent(
-            attribution=payload["attribution"]
-        )
+        event_payload = AnswerAttributionAddedRuntimeEvent(attribution=payload["attribution"])
     elif variant == "knowledge_gap":
         event_payload = KnowledgeGapRuntimeEvent(
             query=payload["query"],

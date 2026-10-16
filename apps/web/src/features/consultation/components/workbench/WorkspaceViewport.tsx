@@ -1,5 +1,5 @@
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import type { ReactNode } from "react";
-import type { BodyStateProjection } from "../../types/consultation";
 import type { WorkspaceView } from "../../model/workbenchView";
 import {
   BodyExplorer,
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface WorkspaceViewportProps {
   view: WorkspaceView;
-  bodyState: BodyStateProjection | null;
+  bodyState: BodyRecords | null;
   state: ReactNode;
   diagnosis: ReactNode;
   treatment: ReactNode;

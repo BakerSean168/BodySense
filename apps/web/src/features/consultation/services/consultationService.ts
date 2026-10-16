@@ -161,7 +161,6 @@ function toConsultationThread(
     extracted_info: input.extracted_info.map((item) =>
       parseExtractedInfo(item),
     ),
-    body_state: input.body_state,
     diagnosis: null,
     pending_interactions: input.pending_interactions.map(
       projectPendingInteraction,

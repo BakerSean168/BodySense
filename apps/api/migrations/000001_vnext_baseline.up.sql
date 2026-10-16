@@ -1,11 +1,9 @@
--- BodySense vNext canonical PostgreSQL 18 baseline.
+-- BodySense V2 canonical PostgreSQL 18 baseline.
 --
--- Phase 08 intentionally resets the pre-user migration chain. Git history
--- preserves migrations 000001-000063; runtime databases are explicitly reset
--- rather than pretending that legacy application data must be upgraded.
---
--- This schema was captured from the Phase 07 accepted PG18 schema after
--- removing migration-era columns with no current runtime authority.
+-- 2026-10-15 V2 big-bang rebuild: there is no user data to preserve, so the
+-- vNext chain 000001-000012 was folded into this single baseline and runtime
+-- databases are reset instead of upgraded. Git history keeps the old chain.
+-- Later V2 domain work edits this baseline directly until first real release.
 
 --
 -- PostgreSQL database dump
@@ -76,7 +74,7 @@ CREATE TABLE public.agent_interactions (
     answered_at timestamp with time zone,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     expires_at timestamp with time zone,
-    CONSTRAINT agent_interactions_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'answered'::character varying, 'cancelled'::character varying, 'expired'::character varying])::text[])))
+    CONSTRAINT agent_interactions_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('answered'::character varying)::text, ('cancelled'::character varying)::text, ('expired'::character varying)::text])))
 );
 
 
@@ -99,7 +97,7 @@ CREATE TABLE public.agent_tool_calls (
     started_at timestamp with time zone DEFAULT now() NOT NULL,
     finished_at timestamp with time zone,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT agent_tool_calls_status_check CHECK (((status)::text = ANY ((ARRAY['running'::character varying, 'succeeded'::character varying, 'failed'::character varying])::text[])))
+    CONSTRAINT agent_tool_calls_status_check CHECK (((status)::text = ANY (ARRAY[('running'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text])))
 );
 
 
@@ -145,7 +143,7 @@ CREATE TABLE public.assessment_reports (
     contract_revision character varying(80) DEFAULT 'assessment-output-v1'::character varying NOT NULL,
     evidence_coverage jsonb DEFAULT '{}'::jsonb NOT NULL,
     evidence_gaps jsonb DEFAULT '[]'::jsonb NOT NULL,
-    CONSTRAINT assessment_reports_status_check CHECK (((status)::text = ANY ((ARRAY['completed'::character varying, 'insufficient_information'::character varying])::text[])))
+    CONSTRAINT assessment_reports_status_check CHECK (((status)::text = ANY (ARRAY[('completed'::character varying)::text, ('insufficient_information'::character varying)::text])))
 );
 
 
@@ -175,106 +173,181 @@ CREATE TABLE public.assessment_rollout_observations (
 
 
 --
--- Name: body_state_evidence; Type: TABLE; Schema: public; Owner: -
+-- Name: body_fact_commits; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.body_state_evidence (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+CREATE TABLE public.body_fact_commits (
+    id uuid NOT NULL,
     user_id uuid NOT NULL,
-    source_type character varying(40) NOT NULL,
-    source_key text NOT NULL,
-    source_version text DEFAULT ''::text NOT NULL,
-    title text DEFAULT ''::text NOT NULL,
-    summary text DEFAULT ''::text NOT NULL,
-    excerpt text DEFAULT ''::text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    retrieved_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    idempotency_key character varying(128) NOT NULL,
+    fingerprint character(64) NOT NULL,
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    fact_ids jsonb NOT NULL,
+    committed_at timestamp with time zone NOT NULL,
+    CONSTRAINT body_fact_commits_fact_ids_check CHECK (((jsonb_typeof(fact_ids) = 'array'::text) AND ((jsonb_array_length(fact_ids) >= 1) AND (jsonb_array_length(fact_ids) <= 20)))),
+    CONSTRAINT body_fact_commits_idempotency_key_check CHECK ((length(TRIM(BOTH FROM idempotency_key)) > 0))
 );
 
 
 --
--- Name: body_state_facts; Type: TABLE; Schema: public; Owner: -
+-- Name: body_facts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.body_state_facts (
-    id uuid DEFAULT uuidv7() NOT NULL,
+CREATE TABLE public.body_facts (
+    id uuid NOT NULL,
     user_id uuid NOT NULL,
-    concern_key character varying(120) DEFAULT ''::character varying NOT NULL,
-    kind character varying(80) NOT NULL,
-    body_region character varying(120) DEFAULT ''::character varying NOT NULL,
-    value text DEFAULT ''::text NOT NULL,
-    details jsonb DEFAULT '{}'::jsonb NOT NULL,
-    origin character varying(40) NOT NULL,
-    review_state character varying(40) DEFAULT 'unverified'::character varying NOT NULL,
-    lifecycle_state character varying(30) DEFAULT 'active'::character varying NOT NULL,
-    trend character varying(30) DEFAULT 'unknown'::character varying NOT NULL,
-    source_key text DEFAULT ''::text NOT NULL,
-    provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    observed_at timestamp with time zone,
-    valid_from timestamp with time zone,
-    valid_until timestamp with time zone,
-    supersedes_fact_id uuid,
-    excluded_from_reasoning boolean DEFAULT false NOT NULL,
-    created_revision bigint NOT NULL,
-    updated_revision bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    body_region_id character varying(80)
-);
-
-
---
--- Name: body_state_hypotheses; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.body_state_hypotheses (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    concern_key character varying(120) DEFAULT 'general'::character varying NOT NULL,
+    subject text NOT NULL,
+    kind text NOT NULL,
     statement text NOT NULL,
-    lifecycle_state character varying(30) DEFAULT 'active'::character varying NOT NULL,
-    confidence character varying(20),
-    supporting_fact_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    supporting_observation_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    supporting_evidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    counterevidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    source_analysis_id uuid,
-    provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
+    body_region_ids jsonb NOT NULL,
+    temporal jsonb NOT NULL,
+    details jsonb NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    assertion_status text NOT NULL,
     created_revision bigint NOT NULL,
-    updated_revision bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT body_state_hypotheses_lifecycle_state_check CHECK (((lifecycle_state)::text = ANY ((ARRAY['active'::character varying, 'strengthened'::character varying, 'weakened'::character varying, 'unsupported'::character varying, 'retired'::character varying])::text[])))
+    recorded_at timestamp with time zone NOT NULL,
+    supersedes_fact_id uuid,
+    CONSTRAINT body_facts_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text, 'withdrawn'::text]))),
+    CONSTRAINT body_facts_body_region_ids_check CHECK (((jsonb_typeof(body_region_ids) = 'array'::text) AND (jsonb_array_length(body_region_ids) <= 20))),
+    CONSTRAINT body_facts_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT body_facts_details_check CHECK ((jsonb_typeof(details) = 'object'::text)),
+    CONSTRAINT body_facts_kind_check CHECK ((kind = ANY (ARRAY['symptom'::text, 'health_history'::text, 'activity'::text, 'lifestyle'::text, 'training_feedback'::text]))),
+    CONSTRAINT body_facts_no_self_supersession CHECK (((supersedes_fact_id IS NULL) OR (supersedes_fact_id <> id))),
+    CONSTRAINT body_facts_statement_check CHECK ((((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (char_length(btrim(statement)) > 0))),
+    CONSTRAINT body_facts_subject_check CHECK ((subject = 'self'::text)),
+    CONSTRAINT body_facts_temporal_check CHECK (((jsonb_typeof(temporal) = 'object'::text) AND (temporal ? 'precision'::text) AND (jsonb_typeof((temporal -> 'precision'::text)) = 'string'::text) AND ((temporal ->> 'precision'::text) = ANY (ARRAY['exact'::text, 'day'::text, 'range'::text, 'approximate'::text, 'unknown'::text]))))
 );
 
 
 --
--- Name: body_state_observations; Type: TABLE; Schema: public; Owner: -
+-- Name: body_hypotheses; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.body_state_observations (
-    id uuid DEFAULT uuidv7() NOT NULL,
+CREATE TABLE public.body_hypotheses (
+    id uuid NOT NULL,
     user_id uuid NOT NULL,
-    concern_key character varying(120) DEFAULT ''::character varying NOT NULL,
-    kind character varying(80) NOT NULL,
-    body_region character varying(120) DEFAULT ''::character varying NOT NULL,
-    method character varying(80) DEFAULT ''::character varying NOT NULL,
-    value jsonb DEFAULT '{}'::jsonb NOT NULL,
-    condition jsonb DEFAULT '{}'::jsonb NOT NULL,
-    source_key text DEFAULT ''::text NOT NULL,
-    provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    observed_at timestamp with time zone,
-    review_state character varying(40) DEFAULT 'unverified'::character varying NOT NULL,
-    lifecycle_state character varying(30) DEFAULT 'active'::character varying NOT NULL,
-    excluded_from_reasoning boolean DEFAULT true NOT NULL,
+    statement text NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    assertion_status text NOT NULL,
     created_revision bigint NOT NULL,
-    updated_revision bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    withdrawn_at timestamp with time zone,
+    withdrawn_revision bigint,
+    withdrawal_reason text,
+    CONSTRAINT body_hypotheses_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'withdrawn'::text]))),
+    CONSTRAINT body_hypotheses_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT body_hypotheses_statement_check CHECK ((((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (statement = btrim(statement)))),
+    CONSTRAINT body_hypotheses_withdrawal_check CHECK ((((assertion_status = 'asserted'::text) AND (withdrawn_at IS NULL) AND (withdrawn_revision IS NULL) AND (withdrawal_reason IS NULL)) OR ((assertion_status = 'withdrawn'::text) AND (withdrawn_at IS NOT NULL) AND (withdrawn_revision > created_revision)))),
+    CONSTRAINT body_hypotheses_withdrawal_reason_check CHECK (((withdrawal_reason IS NULL) OR (((char_length(withdrawal_reason) >= 1) AND (char_length(withdrawal_reason) <= 500)) AND (withdrawal_reason = btrim(withdrawal_reason)))))
+);
+
+
+--
+-- Name: body_hypothesis_commits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_hypothesis_commits (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    idempotency_key character varying(128) NOT NULL,
+    fingerprint character(64) NOT NULL,
+    operation text NOT NULL,
+    hypothesis_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    committed_at timestamp with time zone NOT NULL,
+    CONSTRAINT body_hypothesis_commits_fingerprint_check CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT body_hypothesis_commits_idempotency_key_check CHECK ((((char_length((idempotency_key)::text) >= 1) AND (char_length((idempotency_key)::text) <= 128)) AND ((idempotency_key)::text = btrim((idempotency_key)::text)))),
+    CONSTRAINT body_hypothesis_commits_operation_check CHECK ((operation = ANY (ARRAY['record'::text, 'withdraw'::text]))),
+    CONSTRAINT body_hypothesis_commits_revision_check CHECK ((revision > 0))
+);
+
+
+--
+-- Name: body_hypothesis_fact_links; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_hypothesis_fact_links (
+    user_id uuid NOT NULL,
+    hypothesis_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    ordinal smallint NOT NULL,
+    CONSTRAINT body_hypothesis_fact_links_ordinal_check CHECK (((ordinal >= 0) AND (ordinal < 20)))
+);
+
+
+--
+-- Name: body_observation_commits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_observation_commits (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    idempotency_key character varying(128) NOT NULL,
+    fingerprint character(64) NOT NULL,
+    observation_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    committed_at timestamp with time zone NOT NULL,
+    operation text DEFAULT 'record'::text NOT NULL,
+    target_observation_id uuid,
+    CONSTRAINT body_observation_commits_fingerprint_check CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT body_observation_commits_idempotency_key_check CHECK ((((char_length((idempotency_key)::text) >= 1) AND (char_length((idempotency_key)::text) <= 128)) AND ((idempotency_key)::text = btrim((idempotency_key)::text)))),
+    CONSTRAINT body_observation_commits_revision_check CHECK ((revision > 0)),
+    CONSTRAINT body_observation_receipt_operation_check CHECK ((operation = ANY (ARRAY['record'::text, 'correct'::text, 'withdraw'::text]))),
+    CONSTRAINT body_observation_receipt_operation_target_check CHECK ((((operation = 'record'::text) AND (target_observation_id IS NULL)) OR ((operation = 'correct'::text) AND (target_observation_id IS NOT NULL) AND (observation_id <> target_observation_id)) OR ((operation = 'withdraw'::text) AND (target_observation_id IS NOT NULL) AND (observation_id = target_observation_id))))
+);
+
+
+--
+-- Name: body_observations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_observations (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    kind character varying(64) NOT NULL,
+    raw_value text DEFAULT ''::text NOT NULL,
+    raw_unit text DEFAULT ''::text NOT NULL,
+    method text DEFAULT ''::text NOT NULL,
+    measurement_context text DEFAULT ''::text NOT NULL,
+    observed_at jsonb NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    assertion_status text NOT NULL,
     supersedes_observation_id uuid,
-    body_region_id character varying(80),
-    CONSTRAINT body_state_observations_review_state_check CHECK (((review_state)::text = ANY ((ARRAY['unverified'::character varying, 'confirmed'::character varying, 'rejected'::character varying])::text[])))
+    created_revision bigint NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    CONSTRAINT body_observations_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text, 'withdrawn'::text]))),
+    CONSTRAINT body_observations_check CHECK (((raw_value <> ''::text) OR (raw_unit = ''::text))),
+    CONSTRAINT body_observations_check1 CHECK (((supersedes_observation_id IS NULL) OR (supersedes_observation_id <> id))),
+    CONSTRAINT body_observations_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT body_observations_kind_check CHECK (((kind)::text ~ '^[a-z][a-z0-9_]{1,63}$'::text)),
+    CONSTRAINT body_observations_measurement_context_check CHECK ((char_length(measurement_context) <= 500)),
+    CONSTRAINT body_observations_method_check CHECK ((char_length(method) <= 240)),
+    CONSTRAINT body_observations_observed_at_check CHECK (((jsonb_typeof(observed_at) = 'object'::text) AND (observed_at ? 'precision'::text) AND ((observed_at ->> 'precision'::text) = ANY (ARRAY['exact'::text, 'day'::text, 'range'::text, 'approximate'::text, 'unknown'::text])))),
+    CONSTRAINT body_observations_raw_unit_check CHECK ((char_length(raw_unit) <= 48)),
+    CONSTRAINT body_observations_raw_value_check CHECK ((char_length(raw_value) <= 120))
+);
+
+
+--
+-- Name: body_state_outbox; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.body_state_outbox (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    event_type text NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT body_state_outbox_payload_check CHECK ((jsonb_typeof(payload) = 'object'::text))
 );
 
 
@@ -300,7 +373,6 @@ CREATE TABLE public.body_state_revisions (
 CREATE TABLE public.body_states (
     user_id uuid NOT NULL,
     current_revision bigint DEFAULT 0 NOT NULL,
-    safety_state jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -337,7 +409,7 @@ CREATE TABLE public.consultation_sessions (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     ended_at timestamp with time zone,
-    CONSTRAINT consultation_sessions_phase_check CHECK (((phase)::text = ANY ((ARRAY['collecting'::character varying, 'ready_for_analysis'::character varying])::text[])))
+    CONSTRAINT consultation_sessions_phase_check CHECK (((phase)::text = ANY (ARRAY[('collecting'::character varying)::text, ('ready_for_analysis'::character varying)::text])))
 );
 
 
@@ -425,7 +497,7 @@ CREATE TABLE public.diagnosis_analysis_freshness (
     evaluated_against_revision bigint CONSTRAINT diagnosis_analysis_freshnes_evaluated_against_revision_not_null NOT NULL,
     reasons jsonb DEFAULT '[]'::jsonb NOT NULL,
     checked_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT diagnosis_analysis_freshness_state_check CHECK (((state)::text = ANY ((ARRAY['fresh'::character varying, 'potentially_stale'::character varying, 'stale'::character varying])::text[])))
+    CONSTRAINT diagnosis_analysis_freshness_state_check CHECK (((state)::text = ANY (ARRAY[('fresh'::character varying)::text, ('potentially_stale'::character varying)::text, ('stale'::character varying)::text])))
 );
 
 
@@ -540,9 +612,145 @@ CREATE TABLE public.document_indicator_reviews (
     reviewer_user_id uuid NOT NULL,
     note text DEFAULT ''::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT document_indicator_reviews_action_check CHECK (((action)::text = ANY ((ARRAY['confirm'::character varying, 'correct'::character varying, 'reject'::character varying])::text[]))),
+    CONSTRAINT document_indicator_reviews_action_check CHECK (((action)::text = ANY (ARRAY[('confirm'::character varying)::text, ('correct'::character varying)::text, ('reject'::character varying)::text]))),
     CONSTRAINT document_indicator_reviews_idempotency_key_check CHECK (((idempotency_key)::text <> ''::text)),
     CONSTRAINT document_indicator_reviews_indicator_index_check CHECK ((indicator_index >= 0))
+);
+
+
+--
+-- Name: episode_command_receipts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.episode_command_receipts (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    idempotency_key character varying(128) NOT NULL,
+    fingerprint character(64) NOT NULL,
+    operation text NOT NULL,
+    episode_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    committed_at timestamp with time zone NOT NULL,
+    CONSTRAINT episode_command_receipts_fingerprint_check CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT episode_command_receipts_idempotency_key_check CHECK ((((length((idempotency_key)::text) >= 1) AND (length((idempotency_key)::text) <= 128)) AND ((idempotency_key)::text = btrim((idempotency_key)::text)))),
+    CONSTRAINT episode_command_receipts_operation_check CHECK ((operation = ANY (ARRAY['create'::text, 'link'::text, 'status'::text, 'recurrence'::text]))),
+    CONSTRAINT episode_command_receipts_revision_check CHECK ((revision > 0))
+);
+
+
+--
+-- Name: episode_fact_links; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.episode_fact_links (
+    user_id uuid NOT NULL,
+    episode_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    fact_kind text DEFAULT 'symptom'::text NOT NULL,
+    basis_evidence_id uuid NOT NULL,
+    role text NOT NULL,
+    association_method text NOT NULL,
+    is_primary boolean NOT NULL,
+    authorization_id uuid,
+    created_revision bigint NOT NULL,
+    CONSTRAINT episode_fact_links_association_method_check CHECK ((association_method = ANY (ARRAY['explicit'::text, 'inferred'::text, 'user_corrected'::text]))),
+    CONSTRAINT episode_fact_links_check CHECK (((association_method <> 'user_corrected'::text) OR (authorization_id IS NOT NULL))),
+    CONSTRAINT episode_fact_links_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT episode_fact_links_fact_kind_check CHECK ((fact_kind = 'symptom'::text)),
+    CONSTRAINT episode_fact_links_role_check CHECK ((role = ANY (ARRAY['onset'::text, 'observation'::text, 'change'::text, 'resolution'::text])))
+);
+
+
+--
+-- Name: episode_relations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.episode_relations (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    from_episode_id uuid NOT NULL,
+    to_episode_id uuid NOT NULL,
+    kind text NOT NULL,
+    basis_fact_id uuid NOT NULL,
+    basis_evidence_id uuid NOT NULL,
+    authorization_id uuid NOT NULL,
+    created_revision bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT episode_relations_check CHECK ((from_episode_id <> to_episode_id)),
+    CONSTRAINT episode_relations_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT episode_relations_kind_check CHECK ((kind = 'recurrence_reported'::text))
+);
+
+
+--
+-- Name: episode_state_evidence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.episode_state_evidence (
+    user_id uuid NOT NULL,
+    episode_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    claim text NOT NULL,
+    as_of jsonb NOT NULL,
+    created_revision bigint NOT NULL,
+    CONSTRAINT episode_state_evidence_as_of_check CHECK (((jsonb_typeof(as_of) = 'object'::text) AND (as_of ? 'precision'::text) AND ((as_of ->> 'precision'::text) = ANY (ARRAY['exact'::text, 'day'::text, 'range'::text, 'approximate'::text, 'unknown'::text])))),
+    CONSTRAINT episode_state_evidence_claim_check CHECK ((claim = ANY (ARRAY['explicit_current_report'::text, 'explicit_resolution'::text]))),
+    CONSTRAINT episode_state_evidence_created_revision_check CHECK ((created_revision > 0))
+);
+
+
+--
+-- Name: equipment_assets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.equipment_assets (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    display_name text NOT NULL,
+    notes text,
+    access_kind text NOT NULL,
+    availability text NOT NULL,
+    valid_from timestamp with time zone,
+    valid_until timestamp with time zone,
+    revision bigint DEFAULT 1 NOT NULL,
+    create_idempotency_key text NOT NULL,
+    create_request_digest text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT equipment_assets_access_kind_check CHECK ((access_kind = ANY (ARRAY['owned'::text, 'borrowed'::text, 'facility_access'::text]))),
+    CONSTRAINT equipment_assets_availability_check CHECK ((availability = ANY (ARRAY['available'::text, 'unavailable'::text, 'retired'::text]))),
+    CONSTRAINT equipment_assets_create_idempotency_key_check CHECK (((char_length(create_idempotency_key) >= 1) AND (char_length(create_idempotency_key) <= 128))),
+    CONSTRAINT equipment_assets_create_request_digest_check CHECK ((create_request_digest ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT equipment_assets_display_name_check CHECK ((((char_length(display_name) >= 1) AND (char_length(display_name) <= 80)) AND (display_name = btrim(display_name)))),
+    CONSTRAINT equipment_assets_notes_check CHECK (((notes IS NULL) OR (((char_length(notes) >= 1) AND (char_length(notes) <= 240)) AND (notes = btrim(notes))))),
+    CONSTRAINT equipment_assets_revision_check CHECK ((revision > 0)),
+    CONSTRAINT equipment_assets_validity_check CHECK (((valid_from IS NULL) OR (valid_until IS NULL) OR (valid_until >= valid_from)))
+);
+
+
+--
+-- Name: interaction_resumes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interaction_resumes (
+    interaction_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    conversation_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    request_id text NOT NULL,
+    answer_fingerprint text NOT NULL,
+    question_fingerprint text NOT NULL,
+    user_message_id uuid NOT NULL,
+    assistant_message_id uuid NOT NULL,
+    claimed_at timestamp with time zone NOT NULL,
+    CONSTRAINT interaction_resumes_answer_fingerprint_check CHECK ((answer_fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT interaction_resumes_check CHECK ((user_message_id <> assistant_message_id)),
+    CONSTRAINT interaction_resumes_question_fingerprint_check CHECK ((question_fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT interaction_resumes_request_id_check CHECK (((length(request_id) >= 1) AND (length(request_id) <= 200)))
 );
 
 
@@ -565,7 +773,7 @@ CREATE TABLE public.interventions (
     ended_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT interventions_status_check CHECK (((status)::text = ANY ((ARRAY['proposed'::character varying, 'active'::character varying, 'paused'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'superseded'::character varying])::text[])))
+    CONSTRAINT interventions_status_check CHECK (((status)::text = ANY (ARRAY[('proposed'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text, ('completed'::character varying)::text, ('cancelled'::character varying)::text, ('superseded'::character varying)::text])))
 );
 
 
@@ -605,7 +813,7 @@ CREATE TABLE public.jobs (
     attempts integer DEFAULT 0 NOT NULL,
     max_attempts integer DEFAULT 1 NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT jobs_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying, 'waiting_user'::character varying, 'completed'::character varying, 'failed'::character varying, 'cancelled'::character varying, 'timed_out'::character varying])::text[])))
+    CONSTRAINT jobs_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text, ('waiting_user'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('cancelled'::character varying)::text, ('timed_out'::character varying)::text])))
 );
 
 
@@ -887,7 +1095,7 @@ CREATE TABLE public.outcomes (
     provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
     body_state_revision bigint,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT outcomes_causality_level_check CHECK (((causality_level)::text = ANY ((ARRAY['association_only'::character varying, 'user_attributed'::character varying, 'clinician_attributed'::character varying])::text[])))
+    CONSTRAINT outcomes_causality_level_check CHECK (((causality_level)::text = ANY (ARRAY[('association_only'::character varying)::text, ('user_attributed'::character varying)::text, ('clinician_attributed'::character varying)::text])))
 );
 
 
@@ -908,7 +1116,7 @@ CREATE TABLE public.privacy_erasure_requests (
     requested_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     completed_at timestamp with time zone,
-    CONSTRAINT privacy_erasure_requests_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying, 'retryable'::character varying, 'completed'::character varying])::text[])))
+    CONSTRAINT privacy_erasure_requests_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text, ('retryable'::character varying)::text, ('completed'::character varying)::text])))
 );
 
 
@@ -938,7 +1146,7 @@ CREATE TABLE public.runs (
     lease_expires_at timestamp with time zone,
     lease_owner character varying(120) DEFAULT ''::character varying NOT NULL,
     lease_heartbeat_at timestamp with time zone,
-    CONSTRAINT runs_status_check CHECK (((status)::text = ANY ((ARRAY['running'::character varying, 'waiting_user'::character varying, 'completed'::character varying, 'failed'::character varying, 'cancelled'::character varying])::text[])))
+    CONSTRAINT runs_status_check CHECK (((status)::text = ANY (ARRAY[('running'::character varying)::text, ('waiting_user'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('cancelled'::character varying)::text])))
 );
 
 
@@ -959,6 +1167,81 @@ CREATE TABLE public.runtime_events (
     source character varying(20) DEFAULT 'go'::character varying NOT NULL,
     replayable boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: safety_screens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.safety_screens (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    capture_id text NOT NULL,
+    body_fact_id uuid NOT NULL,
+    source_conversation_id uuid NOT NULL,
+    source_run_id uuid NOT NULL,
+    source_message_id uuid NOT NULL,
+    source_interaction_id uuid NOT NULL,
+    source_tool_call_id text NOT NULL,
+    trauma boolean NOT NULL,
+    radiating_pain boolean NOT NULL,
+    numbness boolean NOT NULL,
+    weakness boolean NOT NULL,
+    dizziness boolean NOT NULL,
+    body_state_revision bigint NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    CONSTRAINT safety_screens_body_state_revision_check CHECK ((body_state_revision > 0)),
+    CONSTRAINT safety_screens_capture_id_check CHECK ((capture_id ~ '^[0-9a-f]{24}$'::text)),
+    CONSTRAINT safety_screens_tool_call_binding_check CHECK ((source_tool_call_id = ('intake-'::text || capture_id)))
+);
+
+
+--
+-- Name: statement_evidence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.statement_evidence (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    source_kind text NOT NULL,
+    source_version bigint NOT NULL,
+    excerpt text NOT NULL,
+    availability text NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    source_conversation_id uuid,
+    source_run_id uuid,
+    source_message_id uuid,
+    source_interaction_id uuid,
+    source_tool_call_id text,
+    question_excerpt text,
+    CONSTRAINT statement_evidence_availability_check CHECK ((availability = ANY (ARRAY['available'::text, 'blocked'::text, 'erased'::text]))),
+    CONSTRAINT statement_evidence_chat_binding_check CHECK ((((source_kind = 'direct_edit'::text) AND (source_conversation_id IS NULL) AND (source_run_id IS NULL) AND (source_message_id IS NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'user_message'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'structured_answer'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NOT NULL) AND (source_tool_call_id IS NOT NULL) AND ((length(source_tool_call_id) >= 1) AND (length(source_tool_call_id) <= 256)) AND (question_excerpt IS NOT NULL) AND ((length(question_excerpt) >= 1) AND (length(question_excerpt) <= 2000))))),
+    CONSTRAINT statement_evidence_check CHECK (((availability <> 'erased'::text) OR (excerpt = ''::text))),
+    CONSTRAINT statement_evidence_excerpt_check CHECK ((char_length(excerpt) <= 2000)),
+    CONSTRAINT statement_evidence_source_kind_check CHECK ((source_kind = ANY (ARRAY['direct_edit'::text, 'user_message'::text, 'structured_answer'::text]))),
+    CONSTRAINT statement_evidence_source_version_check CHECK ((source_version > 0))
+);
+
+
+--
+-- Name: symptom_episodes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.symptom_episodes (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    symptom_type text NOT NULL,
+    body_region_ids jsonb NOT NULL,
+    laterality text NOT NULL,
+    identity_status text DEFAULT 'current'::text NOT NULL,
+    created_revision bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT symptom_episodes_body_region_ids_check CHECK (((jsonb_typeof(body_region_ids) = 'array'::text) AND (jsonb_array_length(body_region_ids) <= 20))),
+    CONSTRAINT symptom_episodes_created_revision_check CHECK ((created_revision > 0)),
+    CONSTRAINT symptom_episodes_identity_status_check CHECK ((identity_status = ANY (ARRAY['current'::text, 'superseded'::text, 'invalidated'::text]))),
+    CONSTRAINT symptom_episodes_laterality_check CHECK ((laterality = ANY (ARRAY['left'::text, 'right'::text, 'bilateral'::text, 'not_applicable'::text, 'unknown'::text]))),
+    CONSTRAINT symptom_episodes_symptom_type_check CHECK (((char_length(btrim(symptom_type)) >= 1) AND (char_length(btrim(symptom_type)) <= 120)))
 );
 
 
@@ -1038,7 +1321,7 @@ CREATE TABLE public.thread_projections (
     ended_at timestamp with time zone,
     refreshed_at timestamp with time zone DEFAULT now() NOT NULL,
     interaction_history jsonb DEFAULT '[]'::jsonb NOT NULL,
-    CONSTRAINT thread_projections_phase_check CHECK (((phase)::text = ANY ((ARRAY['collecting'::character varying, 'ready_for_analysis'::character varying])::text[])))
+    CONSTRAINT thread_projections_phase_check CHECK (((phase)::text = ANY (ARRAY[('collecting'::character varying)::text, ('ready_for_analysis'::character varying)::text])))
 );
 
 
@@ -1109,9 +1392,9 @@ CREATE TABLE public.treatment_revisions (
     acceptance_decision_trace jsonb DEFAULT '{}'::jsonb NOT NULL,
     replay_input jsonb DEFAULT '{}'::jsonb NOT NULL,
     rollout_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT treatment_revisions_acceptance_state_check CHECK (((acceptance_state)::text = ANY ((ARRAY['proposed'::character varying, 'accepted'::character varying, 'rejected'::character varying])::text[]))),
+    CONSTRAINT treatment_revisions_acceptance_state_check CHECK (((acceptance_state)::text = ANY (ARRAY[('proposed'::character varying)::text, ('accepted'::character varying)::text, ('rejected'::character varying)::text]))),
     CONSTRAINT treatment_revisions_duration_weeks_check CHECK ((duration_weeks > 0)),
-    CONSTRAINT treatment_revisions_lifecycle_state_check CHECK (((lifecycle_state)::text = ANY ((ARRAY['active'::character varying, 'review_recommended'::character varying, 'paused'::character varying, 'superseded'::character varying, 'completed'::character varying])::text[])))
+    CONSTRAINT treatment_revisions_lifecycle_state_check CHECK (((lifecycle_state)::text = ANY (ARRAY[('active'::character varying)::text, ('review_recommended'::character varying)::text, ('paused'::character varying)::text, ('superseded'::character varying)::text, ('completed'::character varying)::text])))
 );
 
 
@@ -1155,7 +1438,7 @@ CREATE TABLE public.treatments (
     status_reasons jsonb DEFAULT '[]'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT treatments_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'review_recommended'::character varying, 'paused'::character varying, 'superseded'::character varying, 'completed'::character varying])::text[])))
+    CONSTRAINT treatments_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('review_recommended'::character varying)::text, ('paused'::character varying)::text, ('superseded'::character varying)::text, ('completed'::character varying)::text])))
 );
 
 
@@ -1193,10 +1476,10 @@ CREATE TABLE public.user_uploads (
     agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
     storage_backend character varying(20) NOT NULL,
     storage_key character varying(500) NOT NULL,
-    CONSTRAINT ck_user_uploads_storage_backend CHECK (((storage_backend)::text = ANY ((ARRAY['local'::character varying, 'oss'::character varying])::text[]))),
+    CONSTRAINT ck_user_uploads_storage_backend CHECK (((storage_backend)::text = ANY (ARRAY[('local'::character varying)::text, ('oss'::character varying)::text]))),
     CONSTRAINT ck_user_uploads_storage_key CHECK ((((storage_key)::text <> ''::text) AND (length((storage_key)::text) <= 492) AND ((storage_key)::text !~ '^/'::text) AND ((storage_key)::text !~ '(^|/)\.\.(/|$)'::text) AND (POSITION((chr(92)) IN (storage_key)) = 0))),
-    CONSTRAINT user_uploads_analysis_status_check CHECK (((analysis_status)::text = ANY ((ARRAY['none'::character varying, 'pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying])::text[]))),
-    CONSTRAINT user_uploads_ocr_status_check CHECK (((ocr_status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying])::text[])))
+    CONSTRAINT user_uploads_analysis_status_check CHECK (((analysis_status)::text = ANY (ARRAY[('none'::character varying)::text, ('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text]))),
+    CONSTRAINT user_uploads_ocr_status_check CHECK (((ocr_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text])))
 );
 
 
@@ -1211,7 +1494,7 @@ CREATE TABLE public.users (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     last_login_at timestamp with time zone,
     role character varying(30) DEFAULT 'member'::character varying NOT NULL,
-    CONSTRAINT chk_users_role CHECK (((role)::text = ANY ((ARRAY['member'::character varying, 'operator'::character varying])::text[])))
+    CONSTRAINT chk_users_role CHECK (((role)::text = ANY (ARRAY[('member'::character varying)::text, ('operator'::character varying)::text])))
 );
 
 
@@ -1300,43 +1583,147 @@ ALTER TABLE ONLY public.assessment_rollout_observations
 
 
 --
--- Name: body_state_evidence body_state_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: body_fact_commits body_fact_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_evidence
-    ADD CONSTRAINT body_state_evidence_pkey PRIMARY KEY (id);
-
-
---
--- Name: body_state_evidence body_state_evidence_user_id_source_type_source_key_source_v_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_evidence
-    ADD CONSTRAINT body_state_evidence_user_id_source_type_source_key_source_v_key UNIQUE (user_id, source_type, source_key, source_version);
+ALTER TABLE ONLY public.body_fact_commits
+    ADD CONSTRAINT body_fact_commits_pkey PRIMARY KEY (id);
 
 
 --
--- Name: body_state_facts body_state_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: body_fact_commits body_fact_commits_user_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_facts
-    ADD CONSTRAINT body_state_facts_pkey PRIMARY KEY (id);
-
-
---
--- Name: body_state_hypotheses body_state_hypotheses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.body_fact_commits
+    ADD CONSTRAINT body_fact_commits_user_id_idempotency_key_key UNIQUE (user_id, idempotency_key);
 
 
 --
--- Name: body_state_observations body_state_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: body_facts body_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_observations
-    ADD CONSTRAINT body_state_observations_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.body_facts
+    ADD CONSTRAINT body_facts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_facts body_facts_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_facts
+    ADD CONSTRAINT body_facts_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_id_source_evidence_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_id_source_evidence_id_key UNIQUE (user_id, id, source_evidence_id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_idempotency_key_key UNIQUE (user_id, idempotency_key);
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_pkey PRIMARY KEY (user_id, hypothesis_id, fact_id);
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_user_id_hypothesis_id_ordinal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_user_id_hypothesis_id_ordinal_key UNIQUE (user_id, hypothesis_id, ordinal);
+
+
+--
+-- Name: body_observation_commits body_observation_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_observation_commits body_observation_commits_user_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_user_id_idempotency_key_key UNIQUE (user_id, idempotency_key);
+
+
+--
+-- Name: body_observations body_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_observations body_observations_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: body_observations body_observations_user_id_id_source_evidence_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_id_source_evidence_id_key UNIQUE (user_id, id, source_evidence_id);
+
+
+--
+-- Name: body_state_outbox body_state_outbox_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_state_outbox
+    ADD CONSTRAINT body_state_outbox_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: body_state_outbox body_state_outbox_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_state_outbox
+    ADD CONSTRAINT body_state_outbox_user_id_id_key UNIQUE (user_id, id);
 
 
 --
@@ -1473,6 +1860,142 @@ ALTER TABLE ONLY public.document_extraction_runs
 
 ALTER TABLE ONLY public.document_indicator_reviews
     ADD CONSTRAINT document_indicator_reviews_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_owner_identity; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_owner_identity UNIQUE (user_id, id);
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_idempotency_key_key UNIQUE (user_id, idempotency_key);
+
+
+--
+-- Name: episode_fact_links episode_fact_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_fact_links
+    ADD CONSTRAINT episode_fact_links_pkey PRIMARY KEY (user_id, episode_id, fact_id);
+
+
+--
+-- Name: episode_fact_links episode_fact_links_user_id_episode_id_fact_id_basis_evidenc_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_fact_links
+    ADD CONSTRAINT episode_fact_links_user_id_episode_id_fact_id_basis_evidenc_key UNIQUE (user_id, episode_id, fact_id, basis_evidence_id);
+
+
+--
+-- Name: episode_relations episode_relations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: episode_relations episode_relations_user_id_authorization_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_authorization_id_key UNIQUE (user_id, authorization_id);
+
+
+--
+-- Name: episode_relations episode_relations_user_id_from_episode_id_to_episode_id_kin_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_from_episode_id_to_episode_id_kin_key UNIQUE (user_id, from_episode_id, to_episode_id, kind);
+
+
+--
+-- Name: episode_relations episode_relations_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: episode_state_evidence episode_state_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_state_evidence
+    ADD CONSTRAINT episode_state_evidence_pkey PRIMARY KEY (user_id, episode_id, fact_id);
+
+
+--
+-- Name: equipment_assets equipment_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_create_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_create_idempotency_key_key UNIQUE (user_id, create_idempotency_key);
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: interaction_resumes interaction_resumes_assistant_message_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_assistant_message_id_key UNIQUE (assistant_message_id);
+
+
+--
+-- Name: interaction_resumes interaction_resumes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_pkey PRIMARY KEY (interaction_id);
+
+
+--
+-- Name: interaction_resumes interaction_resumes_user_id_request_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_user_id_request_id_key UNIQUE (user_id, request_id);
+
+
+--
+-- Name: interaction_resumes interaction_resumes_user_message_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_user_message_id_key UNIQUE (user_message_id);
 
 
 --
@@ -1684,6 +2207,62 @@ ALTER TABLE ONLY public.runtime_events
 
 
 --
+-- Name: safety_screens safety_screens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: safety_screens safety_screens_user_id_capture_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_capture_id_key UNIQUE (user_id, capture_id);
+
+
+--
+-- Name: safety_screens safety_screens_user_id_source_interaction_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_source_interaction_id_key UNIQUE (user_id, source_interaction_id);
+
+
+--
+-- Name: statement_evidence statement_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statement_evidence
+    ADD CONSTRAINT statement_evidence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: statement_evidence statement_evidence_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statement_evidence
+    ADD CONSTRAINT statement_evidence_user_id_id_key UNIQUE (user_id, id);
+
+
+--
+-- Name: symptom_episodes symptom_episodes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.symptom_episodes
+    ADD CONSTRAINT symptom_episodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: symptom_episodes symptom_episodes_user_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.symptom_episodes
+    ADD CONSTRAINT symptom_episodes_user_id_id_key UNIQUE (user_id, id);
+
+
+--
 -- Name: thread_projection_messages thread_projection_messages_conversation_id_seq_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1704,7 +2283,7 @@ ALTER TABLE ONLY public.thread_projection_messages
 --
 
 ALTER TABLE ONLY public.thread_projection_tool_calls
-    ADD CONSTRAINT thread_projection_tool_calls_pkey PRIMARY KEY (tool_call_id);
+    ADD CONSTRAINT thread_projection_tool_calls_pkey PRIMARY KEY (run_id, tool_call_id);
 
 
 --
@@ -1804,6 +2383,153 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: body_facts_episode_link_source_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX body_facts_episode_link_source_identity ON public.body_facts USING btree (user_id, id, kind, source_evidence_id);
+
+
+--
+-- Name: body_facts_one_corrective_successor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX body_facts_one_corrective_successor ON public.body_facts USING btree (user_id, supersedes_fact_id) WHERE (supersedes_fact_id IS NOT NULL);
+
+
+--
+-- Name: body_facts_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_facts_source ON public.body_facts USING btree (user_id, source_evidence_id);
+
+
+--
+-- Name: body_facts_user_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_facts_user_revision ON public.body_facts USING btree (user_id, created_revision DESC, id);
+
+
+--
+-- Name: body_hypotheses_owner_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypotheses_owner_active ON public.body_hypotheses USING btree (user_id, created_revision DESC, id) WHERE (assertion_status = 'asserted'::text);
+
+
+--
+-- Name: body_hypotheses_owner_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypotheses_owner_source ON public.body_hypotheses USING btree (user_id, source_evidence_id);
+
+
+--
+-- Name: body_hypothesis_commits_owner_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypothesis_commits_owner_rev ON public.body_hypothesis_commits USING btree (user_id, revision DESC);
+
+
+--
+-- Name: body_hypothesis_fact_links_owner_fact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_hypothesis_fact_links_owner_fact ON public.body_hypothesis_fact_links USING btree (user_id, fact_id);
+
+
+--
+-- Name: body_observation_commits_owner_rev; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_observation_commits_owner_rev ON public.body_observation_commits USING btree (user_id, revision DESC);
+
+
+--
+-- Name: body_observation_receipts_owner_target; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_observation_receipts_owner_target ON public.body_observation_commits USING btree (user_id, target_observation_id) WHERE (target_observation_id IS NOT NULL);
+
+
+--
+-- Name: body_observations_one_corrective_successor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX body_observations_one_corrective_successor ON public.body_observations USING btree (user_id, supersedes_observation_id) WHERE (supersedes_observation_id IS NOT NULL);
+
+
+--
+-- Name: body_observations_owner_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_observations_owner_revision ON public.body_observations USING btree (user_id, created_revision DESC, id);
+
+
+--
+-- Name: body_observations_owner_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_observations_owner_source ON public.body_observations USING btree (user_id, source_evidence_id);
+
+
+--
+-- Name: body_state_outbox_replay; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX body_state_outbox_replay ON public.body_state_outbox USING btree (user_id, revision, id);
+
+
+--
+-- Name: episode_command_receipts_owner_episode; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX episode_command_receipts_owner_episode ON public.episode_command_receipts USING btree (user_id, episode_id, revision DESC);
+
+
+--
+-- Name: episode_fact_links_by_fact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX episode_fact_links_by_fact ON public.episode_fact_links USING btree (user_id, fact_id);
+
+
+--
+-- Name: episode_fact_one_primary; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX episode_fact_one_primary ON public.episode_fact_links USING btree (user_id, fact_id) WHERE is_primary;
+
+
+--
+-- Name: episode_relations_owner_from; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX episode_relations_owner_from ON public.episode_relations USING btree (user_id, from_episode_id, created_revision DESC);
+
+
+--
+-- Name: episode_relations_owner_to; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX episode_relations_owner_to ON public.episode_relations USING btree (user_id, to_episode_id, created_revision DESC);
+
+
+--
+-- Name: equipment_assets_owner_current; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX equipment_assets_owner_current ON public.equipment_assets USING btree (user_id, created_at DESC, id DESC) WHERE (availability <> 'retired'::text);
+
+
+--
+-- Name: equipment_assets_owner_current_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX equipment_assets_owner_current_name ON public.equipment_assets USING btree (user_id, lower(display_name)) WHERE (availability <> 'retired'::text);
+
+
+--
 -- Name: idx_agent_interactions_conversation_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1899,90 +2625,6 @@ CREATE INDEX idx_assessment_reports_user_created ON public.assessment_reports US
 --
 
 CREATE INDEX idx_assessment_rollout_observations_pair_stage ON public.assessment_rollout_observations USING btree (champion_configuration_id, challenger_configuration_id, stage, canary_bps, created_at DESC);
-
-
---
--- Name: idx_body_state_evidence_user_retrieved; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_evidence_user_retrieved ON public.body_state_evidence USING btree (user_id, retrieved_at DESC);
-
-
---
--- Name: idx_body_state_facts_active_context_kind; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_body_state_facts_active_context_kind ON public.body_state_facts USING btree (user_id, kind) WHERE (((lifecycle_state)::text = 'active'::text) AND ((review_state)::text = 'confirmed'::text) AND (excluded_from_reasoning = false) AND ((kind)::text = ANY ((ARRAY['lifestyle.activity'::character varying, 'lifestyle.sleep'::character varying, 'lifestyle.exercise'::character varying, 'lifestyle.nutrition'::character varying, 'lifestyle.substances'::character varying, 'lifestyle.recovery'::character varying, 'history.injury_summary'::character varying])::text[])));
-
-
---
--- Name: idx_body_state_facts_user_concern; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_facts_user_concern ON public.body_state_facts USING btree (user_id, concern_key, updated_at DESC);
-
-
---
--- Name: idx_body_state_facts_user_current; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_facts_user_current ON public.body_state_facts USING btree (user_id, lifecycle_state, updated_at DESC);
-
-
---
--- Name: idx_body_state_facts_user_source_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_body_state_facts_user_source_key ON public.body_state_facts USING btree (user_id, source_key) WHERE (source_key <> ''::text);
-
-
---
--- Name: idx_body_state_hypotheses_concern; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_hypotheses_concern ON public.body_state_hypotheses USING btree (user_id, concern_key);
-
-
---
--- Name: idx_body_state_hypotheses_user_state; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_hypotheses_user_state ON public.body_state_hypotheses USING btree (user_id, lifecycle_state, updated_at DESC);
-
-
---
--- Name: idx_body_state_observations_active_anthropometry_kind; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_body_state_observations_active_anthropometry_kind ON public.body_state_observations USING btree (user_id, kind) WHERE (((lifecycle_state)::text = 'active'::text) AND (excluded_from_reasoning = false) AND ((kind)::text = ANY ((ARRAY['anthropometry.height'::character varying, 'anthropometry.weight'::character varying])::text[])));
-
-
---
--- Name: idx_body_state_observations_supersedes; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_observations_supersedes ON public.body_state_observations USING btree (supersedes_observation_id) WHERE (supersedes_observation_id IS NOT NULL);
-
-
---
--- Name: idx_body_state_observations_user_concern; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_observations_user_concern ON public.body_state_observations USING btree (user_id, concern_key, updated_at DESC);
-
-
---
--- Name: idx_body_state_observations_user_current; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_body_state_observations_user_current ON public.body_state_observations USING btree (user_id, lifecycle_state, review_state, updated_at DESC);
-
-
---
--- Name: idx_body_state_observations_user_source_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_body_state_observations_user_source_key ON public.body_state_observations USING btree (user_id, source_key) WHERE (source_key <> ''::text);
 
 
 --
@@ -2381,7 +3023,7 @@ CREATE INDEX idx_outcomes_user_occurred ON public.outcomes USING btree (user_id,
 -- Name: idx_privacy_erasure_requests_recovery; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_privacy_erasure_requests_recovery ON public.privacy_erasure_requests USING btree (status, lease_expires_at, updated_at) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying, 'retryable'::character varying])::text[]));
+CREATE INDEX idx_privacy_erasure_requests_recovery ON public.privacy_erasure_requests USING btree (status, lease_expires_at, updated_at) WHERE ((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text, ('retryable'::character varying)::text]));
 
 
 --
@@ -2409,7 +3051,7 @@ CREATE INDEX idx_runs_lease_owner ON public.runs USING btree (lease_owner) WHERE
 -- Name: idx_runs_one_active_per_conversation; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_runs_one_active_per_conversation ON public.runs USING btree (conversation_id) WHERE ((status)::text = ANY ((ARRAY['running'::character varying, 'waiting_user'::character varying])::text[]));
+CREATE UNIQUE INDEX idx_runs_one_active_per_conversation ON public.runs USING btree (conversation_id) WHERE ((status)::text = ANY (ARRAY[('running'::character varying)::text, ('waiting_user'::character varying)::text]));
 
 
 --
@@ -2595,6 +3237,41 @@ CREATE INDEX idx_users_role ON public.users USING btree (role);
 
 
 --
+-- Name: interaction_resumes_run; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interaction_resumes_run ON public.interaction_resumes USING btree (user_id, run_id);
+
+
+--
+-- Name: safety_screens_user_revision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX safety_screens_user_revision ON public.safety_screens USING btree (user_id, body_state_revision DESC, id);
+
+
+--
+-- Name: statement_evidence_source_interaction; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX statement_evidence_source_interaction ON public.statement_evidence USING btree (user_id, source_interaction_id) WHERE (source_interaction_id IS NOT NULL);
+
+
+--
+-- Name: statement_evidence_source_message; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX statement_evidence_source_message ON public.statement_evidence USING btree (user_id, source_message_id) WHERE (source_message_id IS NOT NULL);
+
+
+--
+-- Name: symptom_episodes_owner_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX symptom_episodes_owner_identity ON public.symptom_episodes USING btree (user_id, identity_status, created_revision DESC);
+
+
+--
 -- Name: uq_assessment_rollout_observation_pair; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2738,59 +3415,227 @@ ALTER TABLE ONLY public.assessment_rollout_observations
 
 
 --
--- Name: body_state_evidence body_state_evidence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: body_fact_commits body_fact_commits_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_evidence
-    ADD CONSTRAINT body_state_evidence_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: body_state_facts body_state_facts_supersedes_fact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_facts
-    ADD CONSTRAINT body_state_facts_supersedes_fact_id_fkey FOREIGN KEY (supersedes_fact_id) REFERENCES public.body_state_facts(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.body_fact_commits
+    ADD CONSTRAINT body_fact_commits_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.body_state_revisions(id) ON DELETE CASCADE;
 
 
 --
--- Name: body_state_facts body_state_facts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: body_fact_commits body_fact_commits_user_id_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_facts
-    ADD CONSTRAINT body_state_facts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: body_state_hypotheses body_state_hypotheses_source_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_source_analysis_id_fkey FOREIGN KEY (source_analysis_id) REFERENCES public.diagnosis_analyses(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.body_fact_commits
+    ADD CONSTRAINT body_fact_commits_user_id_event_id_fkey FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) ON DELETE CASCADE;
 
 
 --
--- Name: body_state_hypotheses body_state_hypotheses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: body_fact_commits body_fact_commits_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_hypotheses
-    ADD CONSTRAINT body_state_hypotheses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: body_state_observations body_state_observations_supersedes_observation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.body_state_observations
-    ADD CONSTRAINT body_state_observations_supersedes_observation_id_fkey FOREIGN KEY (supersedes_observation_id) REFERENCES public.body_state_observations(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.body_fact_commits
+    ADD CONSTRAINT body_fact_commits_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
 
 
 --
--- Name: body_state_observations body_state_observations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: body_facts body_facts_supersession_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.body_state_observations
-    ADD CONSTRAINT body_state_observations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.body_facts
+    ADD CONSTRAINT body_facts_supersession_owner_fk FOREIGN KEY (user_id, supersedes_fact_id) REFERENCES public.body_facts(user_id, id);
+
+
+--
+-- Name: body_facts body_facts_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_facts
+    ADD CONSTRAINT body_facts_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_facts body_facts_user_id_source_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_facts
+    ADD CONSTRAINT body_facts_user_id_source_evidence_id_fkey FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id);
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_withdrawn_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_withdrawn_revision_fkey FOREIGN KEY (user_id, withdrawn_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypotheses body_hypotheses_user_id_source_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypotheses
+    ADD CONSTRAINT body_hypotheses_user_id_source_evidence_id_fkey FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id);
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.body_state_revisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_user_id_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_user_id_event_id_fkey FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_commits body_hypothesis_commits_hypothesis_source_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_commits
+    ADD CONSTRAINT body_hypothesis_commits_hypothesis_source_owner_fk FOREIGN KEY (user_id, hypothesis_id, source_evidence_id) REFERENCES public.body_hypotheses(user_id, id, source_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_hypothesis_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_hypothesis_owner_fk FOREIGN KEY (user_id, hypothesis_id) REFERENCES public.body_hypotheses(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_hypothesis_fact_links body_hypothesis_fact_links_fact_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_hypothesis_fact_links
+    ADD CONSTRAINT body_hypothesis_fact_links_fact_owner_fk FOREIGN KEY (user_id, fact_id) REFERENCES public.body_facts(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_commits_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.body_state_revisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_commits_user_id_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_user_id_event_id_fkey FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_commits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_commits_user_id_observation_id_source_evi_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_user_id_observation_id_source_evi_fkey FOREIGN KEY (user_id, observation_id, source_evidence_id) REFERENCES public.body_observations(user_id, id, source_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_commits_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_commits_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observation_commits body_observation_receipt_target_owner_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observation_commits
+    ADD CONSTRAINT body_observation_receipt_target_owner_fk FOREIGN KEY (user_id, target_observation_id) REFERENCES public.body_observations(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observations body_observations_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observations body_observations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: body_observations body_observations_user_id_source_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_source_evidence_id_fkey FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id);
+
+
+--
+-- Name: body_observations body_observations_user_id_supersedes_observation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_observations
+    ADD CONSTRAINT body_observations_user_id_supersedes_observation_id_fkey FOREIGN KEY (user_id, supersedes_observation_id) REFERENCES public.body_observations(user_id, id);
+
+
+--
+-- Name: body_state_outbox body_state_outbox_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.body_state_outbox
+    ADD CONSTRAINT body_state_outbox_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
 
 
 --
@@ -2962,6 +3807,150 @@ ALTER TABLE ONLY public.document_indicator_reviews
 
 
 --
+-- Name: episode_command_receipts episode_command_receipts_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.body_state_revisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_episode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_episode_id_fkey FOREIGN KEY (user_id, episode_id) REFERENCES public.symptom_episodes(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_event_id_fkey FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_fact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_fact_id_fkey FOREIGN KEY (user_id, fact_id) REFERENCES public.body_facts(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_command_receipts episode_command_receipts_user_id_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_command_receipts
+    ADD CONSTRAINT episode_command_receipts_user_id_revision_fkey FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_fact_links episode_fact_links_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_fact_links
+    ADD CONSTRAINT episode_fact_links_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_fact_links episode_fact_links_user_id_episode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_fact_links
+    ADD CONSTRAINT episode_fact_links_user_id_episode_id_fkey FOREIGN KEY (user_id, episode_id) REFERENCES public.symptom_episodes(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_fact_links episode_fact_links_user_id_fact_id_fact_kind_basis_evidenc_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_fact_links
+    ADD CONSTRAINT episode_fact_links_user_id_fact_id_fact_kind_basis_evidenc_fkey FOREIGN KEY (user_id, fact_id, fact_kind, basis_evidence_id) REFERENCES public.body_facts(user_id, id, kind, source_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_authorization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_authorization_id_fkey FOREIGN KEY (user_id, authorization_id) REFERENCES public.episode_command_receipts(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_from_episode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_from_episode_id_fkey FOREIGN KEY (user_id, from_episode_id) REFERENCES public.symptom_episodes(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_to_episode_id_basis_fact_id_basi_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_to_episode_id_basis_fact_id_basi_fkey FOREIGN KEY (user_id, to_episode_id, basis_fact_id, basis_evidence_id) REFERENCES public.episode_fact_links(user_id, episode_id, fact_id, basis_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_relations episode_relations_user_id_to_episode_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_relations
+    ADD CONSTRAINT episode_relations_user_id_to_episode_id_fkey FOREIGN KEY (user_id, to_episode_id) REFERENCES public.symptom_episodes(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_state_evidence episode_state_evidence_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_state_evidence
+    ADD CONSTRAINT episode_state_evidence_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: episode_state_evidence episode_state_evidence_user_id_episode_id_fact_id_source_e_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.episode_state_evidence
+    ADD CONSTRAINT episode_state_evidence_user_id_episode_id_fact_id_source_e_fkey FOREIGN KEY (user_id, episode_id, fact_id, source_evidence_id) REFERENCES public.episode_fact_links(user_id, episode_id, fact_id, basis_evidence_id) ON DELETE CASCADE;
+
+
+--
+-- Name: equipment_assets equipment_assets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.equipment_assets
+    ADD CONSTRAINT equipment_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: ai_output_reviews fk_ai_output_reviews_user_erasure; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2999,6 +3988,54 @@ ALTER TABLE ONLY public.knowledge_units
 
 ALTER TABLE ONLY public.runs
     ADD CONSTRAINT fk_runs_user_erasure FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_assistant_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_assistant_message_id_fkey FOREIGN KEY (assistant_message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_interaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_interaction_id_fkey FOREIGN KEY (interaction_id) REFERENCES public.agent_interactions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.runs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: interaction_resumes interaction_resumes_user_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_resumes
+    ADD CONSTRAINT interaction_resumes_user_message_id_fkey FOREIGN KEY (user_message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
 
 
 --
@@ -3186,6 +4223,54 @@ ALTER TABLE ONLY public.runtime_events
 
 
 --
+-- Name: safety_screens safety_screens_user_id_body_fact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_body_fact_id_fkey FOREIGN KEY (user_id, body_fact_id) REFERENCES public.body_facts(user_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: safety_screens safety_screens_user_id_body_state_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_body_state_revision_fkey FOREIGN KEY (user_id, body_state_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: safety_screens safety_screens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.safety_screens
+    ADD CONSTRAINT safety_screens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: statement_evidence statement_evidence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.statement_evidence
+    ADD CONSTRAINT statement_evidence_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: symptom_episodes symptom_episodes_user_id_created_revision_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.symptom_episodes
+    ADD CONSTRAINT symptom_episodes_user_id_created_revision_fkey FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) ON DELETE CASCADE;
+
+
+--
+-- Name: symptom_episodes symptom_episodes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.symptom_episodes
+    ADD CONSTRAINT symptom_episodes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: thread_projection_messages thread_projection_messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3352,6 +4437,58 @@ ALTER TABLE ONLY public.user_profiles
 ALTER TABLE ONLY public.user_uploads
     ADD CONSTRAINT user_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
+
+-- Go-owned, immutable restrictions for complete structured Safety screens.
+ALTER TABLE public.safety_screens ADD CONSTRAINT safety_screens_owner_revision_key UNIQUE (user_id, id, body_state_revision);
+CREATE TABLE public.safety_restrictions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    safety_screen_id uuid NOT NULL,
+    concept text NOT NULL CHECK (concept IN ('trauma','radiating_pain','numbness','weakness','dizziness')),
+    policy_revision text NOT NULL CHECK (policy_revision = 'safety-screen-restriction-v1'),
+    risk_level text NOT NULL CHECK (risk_level = 'restricted'),
+    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
+    lift_policy text NOT NULL CHECK (lift_policy = 'professional_clearance'),
+    reason text NOT NULL CHECK (length(btrim(reason)) > 0),
+    created_revision bigint NOT NULL,
+    valid_from timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, safety_screen_id, concept),
+    FOREIGN KEY (user_id, safety_screen_id, created_revision) REFERENCES public.safety_screens(user_id, id, body_state_revision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED
+);
+
+
+-- Exact-target user-reported professional clearance, never a global clear.
+ALTER TABLE public.body_state_revisions ADD CONSTRAINT safety_resolution_revision_identity UNIQUE (user_id, revision, id);
+CREATE TABLE public.safety_resolutions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    restriction_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    source_message_id uuid NOT NULL,
+    source_version bigint NOT NULL CHECK (source_version = 1),
+    basis_kind text NOT NULL CHECK (basis_kind = 'professional_clearance'),
+    source_level text NOT NULL CHECK (source_level = 'user_reported'),
+    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
+    policy_revision text NOT NULL CHECK (policy_revision = 'user-reported-professional-clearance-v1'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128),
+    fingerprint text NOT NULL CHECK (length(fingerprint) = 64),
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    actor text NOT NULL CHECK (actor = 'user'),
+    lifted_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, restriction_id),
+    UNIQUE (user_id, source_message_id),
+    UNIQUE (user_id, idempotency_key),
+    FOREIGN KEY (user_id, restriction_id) REFERENCES public.safety_restrictions(user_id, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, revision, revision_id) REFERENCES public.body_state_revisions(user_id, revision, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) DEFERRABLE INITIALLY DEFERRED
+);
 
 --
 -- PostgreSQL database dump complete

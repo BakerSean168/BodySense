@@ -1,3 +1,4 @@
+import { bodyRecordsFixture } from "@/features/profile/services/__fixtures__/bodyRecordsFixture";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -18,8 +19,33 @@ const mockListTrainingPlans = vi.fn();
 const mockGetBodyMetrics = vi.fn();
 const mockGetLifestyle = vi.fn();
 const mockListBodyFacts = vi.fn();
+const mockReadBodyRecords = vi.fn();
+vi.mock("@/features/profile/services/bodyRecordsService", () => ({
+  readBodyRecords: () => mockReadBodyRecords(),
+}));
 vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
   bodyFactRecordsService: { list: () => mockListBodyFacts(), record: vi.fn() },
+}));
+vi.mock("@/features/profile/services/bodyEpisodeService", () => ({
+  bodyEpisodeService: { list: async () => ({ user_id: "11111111-1111-4111-8111-111111111111", current_revision: 1, episodes: [], has_more: false }) },
+}));
+const mockListEquipment = vi.fn();
+const mockUpdateEquipment = vi.fn();
+vi.mock("@/features/profile/services/equipmentService", () => ({
+  equipmentKeys: { all: ["equipment"] },
+  equipmentService: {
+    list: () => mockListEquipment(),
+    create: vi.fn(),
+    update: (id: string, input: unknown) => mockUpdateEquipment(id, input),
+  },
+  availabilityChange: (
+    asset: { revision: number; display_name: string },
+    availability: string,
+  ) => ({
+    expected_revision: asset.revision,
+    display_name: asset.display_name,
+    availability,
+  }),
 }));
 
 vi.mock("../../hooks/useConversationsQuery", () => ({
@@ -115,16 +141,6 @@ function makeWorkspace(
   return {
     generated_at: "2026-10-11T00:00:00Z",
     profile_ready: true,
-    body_state: {
-      current_revision: 2,
-      safety_state: {},
-      facts: [],
-      observations: [],
-      pending_facts: [],
-      pending_observations: [],
-      hypotheses: [],
-      recent_revisions: [],
-    },
     treatment_revisions: [],
     recent_outcomes: [],
     trends: [],
@@ -175,12 +191,17 @@ function openDock(name: string) {
 }
 
 beforeEach(() => {
+  mockReadBodyRecords.mockReset();
+  mockReadBodyRecords.mockResolvedValue(bodyRecordsFixture());
   mockUseConversationsQuery.mockReset();
   mockUseConsultationThreadQuery.mockReset();
   mockUseHealthWorkspaceQuery.mockReset();
   mockListTrainingPlans.mockReset();
   mockGetBodyMetrics.mockReset();
   mockGetLifestyle.mockReset();
+  mockListEquipment.mockReset();
+  mockListEquipment.mockResolvedValue({ items: [] });
+  mockUpdateEquipment.mockReset();
   const owner = "11111111-1111-4111-8111-111111111111";
   useAuthStore.setState({
     user: { id: owner, email: "synthetic@example.test" },
@@ -239,7 +260,6 @@ beforeEach(() => {
     nutrition: { kind: "nutrition", summary: "", details: {} },
     substances: { kind: "substances", summary: "", details: {} },
     recovery: { kind: "recovery", summary: "", details: {} },
-    pending_updates: [],
   });
 });
 
@@ -617,13 +637,51 @@ describe("body-first business windows", () => {
     await screen.findByTestId("person-window");
     await userEvent.click(screen.getByRole("button", { name: "装备" }));
     expect(
-      screen.getByText("添加个人器材，帮助 AI 更好规划训练项目"),
+      await screen.findByText("添加个人器材，帮助 AI 更好规划训练项目"),
     ).toBeInTheDocument();
+    expect(mockListEquipment).toHaveBeenCalled();
     expect(
       screen.getByRole("button", { name: /添加个人器材/ }),
     ).toBeInTheDocument();
     // No fixed slot ceiling is displayed.
     expect(screen.queryByText(/\/\s*12/)).not.toBeInTheDocument();
+  });
+
+  it("lists EquipmentAsset items and marks one unavailable without touching BodyState", async () => {
+    const asset = {
+      id: "eq-1",
+      user_id: "11111111-1111-4111-8111-111111111111",
+      display_name: "弹力带",
+      notes: "中等阻力",
+      access_kind: "owned",
+      availability: "available",
+      valid_from: null,
+      valid_until: null,
+      revision: 2,
+      created_at: "2026-10-15T08:00:00Z",
+      updated_at: "2026-10-15T08:00:00Z",
+    };
+    mockListEquipment.mockResolvedValue({ items: [asset] });
+    mockUpdateEquipment.mockResolvedValue({
+      ...asset,
+      availability: "unavailable",
+      revision: 3,
+    });
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await userEvent.click(screen.getByRole("button", { name: "装备" }));
+    expect(await screen.findByText("弹力带")).toBeInTheDocument();
+    expect(screen.getByText("中等阻力")).toBeInTheDocument();
+    expect(screen.getByText("当前可用")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "标记暂不可用" }));
+    await waitFor(() =>
+      expect(mockUpdateEquipment).toHaveBeenCalledWith("eq-1", {
+        expected_revision: 2,
+        display_name: "弹力带",
+        availability: "unavailable",
+      }),
+    );
   });
 
   it("renders real habit values and marks unrecorded ones as missing", async () => {
@@ -693,4 +751,15 @@ describe("body-first business windows", () => {
     expect(await screen.findByTestId("assistant-chat-panel")).toBeVisible();
     expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();
   });
+});
+
+it("retries failed native body reads from the canvas sync banner", async () => {
+  mockReadBodyRecords.mockRejectedValueOnce(new Error("unavailable"));
+  mockUseHealthWorkspaceQuery.mockReturnValue({ data: makeWorkspace(), isFetching: false, isError: false, refetch: vi.fn() });
+  renderPage();
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("身体信息暂时无法同步");
+  await userEvent.click(within(alert).getByRole("button", { name: "重试" }));
+  await waitFor(() => expect(mockReadBodyRecords).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
 });

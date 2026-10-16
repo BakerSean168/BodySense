@@ -136,7 +136,6 @@ export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
   extracted_info: ExtractedInfo[];
-  body_state?: BodyStateSnapshot | null;
   diagnosis: DiagnosisAnalysis | null;
   pending_interactions?: PendingInteraction[];
   interaction_history?: InteractionHistoryItem[];
@@ -157,94 +156,6 @@ export interface ConsultationThread extends ConsultationSession {
 export type ConsultationPhase = "collecting" | "ready_for_analysis";
 
 export type ExtractedInfo = StreamExtractedInfo;
-
-export interface BodyStateFact {
-  id: string;
-  concern_key?: string;
-  kind: string;
-  body_region?: string;
-  body_region_id?: string | null;
-  value: string;
-  details?: Record<string, unknown>;
-  origin: string;
-  review_state: "unverified" | "confirmed" | "rejected" | string;
-  lifecycle_state: "active" | "inactive" | "resolved" | "corrected" | string;
-  trend: "unknown" | "stable" | "improving" | "worsening" | string;
-  source_key?: string;
-  provenance?: Record<string, unknown>;
-  observed_at?: string | null;
-  valid_from?: string | null;
-  valid_until?: string | null;
-  supersedes_fact_id?: string | null;
-  excluded_from_reasoning?: boolean;
-  created_revision?: number;
-  updated_revision: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface BodyStateObservation {
-  id: string;
-  concern_key?: string;
-  kind: string;
-  body_region?: string;
-  body_region_id?: string | null;
-  method?: string;
-  value: Record<string, unknown>;
-  condition?: Record<string, unknown>;
-  source_key?: string;
-  provenance?: Record<string, unknown>;
-  observed_at?: string | null;
-  review_state: "unverified" | "confirmed" | "rejected" | string;
-  lifecycle_state: string;
-  excluded_from_reasoning?: boolean;
-  created_revision?: number;
-  updated_revision: number;
-}
-
-export interface BodyStateHypothesis {
-  id: string;
-  concern_key: string;
-  statement: string;
-  lifecycle_state:
-    "active" | "strengthened" | "weakened" | "unsupported" | "retired" | string;
-  confidence?: string | null;
-  supporting_fact_ids: string[];
-  supporting_observation_ids: string[];
-  supporting_evidence_ids: string[];
-  counterevidence_ids: string[];
-  source_analysis_id?: string | null;
-  provenance?: Record<string, unknown>;
-  created_revision: number;
-  updated_revision: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface BodyStateRevision {
-  id: string;
-  revision: number;
-  change_type: string;
-  source: string;
-  changes: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface BodyStateProjection {
-  current_revision: number;
-  safety_state: Record<string, unknown>;
-  facts: BodyStateFact[];
-  pending_facts?: BodyStateFact[];
-  observations: BodyStateObservation[];
-  pending_observations?: BodyStateObservation[];
-  hypotheses?: BodyStateHypothesis[];
-  recent_revisions?: BodyStateRevision[];
-}
-
-/** Full user-scoped snapshot returned by thread/body-state APIs. */
-export interface BodyStateSnapshot extends BodyStateProjection {
-  user_id: string;
-}
 
 export interface ConsultationSpatialContext {
   /** Multiple selected canonical regions; selection is navigation, not evidence. */
@@ -399,12 +310,12 @@ export interface AskUserQuestion {
   context?: string;
   /** Optional multi-field form. When present, UI collects all fields once. */
   fields?: AskUserField[];
-  /** Runtime-owned intake metadata. Never authored by ordinary UI input. */
+  /** Go-owned safety screen binding. Never authored by ordinary UI input. */
   purpose?: "symptom_intake" | string;
   state_binding?: {
     revision: string;
     capture_id: string;
-    seed_info: Record<string, unknown>;
+    body_fact_id: string;
     field_map: Record<string, string>;
   };
 }

@@ -1,7 +1,7 @@
 # BodySense BodyRegionOntology
 
 > Status: Implemented canonical ontology v1 / atlas 1.4.0 mapping active
-> Date: 2026-08-27
+> Date: 2026-08-27; native BodyState projection updated 2026-10-16
 > Decision source: ADR 0006
 > Scope: durable BodySense body-region identity and mapping to anatomy visualization
 
@@ -9,7 +9,7 @@
 
 BodySense needs a stable product vocabulary for body regions.
 
-The current system still carries free-text region values such as `右肩`, `腰部`, or `颈肩`. Free text is useful for display and natural-language capture, but it is not a sufficient canonical key for:
+Native BodyFacts and Episodes carry canonical region IDs. User input can still contain free-text names such as `右肩`, `腰部`, or `颈肩`; those words preserve the original statement but are not sufficient canonical keys for:
 
 - left/right distinction;
 - filtering and grouping BodyState;
@@ -282,36 +282,20 @@ Do not guess from English labels at runtime once a versioned mapping exists.
 
 ## 12. Region aggregation from BodyState
 
-A BodyRegionId may own several health records.
-
-Example:
+A BodyRegionId can be associated with multiple asserted native BodyFacts and current Episode identities. The implemented `bodyExplorerSelectors.ts` keeps their counts separate:
 
 ```text
 shoulder.right
-  confirmed facts: 2
-  pending observations: 1
-  trend: worsening
-  safety: false
+  statementCount: 2
+  episodeCount: 1
+  visualState: observed
 ```
 
-The visual selector derives one summary state for the 3D region.
-
-Recommended precedence:
-
-```text
-safety_review
-> worsening
-> improving
-> stable
-> observed
-> none
-```
-
-The raw records remain visible in the adjacent list/inspector.
+Only `none` / `observed` are derived. An assertion is not a symptom lifecycle, and an Episode identity is not proof of ongoing symptoms. Observations currently have no region links; hypotheses do not become Fact markers. Native reads must agree on owner and revision. Safety prompts come from Go workspace capabilities, without a client JSON/trend/clinical-risk interpretation. Raw records remain visible in the adjacent inspector.
 
 ## 13. Relationship to Concern
 
-`Concern` in ADR 0004 is an internal health grouping and is not identical to BodyRegionId.
+The historical `Concern` term in ADR 0004 is not a BodyRegionId or a current independent domain authority. V2 ConcernGroups are read-only organizations of native records; region identity is spatial, not a medical diagnosis identity.
 
 Examples:
 

@@ -430,7 +430,6 @@ describe("consultationApi", () => {
         conversation: { ...conversationWire, message_count: 0 },
         phase: "collecting",
         extracted_info: [],
-        body_state: null,
         pending_interactions: [],
         interaction_history: [],
         active_turn_run_id: null,

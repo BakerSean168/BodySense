@@ -1,6 +1,6 @@
 # BS-OBS-001 · Close BodyObservation V12 correction/withdrawal
 
-Status: QUEUED / NOT ADMITTED. Phase 1. SF cross-reference: SF-20.
+Status: DONE (PR #276, merged ee4dd2c7f, 2026-10-15). Phase 1. SF cross-reference: SF-20.
 **Owner role:** Backend BodyObservation Owner. **Dependencies:** `INT-001`.
 **Exclusive resources:** `api-observation`, `public-openapi`, `database-migrations`.
 

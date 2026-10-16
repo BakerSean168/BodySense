@@ -6,7 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
+import { completeStructuredSafetyIntake } from "./support/safety";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -98,40 +98,15 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(conversations.conversations).toHaveLength(1);
   const conversationId = conversations.conversations[0].id;
 
-  const factResponse = await expectJson<{
-    fact: { id: string; concern_key: string; trend: string };
-    revision: { revision: number };
-  }>(
-    await request.post(`${apiBase}/api/v1/body-state/facts`, {
-      headers: authHeaders,
-      data: {
-        expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "久坐后颈肩酸胀",
-          details: {
-            duration: "2周",
-            trigger: "久坐",
-            severity: "轻度",
-            ...clearStructuredSafetyCapture,
-          },
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "stable",
-          source_key: `e2e-fact-${crypto.randomUUID()}`,
-          provenance: { source_type: "playwright-e2e" },
-          observed_at: new Date().toISOString(),
-        },
-      },
-    }),
-    "create BodyState fact",
+  // Capture and screen the same symptom. Screening another symptom must not
+  // authorize a separately inserted, unscreened fact.
+  const symptom = await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    authHeaders,
+    conversationId,
   );
-  expect(factResponse.revision.revision).toBe(1);
-  expect(factResponse.fact.concern_key).toBe("region:neck");
+  expect(symptom.created_revision).toBe(1);
 
   const diagnosis = await expectJson<{
     analysis_id: string;
@@ -146,7 +121,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "generate DiagnosisAnalysis",
   );
   expect(diagnosis.candidates).toHaveLength(1);
-  expect(diagnosis.candidates[0].concern_key).toBe("region:neck");
+  // Chat intake preserves the statement without guessing a canonical region.
+  expect(diagnosis.candidates[0].concern_key).toBe("general");
   expect(diagnosis.freshness.state).toBe("fresh");
 
   await expectJson(
@@ -353,15 +329,14 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       {
         headers: authHeaders,
         data: {
-          notes: "完成温和训练后，颈肩感觉更轻松。",
+          notes: "完成温和训练后，肩膀感觉更轻松。",
           exercises: [{ name: "下巴微收", completed: true }],
-          symptom_changes: "久坐后的颈肩酸胀有所改善",
+          symptom_changes: "肩膀不适有所改善",
           training_feeling: "轻松",
           difficulties: "",
-          body_region: "颈部",
-          concern_key: "region:neck",
+          body_region: "肩部",
+          concern_key: "general",
           trend: "improving",
-          fact_id: factResponse.fact.id,
         },
       },
     ),
@@ -374,10 +349,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(feedback.result.treatment_status).toBe("review_recommended");
 
   const finalWorkspace = await expectJson<{
-    body_state: {
-      current_revision: number;
-      facts: Array<{ id: string; trend: string }>;
-    };
     treatment: { status: string };
     capabilities: {
       can_execute_treatment: boolean;
@@ -394,15 +365,30 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     }),
     "load reviewed HealthWorkspace",
   );
-  expect(finalWorkspace.body_state.current_revision).toBeGreaterThan(
-    diagnosis.body_state_revision,
+  // The user's own symptom wording became a new V2 symptom statement at the
+  // Outcome's revision; the original statement is untouched (no legacy trend).
+  const records = await expectJson<{
+    facts: Array<{
+      id: string;
+      kind: string;
+      statement: string;
+      created_revision: number;
+    }>;
+  }>(
+    await request.get(`${apiBase}/api/v1/body-state/records`, {
+      headers: authHeaders,
+    }),
+    "list V2 body facts",
   );
   expect(
-    finalWorkspace.body_state.facts.find(
-      (fact) => fact.id === factResponse.fact.id,
-    )?.trend,
-  ).toBe("improving");
-  expect(finalWorkspace.treatment.status).toBe("review_recommended");
+    records.facts.find((fact) => fact.statement === "肩膀不适有所改善"),
+  ).toMatchObject({
+    kind: "symptom",
+    created_revision: feedback.result.outcome.body_state_revision,
+  });
+  expect(records.facts.some((fact) => fact.id === symptom.id)).toBe(true);
+  // The new Outcome symptom has not been screened: fail closed until its own checklist.
+  expect(finalWorkspace.treatment.status).toBe("paused");
   expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
   expect(

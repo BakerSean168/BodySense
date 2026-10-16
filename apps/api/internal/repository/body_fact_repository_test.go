@@ -59,7 +59,7 @@ func TestBodyFactBatchReceiptAndMinimalAuditPostgres(t *testing.T) {
 	if receipt == nil || receipt.Revision != 1 || receipt.EventID == uuid.Nil || receipt.RevisionID == uuid.Nil {
 		t.Fatalf("invalid commit receipt: %#v", receipt)
 	}
-	for table, count := range map[string]int64{"body_facts": 2, "statement_evidence": 2, "body_fact_commits": 1, "body_state_revisions": 1, "body_state_outbox": 1, "body_state_facts": 0} {
+	for table, count := range map[string]int64{"body_facts": 2, "statement_evidence": 2, "body_fact_commits": 1, "body_state_revisions": 1, "body_state_outbox": 1} {
 		assertBodyFactCount(t, db, table, userID, count)
 	}
 	page, err := repo.ListFacts(ctx, userID, 0)

@@ -19,13 +19,29 @@ type InteractionResumeResult struct {
 	Events   []dto.StreamEvent
 }
 
-// InteractionResumeService coordinates one Chat transaction. Domain facts are
-// committed separately after source-bound extraction; no cross-domain atomicity
-// or successful health capture is implied by answering a question.
+// StructuredIntakeRecorder records the safety screen of a Go-bound symptom
+// intake answer inside the claim transaction.
+type StructuredIntakeRecorder interface {
+	RecordStructuredIntakeAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) error
+}
+
+// InteractionResumeService coordinates one Chat transaction. Ordinary answers
+// commit no domain facts here; facts follow from source-bound extraction. The
+// one exception is the Go-bound structured symptom intake, whose safety screen
+// commits atomically with the claim so the Agent is never resumed from an
+// unrecorded intake answer.
 type InteractionResumeService struct {
 	repo         interactionResumeRepository
 	transactions interactionTransactionManager
 	events       interactionLifecycleEventStore
+	intake       StructuredIntakeRecorder
+}
+
+// WithStructuredIntake wires the BodyFact recorder for bound symptom intake.
+// Without it, a bound intake answer is refused rather than silently dropped.
+func (s *InteractionResumeService) WithStructuredIntake(recorder StructuredIntakeRecorder) *InteractionResumeService {
+	s.intake = recorder
+	return s
 }
 
 func NewInteractionResumeService(repo interactionResumeRepository, transactions interactionTransactionManager, events interactionLifecycleEventStore) *InteractionResumeService {
@@ -75,6 +91,14 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 		result.Envelope = envelope
 		if envelope.Existed {
 			return nil
+		}
+		source := model.AnswerFactSource{RunID: envelope.Run.ID, InteractionID: envelope.Interaction.ID, MessageID: envelope.UserMessage.ID}
+		if s.intake != nil {
+			if err := s.intake.RecordStructuredIntakeAnswer(txCtx, command.UserID, source, envelope.Interaction); err != nil {
+				return fmt.Errorf("record structured intake: %w", err)
+			}
+		} else if IsBoundSymptomIntake(envelope.Interaction.ToolCallID, json.RawMessage(envelope.Interaction.Question)) {
+			return model.ErrInteractionResumeUnavailable
 		}
 		ids := dto.StreamEventIDs{ConversationID: command.ConversationID.String(), RunID: envelope.Run.ID.String(), TurnID: envelope.Run.TurnID.String(), InteractionID: command.InteractionID.String(), ToolCallID: envelope.Interaction.ToolCallID}
 		steps := []struct {

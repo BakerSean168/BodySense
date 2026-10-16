@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -232,14 +231,5 @@ func TestBodyFactCorrectionMigrationRefusesHistoryLossPostgres(t *testing.T) {
 	replacement.Statement = "Corrected original"
 	if _, err := NewBodyStateRepository(db).CorrectDirectFact(context.Background(), owner, original.ID, model.AmendBodyFactCommand{IdempotencyKey: "correct", ExpectedRevision: 1, Replacement: &replacement}); err != nil {
 		t.Fatal(err)
-	}
-	down, err := os.ReadFile("../../migrations/000004_body_fact_corrections.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx := db.Begin()
-	defer tx.Rollback()
-	if err := tx.Exec(string(down)).Error; err == nil || !strings.Contains(err.Error(), "Cannot roll back BodyFact corrections") {
-		t.Fatalf("rollback discarded live provenance: %v", err)
 	}
 }

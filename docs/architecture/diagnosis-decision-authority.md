@@ -1,6 +1,6 @@
 # Diagnosis Decision Authority and SafetyEnvelope
 
-> **注意（2026-10-12）**：本文描述的是重构前的现有实现（Consultation Session、Treatment、Assessment、DiagnosisAnalysis candidates 等旧模型）。现行业务规则以 [docs/product](../product/README.md) 为准，术语换算见 [术语表 §3](../product/glossary.md#3-penpot--旧代码名称对照)。
+> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. DiagnosisAnalysis candidates, Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
 
 > Status: Current authority boundary with historical Phase-6 lineage retained. Diagnosis v10 (`diag-config-3f64de162dc937ee`) is the serving Champion; v3 is the retained historical rollback/replay target.
 
@@ -8,59 +8,44 @@
 
 Python produces typed reasoning, candidate content, evidence-acquisition traces, and runtime governance evidence. Go is the only component allowed to decide whether that output may become an ordinary durable Diagnosis result.
 
-The Phase 6 control path is:
+The current serving control path is:
 
 ```text
-BodyState safety state
-        +
-Python Diagnosis payload
-(status / governance / red flags / unresolved critical gaps)
-        |
-        v
-Go DiagnosisDecisionPolicy v1
-        |
-        +--> allow-normal
-        +--> allow-degraded
-        +--> abstain
-        +--> escalate
-        +--> block
-        |
-        v
-ApplyDiagnosisDecision
-        |
-        v
-immutable DiagnosisAnalysis
+One owner/revision-pinned native BodyState read
+  -> Go projects native restrictions, resolutions and symptom-screen coverage
+  -> frozen SafetyEnvelopeV2 + exact Agent input/replay
+  -> Python structured reasoning and runtime governance evidence
+  -> Go EvaluateDiagnosisDecisionV2 / ApplyDiagnosisDecision
+  -> immutable DiagnosisAnalysis + decision_authority / evidence audit
 ```
 
-Candidate confidence and any future semantic/Judge score are deliberately absent from the authority input. They can describe evidence quality but cannot override a business or safety deny.
+Candidate confidence, model prose, legacy `red_flags`, and Judge scores cannot override a deny. Python findings are typed evidence for deterministic Go validation, never authority to write, downgrade or clear durable Safety restrictions.
 
-## Deny-overrides order
+## Current deny-overrides order
 
-`diagnosis-decision-policy-v1` is a pure deterministic function with this precedence:
+`diagnosis-decision-policy-v2-structured-safety` is a pure Go decision function:
 
-1. unsupported policy revision or malformed/unknown policy facts -> `block`;
-2. active durable BodyState safety review -> `block`;
-3. Python hard governance rejection or `safety_blocked` status -> `block`;
-4. a new runtime red flag -> `escalate`;
-5. unresolved critical EvidenceGap -> `abstain`;
-6. `insufficient_information` -> `abstain`;
-7. partial status or degraded runtime governance -> `allow-degraded`;
-8. completed + accepted + at least one candidate -> `allow-normal`;
-9. every other inconsistent state -> `block`.
+1. unsupported/missing envelope or policy, owner-read failure, mismatched revision, unknown concepts or inconsistent coverage/review flags fail closed;
+2. an active native `urgent` restriction blocks ordinary analysis; `restricted`/`advisory` do not by themselves terminate Diagnosis;
+3. incomplete exact-symptom capture coverage abstains;
+4. malformed/rejected governance or invalid typed output blocks;
+5. a validated structured current runtime safety finding escalates; malformed findings block;
+6. unresolved critical EvidenceGap or `insufficient_information` abstains;
+7. partial status or degraded governance allows degraded delivery;
+8. completed + accepted + candidates allows normal delivery; all other combinations block.
 
-`block`, `escalate`, and `abstain` remove ordinary candidate delivery before persistence. `block`/`escalate` become durable `safety_blocked` analyses; `abstain` becomes durable `insufficient_information`. The raw durable analysis records the Go `decision_authority` object.
+`block`, `escalate`, and `abstain` remove ordinary candidates before persistence. Block/escalate persist a `safety_blocked` analysis; abstention persists `insufficient_information`. They do not create an independent BodyState fact or mutate Safety restrictions from AI prose.
 
-## SafetyEnvelope facts
+## Native SafetyEnvelope inputs
 
-The minimal deterministic envelope uses only facts already supported by current business semantics:
+- asserted positive native symptom Facts and exact Go-bound `safety_screens`;
+- immutable `safety_restrictions` and exact-target `safety_resolutions`, including current source availability;
+- stable owner/revision identity, structured source references and explicit coverage;
+- typed Diagnosis output, governance and evidence-acquisition outcomes.
 
-- durable `BodyState.safety_state`;
-- Python runtime governance verdict as evidence, not authority;
-- structured Diagnosis status and candidate cardinality;
-- positive runtime `red_flags`;
-- `EvidenceAcquisitionTrace.unresolved_critical_gaps`.
+There is no durable Safety JSON, global-clear timestamp/endpoint, global evidence pool or AI-write authority. The complete five-concept positive screen maps to restricted/all-training/professional-clearance; that mapping is not a clinically validated urgent classifier. A clearance is bound to one restriction and the original user message. Missing/invalidated evidence cannot silently lift a restriction, and resolving one leaves overlapping restrictions effective. Full Trainer execution gates and clinical-document clearance admission remain separate unfinished verticals.
 
-Unknown enum values, contradictory safety state, missing required fields, and unknown configuration/policy revisions fail closed.
+Historical Phase-6 v1 used broad safety/red-flag inputs. Its repository-known immutable configurations and persisted replay envelopes remain historical audit evidence; they do not describe current serving authorization or restore removed persistence/API paths.
 
 ## Configuration boundary
 

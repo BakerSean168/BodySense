@@ -27,7 +27,7 @@ func episodeFullPostgresHTTPRouter(t *testing.T, owner uuid.UUID, repo *reposito
 		t.Fatal(err)
 	}
 	router := gin.New()
-	application := NewPublicServer(&fakeBodyStateFactService{}).
+	application := NewPublicServer().
 		WithEpisodes(service.NewEpisodeReadService(repo)).
 		WithEpisodeCommands(service.NewEpisodeCommandService(repo))
 	RegisterRoutes(router, StrictHandler(application), RouteSecurity{

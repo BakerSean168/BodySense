@@ -1,5 +1,6 @@
 """CLI wrapper for the consultation eval runner."""
 
+
 def _main() -> int:
     import sys
     from pathlib import Path

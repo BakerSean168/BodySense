@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -15,6 +16,19 @@ type ConversationRepository struct {
 	db *gorm.DB
 }
 
+// ErrLegacyMultipleLiveConversations indicates the user's historical
+// Conversations have not yet been reconciled to the approved singleton
+// contract. Callers MUST NOT select an arbitrary legacy row.
+var ErrLegacyMultipleLiveConversations = errors.New("conversation reconciliation required")
+
+// ErrLegacyConversationHistory prevents a new singleton being created while
+// soft-deleted or mixed live/deleted legacy identities still need review.
+var ErrLegacyConversationHistory = errors.New("historical conversation reconciliation required")
+
+// ErrInvalidConversationOwner prevents a missing auth identity from being
+// used for a tenant-scoped lookup.
+var ErrInvalidConversationOwner = errors.New("valid conversation owner required")
+
 // NewConversationRepository creates a new ConversationRepository.
 func NewConversationRepository(db *gorm.DB) *ConversationRepository {
 	return &ConversationRepository{db: db}
@@ -23,6 +37,49 @@ func NewConversationRepository(db *gorm.DB) *ConversationRepository {
 // Create creates a new conversation.
 func (r *ConversationRepository) Create(ctx context.Context, conversation *model.Conversation) error {
 	return r.db.WithContext(ctx).Create(conversation).Error
+}
+
+// GetSoleLiveByUserID is a READ-ONLY PC-D4 migration admission primitive.
+// It returns the only non-deleted Conversation of an authenticated owner,
+// nil only if the owner has NO historical Conversation row (lazy creation
+// remains elsewhere), ErrLegacyMultipleLiveConversations for two live rows,
+// and ErrLegacyConversationHistory for deleted-only or mixed history.
+// Archived/paused rows still count. Never silently create a new identity
+// just because a previous Conversation was soft-deleted. This method does
+// not select a canonical ID or prevent concurrent creators; singleton
+// runtime still requires approved history reconciliation, a unique DB
+// constraint, and serialized per-owner creation and Run protocol.
+func (r *ConversationRepository) GetSoleLiveByUserID(ctx context.Context, userID uuid.UUID) (*model.Conversation, error) {
+	if userID == uuid.Nil {
+		return nil, ErrInvalidConversationOwner
+	}
+	var matches []model.Conversation
+	err := database.FromContext(ctx, r.db).
+		Where("user_id = ?", userID).
+		// PostgreSQL NULLS FIRST puts all live rows before tombstones.
+		// This bounded query detects both active conflicts and old identity
+		// records without choosing any canonical ID.
+		Order("deleted_at ASC NULLS FIRST").
+		Order("created_at ASC").
+		Order("id ASC").
+		Limit(2).
+		Find(&matches).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		return nil, nil
+	}
+	if len(matches) > 1 {
+		if matches[0].DeletedAt == nil && matches[1].DeletedAt == nil {
+			return nil, ErrLegacyMultipleLiveConversations
+		}
+		return nil, ErrLegacyConversationHistory
+	}
+	if matches[0].DeletedAt != nil {
+		return nil, ErrLegacyConversationHistory
+	}
+	return &matches[0], nil
 }
 
 // GetByID retrieves a conversation by ID with ownership check.

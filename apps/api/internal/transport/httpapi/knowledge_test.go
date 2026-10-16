@@ -48,7 +48,7 @@ func (fakeKnowledgeQueryApplication) Stats(context.Context) (*service.KnowledgeS
 func TestKnowledgeRoutesEnforceOperatorDomainBeforeValidationAndApplication(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	sourceApp := &fakeKnowledgeSourceApplication{}
-	server := NewPublicServer(nil).WithKnowledge(sourceApp, fakeKnowledgeIngestionApplication{}, fakeKnowledgeQueryApplication{})
+	server := NewPublicServer().WithKnowledge(sourceApp, fakeKnowledgeIngestionApplication{}, fakeKnowledgeQueryApplication{})
 	r := gin.New()
 	authCalls, operatorCalls, validatorCalls := 0, 0, 0
 	RegisterRoutes(r, StrictHandler(server), RouteSecurity{
@@ -77,7 +77,7 @@ func TestKnowledgeRoutesEnforceOperatorDomainBeforeValidationAndApplication(t *t
 func TestKnowledgeRoutesAllowOperatorIntoGeneratedBoundary(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	sourceApp := &fakeKnowledgeSourceApplication{}
-	server := NewPublicServer(nil).WithKnowledge(sourceApp, fakeKnowledgeIngestionApplication{}, fakeKnowledgeQueryApplication{})
+	server := NewPublicServer().WithKnowledge(sourceApp, fakeKnowledgeIngestionApplication{}, fakeKnowledgeQueryApplication{})
 	r := gin.New()
 	spec, err := openapiv1.GetSpec()
 	if err != nil {

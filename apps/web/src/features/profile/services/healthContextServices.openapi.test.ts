@@ -29,7 +29,6 @@ const validLifestyle = {
   nutrition: emptyLifestyleSection("lifestyle.nutrition"),
   substances: emptyLifestyleSection("lifestyle.substances"),
   recovery: emptyLifestyleSection("lifestyle.recovery"),
-  pending_updates: [],
 };
 
 describe("profile health-context OpenAPI boundaries", () => {

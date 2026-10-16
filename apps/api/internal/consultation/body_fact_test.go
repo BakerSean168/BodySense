@@ -53,7 +53,7 @@ func TestBodyFactToolUsesServerRunIdentityAndRealReceipt(t *testing.T) {
 	r := &Runtime{}
 	r.AttachBodyFactService(ledger)
 	state := factStreamState()
-	raw, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts())
+	raw, _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestBodyFactToolUsesServerRunIdentityAndRealReceipt(t *testing.T) {
 	if err := json.Unmarshal(raw, &reply); err != nil || reply.Status != "persisted" || reply.Receipt.ID == uuid.Nil {
 		t.Fatalf("reply=%s err=%v", raw, err)
 	}
-	if _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err != nil || ledger.command.IdempotencyKey != originalKey {
+	if _, _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err != nil || ledger.command.IdempotencyKey != originalKey {
 		t.Fatal("retry identity changed")
 	}
 }
@@ -86,7 +86,7 @@ func TestBodyFactToolRejectsForgedSuccessIdentityAndMissingRevision(t *testing.T
 		t.Run(raw, func(t *testing.T) {
 			ledger := &captureFactService{}
 			r := &Runtime{bodyFacts: ledger}
-			result, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "intake-v1", json.RawMessage(raw))
+			result, _, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "intake-v1", json.RawMessage(raw))
 			if err == nil || result != nil || ledger.calls != 0 {
 				t.Fatal("untrusted proposal reached persistence")
 			}
@@ -96,7 +96,7 @@ func TestBodyFactToolRejectsForgedSuccessIdentityAndMissingRevision(t *testing.T
 func TestBodyFactToolFailureNeverReturnsSuccessReceipt(t *testing.T) {
 	for _, ledger := range []*captureFactService{{fail: errors.New("database unavailable")}, {missingReceipt: true}} {
 		r := &Runtime{bodyFacts: ledger}
-		result, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "intake-v1", proposedFacts())
+		result, _, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "intake-v1", proposedFacts())
 		if err == nil || result != nil {
 			t.Fatal("failure leaked a success response")
 		}
@@ -107,12 +107,12 @@ func TestBodyFactToolRejectsHistoricalOrForeignRun(t *testing.T) {
 	r := &Runtime{bodyFacts: ledger}
 	state := factStreamState()
 	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
-	if _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err == nil {
+	if _, _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err == nil {
 		t.Fatal("historical config mutated new ledger")
 	}
 	state = factStreamState()
 	state.Run.UserID = uuid.New()
-	if _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err == nil || ledger.calls != 0 {
+	if _, _, err := r.commitBodyFactProposal(context.Background(), state, "intake-v1", proposedFacts()); err == nil || ledger.calls != 0 {
 		t.Fatal("foreign run accepted")
 	}
 }
@@ -134,37 +134,32 @@ func TestBodyFactRuntimeV3RejectsLegacyFactMutationEvents(t *testing.T) {
 	}
 }
 
-func TestBodyFactExpectedRevisionFollowsOnlyOwnContiguousSafetyReceipt(t *testing.T) {
-	cases := []struct {
-		name     string
-		target   int64
-		foreign  bool
-		invalid  bool
-		expected int64
-	}{
-		{name: "own contiguous", target: 3, expected: 3},
-		{name: "external revision gap", target: 4, expected: 2},
-		{name: "foreign receipt", target: 3, foreign: true, expected: 2},
-		{name: "unpersisted receipt", target: 3, invalid: true, expected: 2},
+func TestBodyFactCommitReportsCommittedFactsForIntakeBinding(t *testing.T) {
+	ledger := &captureFactService{}
+	r := &Runtime{}
+	r.AttachBodyFactService(ledger)
+	proposal := json.RawMessage(`{"status":"proposed","expected_revision":2,"facts":[
+{"kind":"lifestyle","statement":"I sleep seven hours","body_region_ids":[],"temporal":{"precision":"unknown"},"details":{}},
+{"kind":"symptom","statement":"My shoulder hurts","body_region_ids":[],"temporal":{"precision":"unknown"},"details":{"presence":"present"}}]}`)
+	_, committed, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "bodyfact-intake-v1:run", proposal)
+	if err != nil || len(committed) != 2 {
+		t.Fatalf("committed=%#v err=%v", committed, err)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			ledger := &captureFactService{}
-			r := &Runtime{bodyFacts: ledger}
-			state := factStreamState()
-			receipt := model.BodyStateRevision{ID: uuid.New(), UserID: state.UID, Revision: tc.target, ChangeType: "safety.updated", Source: "consultation"}
-			if tc.foreign {
-				receipt.UserID = uuid.New()
-			}
-			if tc.invalid {
-				receipt.ID = uuid.Nil
-			}
-			if _, err := r.commitBodyFactProposal(context.Background(), state, "capture", proposedFacts(), receipt); err != nil {
-				t.Fatal(err)
-			}
-			if ledger.command.ExpectedRevision != tc.expected {
-				t.Fatalf("revision=%d wanted=%d", ledger.command.ExpectedRevision, tc.expected)
-			}
-		})
+	if committed[1].ToolCallID != "bodyfact-intake-v1:run" || committed[1].Index != 1 || committed[1].Kind != "symptom" || committed[1].Presence != "present" || committed[1].FactID == uuid.Nil {
+		t.Fatalf("symptom reference does not match the Go receipt: %#v", committed[1])
+	}
+	if committed[0].Kind != "lifestyle" || committed[0].Presence != "" {
+		t.Fatalf("unexpected first reference: %#v", committed[0])
+	}
+}
+
+func TestBodyFactExpectedRevisionPreservesProducerRevision(t *testing.T) {
+	ledger := &captureFactService{}
+	r := &Runtime{bodyFacts: ledger}
+	if _, _, err := r.commitBodyFactProposal(context.Background(), factStreamState(), "capture", proposedFacts()); err != nil {
+		t.Fatal(err)
+	}
+	if ledger.command.ExpectedRevision != 2 {
+		t.Fatal("producer revision changed")
 	}
 }

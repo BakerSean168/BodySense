@@ -68,12 +68,6 @@ func (*fakeConsultationThreads) RefreshAndGetThread(context.Context, uuid.UUID, 
 	return nil, nil, nil, nil, nil, nil
 }
 
-type fakeConsultationBodyState struct{}
-
-func (*fakeConsultationBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error) {
-	return nil, nil
-}
-
 func newConsultationRouteTestRouter(t *testing.T, runtime consultationRuntimeApplication) (*gin.Engine, uuid.UUID) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -83,13 +77,12 @@ func newConsultationRouteTestRouter(t *testing.T, runtime consultationRuntimeApp
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	server := NewPublicServer(nil).WithConsultation(
+	server := NewPublicServer().WithConsultation(
 		runtime,
 		&fakeConsultationSessions{},
 		&fakeConsultationInteractions{},
 		&fakeConsultationReplay{},
 		&fakeConsultationThreads{},
-		&fakeConsultationBodyState{},
 	)
 	RegisterRoutes(r, StrictHandler(server), RouteSecurity{
 		Auth: func(c *gin.Context) {

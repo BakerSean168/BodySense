@@ -15,6 +15,7 @@ export const assessmentReportV2ObservationsMax = 24;
 
 export const assessmentReportV2InformationGapsMax = 0;
 
+export const assessmentReportV2BodyStateRevisionMin = 0;
 
 
 
@@ -29,7 +30,7 @@ export const AssessmentReportV2 = /*#__PURE__*/ zod.strictObject({
   "summary": /*#__PURE__*/ zod.string(),
   "information_gaps": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()).check(/*#__PURE__*/ zod.maxLength(assessmentReportV2InformationGapsMax))),
   "safety_notes": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string()),
-  "body_state_revision": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))),
+  "body_state_revision": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(assessmentReportV2BodyStateRevisionMin))).check(/*#__PURE__*/ zod.describe('Frozen input BodyState revision; zero represents an empty ledger.')),
   "agent_configuration_id": /*#__PURE__*/ zod.string(),
   "agent_configuration": JsonObject,
   "execution_provenance": JsonObject,

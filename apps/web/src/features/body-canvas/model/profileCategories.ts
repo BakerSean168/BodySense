@@ -1,4 +1,3 @@
-import type { BodyStateFact, BodyStateProjection } from "@/features/consultation/types/consultation";
 
 /**
  * Person/Profile is a presentation projection over authoritative sources. It
@@ -8,7 +7,7 @@ import type { BodyStateFact, BodyStateProjection } from "@/features/consultation
  * | category | authoritative source                        |
  * | -------- | ------------------------------------------- |
  * | records  | BodyState facts / observations              |
- * | equipment| BodyState facts of kind equipment.available |
+ * | equipment| EquipmentAsset inventory (/api/v1/equipment) |
  * | media    | user uploads with a photo file type          |
  * | reports  | user uploads with file type report + OCR     |
  * | habits   | lifestyle onboarding snapshot                |
@@ -44,39 +43,6 @@ export function isProfileCategoryId(value: string): value is ProfileCategoryId {
 export function getProfileCategoryMeta(id: ProfileCategoryId): ProfileCategoryMeta {
   return (
     PROFILE_CATEGORIES.find((category) => category.id === id) ?? PROFILE_CATEGORIES[0]
-  );
-}
-
-export const AVAILABLE_EQUIPMENT_KIND = "equipment.available";
-
-/** Only currently usable, confirmed equipment counts as available. */
-export function selectAvailableEquipment(
-  snapshot: BodyStateProjection | null | undefined,
-): BodyStateFact[] {
-  return (snapshot?.facts ?? []).filter(
-    (fact) =>
-      fact.kind === AVAILABLE_EQUIPMENT_KIND &&
-      fact.lifecycle_state === "active" &&
-      fact.review_state === "confirmed" &&
-      !fact.excluded_from_reasoning,
-  );
-}
-
-/**
- * Records are BodyState facts that represent the user's own reported or
- * confirmed state. Equipment is presented in its own category and internal
- * lifestyle keys are not user-facing "records".
- */
-const NON_RECORD_KINDS = new Set([AVAILABLE_EQUIPMENT_KIND]);
-
-export function selectProfileRecords(
-  snapshot: BodyStateProjection | null | undefined,
-): BodyStateFact[] {
-  return (snapshot?.facts ?? []).filter(
-    (fact) =>
-      !NON_RECORD_KINDS.has(fact.kind) &&
-      fact.lifecycle_state === "active" &&
-      fact.review_state !== "rejected",
   );
 }
 

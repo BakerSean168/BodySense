@@ -1,9 +1,9 @@
 # BodySense Current Technical Approach
 
-> **注意（2026-10-12）**：本文描述的是重构前的现有实现（Consultation Session、Treatment、Assessment、DiagnosisAnalysis candidates 等旧模型）。现行业务规则以 [docs/product](../product/README.md) 为准，术语换算见 [术语表 §3](../product/glossary.md#3-penpot--旧代码名称对照)。
+> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. DiagnosisAnalysis candidates, Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
 
 - Status: Current implementation snapshot
-- Updated: 2026-09-01
+- Updated: 2026-10-16 (PR6 native BodyState retirement)
 - Architecture authority: accepted ADRs + executable repository state
 - Historical initial design: [`docs/plan/archive/architecture-snapshots/2026-09-01/technical-approach.md`](../plan/archive/architecture-snapshots/2026-09-01/technical-approach.md)
 
@@ -37,18 +37,12 @@ The authoritative ownership rules are defined by:
 
 ## 2. Current stack
 
-Versions below are repository-manifest values, not aspirational selections.
+Dependency versions are owned by the executable manifests rather than copied here:
 
-| Layer                   | Current implementation                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Web                     | React `^19.2.8`, TypeScript `6.0.2`, Vite `^8.1.5`, React Router `^8.3.0`, Zustand `^5.0.14`, TanStack Query `^5.101.4`, Tailwind `^4.3.3` |
-| Go API                  | Go `1.26.0`, Gin `1.12.0`, GORM `1.31.2`, golang-migrate `4.19.1`                                                                          |
-| Python AI               | Python `>=3.13`, FastAPI `>=0.140.13`, LangGraph `>=1.2.10`, PydanticAI/Pydantic Evals `>=2.31.0`                                          |
-| LLM routing             | Repository-known Agent manifests -> LiteLLM logical models -> standalone LiteLLM gateway                                                   |
-| Database                | PostgreSQL 18 + pgvector                                                                                                                   |
-| Cache                   | Redis 8.10.2                                                                                                                               |
-| OCR                     | Tesseract via `pytesseract`; PDF rendering/extraction via PyMuPDF                                                                          |
-| Package/runtime tooling | Node 24, pnpm `11.17.0`, Nx `23.1.0`, uv                                                                                                   |
+- [Web manifest](../../apps/web/package.json) and [root toolchain manifest](../../package.json): React, TypeScript, Vite, React Router, Zustand, TanStack Query, Tailwind, pnpm and Nx.
+- [Go module](../../apps/api/go.mod): Go, Gin, GORM and migration tooling.
+- [AI manifest](../../apps/ai-service/pyproject.toml): Python, FastAPI, LangGraph, PydanticAI and OCR dependencies.
+- PostgreSQL 18 + pgvector, Redis and LiteLLM runtime images are owned by [Compose configuration](../../docker/docker-compose.yml).
 
 ### Historical stack assumptions
 
@@ -66,30 +60,22 @@ user_profiles
   timestamps
 ```
 
-Mutable health context belongs to longitudinal BodyState:
+Mutable health context belongs to the native BodyState ledger:
 
 ```text
-body_states
-body_state_facts
-body_state_observations
-body_state_hypotheses
-body_state_evidence
-body_state_revisions
+body_states / body_state_revisions / body_state_outbox
+statement_evidence / body_facts / body_fact_commits
+body_observations / body_observation_commits
+body_hypotheses / body_hypothesis_commits
+symptom_episodes / episode_fact_links / episode_state_evidence
+safety_screens / safety_restrictions / safety_resolutions
 ```
 
-Examples:
+The baseline and model table names are authoritative for the full inventory. Facts preserve the user's statement and assertion status; raw observations preserve source, units and time precision. Correction/withdrawal are distinct from real symptom course. Episode state is derived from eligible evidence. User hypotheses remain separate from Agent hypotheses in analysis audits.
 
-```text
-lifestyle.activity
-lifestyle.sleep
-lifestyle.exercise
-lifestyle.nutrition
-lifestyle.substances
-lifestyle.recovery
-anthropometry.height
-anthropometry.weight
-history.injury_summary
-```
+PR6-C removed the three legacy fact/observation/evidence tables and their mutation/review routes. Aggregate identity, revisions and the repository's native V2 methods remain. Assessment selections persist in reports/replay only; they create no BodyState record or revision. Diagnosis freezes owner-scoped native references in its immutable evidence audit; Treatment uses only the selected analysis's audit, never a global evidence pool.
+
+Safety uses independent owner-bound restrictions and exact-target resolutions, with source/revision/lift-basis checks and conservative source-invalidation handling. No JSON overwrite, global clear or AI-write path exists. Incomplete/unavailable coverage fails closed. A positive five-concept screen creates restricted/all-training/professional-clearance restrictions; it is not an AI urgent classification.
 
 Diagnosis and Treatment use separate durable history rather than writing final truth into `consultation_sessions`:
 
@@ -133,7 +119,7 @@ Frozen health inputs
   -> Python deterministic evidence governance
   -> deterministic source rendering
   -> Go rebuilds catalog + revalidates + rerenders
-  -> unverified/excluded BodyState observation candidate
+  -> immutable Assessment report and replay (no BodyState mutation)
 ```
 
 The model cannot author durable Assessment prose, health grades, numeric dimension scores, recommendations, status, coverage or gaps.
@@ -200,7 +186,7 @@ See [Knowledge Lifecycle Architecture](./knowledge-lifecycle-architecture.md).
 
 ## 8. Current API surface — major boundaries
 
-The executable route registration in `apps/api/cmd/server/main.go` is the route authority. Major protected surfaces include:
+The canonical [OpenAPI](../../packages/contracts/openapi/bodysense.v1.openapi.yaml) and generated transport, registered with security partitions in `apps/api/internal/transport/httpapi/routes.go`, define the public surface; `cmd/server/main.go` wires services and security. Major protected surfaces include:
 
 ```text
 GET/PUT  /api/v1/profile
@@ -219,8 +205,16 @@ GET      /api/v1/consultations/:id/thread
 POST     /api/v1/consultations/:id/diagnosis
 POST     /api/v1/consultations/:id/interrupts/:interactionId/answers
 
-GET      /api/v1/body-state
-POST/PATCH BodyState fact/observation/hypothesis/review surfaces
+GET/POST /api/v1/body-state/records
+POST     /api/v1/body-state/records/:id/correct|withdraw
+GET/POST /api/v1/body-state/observation-records
+POST     /api/v1/body-state/observation-records/:id/correct|withdraw
+GET/POST /api/v1/body-state/hypothesis-records
+POST     /api/v1/body-state/hypothesis-records/:id/withdraw
+GET/POST /api/v1/body-state/episodes...
+GET      /api/v1/body-state/concern-groups
+GET      /api/v1/body-state/safety/restrictions
+POST     /api/v1/body-state/safety/restrictions/:id/resolve
 GET/PUT  /api/v1/lifestyle
 GET/PUT  /api/v1/body-metrics
 GET/PUT  /api/v1/health-history/injury
@@ -237,6 +231,8 @@ GET/POST /api/v1/treatments...
 GET/POST /api/v1/outcomes...
 ```
 
+`health-workspace` exposes capabilities/actions and transitional Diagnosis/Treatment projections, without a `body_state` field. Web loads native records directly, rejects owner/revision drift and never treats a failed read as empty. Internal Go capability and Safety calculations still use one frozen native snapshot.
+
 Knowledge administration is protected by the explicit knowledge-operator capability.
 
 ## 9. Deployment baseline
@@ -245,11 +241,6 @@ Canonical development/staging/production use PostgreSQL 18. Direct development s
 
 ## 10. Source-of-truth rule
 
-When this document, an older feature design, and executable code disagree:
-
-1. accepted ADRs define intended architectural invariants;
-2. `current-*` architecture docs describe implemented state;
-3. executable route/schema/config code proves current mechanics;
-4. implementation gaps are tracked explicitly rather than rewriting aspirational behavior as if it already existed.
+Business requirements are owned by `docs/product`. For implementation facts, code, canonical contracts, the baseline and runtime manifests take precedence over descriptive architecture text. Accepted ADRs supply architectural decisions and historical intent; current documents must be corrected when the implementation changes. Archived plans and old route examples do not authorize restoring retired paths.
 
 Current known mismatches are tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).

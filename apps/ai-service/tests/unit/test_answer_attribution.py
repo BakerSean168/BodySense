@@ -51,8 +51,7 @@ def test_build_published_evidence_binding_uses_publication_identity():
     binding = build_published_evidence_binding(_published_result())
     assert binding is not None
     assert binding["evidence_ref"] == (
-        "published:11111111-1111-1111-1111-111111111111:v3:"
-        "tfu-18d2dc2e4effd2c62097d44794f76e29"
+        "published:11111111-1111-1111-1111-111111111111:v3:tfu-18d2dc2e4effd2c62097d44794f76e29"
     )
     assert binding["publication_key"] == "pain-definition-v3"
     assert binding["claim_id"] == "tfc-a0ffebe00c719febbe6b7a3cd3f7e70b"
@@ -111,10 +110,7 @@ def test_attribution_contract_is_bounded():
     binding = build_published_evidence_binding(_published_result())
     assert binding is not None
     ref = binding["evidence_ref"]
-    claims = [
-        {"claim_text": f"疼痛定义 {index}", "evidence_refs": [ref]}
-        for index in range(7)
-    ]
+    claims = [{"claim_text": f"疼痛定义 {index}", "evidence_refs": [ref]} for index in range(7)]
     with pytest.raises(ValueError, match="at most 6 claims"):
         validate_and_evaluate_attribution(claims, {ref: binding})
 
@@ -156,8 +152,7 @@ async def test_consultation_runtime_emits_attribution_event_only_for_current_tur
     assert attribution["grounding_status"] == "supported"
     assert update["answer_attributions"][0]["evidence_refs"] == [ref]
     assert any(
-        event["type"] == "tool_result" and event["result"]["status"] == "ok"
-        for event in events
+        event["type"] == "tool_result" and event["result"]["status"] == "ok" for event in events
     )
 
 

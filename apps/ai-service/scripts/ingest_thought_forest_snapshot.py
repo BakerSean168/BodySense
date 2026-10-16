@@ -68,9 +68,7 @@ async def main() -> int:
         else None
     )
     claim_review_manifest = (
-        load_claim_review(args.claim_review_manifest)
-        if args.claim_review_manifest
-        else None
+        load_claim_review(args.claim_review_manifest) if args.claim_review_manifest else None
     )
     packs = build_generated_packs(
         snapshot,
@@ -95,9 +93,7 @@ async def main() -> int:
     await library.initialize()
     try:
         if args.overwrite_source:
-            await library.assert_sources_overwritable(
-                [pack.source.source_key for pack in packs]
-            )
+            await library.assert_sources_overwritable([pack.source.source_key for pack in packs])
         for pack in packs:
             result = await library.ingest_generated_pack(
                 pack, overwrite_source=args.overwrite_source

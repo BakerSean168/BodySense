@@ -19,6 +19,7 @@ type trainingRepository interface {
 	ListPlansByUserID(ctx context.Context, userID uuid.UUID) ([]model.TrainingPlan, error)
 	GetActivePlanByUserID(ctx context.Context, userID uuid.UUID) (*model.TrainingPlan, error)
 	GetPlanByTreatmentRevision(ctx context.Context, userID, treatmentRevisionID uuid.UUID) (*model.TrainingPlan, error)
+	LockOwnerForPlanActivation(ctx context.Context, userID uuid.UUID) error
 	SupersedePlansExcept(ctx context.Context, userID, treatmentRevisionID uuid.UUID) error
 	GetOrCreateLog(ctx context.Context, plan *model.TrainingPlan, date time.Time) (*model.TrainingLog, error)
 	SaveLog(ctx context.Context, log *model.TrainingLog) error
@@ -37,21 +38,67 @@ type trainingTreatmentService interface {
 
 var ErrTrainingProjectionFailed = errors.New("failed to create executable training projection")
 
+// ErrIndependentTrainingOwnerLockRequired prevents an independent-plan
+// projection from bypassing its outer, owner-serialized DB transaction.
+var ErrIndependentTrainingOwnerLockRequired = errors.New("independent training projection requires an owner transaction lock")
+
+type independentTrainingOwnerLockKey struct{}
+
+// lockIndependentTrainingOwner obtains a DB lock in the current transaction
+// and records an unforgeable (package-private) witness in this context.
+// The witness is never created before the repository confirms the lock.
+func (s *TrainingService) lockIndependentTrainingOwner(ctx context.Context, userID uuid.UUID) (context.Context, error) {
+	if !s.independentPlans {
+		return ctx, nil
+	}
+	if s.trainingRepo == nil || userID == uuid.Nil {
+		return nil, ErrIndependentTrainingOwnerLockRequired
+	}
+	if err := s.trainingRepo.LockOwnerForPlanActivation(ctx, userID); err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, independentTrainingOwnerLockKey{}, userID), nil
+}
+
 // TrainingService adapts accepted Treatment interventions into the daily-task
 // execution UI. TreatmentRevision is the source of truth; the training tables
 // are a transactional execution projection plus activity log.
 type TrainingService struct {
-	trainingRepo trainingRepository
-	treatment    trainingTreatmentService
-	unitOfWork   treatmentUnitOfWork
+	trainingRepo     trainingRepository
+	treatment        trainingTreatmentService
+	unitOfWork       treatmentUnitOfWork
+	independentPlans bool
+}
+
+// TrainingServiceOption configures a TrainingService without changing the
+// legacy single-active Treatment projection for existing callers.
+type TrainingServiceOption func(*TrainingService)
+
+// WithIndependentTrainingPlans opts in to preserving unrelated active plans.
+//
+// WARNING: This must not be used by production or a V2 route until the
+// coordinated multi-active database migration, explicit plan selection,
+// Treatment revision history reconciliation and rollback gates have passed.
+// The existing constructors intentionally do not enable this option.
+func WithIndependentTrainingPlans() TrainingServiceOption {
+	return func(s *TrainingService) { s.independentPlans = true }
 }
 
 func NewTrainingService(
 	trainingRepo trainingRepository,
 	treatment trainingTreatmentService,
 	unitOfWork treatmentUnitOfWork,
+	options ...TrainingServiceOption,
 ) *TrainingService {
-	return &TrainingService{trainingRepo: trainingRepo, treatment: treatment, unitOfWork: unitOfWork}
+	service := &TrainingService{
+		trainingRepo: trainingRepo, treatment: treatment, unitOfWork: unitOfWork,
+	}
+	for _, option := range options {
+		if option != nil {
+			option(service)
+		}
+	}
+	return service
 }
 
 // AcceptTreatmentAndEnsurePlan is the only activation boundary. Treatment
@@ -68,13 +115,19 @@ func (s *TrainingService) AcceptTreatmentAndEnsurePlan(
 	var treatment *model.Treatment
 	var plan *model.TrainingPlan
 	err := s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
+		// The legacy route is untouched. V2 opt-in serializes this owner
+		// *before* proposal acceptance and revision-projection lookup.
+		lockedCtx, lockErr := s.lockIndependentTrainingOwner(txCtx, userID)
+		if lockErr != nil {
+			return lockErr
+		}
 		var acceptErr error
-		treatment, acceptErr = s.treatment.AcceptProposal(txCtx, userID, revisionID)
+		treatment, acceptErr = s.treatment.AcceptProposal(lockedCtx, userID, revisionID)
 		if acceptErr != nil {
 			return acceptErr
 		}
 		var projectionErr error
-		plan, projectionErr = s.EnsurePlanForTreatment(txCtx, userID, consultationID, treatment)
+		plan, projectionErr = s.EnsurePlanForTreatment(lockedCtx, userID, consultationID, treatment)
 		if projectionErr != nil {
 			return fmt.Errorf("%w: %v", ErrTrainingProjectionFailed, projectionErr)
 		}
@@ -94,6 +147,16 @@ func (s *TrainingService) EnsurePlanForTreatment(
 	consultationID *uuid.UUID,
 	treatment *model.Treatment,
 ) (*model.TrainingPlan, error) {
+	// A direct V2 projection call is unsafe: it could race against another
+	// device after the single-active legacy index is retired. Accepting
+	// Treatment or recovering its projection must hold this owner's lock
+	// in a coordinated transaction; a different owner's witness is invalid.
+	if s.independentPlans {
+		lockedOwner, ok := ctx.Value(independentTrainingOwnerLockKey{}).(uuid.UUID)
+		if !ok || lockedOwner != userID || userID == uuid.Nil {
+			return nil, ErrIndependentTrainingOwnerLockRequired
+		}
+	}
 	if treatment == nil || treatment.UserID != userID || treatment.Current == nil {
 		return nil, errors.New("accepted current treatment is required")
 	}
@@ -104,10 +167,13 @@ func (s *TrainingService) EnsurePlanForTreatment(
 	if existing, err := s.trainingRepo.GetPlanByTreatmentRevision(ctx, userID, revision.ID); err != nil {
 		return nil, err
 	} else if existing != nil {
-		// A previous request may have created the projection and failed before
-		// superseding older plans. Re-run the idempotent cleanup on every retry.
-		if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-			return nil, err
+		// Preserve the existing legacy recovery behavior by default. Future
+		// independent plans must NOT change another plan's status, even on
+		// response-loss retries of the same accepted Treatment revision.
+		if !s.independentPlans {
+			if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
+				return nil, err
+			}
 		}
 		return existing, nil
 	}
@@ -145,8 +211,13 @@ func (s *TrainingService) EnsurePlanForTreatment(
 		Status: "active", Goal: revision.Goal, DurationWeeks: revision.DurationWeeks,
 		CurrentWeek: 1, Phases: phases,
 	}
-	if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-		return nil, err
+	// Only the explicit V2 compatibility mode may preserve other active
+	// plan projections. The current database's single-active index is still
+	// authoritative until a separately reviewed schema migration.
+	if !s.independentPlans {
+		if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.trainingRepo.CreatePlan(ctx, plan); err != nil {
 		return nil, err
@@ -171,6 +242,28 @@ func (s *TrainingService) EnsureCurrentPlan(
 ) (*model.TrainingPlan, error) {
 	if s.treatment == nil {
 		return nil, errors.New("treatment service is not configured")
+	}
+	if s.independentPlans {
+		if s.unitOfWork == nil {
+			return nil, ErrIndependentTrainingOwnerLockRequired
+		}
+		var plan *model.TrainingPlan
+		err := s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
+			lockedCtx, lockErr := s.lockIndependentTrainingOwner(txCtx, userID)
+			if lockErr != nil {
+				return lockErr
+			}
+			current, currentErr := s.treatment.GetCurrent(lockedCtx, userID)
+			if currentErr != nil {
+				return currentErr
+			}
+			plan, currentErr = s.EnsurePlanForTreatment(lockedCtx, userID, consultationID, current)
+			return currentErr
+		})
+		if err != nil {
+			return nil, err
+		}
+		return plan, nil
 	}
 	current, err := s.treatment.GetCurrent(ctx, userID)
 	if err != nil {
@@ -278,7 +371,6 @@ type TrainingFeedbackInput struct {
 	BodyRegion      string
 	ConcernKey      string
 	Trend           string
-	FactID          *uuid.UUID
 }
 
 func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises []TrainingExerciseLogInput) (map[string]any, error) {
@@ -324,9 +416,6 @@ func (s *TrainingService) UpdateLogWithFeedback(
 		kind = "symptom_change"
 		value["description"] = strings.TrimSpace(feedback.SymptomChanges)
 		value["trend"] = feedback.Trend
-		if feedback.FactID != nil {
-			value["fact_id"] = feedback.FactID.String()
-		}
 	}
 	payloadHash := bodyStateHash(string(rawJSON(map[string]any{"notes": feedback.Notes, "value": value}, `{}`)))
 	outcome, _, err := s.treatment.RecordOutcome(ctx, userID, model.Outcome{

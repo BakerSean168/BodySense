@@ -290,8 +290,7 @@
     },
     "SafetyBlockerReasonV1": {
       "enum": [
-        "structured_current_signal",
-        "legacy_active_state"
+        "structured_current_signal"
       ],
       "title": "SafetyBlockerReasonV1",
       "type": "string"
@@ -305,6 +304,20 @@
         "reason": {
           "$ref": "#/$defs/SafetyBlockerReasonV1"
         },
+        "restriction_id": {
+          "format": "uuid",
+          "title": "Restriction Id",
+          "type": "string"
+        },
+        "risk_level": {
+          "enum": [
+            "advisory",
+            "restricted",
+            "urgent"
+          ],
+          "title": "Risk Level",
+          "type": "string"
+        },
         "source_kind": {
           "$ref": "#/$defs/SafetySourceKindV1"
         },
@@ -315,6 +328,8 @@
         }
       },
       "required": [
+        "restriction_id",
+        "risk_level",
         "concept",
         "source_ref",
         "source_kind",
@@ -436,12 +451,8 @@
         "coverage": {
           "$ref": "#/$defs/SafetyCoverageV1"
         },
-        "legacy_state_present": {
-          "title": "Legacy State Present",
-          "type": "boolean"
-        },
         "policy_revision": {
-          "const": "body-state-safety-policy-v1",
+          "const": "body-state-safety-policy-v2-native-restrictions",
           "title": "Policy Revision",
           "type": "string"
         },
@@ -462,7 +473,6 @@
         "assertions",
         "active_blockers",
         "requires_review",
-        "legacy_state_present",
         "coverage"
       ],
       "title": "SafetyEnvelopeV2",
@@ -487,8 +497,7 @@
     },
     "SafetySourceKindV1": {
       "enum": [
-        "body_state_fact",
-        "legacy_safety_state"
+        "safety_screen"
       ],
       "title": "SafetySourceKindV1",
       "type": "string"

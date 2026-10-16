@@ -18,6 +18,11 @@ type RouteSecurity struct {
 	Operator gin.HandlerFunc
 	// Validator enforces the generated OpenAPI request schemas.
 	Validator gin.HandlerFunc
+	// RetireChatShares is an explicit PC-D8 transitional kill-switch.
+	// The legacy default is false until V2 privacy migration admission.
+	// When true, deny anonymous snapshot reads and new public share
+	// creation, but retain owner-authorized revocation of existing tokens.
+	RetireChatShares bool
 }
 
 // routeErrorHandler replaces the generated wrapper's default error writer so
@@ -53,9 +58,17 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	authPublic.POST("/refresh", wrapper.RefreshAccountSession)
 	authPublic.POST("/logout", wrapper.LogoutAccount)
 
-	// Share tokens are capability URLs: public read without authentication.
-	sharePublic := router.Group("/api/v1/shared-conversations", security.Validator)
-	sharePublic.GET("/:token", wrapper.GetSharedConversation)
+	// PC-D8 allows an explicit fail-closed transition away from public
+	// health-chat snapshots without changing unrelated generated routes.
+	// The deny handler goes BEFORE public request validation, so a
+	// malformed token cannot reach any snapshot service or disclose data.
+	sharePublic := router.Group("/api/v1/shared-conversations")
+	if security.RetireChatShares {
+		sharePublic.GET("/:token", retiredConversationShare)
+	} else {
+		sharePublic.Use(security.Validator)
+		sharePublic.GET("/:token", wrapper.GetSharedConversation)
+	}
 
 	// Knowledge administration is a distinct authorization domain. Authenticate
 	// first, resolve durable operator role second, then validate the request.
@@ -65,7 +78,16 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	registerKnowledgeRoutes(knowledge, wrapper)
 
 	protected := router.Group("/api/v1", security.Auth, security.Validator)
-	registerProtectedRoutes(protected, wrapper)
+	registerProtectedRoutes(protected, wrapper, security.RetireChatShares)
+}
+
+// retiredConversationShare returns an identity-free response and never
+// invokes the legacy snapshot provider, even if old share tokens still exist.
+// Database token revocation and copied-source erasure are separate migration
+// tasks and must be verified before V2 release.
+func retiredConversationShare(c *gin.Context) {
+	c.JSON(http.StatusNotFound, dto.NewErrorResponse("NOT_FOUND", "resource not found"))
+	c.Abort()
 }
 
 func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
@@ -77,7 +99,7 @@ func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInt
 	knowledge.GET("/stats", wrapper.GetKnowledgeStats)
 }
 
-func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
+func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper, retireChatShares bool) {
 	// Approved assertion ledger, protected by the same authenticated owner boundary.
 	protected.POST("/body-state/records", wrapper.RecordBodyFacts)
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
@@ -88,6 +110,12 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)
 	protected.POST("/body-state/observation-records/:id/correct", wrapper.CorrectBodyObservationRecord)
 	protected.POST("/body-state/observation-records/:id/withdraw", wrapper.WithdrawBodyObservationRecord)
+	// V2 user-authored BodyHypothesis (direct edit only; no AI write path) and
+	// the derived, non-authoritative ConcernGroup read projection.
+	protected.POST("/body-state/hypothesis-records", wrapper.RecordBodyHypothesis)
+	protected.GET("/body-state/hypothesis-records", wrapper.ListBodyHypothesisRecords)
+	protected.POST("/body-state/hypothesis-records/:id/withdraw", wrapper.WithdrawBodyHypothesisRecord)
+	protected.GET("/body-state/concern-groups", wrapper.ListDerivedConcernGroups)
 	// Owner-authorized explicit Episode mutations and source-backed reads;
 	// AI-driven high-confidence association has no public bypass route.
 	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)
@@ -98,18 +126,14 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
-	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
-	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
-	protected.GET("/body-state", wrapper.GetBodyState)
-	protected.POST("/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)
-	protected.PATCH("/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
-	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
-	protected.POST("/body-state/observations", wrapper.AddBodyStateObservation)
-	protected.PATCH("/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
-	protected.POST("/body-state/hypotheses", wrapper.AddBodyStateHypothesis)
-	protected.PATCH("/body-state/hypotheses/:id/lifecycle", wrapper.UpdateBodyStateHypothesisLifecycle)
-	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
-	protected.POST("/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
+	// Native owner-scoped Safety restrictions and per-restriction resolutions.
+	protected.GET("/body-state/safety/restrictions", wrapper.ListSafetyRestrictions)
+	protected.POST("/body-state/safety/restrictions/:id/resolve", wrapper.ResolveSafetyRestriction)
+
+	// Owner-scoped EquipmentAsset inventory (PC-D2); not BodyState.
+	protected.GET("/equipment", wrapper.ListEquipmentAssets)
+	protected.POST("/equipment", wrapper.CreateEquipmentAsset)
+	protected.PUT("/equipment/:id", wrapper.UpdateEquipmentAsset)
 
 	// Continuous health workspace.
 	protected.GET("/health-workspace", wrapper.GetHealthWorkspace)
@@ -117,8 +141,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Health context commands/read models.
 	protected.GET("/lifestyle", wrapper.GetLifestyle)
 	protected.PUT("/lifestyle", wrapper.UpdateLifestyle)
-	protected.POST("/lifestyle/candidates/:id/accept", wrapper.AcceptLifestyleCandidate)
-	protected.POST("/lifestyle/candidates/:id/reject", wrapper.RejectLifestyleCandidate)
 	protected.GET("/body-metrics", wrapper.GetBodyMetrics)
 	protected.PUT("/body-metrics", wrapper.UpdateBodyMetrics)
 	protected.GET("/health-history/injury", wrapper.GetInjuryHistory)
@@ -152,7 +174,13 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.PATCH("/conversations/:id/pin", wrapper.PinConversation)
 	protected.PUT("/conversations/:id/title", wrapper.RenameConversationTitle)
 	protected.POST("/conversations/:id/title", wrapper.GenerateConversationTitle)
-	protected.POST("/conversations/:id/share", wrapper.ShareConversation)
+	if retireChatShares {
+		protected.POST("/conversations/:id/share", retiredConversationShare)
+	} else {
+		protected.POST("/conversations/:id/share", wrapper.ShareConversation)
+	}
+	// Continue to allow authenticated owners to revoke legacy share tokens
+	// during the migration. It cannot create or read a public snapshot.
 	protected.DELETE("/conversations/:id/share", wrapper.UnshareConversation)
 	protected.GET("/conversations/:id/runs", wrapper.ListConversationRuns)
 	protected.GET("/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)

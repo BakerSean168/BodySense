@@ -9,7 +9,7 @@ import (
 )
 
 // A separate BodyObservation aggregate boundary, not the legacy
-// body_state_observations review/lifecycle or the old AI reasoning model.
+// legacy observation review/lifecycle or the old AI reasoning model.
 type bodyObservationLedger interface {
 	RecordDirectObservation(context.Context, uuid.UUID, model.RecordBodyObservationCommand) (*model.BodyObservationCommit, error)
 	CorrectDirectObservation(context.Context, uuid.UUID, uuid.UUID, model.AmendBodyObservationCommand) (*model.BodyObservationCommit, error)

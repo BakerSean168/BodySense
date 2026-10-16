@@ -14,6 +14,8 @@ from typing import Any, Literal
 from pydantic_ai.models import Model
 from pydantic_ai.models.test import TestModel
 
+from ..services.assessment_evidence import build_assessment_evidence_catalog
+
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -87,11 +89,18 @@ def deterministic_treatment_model(*, call_tools: list[str] | Literal["all"] = "a
     )
 
 
-def deterministic_assessment_model() -> Model:
-    # The deterministic model deliberately emits no claims. Tests that need a
-    # claim inject their own TestModel with exact evidence_refs; this default
-    # cannot manufacture health observations without request-specific evidence.
-    return TestModel(custom_output_args={"observations": []})
+def deterministic_assessment_model(body_state: dict[str, Any] | None = None) -> Model:
+    # Select only literal activity evidence from the real catalog. Governance
+    # and source rendering still run; no evidence means no generated claims.
+    catalog = build_assessment_evidence_catalog(
+        profile={}, body_state=body_state or {}, report_indicators=[], posture_analysis={}
+    )
+    observations = [
+        {"kind": "lifestyle_pattern", "evidence_refs": [item.ref]}
+        for item in catalog.values()
+        if item.kind == "lifestyle.activity"
+    ]
+    return TestModel(custom_output_args={"observations": observations})
 
 
 def deterministic_text_for(use_case: str) -> str:

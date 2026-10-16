@@ -5,18 +5,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BIN="$ROOT/.tools/contracts/bin"
 mkdir -p "$BIN"
 
-install_go_tool() {
-  local name="$1"
-  local module="$2"
-  local version="$3"
-  local stamp="$BIN/.$name-version"
-  if [[ -x "$BIN/$name" && -f "$stamp" && "$(cat "$stamp")" == "$version" ]]; then
-    return 0
-  fi
-  echo "installing $name@$version" >&2
-  (cd "$ROOT" && GOTOOLCHAIN=auto GOBIN="$BIN" go install "$module@$version")
-  printf '%s\n' "$version" > "$stamp"
-}
+# Use the normal verified Go module install. Retry only known transient
+# transport failures; never suppress module checksums or retry auth denials.
+source "$ROOT/scripts/contracts/lib/go-install-retry.sh"
 
 install_protoc() {
   local version="32.1"

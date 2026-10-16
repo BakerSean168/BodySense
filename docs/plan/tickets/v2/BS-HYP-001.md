@@ -4,6 +4,12 @@ Status: QUEUED / NOT ADMITTED. Phase 1. SF cross-reference: SF-20.
 **Owner role:** Domain Contract Owner. **Dependencies:** `INT-001`.
 **Exclusive resources:** `domain-contract`.
 
+## Current remaining scope · 2026-10-16
+
+PR #283 already implemented direct-edit user BodyHypothesis and derived ConcernGroup reads and moved Agent hypotheses into Diagnosis audit. PR6 A–E is complete. This ticket retains only full projection/source variants, stable ConcernGroup identity, presentation and contract acceptance; do not recreate those tables/APIs.
+
+The original steps below are historical decomposition; perform only their unfulfilled acceptance work, under the Master’s single-writer policy.
+
 ## Goal and why now
 
 Finalize Observation/Hypothesis/ConcernGroup projections. This is an execution slice under the approved BodySense V2 Master; it does not approve clinical decisions or establish any readiness gate by itself.
