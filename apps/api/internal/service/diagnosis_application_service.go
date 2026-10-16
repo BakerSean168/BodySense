@@ -2,12 +2,9 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -224,13 +221,6 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis decision", err)
 	}
 
-	if normalized, evidenceErr := s.persistEvidence(ctx, userID, parsed); evidenceErr == nil {
-		result = normalized
-		_ = json.Unmarshal(result, &parsed)
-	} else {
-		log.Printf("failed to persist Diagnosis evidence for user %s: %v", userID, evidenceErr)
-	}
-
 	analysis, err := s.analyses.PersistAIResultWithReplayInput(ctx, userID, snapshot.CurrentRevision, result, replayInput)
 	if err != nil {
 		log.Printf("failed to persist diagnosis analysis for user %s BodyState R%d: %v", userID, snapshot.CurrentRevision, err)
@@ -376,91 +366,6 @@ func (s *DiagnosisApplicationService) observeRollout(
 	if err != nil {
 		log.Printf("Diagnosis %s comparison failed for analysis %s: %v", route.Stage, analysis.ID, err)
 	}
-}
-
-func (s *DiagnosisApplicationService) persistEvidence(
-	ctx context.Context,
-	userID uuid.UUID,
-	parsed map[string]any,
-) (json.RawMessage, error) {
-	if s.bodyState == nil {
-		return json.Marshal(parsed)
-	}
-	rawCitations, _ := parsed["citations"].([]any)
-	if len(rawCitations) == 0 {
-		return json.Marshal(parsed)
-	}
-	identityMap := map[string]string{}
-	for index, rawCitation := range rawCitations {
-		citation, ok := rawCitation.(map[string]any)
-		if !ok {
-			continue
-		}
-		sourceType := firstDiagnosisApplicationString(citation, "source_type", "type", "source")
-		if sourceType == "" {
-			sourceType = "knowledge"
-		}
-		sourceKey := firstDiagnosisApplicationString(citation, "source_key", "id", "source_id", "url", "uri")
-		if sourceKey == "" {
-			encoded, _ := json.Marshal(citation)
-			digest := sha256.Sum256(encoded)
-			sourceKey = "citation:" + hex.EncodeToString(digest[:12])
-		}
-		version := firstDiagnosisApplicationString(citation, "source_version", "version", "updated_at")
-		metadata, _ := json.Marshal(citation)
-		stored, err := s.bodyState.UpsertEvidence(ctx, userID, model.BodyStateEvidence{
-			SourceType: sourceType, SourceKey: sourceKey, SourceVersion: version,
-			Title:    firstDiagnosisApplicationString(citation, "title", "name"),
-			Summary:  firstDiagnosisApplicationString(citation, "summary", "content"),
-			Excerpt:  firstDiagnosisApplicationString(citation, "excerpt", "chunk", "text"),
-			Metadata: datatypes.JSON(metadata),
-		})
-		if err != nil {
-			return nil, err
-		}
-		storedID := stored.ID.String()
-		citation["evidence_id"] = storedID
-		citation["source_key"] = sourceKey
-		rawCitations[index] = citation
-		for _, key := range []string{sourceKey, firstDiagnosisApplicationString(citation, "id"), firstDiagnosisApplicationString(citation, "source_id"), firstDiagnosisApplicationString(citation, "url"), storedID} {
-			if key != "" {
-				identityMap[key] = storedID
-			}
-		}
-	}
-	parsed["citations"] = rawCitations
-	if candidates, ok := parsed["candidates"].([]any); ok {
-		for index, rawCandidate := range candidates {
-			candidate, ok := rawCandidate.(map[string]any)
-			if !ok {
-				continue
-			}
-			if references, ok := candidate["supporting_evidence_ids"].([]any); ok {
-				normalized := make([]string, 0, len(references))
-				for _, rawReference := range references {
-					reference := strings.TrimSpace(fmt.Sprint(rawReference))
-					if mapped := identityMap[reference]; mapped != "" {
-						normalized = append(normalized, mapped)
-					} else if _, err := uuid.Parse(reference); err == nil {
-						normalized = append(normalized, reference)
-					}
-				}
-				candidate["supporting_evidence_ids"] = normalized
-			}
-			candidates[index] = candidate
-		}
-		parsed["candidates"] = candidates
-	}
-	return json.Marshal(parsed)
-}
-
-func firstDiagnosisApplicationString(values map[string]any, keys ...string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(fmt.Sprint(values[key])); value != "" && value != "<nil>" {
-			return value
-		}
-	}
-	return ""
 }
 
 func mustDiagnosisApplicationJSON(value any) []byte {

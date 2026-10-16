@@ -75,32 +75,34 @@ type AgentBodyContext struct {
 
 // AgentBodyFact is one currently asserted user statement.
 type AgentBodyFact struct {
-	ID              uuid.UUID       `json:"id"`
-	Kind            string          `json:"kind"`
-	Subject         string          `json:"subject"`
-	Statement       string          `json:"statement"`
-	Authorship      string          `json:"authorship"`
-	ConcernKey      string          `json:"concern_key,omitempty"`
-	BodyRegionIDs   json.RawMessage `json:"body_region_ids"`
-	Temporal        json.RawMessage `json:"temporal"`
-	Details         json.RawMessage `json:"details"`
-	SafetyScreen    string          `json:"safety_screen,omitempty"`
-	CreatedRevision int64           `json:"created_revision"`
-	RecordedAt      time.Time       `json:"recorded_at"`
+	ID               uuid.UUID       `json:"id"`
+	SourceEvidenceID uuid.UUID       `json:"source_evidence_id"`
+	Kind             string          `json:"kind"`
+	Subject          string          `json:"subject"`
+	Statement        string          `json:"statement"`
+	Authorship       string          `json:"authorship"`
+	ConcernKey       string          `json:"concern_key,omitempty"`
+	BodyRegionIDs    json.RawMessage `json:"body_region_ids"`
+	Temporal         json.RawMessage `json:"temporal"`
+	Details          json.RawMessage `json:"details"`
+	SafetyScreen     string          `json:"safety_screen,omitempty"`
+	CreatedRevision  int64           `json:"created_revision"`
+	RecordedAt       time.Time       `json:"recorded_at"`
 }
 
 // AgentBodyObservation is the newest asserted user-entered observation of a kind.
 type AgentBodyObservation struct {
-	ID                 uuid.UUID          `json:"id"`
-	Kind               string             `json:"kind"`
-	Statement          string             `json:"statement"`
-	RawValue           string             `json:"raw_value,omitempty"`
-	RawUnit            string             `json:"raw_unit,omitempty"`
-	Method             string             `json:"method,omitempty"`
-	MeasurementContext string             `json:"measurement_context,omitempty"`
-	ObservedAt         model.FactTemporal `json:"observed_at"`
-	Authorship         string             `json:"authorship"`
-	CreatedRevision    int64              `json:"created_revision"`
+	ID                 uuid.UUID                   `json:"id"`
+	Source             model.BodyObservationSource `json:"source"`
+	Kind               string                      `json:"kind"`
+	Statement          string                      `json:"statement"`
+	RawValue           string                      `json:"raw_value,omitempty"`
+	RawUnit            string                      `json:"raw_unit,omitempty"`
+	Method             string                      `json:"method,omitempty"`
+	MeasurementContext string                      `json:"measurement_context,omitempty"`
+	ObservedAt         model.FactTemporal          `json:"observed_at"`
+	Authorship         string                      `json:"authorship"`
+	CreatedRevision    int64                       `json:"created_revision"`
 }
 
 // AgentSymptomEpisode is a current episode identity grouping symptom facts.
@@ -268,7 +270,8 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			}
 			view.Facts = append(view.Facts, AgentBodyFact{
 				ID: fact.ID, Kind: fact.Kind, Subject: fact.Subject, Statement: fact.Statement,
-				Authorship: AgentAuthorshipUserReported, ConcernKey: bodyFactConcernKey(fact),
+				SourceEvidenceID: fact.SourceEvidenceID,
+				Authorship:       AgentAuthorshipUserReported, ConcernKey: bodyFactConcernKey(fact),
 				BodyRegionIDs: agentJSONOr(fact.BodyRegionIDs, `[]`), Temporal: agentJSONOr(fact.Temporal, `{}`),
 				Details: agentJSONOr(fact.Details, `{}`), SafetyScreen: screen,
 				CreatedRevision: fact.CreatedRevision, RecordedAt: fact.RecordedAt,
@@ -308,6 +311,7 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			}
 			view.Observations = append(view.Observations, AgentBodyObservation{
 				ID: observation.ID, Kind: observation.Kind, Statement: observation.Statement,
+				Source:   observation.Source,
 				RawValue: observation.RawValue, RawUnit: observation.RawUnit, Method: observation.Method,
 				MeasurementContext: observation.MeasurementContext, ObservedAt: observation.ObservedAt,
 				Authorship: AgentAuthorshipUserReported, CreatedRevision: observation.CreatedRevision,

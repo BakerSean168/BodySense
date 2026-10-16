@@ -111,6 +111,10 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 		return nil, fmt.Errorf("completed diagnosis analysis requires at least one candidate")
 	}
 
+	evidenceAudit, err := buildDiagnosisEvidenceAudit(userID, bodyStateRevision, replayInput, payload.Citations)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	configurationID, configuration := diagnosisConfigurationProvenance(payload.AgentConfiguration)
 	if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, payload.EvidenceAcquisition); err != nil {
@@ -158,7 +162,7 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 		})
 	}
 	analysis.DecisionTrace = buildDiagnosisDecisionTrace(
-		bodyStateRevision, payload, configuration, execution, evidenceTrace, candidates,
+		bodyStateRevision, payload, configuration, execution, evidenceTrace, candidates, evidenceAudit,
 	)
 	if err := s.repo.Create(ctx, analysis, candidates); err != nil {
 		return nil, fmt.Errorf("persist diagnosis analysis: %w", err)
@@ -291,6 +295,7 @@ func buildDiagnosisDecisionTrace(
 	execution datatypes.JSON,
 	evidence datatypes.JSON,
 	candidates []model.DiagnosisCandidateRecord,
+	evidenceAudit diagnosisEvidenceAudit,
 ) datatypes.JSON {
 	decisionAuthority := diagnosisJSON(payload.DecisionAuthority, `{}`)
 	trace, _ := json.Marshal(map[string]any{
@@ -304,6 +309,7 @@ func buildDiagnosisDecisionTrace(
 		"agent_governance":     json.RawMessage(diagnosisJSON(payload.Governance, `{}`)),
 		"decision_authority":   json.RawMessage(decisionAuthority),
 		"agent_hypotheses":     diagnosisAgentHypotheses(candidates),
+		"evidence":             evidenceAudit,
 	})
 	return datatypes.JSON(trace)
 }

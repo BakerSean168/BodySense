@@ -48,7 +48,6 @@ type treatmentBodyStateSource interface {
 	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
 	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
-	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
 	RecordOutcomeSymptom(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error)
 }
 
@@ -204,6 +203,9 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
+	if analysis != nil && analysis.UserID != userID {
+		return nil, fmt.Errorf("Treatment analysis owner mismatch")
+	}
 	facts := TreatmentDecisionFacts{
 		SafetyState:              json.RawMessage(`{}`),
 		CandidateAssessmentReady: true,
@@ -260,7 +262,7 @@ func (s *TreatmentService) GenerateProposal(
 			profilePayload = rawJSON(profile, `{}`)
 		}
 	}
-	evidence, err := s.bodyState.ListEvidence(ctx, userID, 50)
+	evidencePayload, err := treatmentAnalysisEvidence(userID, analysis)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +271,6 @@ func (s *TreatmentService) GenerateProposal(
 	assessmentsPayload := rawJSON(assessments, `[]`)
 	constraints := treatmentConstraintsWithEquipment(bodyView, input.UserConstraints)
 	constraintsPayload := rawJSON(constraints, `{}`)
-	evidencePayload := rawJSON(evidence, `[]`)
 	replayInput, err := EncodeTreatmentReplayInput(
 		bodyView.CurrentRevision,
 		bodyStatePayload,
@@ -327,12 +328,6 @@ func (s *TreatmentService) GenerateProposal(
 			Prescription: datatypes.JSON(rawJSON(item.Prescription, `{}`)),
 		})
 	}
-	evidenceIDs := make([]uuid.UUID, 0, len(payload.EvidenceIDs))
-	for _, rawID := range payload.EvidenceIDs {
-		if parsed, parseErr := uuid.Parse(rawID); parseErr == nil {
-			evidenceIDs = append(evidenceIDs, parsed)
-		}
-	}
 	generationTrace := buildTreatmentDecisionTrace(
 		generationDecision,
 		facts,
@@ -346,7 +341,7 @@ func (s *TreatmentService) GenerateProposal(
 		DurationWeeks:             plan.DurationWeeks,
 		Plan:                      datatypes.JSON(rawJSON(plan, `{}`)),
 		UserConstraints:           datatypes.JSON(constraintsPayload),
-		EvidenceIDs:               datatypes.JSON(rawJSON(evidenceIDs, `[]`)),
+		EvidenceIDs:               datatypes.JSON(rawJSON(payload.EvidenceIDs, `[]`)),
 		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
 		AgentConfigurationID:      configurationID,
 		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),

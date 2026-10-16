@@ -149,9 +149,6 @@ func (f *fakeTreatmentBodyState) ResolveRevisionFacts(_ context.Context, _ uuid.
 func (f *fakeTreatmentBodyState) ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error) {
 	return f.revisions, nil
 }
-func (f *fakeTreatmentBodyState) ListEvidence(context.Context, uuid.UUID, int) ([]model.BodyStateEvidence, error) {
-	return nil, nil
-}
 func (f *fakeTreatmentBodyState) RecordOutcomeSymptom(_ context.Context, _ uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error) {
 	f.recordOutcomeCalls++
 	if f.recordOutcomeErr != nil {
@@ -305,7 +302,8 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
 		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[{"evidence_type":"body_fact","evidence_id":"11111111-1111-4111-8111-111111111111","version":3,"statement_evidence_id":"22222222-2222-4222-8222-222222222222","assertion_status":"asserted"}],"citations":[{"evidence_id":"selected-analysis-only","summary":"audit citation","evidence_type":"body_fact","body_state_authority":"authoritative"}]}}`),
+		Candidates:    []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
 	var captured TreatmentRecommendationRequest
@@ -323,6 +321,7 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
 			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
+			"evidence_ids":["selected-analysis-only"],
 			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}],
 			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
 		}`), capture: &captured},
@@ -341,6 +340,22 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	}
 	if revision.SourceBodyStateRevision != 9 || revision.SourceDiagnosisAnalysisID != analysis.ID {
 		t.Fatalf("proposal did not pin exact inputs: %#v", revision)
+	}
+	if string(revision.EvidenceIDs) != `["selected-analysis-only"]` {
+		t.Fatalf("external audit reference was dropped: %s", revision.EvidenceIDs)
+	}
+	if !strings.Contains(string(captured.Evidence), "selected-analysis-only") {
+		t.Fatalf("selected analysis evidence missing: %s", captured.Evidence)
+	}
+	var selectedEvidence []map[string]any
+	if err := json.Unmarshal(captured.Evidence, &selectedEvidence); err != nil {
+		t.Fatal(err)
+	}
+	if len(selectedEvidence) != 2 || selectedEvidence[0]["statement_evidence_id"] != "22222222-2222-4222-8222-222222222222" || selectedEvidence[0]["version"] != float64(3) {
+		t.Fatalf("selected native source references lost: %s", captured.Evidence)
+	}
+	if selectedEvidence[1]["evidence_type"] != "external_citation" || selectedEvidence[1]["body_state_authority"] != "none" {
+		t.Fatalf("Agent citation lost audit-only classification: %s", captured.Evidence)
 	}
 	if captured.ConfigurationID != defaultTreatmentConfigurationID {
 		t.Fatalf("Treatment request lost config identity: %#v", captured)
@@ -373,10 +388,39 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	}
 }
 
+func TestTreatmentRejectsForeignOrUnavailableAnalysisEvidenceBeforeAgent(t *testing.T) {
+	owner := uuid.New()
+	for _, name := range []string{"foreign owner", "missing audit", "malformed audit", "invalid authority"} {
+		t.Run(name, func(t *testing.T) {
+			analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), UserID: owner, Status: "completed", BodyStateRevision: 7,
+				Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), Name: "candidate", Confidence: "中"}},
+			}
+			switch name {
+			case "foreign owner":
+				analysis.UserID = uuid.New()
+			case "malformed audit":
+				analysis.DecisionTrace = datatypes.JSON(`{"evidence":`)
+			case "invalid authority":
+				analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"authoritative"}}`)
+			}
+			var captured TreatmentRecommendationRequest
+			repo := &fakeTreatmentRepo{}
+			svc := NewTreatmentService(repo, &fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+				&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: owner, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}}, nil, nil,
+				fakeTreatmentReasoner{capture: &captured}, testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{})
+			_, err := svc.GenerateProposal(context.Background(), owner, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
+			if err == nil || captured.UserID != "" || repo.current != nil {
+				t.Fatalf("invalid evidence reached Agent: err=%v request=%+v", err, captured)
+			}
+		})
+	}
+}
+
 func TestTreatmentGenerationMapsGovernanceRejectionToSafetyBlock(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
@@ -422,7 +466,8 @@ func TestTreatmentGenerationMapsGovernanceRejectionToSafetyBlock(t *testing.T) {
 func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
@@ -454,7 +499,8 @@ func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *tes
 
 func TestTreatmentGenerationBlockedBySafetyState(t *testing.T) {
 	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), UserID: userID, Status: "completed", Candidates: []model.DiagnosisCandidateRecord{{Name: "x", Confidence: "中"}}}
+	analysis := &model.DiagnosisAnalysisRecord{
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`), ID: uuid.New(), UserID: userID, Status: "completed", Candidates: []model.DiagnosisCandidateRecord{{Name: "x", Confidence: "中"}}}
 	svc := NewTreatmentService(
 		&fakeTreatmentRepo{}, &fakeTreatmentDiagnosis{analysis: analysis},
 		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{CurrentRevision: 3, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
@@ -542,7 +588,8 @@ func TestTreatmentReviewV2AmendmentsAndEpisodes(t *testing.T) {
 func TestTreatmentGenerationRequiresCandidateAssessment(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	svc := NewTreatmentService(
@@ -918,7 +965,7 @@ func TestRawJSONUsesFallbackForNilContainers(t *testing.T) {
 		t.Fatalf("nil map must use object fallback, got %s", got)
 	}
 
-	var evidence []model.BodyStateEvidence
+	var evidence []diagnosisBodyEvidenceRef
 	if got := string(rawJSON(evidence, `[]`)); got != `[]` {
 		t.Fatalf("nil slice must use array fallback, got %s", got)
 	}
@@ -986,7 +1033,8 @@ func TestTreatmentAgentIdentityRejectsPolicyAndRuntimeDrift(t *testing.T) {
 func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 12,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 12,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:shoulder", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
@@ -1042,7 +1090,8 @@ func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
 func TestTreatmentProposalPersistsGenerationDecisionTrace(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 14,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 14,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
@@ -1130,7 +1179,8 @@ func TestTreatmentAcceptancePersistsDecisionTraceWithCheckedRevision(t *testing.
 func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgentOrAcceptance(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 20,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 20,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	bodyState := &fakeTreatmentBodyState{snapshot: &BodyStateReadModel{
@@ -1167,7 +1217,8 @@ func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgentOrAcceptance(t *test
 func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServedProposal(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 30,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 30,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
@@ -1219,7 +1270,8 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 31,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 31,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	observer := &fakeTreatmentRolloutObserver{}
@@ -1247,7 +1299,8 @@ func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
 func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	notes := "medium"

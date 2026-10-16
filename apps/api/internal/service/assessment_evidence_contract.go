@@ -161,7 +161,7 @@ func assessmentInteger(value any) (int, bool) {
 
 func assessmentBodyStateCompactValue(item map[string]any) map[string]any {
 	out := map[string]any{}
-	for _, key := range []string{"kind", "value", "details", "body_region", "method", "review_state", "statement", "raw_value", "raw_unit", "authorship", "observed_at", "source", "temporal"} {
+	for _, key := range []string{"id", "source_evidence_id", "created_revision", "kind", "value", "details", "body_region", "method", "review_state", "statement", "raw_value", "raw_unit", "authorship", "observed_at", "source", "temporal"} {
 		if value, ok := item[key]; ok {
 			out[key] = value
 		}

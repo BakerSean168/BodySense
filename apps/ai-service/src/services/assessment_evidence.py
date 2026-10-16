@@ -113,6 +113,9 @@ def _compact_body_state_value(item: dict[str, Any]) -> dict[str, Any]:
     return {
         key: item[key]
         for key in (
+            "id",
+            "source_evidence_id",
+            "created_revision",
             "kind",
             "value",
             "details",

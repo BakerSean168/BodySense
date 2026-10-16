@@ -395,6 +395,8 @@ def test_native_v2_statements_and_measurements_keep_identity_and_source_text() -
             "facts": [
                 {
                     "id": fact_id,
+                    "source_evidence_id": "source-fact",
+                    "created_revision": 3,
                     "kind": "lifestyle",
                     "statement": "每周跑步两次",
                     "details": {"habit_type": "exercise"},
@@ -404,6 +406,8 @@ def test_native_v2_statements_and_measurements_keep_identity_and_source_text() -
             "observations": [
                 {
                     "id": observation_id,
+                    "source": {"id": "source-observation", "version": 2},
+                    "created_revision": 5,
                     "kind": "weight",
                     "statement": "我体重70公斤",
                     "raw_value": "70",
@@ -427,3 +431,7 @@ def test_native_v2_statements_and_measurements_keep_identity_and_source_text() -
     assert "每周跑步两次" in rendered[0]["description"]
     assert "我体重70公斤" in rendered[1]["description"]
     assert catalog[observation_ref].value["authorship"] == "user_reported"
+
+    assert catalog[fact_ref].value["source_evidence_id"] == "source-fact"
+    assert catalog[fact_ref].value["created_revision"] == 3
+    assert catalog[observation_ref].value["source"] == {"id": "source-observation", "version": 2}
