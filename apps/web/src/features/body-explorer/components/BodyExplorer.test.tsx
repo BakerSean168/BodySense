@@ -62,7 +62,7 @@ describe("BodyExplorer fallback boundary", () => {
       screen.getByRole("img", { name: /当前身体区域概览/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /重试/ })).toBeInTheDocument();
-    expect(screen.getByText("还没有身体记录")).toBeInTheDocument();
+    expect(screen.getByText("身体记录尚未读取")).toBeInTheDocument();
   });
 
   it("keeps the semantic region slot outside the WebGL implementation", async () => {

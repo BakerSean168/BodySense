@@ -72,7 +72,7 @@ func uploadTestRouter(t *testing.T, uploads uploadApplication, reviews healthDoc
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
 	r := gin.New()
-	RegisterRoutes(r, StrictHandler(NewPublicServer(nil).WithUploads(uploads, reviews)), RouteSecurity{
+	RegisterRoutes(r, StrictHandler(NewPublicServer().WithUploads(uploads, reviews)), RouteSecurity{
 		Auth: func(c *gin.Context) {
 			if authenticated {
 				c.Set("user_id", uuid.New().String())

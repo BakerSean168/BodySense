@@ -31,18 +31,8 @@ func (f *fakeHealthWorkspaceService) Get(_ context.Context, _ uuid.UUID) (*servi
 
 func minimalWorkspace() *service.HealthWorkspace {
 	return &service.HealthWorkspace{
-		GeneratedAt:  time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
-		ProfileReady: true,
-		BodyState: &service.HealthWorkspaceBodyState{
-			CurrentRevision:     0,
-			SafetyState:         json.RawMessage(`{}`),
-			Facts:               []model.BodyStateFact{},
-			PendingFacts:        []model.BodyStateFact{},
-			Observations:        []model.BodyStateObservation{},
-			PendingObservations: []model.BodyStateObservation{},
-			Hypotheses:          []model.BodyStateHypothesis{},
-			RecentRevisions:     []model.BodyStateRevision{},
-		},
+		GeneratedAt:        time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
+		ProfileReady:       true,
 		TreatmentRevisions: []model.TreatmentRevision{},
 		RecentOutcomes:     []model.Outcome{},
 		Trends:             []service.HealthWorkspaceTrend{},
@@ -64,7 +54,7 @@ func newWorkspaceOpenAPIRouter(t *testing.T, service healthWorkspaceService) *gi
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithHealthWorkspace(service)))
+	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer().WithHealthWorkspace(service)))
 	return r
 }
 
@@ -86,12 +76,8 @@ func TestGetHealthWorkspaceMatchesOpenAPIResponseSchema(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	bodyState, ok := body["body_state"].(map[string]any)
-	if !ok {
-		t.Fatalf("body_state=%#v", body["body_state"])
-	}
-	if _, exists := bodyState["user_id"]; exists {
-		t.Fatal("workspace body_state must not invent the consultation snapshot user_id field")
+	if _, exists := body["body_state"]; exists {
+		t.Fatal("retired body_state field exposed")
 	}
 }
 

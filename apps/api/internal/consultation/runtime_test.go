@@ -174,35 +174,10 @@ func (w *failingResponseWriter) Write([]byte) (int, error) {
 }
 func (w *failingResponseWriter) Flush() {}
 
-type fakeRuntimeBodyState struct {
-	extractedErr   error
-	safetyErr      error
-	interactionErr error
-	lifestyleErr   error
-}
+type fakeRuntimeBodyState struct{}
 
-func (f *fakeRuntimeBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error) {
-	return &service.BodyStateSnapshot{}, nil
-}
-
-func (f *fakeRuntimeBodyState) UpsertExtractedSymptom(context.Context, uuid.UUID, uuid.UUID, json.RawMessage) error {
-	return f.extractedErr
-}
-
-func (f *fakeRuntimeBodyState) RecordLifestyleContext(context.Context, uuid.UUID, uuid.UUID, json.RawMessage) error {
-	return f.lifestyleErr
-}
-
-func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, json.RawMessage) error {
-	return f.safetyErr
-}
-
-func (f *fakeRuntimeBodyState) RecordSafetyEventWithReceipt(context.Context, uuid.UUID, json.RawMessage) (*model.BodyStateRevision, error) {
-	return nil, f.safetyErr
-}
-
-func (f *fakeRuntimeBodyState) RecordInteractionAnswer(context.Context, uuid.UUID, uuid.UUID, string, datatypes.JSON, json.RawMessage) error {
-	return f.interactionErr
+func (f *fakeRuntimeBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*service.AgentBodyContext, error) {
+	return &service.AgentBodyContext{Schema: service.AgentBodyContextSchemaV1, UserID: owner, RecordsAvailable: true}, nil
 }
 
 func testStreamState() streamState {
@@ -258,6 +233,14 @@ func privateRuntimeEvent(
 			t.Fatal(err)
 		}
 		typed = service.ConsultationRuntimeExtractedInfoPayload{Info: value.Info}
+	case service.ConsultationRuntimeLifestyleContext:
+		var value struct {
+			Context json.RawMessage `json:"context"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeLifestyleContextPayload{Context: value.Context}
 	case service.ConsultationRuntimeRedFlagDetected:
 		var value struct {
 			HasRedFlags bool              `json:"has_red_flags"`
@@ -293,39 +276,37 @@ func privateRuntimeEvent(
 	}
 }
 
-func TestHandleAIEventFailsClosedWhenExtractedBodyStateWriteFails(t *testing.T) {
-	state := testStreamState()
-	repo := &fakeConsultationRunRepo{run: state.Run}
-	runtime := &Runtime{
-		bodyStateService: &fakeRuntimeBodyState{extractedErr: errors.New("db unavailable")},
-		runService:       testRunService(repo),
-		streamRuntime:    stream.NewRuntime(),
-	}
-	recorder := httptest.NewRecorder()
-	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
-	phase := "collecting"
-	result := streamResult{}
-	event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeExtractedInfo, state, map[string]any{
-		"info": map[string]any{"body_part": "颈肩", "symptom_type": "酸胀"},
-	})
-
-	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); !stopped {
-		t.Fatal("durable BodyState failure must stop the active stream")
-	}
-	body := recorder.Body.String()
-	if !strings.Contains(body, "run.failed") || !strings.Contains(body, "message.failed") {
-		t.Fatalf("expected fail-closed runtime events, got %s", body)
-	}
-	if strings.Contains(body, "state.extracted_info.upsert") {
-		t.Fatalf("uncommitted extracted state must not be emitted as successful: %s", body)
+func TestHandleAIEventForwardsExtractedCandidatesWithoutPersisting(t *testing.T) {
+	for _, tc := range []struct {
+		kind    service.ConsultationRuntimeEventKind
+		payload map[string]any
+	}{
+		{service.ConsultationRuntimeExtractedInfo, map[string]any{"info": map[string]any{"body_part": "颈肩", "symptom_type": "酸胀"}}},
+		{service.ConsultationRuntimeLifestyleContext, map[string]any{"context": map[string]any{"section": "sleep", "summary": "每晚睡五小时"}}},
+	} {
+		state := testStreamState()
+		// No BodyState service is configured: a model-extracted candidate must
+		// never need persistence, so it cannot fail the stream either.
+		runtime := &Runtime{streamRuntime: stream.NewRuntime()}
+		recorder := httptest.NewRecorder()
+		sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
+		phase := "collecting"
+		result := streamResult{}
+		event := privateRuntimeEvent(t, 1, tc.kind, state, tc.payload)
+		if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); stopped {
+			t.Fatalf("%s candidate must be forwarded as ephemeral state: %s", tc.kind, recorder.Body.String())
+		}
+		if body := recorder.Body.String(); strings.Contains(body, "run.failed") {
+			t.Fatalf("%s candidate failed the stream: %s", tc.kind, body)
+		}
 	}
 }
 
-func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
+func TestHandleAIWarningHasNoSafetyWriteAuthority(t *testing.T) {
 	state := testStreamState()
 	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
-		bodyStateService: &fakeRuntimeBodyState{safetyErr: errors.New("db unavailable")},
+		bodyStateService: &fakeRuntimeBodyState{},
 		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
@@ -338,26 +319,15 @@ func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
 		"flags":         []any{},
 	})
 
-	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); !stopped {
-		t.Fatal("safety persistence failure must stop the active stream")
+	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); stopped {
+		t.Fatal("untrusted model warning must not write Safety or stop the stream")
 	}
 	body := recorder.Body.String()
-	if !strings.Contains(body, "failed to persist safety state") {
+	if strings.Contains(body, "failed to persist safety state") {
 		t.Fatalf("expected explicit safety persistence failure, got %s", body)
 	}
-	if strings.Contains(body, "safety.red_flag.detected") {
+	if !strings.Contains(body, "safety.red_flag.detected") {
 		t.Fatalf("uncommitted safety signal must not be emitted as successful: %s", body)
-	}
-}
-
-func TestPersistInteractionAnswerPropagatesBodyStateFailure(t *testing.T) {
-	runtime := &Runtime{bodyStateService: &fakeRuntimeBodyState{interactionErr: errors.New("db unavailable")}}
-	err := runtime.persistInteractionAnswer(
-		context.Background(), uuid.New(), uuid.New(), "tool-call-1",
-		datatypes.JSON(`{"text":"是否麻木"}`), json.RawMessage(`"是"`),
-	)
-	if err == nil {
-		t.Fatal("interaction answer persistence failure must be returned before interaction resume")
 	}
 }
 

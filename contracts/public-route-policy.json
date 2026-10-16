@@ -7,7 +7,13 @@
       "reason": "Operational liveness endpoint, not a browser-facing product API. It remains tested/deployed but is outside the public v1 OpenAPI contract."
     }
   ],
-  "retiredBaselineRoutes": [],
+  "retiredBaselineRoutes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/safety/resolve",
+      "reason": "SAFE-D5 replaces global clear with source-bound resolution of one native restriction."
+    }
+  ],
   "approvedNewRoutes": [
     {
       "method": "GET",
@@ -28,6 +34,16 @@
       "method": "POST",
       "path": "/api/v1/body-state/records/{id}/withdraw",
       "reason": "SF-20 explicit user assertion correction/withdrawal with exact target, optimistic revision, immutable source history and idempotent commit receipt."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/body-state/safety/restrictions",
+      "reason": "SAFE-D5 exact-target source-validated user-reported professional clearance and native restriction audit."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/safety/restrictions/{id}/resolve",
+      "reason": "SAFE-D5 exact-target source-validated user-reported professional clearance and native restriction audit."
     }
   ]
 }

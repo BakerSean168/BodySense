@@ -210,15 +210,14 @@ class DiagnosisService:
     ) -> dict[str, Any]:
         if safety_envelope.body_state_revision != body_state_revision:
             raise ValueError("safety_envelope does not match body_state_revision")
-        if not safety_envelope.coverage.complete or safety_envelope.requires_review:
+        urgent = any(blocker.risk_level == "urgent" for blocker in safety_envelope.active_blockers)
+        if not safety_envelope.coverage.complete or urgent:
             reason = (
                 "active_structured_safety_blocker"
-                if safety_envelope.requires_review
+                if urgent
                 else "structured_safety_coverage_incomplete"
             )
-            status = (
-                "safety_blocked" if safety_envelope.requires_review else "insufficient_information"
-            )
+            status = "safety_blocked" if urgent else "insufficient_information"
             trace = EvidenceAcquisitionTrace(
                 policy_revision=config.evidence_policy_revision,
                 external_evidence_status=ExternalEvidenceStatus.NOT_REQUIRED,

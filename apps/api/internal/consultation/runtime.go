@@ -1,6 +1,7 @@
 package consultation
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -33,16 +34,15 @@ func durableExecutionContext(parent context.Context) (context.Context, context.C
 type ConsultationErrorCode string
 
 const (
-	ConsultationErrorBodyStatePersistenceFailed ConsultationErrorCode = "BODY_STATE_PERSISTENCE_FAILED"
-	ConsultationErrorInteractionClosed          ConsultationErrorCode = "INTERACTION_CLOSED"
-	ConsultationErrorInteractionExpired         ConsultationErrorCode = "INTERACTION_EXPIRED"
-	ConsultationErrorInteractionNotResumable    ConsultationErrorCode = "INTERACTION_NOT_RESUMABLE"
-	ConsultationErrorInternal                   ConsultationErrorCode = "INTERNAL_ERROR"
-	ConsultationErrorInvalidID                  ConsultationErrorCode = "INVALID_ID"
-	ConsultationErrorInvalidRequest             ConsultationErrorCode = "INVALID_REQUEST"
-	ConsultationErrorInvalidSpatialContext      ConsultationErrorCode = "INVALID_SPATIAL_CONTEXT"
-	ConsultationErrorNotFound                   ConsultationErrorCode = "NOT_FOUND"
-	ConsultationErrorRunTerminal                ConsultationErrorCode = "RUN_TERMINAL"
+	ConsultationErrorInteractionClosed       ConsultationErrorCode = "INTERACTION_CLOSED"
+	ConsultationErrorInteractionExpired      ConsultationErrorCode = "INTERACTION_EXPIRED"
+	ConsultationErrorInteractionNotResumable ConsultationErrorCode = "INTERACTION_NOT_RESUMABLE"
+	ConsultationErrorInternal                ConsultationErrorCode = "INTERNAL_ERROR"
+	ConsultationErrorInvalidID               ConsultationErrorCode = "INVALID_ID"
+	ConsultationErrorInvalidRequest          ConsultationErrorCode = "INVALID_REQUEST"
+	ConsultationErrorInvalidSpatialContext   ConsultationErrorCode = "INVALID_SPATIAL_CONTEXT"
+	ConsultationErrorNotFound                ConsultationErrorCode = "NOT_FOUND"
+	ConsultationErrorRunTerminal             ConsultationErrorCode = "RUN_TERMINAL"
 )
 
 type HTTPError struct {
@@ -52,12 +52,7 @@ type HTTPError struct {
 }
 
 type runtimeBodyStateService interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*service.BodyStateSnapshot, error)
-	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
-	RecordLifestyleContext(ctx context.Context, userID, runID uuid.UUID, payload json.RawMessage) error
-	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
-	RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error)
-	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, toolCallID string, question datatypes.JSON, answer json.RawMessage) error
+	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*service.AgentBodyContext, error)
 }
 
 type runtimeKnowledgeObservationService interface {
@@ -647,12 +642,9 @@ func (r *Runtime) ResumeInteraction(
 		return nil
 	}
 
-	// The interaction answer is a durable health input, not merely a chat message.
-	// Commit it before closing the interaction so a persistence failure remains
-	// retryable and never resumes the Agent from an unrecorded health answer.
-	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.ToolCallID, interaction.Question, req.Answer); err != nil {
-		return httpErr(http.StatusInternalServerError, ConsultationErrorBodyStatePersistenceFailed, "failed to persist interaction answer")
-	}
+	// Legacy (pre-v3) runs have no source-bound resume envelope, so their
+	// answers stay chat messages only and never become BodyFacts. Without a
+	// recorded intake the Safety coverage stays incomplete (fail-closed).
 
 	if err := r.interactionService.ResumeInteractionWithEvent(ctx, interactionID, datatypes.JSON(req.Answer)); err != nil {
 		switch {
@@ -915,42 +907,22 @@ func (r *Runtime) buildBusinessContext(
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
 		},
 	}
-	var bodyStateSnapshot *service.BodyStateSnapshot
+	// The native V2 agent view (facts, observations, episodes, user
+	// hypotheses, Safety digest, usable equipment) pinned to one revision. A
+	// read failure is explicit (records_available=false) so the turn cannot
+	// invent revision zero, claim capture, or present symptoms as screened.
+	var bodyContext *service.AgentBodyContext
 	if r.bodyStateService != nil {
-		if snapshot, err := r.bodyStateService.GetSnapshot(ctx, uid, 20); err != nil {
-			log.Printf("body state context load failed for user %s: %v", uid, err)
+		if view, err := r.bodyStateService.GetAgentBodyContext(ctx, uid); err != nil {
+			log.Printf("agent body context load failed for user %s: %v", uid, err)
 		} else {
-			bodyStateSnapshot = snapshot
-			if raw, marshalErr := json.Marshal(snapshot); marshalErr == nil {
-				bc.BodyState = raw
-			}
+			bodyContext = view
 		}
-	}
-	// A bounded new-ledger projection is distinct from legacy observations.
-	// Read failure is explicit so v3 cannot invent revision zero and claim capture.
-	if r.bodyFacts != nil {
-		combined := map[string]any{}
-		if len(bc.BodyState) > 0 {
-			_ = json.Unmarshal(bc.BodyState, &combined)
-		}
-		if page, err := r.bodyFacts.ListFacts(ctx, uid, 0); err == nil && page != nil && page.UserID == uid {
-			combined["current_revision"] = page.CurrentRevision
-			records := page.Facts
-			if len(records) > 40 {
-				records = records[:40]
-			}
-			combined["records"] = records
-			combined["records_available"] = true
-		} else {
-			combined["records_available"] = false
-		}
-		if raw, err := json.Marshal(combined); err == nil {
-			bc.BodyState = raw
-		}
+		bc.BodyState = consultationBodyStatePayload(bodyContext, r.bodyFacts != nil)
 	}
 	if r.contextRetrievalService != nil {
 		if history, err := r.contextRetrievalService.Retrieve(
-			ctx, uid, conversationID, queryText, bodyStateSnapshot,
+			ctx, uid, conversationID, queryText, bodyContext,
 		); err != nil {
 			log.Printf("historical context retrieval failed for conversation %s: %v", conversationID, err)
 		} else {
@@ -1000,6 +972,22 @@ func (r *Runtime) buildBusinessContext(
 	return bc
 }
 
+// consultationBodyStatePayload encodes the agent view for the turn. Capture is
+// available only when the view loaded and the run can commit BodyFacts.
+func consultationBodyStatePayload(view *service.AgentBodyContext, captureAvailable bool) json.RawMessage {
+	if view == nil {
+		raw, _ := json.Marshal(map[string]any{"schema": service.AgentBodyContextSchemaV1, "records_available": false})
+		return raw
+	}
+	payload := *view
+	payload.RecordsAvailable = view.RecordsAvailable && captureAvailable
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		raw, _ = json.Marshal(map[string]any{"schema": service.AgentBodyContextSchemaV1, "records_available": false})
+	}
+	return raw
+}
+
 type streamState struct {
 	UID                     uuid.UUID
 	ConversationID          uuid.UUID
@@ -1021,12 +1009,14 @@ type ConsultationExecutionIdentity struct {
 }
 
 type streamResult struct {
-	AssistantParts       []map[string]any
-	Usage                any
-	ProviderResponseID   string
-	GovernanceResult     datatypes.JSON
-	ExecutionIdentity    ConsultationExecutionIdentity
-	OwnedSafetyRevisions []model.BodyStateRevision
+	AssistantParts     []map[string]any
+	Usage              any
+	ProviderResponseID string
+	GovernanceResult   datatypes.JSON
+	ExecutionIdentity  ConsultationExecutionIdentity
+	// CommittedFacts are the BodyFacts Go committed in this stream; a symptom
+	// intake question may bind only to one of them.
+	CommittedFacts []service.CommittedBodyFact
 }
 
 func projectConsultationRuntimeEvent(event service.ConsultationRuntimeEvent) (dto.StreamEvent, error) {
@@ -1254,13 +1244,14 @@ func (r *Runtime) handleAIEvent(
 	case service.ConsultationRuntimeToolResultPayload:
 		var captureErr error
 		if payload.Tool == "record_body_state" {
-			committed, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result, result.OwnedSafetyRevisions...)
+			committed, facts, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result)
 			captureErr = err
 			if err != nil {
 				log.Printf("BodyFact proposal rejected: %v", err)
 				payload.Result = json.RawMessage(`{"status":"rejected","error":"身体记录尚未确认保存，请刷新记录后重试。"}`)
 			} else {
 				payload.Result = committed
+				result.CommittedFacts = append(result.CommittedFacts, facts...)
 			}
 			// Only a receipt or explicit rejection crosses the browser boundary.
 			publicEvent.Payload, _ = json.Marshal(payload)
@@ -1275,20 +1266,10 @@ func (r *Runtime) handleAIEvent(
 			return true
 		}
 
-	case service.ConsultationRuntimeExtractedInfoPayload:
-		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {
-			log.Printf("failed to persist extracted symptom in BodyState for run %s: %v", state.Run.ID, err)
-			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
-			return true
-		}
-		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
-
-	case service.ConsultationRuntimeLifestyleContextPayload:
-		if err := r.persistLifestyleContext(ctx, state.UID, state.Run.ID, payload.Context); err != nil {
-			log.Printf("failed to persist lifestyle context in BodyState for run %s: %v", state.Run.ID, err)
-			r.failActiveStream(ctx, sw, state, "failed to persist durable lifestyle state")
-			return true
-		}
+	case service.ConsultationRuntimeExtractedInfoPayload, service.ConsultationRuntimeLifestyleContextPayload:
+		// Model-extracted candidates are ephemeral browser state only. They are
+		// never persisted: health facts come solely from user-authored or
+		// user-confirmed input (record_body_state, structured intake, direct edit).
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 
 	case service.ConsultationRuntimeCitationAddedPayload:
@@ -1304,21 +1285,8 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", publicEvent.Payload))
 
 	case service.ConsultationRuntimeRedFlagDetectedPayload:
-		var revision *model.BodyStateRevision
-		var safetyErr error
-		if r.bodyStateService == nil {
-			safetyErr = errors.New("BodyState service is not configured")
-		} else {
-			revision, safetyErr = r.bodyStateService.RecordSafetyEventWithReceipt(ctx, state.UID, publicEvent.Payload)
-		}
-		if revision != nil && safetyErr == nil {
-			result.OwnedSafetyRevisions = append(result.OwnedSafetyRevisions, *revision)
-		}
-		if err := safetyErr; err != nil {
-			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
-			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
-			return true
-		}
+		// Model warnings remain conversation output. Only Go-validated user
+		// screens can create restrictions; AI text cannot write Safety authority.
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", publicEvent.Payload))
 
@@ -1406,6 +1374,23 @@ func (r *Runtime) handleInteractionRequired(
 ) bool {
 	policy, _ := service.ConsultationDecisionPolicyRevisionForConfiguration(state.ExpectedConfigurationID)
 	sameRunResume := policy == service.ConsultationDecisionPolicyV3
+	// Go owns the symptom intake binding: only a reference to a symptom fact
+	// committed in this stream (v3 only) becomes a bound question; every
+	// other binding is stripped so its answer can record nothing.
+	var committedFacts []service.CommittedBodyFact
+	if sameRunResume {
+		committedFacts = result.CommittedFacts
+	}
+	question, bound, err := service.BindSymptomIntakeQuestion(payload.Question, event.IDs.ToolCallID, committedFacts)
+	if err != nil {
+		log.Printf("rejected interaction question for run %s: %v", state.Run.ID, err)
+		r.failActiveStream(ctx, sw, state, "invalid user interaction")
+		return true
+	}
+	if !bound && bytes.Contains(payload.Question, []byte(`"state_binding"`)) {
+		log.Printf("stripped unbound symptom intake binding for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
+	}
+	payload.Question = question
 	var nativeIDs []string
 	if sameRunResume {
 		nativeIDs = []string{payload.InteractionID}
@@ -1763,52 +1748,6 @@ func (r *Runtime) maybeGenerateTitle(ctx context.Context, conversationID, userID
 			log.Printf("failed to trigger title generation for conversation %s: %v", conversationID, err)
 		}
 	}
-}
-
-func (r *Runtime) persistExtractedSymptom(
-	ctx context.Context,
-	userID, runID uuid.UUID,
-	info json.RawMessage,
-) error {
-	if r.bodyStateService == nil {
-		return errors.New("BodyState service is not configured")
-	}
-	return r.bodyStateService.UpsertExtractedSymptom(ctx, userID, runID, info)
-}
-
-func (r *Runtime) persistLifestyleContext(
-	ctx context.Context,
-	userID, runID uuid.UUID,
-	payload json.RawMessage,
-) error {
-	if r.bodyStateService == nil {
-		return errors.New("BodyState service is not configured")
-	}
-	return r.bodyStateService.RecordLifestyleContext(ctx, userID, runID, payload)
-}
-
-func (r *Runtime) persistSafetyEvent(
-	ctx context.Context,
-	userID uuid.UUID,
-	payload json.RawMessage,
-) error {
-	if r.bodyStateService == nil {
-		return errors.New("BodyState service is not configured")
-	}
-	return r.bodyStateService.RecordSafetyEvent(ctx, userID, payload)
-}
-
-func (r *Runtime) persistInteractionAnswer(
-	ctx context.Context,
-	userID, interactionID uuid.UUID,
-	toolCallID string,
-	question datatypes.JSON,
-	answer json.RawMessage,
-) error {
-	if r.bodyStateService == nil {
-		return errors.New("BodyState service is not configured")
-	}
-	return r.bodyStateService.RecordInteractionAnswer(ctx, userID, interactionID, toolCallID, question, answer)
 }
 
 func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uuid.UUID) {

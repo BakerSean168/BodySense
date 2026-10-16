@@ -1,6 +1,6 @@
 # BodySense V2 · Frozen Main Baseline and Writer Admission
 
-Status: **MAIN BASELINE VERIFIED; V2 DOMAIN/RELEASE GATES STILL OPEN.**
+Status: **HISTORICAL BASELINE / ADMISSION POLICY SUPERSEDED (2026-10-16).** Current verified main is `af3e1993b1f62930e3b680b54abab5ade456935b`, recorded in [queue.json](../tickets/v2/queue.json) and [v2-handoff-state.json](./v2-handoff-state.json); PR6 A–E is complete through #298. The [Master §0 big-bang decision](./2026-10-13-v2-parallel-master.md) supersedes the separate-ticket parallel admission, data-reconciliation and rollback instructions below. Preserve this page only as the dated 2026-10-14 evidence; do not dispatch from its old SHA or policies. Complete V2 domain/release gates remain open.
 Owner: ChatGPT Web, GCP Agent Fabric. Observed on 2026-10-14 UTC.
 
 ## 1. Immutable execution base

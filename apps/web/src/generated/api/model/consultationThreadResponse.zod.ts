@@ -7,7 +7,6 @@
  */
 import * as zod from 'zod/mini';
 import { AgentInteraction } from './agentInteraction.zod';
-import { BodyStateSnapshot } from './bodyStateSnapshot.zod';
 import { ConsultationThreadConversation } from './consultationThreadConversation.zod';
 import { ConversationMessage } from './conversationMessage.zod';
 import { JsonObject } from './jsonObject.zod';
@@ -19,7 +18,6 @@ export const ConsultationThreadResponse = /*#__PURE__*/ zod.strictObject({
   "conversation": ConsultationThreadConversation,
   "phase": /*#__PURE__*/ zod.enum(['collecting', 'ready_for_analysis']),
   "extracted_info": /*#__PURE__*/ zod.array(JsonObject),
-  "body_state": /*#__PURE__*/ zod.union([BodyStateSnapshot,/*#__PURE__*/ zod.null()]),
   "pending_interactions": /*#__PURE__*/ zod.array(AgentInteraction),
   "interaction_history": /*#__PURE__*/ zod.array(AgentInteraction),
   "active_turn_run_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]),

@@ -76,9 +76,9 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	}
 	mustExec("INSERT INTO user_uploads(id,user_id,file_type,original_name,storage_backend,storage_key,file_size,mime_type,ocr_result,ocr_status) VALUES (?,?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo_front", "photo.jpg", "local", uploadKey, len(payload), "image/jpeg", `{"private":"ocr"}`, "completed")
 
-	mustExec("INSERT INTO body_states(user_id,current_revision,safety_state) VALUES (?,?,?)", userID, 1, `{"private":"safety"}`)
-	mustExec("INSERT INTO body_state_revisions(user_id,revision,change_type,source,changes) VALUES (?,?,?,?,?)", userID, 1, "synthetic", "integration", `{"private":"state"}`)
-	mustExec("INSERT INTO body_state_facts(user_id,kind,value,origin,created_revision,updated_revision,details) VALUES (?,?,?,?,?,?,?)", userID, "symptom", "private pain", "user", 1, 1, `{"private":true}`)
+	if _, err := repository.NewBodyStateRepository(db).RecordDirectFacts(ctx, userID, model.RecordBodyFactsCommand{IdempotencyKey: "privacy-seed", Facts: []model.BodyFactInput{{Kind: "symptom", Statement: "private pain", BodyRegionIDs: []string{}, Temporal: model.FactTemporal{Precision: "unknown"}, Details: []byte(`{}`)}}}); err != nil {
+		t.Fatal(err)
+	}
 
 	mustExec("INSERT INTO diagnosis_analyses(id,user_id,body_state_revision,status,summary,raw_output) VALUES (?,?,?,?,?,?)", analysisID, userID, 1, "completed", "private diagnosis", `{"private":"diagnosis reasoning"}`)
 	mustExec("INSERT INTO diagnosis_candidates(analysis_id,ordinal,name,confidence,basis,raw_payload) VALUES (?,?,?,?,?,?)", analysisID, 1, "synthetic candidate", "medium", "private basis", `{"private":true}`)
@@ -133,7 +133,9 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		{name: "user_uploads", query: "SELECT COUNT(*) FROM user_uploads WHERE user_id = ?", arg: userID},
 		{name: "body_states", query: "SELECT COUNT(*) FROM body_states WHERE user_id = ?", arg: userID},
 		{name: "body_state_revisions", query: "SELECT COUNT(*) FROM body_state_revisions WHERE user_id = ?", arg: userID},
-		{name: "body_state_facts", query: "SELECT COUNT(*) FROM body_state_facts WHERE user_id = ?", arg: userID},
+		{name: "body_facts", query: "SELECT COUNT(*) FROM body_facts WHERE user_id = ?", arg: userID},
+		{name: "statement_evidence", query: "SELECT COUNT(*) FROM statement_evidence WHERE user_id = ?", arg: userID},
+		{name: "body_fact_commits", query: "SELECT COUNT(*) FROM body_fact_commits WHERE user_id = ?", arg: userID},
 		{name: "diagnosis_analyses", query: "SELECT COUNT(*) FROM diagnosis_analyses WHERE user_id = ?", arg: userID},
 		{name: "diagnosis_candidates", query: "SELECT COUNT(*) FROM diagnosis_candidates WHERE analysis_id = ?", arg: analysisID},
 		{name: "diagnosis_rollout_observations", query: "SELECT COUNT(*) FROM diagnosis_rollout_observations WHERE source_analysis_id = ?", arg: analysisID},

@@ -98,7 +98,26 @@ func assessmentBodyStateEvidenceKindAllowed(observationKind, evidenceKind string
 	}
 }
 
+// assessmentBodyStateCategory classifies evidence for coverage/rendering; it
+// never changes the native record kind or source in the frozen input.
+func assessmentBodyStateCategory(item map[string]any) string {
+	kind, _ := item["kind"].(string)
+	if kind == "lifestyle" {
+		details, _ := item["details"].(map[string]any)
+		if habit, ok := details["habit_type"].(string); ok && habit != "" {
+			return "lifestyle." + habit
+		}
+	}
+	if kind == "height" || kind == "weight" {
+		return "anthropometry." + kind
+	}
+	return kind
+}
+
 func assessmentBodyStateEvidenceEligible(item map[string]any) bool {
+	if status, ok := item["assertion_status"].(string); ok && status != "asserted" {
+		return false
+	}
 	if excluded, ok := item["excluded_from_reasoning"].(bool); ok && excluded {
 		return false
 	}
@@ -142,7 +161,7 @@ func assessmentInteger(value any) (int, bool) {
 
 func assessmentBodyStateCompactValue(item map[string]any) map[string]any {
 	out := map[string]any{}
-	for _, key := range []string{"kind", "value", "details", "body_region", "method", "review_state"} {
+	for _, key := range []string{"id", "source_evidence_id", "created_revision", "kind", "value", "details", "body_region", "method", "review_state", "statement", "raw_value", "raw_unit", "authorship", "observed_at", "source", "temporal"} {
 		if value, ok := item[key]; ok {
 			out[key] = value
 		}
@@ -175,7 +194,7 @@ func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest) map[string]
 				if item == nil || !assessmentBodyStateEvidenceEligible(item) {
 					continue
 				}
-				kind, _ := item["kind"].(string)
+				kind := assessmentBodyStateCategory(item)
 				catalog[assessmentBodyStateEvidenceRef("body_state:fact", item, index)] = assessmentEvidenceItem{
 					Source: "body_state", Kind: firstNonEmpty(kind, "fact"), Value: assessmentBodyStateCompactValue(item),
 				}
@@ -187,7 +206,7 @@ func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest) map[string]
 				if item == nil || !assessmentBodyStateEvidenceEligible(item) {
 					continue
 				}
-				kind, _ := item["kind"].(string)
+				kind := assessmentBodyStateCategory(item)
 				catalog[assessmentBodyStateEvidenceRef("body_state:observation", item, index)] = assessmentEvidenceItem{
 					Source: "body_state", Kind: firstNonEmpty(kind, "observation"), Value: assessmentBodyStateCompactValue(item),
 				}
@@ -380,7 +399,9 @@ func renderAssessmentObservation(kind, ref string, item assessmentEvidenceItem) 
 		draft.Label = firstNonEmpty(assessmentBodyStateLabels[item.Kind], "身体状态记录")
 		rawValue := value["value"]
 		text := assessmentEvidenceText(rawValue)
-		if strings.HasPrefix(item.Kind, "anthropometry.") {
+		if statement, ok := value["statement"].(string); ok && statement != "" {
+			text = statement
+		} else if strings.HasPrefix(item.Kind, "anthropometry.") {
 			text = assessmentMeasurementText(rawValue)
 		}
 		if text != "" {

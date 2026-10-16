@@ -3,6 +3,7 @@
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StrictBool, StrictInt, model_validator
 
@@ -39,18 +40,19 @@ class SafetyReviewStateV1(StrEnum):
 
 
 class SafetySourceKindV1(StrEnum):
-    BODY_STATE_FACT = "body_state_fact"
-    LEGACY_SAFETY_STATE = "legacy_safety_state"
+    # Go projects structured safety only from user-answered safety screens.
+    SAFETY_SCREEN = "safety_screen"
 
 
 class SafetyBlockerReasonV1(StrEnum):
     STRUCTURED_CURRENT_SIGNAL = "structured_current_signal"
-    LEGACY_ACTIVE_STATE = "legacy_active_state"
 
 
 class SafetyBlockerV1(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    restriction_id: UUID
+    risk_level: Literal["advisory", "restricted", "urgent"]
     concept: SafetyConceptV1
     source_ref: str = Field(min_length=1)
     source_kind: SafetySourceKindV1
@@ -104,12 +106,11 @@ class SafetyEnvelopeV2(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_revision: Literal["body-state-safety-envelope-v2"]
-    policy_revision: Literal["body-state-safety-policy-v1"]
+    policy_revision: Literal["body-state-safety-policy-v2-native-restrictions"]
     body_state_revision: StrictInt = Field(gt=0)
     assertions: list[SafetyAssertionV1]
     active_blockers: list[SafetyBlockerV1]
     requires_review: StrictBool
-    legacy_state_present: StrictBool
     coverage: SafetyCoverageV1
 
     @model_validator(mode="after")
@@ -117,13 +118,8 @@ class SafetyEnvelopeV2(BaseModel):
         if self.requires_review != bool(self.active_blockers):
             raise ValueError("requires_review must match active_blockers")
         for blocker in self.active_blockers:
-            expected_reason = (
-                SafetyBlockerReasonV1.LEGACY_ACTIVE_STATE
-                if blocker.source_kind == SafetySourceKindV1.LEGACY_SAFETY_STATE
-                else SafetyBlockerReasonV1.STRUCTURED_CURRENT_SIGNAL
-            )
-            if blocker.reason != expected_reason:
-                raise ValueError("blocker reason does not match source kind")
+            if blocker.reason != SafetyBlockerReasonV1.STRUCTURED_CURRENT_SIGNAL:
+                raise ValueError("blocker reason does not match native restriction")
             if not any(
                 assertion.concept == blocker.concept
                 and assertion.source_ref == blocker.source_ref

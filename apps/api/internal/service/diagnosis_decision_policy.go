@@ -26,9 +26,15 @@ func EvaluateDiagnosisDecisionV2(envelope *SafetyEnvelopeV2, bodyStateRevision i
 	if envelope.RequiresReview != (len(envelope.ActiveBlockers) > 0) || envelope.Coverage.Complete != (len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0) {
 		return decision
 	}
-	if envelope.RequiresReview {
-		decision.Reasons = []string{"active_structured_safety_blocker"}
-		return decision
+	for _, blocker := range envelope.ActiveBlockers {
+		if blocker.RiskLevel == "urgent" {
+			decision.Reasons = []string{"active_urgent_safety_restriction"}
+			return decision
+		}
+		if blocker.RiskLevel != "restricted" && blocker.RiskLevel != "advisory" {
+			decision.Reasons = []string{"invalid_structured_safety_envelope"}
+			return decision
+		}
 	}
 	if !envelope.Coverage.Complete {
 		decision.Outcome = DiagnosisAbstain

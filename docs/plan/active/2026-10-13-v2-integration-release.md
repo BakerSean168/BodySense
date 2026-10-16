@@ -1,5 +1,7 @@
 # BodySense V2 · Integration & Release Workstream
 
+> **2026-10-16 current checkpoint: PR6 A–E COMPLETE / MERGED.** All native BodyState writer/consumer migration, independent Safety, Web cutover, old storage/API retirement and Python/documentation/browser closeout are merged through #298 (`af3e1993b1f62930e3b680b54abab5ade456935b`). Exact-main CI passes, including PostgreSQL baseline/recovery and browser checks; [PR6 E closeout](../archive/2026-10-16-pr6-e-closeout.md) records full Chromium 25/25 without skips/retries. `PR6-001` is done in the queue and `completedPrograms` in the handoff records each A–E merge. Earlier checkpoints are historical: do not restart any PR6 slice. Remaining full-domain design, singleton Chat/retention, Diagnosis V2, TrainingPlan/Trainer, shared assets/erasure and release acceptance are separate work. Staging promotion remains gated.
+
 Status: ACTIVE / TRACK D. [Primary program](./2026-10-13-v2-parallel-master.md) · [Readiness register](./v2-handoff-state.json) · [Existing acceptance](../../product/acceptance.md).
 
 ## Mission

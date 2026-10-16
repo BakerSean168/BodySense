@@ -49,7 +49,7 @@ func newProfileOpenAPIRouter(t *testing.T, profile profileApplication) *gin.Engi
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer(&fakeBodyStateFactService{}).WithProfile(profile)))
+	openapiv1.RegisterHandlers(g, StrictHandler(NewPublicServer().WithProfile(profile)))
 	return r
 }
 

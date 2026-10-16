@@ -13,8 +13,7 @@ export const TrainingFeedbackInput = /*#__PURE__*/ zod.strictObject({
   "difficulties": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "body_region": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "concern_key": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "trend": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "fact_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid())
+  "trend": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string())
 });
 
 export type TrainingFeedbackInput = zod.input<typeof TrainingFeedbackInput>;

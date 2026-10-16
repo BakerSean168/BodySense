@@ -1,3 +1,4 @@
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import {
   Component,
   Suspense,
@@ -9,7 +10,6 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import type { BodyStateProjection } from "@/features/consultation/types/consultation";
 import { cn } from "@/lib/utils";
 import {
   createClientDiagnosticId,
@@ -45,7 +45,7 @@ export interface BodyExplorerSemanticBridge {
 }
 
 export interface BodyExplorerProps {
-  snapshot: BodyStateProjection | null;
+  snapshot: BodyRecords | null;
   className?: string;
   semanticBridge?: BodyExplorerSemanticBridge;
 }

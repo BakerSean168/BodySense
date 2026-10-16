@@ -86,7 +86,7 @@ func newConversationRouteTestRouter(
 		}
 	}
 	r := gin.New()
-	server := NewPublicServer(nil).WithConversations(conversations, shares, &fakeRuntimeEventApplication{})
+	server := NewPublicServer().WithConversations(conversations, shares, &fakeRuntimeEventApplication{})
 	RegisterRoutes(r, StrictHandler(server), RouteSecurity{
 		Auth:      authMiddleware,
 		Operator:  func(c *gin.Context) { c.Next() },

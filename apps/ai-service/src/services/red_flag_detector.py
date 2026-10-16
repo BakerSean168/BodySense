@@ -306,8 +306,7 @@ class RedFlagDetector:
         for pattern in RED_FLAG_PATTERNS:
             for keyword in pattern["keywords"]:
                 if any(
-                    _keyword_is_present(segment, keyword, revision)
-                    for segment in scan_segments
+                    _keyword_is_present(segment, keyword, revision) for segment in scan_segments
                 ):
                     flags.append(
                         RedFlag(

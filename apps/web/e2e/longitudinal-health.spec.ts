@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
+import { completeStructuredSafetyIntake } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -202,54 +202,30 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   const conversationId = conversationsPayload.conversations[0]?.id;
   expect(conversationId).toBeTruthy();
 
-  const factResponse = await request.post(
-    `${apiBase}/api/v1/body-state/facts`,
-    {
-      headers,
-      data: {
-        expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "久坐后颈肩酸胀",
-          details: {
-            trigger: "久坐",
-            severity: "中度",
-            ...clearStructuredSafetyCapture,
-          },
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          trend: "stable",
-          source_key: `e2e-fact-${Date.now()}`,
-        },
-      },
-    },
+  // One original symptom and its own Go-bound checklist provide coverage.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    headers,
+    String(conversationId),
   );
-  expect(factResponse.ok()).toBeTruthy();
 
   const staleRevisionWrite = await request.post(
-    `${apiBase}/api/v1/body-state/facts`,
+    `${apiBase}/api/v1/body-state/records`,
     {
       headers,
       data: {
+        idempotency_key: `e2e-stale-${Date.now()}`,
         expected_revision: 0,
-        fact: {
-          concern_key: "region:neck",
-          kind: "discomfort",
-          body_region: "颈部",
-          body_region_id: "neck",
-          value: "stale concurrent write",
-          details: {
-            ...clearStructuredSafetyCapture,
+        facts: [
+          {
+            kind: "symptom",
+            statement: "stale concurrent write",
+            body_region_ids: ["neck"],
+            temporal: { precision: "unknown" },
+            details: {},
           },
-          origin: "user_reported",
-          review_state: "confirmed",
-          lifecycle_state: "active",
-          source_key: `e2e-stale-${Date.now()}`,
-        },
+        ],
       },
     },
   );
@@ -333,20 +309,15 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     JSON.parse(firstProposalBody) as { proposal: { id: string } }
   ).proposal;
 
-  const safetyRun = await request.post(`${apiBase}/api/v1/consultation-runs`, {
+  // Only a user-answered, Go-bound positive screen creates Safety authority.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
     headers,
-    data: {
-      conversationId,
-      clientMessageId: `e2e-safety-${Date.now()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "E2E_TRIGGER_SAFETY" }],
-      },
-    },
-  });
-  expect(safetyRun.ok()).toBeTruthy();
-  await safetyRun.text();
+    String(conversationId),
+    ["麻木"],
+    "我今天肩膀不舒服。",
+  );
 
   const blockedAccept = await request.post(
     `${apiBase}/api/v1/treatments/revisions/${firstProposal.id}/accept`,
@@ -358,30 +329,67 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   };
   expect(blockedAcceptError.error?.code).toBe("TREATMENT_SAFETY_BLOCKED");
 
-  const bodyStateAfterSafety = await request.get(
-    `${apiBase}/api/v1/body-state`,
-    {
-      headers,
-    },
+  const restrictionResponse = await request.get(
+    `${apiBase}/api/v1/body-state/safety/restrictions`,
+    { headers },
   );
-  expect(bodyStateAfterSafety.ok()).toBeTruthy();
-  const safetySnapshot = (await bodyStateAfterSafety.json()) as {
+  expect(restrictionResponse.ok()).toBeTruthy();
+  const safety = (await restrictionResponse.json()) as {
     current_revision: number;
+    restrictions: Array<{ id: string; active: boolean; concept: string }>;
   };
-  expect(Number.isInteger(safetySnapshot.current_revision)).toBeTruthy();
+  const active = safety.restrictions.filter((row) => row.active);
+  expect(active).toHaveLength(1);
+  expect(active[0].concept).toBe("numbness");
 
-  const resolveSafety = await request.post(
-    `${apiBase}/api/v1/body-state/safety/resolve`,
+  const statement = "专业人员已针对这条限制及全部训练放行";
+  const clearanceRun = await request.post(
+    `${apiBase}/api/v1/consultation-runs`,
     {
       headers,
       data: {
-        expected_revision: safetySnapshot.current_revision,
-        resolution: "cleared_by_review",
-        note: "E2E reviewed",
+        conversationId,
+        clientMessageId: crypto.randomUUID(),
+        requestId: crypto.randomUUID(),
+        message: { role: "user", parts: [{ type: "text", text: statement }] },
       },
     },
   );
-  expect(resolveSafety.ok()).toBeTruthy();
+  expect(clearanceRun.ok()).toBeTruthy();
+  await clearanceRun.text();
+  const conversationResponse = await request.get(
+    `${apiBase}/api/v1/conversations/${conversationId}`,
+    { headers },
+  );
+  expect(conversationResponse.ok()).toBeTruthy();
+  const conversation = (await conversationResponse.json()) as {
+    messages: Array<{
+      id: string;
+      role: string;
+      parts: Array<{ type: string; text?: string }>;
+    }>;
+  };
+  const source = conversation.messages.find(
+    (message) =>
+      message.role === "user" &&
+      message.parts.some(
+        (part) => part.type === "text" && part.text === statement,
+      ),
+  );
+  expect(source).toBeTruthy();
+  const resolveSafety = await request.post(
+    `${apiBase}/api/v1/body-state/safety/restrictions/${active[0].id}/resolve`,
+    {
+      headers,
+      data: {
+        expected_revision: safety.current_revision,
+        idempotency_key: crypto.randomUUID(),
+        source_message_id: source!.id,
+        statement,
+      },
+    },
+  );
+  expect(resolveSafety.ok(), await resolveSafety.text()).toBeTruthy();
 
   const freshDiagnosisResponse = await request.post(
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
@@ -440,10 +448,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(workspaceResponse.ok()).toBeTruthy();
   const workspace = (await workspaceResponse.json()) as {
     training_plan?: { id: string };
-    body_state: { current_revision: number };
   };
   expect(workspace.training_plan?.id).toBe(accepted.training_plan.id);
-  const revisionBeforeFeedback = workspace.body_state.current_revision;
+  const beforeFacts = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    { headers },
+  );
+  expect(beforeFacts.ok()).toBeTruthy();
+  const revisionBeforeFeedback = (await beforeFacts.json()).current_revision;
 
   await page.goto(`/consultation/${conversationId}?view=treatment`);
   await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
@@ -465,11 +477,11 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
       data: {
         notes: "E2E worsening after session",
         exercises: [],
-        symptom_changes: "颈肩酸胀加重",
+        symptom_changes: "肩膀不适加重",
         training_feeling: "uncomfortable",
         difficulties: "pain",
-        body_region: "颈肩",
-        concern_key: "region:neck",
+        body_region: "肩部",
+        concern_key: "general",
         trend: "worsening",
       },
     },
@@ -481,11 +493,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     { headers },
   );
   const finalWorkspace = (await finalWorkspaceResponse.json()) as {
-    body_state: { current_revision: number };
     recent_outcomes: unknown[];
     capabilities: { requires_treatment_review: boolean };
   };
-  expect(finalWorkspace.body_state.current_revision).toBeGreaterThan(
+  const afterFacts = await request.get(`${apiBase}/api/v1/body-state/records`, {
+    headers,
+  });
+  expect(afterFacts.ok()).toBeTruthy();
+  expect((await afterFacts.json()).current_revision).toBeGreaterThan(
     revisionBeforeFeedback,
   );
   expect(finalWorkspace.recent_outcomes.length).toBeGreaterThan(0);

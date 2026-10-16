@@ -15,7 +15,7 @@ export {
   resolveBodyRegionInput,
   type BodyRegionId,
 } from "./model/bodyRegionOntology";
-export { resolveRecordBodyRegion } from "./model/bodyExplorerSelectors";
+export { recordBodyRegions } from "./model/bodyExplorerSelectors";
 export type {
   BodyExplorerProps,
   BodyExplorerSemanticBridge,

@@ -435,9 +435,7 @@ export interface InteractionQuestionField {
 export interface InteractionStateBinding {
   revision: string;
   capture_id: string;
-  seed_info: {
-    [k: string]: unknown;
-  };
+  body_fact_id: string;
   field_map: {
     [k: string]: string;
   };

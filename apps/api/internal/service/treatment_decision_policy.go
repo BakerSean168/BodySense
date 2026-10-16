@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -34,7 +33,7 @@ type TreatmentDecisionFacts struct {
 	DiagnosisStatus          string                         `json:"diagnosis_status"`
 	CandidateCount           int                            `json:"candidate_count"`
 	FreshnessState           string                         `json:"freshness_state,omitempty"`
-	SafetyState              json.RawMessage                `json:"safety_state"`
+	SafetyEnvelope           *SafetyEnvelopeV2              `json:"safety_envelope"`
 	CandidateAssessmentReady bool                           `json:"candidate_assessment_ready"`
 	ProposalAcceptanceState  model.TreatmentAcceptanceState `json:"proposal_acceptance_state,omitempty"`
 	SourceBodyStateRevision  int64                          `json:"source_body_state_revision,omitempty"`
@@ -84,7 +83,7 @@ func EvaluateTreatmentDecision(
 		}
 	}
 
-	activeSafety, err := strictTreatmentSafetyReview(facts.SafetyState)
+	activeSafety, err := strictTreatmentSafetyReview(facts.SafetyEnvelope, facts.CurrentBodyStateRevision)
 	if err != nil {
 		decision.Reasons = []string{"malformed_or_unknown_safety_state", err.Error()}
 		return decision
@@ -140,36 +139,30 @@ func treatmentFreshnessBlocks(state string) bool {
 
 // strictTreatmentSafetyReview deliberately treats malformed or internally
 // inconsistent durable safety facts as an authority failure rather than as safe.
-func strictTreatmentSafetyReview(raw json.RawMessage) (bool, error) {
-	if len(raw) == 0 || string(raw) == "null" || string(raw) == "{}" {
-		return false, nil
+func strictTreatmentSafetyReview(envelope *SafetyEnvelopeV2, revision int64) (bool, error) {
+	if envelope == nil || envelope.SchemaRevision != SafetyEnvelopeSchemaV2 || envelope.PolicyRevision != SafetyEnvelopePolicyV1 || envelope.BodyStateRevision != revision || envelope.Coverage.Revision != SafetyCoverageRevisionV1 || envelope.Coverage.CaptureRevision != SafetyCaptureRevisionV1 || envelope.RequiresReview != (len(envelope.ActiveBlockers) > 0) {
+		return false, fmt.Errorf("native Safety unavailable or not pinned")
 	}
-	var state struct {
-		HasRedFlags *bool   `json:"has_red_flags"`
-		Status      *string `json:"status"`
+	if envelope.Coverage.Complete != (len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0) || len(envelope.Coverage.RequiredConcepts) != len(structuredSafetyDetails) {
+		return false, fmt.Errorf("inconsistent native safety coverage")
 	}
-	if err := json.Unmarshal(raw, &state); err != nil {
-		return false, fmt.Errorf("invalid BodyState safety state: %w", err)
+	for i, field := range structuredSafetyDetails {
+		if envelope.Coverage.RequiredConcepts[i] != field.key {
+			return false, fmt.Errorf("unknown native safety coverage concept")
+		}
 	}
-	if state.HasRedFlags == nil {
-		return false, fmt.Errorf("BodyState safety state is missing has_red_flags")
+
+	if len(envelope.Coverage.IncompleteSourceRefs) > 0 {
+		return true, nil
 	}
-	status := ""
-	if state.Status != nil {
-		status = strings.TrimSpace(*state.Status)
+	for _, blocker := range envelope.ActiveBlockers {
+		switch blocker.RiskLevel {
+		case "restricted", "urgent":
+			return true, nil
+		case "advisory":
+		default:
+			return false, fmt.Errorf("unknown native safety risk level")
+		}
 	}
-	allowed := map[string]bool{
-		"": true, "requires_review": true, "active": true,
-		"monitoring": true, "resolved": true, "cleared_by_review": true,
-	}
-	if !allowed[status] {
-		return false, fmt.Errorf("unknown BodyState safety status %q", status)
-	}
-	if *state.HasRedFlags && (status == "resolved" || status == "cleared_by_review" || status == "") {
-		return false, fmt.Errorf("inconsistent BodyState safety state")
-	}
-	if !*state.HasRedFlags && (status == "requires_review" || status == "active" || status == "monitoring") {
-		return false, fmt.Errorf("inconsistent BodyState safety state")
-	}
-	return *state.HasRedFlags && (status == "requires_review" || status == "active"), nil
+	return false, nil
 }

@@ -66,6 +66,11 @@ func TestBodyFactHTTPRecordReadRetryRoundTripPostgres(t *testing.T) {
 	if len(page.Facts) != 1 || page.Facts[0].Statement != "My shoulder hurts." || page.CurrentRevision != 1 {
 		t.Fatalf("roundtrip=%#v", page)
 	}
+	retired := performJSONAt(r, http.MethodGet, "/api/v1/body-state", "")
+	if retired.Code != http.StatusNotFound {
+		t.Fatalf("retired aggregate route status=%d", retired.Code)
+	}
+
 	var source model.StatementEvidence
 	if err := db.First(&source, "id = ?", page.Facts[0].SourceEvidenceID).Error; err != nil {
 		t.Fatal(err)

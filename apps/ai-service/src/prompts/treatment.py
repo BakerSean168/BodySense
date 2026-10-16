@@ -45,7 +45,7 @@ EvidenceGap 规则：
   frequency、progression 和 stop_conditions。
 - 出现安全信号时，不应生成普通方案；由确定性业务 gate 在调用前阻断。
 - 输出必须满足 TreatmentAgentOutput，不要输出 durable treatment/revision/intervention ID。
-"""
+""",
 }
 
 

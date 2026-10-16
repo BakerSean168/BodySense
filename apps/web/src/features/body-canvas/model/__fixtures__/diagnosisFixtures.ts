@@ -41,16 +41,6 @@ export function makeWorkspace(
   return {
     generated_at: "2026-10-11T00:00:00Z",
     profile_ready: true,
-    body_state: {
-      current_revision: 3,
-      safety_state: {},
-      facts: [],
-      observations: [],
-      pending_facts: [],
-      pending_observations: [],
-      hypotheses: [],
-      recent_revisions: [],
-    },
     treatment_revisions: [],
     recent_outcomes: [],
     trends: [],

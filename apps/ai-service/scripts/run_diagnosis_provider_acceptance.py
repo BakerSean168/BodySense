@@ -111,9 +111,7 @@ async def _run_one(
                 "status": payload.get("status"),
                 "governance_verdict": governance.get("verdict"),
                 "candidate_count": len(payload.get("candidates") or []),
-                "configuration_id": (
-                    payload.get("agent_configuration") or {}
-                ).get("id"),
+                "configuration_id": (payload.get("agent_configuration") or {}).get("id"),
                 "provider_adapter": provenance.get("provider_adapter"),
                 "gateway_reported_model": provenance.get("gateway_reported_model"),
                 "input_tokens": (provenance.get("usage") or {}).get("input_tokens"),
@@ -159,10 +157,7 @@ async def _run(
                 "provider acceptance cases require complete nonblocking safety coverage"
             )
 
-    cases = [
-        source_cases[(ordinal - 1) % len(source_cases)]
-        for ordinal in range(1, samples + 1)
-    ]
+    cases = [source_cases[(ordinal - 1) % len(source_cases)] for ordinal in range(1, samples + 1)]
     semaphore = asyncio.Semaphore(concurrency)
     rate_limiter = StartRateLimiter(min_start_interval_seconds)
     service = DiagnosisService()
@@ -180,9 +175,7 @@ async def _run(
     )
 
     failure_counts = Counter(
-        failure
-        for result in results
-        for failure in result.get("failures", [])
+        failure for result in results for failure in result.get("failures", [])
     )
     successes = sum(1 for result in results if result["success"])
     durations = [int(result["duration_ms"]) for result in results]

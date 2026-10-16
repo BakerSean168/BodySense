@@ -110,6 +110,12 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)
 	protected.POST("/body-state/observation-records/:id/correct", wrapper.CorrectBodyObservationRecord)
 	protected.POST("/body-state/observation-records/:id/withdraw", wrapper.WithdrawBodyObservationRecord)
+	// V2 user-authored BodyHypothesis (direct edit only; no AI write path) and
+	// the derived, non-authoritative ConcernGroup read projection.
+	protected.POST("/body-state/hypothesis-records", wrapper.RecordBodyHypothesis)
+	protected.GET("/body-state/hypothesis-records", wrapper.ListBodyHypothesisRecords)
+	protected.POST("/body-state/hypothesis-records/:id/withdraw", wrapper.WithdrawBodyHypothesisRecord)
+	protected.GET("/body-state/concern-groups", wrapper.ListDerivedConcernGroups)
 	// Owner-authorized explicit Episode mutations and source-backed reads;
 	// AI-driven high-confidence association has no public bypass route.
 	protected.POST("/body-state/episodes", wrapper.CreateBodyEpisode)
@@ -120,18 +126,14 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
-	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
-	protected.POST("/body-state/facts", wrapper.AddBodyStateFact)
-	protected.GET("/body-state", wrapper.GetBodyState)
-	protected.POST("/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)
-	protected.PATCH("/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
-	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
-	protected.POST("/body-state/observations", wrapper.AddBodyStateObservation)
-	protected.PATCH("/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
-	protected.POST("/body-state/hypotheses", wrapper.AddBodyStateHypothesis)
-	protected.PATCH("/body-state/hypotheses/:id/lifecycle", wrapper.UpdateBodyStateHypothesisLifecycle)
-	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
-	protected.POST("/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
+	// Native owner-scoped Safety restrictions and per-restriction resolutions.
+	protected.GET("/body-state/safety/restrictions", wrapper.ListSafetyRestrictions)
+	protected.POST("/body-state/safety/restrictions/:id/resolve", wrapper.ResolveSafetyRestriction)
+
+	// Owner-scoped EquipmentAsset inventory (PC-D2); not BodyState.
+	protected.GET("/equipment", wrapper.ListEquipmentAssets)
+	protected.POST("/equipment", wrapper.CreateEquipmentAsset)
+	protected.PUT("/equipment/:id", wrapper.UpdateEquipmentAsset)
 
 	// Continuous health workspace.
 	protected.GET("/health-workspace", wrapper.GetHealthWorkspace)
@@ -139,8 +141,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Health context commands/read models.
 	protected.GET("/lifestyle", wrapper.GetLifestyle)
 	protected.PUT("/lifestyle", wrapper.UpdateLifestyle)
-	protected.POST("/lifestyle/candidates/:id/accept", wrapper.AcceptLifestyleCandidate)
-	protected.POST("/lifestyle/candidates/:id/reject", wrapper.RejectLifestyleCandidate)
 	protected.GET("/body-metrics", wrapper.GetBodyMetrics)
 	protected.PUT("/body-metrics", wrapper.UpdateBodyMetrics)
 	protected.GET("/health-history/injury", wrapper.GetInjuryHistory)

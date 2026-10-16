@@ -1,10 +1,6 @@
 package service
 
-import (
-	"errors"
-	"fmt"
-	"strings"
-)
+import "errors"
 
 var (
 	// ErrUnknownBodyRegionID means a caller supplied a canonical region identity
@@ -33,28 +29,4 @@ type BodyRegionIDValidatorFunc func(id string) bool
 
 func (f BodyRegionIDValidatorFunc) IsValidBodyRegionID(id string) bool {
 	return f(id)
-}
-
-func (s *BodyStateService) normalizeBodyRegionID(raw *string, display string) (*string, error) {
-	id := ""
-	if raw != nil {
-		id = strings.TrimSpace(*raw)
-	}
-	if id == "" {
-		if strings.TrimSpace(display) == "" {
-			return nil, nil
-		}
-		resolved, ok := ResolveCanonicalBodyRegionID(display)
-		if !ok {
-			return nil, fmt.Errorf("%w: %q", ErrBodyRegionIDRequired, strings.TrimSpace(display))
-		}
-		id = resolved
-	}
-	if s.bodyRegionIDValidator == nil {
-		return nil, fmt.Errorf("%w: %q", ErrBodyRegionIDValidationUnavailable, id)
-	}
-	if !s.bodyRegionIDValidator.IsValidBodyRegionID(id) {
-		return nil, fmt.Errorf("%w: %q", ErrUnknownBodyRegionID, id)
-	}
-	return &id, nil
 }

@@ -150,8 +150,7 @@ async def test_treatment_v2_exposes_only_gap_aware_tool() -> None:
 
 
 @pytest.mark.asyncio
-async def test_treatment_output_transport_stays_on_final_result_tool_when_profile_prefers_native(
-) -> None:
+async def test_treatment_transport_keeps_final_result_tool_for_native_profile() -> None:
     config = _v2_config()
     model = TestModel(
         call_tools=[],

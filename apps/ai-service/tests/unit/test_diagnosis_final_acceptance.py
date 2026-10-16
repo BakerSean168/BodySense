@@ -97,9 +97,7 @@ def test_final_acceptance_is_independent_of_legacy_rollout_gate(monkeypatch) -> 
 
 def test_final_acceptance_fails_closed_on_provider_error(monkeypatch) -> None:
     reports = _reports()
-    reports["provider.json"]["summary"].update(
-        {"total": 20, "successes": 19, "errors": 1}
-    )
+    reports["provider.json"]["summary"].update({"total": 20, "successes": 19, "errors": 1})
     monkeypatch.setattr(acceptance, "_read_report", lambda path: reports[path])
     monkeypatch.setattr(acceptance, "_staging_route", lambda _logical: _route())
 

@@ -2,12 +2,9 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -119,7 +116,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	conversationID uuid.UUID,
 	profileJSON json.RawMessage,
 ) (map[string]any, *DiagnosisApplicationError) {
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 50)
+	snapshot, err := s.bodyState.GetBodyState(ctx, userID, 50)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to load body state", err)
 	}
@@ -133,7 +130,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	route := s.deployment.SelectDiagnosisRoute(userID.String())
 	configurationID := route.ServedConfigurationID
 	policyRevision := route.ServedDecisionPolicyRevision
-	if policyRevision != DiagnosisDecisionPolicyV1 && policyRevision != DiagnosisDecisionPolicyV2 {
+	if policyRevision != DiagnosisDecisionPolicyV2 {
 		return nil, diagnosisApplicationError(
 			"INVALID_AGENT_CONFIGURATION",
 			"selected Diagnosis configuration does not use the current decision authority",
@@ -145,22 +142,13 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode body state", err)
 	}
 	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
-	// Preserve the historical pre-agent block for malformed legacy state. A
-	// projection error must never authorize an ordinary AI call.
 	envelope, projectionErr := ProjectSafetyEnvelopeV2(snapshot)
-	var frozenEnvelope *SafetyEnvelopeV2
-	if projectionErr == nil {
-		frozenEnvelope = &envelope
+	if projectionErr != nil {
+		return nil, diagnosisApplicationError("SAFETY_UNAVAILABLE", "failed to read native Safety restrictions", projectionErr)
 	}
-	preflightBlock := json.RawMessage(nil)
-	if policyRevision == DiagnosisDecisionPolicyV1 {
-		preflightBlock = s.preAgentSafetyBlock(snapshot, configurationID, policyRevision, route)
-	} else {
-		preflightBlock = structuredDiagnosisPreflight(frozenEnvelope, snapshot.CurrentRevision, configurationID, route)
-	}
-	if projectionErr != nil && preflightBlock == nil {
-		return nil, diagnosisApplicationError("INVALID_SAFETY_STATE", "failed to project BodyState safety", projectionErr)
-	}
+	frozenEnvelope := &envelope
+	preflightBlock := structuredDiagnosisPreflight(frozenEnvelope, snapshot.CurrentRevision, configurationID, route)
+
 	replayInput, err := EncodeDiagnosisReplayInput(snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON, frozenEnvelope)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to freeze Diagnosis replay input", err)
@@ -202,33 +190,12 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis rollout provenance", err)
 	}
 
-	if redFlags, ok := parsed["red_flags"].(map[string]any); ok && policyRevision == DiagnosisDecisionPolicyV1 {
-		safetyPayload, marshalErr := json.Marshal(redFlags)
-		if marshalErr != nil {
-			return nil, diagnosisApplicationError("INVALID_AI_RESPONSE", "diagnosis safety response was not valid", marshalErr)
-		}
-		if err := s.bodyState.RecordSafetyEvent(ctx, userID, safetyPayload); err != nil {
-			log.Printf("failed to promote Diagnosis safety signal into BodyState for user %s: %v", userID, err)
-			return nil, diagnosisApplicationError("SAFETY_STATE_PERSISTENCE_FAILED", "failed to persist diagnosis safety state", err)
-		}
-	}
-
 	s.recordGovernedOutput(ctx, "diagnosis", &userID, &conversationID, nil, parsed, result)
-	decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, parsed)
-	if policyRevision == DiagnosisDecisionPolicyV2 {
-		decision = EvaluateDiagnosisDecisionV2(frozenEnvelope, snapshot.CurrentRevision, parsed)
-	}
+	decision := EvaluateDiagnosisDecisionV2(frozenEnvelope, snapshot.CurrentRevision, parsed)
 	parsed = ApplyDiagnosisDecision(parsed, decision)
 	result, err = json.Marshal(parsed)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis decision", err)
-	}
-
-	if normalized, evidenceErr := s.persistEvidence(ctx, userID, parsed); evidenceErr == nil {
-		result = normalized
-		_ = json.Unmarshal(result, &parsed)
-	} else {
-		log.Printf("failed to persist Diagnosis evidence for user %s: %v", userID, evidenceErr)
 	}
 
 	analysis, err := s.analyses.PersistAIResultWithReplayInput(ctx, userID, snapshot.CurrentRevision, result, replayInput)
@@ -237,9 +204,8 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to persist diagnosis analysis", err)
 	}
 	s.observeRollout(ctx, userID, analysis, route)
-	if hypothesisErr := s.commitHypotheses(ctx, userID, analysis); hypothesisErr != nil {
-		log.Printf("failed to project Diagnosis hypotheses for analysis %s: %v", analysis.ID, hypothesisErr)
-	}
+	// Agent hypotheses stay in the analysis audit (decision_trace.agent_hypotheses,
+	// written by PersistAIResultWithReplayInput). They never enter BodyState.
 
 	payload := s.publicPayload(ctx, userID, analysis)
 	return payload, nil
@@ -283,26 +249,6 @@ func structuredDiagnosisPreflight(envelope *SafetyEnvelopeV2, revision int64, co
 		payload["summary"] = "结构化安全信息尚未完整采集，请完成安全信号确认后重新分析。"
 	}
 	encoded, _ := json.Marshal(payload)
-	return encoded
-}
-
-func (s *DiagnosisApplicationService) preAgentSafetyBlock(
-	snapshot *BodyStateSnapshot,
-	configurationID string,
-	policyRevision string,
-	route DiagnosisRouteSelection,
-) json.RawMessage {
-	probe := map[string]any{
-		"status":     "completed",
-		"candidates": []any{map[string]any{"name": "preflight", "confidence": "n/a"}},
-		"governance": map[string]any{"verdict": "accepted"},
-	}
-	decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, probe)
-	if decision.Outcome != DiagnosisBlock {
-		return nil
-	}
-	blocked := ApplyDiagnosisDecision(safetyBlockedDiagnosisPayload(snapshot.SafetyState, configurationID, policyRevision, route), decision)
-	encoded, _ := json.Marshal(blocked)
 	return encoded
 }
 
@@ -377,121 +323,6 @@ func (s *DiagnosisApplicationService) observeRollout(
 	if err != nil {
 		log.Printf("Diagnosis %s comparison failed for analysis %s: %v", route.Stage, analysis.ID, err)
 	}
-}
-
-func (s *DiagnosisApplicationService) persistEvidence(
-	ctx context.Context,
-	userID uuid.UUID,
-	parsed map[string]any,
-) (json.RawMessage, error) {
-	if s.bodyState == nil {
-		return json.Marshal(parsed)
-	}
-	rawCitations, _ := parsed["citations"].([]any)
-	if len(rawCitations) == 0 {
-		return json.Marshal(parsed)
-	}
-	identityMap := map[string]string{}
-	for index, rawCitation := range rawCitations {
-		citation, ok := rawCitation.(map[string]any)
-		if !ok {
-			continue
-		}
-		sourceType := firstDiagnosisApplicationString(citation, "source_type", "type", "source")
-		if sourceType == "" {
-			sourceType = "knowledge"
-		}
-		sourceKey := firstDiagnosisApplicationString(citation, "source_key", "id", "source_id", "url", "uri")
-		if sourceKey == "" {
-			encoded, _ := json.Marshal(citation)
-			digest := sha256.Sum256(encoded)
-			sourceKey = "citation:" + hex.EncodeToString(digest[:12])
-		}
-		version := firstDiagnosisApplicationString(citation, "source_version", "version", "updated_at")
-		metadata, _ := json.Marshal(citation)
-		stored, err := s.bodyState.UpsertEvidence(ctx, userID, model.BodyStateEvidence{
-			SourceType: sourceType, SourceKey: sourceKey, SourceVersion: version,
-			Title:    firstDiagnosisApplicationString(citation, "title", "name"),
-			Summary:  firstDiagnosisApplicationString(citation, "summary", "content"),
-			Excerpt:  firstDiagnosisApplicationString(citation, "excerpt", "chunk", "text"),
-			Metadata: datatypes.JSON(metadata),
-		})
-		if err != nil {
-			return nil, err
-		}
-		storedID := stored.ID.String()
-		citation["evidence_id"] = storedID
-		citation["source_key"] = sourceKey
-		rawCitations[index] = citation
-		for _, key := range []string{sourceKey, firstDiagnosisApplicationString(citation, "id"), firstDiagnosisApplicationString(citation, "source_id"), firstDiagnosisApplicationString(citation, "url"), storedID} {
-			if key != "" {
-				identityMap[key] = storedID
-			}
-		}
-	}
-	parsed["citations"] = rawCitations
-	if candidates, ok := parsed["candidates"].([]any); ok {
-		for index, rawCandidate := range candidates {
-			candidate, ok := rawCandidate.(map[string]any)
-			if !ok {
-				continue
-			}
-			if references, ok := candidate["supporting_evidence_ids"].([]any); ok {
-				normalized := make([]string, 0, len(references))
-				for _, rawReference := range references {
-					reference := strings.TrimSpace(fmt.Sprint(rawReference))
-					if mapped := identityMap[reference]; mapped != "" {
-						normalized = append(normalized, mapped)
-					} else if _, err := uuid.Parse(reference); err == nil {
-						normalized = append(normalized, reference)
-					}
-				}
-				candidate["supporting_evidence_ids"] = normalized
-			}
-			candidates[index] = candidate
-		}
-		parsed["candidates"] = candidates
-	}
-	return json.Marshal(parsed)
-}
-
-func (s *DiagnosisApplicationService) commitHypotheses(
-	ctx context.Context,
-	userID uuid.UUID,
-	analysis *model.DiagnosisAnalysisRecord,
-) error {
-	if s.bodyState == nil || analysis == nil {
-		return nil
-	}
-	for _, candidate := range analysis.Candidates {
-		confidence := candidate.Confidence
-		_, _, err := s.bodyState.AddDiagnosisHypothesis(ctx, userID, model.BodyStateHypothesis{
-			ConcernKey: candidate.ConcernKey, Statement: candidate.Name,
-			LifecycleState: "active", Confidence: &confidence,
-			SupportingFactIDs:        candidate.BasisFactIDs,
-			SupportingObservationIDs: candidate.BasisObservationIDs,
-			SupportingEvidenceIDs:    candidate.SupportingEvidenceIDs,
-			CounterevidenceIDs:       candidate.CounterevidenceIDs,
-			SourceAnalysisID:         &analysis.ID,
-			Provenance: datatypes.JSON(mustDiagnosisApplicationJSON(map[string]any{
-				"source_type": "diagnosis_analysis", "analysis_id": analysis.ID,
-				"candidate_id": candidate.ID, "reasoning_summary": candidate.ReasoningSummary,
-			})),
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func firstDiagnosisApplicationString(values map[string]any, keys ...string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(fmt.Sprint(values[key])); value != "" && value != "<nil>" {
-			return value
-		}
-	}
-	return ""
 }
 
 func mustDiagnosisApplicationJSON(value any) []byte {

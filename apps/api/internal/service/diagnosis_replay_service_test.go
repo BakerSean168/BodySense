@@ -10,20 +10,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
 
-func replayTestInput(t *testing.T, revision int64) json.RawMessage {
+func replayTestInput(t *testing.T, revision int64, owner uuid.UUID) json.RawMessage {
 	t.Helper()
-	bodyState := json.RawMessage(`{"user_id":"private-user-id","current_revision":12,"safety_state":{},"facts":[{"id":"fact-neck-1","kind":"discomfort","concern_key":"region:neck","value":"mild neck load"}],"observations":[]}`)
-	if revision != 12 {
-		var payload map[string]any
-		if err := json.Unmarshal(bodyState, &payload); err != nil {
-			t.Fatal(err)
-		}
-		payload["current_revision"] = revision
-		bodyState, _ = json.Marshal(payload)
-	}
+	bodyState := rawJSON(BodyStateReadModel{UserID: owner, CurrentRevision: revision, Facts: []model.BodyFact{{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111"), UserID: owner, Kind: "symptom", Statement: "mild neck load", SourceEvidenceID: uuid.MustParse("22222222-2222-4222-8222-222222222222"), AssertionStatus: "asserted", CreatedRevision: 1}},
+		Observations: []model.BodyObservationRecord{}}, `{}`)
 	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","birth_date":"1996-08-27","age_years":30}`), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +80,7 @@ func replayTestRaw(configurationID, decisionRevision, concernKey string) json.Ra
 			"name":           "neck load pattern",
 			"confidence":     "high",
 			"basis":          "frozen fact",
-			"basis_fact_ids": []string{"fact-neck-1"},
+			"basis_fact_ids": []string{"11111111-1111-4111-8111-111111111111"},
 		}},
 		"cross_concern_patterns": []any{},
 		"information_gaps":       []any{},
@@ -127,7 +121,7 @@ func persistReplayTestAnalysis(t *testing.T, configurationID, decisionRevision, 
 	analysis, err := diagnosis.PersistAIResultWithReplayInput(
 		context.Background(), userID, 12,
 		replayTestRaw(configurationID, decisionRevision, concernKey),
-		replayTestInput(t, 12),
+		replayTestInput(t, 12, userID),
 	)
 	if err != nil {
 		t.Fatalf("persist replay fixture: %v", err)
@@ -214,7 +208,7 @@ func TestCounterfactualDiagnosisReplayUsesFrozenInputAndSelectedConfigurationWit
 	if captured.BodyStateRevision != 12 || captured.ConfigurationID != diagnosisClaimSurfaceConfigID {
 		t.Fatalf("counterfactual must use frozen revision and selected config: %#v", captured)
 	}
-	if !json.Valid(captured.BodyState) || !strings.Contains(string(captured.BodyState), "fact-neck-1") {
+	if !json.Valid(captured.BodyState) || !strings.Contains(string(captured.BodyState), "11111111-1111-4111-8111-111111111111") {
 		t.Fatalf("counterfactual must use the frozen BodyState: %s", captured.BodyState)
 	}
 	if report.Comparison.Hard.Match {
@@ -315,7 +309,7 @@ func TestDiagnosisReplayExportsQualificationShapedRegressionCaseWithoutRealUserI
 	if strings.Contains(string(encoded), "private-user-id") || strings.Contains(string(encoded), "private@example.com") || strings.Contains(string(encoded), "profile-private") {
 		t.Fatalf("regression export must scrub direct identifiers: %s", encoded)
 	}
-	if !strings.Contains(string(encoded), "fact-neck-1") {
+	if !strings.Contains(string(encoded), "11111111-1111-4111-8111-111111111111") {
 		t.Fatalf("regression export must retain domain evidence identities: %s", encoded)
 	}
 	metadata := caseDoc["metadata"].(map[string]any)
@@ -339,8 +333,8 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyProseFalsePositive(t *t
 				Complete:          true,
 			},
 			Assertions: []SafetyAssertionV1{
-				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
-				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
 			},
 			ActiveBlockers: []SafetyBlockerV1{},
 			RequiresReview: false,
@@ -401,8 +395,8 @@ func TestDiagnosisReplayAuthorityEvidenceRecognizesLegacyPreAgentSafetyFalsePosi
 				Complete:          true,
 			},
 			Assertions: []SafetyAssertionV1{
-				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
-				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:test", SourceKind: SafetyBodyStateFact},
+				{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
+				{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:test", SourceKind: SafetyStructuredScreen},
 			},
 			ActiveBlockers: []SafetyBlockerV1{},
 			RequiresReview: false,
@@ -503,15 +497,15 @@ func TestDiagnosisReplayAuthorityEvidenceRequiresConfirmedAbsentCoverage(t *test
 			CoveredSourceRefs: []string{"body-state:fact:a", "body-state:fact:b"},
 		},
 		Assertions: []SafetyAssertionV1{
-			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:fact:a", SourceKind: SafetyBodyStateFact},
-			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:fact:b", SourceKind: SafetyBodyStateFact},
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:a", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyTrauma, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:b", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: "body-state:safety-screen:a", SourceKind: SafetyStructuredScreen},
+			{Concept: SafetyRadiatingPain, Polarity: SafetyAbsent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:safety-screen:b", SourceKind: SafetyStructuredScreen},
 		},
 	}
 	got := replayConfirmedAbsentConcepts(envelope)
 	if !slices.Equal(got, []string{"trauma"}) {
-		t.Fatalf("only concepts confirmed absent across every covered source are authoritative: %#v", got)
+		t.Fatalf("only concepts every safety screen confirms absent are authoritative: %#v", got)
 	}
 }
 

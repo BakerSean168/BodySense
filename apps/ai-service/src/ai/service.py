@@ -251,13 +251,11 @@ class AIService:
             decoded = json.loads(raw_arguments)
         except json.JSONDecodeError as exc:
             raise GatewayProtocolError(
-                "provider returned malformed tool-call arguments "
-                f"for {tool_name or '<unnamed>'}"
+                f"provider returned malformed tool-call arguments for {tool_name or '<unnamed>'}"
             ) from exc
         if not isinstance(decoded, dict):
             raise GatewayProtocolError(
-                "provider returned non-object tool-call arguments "
-                f"for {tool_name or '<unnamed>'}"
+                f"provider returned non-object tool-call arguments for {tool_name or '<unnamed>'}"
             )
         return decoded
 

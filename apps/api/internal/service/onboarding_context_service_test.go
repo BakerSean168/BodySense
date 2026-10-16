@@ -24,19 +24,6 @@ func (f *fakeOnboardingProfileWriter) CreateOrUpdateProfile(_ context.Context, u
 	return nil
 }
 
-type fakeOnboardingBodyStateWriter struct {
-	patches []model.BodyStateCurrentContextPatch
-	err     error
-}
-
-func (f *fakeOnboardingBodyStateWriter) ApplyCurrentContextPatch(_ context.Context, _ uuid.UUID, _ *int64, patch model.BodyStateCurrentContextPatch, _ string) (*model.BodyStateRevision, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	f.patches = append(f.patches, patch)
-	return &model.BodyStateRevision{Revision: 1}, nil
-}
-
 type fakeOnboardingTransactions struct {
 	calls int
 	err   error
@@ -70,7 +57,7 @@ func validOnboardingContextRequest() OnboardingContextRequest {
 
 func TestOnboardingContextSubmitsStableProfileAndOneBodyStatePatch(t *testing.T) {
 	profiles := &fakeOnboardingProfileWriter{}
-	bodyState := &fakeOnboardingBodyStateWriter{}
+	bodyState := &memoryBodyContextStore{}
 	transactions := &fakeOnboardingTransactions{}
 	svc := NewOnboardingContextService(profiles, bodyState, transactions)
 
@@ -88,27 +75,24 @@ func TestOnboardingContextSubmitsStableProfileAndOneBodyStatePatch(t *testing.T)
 	if profile.Gender == nil || *profile.Gender != "male" || profile.BirthDate == nil {
 		t.Fatalf("unexpected stable profile: %#v", profile)
 	}
-	if len(bodyState.patches) != 1 {
-		t.Fatalf("BodyState patch calls=%d, want 1", len(bodyState.patches))
+	if len(bodyState.updates) != 1 {
+		t.Fatalf("BodyState update calls=%d, want 1", len(bodyState.updates))
 	}
-	patch := bodyState.patches[0]
-	if len(patch.Facts) != 7 {
-		t.Fatalf("fact mutations=%d, want six lifestyle + injury", len(patch.Facts))
+	if len(bodyState.ledger.facts) != 7 || len(bodyState.ledger.observations) != 2 {
+		t.Fatalf("want six lifestyle + injury facts and height + weight: facts=%d observations=%d",
+			len(bodyState.ledger.facts), len(bodyState.ledger.observations))
 	}
-	if len(patch.Observations) != 2 {
-		t.Fatalf("observation mutations=%d, want height + weight", len(patch.Observations))
+	if bodyState.ledger.commands != 3 {
+		t.Fatalf("onboarding must be one fact batch plus one observation per metric, got %d commands", bodyState.ledger.commands)
 	}
-	if patch.Facts[6].Kind != model.BodyStateFactKindInjuryHistory {
-		t.Fatalf("last fact kind=%q, want injury summary", patch.Facts[6].Kind)
-	}
-	if result.BodyStateRevision == nil || *result.BodyStateRevision != 1 {
-		t.Fatalf("result revision=%v, want 1", result.BodyStateRevision)
+	if result.BodyStateRevision == nil || *result.BodyStateRevision != 3 {
+		t.Fatalf("result revision=%v, want 3", result.BodyStateRevision)
 	}
 }
 
 func TestOnboardingContextRejectsInvalidMetricsBeforeTransaction(t *testing.T) {
 	profiles := &fakeOnboardingProfileWriter{}
-	bodyState := &fakeOnboardingBodyStateWriter{}
+	bodyState := &memoryBodyContextStore{}
 	transactions := &fakeOnboardingTransactions{}
 	svc := NewOnboardingContextService(profiles, bodyState, transactions)
 	request := validOnboardingContextRequest()
@@ -119,7 +103,7 @@ func TestOnboardingContextRejectsInvalidMetricsBeforeTransaction(t *testing.T) {
 	if !errors.Is(err, ErrInvalidOnboardingContext) {
 		t.Fatalf("error=%v, want ErrInvalidOnboardingContext", err)
 	}
-	if transactions.calls != 0 || len(profiles.profiles) != 0 || len(bodyState.patches) != 0 {
-		t.Fatalf("invalid request reached persistence: transactions=%d profiles=%d patches=%d", transactions.calls, len(profiles.profiles), len(bodyState.patches))
+	if transactions.calls != 0 || len(profiles.profiles) != 0 || len(bodyState.updates) != 0 {
+		t.Fatalf("invalid request reached persistence: transactions=%d profiles=%d updates=%d", transactions.calls, len(profiles.profiles), len(bodyState.updates))
 	}
 }

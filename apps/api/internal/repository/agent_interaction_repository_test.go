@@ -34,7 +34,7 @@ func TestAgentInteractionRepositoryAggregateScopesToOwner(t *testing.T) {
 	userID := uuid.New()
 	conversationID := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE (conversations.user_id = $1 AND conversations.deleted_at IS NULL) AND agent_interactions.conversation_id = $2 `) + `GROUP BY "agent_interactions"\."status"`).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE (conversations.user_id = $1 AND conversations.deleted_at IS NULL) AND agent_interactions.conversation_id = $2 `)+`GROUP BY "agent_interactions"\."status"`).
 		WithArgs(userID, conversationID).
 		WillReturnRows(sqlmock.NewRows([]string{"status", "count"}).
 			AddRow("answered", 3).

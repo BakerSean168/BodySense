@@ -19,15 +19,11 @@ import {
   BodyEpisodeRelationPage,
   BodyFactCommit,
   BodyFactRecordPage,
+  BodyHypothesisCommit,
+  BodyHypothesisRecordList,
   BodyMetricsSnapshot,
   BodyObservationCommit,
   BodyObservationRecordPage,
-  BodyStateEvidenceListResponse,
-  BodyStateFactMutationResponse,
-  BodyStateHypothesisMutationResponse,
-  BodyStateObservationMutationResponse,
-  BodyStateRevisionMutationResponse,
-  BodyStateSnapshot,
   CancelConsultationRunResponse,
   ConsultationRunDecision,
   ConsultationSessionResponse,
@@ -38,11 +34,14 @@ import {
   ConversationRunListResponse,
   CurrentTreatmentResponse,
   CurrentUser,
+  DerivedConcernGroupList,
   DiagnosisAnalysisListResponse,
   DiagnosisCandidateAssessmentResponse,
   DiagnosisReplayReport,
   DiagnosisWorkspaceProjection,
   DocumentIndicatorReviewRecord,
+  EquipmentAsset,
+  EquipmentAssetList,
   HealthDocumentReviewContext,
   HealthDocumentReviewListResponse,
   HealthWorkspace,
@@ -65,6 +64,8 @@ import {
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
   RuntimeEventListResponse,
+  SafetyResolution,
+  SafetyRestrictionList,
   ShareConversationResponse,
   SharedConversationResponse,
   TrainingCheckInResponse,
@@ -104,17 +105,11 @@ import type {
   BodyEpisodeRelationPageOutput,
   BodyFactCommitOutput,
   BodyFactRecordPageOutput,
+  BodyHypothesisCommitOutput,
+  BodyHypothesisRecordListOutput,
   BodyMetricsSnapshotOutput,
   BodyObservationCommitOutput,
   BodyObservationRecordPageOutput,
-  BodyStateEvidenceListResponseOutput,
-  BodyStateFactMutationResponseOutput,
-  BodyStateHypothesisInput,
-  BodyStateHypothesisMutationResponseOutput,
-  BodyStateObservationInput,
-  BodyStateObservationMutationResponseOutput,
-  BodyStateRevisionMutationResponseOutput,
-  BodyStateSnapshotOutput,
   CancelConsultationRunRequest,
   CancelConsultationRunResponseOutput,
   ClientDiagnostic,
@@ -131,10 +126,11 @@ import type {
   ConversationUpdateRequest,
   CorrectBodyFactRecordRequest,
   CorrectBodyObservationRequest,
-  CorrectBodyStateFactRequest,
+  CreateEquipmentAssetRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
   CurrentUserOutput,
+  DerivedConcernGroupListOutput,
   DiagnosisAnalysisListResponseOutput,
   DiagnosisCandidateAssessmentRequest,
   DiagnosisCandidateAssessmentResponseOutput,
@@ -142,6 +138,8 @@ import type {
   DiagnosisReplayRequest,
   DiagnosisWorkspaceProjectionOutput,
   DocumentIndicatorReviewRecordOutput,
+  EquipmentAssetListOutput,
+  EquipmentAssetOutput,
   HealthDocumentReviewContextOutput,
   HealthDocumentReviewListResponseOutput,
   HealthWorkspaceOutput,
@@ -178,15 +176,15 @@ import type {
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
   RecordBodyFactsRequest,
+  RecordBodyHypothesisRequest,
   RecordBodyObservationRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
-  ResolveBodyStateSafetyRequest,
+  ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
-  ReviewBodyStateFactRequest,
-  ReviewBodyStateObservationRequest,
-  ReviewLifestyleCandidateRequest,
   RuntimeEventListResponseOutput,
+  SafetyResolutionOutput,
+  SafetyRestrictionListOutput,
   ShareConversationResponseOutput,
   SharedConversationResponseOutput,
   StartConsultationRunRequest,
@@ -206,17 +204,16 @@ import type {
   TreatmentRevisionListResponseOutput,
   TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
-  UpdateBodyStateFactTemporalRequest,
-  UpdateBodyStateHypothesisLifecycleRequest,
+  UpdateEquipmentAssetRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
   UploadDeleteResponseOutput,
   UploadListResponseOutput,
-  UpsertBodyStateFactRequest,
   UserProfileResponseOutput,
   UserUploadOutput,
   WithdrawBodyFactRecordRequest,
+  WithdrawBodyHypothesisRequest,
   WithdrawBodyObservationRequest
 } from './model';
 
@@ -527,6 +524,194 @@ const res = await (fetchFn ?? fetch)(getWithdrawBodyObservationRecordUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyObservationCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordBodyHypothesisUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records`
+}
+
+/**
+ * Direct user edit only. A BodyHypothesis carries no confidence, clinical status or AI provenance; Agent/Diagnosis hypotheses never enter this ledger. Owner, source and revision are assigned server-side. Related facts must be the owner's current asserted BodyFacts. Exact retry with the same idempotency key replays the original receipt.
+ * @summary Record the authenticated user's own guess about a cause or possible condition.
+ */
+export const recordBodyHypothesis = async (recordBodyHypothesisRequest: RecordBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordBodyHypothesisUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordBodyHypothesisRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisCommit, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListBodyHypothesisRecordsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records`
+}
+
+/**
+ * Bounded to 100 newest-first records. related_fact_ids lists only facts that are still asserted. Withdrawn hypotheses are excluded.
+ * @summary Read the user's current (asserted, source-available) hypotheses from one BodyState revision.
+ */
+export const listBodyHypothesisRecords = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisRecordListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListBodyHypothesisRecordsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisRecordList, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisRecordList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisRecordList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getWithdrawBodyHypothesisRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records/${id}/withdraw`
+}
+
+/**
+ * @summary Withdraw one of the user's own current hypotheses without erasing its history or touching linked facts.
+ */
+export const withdrawBodyHypothesisRecord = async (id: string,
+    withdrawBodyHypothesisRequest: WithdrawBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getWithdrawBodyHypothesisRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(withdrawBodyHypothesisRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisCommit, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListDerivedConcernGroupsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/concern-groups`
+}
+
+/**
+ * Computed on read, never stored. Hypothesis–fact links and episode–fact links form an undirected graph; every connected component containing at least one hypothesis or episode is one group. Group ids are provisional display ids (UUIDv5 of the earliest member) that may change on merge/split and must never be used as a foreign key or a clinical conclusion.
+ * @summary Read the derived, non-authoritative ConcernGroup organisation of one BodyState revision.
+ */
+export const listDerivedConcernGroups = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DerivedConcernGroupListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListDerivedConcernGroupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DerivedConcernGroupList, status?: number} = new globalThis.Error();
+    const data : DerivedConcernGroupList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DerivedConcernGroupList.parse(parsedBody) : parsedBody
   return data
 }
 
@@ -886,59 +1071,6 @@ export const listBodyEpisodeRelations = async (id: string,
 
 
 
-export const getAddBodyStateFactUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/facts`
-}
-
-/**
- * @summary Add a durable BodyState fact with optimistic revision checking.
- */
-export const addBodyStateFact = async (upsertBodyStateFactRequest: UpsertBodyStateFactRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateFactUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(upsertBodyStateFactRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
 export const getGetHealthWorkspaceUrl = () => {
 
 
@@ -978,20 +1110,20 @@ export const getHealthWorkspace = async ( options?: RequestInit, fetchFn?: typeo
 
 
 
-export const getGetBodyStateUrl = () => {
+export const getListSafetyRestrictionsUrl = () => {
 
 
 
 
-  return `/api/v1/body-state`
+  return `/api/v1/body-state/safety/restrictions`
 }
 
 /**
- * @summary Get the current durable BodyState snapshot.
+ * @summary Read all owner restrictions and source-validated clearance audit.
  */
-export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateSnapshotOutput> => {
+export const listSafetyRestrictions = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SafetyRestrictionListOutput> => {
 
-  const res = await (fetchFn ?? fetch)(getGetBodyStateUrl(),
+  const res = await (fetchFn ?? fetch)(getListSafetyRestrictionsUrl(),
   {
     ...options,
     method: 'GET'
@@ -1004,32 +1136,32 @@ export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof glob
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   if (!res.ok) {
 
-    const err: globalThis.Error & {info?: BodyStateSnapshot, status?: number} = new globalThis.Error();
-    const data : BodyStateSnapshot = body ? JSON.parse(body) : {}
+    const err: globalThis.Error & {info?: SafetyRestrictionList, status?: number} = new globalThis.Error();
+    const data : SafetyRestrictionList = body ? JSON.parse(body) : {}
     err.info = data;
     err.status = res.status;
     throw err;
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateSnapshot.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? SafetyRestrictionList.parse(parsedBody) : parsedBody
   return data
 }
 
 
 
-export const getCorrectBodyStateFactUrl = (id: string,) => {
+export const getResolveSafetyRestrictionUrl = (id: string,) => {
 
 
 
 
-  return `/api/v1/body-state/facts/${id}/correct`
+  return `/api/v1/body-state/safety/restrictions/${id}/resolve`
 }
 
 /**
- * @summary Correct a fact that was previously wrong.
+ * @summary Submit exact-target user-reported professional clearance.
  */
-export const correctBodyStateFact = async (id: string,
-    correctBodyStateFactRequest: CorrectBodyStateFactRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
+export const resolveSafetyRestriction = async (id: string,
+    resolveSafetyRestrictionRequest: ResolveSafetyRestrictionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SafetyResolutionOutput> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1045,12 +1177,12 @@ export const correctBodyStateFact = async (id: string,
     }
     return headers;
   };
-const res = await (fetchFn ?? fetch)(getCorrectBodyStateFactUrl(id),
+const res = await (fetchFn ?? fetch)(getResolveSafetyRestrictionUrl(id),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(correctBodyStateFactRequest)
+    body: JSON.stringify(resolveSafetyRestrictionRequest)
   }
 )
 
@@ -1058,428 +1190,14 @@ const res = await (fetchFn ?? fetch)(getCorrectBodyStateFactUrl(id),
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   if (!res.ok) {
 
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
+    const err: globalThis.Error & {info?: SafetyResolution, status?: number} = new globalThis.Error();
+    const data : SafetyResolution = body ? JSON.parse(body) : {}
     err.info = data;
     err.status = res.status;
     throw err;
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getUpdateBodyStateFactTemporalUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/facts/${id}/temporal`
-}
-
-/**
- * @summary Update temporal state for a previously true fact.
- */
-export const updateBodyStateFactTemporal = async (id: string,
-    updateBodyStateFactTemporalRequest: UpdateBodyStateFactTemporalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getUpdateBodyStateFactTemporalUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateBodyStateFactTemporalRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReviewBodyStateFactUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/facts/${id}/review`
-}
-
-/**
- * @summary Review a BodyState fact.
- */
-export const reviewBodyStateFact = async (id: string,
-    reviewBodyStateFactRequest: ReviewBodyStateFactRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getReviewBodyStateFactUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewBodyStateFactRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateObservationUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/observations`
-}
-
-/**
- * @summary Add a durable BodyState observation.
- */
-export const addBodyStateObservation = async (bodyStateObservationInput: BodyStateObservationInput, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateObservationMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateObservationUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(bodyStateObservationInput)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateObservationMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateObservationMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReviewBodyStateObservationUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/observations/${id}/review`
-}
-
-/**
- * @summary Review a BodyState observation.
- */
-export const reviewBodyStateObservation = async (id: string,
-    reviewBodyStateObservationRequest: ReviewBodyStateObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateObservationMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getReviewBodyStateObservationUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewBodyStateObservationRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateObservationMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateObservationMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateHypothesisUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses`
-}
-
-/**
- * @summary Add a BodyState hypothesis.
- */
-export const addBodyStateHypothesis = async (bodyStateHypothesisInput: BodyStateHypothesisInput, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateHypothesisUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(bodyStateHypothesisInput)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getUpdateBodyStateHypothesisLifecycleUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/hypotheses/${id}/lifecycle`
-}
-
-/**
- * @summary Update hypothesis lifecycle/counterevidence.
- */
-export const updateBodyStateHypothesisLifecycle = async (id: string,
-    updateBodyStateHypothesisLifecycleRequest: UpdateBodyStateHypothesisLifecycleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateHypothesisMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getUpdateBodyStateHypothesisLifecycleUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateBodyStateHypothesisLifecycleRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateHypothesisMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateHypothesisMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateHypothesisMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getListBodyStateEvidenceUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/evidence`
-}
-
-/**
- * @summary List durable evidence references used by BodyState reasoning.
- */
-export const listBodyStateEvidence = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateEvidenceListResponseOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getListBodyStateEvidenceUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateEvidenceListResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateEvidenceListResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateEvidenceListResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getResolveBodyStateSafetyUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/safety/resolve`
-}
-
-/**
- * @summary Resolve or monitor the durable safety projection.
- */
-export const resolveBodyStateSafety = async (resolveBodyStateSafetyRequest: ResolveBodyStateSafetyRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateRevisionMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getResolveBodyStateSafetyUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(resolveBodyStateSafetyRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateRevisionMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateRevisionMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateRevisionMutationResponse.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? SafetyResolution.parse(parsedBody) : parsedBody
   return data
 }
 
@@ -1557,114 +1275,6 @@ const res = await (fetchFn ?? fetch)(getUpdateLifestyleUrl(),
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLifestyleRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
-    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAcceptLifestyleCandidateUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/lifestyle/candidates/${id}/accept`
-}
-
-/**
- * @summary Accept an AI-extracted lifestyle candidate.
- */
-export const acceptLifestyleCandidate = async (id: string,
-    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAcceptLifestyleCandidateUrl(id),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewLifestyleCandidateRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
-    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getRejectLifestyleCandidateUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/lifestyle/candidates/${id}/reject`
-}
-
-/**
- * @summary Reject an AI-extracted lifestyle candidate.
- */
-export const rejectLifestyleCandidate = async (id: string,
-    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getRejectLifestyleCandidateUrl(id),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewLifestyleCandidateRequest)
   }
 )
 
@@ -2048,6 +1658,155 @@ const res = await (fetchFn ?? fetch)(getUpdateUserProfileUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? UserProfileResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListEquipmentAssetsUrl = () => {
+
+
+
+
+  return `/api/v1/equipment`
+}
+
+/**
+ * EquipmentAsset (PC-D2) states which training resources the user can use. It is not BodyState and never rewrites an accepted plan. Bounded to 200 items.
+ * @summary List the user's current (not retired) equipment assets, newest first.
+ */
+export const listEquipmentAssets = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListEquipmentAssetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAssetList, status?: number} = new globalThis.Error();
+    const data : EquipmentAssetList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAssetList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateEquipmentAssetUrl = () => {
+
+
+
+
+  return `/api/v1/equipment`
+}
+
+/**
+ * Direct user edit only. Owner and revision are server-assigned. An exact retry with the same idempotency_key returns the original asset; the same key with different fields is 409. A second current asset with the same name (case-insensitive) is 409.
+ * @summary Add an equipment asset the user owns, borrows or can access.
+ */
+export const createEquipmentAsset = async (createEquipmentAssetRequest: CreateEquipmentAssetRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreateEquipmentAssetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createEquipmentAssetRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAsset, status?: number} = new globalThis.Error();
+    const data : EquipmentAsset = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAsset.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateEquipmentAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/equipment/${id}`
+}
+
+/**
+ * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+ * @summary Edit an equipment asset, mark it unavailable, or retire it.
+ */
+export const updateEquipmentAsset = async (id: string,
+    updateEquipmentAssetRequest: UpdateEquipmentAssetRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EquipmentAssetOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateEquipmentAssetUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateEquipmentAssetRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EquipmentAsset, status?: number} = new globalThis.Error();
+    const data : EquipmentAsset = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EquipmentAsset.parse(parsedBody) : parsedBody
   return data
 }
 

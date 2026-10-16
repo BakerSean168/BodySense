@@ -4,6 +4,12 @@ Status: QUEUED / NOT ADMITTED. Phase 2. SF cross-reference: SF-12/SF-20.
 **Owner role:** Go/Python Owner. **Dependencies:** `BS-OBS-001`, `BS-HYP-001`.
 **Exclusive resources:** `agent-tools`, `public-openapi`.
 
+## Current remaining scope · 2026-10-16
+
+Source-bound BodyFact/AskUser commits and native frozen Agent inputs are implemented; PR6 A–E includes removal of the obsolete intake binding. Remaining scope is unimplemented authorization/command variants, not PR6 input migration or binding cleanup.
+
+The original steps below are historical decomposition; perform only their unfulfilled acceptance work, under the Master’s single-writer policy.
+
 ## Goal and why now
 
 Connect source-bound AI suggestions to Go decisions. This is an execution slice under the approved BodySense V2 Master; it does not approve clinical decisions or establish any readiness gate by itself.

@@ -38,7 +38,7 @@ async def generate_assessment(request: AssessmentRequest):
             # E2E remains deterministic but still executes the same evidence
             # catalog, typed contract and governance path as production.
             service = AssessmentService(
-                model_resolver=lambda _config: deterministic_assessment_model()
+                model_resolver=lambda _config: deterministic_assessment_model(request.body_state)
             )
         else:
             service = get_assessment_service()

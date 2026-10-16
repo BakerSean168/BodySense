@@ -81,7 +81,7 @@ func newAssessmentOpenAPIRouter(t *testing.T, assessment assessmentApplication, 
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	server := NewPublicServer(&fakeBodyStateFactService{}).WithAssessment(assessment, replay)
+	server := NewPublicServer().WithAssessment(assessment, replay)
 	openapiv1.RegisterHandlers(g, StrictHandler(server))
 	return r
 }
@@ -99,8 +99,7 @@ func validAssessmentV2Report() *model.AssessmentReport {
 			"injury_symptoms":{"status":"missing","evidence_refs":[]}
 		}
 	}`)
-	observationID := uuid.New()
-	observations := json.RawMessage(fmt.Sprintf(`[{"observation_id":%q,"review_state":"unverified","kind":"exercise_pattern","body_region":"","label":"运动记录","description":"每周训练。","method":"assessment_evidence","evidence_refs":["body_state:fact:0"]}]`, observationID.String()))
+	observations := json.RawMessage(`[{"kind":"exercise_pattern","body_region":"","label":"运动记录","description":"每周训练。","method":"assessment_evidence","evidence_refs":["body_state:fact:0"]}]`)
 	now := time.Now().UTC().Truncate(time.Second)
 	revision := int64(4)
 	return &model.AssessmentReport{
@@ -136,6 +135,32 @@ func TestAssessmentListRejectsInvalidPaginationBeforeApplication(t *testing.T) {
 		t.Fatalf("list calls=%d want=0", assessment.listCalls)
 	}
 	assertErrorCode(t, rec, "INVALID_REQUEST")
+}
+
+func TestAssessmentGenerationPreservesZeroInputRevision(t *testing.T) {
+	report := validAssessmentV2Report()
+	revision := int64(0)
+	report.BodyStateRevision = &revision
+	report.Status = model.AssessmentReportInsufficientInformation
+	report.Observations = json.RawMessage(`[]`)
+	assessment := &fakeAssessmentApplication{generateReport: report}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/assessment/generate", nil)
+	req.Header.Set("Authorization", "Bearer validated-by-auth-middleware")
+	rec := httptest.NewRecorder()
+	newAssessmentOpenAPIRouter(t, assessment, nil).ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status=%d want=201 body=%s", rec.Code, rec.Body.String())
+	}
+	assertOpenAPIResponse(t, req, rec)
+	var response struct {
+		BodyStateRevision *int64 `json:"body_state_revision"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.BodyStateRevision == nil || *response.BodyStateRevision != 0 {
+		t.Fatalf("empty input revision must survive serialization: %s", rec.Body.String())
+	}
 }
 
 func TestAssessmentListUsesOpenAPIDefaultsAndValidatesV2Report(t *testing.T) {

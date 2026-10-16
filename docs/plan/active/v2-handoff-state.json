@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Single gate-status registry; a plan is not implementation evidence. Gate ready requires dated reproducible proof. Initial snapshot is not an ongoing environment monitor.",
+  "note": "Single six-gate readiness registry. Bounded implementation completion is recorded separately from whole-domain readiness. Earlier boundedSlices preserve dated evidence/limits; latestExecution and completedPrograms describe the current accepted baseline.",
   "baseline": {
     "auditedAtUtc": "2026-10-13T02:44:12Z",
     "branch": "refactor/schema-first-v2-20261013",
@@ -37,50 +37,43 @@
       "name": "Additive BodyFact ledger and typed API",
       "state": "in_progress",
       "next": "ENG-BS-02",
-      "details": "True Go/Python/Postgres/Person accepted user statement and direct amendments, plus source-bound Episode v8 manually authorized create/observation-link transactions; full BodyState/status/observation/hypothesis and legacy cutover open."
+      "details": "Native BodyFact, Episode, BodyObservation and user BodyHypothesis persistence/API plus native Web/Agent consumers are merged; PR6 A-E legacy BodyState retirement complete. Remaining full BodyState authorization, presentation and privacy acceptance stay open."
     },
     {
       "id": "F-CONTRACT",
       "name": "Canonical domain-to-view-model handoff",
       "state": "in_progress",
       "next": "DS-BASE-01",
-      "details": "Actual Person Records/Habits and typed source-backed Episode read plus exact direct-user create/link commit receipt contract. Complete medical/condition and other domain ViewModel remains open."
+      "details": "Generated native records/observations/hypotheses/Episode and Safety restriction contracts are live; EquipmentAsset is separate. Full target Diagnosis, singleton Chat, Trainer and shared UserAsset contracts/acceptance remain open."
     },
     {
       "id": "F-PENPOT",
       "name": "Editable UI source and flow inventory",
       "state": "in_progress",
       "next": "PD-BASE-01",
-      "details": "Reusable existing Penpot source and concrete BodyState view-model-to-component handoff available; no official Penpot Product edits or V2 Viewer sign-off in this execution."
+      "details": "Design/React foundations integrated in #255 and native V2 Web reads in #288. Complete V2 editable Penpot/Viewer acceptance is not recorded."
     },
     {
       "id": "F-ACCEPTANCE",
       "name": "Per-domain executable integration matrix",
       "state": "in_progress",
       "next": "IR-BASE-01",
-      "details": "Bounded BodyFact/Chat evidence matrix and actual E2E/concurrency cases established; other domain acceptance remains pending."
+      "details": "PR6 complete; #298 records full Chromium 25/25 zero retries/skips at post-C runtime source, and exact main CI passes. Remaining domain-wide QA and final visual acceptance are open."
     },
     {
       "id": "F-RELEASE",
       "name": "V2 release qualification",
       "state": "not_started",
       "next": "IR-FINAL-01",
-      "details": "No v2 staging/production migration or promotion performed"
+      "details": "Exact main candidate built successfully; mutable staging promotion skipped by V2 gate. Whole V2 release qualification remains not started; production deployment not verified here."
     }
   ],
   "domains": [
     {
       "id": "body-state",
       "name": "BodyState / BodyFact / Episode",
-      "product": [
-        "docs/product/domain/bodystate.md"
-      ],
-      "sf": [
-        "SF-10",
-        "SF-11",
-        "SF-12",
-        "SF-20"
-      ],
+      "product": ["docs/product/domain/bodystate.md"],
+      "sf": ["SF-10", "SF-11", "SF-12", "SF-20"],
       "gates": {
         "business": {
           "state": "ready",
@@ -92,40 +85,35 @@
         "view_model": {
           "state": "in_progress",
           "next": "DS-BS-01",
-          "details": "Person Records/Habits live and provisional Episode source-selection UI, v9 explicit-status, v10 recurrence source relation. V11 adds whole-revision source-available user-report BodyObservation read contract and typed client without any final Penpot Observation UI; no completed all-domain ViewModel or hypothesis/ConcernGroup."
+          "details": "Native Fact/Observation/Episode/user-Hypothesis/derived ConcernGroup contracts exist; Web and Agent consume source/owner/revision-pinned native reads. Remaining full Hypothesis/ConcernGroup presentation, Episode reorganization and final contract acceptance are open."
         },
         "database": {
           "state": "in_progress",
           "next": "DS-BS-02",
-          "details": "v1-v11 immutable SQL, v11 direct-user Observation owner-source composite FK and atomic receipts verified exact-SHA GitHub CI on c2076d1dd39d64afa0ec616813e722a94db657ad (12/12). New additive v12 amends exact user source-backed observation correction/withdrawal: server-owned operation/target owner FK, guarded data-loss down, immutable supersession source; PG18 v12 up/down-v11/replay-v12 PASS; real repo/HTTP/race rerun pending. Device/file admission, Hypothesis, ConcernGroup and all-domain schema OPEN."
+          "details": "PR279 consolidated v1-v12 into one 000001_vnext_baseline under the approved big-bang reset. PR283 adds user hypotheses; PR294-296 native restrictions/resolutions; PR297 removes legacy fact/observation/evidence and Safety JSON. PG18 baseline/recovery CI passes at the current main. Remaining complete-domain schema acceptance is open; do not restart additive v11/v12 migrations or legacy retirement."
         },
         "design": {
           "state": "in_progress",
           "next": "PD-BS-01",
-          "details": "Official editable Penpot Product/components and navigation independently developed on PR #250; this engineering slice adds a deliberately provisional disclosure inside existing Person Records and no edits to design PR worktree. Pixel-level Episode UI/Viewer sign-off pending."
+          "details": "Design/React baseline merged through #255 and native consumer UI through #288. Final editable Penpot, Episode and Hypothesis/ConcernGroup interaction acceptance remain open."
         },
         "engineering": {
           "state": "in_progress",
           "next": "ENG-BS-02",
-          "details": "v11 direct-user BodyObservation source/original capture, generated OpenAPI Go/TS/Zod and browser adapter exact-SHA GitHub CI 12/12 PASS. v12 adds strict correct/withdraw current direct observation with per-user idempotency, source-preserving successor and rollback, typed client; canonical OpenAPI/Postman 110 operations PASS, Web 75 files/464 Vitest tests, lint/typecheck/build PASS. Native PG18 and 17 browser tests PENDING. No final editable Penpot Observation UI, AI interpretation or global domain signoff."
+          "details": "PR6 A-E COMPLETE/MERGED through #298: source-bound native writers, Agent/Web reads, analysis audit evidence, independent Safety restrictions/resolutions and legacy persistence/API removal. This bounded retirement is done; remaining source-authorized Agent actions and full target BodyState/visual acceptance are separate work."
         },
         "integration": {
           "state": "in_progress",
           "next": "IR-BS-01",
-          "details": "PR #253 exact SHA c2076d1dd39d64afa0ec616813e722a94db657ad CI 12/12 SUCCESS. v12 add two user-authorized observation amendment endpoints and PG18 migration v12 up/down/replay PASS; OpenAPI Go/TS/Zod Postman 110 operations PASS; Web 75 files/464 tests lint/typecheck/build PASS; native Go/PG18 and real browser v12 amendment flow pending. Staging/production and V2 whole-domain gates remain OPEN."
+          "details": "PR6 A-E COMPLETE/MERGED. #298 records post-C full Chromium 25/25 zero skips/retries, retired-schema/route checks and native Safety/recovery paths. Exact main af3e1993b CI including PG18 baseline/recovery/browser SUCCESS. Complete domain design/integration sign-off and staging/production remain open."
         }
       }
     },
     {
       "id": "conversation-person",
       "name": "Conversation / Ask User / Person Profile",
-      "product": [
-        "docs/product/domain/person-chat.md"
-      ],
-      "sf": [
-        "SF-30",
-        "SF-70"
-      ],
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-30", "SF-70"],
       "gates": {
         "business": {
           "state": "ready",
@@ -142,7 +130,7 @@
         "database": {
           "state": "in_progress",
           "next": "DS-PC-01",
-          "details": "000006 adds one exact accepted-answer resume receipt and durable source binding; ten new PostgreSQL race/rollback/tenant/pruning tests pass. Multi-conversation legacy tables and full retention still remain."
+          "details": "Accepted-answer resume/source receipts are consolidated into the single baseline. Read-only singleton preflight seam PR266 exists; unique Conversation owner constraint, serialized creation/runtime admission and full retention remain pending."
         },
         "design": {
           "state": "in_progress",
@@ -152,7 +140,7 @@
         "engineering": {
           "state": "in_progress",
           "next": "ENG-PC-01",
-          "details": "V3 continues original Run from stored native interrupt; atomic answer/message/lease/milestones, stable retries and exact-source facts implemented. Singleton Conversation, full recovery and controlled raw history pruning remain open."
+          "details": "Same-Run Ask User and true source-bound receipts/UI implemented; PR266 singleton reader has no runtime caller and PR267 share-retirement gate remains opt-in. Singleton runtime, retention and complete sharing retirement remain pending."
         },
         "integration": {
           "state": "in_progress",
@@ -164,12 +152,8 @@
     {
       "id": "diagnosis",
       "name": "Diagnosis V2 / ConditionEntry",
-      "product": [
-        "docs/product/domain/diagnosis.md"
-      ],
-      "sf": [
-        "SF-40"
-      ],
+      "product": ["docs/product/domain/diagnosis.md"],
+      "sf": ["SF-40"],
       "gates": {
         "business": {
           "state": "ready",
@@ -181,12 +165,12 @@
         "view_model": {
           "state": "not_started",
           "next": "DS-DX-01",
-          "details": "ConditionEntry/proposal/evidence query and exact decision command contracts pending"
+          "details": "DS-DX-01 contract candidate exists, not accepted/generated ConditionEntry decision API. PR286/290/291 migrated current diagnosis readers and analysis audit to native V2 evidence; target ConditionEntry/exact proposal workflow remains pending."
         },
         "database": {
           "state": "not_started",
           "next": "DS-DX-01",
-          "details": "Legacy diagnosis analysis and treatment tables remain in 000001"
+          "details": "Legacy diagnosis_analyses/Treatment model remains in the single baseline; target singleton Diagnosis/ConditionEntry/proposal persistence not implemented."
         },
         "design": {
           "state": "in_progress",
@@ -196,7 +180,7 @@
         "engineering": {
           "state": "not_started",
           "next": "ENG-DX-01",
-          "details": "Target ConditionEntry and atomic proposal workflow not implemented"
+          "details": "Current Diagnosis freshness/read/evidence consumers use native V2 data and analysis-scoped audit after PR286/290/291. Target ConditionEntry/exact atomic proposal decisions are not implemented."
         },
         "integration": {
           "state": "not_started",
@@ -212,9 +196,7 @@
         "docs/product/domain/training.md",
         "docs/product/domain/safety.md"
       ],
-      "sf": [
-        "SF-50"
-      ],
+      "sf": ["SF-50"],
       "gates": {
         "business": {
           "state": "ready",
@@ -225,14 +207,14 @@
           ]
         },
         "view_model": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-TP-01",
-          "details": "Plan/template/proposal/session/gate projection contract pending"
+          "details": "Native Safety restriction list and exact source-bound per-restriction resolution DTOs are implemented in PR294-296. Independent PlanProposal/Trainer session and action/gate projections remain target work."
         },
         "database": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-TP-01",
-          "details": "Target independent Trainer and Safety storage not yet migrated"
+          "details": "Native safety_restrictions/safety_resolutions are in the single baseline and old Safety JSON is removed. Independent TrainingPlan/Trainer persistence and live multi-active activation remain pending."
         },
         "design": {
           "state": "in_progress",
@@ -240,27 +222,22 @@
           "details": "Existing training window prototypes; proposal/execution/safety semantics not accepted"
         },
         "engineering": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "ENG-TP-01",
-          "details": "Target plan/trainer/safety workflow pending"
+          "details": "Native Go-owned restriction recording, exact clearance and fail-closed consumer cutover complete in PR294-296. Multi-active compatibility remains dormant; proposal policy PR274 is OPEN/BEHIND, not integrated. Complete PlanProposal/Trainer workflow remains pending."
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-TP-01",
-          "details": "No Trainer/Safety V2 E2E"
+          "details": "PR6 native Safety browser/PG18 coverage is accepted; PR298 records full suite 25/25. This is not complete TrainingPlan/Trainer action, lifecycle or design acceptance."
         }
       }
     },
     {
       "id": "person-assets",
       "name": "Equipment / UserAsset / Media / Reports",
-      "product": [
-        "docs/product/domain/person-chat.md"
-      ],
-      "sf": [
-        "SF-60",
-        "SF-70"
-      ],
+      "product": ["docs/product/domain/person-chat.md"],
+      "sf": ["SF-60", "SF-70"],
       "gates": {
         "business": {
           "state": "ready",
@@ -270,14 +247,14 @@
           ]
         },
         "view_model": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-ASSET-01",
-          "details": "Shared asset/admission/removal/erasure query and command projections pending"
+          "details": "EquipmentAsset generated owner-scoped list/create/update contracts and Person UI implemented in PR285. Shared UserAsset admission/removal/verified-erasure projections remain pending."
         },
         "database": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-ASSET-01",
-          "details": "Target shared UserAsset and two deletion commands not yet fully migrated"
+          "details": "equipment_assets is persisted independently from BodyState in the single baseline (PR285). Full UserAsset/source/controlled-copy deletion storage remains pending."
         },
         "design": {
           "state": "in_progress",
@@ -285,9 +262,9 @@
           "details": "Existing Person tabs; source availability and distinct deletion confirmations not accepted"
         },
         "engineering": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "ENG-ASSET-01",
-          "details": "Target UserAsset migration and verified controlled-copy erase pending"
+          "details": "Person Equipment uses the real EquipmentAsset API; usable equipment enters frozen Agent input (PR285/287). Media/Reports/shared UserAsset admission and verified controlled-copy erasure remain pending."
         },
         "integration": {
           "state": "not_started",
@@ -541,7 +518,7 @@
     },
     {
       "id": "body-observation-direct-amendments-v12",
-      "status": "in_progress",
+      "status": "merged_verified",
       "contract": "docs/plan/active/2026-10-13-body-observation-amendments.md",
       "tests": [
         "apps/api/internal/repository/body_observation_amendment_repository_test.go",
@@ -553,19 +530,67 @@
         "scripts/validate-body-fact-vertical.sh"
       ],
       "limits": [
-        "Direct user command only; correction of the old report and withdrawal of one exact assertion are not a later measurement or clinical recovery",
-        "Correction supersedes original source-linked row; withdrawal only hides current assertion, not private historical erasure",
-        "Global per-user exact idempotency and BodyState revision shared with v11 write",
-        "Only generated TS/Zod browser adapter; Penpot Track B UI independently owned",
-        "No device/document/lab/OCR admission, measurement normalization, BodyHypothesis, ConcernGroup, legacy retirement or production deployment"
+        "PR276 and PR277 accepted native correction/withdrawal and cross-tenant replay; schema is now consolidated into the single baseline.",
+        "This bounded completion does not close all device/file admission, final Penpot, controlled-copy erasure or V2 release gates."
       ],
-      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/"
+      "runtimeEvidenceRoot": ".runtime/schema-first-v2-evidence/",
+      "acceptedSha": "ee4dd2c7f821f5625d486577ba762fb738c67c8d"
+    },
+    {
+      "id": "training-multi-active-dormant-compat",
+      "status": "merged_dormant",
+      "domain": "training-safety",
+      "contract": "docs/plan/active/2026-10-14-tp-d1-legacy-multi-active-handoff.md",
+      "prs": [270, 271, 273],
+      "mergedMainSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
+      "tests": [
+        "apps/api/internal/service/training_service_test.go",
+        "apps/api/internal/repository/training_active_selection_test.go",
+        "apps/api/internal/repository/training_owner_lock_test.go",
+        "apps/api/internal/repository/training_owner_lock_postgres_test.go",
+        "scripts/plan/test-tp-d1-owner-lock-pg18.sh"
+      ],
+      "limits": [
+        "no production constructor enables WithIndependentTrainingPlans",
+        "legacy single-active index still live",
+        "owner lock switched to FOR NO KEY UPDATE on users (review finding Q1 resolved 2026-10-15; native PG18 FK child insert not blocked)",
+        "no PlanProposal/TrainingPlanRevision runtime",
+        "no UI",
+        "not gate evidence"
+      ]
     }
   ],
-  "updatedAtUtc": "2026-10-14T12:46:08Z",
+  "updatedAtUtc": "2026-10-16T11:47:49Z",
   "latestExecution": {
+    "owner": "Codex/User-requested-PR6-status-sync-20261016",
+    "baselineHead": "af3e1993b1f62930e3b680b54abab5ade456935b",
+    "previousBaselineHead": "e4160a9c755455ffe9277af2caba88f62df1a032",
+    "state": "PR6_A_to_E_complete_merged;remaining_V2_domains_pending;staging_promotion_blocked",
+    "contract": "docs/plan/archive/2026-10-16-pr6-e-closeout.md",
+    "nextTickets": [
+      "PC-001",
+      "PC-RET-001",
+      "DX-001",
+      "TP-001",
+      "TP-002",
+      "AS-001",
+      "UI-001",
+      "QA-001"
+    ],
+    "verification": {
+      "mainCi": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615:SUCCESS_including_PG18_baseline_recovery_and_browser",
+      "mainCandidate": "https://github.com/BakerSean168/BodySense/actions/runs/38894149824:SUCCESS;Promote_coherent_staging_channel_SKIPPED",
+      "pr6Acceptance": "PR298_MERGED;25_of_25_full_Chromium_zero_skips_retries_recorded_at_runtime_source_72bbe661d59b881b36e68d813595e82e01a80d62;not_rerun_by_this_sync",
+      "schema": "single_000001_vnext_baseline;legacy_BodyState_fact_observation_evidence_tables_and_Safety_JSON_removed",
+      "trainingProposalPr274": "OPEN_BEHIND;head_681edbd8eef88c504f07df5a2a7e2dadd8be85f9;old_base_not_revalidated",
+      "readiness": "No_whole_domain_design_integration_or_release_gate_raised_by_status_sync",
+      "operations": "No_runtime_change_deployment_database_cleanup_scheduler_or_writer_lock_change"
+    },
+    "auditedAtUtc": "2026-10-16T11:47:49Z"
+  },
+  "previousExecution": {
     "owner": "ChatGPT-Web/Integration-Execution-Reconciliation-20261014-PC-TP",
-    "baselineHead": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "baselineHead": "e4160a9c755455ffe9277af2caba88f62df1a032",
     "state": "bounded_owner_handoff_in_progress;V2_domain_gates_open;staging_promotion_blocked",
     "contract": "docs/plan/active/2026-10-13-v2-parallel-master.md",
     "nextTickets": [
@@ -579,7 +604,7 @@
     ],
     "verification": {
       "lastGreenMain": "375e5a8215100b50f45fa78f761e4a92e6154c67:CI_38564462755_SUCCESS;candidate_38565576350_SUCCESS;staging_promotion_SKIPPED_BY_V2_GATES",
-      "newerObservedMain": "375e5a8215100b50f45fa78f761e4a92e6154c67:PR266_AND_PR267_MERGED;CI_38564462755_SUCCESS",
+      "newerObservedMain": "e4160a9c755455ffe9277af2caba88f62df1a032:PR270_PR271_PR272_PR273_MERGED;main_CI_38590342080_SUCCESS_observed_by_TrackD;staging_promotion_gated",
       "backendPrivacy": "original_f2085b263fe011b2d83a3f4f708a5fbdd4b9a661_equivalent_committed_as_7d3a1e1e94dfb52d70cba64047bfc7e4a4f4645c;PR263_CI_SUCCESS;PG18_race_2_of_2_PASS",
       "domainContract": "Track_A_original_staged_WIP_saved_as_605d0e403ceec11aa7ed4ee85e59d8d7cd6033c5;39_of_39_model_PASS;90_of_90_plan_PASS;PR264_exact_head_ccecaf2eb7762046918e2f763c14f2a2bb9b67aa_12_of_12_CI_SUCCESS_MERGED_945d8ef41c46c73dd222cdb8cb4007681c71babb",
       "stackedPrCI": "INT002_PR258_exact_head_2fd44ea76a4eaeb11b59ff520181c953a1a01da5_12_of_12_CI_PASS_MERGED_b4eff04f11388a0dd0a7c08228afb6374d00c1be",
@@ -588,7 +613,110 @@
       "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion",
       "pcSingletonReader": "PR266_FINAL_cc295803bb87cc213def387b1b0b41395be3ec1e_CI_38558686569_SUCCESS;MERGED_17552e5cda9335b58187534ed7cc5273f5e0500b;PG18_RACE_7_PASS;NO_RUNTIME_SWITCH",
       "pcShareRetirementGate": "PR267_FINAL_2ed788fbe703c0dec5d8c61aa63e9be093b27aef_CI_38563199186_SUCCESS;MERGED_375e5a8215100b50f45fa78f761e4a92e6154c67;DEFAULT_OFF_NO_TOKEN_ERASURE_NO_DEPLOYMENT",
-      "trainingMultiActiveBlocker": "TP-D1_CROSS_TRACK_ISSUE_268;PG18_12_MIGRATIONS_INDEX_idx_training_plans_user_active_REJECTS_SECOND_ACTIVE;ISOLATED_DROP_PERMITS_TWO;LEGACY_GO_SUPERSEDE_STILL_ACTIVE;NO_SCHEMA_CHANGE"
+      "trainingMultiActiveBlocker": "TP-D1_CROSS_TRACK_ISSUE_268;PG18_12_MIGRATIONS_INDEX_idx_training_plans_user_active_REJECTS_SECOND_ACTIVE;ISOLATED_DROP_PERMITS_TWO;LEGACY_GO_SUPERSEDE_STILL_ACTIVE;NO_SCHEMA_CHANGE",
+      "trainingProposalPr274": "head_681edbd8eef88c504f07df5a2a7e2dadd8be85f9;CI_38593599317_executed_lanes_PASS;PG18_children_SKIPPED;OPEN_not_merged",
+      "observationV12Owner": "850791384b2be16ad5640ff721a314f20981524e;3_unpushed_test_commits;go_test_race_exit0_2026-10-15T02:16Z;base_predates_frozen_main",
+      "trackDWriteBlock": "2026-10-15_09:39_CST_commit_PG18_contracts_verify_START_BLOCKED_by_platform_safety_control"
+    },
+    "previousBaselineHead": "375e5a8215100b50f45fa78f761e4a92e6154c67",
+    "alignmentAudit": "docs/plan/active/2026-10-15-v2-implementation-alignment-audit.md",
+    "alignmentAuditedAtUtc": "2026-10-15T02:40Z"
+  },
+  "completedPrograms": [
+    {
+      "id": "PR6-001",
+      "status": "done",
+      "scope": "Native BodyState legacy retirement; all A-E slices complete. Not whole V2 product/design/release acceptance.",
+      "acceptedSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+      "acceptedAtUtc": "2026-10-16T11:21:09Z",
+      "document": "docs/plan/archive/2026-10-16-pr6-e-closeout.md",
+      "slices": {
+        "A": {
+          "status": "done",
+          "mergedPrs": [
+            {
+              "number": 284,
+              "mergeSha": "8aa6375aaf7e3e7c0c61415981a015188a9e7d88"
+            },
+            {
+              "number": 285,
+              "mergeSha": "aa3429f19bb1d3f76dd77efa2640cecc9895f080"
+            }
+          ]
+        },
+        "B": {
+          "status": "done",
+          "mergedPrs": [
+            {
+              "number": 286,
+              "mergeSha": "972c50c3f448b226785830f75f83ff02cd3145cb"
+            },
+            {
+              "number": 287,
+              "mergeSha": "ca225772b1f565e114633bdb6a684b33d85656bb"
+            },
+            {
+              "number": 290,
+              "mergeSha": "d93a7d9a27ca207927058e802ed98c4b968a77b3"
+            },
+            {
+              "number": 291,
+              "mergeSha": "b36364ec69ca41b3bdcdb889ed058c1676cbe918"
+            },
+            {
+              "number": 292,
+              "mergeSha": "b8ba34fa192dc9a1dd2fa46b93505713b95881d8"
+            },
+            {
+              "number": 294,
+              "mergeSha": "6705ca3c926739a37c3228d18990bb7d0ac3bf15"
+            },
+            {
+              "number": 295,
+              "mergeSha": "8b2a6e6701e6a88dfa8cefa8e8a4432d11a5fefa"
+            },
+            {
+              "number": 296,
+              "mergeSha": "4d3dc793c9f11cf02e9c9179454e4dac3fd9aaf6"
+            }
+          ]
+        },
+        "C": {
+          "status": "done",
+          "mergedPrs": [
+            {
+              "number": 297,
+              "mergeSha": "72bbe661d59b881b36e68d813595e82e01a80d62"
+            }
+          ]
+        },
+        "D": {
+          "status": "done",
+          "mergedPrs": [
+            {
+              "number": 288,
+              "mergeSha": "b93ce7c0a2c627748c189f2ce6fac1ef79a623e0"
+            }
+          ]
+        },
+        "E": {
+          "status": "done",
+          "mergedPrs": [
+            {
+              "number": 293,
+              "mergeSha": "dd740fb650581563e4f0036891484d9ff707d9bc"
+            },
+            {
+              "number": 298,
+              "mergeSha": "af3e1993b1f62930e3b680b54abab5ade456935b"
+            }
+          ]
+        }
+      },
+      "acceptanceCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
+      "candidateRun": "https://github.com/BakerSean168/BodySense/actions/runs/38894149824",
+      "stagingPromotion": "skipped_by_v2_readiness_gate",
+      "productionDeployment": "not_verified_by_this_sync"
     }
-  }
+  ]
 }

@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
-import { clearStructuredSafetyCapture } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -27,22 +26,21 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  const fact = await request.post(`${apiBase}/api/v1/body-state/facts`, {
+  // Symptoms enter BodyState only through the V2 records ledger.
+  const fact = await request.post(`${apiBase}/api/v1/body-state/records`, {
     headers,
     data: {
+      idempotency_key: `e2e-symptom-${crypto.randomUUID()}`,
       expected_revision: 0,
-      fact: {
-        concern_key: "region:shoulder.right",
-        kind: "discomfort",
-        body_region: "右肩",
-        body_region_id: "shoulder.right",
-        value: "抬高手臂时右肩疼",
-        details: { ...clearStructuredSafetyCapture },
-        origin: "user_reported",
-        review_state: "confirmed",
-        lifecycle_state: "active",
-        trend: "stable",
-      },
+      facts: [
+        {
+          kind: "symptom",
+          statement: "抬高手臂时右肩疼",
+          body_region_ids: ["shoulder.right"],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
     },
   });
   expect(fact.ok(), await fact.text()).toBeTruthy();
@@ -83,10 +81,11 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await regionSelect.selectOption("shoulder.right");
   await page.getByRole("button", { name: "查看已选区域" }).click();
 
-  await expect(
-    page.getByRole("complementary", { name: "已选区域当前状况" }),
-  ).toContainText("右肩");
-  await expect(page.getByText("抬高手臂时右肩疼")).toBeVisible();
+  const selectedRegionPanel = page.getByRole("complementary", {
+    name: "已选区域当前状况",
+  });
+  await expect(selectedRegionPanel).toContainText("右肩");
+  await expect(selectedRegionPanel.getByText("抬高手臂时右肩疼")).toBeVisible();
 
   await page.getByRole("button", { name: "针对这里提问" }).click();
   const chatWindow = page.locator('.bc-business-window[data-window="chat"]');
@@ -201,21 +200,25 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(personWindow.getByText("弹力带", { exact: true })).toBeVisible();
   await expect(personWindow.getByText("当前可用")).toBeVisible();
 
-  const equipmentStateResponse = await request.get(
-    `${apiBase}/api/v1/body-state`,
-    { headers },
-  );
-  const equipmentStateBody = await equipmentStateResponse.text();
-  expect(equipmentStateResponse.ok(), equipmentStateBody).toBeTruthy();
-  const equipmentState = JSON.parse(equipmentStateBody) as {
-    facts: Array<{ kind: string; value: string; review_state: string }>;
+  // Equipment is its own owner-scoped EquipmentAsset, never a BodyState fact.
+  const equipmentResponse = await request.get(`${apiBase}/api/v1/equipment`, {
+    headers,
+  });
+  const equipmentBody = await equipmentResponse.text();
+  expect(equipmentResponse.ok(), equipmentBody).toBeTruthy();
+  const equipment = JSON.parse(equipmentBody) as {
+    items: Array<{
+      display_name: string;
+      notes: string | null;
+      availability: string;
+    }>;
   };
-  expect(equipmentState.facts).toEqual(
+  expect(equipment.items).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        kind: "equipment.available",
-        value: "弹力带",
-        review_state: "confirmed",
+        display_name: "弹力带",
+        notes: "中等阻力",
+        availability: "available",
       }),
     ]),
   );

@@ -1,19 +1,20 @@
 # BodySense Current Longitudinal System
 
-> **注意（2026-10-12）**：本文描述的是重构前的现有实现（Consultation Session、Treatment、Assessment、DiagnosisAnalysis candidates 等旧模型）。现行业务规则以 [docs/product](../product/README.md) 为准，术语换算见 [术语表 §3](../product/glossary.md#3-penpot--旧代码名称对照)。
+> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. DiagnosisAnalysis candidates, Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
 
 > Status: authoritative current implementation
-> Updated: 2026-08-23
+> Updated: 2026-10-16 (PR6 native BodyState retirement)
 > Supersedes: linear Health Journey, session `health_features`, session diagnosis/treatment JSON, and direct Training plan mutation.
 
 ## 1. Product loop
 
 ```text
-Consultation / Posture / Assessment
+User statements / admitted source-backed observations
                 |
                 v
         durable BodyState
-     Fact / Observation / Hypothesis / Evidence
+ Fact / Observation / Episode / User Hypothesis
+        + StatementEvidence / native Safety
                 |
                 v
  DiagnosisAnalysis pinned to one BodyState revision
@@ -54,7 +55,7 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 ### Diagnosis
 
 - Input is an exact durable BodyState revision.
-- Ordinary analysis is blocked by active durable safety state.
+- Go reads native restrictions and a revision-pinned SafetyEnvelope. Urgent blocks ordinary analysis; restricted training constraints do not terminate Diagnosis. Incomplete capture abstains, and unavailable/invalid Safety fails closed.
 - Python returns typed candidate-oriented output.
 - Go persists immutable analysis identity and evidence references.
 - Analysis freshness is evaluated independently from historical immutability.
@@ -66,7 +67,7 @@ Generation and final acceptance both require:
 - eligible DiagnosisAnalysis;
 - fresh DiagnosisAnalysis;
 - at least one candidate assessed as `confirmed` or `unsure`;
-- no active safety review state.
+- native Safety authorization, including complete symptom coverage and no applicable blocking restriction. A stale/invalidated clearance cannot authorize acceptance.
 
 Final acceptance additionally re-reads current BodyState and rejects a proposal when a material related change occurred after its source revision. UI capabilities are advisory; the mutation boundary enforces the invariant again.
 
@@ -78,13 +79,13 @@ Treatment rollout selection is Go-owned and stable per user. Shadow/canary runs 
 
 ### Outcome feedback
 
-`Outcome(user_id, source_type, source_key)` is idempotent. If Outcome persistence succeeds but BodyState projection fails, retrying the same source identity repairs the missing BodyState link rather than returning early forever.
+`Outcome(user_id, source_type, source_key)` is idempotent. Only an explicit symptom/new-discomfort value carrying the user's own words creates a native symptom Fact; notes, training feelings and system defaults do not. Outcome persistence and its required fact/revision link share the application transaction, so projection failure rolls back and an exact retry succeeds atomically. The symptom remains unscreened until its own Go-bound screen; no recovery or safety clearance is inferred.
 
 ### Training execution
 
 - Only an accepted TreatmentRevision can produce a TrainingPlan.
-- Projection creation is idempotent and recoverable through `POST /api/v1/training/current/ensure`.
-- `HealthWorkspace.active_training_plan` makes the plan discoverable after reload, login, or device change.
+- Projection creation is idempotent and coupled to the accepted-revision command (`AcceptTreatmentAndEnsurePlan`); there is no separate public current/ensure route.
+- `HealthWorkspace.training_plan` makes the plan discoverable after reload, login, or device change.
 - Training feedback creates Outcomes; it never mutates an accepted plan in place.
 
 ### Posture perception
@@ -95,14 +96,15 @@ Posture v2 is the current perception Champion (`posture-config-efa3a84622818772`
 
 Assessment is a derived report, not a second health truth or Treatment system.
 
-- The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the current v4 Agent itself only receives the canonical evidence catalog. Completed OCR indicators enter that catalog only when `ocr-indicator-admissibility-v1` marks them `admissible`; review-required report values remain stored but unavailable to Assessment reasoning. Assessment never directly interprets raw images.
-- It emits traceable Observation candidates with exact evidence refs; evidence coverage/gaps are derived deterministically by the application.
-- Observations are projected into BodyState inside the same transaction as the report, using report-scoped source keys (`assessment:<report_id>:observation:<index>`). Cross-report evidence/content-addressed idempotency is an explicit `DECISION-GAP`: report-history semantics and evidence-candidate deduplication are both valid models, so no stronger key should be introduced until the longitudinal meaning is chosen.
+- The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the serving Assessment Agent itself only receives the canonical evidence catalog. Completed OCR indicators enter that catalog only when `ocr-indicator-admissibility-v1` marks them `admissible`; review-required report values remain stored but unavailable to Assessment reasoning. Assessment never directly interprets raw images.
+- It selects source-grounded report observations with exact evidence refs; Go derives coverage/gaps and renders the report. Selections remain in the immutable report/replay, never in either BodyState ledger. Saving a report does not increment BodyState revision; an empty input preserves revision zero. File admission remains a separate source-authority boundary, not an Assessment review action.
 - It does not emit executable exercise, nutrition, or treatment prescriptions.
 
 ### Safety and consultation input
 
-Safety events are fail-closed. Interaction answers and extracted health inputs must be durably written to BodyState before the Agent proceeds or the event is exposed as successfully committed.
+Go validates the exact user-message span before committing native Facts. The five-concept Ask User V2 binding targets the exact committed symptom Fact, never a seed/provisional identity. A complete positive screen atomically creates native restrictions; negative screens create none. Go alone owns Safety decisions. Restriction-specific professional clearance binds the authenticated owner, original message, exact restriction and expected revision; lifting one cannot lift overlapping restrictions. Source invalidation restores the conservative gate. Agent warning prose cannot write or clear Safety. Agent/replay inputs stay frozen.
+
+Native facts, raw observations, user hypotheses and Episode identities own their separate semantics. External citations and Agent hypotheses belong only to immutable analysis audits. Treatment consumes the selected analysis's audit; shared references do not establish medical causality.
 
 ## 4. Runtime contract
 
@@ -133,11 +135,20 @@ POST /api/v1/consultation-runs/:id/cancel
 GET  /api/v1/consultations/:id/thread
 POST /api/v1/consultations/:id/diagnosis
 
-GET  /api/v1/body-state
-POST /api/v1/body-state/facts
-POST /api/v1/body-state/observations
-POST /api/v1/body-state/hypotheses
-POST /api/v1/body-state/safety/resolve
+GET/POST /api/v1/body-state/records
+POST /api/v1/body-state/records/:id/correct|withdraw
+GET/POST /api/v1/body-state/observation-records
+POST /api/v1/body-state/observation-records/:id/correct|withdraw
+GET/POST /api/v1/body-state/hypothesis-records
+POST /api/v1/body-state/hypothesis-records/:id/withdraw
+GET/POST /api/v1/body-state/episodes...
+GET  /api/v1/body-state/concern-groups
+GET  /api/v1/body-state/safety/restrictions
+POST /api/v1/body-state/safety/restrictions/:id/resolve
+
+GET  /api/v1/equipment
+POST /api/v1/equipment
+PUT  /api/v1/equipment/:id
 
 GET  /api/v1/diagnosis-analyses
 PUT  /api/v1/diagnosis-analyses/:analysisId/assessment
@@ -147,7 +158,7 @@ POST /api/v1/treatments/revisions/:revisionId/accept
 POST /api/v1/treatments/revisions/:revisionId/reject
 POST /api/v1/treatments/current/review
 
-POST /api/v1/training/current/ensure
+GET  /api/v1/training
 GET  /api/v1/training/:id
 PUT  /api/v1/training/:id/log
 POST /api/v1/training/:id/checkin
@@ -155,6 +166,8 @@ POST /api/v1/training/:id/checkin
 POST /api/v1/outcomes
 GET  /api/v1/health-workspace
 ```
+
+The old aggregate GET, fact temporal/review, observation/review and global evidence/clearance endpoints are retired. `health-workspace` has no `body_state` field; its internal native snapshot still computes capabilities and Safety. Public contracts are generated from [OpenAPI](../../packages/contracts/openapi/bodysense.v1.openapi.yaml).
 
 ## 5.1 Online RAG resource boundary
 
@@ -189,6 +202,8 @@ React route
     ├── last desktop chat width
     └── mobile chat/workspace surface
 ```
+
+Web's `readBodyRecords` loads all native pages and requires the same owner and revision across sources. The 3D selector counts asserted statements and current Episode identities separately and derives only `none`/`observed`. Observations currently have no region links, and hypotheses never paint a region as a Fact. Safety prompts use Go workspace capabilities; no legacy trend/lifecycle or Safety JSON is interpreted in the browser.
 
 The desktop consultation route is an immersive workbench:
 

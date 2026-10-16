@@ -14,7 +14,6 @@ type HealthWorkspace struct {
 	GeneratedAt        time.Time                   `json:"generated_at"`
 	ConversationID     *uuid.UUID                  `json:"conversation_id,omitempty"`
 	ProfileReady       bool                        `json:"profile_ready"`
-	BodyState          *HealthWorkspaceBodyState   `json:"body_state"`
 	Diagnosis          map[string]any              `json:"diagnosis,omitempty"`
 	Treatment          *model.Treatment            `json:"treatment,omitempty"`
 	TrainingPlan       *model.TrainingPlan         `json:"training_plan,omitempty"`
@@ -23,17 +22,6 @@ type HealthWorkspace struct {
 	Trends             []HealthWorkspaceTrend      `json:"trends"`
 	Capabilities       HealthWorkspaceCapabilities `json:"capabilities"`
 	Actions            []HealthWorkspaceAction     `json:"actions"`
-}
-
-type HealthWorkspaceBodyState struct {
-	CurrentRevision     int64                        `json:"current_revision"`
-	SafetyState         json.RawMessage              `json:"safety_state"`
-	Facts               []model.BodyStateFact        `json:"facts"`
-	PendingFacts        []model.BodyStateFact        `json:"pending_facts"`
-	Observations        []model.BodyStateObservation `json:"observations"`
-	PendingObservations []model.BodyStateObservation `json:"pending_observations"`
-	Hypotheses          []model.BodyStateHypothesis  `json:"hypotheses"`
-	RecentRevisions     []model.BodyStateRevision    `json:"recent_revisions"`
 }
 
 type HealthWorkspaceCapabilities struct {

@@ -5,6 +5,8 @@
 > Product mapping (2026-10-12): in the current product spec the evidence consumer is **Diagnosis analysis** (`ConditionAnalysisRun`), and admitted values become `BodyObservation`; "Assessment" / "Assessment v5" below names the current implementation. Business rules for uploads live in [docs/product/requirements.md R-PS-03](../product/requirements.md#26-person-个人档案与当前状态); auto-admitted values never auto-form a diagnosis.
 > Current production remains the frozen Tesseract baseline. The extraction target architecture is implemented as v20 in a dedicated 384 MiB `document-service` qualification lane and has passed synthetic mechanics gates. The append-only human-review domain, source-grounded Web review projection and Assessment v5 reviewed-evidence path are also implemented. None of those facts make v20 eligible for Champion promotion: the deidentified independently double-reviewed real-layout gate remains mandatory.
 
+> **PR6 current implementation boundary (2026-10-16):** Assessment selections persist only in the immutable report/replay and do not admit or review BodyObservations. The legacy observation/evidence tables and review routes are retired. The target admitted-observation lane below requires its own source-authorized admission implementation; report generation cannot substitute for that gate.
+
 ## 1. Purpose
 
 BodySense needs to ingest user-provided health documents such as:
@@ -34,7 +36,7 @@ Evidence Admissibility
   owns: whether a candidate may participate in health reasoning
 
 Diagnosis analysis (current implementation: Assessment)
-  owns: evidence-grounded body-state synthesis
+  owns: source-grounded report projection; no BodyState writes
 
 Diagnosis
   owns: diagnosis candidate reasoning / decision authority

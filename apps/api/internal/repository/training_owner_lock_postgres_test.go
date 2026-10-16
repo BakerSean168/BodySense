@@ -88,7 +88,7 @@ func TestTrainingOwnerLockConcurrentNativePG18(t *testing.T) {
 			DurationWeeks: 4, CurrentWeek: 1, Phases: json.RawMessage("[]"),
 		})
 	}
-	firstID, secondID, foreignID := uuid.New(), uuid.New(), uuid.New()
+	firstID, secondID, foreignID, childID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	go func() {
 		firstResult <- manager.WithinTransaction(ctx, func(txCtx context.Context) error {
 			if err := repo.LockOwnerForPlanActivation(txCtx, owner); err != nil {
@@ -112,6 +112,45 @@ func TestTrainingOwnerLockConcurrentNativePG18(t *testing.T) {
 		t.Fatalf("first lock/plan insertion failed: %v", e)
 	case <-ctx.Done():
 		t.Fatal("timeout acquiring first synthetic owner lock")
+	}
+	// While owner A holds the activation lock, the FOR KEY SHARE that every
+	// same-owner child foreign-key insert takes on users must not wait.
+	keyShareResult := make(chan error, 1)
+	go func() {
+		keyShareResult <- db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec("SET LOCAL lock_timeout = '2s'").Error; err != nil {
+				return err
+			}
+			var n int64
+			return tx.Raw("SELECT count(*) FROM (SELECT 1 FROM users WHERE id = ? FOR KEY SHARE) s", owner).
+				Scan(&n).Error
+		})
+	}()
+	select {
+	case err := <-keyShareResult:
+		if err != nil {
+			t.Fatalf("owner lock blocked a same-owner FOR KEY SHARE: %v", err)
+		}
+	case <-time.After(4 * time.Second):
+		t.Fatal("owner lock stalled a same-owner foreign-key check")
+	}
+	childResult := make(chan error, 1)
+	go func() {
+		childResult <- db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec("SET LOCAL lock_timeout = '2s'").Error; err != nil {
+				return err
+			}
+			return tx.Exec("INSERT INTO training_plans(id,user_id,status,goal) VALUES (?,?,?,?)",
+				childID, owner, "completed", "synthetic unlocked child insert").Error
+		})
+	}()
+	select {
+	case err := <-childResult:
+		if err != nil {
+			t.Fatalf("owner lock blocked a same-owner child FK insert: %v", err)
+		}
+	case <-time.After(4 * time.Second):
+		t.Fatal("owner lock stalled a same-owner child FK insert")
 	}
 	go func() {
 		secondResult <- manager.WithinTransaction(ctx, func(txCtx context.Context) error {
@@ -198,11 +237,12 @@ func TestTrainingOwnerLockConcurrentNativePG18(t *testing.T) {
 	}
 	var afterRollback int64
 	if err := db.Model(&model.TrainingPlan{}).Where("user_id = ?", owner).
-		Count(&afterRollback).Error; err != nil || afterRollback != 2 {
+		Count(&afterRollback).Error; err != nil || afterRollback != 3 {
 		t.Fatalf("owner transaction leaked uncommitted plan: %d %v", afterRollback, err)
 	}
 	t.Log("TP_D1_NATIVE_PG18_PER_OWNER_SERIALIZATION=PASS")
 	t.Log("TP_D1_NATIVE_PG18_CROSS_OWNER_INDEPENDENCE=PASS")
 	t.Log("TP_D1_NATIVE_PG18_TWO_ACTIVE_AND_LEGACY_FAIL_CLOSED=PASS")
 	t.Log("TP_D1_NATIVE_PG18_ROLLBACK_INTEGRITY=PASS")
+	t.Log("TP_D1_NATIVE_PG18_FK_CHILD_INSERT_NOT_BLOCKED=PASS")
 }

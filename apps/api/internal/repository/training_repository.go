@@ -38,8 +38,11 @@ func NewTrainingRepository(db *gorm.DB) *TrainingRepository {
 // for the same owner. It must run inside the outer acceptance transaction,
 // before reading/accepting the proposal or testing projection idempotency.
 // Locking the stable users row avoids a missing-plan race and hash collisions;
-// no lock of another user's row is needed. This is dormant until a V2 owner
-// explicitly opts into independent plans.
+// no lock of another user's row is needed. FOR NO KEY UPDATE still conflicts
+// with itself, so same-owner activations serialize, but not with the
+// FOR KEY SHARE that PostgreSQL foreign-key checks take on users, so the
+// owner's concurrent Chat/BodyFact/Observation inserts are not blocked.
+// This is dormant until a V2 owner explicitly opts into independent plans.
 func (r *TrainingRepository) LockOwnerForPlanActivation(ctx context.Context, userID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return ErrTrainingPlanOwnerNotFound
@@ -51,7 +54,7 @@ func (r *TrainingRepository) LockOwnerForPlanActivation(ctx context.Context, use
 	err := database.FromContext(ctx, r.db).Table("users").
 		Select("id").
 		Where("id = ?", userID).
-		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Clauses(clause.Locking{Strength: "NO KEY UPDATE"}).
 		Take(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrTrainingPlanOwnerNotFound
