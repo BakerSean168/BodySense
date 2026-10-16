@@ -1,3 +1,4 @@
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -7,7 +8,6 @@ import { consultationApi } from "../services/consultationService";
 import { consultationKeys } from "../services/consultationQueryKeys";
 import { diagnosisHistoryQueryOptions } from "../services/consultationQueryOptions";
 import type {
-  BodyStateProjection,
   ConsultationThread,
   DiagnosisAnalysis,
   DiagnosisCandidateAssessmentState,
@@ -15,7 +15,7 @@ import type {
 
 interface UseDiagnosisActionsOptions {
   conversationId: string | null;
-  bodyState: BodyStateProjection | null;
+  bodyState: BodyRecords | null;
   analysis: DiagnosisAnalysis | null;
 }
 

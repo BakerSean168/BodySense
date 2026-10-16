@@ -1,8 +1,4 @@
 import type {
-  BodyStateFact,
-  BodyStateObservation,
-  BodyStateProjection,
-  BodyStateRevision,
   Citation,
   DiagnosisCandidate,
   DiagnosisCandidateAssessmentState,
@@ -158,13 +154,6 @@ export interface WorkspaceAction {
   target?: Record<string, unknown>;
 }
 
-/** Workspace is a read projection, not the full user-scoped BodyState snapshot. */
-export interface WorkspaceBodyState extends BodyStateProjection {
-  pending_facts: BodyStateFact[];
-  pending_observations: BodyStateObservation[];
-  recent_revisions: BodyStateRevision[];
-}
-
 /** Only diagnosis fields consumed by the workspace feature belong in its app read model. */
 export interface WorkspaceDiagnosis {
   analysis_id: string;
@@ -187,7 +176,6 @@ export interface HealthWorkspace {
   generated_at: string;
   conversation_id?: string | null;
   profile_ready: boolean;
-  body_state: WorkspaceBodyState;
   diagnosis?: WorkspaceDiagnosis;
   treatment?: Treatment | null;
   training_plan?: TrainingExecutionPlan | null;

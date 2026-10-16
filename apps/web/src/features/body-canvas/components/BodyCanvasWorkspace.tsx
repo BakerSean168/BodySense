@@ -1,14 +1,15 @@
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, BoxSelect, Brush, ChevronDown, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Sun, Undo2, X } from "lucide-react";
 import { AppUserMenu } from "@/components/layout/AppUserMenu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import type { BodyStateProjection, ConsultationSpatialContext } from "@/features/consultation/types/consultation";
+import type { ConsultationSpatialContext } from "@/features/consultation/types/consultation";
 import type { HealthWorkspace } from "@/features/workspace/types/workspace";
 import { BodyExplorer } from "@/features/body-explorer/components/BodyExplorer";
 import type { BodyExplorerWorkspaceController } from "@/features/body-explorer/hooks/useBodyExplorerWorkspace";
 import { BODY_REGION_IDS, getBodyRegionDefinition, isBodyRegionId, type BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
-import { resolveRecordBodyRegion, selectBodyRegionVisualSummaries } from "@/features/body-explorer/model/bodyExplorerSelectors";
+import { recordBodyRegions, selectBodyRegionVisualSummaries } from "@/features/body-explorer/model/bodyExplorerSelectors";
 import { buildCanvasContext, canvasShortcut, EMPTY_SELECTION, getReferenceMotion, REFERENCE_MOTIONS, selectionReducer, type CanvasPanel, type CanvasTool, type MotionId } from "../model/bodyCanvas";
 import {
   activeBusinessWindow,
@@ -38,7 +39,7 @@ import "../body-canvas.css";
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
 
 export interface BodyCanvasWorkspaceProps {
-  bodyState: BodyStateProjection | null;
+  bodyState: BodyRecords | null;
   workspace?: HealthWorkspace;
   bodyExplorer: BodyExplorerWorkspaceController;
   chat: ReactNode;
@@ -124,16 +125,14 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
 
   const definition = getReferenceMotion(motion);
   const primary = selection.regions[0] ?? null;
-  const safetyReview = props.workspace?.capabilities.requires_safety_review === true || (props.bodyState?.safety_state.has_red_flags === true && ["requires_review", "active"].includes(String(props.bodyState.safety_state.status)));
+  const safetyReview = props.workspace?.capabilities.requires_safety_review === true;
   // Playback is a background behaviour: any open window pauses it.
   const effectivePlaying = playing && !safetyReview && !activeWindow;
   const summaries = useMemo(() => selectBodyRegionVisualSummaries(props.bodyState), [props.bodyState]);
   const attention = summaries.filter((summary) => summary.visualState !== "none");
   const regionFacts = useMemo(() => (props.bodyState?.facts ?? []).filter((fact) => {
-    const region = resolveRecordBodyRegion(fact);
-    return region && selection.regions.includes(region) && fact.lifecycle_state === "active" && fact.review_state !== "rejected" && !fact.excluded_from_reasoning;
+    return recordBodyRegions(fact).some((region) => selection.regions.includes(region)) && fact.assertion_status === "asserted";
   }), [props.bodyState, selection.regions]);
-  const confirmedCount = regionFacts.filter((fact) => fact.review_state === "confirmed").length;
   const selectionLabel = selection.regions.map((id) => getBodyRegionDefinition(id).labels["zh-CN"]).join("、");
   const diagnosisView = useMemo(() => projectDiagnosisView(props.workspace, props.workspace?.diagnosis ?? null), [props.workspace]);
   const projected = useMemo(
@@ -483,7 +482,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       {showRegionCard && <aside className="bc-region-card bc-floating-panel" aria-label="已选区域当前状况">
         <div className="bc-panel-heading"><div><span className="bc-eyebrow">{selection.regions.length > 1 ? "SELECTION / 选区预览" : "CURRENT REGION"}</span><h2>{selection.regions.length > 1 ? `${selection.regions.length} 个区域` : getBodyRegionDefinition(primary).labels["zh-CN"]}</h2></div><button className="bc-icon-button" onClick={() => setRegionCardOpen(false)} aria-label="收起区域详情"><X size={20} /></button></div>
         <div className="bc-selection-chips">{selection.regions.map((id) => <button key={id} onClick={() => removeRegion(id)} aria-label={`取消选择${getBodyRegionDefinition(id).labels["zh-CN"]}`}>{getBodyRegionDefinition(id).labels["zh-CN"]}<X size={12} /></button>)}</div>
-        <div className="bc-region-facts">{props.loading ? <p role="status">正在读取这个区域的记录…</p> : props.error && !props.bodyState ? <p>暂时无法读取记录；这不代表这个区域没有问题。</p> : regionFacts.length ? <><span className="bc-small-label">已确认 {confirmedCount} 条 · 待核实 {regionFacts.length - confirmedCount} 条</span>{regionFacts.slice(0, 3).map((fact) => <article key={fact.id}><strong>{fact.value}</strong><span>{fact.review_state === "confirmed" ? "已确认" : "待核实"}{fact.observed_at && ` · ${new Date(fact.observed_at).toLocaleDateString("zh-CN")}`}</span></article>)}</> : <><h3>这里还没有已记录的信息</h3><p>可以告诉我你的真实感受。选中一个位置，不代表那里一定存在问题。</p></>}</div>
+        <div className="bc-region-facts">{props.loading ? <p role="status">正在读取这个区域的记录…</p> : props.error && !props.bodyState ? <p>暂时无法读取记录；这不代表这个区域没有问题。</p> : regionFacts.length ? <><span className="bc-small-label">用户陈述 {regionFacts.length} 条</span>{regionFacts.slice(0, 3).map((fact) => <article key={fact.id}><strong>{fact.statement}</strong><span>用户陈述 · {new Date(fact.recorded_at).toLocaleDateString("zh-CN")}</span></article>)}</> : <><h3>这里还没有已记录的信息</h3><p>可以告诉我你的真实感受。选中一个位置，不代表那里一定存在问题。</p></>}</div>
         {motionMode && <div className="bc-context-note"><Play size={15} /><span>{definition.label} · {(phase * definition.duration).toFixed(2)}s<br /><small>通用参考动作，不是你的实际动作证据</small></span></div>}
         <div className="bc-panel-actions"><button className="bc-button bc-primary" onClick={ask}>针对这里提问<ArrowRight size={17} /></button><button className="bc-button" onClick={() => openWindow("person")}>查看完整记录</button><div className="bc-actions"><button className="bc-text-button" onClick={undo} disabled={!selection.history.length}><Undo2 size={15} />撤销选择</button><button className="bc-text-button" onClick={clear}>清除选区</button></div></div>
       </aside>}

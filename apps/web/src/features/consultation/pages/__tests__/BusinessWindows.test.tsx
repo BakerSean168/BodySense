@@ -1,3 +1,4 @@
+import { bodyRecordsFixture } from "@/features/profile/services/__fixtures__/bodyRecordsFixture";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -18,8 +19,15 @@ const mockListTrainingPlans = vi.fn();
 const mockGetBodyMetrics = vi.fn();
 const mockGetLifestyle = vi.fn();
 const mockListBodyFacts = vi.fn();
+const mockReadBodyRecords = vi.fn();
+vi.mock("@/features/profile/services/bodyRecordsService", () => ({
+  readBodyRecords: () => mockReadBodyRecords(),
+}));
 vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
   bodyFactRecordsService: { list: () => mockListBodyFacts(), record: vi.fn() },
+}));
+vi.mock("@/features/profile/services/bodyEpisodeService", () => ({
+  bodyEpisodeService: { list: async () => ({ user_id: "11111111-1111-4111-8111-111111111111", current_revision: 1, episodes: [], has_more: false }) },
 }));
 const mockListEquipment = vi.fn();
 const mockUpdateEquipment = vi.fn();
@@ -133,15 +141,6 @@ function makeWorkspace(
   return {
     generated_at: "2026-10-11T00:00:00Z",
     profile_ready: true,
-    body_state: {
-      current_revision: 2,
-      safety_state: {},
-      facts: [],
-      observations: [],
-      pending_facts: [],
-      pending_observations: [],
-      recent_revisions: [],
-    },
     treatment_revisions: [],
     recent_outcomes: [],
     trends: [],
@@ -192,6 +191,8 @@ function openDock(name: string) {
 }
 
 beforeEach(() => {
+  mockReadBodyRecords.mockReset();
+  mockReadBodyRecords.mockResolvedValue(bodyRecordsFixture());
   mockUseConversationsQuery.mockReset();
   mockUseConsultationThreadQuery.mockReset();
   mockUseHealthWorkspaceQuery.mockReset();
@@ -751,4 +752,15 @@ describe("body-first business windows", () => {
     expect(await screen.findByTestId("assistant-chat-panel")).toBeVisible();
     expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();
   });
+});
+
+it("retries failed native body reads from the canvas sync banner", async () => {
+  mockReadBodyRecords.mockRejectedValueOnce(new Error("unavailable"));
+  mockUseHealthWorkspaceQuery.mockReturnValue({ data: makeWorkspace(), isFetching: false, isError: false, refetch: vi.fn() });
+  renderPage();
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("身体信息暂时无法同步");
+  await userEvent.click(within(alert).getByRole("button", { name: "重试" }));
+  await waitFor(() => expect(mockReadBodyRecords).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
 });

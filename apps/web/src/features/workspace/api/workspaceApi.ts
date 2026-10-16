@@ -1,20 +1,12 @@
 import {
   acceptTreatmentRevision,
-  correctBodyFactRecord,
   generateTreatmentProposal,
   getHealthWorkspace,
-  recordBodyFacts,
   recordOutcome,
   rejectTreatmentRevision,
-  resolveBodyStateSafety,
   reviewCurrentTreatment,
-  reviewBodyStateFact,
-  reviewBodyStateObservation,
-  updateBodyStateFactTemporal,
-  updateLifestyle,
 } from "@/generated/api/bodysense";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
-import type { BodyStateFact } from "@/features/consultation/types/consultation";
 import type {
   HealthWorkspace,
   Outcome,
@@ -23,21 +15,6 @@ import type {
   TreatmentRevision,
   TrainingExecutionPlan,
 } from "../types/workspace";
-
-// A user-typed symptom statement for the V2 BodyFact ledger. The server
-// assigns the direct_edit source; Safety stays fail-closed until screened.
-export interface SymptomStatementInput {
-  statement: string;
-  body_region_ids: string[];
-  details?: Record<string, unknown>;
-}
-
-export type LifestyleSectionKey =
-  "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
-
-export type BodyStateReviewState = "unverified" | "confirmed" | "rejected";
-export type BodyStateSafetyResolution =
-  "resolved" | "cleared_by_review" | "monitoring";
 
 function projectWorkspaceCitations(
   citations: Array<Record<string, unknown>>,
@@ -99,7 +76,6 @@ export const workspaceApi = {
         generated_at: response.generated_at,
         conversation_id: response.conversation_id,
         profile_ready: response.profile_ready,
-        body_state: response.body_state,
         diagnosis: response.diagnosis
           ? projectWorkspaceDiagnosis(response.diagnosis)
           : undefined,
@@ -111,113 +87,6 @@ export const workspaceApi = {
         capabilities: response.capabilities,
         actions: response.actions,
       };
-    }),
-
-  reviewFact: async (
-    factId: string,
-    expectedRevision: number,
-    reviewState: BodyStateReviewState,
-  ): Promise<{ fact: BodyStateFact }> =>
-    withOpenApiError(async () => {
-      const response = await reviewBodyStateFact(
-        factId,
-        { expected_revision: expectedRevision, review_state: reviewState },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { fact: response.fact };
-    }),
-
-  recordSymptom: async (
-    expectedRevision: number,
-    input: SymptomStatementInput,
-  ): Promise<{ revision: number }> =>
-    withOpenApiError(async () => {
-      const response = await recordBodyFacts(
-        {
-          idempotency_key: crypto.randomUUID(),
-          expected_revision: expectedRevision,
-          facts: [
-            {
-              kind: "symptom",
-              statement: input.statement,
-              body_region_ids: input.body_region_ids,
-              temporal: { precision: "unknown" },
-              details: input.details ?? {},
-            },
-          ],
-        },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { revision: response.revision };
-    }),
-
-  correctSymptom: async (
-    factId: string,
-    expectedRevision: number,
-    replacement: SymptomStatementInput,
-  ): Promise<{ revision: number }> =>
-    withOpenApiError(async () => {
-      const response = await correctBodyFactRecord(
-        factId,
-        {
-          idempotency_key: crypto.randomUUID(),
-          expected_revision: expectedRevision,
-          replacement: {
-            kind: "symptom",
-            statement: replacement.statement,
-            body_region_ids: replacement.body_region_ids,
-            temporal: { precision: "unknown" },
-            details: replacement.details ?? {},
-          },
-        },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { revision: response.revision };
-    }),
-
-  updateFactTemporal: async (
-    factId: string,
-    expectedRevision: number,
-    input: { lifecycle_state?: string; trend?: string; valid_until?: string },
-  ): Promise<{ fact: BodyStateFact }> =>
-    withOpenApiError(async () => {
-      const response = await updateBodyStateFactTemporal(
-        factId,
-        { expected_revision: expectedRevision, ...input },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { fact: response.fact };
-    }),
-
-  reviewObservation: async (
-    observationId: string,
-    expectedRevision: number,
-    reviewState: BodyStateReviewState,
-  ): Promise<void> =>
-    withOpenApiError(async () => {
-      await reviewBodyStateObservation(
-        observationId,
-        { expected_revision: expectedRevision, review_state: reviewState },
-        undefined,
-        openApiAuthFetch,
-      );
-    }),
-
-  resolveSafety: async (
-    expectedRevision: number,
-    resolution: BodyStateSafetyResolution,
-    note: string,
-  ): Promise<void> =>
-    withOpenApiError(async () => {
-      await resolveBodyStateSafety(
-        { expected_revision: expectedRevision, resolution, note },
-        undefined,
-        openApiAuthFetch,
-      );
     }),
 
   generateTreatmentProposal: async (
@@ -289,20 +158,4 @@ export const workspaceApi = {
       return { outcome: response.outcome, created: response.created };
     }),
 
-  updateLifestyleCurrent: async (
-    expectedRevision: number,
-    section: LifestyleSectionKey,
-    summary: string,
-    details: Record<string, unknown> = {},
-  ): Promise<void> =>
-    withOpenApiError(async () => {
-      await updateLifestyle(
-        {
-          expected_revision: expectedRevision,
-          [section]: { summary, details },
-        },
-        undefined,
-        openApiAuthFetch,
-      );
-    }),
 };

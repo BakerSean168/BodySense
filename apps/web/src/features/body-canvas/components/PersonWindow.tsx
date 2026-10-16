@@ -16,7 +16,7 @@ import {
   type EquipmentAsset,
 } from "@/features/profile/services/equipmentService";
 import { BodyFactRecords } from "./BodyFactRecords";
-import { BodyEpisodeAssociations } from "./BodyEpisodeAssociations";
+import { BodyStateWorkbench } from "@/features/workspace/components/BodyStateWorkbench";
 import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
 import {
@@ -607,10 +607,7 @@ export function PersonWindow({
         data-category={category}
       >
         {category === "records" ? (
-          <>
-            <BodyFactRecords canEdit={canEdit} />
-            <BodyEpisodeAssociations canEdit={canEdit} />
-          </>
+          <BodyStateWorkbench canEdit={canEdit} />
         ) : category === "habits" ? (
           <BodyFactRecords habitsOnly canEdit={canEdit} />
         ) : data.error ? (

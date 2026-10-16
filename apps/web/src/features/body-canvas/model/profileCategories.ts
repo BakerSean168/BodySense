@@ -1,4 +1,3 @@
-import type { BodyStateFact, BodyStateProjection } from "@/features/consultation/types/consultation";
 
 /**
  * Person/Profile is a presentation projection over authoritative sources. It
@@ -44,20 +43,6 @@ export function isProfileCategoryId(value: string): value is ProfileCategoryId {
 export function getProfileCategoryMeta(id: ProfileCategoryId): ProfileCategoryMeta {
   return (
     PROFILE_CATEGORIES.find((category) => category.id === id) ?? PROFILE_CATEGORIES[0]
-  );
-}
-
-/**
- * Records are BodyState facts that represent the user's own reported or
- * confirmed state. Equipment is its own EquipmentAsset source, never a fact.
- */
-export function selectProfileRecords(
-  snapshot: BodyStateProjection | null | undefined,
-): BodyStateFact[] {
-  return (snapshot?.facts ?? []).filter(
-    (fact) =>
-      fact.lifecycle_state === "active" &&
-      fact.review_state !== "rejected",
   );
 }
 
