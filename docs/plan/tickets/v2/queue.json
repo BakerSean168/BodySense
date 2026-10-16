@@ -39,7 +39,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "T3 project authorization fixed; Qiyu GPT-6.1 Sol real assistant reply verified in PC-001 read-only canary. DeepSeek Pi/DSH routes unverified. Integration T3 project read-only cwd/HEAD verified on f67f9dd; ticket-specific independent coding worktree and single-Writer admission still unverified; no coding writer admitted."
+      "blockedReason": "SUPERSEDED by Master §0 single designated writer (2026-10-15): T3 parallel writers are not on the V2 critical path. Recommend closing; reopen only if parallel agents are re-enabled. Previous provider/model-auth blocker unchanged."
     },
     {
       "id": "INT-002",
@@ -102,7 +102,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR283 already implemented direct-edit user BodyHypothesis and derived ConcernGroup APIs and removed AI hypotheses from BodyState. Only remaining full projection/source variants, stable-group identity, presentation and contract acceptance are queued; do not recreate the implemented ledger/API."
+      "remainingScope": "PR283 implemented user BodyHypothesis ledger/records/withdraw and derived ConcernGroup. Remaining: hypothesis-observation links (RelatedObservationIDs is empty), hypothesis correct/supersede, DC-032 stable group identity; UI moves to UI-001."
     },
     {
       "id": "BS-AGENT-001",
@@ -134,7 +134,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "Singleton runtime remains unimplemented and not admitted: no unique owner constraint or serialized per-owner creation; PR266 is read-only with no runtime caller. Previous Track D commit/PG18 platform denial and staged patch at 76bc12959 were observed on 2026-10-15, not revalidated in this sync. Apply current Master big-bang policy, not the old data-reconciliation/rollback prerequisites.",
+      "blockedReason": "Not started under big-bang: no per-owner conversation uniqueness, active-Run index is per conversation not per user, GetSoleLiveByUserID has no caller, share stack still present behind kill-switch. Admit as next domain vertical per 2026-10-16-v2-remaining-plan.md; old Track D platform denial is historical.",
       "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification"
     },
     {
@@ -165,7 +165,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "remainingScope": "Folded into DX-002 slice 1 under big-bang: the frozen ConditionEntry/Proposal/Decision contract ships as the first commit of the DX-002 vertical; no separate contract-only PR. Q-17 TTL stays undecided."
     },
     {
       "id": "DX-002",
@@ -211,7 +212,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Only remaining Trainer-specific scope/action contract and complete target acceptance are queued; do not reimplement native Safety or old JSON compatibility."
+      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Remaining: advisory/urgent levels, plan/exercise scopes, on_expiry/user_reverification lift, pure Go TrainerGate and per-restriction versioned release (see 2026-10-16-v2-remaining-plan.md)."
     },
     {
       "id": "TP-D1-001",
@@ -234,7 +235,7 @@
       "id": "TP-PROP-001",
       "title": "TrainingPlan PlanProposal pure precommit admission policy (PR #274)",
       "phase": "1",
-      "status": "blocked",
+      "status": "done",
       "dependsOn": ["TP-D1-001"],
       "sf": "SF-50",
       "owner": "Training Domain Owner",
@@ -242,14 +243,17 @@
       "document": "docs/plan/tickets/v2/TP-PROP-001.md",
       "threadId": null,
       "projectId": null,
-      "worktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-privacy",
-      "acceptedSha": null,
+      "worktree": null,
+      "acceptedSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
       "baseSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
-      "implementationHead": "681edbd8eef88c504f07df5a2a7e2dadd8be85f9",
+      "implementationHead": "e98eb3c6302b88580bae868c2b5488df6229bdff",
       "reviewPr": 274,
-      "currentCiRun": "BakerSean168/BodySense/actions/runs/38593599317",
-      "ciAcceptance": "EXACT_HEAD_CI_SUCCESS_ON_EXECUTED_LANES;PG18_baseline_and_recovery_children_SKIPPED;not_merged",
-      "blockedReason": "PR274 is OPEN/BEHIND on historical base e4160a9c7; not admitted against current frozen main. Rebase/review and current exact-head CI are required before integration."
+      "currentCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38900112810",
+      "ciAcceptance": "EXACT_HEAD_CI_SUCCESS_after_update_branch_onto_887f74b6b;PG18_children_SKIPPED_no_migration;merged_PR274",
+      "mergedMainSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
+      "acceptedAtUtc": "2026-10-16T12:34:08Z",
+      "mergedPrs": [274],
+      "acceptanceNote": "Pure dormant Go precommit policy (apps/api/internal/domain/trainingplan); no caller, no schema. Persisted accept transaction belongs to TP-002."
     },
     {
       "id": "TP-002",
@@ -426,16 +430,16 @@
       "acceptanceNote": "All A-E slices COMPLETE and merged. Full post-C Chromium 25/25 recorded in PR298; current exact-main CI including PG18 baseline/recovery/browser SUCCESS. Remaining V2 domains/design/privacy/release are outside this completed ticket."
     }
   ],
-  "mainBaselineSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+  "mainBaselineSha": "6687a9e26f9548fdc3f3a43daf14785ba2cda2e6",
   "mainBaselineCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
   "mainCandidateRun": "https://github.com/BakerSean168/BodySense/actions/runs/38894149824",
-  "baselineFrozenAtUtc": "2026-10-16T11:47:49Z",
-  "previousFrozenBaselineSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
+  "baselineFrozenAtUtc": "2026-10-16T12:34:08Z",
+  "previousFrozenBaselineSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
   "newWriterAdmissionPolicy": "SINGLE_DESIGNATED_WRITER_UNDER_MASTER_BIG_BANG_POLICY;status_sync_does_not_admit_runtime_writers",
-  "auditedAtUtc": "2026-10-16T11:47:49Z",
-  "postMergeMainSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
-  "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
-  "latestObservedMainCiStatus": "SUCCESS_EXACT_MAIN_including_PG18_baseline_recovery_browser",
+  "auditedAtUtc": "2026-10-16T12:34:08Z",
+  "postMergeMainSha": "6687a9e26f9548fdc3f3a43daf14785ba2cda2e6",
+  "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38901329790",
+  "latestObservedMainCiStatus": "PR249_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
   "mergedDomainContractPr": 264,
   "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
   "mainCandidateStatus": "SUCCESS_IMMUTABLE_CANDIDATE_STAGING_PROMOTION_SKIPPED",
@@ -482,5 +486,6 @@
     "scope": "PR6 A-E all complete; pending tickets describe residual target-domain work only",
     "evidence": "docs/plan/archive/2026-10-16-pr6-e-closeout.md",
     "schedulerState": "not_observed_or_changed;historical_automation_notes_are_not_live_authority"
-  }
+  },
+  "remainingPlan": "docs/plan/active/2026-10-16-v2-remaining-plan.md"
 }

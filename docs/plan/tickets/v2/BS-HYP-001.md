@@ -4,6 +4,8 @@ Status: QUEUED / NOT ADMITTED. Phase 1. SF cross-reference: SF-20.
 **Owner role:** Domain Contract Owner. **Dependencies:** `INT-001`.
 **Exclusive resources:** `domain-contract`.
 
+**2026-10-16 code check:** remaining = hypothesis–observation links (`RelatedObservationIDs` is always empty), hypothesis correct/supersede and DC-032 stable ConcernGroup identity; Web UI moves to UI-001. Size S. See [2026-10-16 remaining-work plan](../../active/2026-10-16-v2-remaining-plan.md).
+
 ## Current remaining scope · 2026-10-16
 
 PR #283 already implemented direct-edit user BodyHypothesis and derived ConcernGroup reads and moved Agent hypotheses into Diagnosis audit. PR6 A–E is complete. This ticket retains only full projection/source variants, stable ConcernGroup identity, presentation and contract acceptance; do not recreate those tables/APIs.

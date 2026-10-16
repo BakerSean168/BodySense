@@ -560,8 +560,35 @@
       ]
     }
   ],
-  "updatedAtUtc": "2026-10-16T11:47:49Z",
+  "updatedAtUtc": "2026-10-16T12:34:08Z",
   "latestExecution": {
+    "owner": "Hark/V2-bigbang-rebuild-consolidation-20261016",
+    "baselineHead": "6687a9e26f9548fdc3f3a43daf14785ba2cda2e6",
+    "previousBaselineHead": "af3e1993b1f62930e3b680b54abab5ade456935b",
+    "state": "PR6_A_to_E_complete;PR299_status_sync_and_PR274_TP-PROP-001_merged;remaining_V2_domains_planned;staging_promotion_blocked",
+    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
+    "nextTickets": [
+      "PC-001",
+      "TP-001",
+      "BS-HYP-001",
+      "UI-001",
+      "DX-002",
+      "BS-AGENT-001",
+      "DX-003",
+      "TP-002",
+      "PC-RET-001",
+      "AS-001",
+      "QA-001"
+    ],
+    "verification": {
+      "mergedPrs": "299:887f74b6b;274:adaa02607;249:6687a9e26(CI_action_pins_only)",
+      "pr274Ci": "https://github.com/BakerSean168/BodySense/actions/runs/38900112810:SUCCESS_executed_lanes;PG18_children_SKIPPED_no_migration",
+      "readiness": "No_domain_gate_raised;plan_only",
+      "operations": "No_runtime_change_deployment_database_cleanup_scheduler_or_writer_lock_change"
+    },
+    "auditedAtUtc": "2026-10-16T12:34:08Z"
+  },
+  "previousExecution": {
     "owner": "Codex/User-requested-PR6-status-sync-20261016",
     "baselineHead": "af3e1993b1f62930e3b680b54abab5ade456935b",
     "previousBaselineHead": "e4160a9c755455ffe9277af2caba88f62df1a032",
@@ -587,40 +614,6 @@
       "operations": "No_runtime_change_deployment_database_cleanup_scheduler_or_writer_lock_change"
     },
     "auditedAtUtc": "2026-10-16T11:47:49Z"
-  },
-  "previousExecution": {
-    "owner": "ChatGPT-Web/Integration-Execution-Reconciliation-20261014-PC-TP",
-    "baselineHead": "e4160a9c755455ffe9277af2caba88f62df1a032",
-    "state": "bounded_owner_handoff_in_progress;V2_domain_gates_open;staging_promotion_blocked",
-    "contract": "docs/plan/active/2026-10-13-v2-parallel-master.md",
-    "nextTickets": [
-      "OPS-001",
-      "BS-HYP-001",
-      "PC-001",
-      "DX-001",
-      "TP-001",
-      "QA-001",
-      "UI-001"
-    ],
-    "verification": {
-      "lastGreenMain": "375e5a8215100b50f45fa78f761e4a92e6154c67:CI_38564462755_SUCCESS;candidate_38565576350_SUCCESS;staging_promotion_SKIPPED_BY_V2_GATES",
-      "newerObservedMain": "e4160a9c755455ffe9277af2caba88f62df1a032:PR270_PR271_PR272_PR273_MERGED;main_CI_38590342080_SUCCESS_observed_by_TrackD;staging_promotion_gated",
-      "backendPrivacy": "original_f2085b263fe011b2d83a3f4f708a5fbdd4b9a661_equivalent_committed_as_7d3a1e1e94dfb52d70cba64047bfc7e4a4f4645c;PR263_CI_SUCCESS;PG18_race_2_of_2_PASS",
-      "domainContract": "Track_A_original_staged_WIP_saved_as_605d0e403ceec11aa7ed4ee85e59d8d7cd6033c5;39_of_39_model_PASS;90_of_90_plan_PASS;PR264_exact_head_ccecaf2eb7762046918e2f763c14f2a2bb9b67aa_12_of_12_CI_SUCCESS_MERGED_945d8ef41c46c73dd222cdb8cb4007681c71babb",
-      "stackedPrCI": "INT002_PR258_exact_head_2fd44ea76a4eaeb11b59ff520181c953a1a01da5_12_of_12_CI_PASS_MERGED_b4eff04f11388a0dd0a7c08228afb6374d00c1be",
-      "qaOwner": "merge_guard_and_Diagnosis_E2E_semantics_and_focused_harness_already_present_in_main;QA_old_worktree_has_staged_script_and_untracked_venv;preserved_not_reset_or_force_merged",
-      "modelAvailability": "Qiyu_GPT61_and_GLM53_real_responses_verified_in_PC001_T3_project;Qiyu_integration_readonly_t3_cwd_and_HEAD_f67f9dd_verified_in_thread_002313;independent_coding_writer_not_admitted",
-      "formalGateState": "All_five_business_contracts_ready;no_complete_domain;no_staging_or_production_V2_promotion",
-      "pcSingletonReader": "PR266_FINAL_cc295803bb87cc213def387b1b0b41395be3ec1e_CI_38558686569_SUCCESS;MERGED_17552e5cda9335b58187534ed7cc5273f5e0500b;PG18_RACE_7_PASS;NO_RUNTIME_SWITCH",
-      "pcShareRetirementGate": "PR267_FINAL_2ed788fbe703c0dec5d8c61aa63e9be093b27aef_CI_38563199186_SUCCESS;MERGED_375e5a8215100b50f45fa78f761e4a92e6154c67;DEFAULT_OFF_NO_TOKEN_ERASURE_NO_DEPLOYMENT",
-      "trainingMultiActiveBlocker": "TP-D1_CROSS_TRACK_ISSUE_268;PG18_12_MIGRATIONS_INDEX_idx_training_plans_user_active_REJECTS_SECOND_ACTIVE;ISOLATED_DROP_PERMITS_TWO;LEGACY_GO_SUPERSEDE_STILL_ACTIVE;NO_SCHEMA_CHANGE",
-      "trainingProposalPr274": "head_681edbd8eef88c504f07df5a2a7e2dadd8be85f9;CI_38593599317_executed_lanes_PASS;PG18_children_SKIPPED;OPEN_not_merged",
-      "observationV12Owner": "850791384b2be16ad5640ff721a314f20981524e;3_unpushed_test_commits;go_test_race_exit0_2026-10-15T02:16Z;base_predates_frozen_main",
-      "trackDWriteBlock": "2026-10-15_09:39_CST_commit_PG18_contracts_verify_START_BLOCKED_by_platform_safety_control"
-    },
-    "previousBaselineHead": "375e5a8215100b50f45fa78f761e4a92e6154c67",
-    "alignmentAudit": "docs/plan/active/2026-10-15-v2-implementation-alignment-audit.md",
-    "alignmentAuditedAtUtc": "2026-10-15T02:40Z"
   },
   "completedPrograms": [
     {

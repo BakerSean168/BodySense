@@ -14,7 +14,7 @@
 
 PR6 A–E is **COMPLETE / MERGED** through #298 (`af3e1993b`), recorded by done ticket `PR6-001` and the handoff `completedPrograms` entry. Native Hypothesis/ConcernGroup, Safety and Web work already shipped; their remaining tickets cover only the residual scope named in `remainingScope`. Do not dispatch the completed PR6 work again.
 
-The frozen baseline is main `af3e1993b1f62930e3b680b54abab5ade456935b`, with exact-main CI including PG18 baseline/recovery/browser PASS. PR #274 remains OPEN/BEHIND and is blocked from admission against this new baseline. Master §0’s big-bang **one designated writer** rule supersedes the historical three-writer pilot and parallel scheduling instructions above/below; this status sync changes no locks, scheduler settings or runtime writer ownership.
+The frozen baseline is main `af3e1993b1f62930e3b680b54abab5ade456935b`, with exact-main CI including PG18 baseline/recovery/browser PASS. PR #274 (TP-PROP-001) was then updated onto this baseline, passed exact-head CI and merged as `adaa02607`; dependabot #249 (CI action pins only) followed as `6687a9e26`, the current queue baseline. Residual scope per ticket, sizes and order: [2026-10-16 remaining-work plan](../../active/2026-10-16-v2-remaining-plan.md). Master §0’s big-bang **one designated writer** rule supersedes the historical three-writer pilot and parallel scheduling instructions above/below; this status sync changes no locks, scheduler settings or runtime writer ownership.
 
 ## Scheduling policy
 
