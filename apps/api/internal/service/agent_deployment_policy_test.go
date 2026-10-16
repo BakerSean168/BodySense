@@ -42,7 +42,6 @@ func clearAgentDeploymentEnv(t *testing.T) {
 		"ASSESSMENT_PROMOTION_RECORD",
 		"CONSULTATION_CHAMPION_CONFIGURATION_ID",
 		"POSTURE_CHAMPION_CONFIGURATION_ID",
-		"TITLE_CHAMPION_CONFIGURATION_ID",
 		"KNOWLEDGE_CURATOR_CONFIGURATION_ID",
 		"KNOWLEDGE_SPLITTER_CONFIGURATION_ID",
 	} {
@@ -407,26 +406,24 @@ func TestPostureChampionBindsPinnedGeometry(t *testing.T) {
 	}
 }
 
-func TestAgentDeploymentPolicyOwnsUtilityAndKnowledgeAgentPointers(t *testing.T) {
+func TestAgentDeploymentPolicyOwnsKnowledgeAgentPointers(t *testing.T) {
 	clearAgentDeploymentEnv(t)
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if policy.TitleConfigurationID() != defaultTitleConfigurationID ||
-		policy.KnowledgeCuratorConfigurationID() != defaultKnowledgeCuratorConfigurationID ||
+	if policy.KnowledgeCuratorConfigurationID() != defaultKnowledgeCuratorConfigurationID ||
 		policy.KnowledgeSplitterConfigurationID() != defaultKnowledgeSplitterConfigurationID {
-		t.Fatal("utility/knowledge Agent defaults drifted")
+		t.Fatal("knowledge Agent defaults drifted")
 	}
 }
 
-func TestAgentDeploymentPolicyRejectsUnknownUtilityAndKnowledgeConfigurations(t *testing.T) {
+func TestAgentDeploymentPolicyRejectsUnknownKnowledgeConfigurations(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		env  string
 		id   string
 	}{
-		{"title", "TITLE_CHAMPION_CONFIGURATION_ID", "title-config-unknown"},
 		{"knowledge-curator", "KNOWLEDGE_CURATOR_CONFIGURATION_ID", "knowledge-curator-config-unknown"},
 		{"knowledge-splitter", "KNOWLEDGE_SPLITTER_CONFIGURATION_ID", "knowledge-splitter-config-unknown"},
 	} {

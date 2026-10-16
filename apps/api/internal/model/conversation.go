@@ -14,27 +14,21 @@ const ConversationStatusActive = "active"
 // Conversation is the user's single, long-lived chat thread (PC-D4). The
 // database enforces one row per user (`conversations_user_id_key`).
 type Conversation struct {
-	ID                        uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
-	UserID                    uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"user_id"`
-	Title                     string         `gorm:"type:text" json:"title,omitempty"`
-	TitleStatus               string         `gorm:"type:varchar(20);not null;default:'pending'" json:"title_status"`
-	TitleAgentConfigurationID string         `gorm:"type:varchar(80);not null;default:'';index" json:"title_agent_configuration_id,omitempty"`
-	TitleAgentConfiguration   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"title_agent_configuration"`
-	TitleExecutionProvenance  datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"title_execution_provenance"`
-	TitleDecisionTrace        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"title_decision_trace"`
-	Status                    string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
-	DefaultModel              string         `gorm:"type:text" json:"default_model,omitempty"`
-	SystemPromptVersion       string         `gorm:"type:text" json:"system_prompt_version,omitempty"`
-	Provider                  string         `gorm:"type:text" json:"provider,omitempty"`
-	ProviderConversationID    string         `gorm:"type:text" json:"provider_conversation_id,omitempty"`
-	ProviderLastResponseID    string         `gorm:"type:text" json:"provider_last_response_id,omitempty"`
-	ActiveRunID               *uuid.UUID     `gorm:"type:uuid" json:"active_run_id,omitempty"`
-	ActiveStreamID            string         `gorm:"type:text" json:"active_stream_id,omitempty"`
-	Summary                   string         `gorm:"type:text" json:"summary,omitempty"`
-	Metadata                  datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
-	CreatedAt                 time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt                 time.Time      `gorm:"not null;default:now()" json:"updated_at"`
-	LastMessageAt             *time.Time     `json:"last_message_at,omitempty"`
+	ID                     uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
+	UserID                 uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"user_id"`
+	Status                 string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+	DefaultModel           string         `gorm:"type:text" json:"default_model,omitempty"`
+	SystemPromptVersion    string         `gorm:"type:text" json:"system_prompt_version,omitempty"`
+	Provider               string         `gorm:"type:text" json:"provider,omitempty"`
+	ProviderConversationID string         `gorm:"type:text" json:"provider_conversation_id,omitempty"`
+	ProviderLastResponseID string         `gorm:"type:text" json:"provider_last_response_id,omitempty"`
+	ActiveRunID            *uuid.UUID     `gorm:"type:uuid" json:"active_run_id,omitempty"`
+	ActiveStreamID         string         `gorm:"type:text" json:"active_stream_id,omitempty"`
+	Summary                string         `gorm:"type:text" json:"summary,omitempty"`
+	Metadata               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
+	CreatedAt              time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt              time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	LastMessageAt          *time.Time     `json:"last_message_at,omitempty"`
 }
 
 // TableName specifies the table name for GORM.

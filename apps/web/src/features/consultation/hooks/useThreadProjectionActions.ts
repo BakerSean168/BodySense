@@ -34,28 +34,6 @@ export function useThreadProjectionActions({
     [queryClient],
   );
 
-  const updateTitle = useCallback(
-    (title: string) => {
-      const conversationId = resolveConversationId();
-      if (!conversationId) return;
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(conversationId),
-        (old) =>
-          old
-            ? {
-                ...old,
-                conversation: {
-                  ...old.conversation,
-                  title,
-                  title_status: "generated",
-                },
-              }
-            : old,
-      );
-    },
-    [queryClient, resolveConversationId],
-  );
-
   const reconcileMessageId = useCallback(
     (clientMessageId: string, messageId: string) => {
       const conversationId = resolveConversationId();
@@ -132,7 +110,6 @@ export function useThreadProjectionActions({
 
   return {
     registerConversation,
-    updateTitle,
     reconcileMessageId,
     updateExtractedInfo,
     updatePhase,

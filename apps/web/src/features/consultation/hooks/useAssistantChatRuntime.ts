@@ -67,7 +67,6 @@ export interface ConsultationAdapterOptions {
   onPhaseChange?: (from: string, to: string) => void;
   onRedFlag?: (flag: RedFlagEvent) => void;
   onCitation?: (citation: Citation) => void;
-  onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
   onInteractionRequired?: (interaction: PendingInteraction) => void;
   /** Called on each dispatch with the full active turn state. */
@@ -181,13 +180,6 @@ export function useAssistantChatRuntime(
           case "message_completed":
             optionsRef.current.onMessageCompleted?.(effect.data);
             break;
-          case "title_generated":
-            console.debug("[SSE] ④ applyEffects → 触发 onTitleGenerated 回调", {
-              title: effect.title,
-              hasCallback: !!optionsRef.current.onTitleGenerated,
-            });
-            optionsRef.current.onTitleGenerated?.(effect.title);
-            break;
           case "stream_error":
             break;
           default:
@@ -218,17 +210,13 @@ export function useAssistantChatRuntime(
       const result = reduceActiveTurnEvent(reducerState, event);
       reducerState = result.state;
       // 🔍 追踪关键事件的 effect 产生情况
-      if (
-        event.type === "conversation.created" ||
-        event.type === "title.generated"
-      ) {
+      if (event.type === "conversation.created") {
         console.debug(
           `[SSE] ④ dispatch(${event.type}) → effects 数量: ${result.effects.length}`,
           {
             effects: result.effects.map((e) => e.type),
             hasConversationCreatedCb:
               !!optionsRef.current.onConversationCreated,
-            hasTitleGeneratedCb: !!optionsRef.current.onTitleGenerated,
           },
         );
       }
@@ -264,13 +252,6 @@ export function useAssistantChatRuntime(
               conversation_id: data.ids.conversation_id,
               run_id: data.ids.run_id,
             },
-          );
-          dispatch(data);
-        },
-        onTitleGenerated: (data) => {
-          console.debug(
-            "[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch",
-            { title: data.payload.title },
           );
           dispatch(data);
         },

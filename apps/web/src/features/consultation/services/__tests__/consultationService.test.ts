@@ -12,8 +12,6 @@ const mockAuthFetch = vi.mocked(authFetch);
 
 const conversationWire = {
   id: "11111111-1111-4111-8111-111111111111",
-  title: "Conversation",
-  title_status: "generated" as const,
   status: "active" as const,
   metadata: {},
   created_at: "2026-09-13T12:00:00Z",

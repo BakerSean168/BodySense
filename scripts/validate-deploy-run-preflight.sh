@@ -57,7 +57,7 @@ RUN_ID="00000000-0000-4000-8000-000000000333"
 TURN_ID="00000000-0000-4000-8000-000000000444"
 compose exec -T postgres psql -v ON_ERROR_STOP=1 -U postgres -d "$DB" >/dev/null <<SQL
 INSERT INTO users(id,email,password_hash) VALUES ('$USER_ID','preflight@example.test','hash');
-INSERT INTO conversations(id,user_id,title) VALUES ('$CONV_ID','$USER_ID','preflight');
+INSERT INTO conversations(id,user_id) VALUES ('$CONV_ID','$USER_ID');
 INSERT INTO runs(id,conversation_id,turn_id,request_id,user_id,status,model,lease_owner,lease_expires_at,lease_heartbeat_at)
 VALUES ('$RUN_ID','$CONV_ID','$TURN_ID','preflight-run','$USER_ID','running','synthetic','worker-a',now() + interval '5 minutes',now());
 SQL

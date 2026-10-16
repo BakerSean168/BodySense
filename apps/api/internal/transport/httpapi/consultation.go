@@ -391,8 +391,6 @@ func (s *PublicServer) GetConsultationThread(
 		ConversationID: projection.ConversationID,
 		Conversation: consultationThreadConversationWire{
 			ID:            projection.ConversationID,
-			Title:         projection.Title,
-			TitleStatus:   projection.TitleStatus,
 			Status:        projection.Status,
 			DefaultModel:  nullableString(projection.DefaultModel),
 			LastMessageAt: projection.LastMessageAt,
@@ -422,8 +420,6 @@ func (s *PublicServer) GetConsultationThread(
 
 type consultationThreadConversationWire struct {
 	ID            uuid.UUID       `json:"id"`
-	Title         string          `json:"title"`
-	TitleStatus   string          `json:"title_status"`
 	Status        string          `json:"status"`
 	DefaultModel  *string         `json:"default_model"`
 	LastMessageAt *time.Time      `json:"last_message_at"`

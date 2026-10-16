@@ -95,7 +95,8 @@ export function ConsultationPage() {
 
   // --- Server state via TanStack Query ---
   const conversationQuery = useConversationQuery();
-  const singletonConversationId = conversationQuery.data?.conversationId ?? null;
+  const singletonConversationId =
+    conversationQuery.data?.conversationId ?? null;
   const threadQuery = useConsultationThreadQuery(routeConversationId);
   const threadData = threadQuery.data;
   const displayedConversationId = routeConversationId
@@ -112,7 +113,9 @@ export function ConsultationPage() {
   const extractedInfo = displayedThread?.extracted_info ?? [];
   const workspace = workspaceQuery.data;
   const bodyRecordsQuery = useBodyRecordsQuery();
-  const bodyState = bodyRecordsQuery.isError ? null : (bodyRecordsQuery.data ?? null);
+  const bodyState = bodyRecordsQuery.isError
+    ? null
+    : (bodyRecordsQuery.data ?? null);
   const handleAskSpatialContext = useCallback(
     (context: ConsultationSpatialContext) => {
       setChatSpatialContext(context);
@@ -319,7 +322,6 @@ export function ConsultationPage() {
                 initialExtractedInfo={extractedInfo}
                 onExtractedInfoUpdate={threadActions.updateExtractedInfo}
                 onPhaseChange={threadActions.updatePhase}
-                onTitleGenerated={threadActions.updateTitle}
                 onMessagePersisted={threadActions.reconcileMessageId}
                 spatialContext={chatSpatialContext}
                 onClearSpatialContext={() => setChatSpatialContext(null)}
@@ -364,8 +366,16 @@ export function ConsultationPage() {
         onWindowChange={handleWindowChange}
         windowRequest={windowRequest}
         demonstrationRequest={demonstrationRequest}
-        loading={workspaceQuery.isFetching || bodyRecordsQuery.isFetching || isThreadSwitching}
-        error={workspaceUnavailable || bodyRecordsQuery.isError || hasThreadSwitchError}
+        loading={
+          workspaceQuery.isFetching ||
+          bodyRecordsQuery.isFetching ||
+          isThreadSwitching
+        }
+        error={
+          workspaceUnavailable ||
+          bodyRecordsQuery.isError ||
+          hasThreadSwitchError
+        }
         onRetry={() => {
           void workspaceQuery.refetch();
           void bodyRecordsQuery.refetch();

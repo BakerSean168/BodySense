@@ -98,7 +98,6 @@ from src.ai.gateway import (
     ASSESSMENT_ROUTE,
     CONSULTATION_ROUTE,
     POSTURE_ROUTE,
-    TITLE_ROUTE,
 )
 from src.ai.types import ChatMessage
 
@@ -108,7 +107,6 @@ async def main() -> None:
     cases = [
         (CONSULTATION_ROUTE, "bodysense-consultation-ok"),
         (ASSESSMENT_ROUTE, '{"status":"ok"}'),
-        (TITLE_ROUTE, "bodysense-text-ok"),
         (POSTURE_ROUTE, '{"view":"front","findings":[]}'),
     ]
     for route, expected in cases:

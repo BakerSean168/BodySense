@@ -29,7 +29,6 @@
     "state.phase.changed",
     "stream.done",
     "stream.error",
-    "title.generated",
     "tool.call",
     "tool.result",
     "usage.reported"

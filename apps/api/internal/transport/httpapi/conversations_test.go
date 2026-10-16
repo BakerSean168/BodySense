@@ -69,23 +69,17 @@ func TestGetConversationReturnsSingletonPublicProjectionWithoutPersistenceIntern
 	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 	owner := uuid.New()
 	conversation := &model.Conversation{
-		ID:                        uuid.New(),
-		UserID:                    owner,
-		Title:                     "Private generated title",
-		TitleStatus:               "generated",
-		TitleAgentConfigurationID: "private-config-id",
-		TitleAgentConfiguration:   []byte(`{"private":true}`),
-		TitleExecutionProvenance:  []byte(`{"provider":"private"}`),
-		TitleDecisionTrace:        []byte(`{"trace":"private"}`),
-		Status:                    model.ConversationStatusActive,
-		DefaultModel:              "glm-5.3",
-		Provider:                  "private-provider",
-		ProviderConversationID:    "private-provider-conversation",
-		ActiveRunID:               ptrUUID(uuid.New()),
-		Metadata:                  []byte(`{"surface":"consultation"}`),
-		CreatedAt:                 now,
-		UpdatedAt:                 now,
-		LastMessageAt:             &now,
+		ID:                     uuid.New(),
+		UserID:                 owner,
+		Status:                 model.ConversationStatusActive,
+		DefaultModel:           "glm-5.3",
+		Provider:               "private-provider",
+		ProviderConversationID: "private-provider-conversation",
+		ActiveRunID:            ptrUUID(uuid.New()),
+		Metadata:               []byte(`{"surface":"consultation"}`),
+		CreatedAt:              now,
+		UpdatedAt:              now,
+		LastMessageAt:          &now,
 	}
 	app := &fakeConversationApplication{conversation: conversation}
 	r := newConversationRouteTestRouter(t, app, func(c *gin.Context) {

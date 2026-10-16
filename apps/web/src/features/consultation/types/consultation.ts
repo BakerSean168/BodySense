@@ -12,7 +12,6 @@ import type {
   RedFlagDetectedEvent,
   MessageCompletedEvent,
   MessageFailedEvent,
-  TitleGeneratedEvent,
   StreamDoneEvent,
   StreamErrorEvent,
   InteractionRequiredEvent,
@@ -33,8 +32,6 @@ export type {
 
 export interface Conversation {
   id: string;
-  title: string | null;
-  title_status: "pending" | "generating" | "generated" | "failed";
   status: "active";
   default_model: string | null;
   last_message_at: string | null;
@@ -244,7 +241,6 @@ export type SSEMessageCompleted = MessageCompletedEvent;
 export type SSEMessageFailed = MessageFailedEvent;
 export type SSEStreamDone = StreamDoneEvent;
 export type SSEStreamError = StreamErrorEvent;
-export type SSETitleGenerated = TitleGeneratedEvent;
 
 export interface PendingInteraction {
   id: string;

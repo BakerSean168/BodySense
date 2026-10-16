@@ -9,8 +9,6 @@ export type BodySenseStreamEventV1 = (
       type: "conversation.created";
       channel: "conversation";
       payload: {
-        title: string;
-        title_status: string;
         status: "active";
         last_message_at: string;
         created_at: string;
@@ -291,15 +289,6 @@ export type BodySenseStreamEventV1 = (
       [k: string]: unknown;
     }
   | {
-      type: "title.generated";
-      channel: "title";
-      payload: {
-        title: string;
-        [k: string]: unknown;
-      };
-      [k: string]: unknown;
-    }
-  | {
       type: "stream.done";
       channel: "stream";
       payload: {
@@ -358,8 +347,7 @@ export type BodySenseStreamEventV1 = (
 ) & {
   version: 1;
   seq: number;
-  channel:
-    "conversation" | "run" | "message" | "tool" | "state" | "source" | "safety" | "usage" | "job" | "stream" | "title";
+  channel: "conversation" | "run" | "message" | "tool" | "state" | "source" | "safety" | "usage" | "job" | "stream";
   type: string;
   ids: {
     conversation_id?: string | null;

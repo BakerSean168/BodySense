@@ -32,7 +32,7 @@ model_list:
       api_key: os.environ/STAGING_DIAGNOSIS_API_KEY
       timeout: 45
 
-  # Small text generation such as conversation titles.
+  # General text generation for non-conversation consumers.
   - model_name: bodysense-text
     litellm_params:
       model: groq/qwen/qwen3.8-27b

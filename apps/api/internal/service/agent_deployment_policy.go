@@ -57,9 +57,6 @@ const (
 
 	defaultPostureConfigurationID = "posture-config-efa3a84622818772"
 
-	defaultTitleConfigurationID = "title-config-bcc5f3a39bc98200"
-	titleLogicalModelV1         = "bodysense-text"
-
 	defaultKnowledgeCuratorConfigurationID  = "knowledge-curator-config-59b2868d6fbbd12a"
 	defaultKnowledgeSplitterConfigurationID = "knowledge-splitter-config-b14201d581dbf854"
 	knowledgeLogicalModelV1                 = "bodysense-structured"
@@ -126,11 +123,6 @@ type postureConfigurationRegistration struct {
 	ThresholdSHA256        string
 }
 
-type titleConfigurationRegistration struct {
-	DecisionPolicyRevision string
-	LogicalModel           string
-}
-
 type knowledgeConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
@@ -184,15 +176,6 @@ var knownPostureConfigurations = map[string]postureConfigurationRegistration{
 		ModelSHA256:            "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
 		ThresholdRevision:      "posture-geometry-thresholds-v1",
 		ThresholdSHA256:        "588917b4a071ee1e249d3930b37769c9c9bd7a4fdebd68eb2a00bfdd13fbb140",
-	},
-}
-
-const TitleDecisionPolicyV1 = "title-go-generation-v1"
-
-var knownTitleConfigurations = map[string]titleConfigurationRegistration{
-	defaultTitleConfigurationID: {
-		DecisionPolicyRevision: TitleDecisionPolicyV1,
-		LogicalModel:           titleLogicalModelV1,
 	},
 }
 
@@ -322,7 +305,6 @@ type AgentDeploymentPolicy struct {
 	consultationChampionConfigurationID string
 
 	postureChampionConfigurationID   string
-	titleChampionConfigurationID     string
 	knowledgeCuratorConfigurationID  string
 	knowledgeSplitterConfigurationID string
 }
@@ -515,14 +497,6 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
-	titleChampion := strings.TrimSpace(os.Getenv("TITLE_CHAMPION_CONFIGURATION_ID"))
-	if titleChampion == "" {
-		titleChampion = defaultTitleConfigurationID
-	}
-	if err := validateTitleConfigurationID(titleChampion); err != nil {
-		return nil, err
-	}
-
 	knowledgeCurator := strings.TrimSpace(os.Getenv("KNOWLEDGE_CURATOR_CONFIGURATION_ID"))
 	if knowledgeCurator == "" {
 		knowledgeCurator = defaultKnowledgeCuratorConfigurationID
@@ -559,7 +533,6 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		assessmentPromotionRecord:           assessmentPromotionRecord,
 		consultationChampionConfigurationID: consultationChampion,
 		postureChampionConfigurationID:      postureChampion,
-		titleChampionConfigurationID:        titleChampion,
 		knowledgeCuratorConfigurationID:     knowledgeCurator,
 		knowledgeSplitterConfigurationID:    knowledgeSplitter,
 	}, nil
@@ -840,28 +813,6 @@ func validatePostureKnownConfigurationID(id string) error {
 
 func validatePostureConfigurationID(id string) error {
 	return validatePostureKnownConfigurationID(id)
-}
-
-func (p *AgentDeploymentPolicy) TitleConfigurationID() string {
-	return p.titleChampionConfigurationID
-}
-
-func TitleDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
-	registration, ok := knownTitleConfigurations[strings.TrimSpace(configurationID)]
-	if !ok {
-		return "", fmt.Errorf("unknown Title Agent configuration id %q", configurationID)
-	}
-	return registration.DecisionPolicyRevision, nil
-}
-
-func validateTitleConfigurationID(id string) error {
-	if !strings.HasPrefix(id, "title-config-") {
-		return fmt.Errorf("invalid Title Agent configuration id %q", id)
-	}
-	if _, ok := knownTitleConfigurations[id]; !ok {
-		return fmt.Errorf("unknown Title Agent configuration id %q", id)
-	}
-	return nil
 }
 
 func (p *AgentDeploymentPolicy) KnowledgeCuratorConfigurationID() string {

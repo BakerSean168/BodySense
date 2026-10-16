@@ -40,8 +40,6 @@ vi.mock("@/features/workspace/hooks/useHealthWorkspaceQuery", () => ({
 function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
     id: "conv-1",
-    title: "肩颈咨询",
-    title_status: "generated",
     status: "active",
     default_model: null,
     last_message_at: null,
@@ -186,5 +184,4 @@ describe("ConsultationPage", () => {
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
     expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
   });
-
 });

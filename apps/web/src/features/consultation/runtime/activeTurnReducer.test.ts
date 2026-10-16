@@ -33,8 +33,6 @@ function eventDefault<TType extends StreamEvent["type"]>(
 
 const TEST_EVENT_DEFAULTS = {
   "conversation.created": eventDefault("conversation.created", "conversation", {
-    title: "",
-    title_status: "pending",
     status: "active",
     last_message_at: "2026-08-23T00:00:00Z",
     created_at: "2026-08-23T00:00:00Z",

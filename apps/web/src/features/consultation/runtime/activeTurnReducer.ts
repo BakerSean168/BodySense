@@ -113,7 +113,6 @@ export type ActiveTurnEffect =
       type: "message_completed";
       data: Extract<StreamEvent, { type: "message.completed" }>;
     }
-  | { type: "title_generated"; title: string }
   | { type: "stream_error"; message: string };
 
 export interface ReduceResult {
@@ -361,12 +360,6 @@ export function reduceActiveTurnEvent(
           finalParts: buildFinalMessageParts(current),
         };
       }
-      break;
-    }
-
-    case "title.generated": {
-      const payload = event.payload;
-      effects.push({ type: "title_generated", title: payload.title });
       break;
     }
 

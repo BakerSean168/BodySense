@@ -89,7 +89,6 @@ func ShouldPersistEvent(eventType string) bool {
 		"state.interaction.expired",
 		"message.completed",
 		"message.failed",
-		"title.generated",
 		"usage.reported",
 		"stream.done",
 		"stream.error":

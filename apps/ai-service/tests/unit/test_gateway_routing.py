@@ -11,7 +11,6 @@ from src.ai.gateway import (
     KNOWLEDGE_CURATOR_ROUTE,
     KNOWLEDGE_SPLITTER_ROUTE,
     POSTURE_ROUTE,
-    TITLE_ROUTE,
     TREATMENT_ROUTE,
     gateway_model_settings,
     gateway_route,
@@ -28,7 +27,6 @@ def test_business_routes_resolve_only_to_gateway_logical_models() -> None:
         TREATMENT_ROUTE: "bodysense-structured",
         KNOWLEDGE_CURATOR_ROUTE: "bodysense-structured",
         KNOWLEDGE_SPLITTER_ROUTE: "bodysense-structured",
-        TITLE_ROUTE: "bodysense-text",
         POSTURE_ROUTE: "bodysense-posture",
     }
     assert {route: gateway_route(route).logical_model for route in expected} == expected
@@ -144,7 +142,7 @@ async def test_ai_service_honors_manifest_pinned_logical_model() -> None:
 
     await service.generate(
         AiRequest(
-            use_case=TITLE_ROUTE,
+            use_case=CONSULTATION_ROUTE,
             messages=[ChatMessage(role="user", content="hello")],
             logical_model="manifest-model",
             model_settings={"temperature": 0.0, "max_tokens": 12},
@@ -205,12 +203,9 @@ async def test_ai_service_stream_honors_manifest_pinned_logical_model() -> None:
 def test_go_owned_internal_http_boundaries_require_configuration_identity() -> None:
     from src.api.routes.assessment import AssessmentRequest
     from src.api.routes.runtime import StartTurnRequest
-    from src.api.routes.title import TitleGenerateRequest
 
     with pytest.raises(ValidationError, match="configuration_id"):
         AssessmentRequest.model_validate({"profile": {}})
-    with pytest.raises(ValidationError, match="configuration_id"):
-        TitleGenerateRequest.model_validate({"messages": []})
     with pytest.raises(ValidationError, match="configuration_id"):
         StartTurnRequest.model_validate(
             {
@@ -376,3 +371,12 @@ async def test_ai_stream_rejects_malformed_tool_call_arguments() -> None:
 
     with pytest.raises(GatewayProtocolError, match="non-object tool-call arguments"):
         AIService._decode_tool_arguments('["not", "an", "object"]', "search_knowledge")
+
+
+def test_retired_conversation_title_route_is_unavailable(client) -> None:
+    from src.ai.errors import GatewayUnavailableError
+
+    response = client.post("/api/title/generate", json={"messages": []})
+    assert response.status_code == 404
+    with pytest.raises(GatewayUnavailableError, match="No LiteLLM logical route"):
+        gateway_route("conversation.title")

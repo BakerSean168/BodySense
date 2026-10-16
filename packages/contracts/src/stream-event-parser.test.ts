@@ -52,6 +52,15 @@ describe("parseStreamEvent", () => {
     expectInvalid(input);
   });
 
+  it("rejects the retired conversation title event", () => {
+    expectInvalid({
+      ...valid,
+      channel: "title",
+      type: "title.generated",
+      payload: { title: "Old conversation" },
+    });
+  });
+
   it("accepts execution_lost as a durable run.failed reason", () => {
     const event = {
       ...valid,

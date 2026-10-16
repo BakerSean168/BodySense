@@ -30,7 +30,7 @@ func TestBodyFactThreadWirePreservesCommittedToolAndUserMessages(t *testing.T) {
 	}
 	wire := consultationThreadWire{
 		ConversationID: conversation,
-		Conversation:   consultationThreadConversationWire{ID: conversation, Title: "synthetic", TitleStatus: "generated", Status: "active", Metadata: json.RawMessage(`{}`), MessageCount: 2, CreatedAt: now, UpdatedAt: now},
+		Conversation:   consultationThreadConversationWire{ID: conversation, Status: "active", Metadata: json.RawMessage(`{}`), MessageCount: 2, CreatedAt: now, UpdatedAt: now},
 		Phase:          "collecting", ExtractedInfo: json.RawMessage(`[]`), PendingInteractions: json.RawMessage(`[]`), InteractionHistory: json.RawMessage(`[]`),
 		ActiveTurnEvents: []threadRuntimeEventWire{},
 		Messages: []model.ThreadProjectionMessage{

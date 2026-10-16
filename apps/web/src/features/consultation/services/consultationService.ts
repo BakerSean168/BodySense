@@ -27,10 +27,7 @@ import type {
   ConversationMessageOutput as PublicConversationMessage,
   DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
 } from "@/generated/api/model";
-import {
-  openApiAuthFetch,
-  withOpenApiError,
-} from "@/lib/openapi-client";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type {
   Message,
   ConsultationSession,
@@ -142,8 +139,6 @@ function toConsultationThread(
     ended_at: input.ended_at ?? null,
     conversation: {
       id: input.conversation.id,
-      title: input.conversation.title ?? null,
-      title_status: input.conversation.title_status,
       status: input.conversation.status,
       default_model: input.conversation.default_model ?? null,
       last_message_at: input.conversation.last_message_at ?? null,

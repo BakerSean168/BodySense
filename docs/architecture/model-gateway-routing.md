@@ -28,7 +28,7 @@ Physical providers / models
 ```
 
 Application code does not construct physical provider candidates or fallback chains. `AIService`
-remains as a stable transport facade for Consultation/Knowledge/Title/Posture; its former provider
+remains as a stable transport facade for Consultation/Knowledge/Posture; its former provider
 routing responsibility is retired.
 
 ## Logical groups
@@ -36,15 +36,14 @@ routing responsibility is retired.
 The repository-owned logical route registry in `src/ai/gateway.py` provides the allowed BodySense
 logical groups:
 
-| Business route | LiteLLM logical group | Typical consumer |
-| --- | --- | --- |
-| `consultation.reply` | `bodysense-consultation` | Consultation runtime + tools |
-| `assessment.generate` | `bodysense-structured` | typed Assessment Agent |
-| `treatment.proposal` | `bodysense-structured` | typed Treatment Agent |
-| `knowledge.curate` | `bodysense-structured` | Knowledge Curator |
-| `knowledge.split` | `bodysense-structured` | Knowledge Splitter |
-| `conversation.title` | `bodysense-text` | Title Agent |
-| `posture.analyze` | `bodysense-posture` | multimodal Posture Agent |
+| Business route        | LiteLLM logical group    | Typical consumer             |
+| --------------------- | ------------------------ | ---------------------------- |
+| `consultation.reply`  | `bodysense-consultation` | Consultation runtime + tools |
+| `assessment.generate` | `bodysense-structured`   | typed Assessment Agent       |
+| `treatment.proposal`  | `bodysense-structured`   | typed Treatment Agent        |
+| `knowledge.curate`    | `bodysense-structured`   | Knowledge Curator            |
+| `knowledge.split`     | `bodysense-structured`   | Knowledge Splitter           |
+| `posture.analyze`     | `bodysense-posture`      | multimodal Posture Agent     |
 
 Diagnosis uses its immutable manifest logical group `bodysense-diagnosis`.
 
@@ -73,7 +72,7 @@ Responses are fail-closed where Go owns a durable artifact or application bounda
 
 ## Internal HTTP configuration authority
 
-The application-facing Python boundaries for Assessment, Consultation turn start, Posture and Title
+The application-facing Python boundaries for Assessment, Consultation turn start, and Posture
 require `configuration_id`. Knowledge requires exact Splitter/Curator ids whenever those LLM
 capabilities are enabled. Production Go callers supply these values from `AgentDeploymentPolicy`.
 
@@ -128,7 +127,6 @@ Not every LLM consumer needs the Diagnosis canary machinery. The governing rule 
 - clinical decision/conversational Agents: qualification + replay + rollout appropriate to the role;
 - Posture perception: exact config/provenance + deterministic output governance + downstream clinical
   gates;
-- Title utility: exact config/provenance, no clinical rollout requirement;
 - Knowledge offline content: exact config/lineage + human publication/review authority;
 - OCR/ASR/Embedding/Pose: non-LLM mechanisms, not fake Agents.
 
@@ -187,7 +185,6 @@ physical LLM provider credentials. Current validation also covers:
 - manifest logical-model pinning for normal and streaming AIService calls;
 - cross-language repository-known configuration identities;
 - Posture Go -> Python config pinning + response identity validation;
-- Title Go-owned identity + durable provenance;
 - Knowledge Go-selected Splitter/Curator ids + provider/model lineage;
 - authenticated LiteLLM access and real gateway routing smoke;
 - Diagnosis/Treatment qualification/promotion suites;

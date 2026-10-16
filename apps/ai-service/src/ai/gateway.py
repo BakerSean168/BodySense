@@ -23,7 +23,6 @@ ASSESSMENT_ROUTE = "assessment.generate"
 TREATMENT_ROUTE = "treatment.proposal"
 KNOWLEDGE_CURATOR_ROUTE = "knowledge.curate"
 KNOWLEDGE_SPLITTER_ROUTE = "knowledge.split"
-TITLE_ROUTE = "conversation.title"
 POSTURE_ROUTE = "posture.analyze"
 
 
@@ -41,7 +40,6 @@ _GATEWAY_ROUTES: dict[str, GatewayRoute] = {
     TREATMENT_ROUTE: GatewayRoute("bodysense-structured", 0.3, 2048),
     KNOWLEDGE_CURATOR_ROUTE: GatewayRoute("bodysense-structured", 0.3, 2048, "json_object"),
     KNOWLEDGE_SPLITTER_ROUTE: GatewayRoute("bodysense-structured", 0.3, 2048, "json_object"),
-    TITLE_ROUTE: GatewayRoute("bodysense-text", 0.3, 100),
     POSTURE_ROUTE: GatewayRoute("bodysense-posture", 0.2, 1500, "json_object"),
 }
 

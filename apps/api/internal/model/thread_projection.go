@@ -11,8 +11,6 @@ import (
 type ThreadProjection struct {
 	ConversationID        uuid.UUID         `gorm:"type:uuid;primaryKey" json:"conversation_id"`
 	UserID                uuid.UUID         `gorm:"type:uuid;index;not null" json:"user_id"`
-	Title                 string            `gorm:"type:text" json:"title,omitempty"`
-	TitleStatus           string            `gorm:"type:varchar(20);not null;default:'pending'" json:"title_status"`
 	Status                string            `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
 	DefaultModel          string            `gorm:"type:text" json:"default_model,omitempty"`
 	ActiveRunID           *uuid.UUID        `gorm:"type:uuid" json:"active_run_id,omitempty"`
