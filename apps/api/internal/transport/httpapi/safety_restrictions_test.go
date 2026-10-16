@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,10 +81,25 @@ func TestSafetyRestrictionHTTPReadFailsClosed(t *testing.T) {
 		ID: uuid.New(), UserID: owner, SafetyScreenID: uuid.New(), Concept: "numbness",
 		PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted", ScopeKind: "all_training",
 		LiftPolicy: "professional_clearance", Reason: "synthetic", CreatedRevision: 1, ValidFrom: time.Now().UTC(),
+		ExerciseIDs: []string{},
 	}, Active: true}}
 	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 200 {
 		t.Fatalf("native restriction with null resolution: %d %s", rec.Code, rec.Body.String())
 	}
+	plan, until := uuid.New(), time.Now().UTC().Add(24*time.Hour)
+	widened := app.list.Restrictions[0]
+	widened.RiskLevel, widened.ScopeKind, widened.LiftPolicy = "advisory", "exercise", "on_expiry"
+	widened.PlanID, widened.ValidUntil, widened.ExerciseIDs = &plan, &until, []string{"squat"}
+	app.list.Restrictions = append(app.list.Restrictions, widened)
+	app.list.Restrictions[1].ID = uuid.New()
+	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"exercise_ids":["squat"]`) || !strings.Contains(rec.Body.String(), plan.String()) {
+		t.Fatalf("widened restriction: %d %s", rec.Code, rec.Body.String())
+	}
+	app.list.Restrictions[1].RiskLevel = "severe"
+	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 503 {
+		t.Fatalf("unknown risk level served: %d", rec.Code)
+	}
+	app.list.Restrictions = app.list.Restrictions[:1]
 	app.list.UserID = uuid.New()
 	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 503 {
 		t.Fatalf("foreign read accepted: %d", rec.Code)

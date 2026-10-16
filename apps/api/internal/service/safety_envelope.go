@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bodysense/api/internal/domain/safety"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -216,7 +217,7 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 	sort.Slice(restrictions, func(i, j int) bool { return restrictions[i].ID.String() < restrictions[j].ID.String() })
 	for _, row := range restrictions {
 		key := row.SafetyScreenID.String() + ":" + row.Concept
-		if row.UserID != snapshot.UserID || row.ID == uuid.Nil || row.CreatedRevision <= 0 || row.CreatedRevision > snapshot.CurrentRevision || !positive[key] || row.PolicyRevision != model.SafetyScreenRestrictionPolicyV1 || row.RiskLevel != "restricted" || row.ScopeKind != "all_training" || row.LiftPolicy != "professional_clearance" {
+		if row.UserID != snapshot.UserID || row.CreatedRevision > snapshot.CurrentRevision || !positive[key] || row.PolicyRevision != model.SafetyScreenRestrictionPolicyV1 || !safety.ValidateRestriction(gateRestriction(row)) {
 			return envelope, fmt.Errorf("invalid native safety restriction")
 		}
 		if row.Active != (row.Resolution == nil || !row.ClearanceAvailable) {

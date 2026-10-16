@@ -92,7 +92,7 @@ func TestAgentBodyContextSafetyScreenStates(t *testing.T) {
 			}}
 			if test.positive {
 				screen := repo.memoryBodyContextLedger.screens[0]
-				repo.restrictions = []model.SafetyRestrictionRecord{{SafetyRestriction: model.SafetyRestriction{ID: uuid.New(), UserID: owner, SafetyScreenID: screen.ID, Concept: "numbness", PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted", ScopeKind: "all_training", LiftPolicy: "professional_clearance", CreatedRevision: 3}, Active: true}}
+				repo.restrictions = []model.SafetyRestrictionRecord{{SafetyRestriction: model.SafetyRestriction{ID: uuid.New(), UserID: owner, SafetyScreenID: screen.ID, Concept: "numbness", PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted", ScopeKind: "all_training", LiftPolicy: "professional_clearance", CreatedRevision: 3, ValidFrom: screen.RecordedAt}, Active: true}}
 			}
 			view, err := svc.GetAgentBodyContext(context.Background(), owner)
 			if err != nil {

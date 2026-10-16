@@ -49,6 +49,7 @@ DROP TABLE IF EXISTS
     public.runs,
     public.runtime_events,
     public.safety_resolutions,
+    public.safety_restriction_exercises,
     public.safety_restrictions,
     public.safety_screens,
     public.statement_evidence,

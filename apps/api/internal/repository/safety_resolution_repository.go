@@ -154,6 +154,17 @@ func (r *BodyStateRepository) ListSafetyRestrictions(ctx context.Context, owner 
 		if err := tx.Where("user_id=?", owner).Order("created_revision, id").Find(&rows).Error; err != nil {
 			return err
 		}
+		var exercises []model.SafetyRestrictionExercise
+		if err := tx.Where("user_id=?", owner).Order("restriction_id, exercise_id").Find(&exercises).Error; err != nil {
+			return err
+		}
+		scoped := map[uuid.UUID][]string{}
+		for _, exercise := range exercises {
+			if exercise.UserID != owner {
+				return fmt.Errorf("safety restriction exercise owner mismatch")
+			}
+			scoped[exercise.RestrictionID] = append(scoped[exercise.RestrictionID], exercise.ExerciseID)
+		}
 		var resolutions []model.SafetyResolution
 		if err := tx.Where("user_id=?", owner).Find(&resolutions).Error; err != nil {
 			return err
@@ -180,11 +191,22 @@ func (r *BodyStateRepository) ListSafetyRestrictions(ctx context.Context, owner 
 			if row.UserID != owner || row.CreatedRevision > head.CurrentRevision {
 				return fmt.Errorf("safety restriction owner/revision mismatch")
 			}
+			row.ExerciseIDs = scoped[row.ID]
+			delete(scoped, row.ID)
+			if row.ExerciseIDs == nil {
+				row.ExerciseIDs = []string{}
+			}
+			if (row.ScopeKind == "exercise") != (len(row.ExerciseIDs) > 0) {
+				return fmt.Errorf("safety restriction exercise scope mismatch")
+			}
 			resolution := resolved[row.ID]
 			if resolution != nil && resolution.Revision <= row.CreatedRevision {
 				return fmt.Errorf("invalid safety resolution revision")
 			}
 			output.Restrictions = append(output.Restrictions, model.SafetyRestrictionRecord{SafetyRestriction: row, Resolution: resolution, ClearanceAvailable: available[row.ID], Active: resolution == nil || !available[row.ID]})
+		}
+		if len(scoped) > 0 {
+			return fmt.Errorf("orphan safety restriction exercise scope")
 		}
 		return nil
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
