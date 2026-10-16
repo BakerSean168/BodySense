@@ -185,8 +185,7 @@ def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
 
     The v3 safety screen references a committed record_body_state fact
     (``fact_ref``); Go resolves it and writes the canonical binding, stripping
-    anything it cannot resolve. The legacy seed binding is ephemeral runtime
-    state for the pre-v3 runtime only and never reaches Go persistence.
+    anything it cannot resolve. No seed-based binding is accepted.
     """
     if not isinstance(raw, dict):
         return None
@@ -213,36 +212,7 @@ def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
             "fact_ref": {"tool_call_id": tool_call_id, "index": index},
             "field_map": {"safety_signals": "safety_signals"},
         }
-    seed_info = raw.get("seed_info")
-    field_map = raw.get("field_map")
-    if not isinstance(seed_info, dict) or not isinstance(field_map, dict):
-        return None
-    normalized_field_map: dict[str, str] = {}
-    allowed_targets = {
-        "duration",
-        "trigger",
-        "relief",
-        "severity",
-        "radiation",
-        "functional_impact",
-        "neurological_signs",
-        "onset",
-        "additional_notes",
-        "safety_signals",
-    }
-    for key, target in field_map.items():
-        source_key = str(key).strip()
-        target_key = str(target).strip()
-        if source_key and target_key in allowed_targets:
-            normalized_field_map[source_key] = target_key
-    if not normalized_field_map:
-        return None
-    return {
-        "revision": "symptom-intake-binding-v1",
-        "capture_id": capture_id,
-        "seed_info": dict(seed_info),
-        "field_map": normalized_field_map,
-    }
+    return None
 
 
 def _build_default_context(question: str, reason: str) -> str:
