@@ -30,7 +30,7 @@ type assessmentUploadSource interface {
 }
 
 type assessmentBodyStateSource interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
+	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
 	AddAssessmentObservation(ctx context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 }
 
@@ -148,7 +148,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if err != nil {
 		return nil, fmt.Errorf("encode assessment profile: %w", err)
 	}
-	bodySnapshot, err := s.bodyState.GetSnapshot(ctx, userID, 20)
+	bodySnapshot, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get assessment BodyState: %w", err)
 	}

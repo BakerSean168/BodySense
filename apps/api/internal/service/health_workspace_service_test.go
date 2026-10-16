@@ -11,9 +11,11 @@ import (
 )
 
 func TestWorkspaceCapabilitiesSafetyBlocksOrdinaryReasoningAndExecution(t *testing.T) {
+	owner := uuid.New()
 	caps := deriveWorkspaceCapabilities(
-		&BodyStateSnapshot{
-			Facts:       []model.BodyStateFact{{Kind: "red_flags"}},
+		&BodyStateReadModel{
+			UserID: owner, CurrentRevision: 2,
+			Facts:       []model.BodyFact{{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1}},
 			SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`),
 		},
 		&model.DiagnosisAnalysisRecord{
@@ -44,7 +46,7 @@ func TestWorkspaceCapabilitiesExposeProposalAcceptanceWithoutMakingItCurrent(t *
 	analysisID := uuid.New()
 	candidateID := uuid.New()
 	caps := deriveWorkspaceCapabilities(
-		&BodyStateSnapshot{CurrentRevision: 7, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
+		screenedWorkspaceBodyState(7),
 		&model.DiagnosisAnalysisRecord{
 			ID: analysisID, Status: "completed",
 			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
@@ -68,7 +70,7 @@ func TestWorkspaceCapabilitiesRequireCandidateAssessmentForTreatment(t *testing.
 	analysisID := uuid.New()
 	candidateID := uuid.New()
 	caps := deriveWorkspaceCapabilities(
-		&BodyStateSnapshot{CurrentRevision: 7, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
+		screenedWorkspaceBodyState(7),
 		&model.DiagnosisAnalysisRecord{
 			ID: analysisID, Status: "completed",
 			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
@@ -91,7 +93,7 @@ func TestWorkspaceCapabilitiesRequireCandidateAssessmentForTreatment(t *testing.
 func TestWorkspaceCapabilitiesRejectPotentiallyStaleDiagnosisForTreatment(t *testing.T) {
 	candidateID := uuid.New()
 	caps := deriveWorkspaceCapabilities(
-		&BodyStateSnapshot{CurrentRevision: 8, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
+		screenedWorkspaceBodyState(8),
 		&model.DiagnosisAnalysisRecord{
 			ID: uuid.New(), Status: "completed",
 			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
@@ -112,7 +114,7 @@ func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *tes
 	candidateID := uuid.New()
 	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
 		return deriveWorkspaceCapabilities(
-			&BodyStateSnapshot{CurrentRevision: 7, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
+			screenedWorkspaceBodyState(7),
 			&model.DiagnosisAnalysisRecord{
 				ID: analysisID, Status: "completed",
 				Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
@@ -157,7 +159,6 @@ func TestWorkspaceActionsOpenTrainingTargetsCanonicalTreatmentView(t *testing.T)
 func TestWorkspaceTrendsPreserveAssociationOnlyOutcome(t *testing.T) {
 	now := time.Now().UTC()
 	trends := deriveWorkspaceTrends(
-		&BodyStateSnapshot{},
 		[]model.Outcome{{
 			ID: uuid.New(), ConcernKey: "region:neck", BodyRegion: "颈肩",
 			Kind: "symptom_change", SourceType: "training_feedback",
@@ -170,5 +171,25 @@ func TestWorkspaceTrendsPreserveAssociationOnlyOutcome(t *testing.T) {
 	}
 	if trends[0].Points[0].CausalityLevel != "association_only" {
 		t.Fatal("trend projection must preserve causality caveat")
+	}
+}
+
+func screenedWorkspaceBodyState(revision int64) *BodyStateReadModel {
+	owner := uuid.New()
+	factID := uuid.New()
+	return &BodyStateReadModel{UserID: owner, CurrentRevision: revision, Facts: []model.BodyFact{{ID: factID, UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1}}, SafetyScreens: []model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyFactID: factID, BodyStateRevision: revision}}}
+}
+
+func TestWorkspaceCapabilitiesIncompleteSafetyBlocksTraining(t *testing.T) {
+	snapshot := screenedWorkspaceBodyState(7)
+	snapshot.SafetyScreens = nil
+	caps := deriveWorkspaceCapabilities(snapshot, nil, nil, nil,
+		&model.Treatment{Status: model.TreatmentStatusActive, Current: &model.TreatmentRevision{AcceptanceState: model.TreatmentAcceptanceAccepted}},
+		&model.TrainingPlan{Status: "active"}, nil)
+	if caps.CanExecuteTreatment || caps.CanAcceptTreatment || caps.CanGenerateTreatment {
+		t.Fatalf("unscreened native symptoms must block training: %+v", caps)
+	}
+	if !caps.CanContinueConsultation || !caps.CanRequestDiagnosis {
+		t.Fatalf("incomplete screening must still allow information collection: %+v", caps)
 	}
 }

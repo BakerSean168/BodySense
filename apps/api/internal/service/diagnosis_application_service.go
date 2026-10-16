@@ -119,7 +119,7 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	conversationID uuid.UUID,
 	profileJSON json.RawMessage,
 ) (map[string]any, *DiagnosisApplicationError) {
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 50)
+	snapshot, err := s.bodyState.GetBodyState(ctx, userID, 50)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to load body state", err)
 	}
@@ -286,7 +286,7 @@ func structuredDiagnosisPreflight(envelope *SafetyEnvelopeV2, revision int64, co
 }
 
 func (s *DiagnosisApplicationService) preAgentSafetyBlock(
-	snapshot *BodyStateSnapshot,
+	snapshot *BodyStateReadModel,
 	configurationID string,
 	policyRevision string,
 	route DiagnosisRouteSelection,

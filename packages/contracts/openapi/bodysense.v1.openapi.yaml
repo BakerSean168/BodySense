@@ -519,7 +519,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BodyStateSnapshot'
+                $ref: '#/components/schemas/BodyStateReadModel'
         '400':
           $ref: '#/components/responses/InvalidRequest'
         '401':
@@ -4931,40 +4931,7 @@ components:
           format: date-time
         updated_at: *id006
     HealthWorkspaceBodyState:
-      type: object
-      additionalProperties: false
-      required:
-      - current_revision
-      - safety_state
-      - facts
-      - pending_facts
-      - observations
-      - pending_observations
-      - recent_revisions
-      properties:
-        current_revision: *id005
-        safety_state:
-          $ref: '#/components/schemas/JsonObject'
-        facts:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateFact'
-        pending_facts:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateFact'
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateObservation'
-        pending_observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateObservation'
-        recent_revisions:
-          type: array
-          items:
-            $ref: '#/components/schemas/BodyStateRevision'
+      $ref: '#/components/schemas/BodyStateReadModel'
     DiagnosisCandidate:
       type: object
       additionalProperties: false
@@ -5956,17 +5923,14 @@ components:
           type: string
         message:
           type: string
-    BodyStateSnapshot:
+    BodyStateReadModel:
       type: object
       additionalProperties: false
-      required:
-      - user_id
-      - current_revision
-      - safety_state
-      - facts
-      - observations
+      required: [user_id, current_revision, safety_state, facts, observations, episodes, hypotheses, recent_revisions]
       properties:
-        user_id: *id001
+        user_id:
+          type: string
+          format: uuid
         current_revision:
           type: integer
           format: int64
@@ -5976,11 +5940,19 @@ components:
         facts:
           type: array
           items:
-            $ref: '#/components/schemas/BodyStateFact'
+            $ref: '#/components/schemas/BodyFactRecord'
         observations:
           type: array
           items:
-            $ref: '#/components/schemas/BodyStateObservation'
+            $ref: '#/components/schemas/BodyObservationRecord'
+        episodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyEpisodeRecord'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyHypothesisRecord'
         recent_revisions:
           type: array
           items:

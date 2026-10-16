@@ -92,35 +92,3 @@ func TestLifestyleUpdateIsPatchLikeAndKeepsHistory(t *testing.T) {
 		t.Fatalf("a real habit change appends history: %#v", store.ledger.facts)
 	}
 }
-
-func TestBodyContextProjectsIntoSnapshotReplacingLegacyRows(t *testing.T) {
-	store := &memoryBodyContextStore{}
-	owner := uuid.New()
-	height := 170.0
-	injury := "右肩旧伤"
-	if _, err := store.UpdateBodyContext(context.Background(), owner, nil, BodyContextUpdate{
-		HeightCm: &height, Injury: &injury,
-		Lifestyle: map[string]*LifestyleSectionInput{"sleep": {Summary: "早睡"}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	current, err := store.CurrentBodyContext(context.Background(), owner)
-	if err != nil {
-		t.Fatal(err)
-	}
-	snapshot := &BodyStateSnapshot{}
-	projectBodyContextIntoSnapshot(snapshot, current)
-	kinds := map[string]string{}
-	for _, fact := range snapshot.Facts {
-		kinds[fact.Kind] = fact.Value
-	}
-	if kinds["history.injury_summary"] != "右肩旧伤" || kinds["lifestyle.sleep"] != "早睡" {
-		t.Fatalf("snapshot facts: %#v", snapshot.Facts)
-	}
-	if len(snapshot.Observations) != 1 || snapshot.Observations[0].Kind != "anthropometry.height" {
-		t.Fatalf("snapshot observations: %#v", snapshot.Observations)
-	}
-	if snapshot.CurrentRevision != current.Revision {
-		t.Fatalf("snapshot revision must include ledger revision")
-	}
-}

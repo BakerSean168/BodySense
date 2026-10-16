@@ -46,17 +46,14 @@ func (s fakeAssessmentUploadSource) GetByUserID(context.Context, uuid.UUID) ([]m
 }
 
 type fakeAssessmentBodyState struct {
-	facts             []model.BodyStateFact
-	stateObservations []model.BodyStateObservation
+	facts             []AgentBodyFact
+	stateObservations []AgentBodyObservation
 	observations      []model.BodyStateObservation
 	fail              bool
 }
 
-func (s *fakeAssessmentBodyState) GetSnapshot(_ context.Context, userID uuid.UUID, _ int) (*BodyStateSnapshot, error) {
-	return &BodyStateSnapshot{
-		UserID: userID, SafetyState: json.RawMessage(`{}`),
-		Facts: s.facts, Observations: s.stateObservations,
-	}, nil
+func (s *fakeAssessmentBodyState) GetAgentBodyContext(_ context.Context, userID uuid.UUID) (*AgentBodyContext, error) {
+	return &AgentBodyContext{UserID: userID, Facts: s.facts, Observations: s.stateObservations}, nil
 }
 
 func (s *fakeAssessmentBodyState) AddAssessmentObservation(_ context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
@@ -81,8 +78,8 @@ func (r fakeAssessmentReasoner) GenerateAssessment(context.Context, AssessmentGe
 }
 
 func exerciseAssessmentBodyState() *fakeAssessmentBodyState {
-	return &fakeAssessmentBodyState{facts: []model.BodyStateFact{{
-		Kind: model.BodyStateFactKindLifestyleExercise, Value: "健身；频率：1-2",
+	return &fakeAssessmentBodyState{facts: []AgentBodyFact{{
+		Kind: "lifestyle", Statement: "健身；频率：1-2", Details: json.RawMessage(`{"habit_type":"exercise"}`),
 	}}}
 }
 
@@ -276,13 +273,9 @@ func TestAssessmentRejectsUnsupportedPostureObservationWithoutVisualEvidence(t *
 
 func TestAssessmentDoesNotReuseUnverifiedBodyStateAsEvidence(t *testing.T) {
 	userID := uuid.New()
-	bodyState := &fakeAssessmentBodyState{facts: []model.BodyStateFact{{
-		Kind:                  model.BodyStateFactKindLifestyleExercise,
-		Value:                 "健身；频率：1-2",
-		ReviewState:           "unverified",
-		LifecycleState:        "active",
-		ExcludedFromReasoning: true,
-	}}}
+	// Unadmitted Assessment candidates are absent from the native agent view.
+	bodyState := &fakeAssessmentBodyState{}
+
 	svc := NewAssessmentService(
 		&fakeAssessmentRepository{},
 		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},

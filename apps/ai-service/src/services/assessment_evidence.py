@@ -84,6 +84,8 @@ def _clean_mapping(value: Any) -> dict[str, Any]:
 
 
 def _reasoning_eligible_body_state_item(item: dict[str, Any]) -> bool:
+    if "assertion_status" in item and item["assertion_status"] != "asserted":
+        return False
     if item.get("excluded_from_reasoning") is True:
         return False
     review_state = str(item.get("review_state") or "").strip()
@@ -95,10 +97,36 @@ def _reasoning_eligible_body_state_item(item: dict[str, Any]) -> bool:
     return True
 
 
+def _body_state_category(item: dict[str, Any]) -> str:
+    """Classify coverage without rewriting the native record or source grade."""
+    kind = str(item.get("kind") or "")
+    if kind == "lifestyle":
+        habit = _clean_mapping(item.get("details")).get("habit_type")
+        if isinstance(habit, str) and habit:
+            return f"lifestyle.{habit}"
+    if kind in {"height", "weight"}:
+        return f"anthropometry.{kind}"
+    return kind
+
+
 def _compact_body_state_value(item: dict[str, Any]) -> dict[str, Any]:
     return {
         key: item[key]
-        for key in ("kind", "value", "details", "body_region", "method", "review_state")
+        for key in (
+            "kind",
+            "value",
+            "details",
+            "body_region",
+            "method",
+            "review_state",
+            "statement",
+            "raw_value",
+            "raw_unit",
+            "authorship",
+            "observed_at",
+            "source",
+            "temporal",
+        )
         if key in item
     }
 
@@ -230,7 +258,7 @@ def build_assessment_evidence_catalog(
         catalog[ref] = AssessmentEvidenceItem(
             ref,
             "body_state",
-            str(item.get("kind") or "fact"),
+            _body_state_category(item) or "fact",
             _compact_body_state_value(item),
         )
 
@@ -242,7 +270,7 @@ def build_assessment_evidence_catalog(
         catalog[ref] = AssessmentEvidenceItem(
             ref,
             "body_state",
-            str(item.get("kind") or "observation"),
+            _body_state_category(item) or "observation",
             _compact_body_state_value(item),
         )
 
@@ -488,7 +516,9 @@ def _render_body_state(item: AssessmentEvidenceItem) -> tuple[str, str, str]:
     raw_value = data.get("value")
     body_region = str(data.get("body_region") or "").strip()
     label = _BODY_STATE_LABELS.get(item.kind, "身体状态记录")
-    if item.kind.startswith("anthropometry."):
+    if isinstance(data.get("statement"), str) and data["statement"]:
+        text = data["statement"]
+    elif item.kind.startswith("anthropometry."):
         text = _measurement_text(raw_value)
     else:
         text = _json_text(raw_value)

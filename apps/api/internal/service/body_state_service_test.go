@@ -333,14 +333,14 @@ func TestUserObservationIsConfirmedAtCreation(t *testing.T) {
 	}
 }
 
-func TestBodyStateSnapshotNormalizesEmptyCollections(t *testing.T) {
+func TestBodyStateReadModelNormalizesEmptyCollections(t *testing.T) {
 	repo := &fakeBodyStateRepository{current: &model.BodyState{
 		UserID: uuid.New(), SafetyState: datatypes.JSON(`{}`),
 	}}
 	svc := NewBodyStateService(repo)
-	snapshot, err := svc.GetSnapshot(context.Background(), repo.current.UserID, 30)
+	snapshot, err := svc.GetBodyState(context.Background(), repo.current.UserID, 30)
 	if err != nil {
-		t.Fatalf("GetSnapshot returned error: %v", err)
+		t.Fatalf("GetBodyState returned error: %v", err)
 	}
 	if snapshot.Facts == nil || snapshot.Observations == nil || snapshot.RecentRevisions == nil {
 		t.Fatalf("BodyState JSON collections must be empty arrays, not nil: %#v", snapshot)

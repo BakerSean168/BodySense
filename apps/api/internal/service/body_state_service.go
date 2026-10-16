@@ -43,20 +43,6 @@ type bodyStateRepository interface {
 	GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error)
 }
 
-// BodyStateSnapshot is the stable business context shared with Consultation and
-// Diagnosis. Revisions are newest-first and bounded so context remains finite.
-type BodyStateSnapshot struct {
-	UserID          uuid.UUID                    `json:"user_id"`
-	CurrentRevision int64                        `json:"current_revision"`
-	SafetyState     json.RawMessage              `json:"safety_state"`
-	Facts           []model.BodyStateFact        `json:"facts"`
-	Observations    []model.BodyStateObservation `json:"observations"`
-	RecentRevisions []model.BodyStateRevision    `json:"recent_revisions,omitempty"`
-	// SafetyScreens feed the Go Safety envelope only; they are not sent to
-	// agents or browsers as raw rows.
-	SafetyScreens []model.SafetyScreen `json:"-"`
-}
-
 // BodyStateService is the application boundary around the user-scoped aggregate.
 // Producers (chat, workbench, posture analysis) call this service; they never own
 // BodyState persistence themselves.
@@ -77,46 +63,6 @@ func NewBodyStateService(repo bodyStateRepository) *BodyStateService {
 func (s *BodyStateService) WithBodyRegionIDValidator(validator BodyRegionIDValidator) *BodyStateService {
 	s.bodyRegionIDValidator = validator
 	return s
-}
-
-func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error) {
-	state, err := s.repo.GetCurrent(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get current body state: %w", err)
-	}
-	revisions, err := s.repo.ListRecentRevisions(ctx, userID, historyLimit)
-	if err != nil {
-		return nil, fmt.Errorf("list body state revisions: %w", err)
-	}
-	safety := json.RawMessage(state.SafetyState)
-	if len(safety) == 0 {
-		safety = json.RawMessage(`{}`)
-	}
-	facts := state.Facts
-	if facts == nil {
-		facts = []model.BodyStateFact{}
-	}
-	observations := state.Observations
-	if observations == nil {
-		observations = []model.BodyStateObservation{}
-	}
-	if revisions == nil {
-		revisions = []model.BodyStateRevision{}
-	}
-	snapshot := &BodyStateSnapshot{
-		UserID:          userID,
-		CurrentRevision: state.CurrentRevision,
-		SafetyState:     safety,
-		Facts:           facts,
-		Observations:    observations,
-		RecentRevisions: revisions,
-	}
-	current, err := loadBodyContext(ctx, s.repo, userID)
-	if err != nil {
-		return nil, err
-	}
-	projectBodyContextIntoSnapshot(snapshot, current)
-	return snapshot, nil
 }
 
 // CurrentBodyContext returns the user's reported metrics, injury history and

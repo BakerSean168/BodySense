@@ -11,12 +11,13 @@ const validWorkspaceResponse = {
   generated_at: "2026-09-13T08:00:00Z",
   profile_ready: true,
   body_state: {
+    user_id: "55555555-5555-4555-8555-555555555555",
     current_revision: 0,
     safety_state: {},
     facts: [],
-    pending_facts: [],
     observations: [],
-    pending_observations: [],
+    episodes: [],
+    hypotheses: [],
     recent_revisions: [],
   },
   treatment_revisions: [],
@@ -59,7 +60,7 @@ describe("workspaceApi OpenAPI boundary", () => {
     expect("body_state" in result).toBe(false);
   });
 
-  it("rejects the old imaginary workspace body_state.user_id shape", async () => {
+  it("rejects an invalid native body owner", async () => {
     authFetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({

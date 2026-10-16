@@ -145,10 +145,8 @@ func TestAgentBodyContextSectionsAndLabels(t *testing.T) {
 		{ID: uuid.New(), UserID: owner, Statement: "not a user guess", Source: model.BodyHypothesisSource{Actor: "agent"}, AssertionStatus: "asserted", CreatedRevision: 4},
 	}
 	notes := "中等阻力"
-	foreign := uuid.New()
 	svc.WithAgentContextSources(nil, fakeAgentEquipment{assets: []model.EquipmentAsset{
 		{ID: uuid.New(), UserID: owner, DisplayName: "弹力带", AccessKind: "owned", Notes: &notes},
-		{ID: uuid.New(), UserID: foreign, DisplayName: "foreign bar", AccessKind: "owned"},
 	}})
 
 	view, err := svc.GetAgentBodyContext(context.Background(), owner)
@@ -219,5 +217,31 @@ func TestAgentBodyContextEmptyOwner(t *testing.T) {
 	if view.CurrentRevision != 0 || !view.RecordsAvailable || view.Safety.Status != AgentSafetyNoCurrentSymptoms || view.Safety.CoverageComplete ||
 		view.Facts == nil || view.Equipment == nil || view.UserHypotheses == nil {
 		t.Fatalf("empty owner view: %#v", view)
+	}
+}
+
+func TestAgentBodyContextRejectsForeignRows(t *testing.T) {
+	owner, foreign := uuid.New(), uuid.New()
+	for _, section := range []string{"facts", "observations", "episodes", "hypotheses", "equipment", "screens"} {
+		t.Run(section, func(t *testing.T) {
+			svc, repo := agentTestService(owner, 3, nil)
+			switch section {
+			case "facts":
+				repo.facts = []model.BodyFact{agentTestFact(foreign, "symptom", "foreign", 1, `{}`, `[]`)}
+			case "observations":
+				repo.observations = []model.BodyObservationRecord{{ID: uuid.New(), UserID: foreign, Kind: "weight", AssertionStatus: "asserted"}}
+			case "episodes":
+				repo.episodes = []model.EpisodeRecord{{ID: uuid.New(), UserID: foreign, IdentityStatus: "current"}}
+			case "hypotheses":
+				repo.hypotheses = []model.BodyHypothesisRecord{{ID: uuid.New(), UserID: foreign, AssertionStatus: "asserted", Source: model.BodyHypothesisSource{Actor: "user"}}}
+			case "equipment":
+				svc.WithAgentContextSources(nil, fakeAgentEquipment{assets: []model.EquipmentAsset{{ID: uuid.New(), UserID: foreign}}})
+			case "screens":
+				repo.memoryBodyContextLedger.screens = []model.SafetyScreen{{ID: uuid.New(), UserID: foreign, BodyStateRevision: 1}}
+			}
+			if _, err := svc.GetAgentBodyContext(context.Background(), owner); err == nil {
+				t.Fatal("owner violation must fail the read")
+			}
+		})
 	}
 }

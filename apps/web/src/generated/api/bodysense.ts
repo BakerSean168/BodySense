@@ -27,8 +27,8 @@ import {
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
   BodyStateObservationMutationResponse,
+  BodyStateReadModel,
   BodyStateRevisionMutationResponse,
-  BodyStateSnapshot,
   CancelConsultationRunResponse,
   ConsultationRunDecision,
   ConsultationSessionResponse,
@@ -117,8 +117,8 @@ import type {
   BodyStateFactMutationResponseOutput,
   BodyStateObservationInput,
   BodyStateObservationMutationResponseOutput,
+  BodyStateReadModelOutput,
   BodyStateRevisionMutationResponseOutput,
-  BodyStateSnapshotOutput,
   CancelConsultationRunRequest,
   CancelConsultationRunResponseOutput,
   ClientDiagnostic,
@@ -1132,7 +1132,7 @@ export const getGetBodyStateUrl = () => {
 /**
  * @summary Get the current durable BodyState snapshot.
  */
-export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateSnapshotOutput> => {
+export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateReadModelOutput> => {
 
   const res = await (fetchFn ?? fetch)(getGetBodyStateUrl(),
   {
@@ -1147,14 +1147,14 @@ export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof glob
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   if (!res.ok) {
 
-    const err: globalThis.Error & {info?: BodyStateSnapshot, status?: number} = new globalThis.Error();
-    const data : BodyStateSnapshot = body ? JSON.parse(body) : {}
+    const err: globalThis.Error & {info?: BodyStateReadModel, status?: number} = new globalThis.Error();
+    const data : BodyStateReadModel = body ? JSON.parse(body) : {}
     err.info = data;
     err.status = res.status;
     throw err;
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateSnapshot.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? BodyStateReadModel.parse(parsedBody) : parsedBody
   return data
 }
 

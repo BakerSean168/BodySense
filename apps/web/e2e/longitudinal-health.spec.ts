@@ -202,26 +202,13 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   const conversationId = conversationsPayload.conversations[0]?.id;
   expect(conversationId).toBeTruthy();
 
-  const factResponse = await request.post(
-    `${apiBase}/api/v1/body-state/records`,
-    {
-      headers,
-      data: {
-        idempotency_key: `e2e-fact-${Date.now()}`,
-        expected_revision: 0,
-        facts: [
-          {
-            kind: "symptom",
-            statement: "久坐后颈肩酸胀",
-            body_region_ids: ["neck"],
-            temporal: { precision: "unknown" },
-            details: {},
-          },
-        ],
-      },
-    },
+  // One original symptom and its own Go-bound checklist provide coverage.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    headers,
+    String(conversationId),
   );
-  expect(factResponse.ok()).toBeTruthy();
 
   const staleRevisionWrite = await request.post(
     `${apiBase}/api/v1/body-state/records`,
@@ -262,14 +249,6 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     concurrentResponses.map((response) => response.status()).sort(),
   ).toEqual([200, 409]);
   await Promise.all(concurrentResponses.map((response) => response.text()));
-
-  // Safety coverage comes only from the user's structured intake answer.
-  await completeStructuredSafetyIntake(
-    request,
-    apiBase,
-    headers,
-    String(conversationId),
-  );
 
   const diagnosisResponse = await request.post(
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
@@ -462,11 +441,11 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
       data: {
         notes: "E2E worsening after session",
         exercises: [],
-        symptom_changes: "颈肩酸胀加重",
+        symptom_changes: "肩膀不适加重",
         training_feeling: "uncomfortable",
         difficulties: "pain",
-        body_region: "颈肩",
-        concern_key: "region:neck",
+        body_region: "肩部",
+        concern_key: "general",
         trend: "worsening",
       },
     },

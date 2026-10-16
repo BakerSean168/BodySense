@@ -56,4 +56,18 @@ export async function completeStructuredSafetyIntake(
   const answerBody = await answer.text();
   expect(answer.ok(), answerBody).toBeTruthy();
   expect(answerBody).toContain("event: stream.done");
+
+  const records = await request.get(`${apiBase}/api/v1/body-state/records`, {
+    headers,
+  });
+  expect(records.ok(), await records.text()).toBeTruthy();
+  const body = (await records.json()) as {
+    facts: Array<{ id: string; statement: string; created_revision: number }>;
+  };
+  const symptoms = body.facts.filter(
+    (fact) => fact.statement === "我昨天肩膀不舒服。",
+  );
+  // The accepted checklist must screen the committed fact without duplicating it.
+  expect(symptoms).toHaveLength(1);
+  return symptoms[0];
 }

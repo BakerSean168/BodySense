@@ -98,37 +98,15 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(conversations.conversations).toHaveLength(1);
   const conversationId = conversations.conversations[0].id;
 
-  const factResponse = await expectJson<{
-    revision: number;
-    fact_ids: string[];
-  }>(
-    await request.post(`${apiBase}/api/v1/body-state/records`, {
-      headers: authHeaders,
-      data: {
-        idempotency_key: `e2e-fact-${crypto.randomUUID()}`,
-        expected_revision: 0,
-        facts: [
-          {
-            kind: "symptom",
-            statement: "久坐后颈肩酸胀",
-            body_region_ids: ["neck"],
-            temporal: { precision: "unknown" },
-            details: {},
-          },
-        ],
-      },
-    }),
-    "create BodyState fact",
-  );
-  expect(factResponse.revision).toBe(1);
-  expect(factResponse.fact_ids).toHaveLength(1);
-  // Safety coverage comes only from the user's structured intake answer.
-  await completeStructuredSafetyIntake(
+  // Capture and screen the same symptom. Screening another symptom must not
+  // authorize a separately inserted, unscreened fact.
+  const symptom = await completeStructuredSafetyIntake(
     request,
     apiBase,
     authHeaders,
     conversationId,
   );
+  expect(symptom.created_revision).toBe(1);
 
   const diagnosis = await expectJson<{
     analysis_id: string;
@@ -143,7 +121,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "generate DiagnosisAnalysis",
   );
   expect(diagnosis.candidates).toHaveLength(1);
-  expect(diagnosis.candidates[0].concern_key).toBe("region:neck");
+  // Chat intake preserves the statement without guessing a canonical region.
+  expect(diagnosis.candidates[0].concern_key).toBe("general");
   expect(diagnosis.freshness.state).toBe("fresh");
 
   await expectJson(
@@ -350,13 +329,13 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       {
         headers: authHeaders,
         data: {
-          notes: "完成温和训练后，颈肩感觉更轻松。",
+          notes: "完成温和训练后，肩膀感觉更轻松。",
           exercises: [{ name: "下巴微收", completed: true }],
-          symptom_changes: "久坐后的颈肩酸胀有所改善",
+          symptom_changes: "肩膀不适有所改善",
           training_feeling: "轻松",
           difficulties: "",
-          body_region: "颈部",
-          concern_key: "region:neck",
+          body_region: "肩部",
+          concern_key: "general",
           trend: "improving",
         },
       },
@@ -408,14 +387,12 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "list V2 body facts",
   );
   expect(
-    records.facts.find((fact) => fact.statement === "久坐后的颈肩酸胀有所改善"),
+    records.facts.find((fact) => fact.statement === "肩膀不适有所改善"),
   ).toMatchObject({
     kind: "symptom",
     created_revision: feedback.result.outcome.body_state_revision,
   });
-  expect(
-    records.facts.some((fact) => fact.id === factResponse.fact_ids[0]),
-  ).toBe(true);
+  expect(records.facts.some((fact) => fact.id === symptom.id)).toBe(true);
   expect(finalWorkspace.treatment.status).toBe("review_recommended");
   expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);

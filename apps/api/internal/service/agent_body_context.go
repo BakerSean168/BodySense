@@ -15,7 +15,7 @@ import (
 
 // AgentBodyContextSchemaV1 names the native V2 BodyState view that Go hands to
 // AI agents (consultation turns, Treatment generation). It replaces the legacy
-// BodyStateSnapshot projection for those inputs.
+// snapshot projection for those inputs.
 const AgentBodyContextSchemaV1 = "agent-body-context-v1"
 
 const (
@@ -239,7 +239,10 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		}
 		for index := range facts.Facts {
 			fact := facts.Facts[index]
-			if fact.UserID != owner || fact.AssertionStatus != "asserted" {
+			if fact.UserID != owner {
+				return nil, fmt.Errorf("body fact owner mismatch")
+			}
+			if fact.AssertionStatus != "asserted" {
 				continue
 			}
 			if key := bodyContextFactKey(fact); key != "" {
@@ -292,7 +295,10 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			return nil, err
 		}
 		for _, observation := range observations.Observations {
-			if observation.UserID != owner || observation.AssertionStatus != "asserted" || seenObservationKinds[observation.Kind] {
+			if observation.UserID != owner {
+				return nil, fmt.Errorf("body observation owner mismatch")
+			}
+			if observation.AssertionStatus != "asserted" || seenObservationKinds[observation.Kind] {
 				continue
 			}
 			seenObservationKinds[observation.Kind] = true
@@ -321,7 +327,10 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		return nil, err
 	}
 	for _, episode := range episodes.Episodes {
-		if episode.UserID != owner || episode.IdentityStatus != "current" {
+		if episode.UserID != owner {
+			return nil, fmt.Errorf("body episode owner mismatch")
+		}
+		if episode.IdentityStatus != "current" {
 			continue
 		}
 		if len(view.Episodes) >= agentBodyContextMaxEpisodes {
@@ -350,7 +359,10 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		return nil, err
 	}
 	for _, hypothesis := range hypotheses.Hypotheses {
-		if hypothesis.UserID != owner || hypothesis.AssertionStatus != "asserted" || hypothesis.Source.Actor != "user" {
+		if hypothesis.UserID != owner {
+			return nil, fmt.Errorf("body hypothesis owner mismatch")
+		}
+		if hypothesis.AssertionStatus != "asserted" || hypothesis.Source.Actor != "user" {
 			continue
 		}
 		if len(view.UserHypotheses) >= agentBodyContextMaxHypotheses {
@@ -371,6 +383,11 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 	if err != nil {
 		return nil, fmt.Errorf("list safety screens: %w", err)
 	}
+	for _, screen := range screens {
+		if screen.UserID != owner {
+			return nil, fmt.Errorf("safety screen owner mismatch")
+		}
+	}
 	applyAgentSafety(view, safetyProjectionInput{
 		UserID: owner, CurrentRevision: revision, SafetyState: view.SafetyState, Symptoms: symptoms, Screens: screens,
 	}, allFactsRead)
@@ -382,7 +399,7 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		}
 		for _, asset := range assets {
 			if asset.UserID != owner {
-				continue
+				return nil, fmt.Errorf("equipment owner mismatch")
 			}
 			if len(view.Equipment) >= agentBodyContextMaxEquipment {
 				view.Truncated = true
