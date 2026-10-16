@@ -1,5 +1,7 @@
 # BodySense V2 · Integration & Release Workstream
 
+> **2026-10-16 PR6 checkpoint:** Native BodyState consumer migration and old storage/API retirement are merged through #297 (`72bbe661d59b881b36e68d813595e82e01a80d62`). Post-C documentation and 25/25 full browser acceptance are recorded in [PR6 E closeout](../archive/2026-10-16-pr6-e-closeout.md). Dated checkpoints below preserve earlier gaps; do not restart retired BodyState work from them. This does not close the complete V2 product, design, Diagnosis, Trainer, assets or release gates; handoff JSON still owns readiness.
+
 Status: ACTIVE / TRACK D. [Primary program](./2026-10-13-v2-parallel-master.md) · [Readiness register](./v2-handoff-state.json) · [Existing acceptance](../../product/acceptance.md).
 
 ## Mission

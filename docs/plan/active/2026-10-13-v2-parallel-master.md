@@ -1,5 +1,7 @@
 # BodySense V2 · Parallel Full-Stack Rebuild Master Plan
 
+> **2026-10-16 PR6 checkpoint:** Native BodyState consumer migration and old storage/API retirement are merged through #297 (`72bbe661d59b881b36e68d813595e82e01a80d62`). Post-C documentation and 25/25 full browser acceptance are recorded in [PR6 E closeout](../archive/2026-10-16-pr6-e-closeout.md). Dated checkpoints below preserve earlier gaps; do not restart retired BodyState work from them. This does not close the complete V2 product, design, Diagnosis, Trainer, assets or release gates; handoff JSON still owns readiness.
+
 Status: ACTIVE / PRIMARY PROGRAM. Baseline audited 2026-10-13 (UTC). Execution owner: ChatGPT Web; Agent Fabric is the authorized transport, not a second implementation writer. The original single hourly continuation automation is disabled; per-track automations are recorded in the [active index](./README.md) (2026-10-15: Track C/D enabled, Track A/B disabled) and this plan does not change scheduler state. Latest verified alignment: [2026-10-15 audit](./2026-10-15-v2-implementation-alignment-audit.md).
 
 ## 0. 2026-10-15 user decision · Big-bang V2 rebuild (supersedes conflicting rules below)

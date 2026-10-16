@@ -1,20 +1,23 @@
 # BodySense V2 · Engineering Workstream
 
+> **2026-10-16 PR6 checkpoint:** Native BodyState consumer migration and old storage/API retirement are merged through #297 (`72bbe661d59b881b36e68d813595e82e01a80d62`). Post-C documentation and 25/25 full browser acceptance are recorded in [PR6 E closeout](../archive/2026-10-16-pr6-e-closeout.md). Dated checkpoints below preserve earlier gaps; do not restart retired BodyState work from them. This does not close the complete V2 product, design, Diagnosis, Trainer, assets or release gates; handoff JSON still owns readiness.
+
 Status: ACTIVE / TRACK C. [Primary program](./2026-10-13-v2-parallel-master.md) · [Readiness register](./v2-handoff-state.json) · [Detailed SF implementation ledger](./2026-10-13-schema-first-full-refactor.md).
 
-## Outcome and existing baseline
+## Outcome and initial 2026-10-13 baseline (historical)
 
 Build one working vertical at a time: **typed user/Agent intent → Go authentication/validation → transaction / durable evidence → authoritative receipt/outbox → React query/invalidation and visible behavior**. Keep Go as persistent domain owner, Python as proposal/extraction runtime, and React as display+intent client. Do not let Python invent trusted message/run identity, let frontend infer medical judgments, or treat RPC success as a durable business save.
 
-Current worktree `/home/dev/projects/bodysense`, branch `refactor/schema-first-v2-20261013`, baseline `ce00bc0c1`. Draft PR [#247](https://github.com/BakerSean168/BodySense/pull/247) passed 12/12 CI on that exact audited SHA. SF-10/11 are **locally accepted foundations**, not production ready. SF-12 is incomplete; remaining domains are unimplemented. No staging/production migration was run.
+At the initial 2026-10-13 checkpoint, worktree `/home/dev/projects/bodysense`, branch `refactor/schema-first-v2-20261013`, baseline `ce00bc0c1`. Draft PR [#247](https://github.com/BakerSean168/BodySense/pull/247) passed 12/12 CI on that exact audited SHA. SF-10/11 are **locally accepted foundations**, not production ready. SF-12 is incomplete; remaining domains are unimplemented. No staging/production migration was run.
 
-Existing code to preserve and build on:
+Initial foundation inventory (historical migration paths may now be consolidated into the baseline):
 
 - `apps/api/migrations/000002_body_fact_ledger.*` and `000003_message_fact_source.*`; PostgreSQL 18 integration and native migration replay passed on synthetic data.
 - `apps/api/internal/model/body_fact.go`, `service/body_fact_service.go`, `repository/body_fact_repository.go`, `transport/httpapi/body_fact_ledger.go`; Go enforces owner/source, revision, atomic receipt and idempotency.
 - `packages/contracts/openapi/bodysense.v1.openapi.yaml` + generated API/TS/Zod and policy; public authenticated `GET/POST /api/v1/body-state/records`.
 - `apps/web/src/features/profile/services/bodyFactRecordsService.ts` is an isolated typed adapter with tests, **not yet called by the real Person panel**.
-- Existing old `body_state_facts`, diagnosis, treatment, conversation and training consumers are still active. No blanket legacy deletion until the replacement has proven equivalent target behavior.
+
+Current PR6 state: legacy BodyState fact/observation/evidence storage and routes are retired through PR6-C. Diagnosis, Treatment, conversation and training still have transitional consumers; their retirement requires their own proven target verticals.
 
 ## Project boundaries and dependency rules
 

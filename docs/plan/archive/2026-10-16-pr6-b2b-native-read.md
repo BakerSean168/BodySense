@@ -1,5 +1,7 @@
 # PR6 B2b · Native V2 reads
 
+Status: COMPLETE / MERGED as [PR #290](https://github.com/BakerSean168/BodySense/pull/290), merge `d93a7d9a27ca207927058e802ed98c4b968a77b3` (2026-10-16). The local/CI-pending statements below are chronological checkpoints, not current pending work. PR6-C subsequently removed the legacy tables/API; final E acceptance is tracked in [PR6 E closeout](./2026-10-16-pr6-e-closeout.md).
+
 Scope: migrate Assessment, Diagnosis, workspace and GET `/body-state` to native
 V2 records; delete `GetSnapshot` and `projectBodyContextIntoSnapshot`.
 

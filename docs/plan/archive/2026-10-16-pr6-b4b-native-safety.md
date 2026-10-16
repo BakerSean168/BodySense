@@ -1,5 +1,9 @@
 # PR6 B4b · Native Safety restrictions and resolutions
 
+Status: COMPLETE / MERGED as [PR #296](https://github.com/BakerSean168/BodySense/pull/296), merge `4d3dc793c9f11cf02e9c9179454e4dac3fd9aaf6` (2026-10-16). The local/CI-pending statements below are chronological checkpoints, not current pending work. PR6-C subsequently removed the legacy tables/API; final E acceptance is tracked in [PR6 E closeout](./2026-10-16-pr6-e-closeout.md).
+
+Merged sub-slices: #294 `6705ca3c926739a37c3228d18990bb7d0ac3bf15`; #295 `8b2a6e6701e6a88dfa8cefa8e8a4432d11a5fefa`; #296 completed the native consumer cutover. Trainer gates remain a separate vertical.
+
 Baseline: E1 PR #293, main dd740fb650581563e4f0036891484d9ff707d9bc.
 
 Product owner confirmed on 2026-10-16: any positive result of the Go five-concept
@@ -104,7 +108,7 @@ erased evidence makes that resolution ineffective in the native projection.
   (113 operations), Web typecheck/lint and 17 relevant Vitest tests passed.
 - Fixed the shared integration fixture's unclosed database pools after the full
   suite exhausted PostgreSQL connections; the rerun passed without raising limits.
-- Exact-head CI remains required. No deployment or domain readiness claim.
+- At this local checkpoint, exact-head CI was still required before merge. No deployment or domain readiness claim.
 
 ## B4b2b: native Safety consumers
 
@@ -131,7 +135,7 @@ restrictions remain conservative. Trainer execution gates are still deferred.
   does not qualify any configuration or imply promotion readiness.
 - Fresh migration without down/replay, domain validator, checksum/history and
   plan checks passed. Web typecheck, ESLint and workspace Vitest passed.
-- Exact-head CI remains required. Full Trainer gates, clinical-document admission,
+- At this local checkpoint, exact-head CI was still required before merge. Full Trainer gates, clinical-document admission,
   final V2 E2E and release readiness remain deferred; no readiness gate is raised.
 
 ### B4b2b browser regression follow-up
@@ -146,4 +150,4 @@ own screen. Preserve that fail-closed assertion instead of weakening Safety.
 On an isolated local PG18 + Redis + deterministic Go/Python environment, the
 three tests in longitudinal-health and longitudinal-full-loop passed after these
 changes. Python 720 unit tests, ruff checks, Web typecheck/ESLint and plan checks
-also passed. The updated PR head still requires a complete fresh CI run.
+also passed. The updated PR head required a complete fresh CI run before the merge recorded above.

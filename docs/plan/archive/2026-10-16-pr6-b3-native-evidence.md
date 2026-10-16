@@ -1,5 +1,7 @@
 # PR6 B3 · Native evidence audit
 
+Status: COMPLETE / MERGED as [PR #291](https://github.com/BakerSean168/BodySense/pull/291), merge `b36364ec69ca41b3bdcdb889ed058c1676cbe918` (2026-10-16). The local/CI-pending statements below are chronological checkpoints, not current pending work. PR6-C subsequently removed the legacy tables/API; final E acceptance is tracked in [PR6 E closeout](./2026-10-16-pr6-e-closeout.md).
+
 Replace Diagnosis citation writes to `body_state_evidence` and Treatment's
 global evidence lookup with the selected analysis's immutable evidence audit.
 
