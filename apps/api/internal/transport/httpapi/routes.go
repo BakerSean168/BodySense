@@ -115,6 +115,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/body-state/hypothesis-records", wrapper.RecordBodyHypothesis)
 	protected.GET("/body-state/hypothesis-records", wrapper.ListBodyHypothesisRecords)
 	protected.POST("/body-state/hypothesis-records/:id/withdraw", wrapper.WithdrawBodyHypothesisRecord)
+	protected.POST("/body-state/hypothesis-records/:id/correct", wrapper.CorrectBodyHypothesisRecord)
 	protected.GET("/body-state/concern-groups", wrapper.ListDerivedConcernGroups)
 	// Owner-authorized explicit Episode mutations and source-backed reads;
 	// AI-driven high-confidence association has no public bypass route.

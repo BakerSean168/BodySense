@@ -10,7 +10,7 @@ import (
 
 func concernFixture() (ConcernGroupSnapshot, map[string]uuid.UUID) {
 	id := map[string]uuid.UUID{}
-	for _, k := range []string{"h1", "h2", "h3", "f1", "f2", "f3", "f4", "f5", "e1", "e2", "x"} {
+	for _, k := range []string{"h1", "h2", "h3", "f1", "f2", "f3", "f4", "f5", "e1", "e2", "o1", "o2", "x"} {
 		id[k] = uuid.New()
 	}
 	s := ConcernGroupSnapshot{
@@ -24,6 +24,12 @@ func concernFixture() (ConcernGroupSnapshot, map[string]uuid.UUID) {
 			{ID: id["f1"], CreatedRevision: 1}, {ID: id["f2"], CreatedRevision: 2},
 			{ID: id["f3"], CreatedRevision: 4}, {ID: id["f4"], CreatedRevision: 5},
 			{ID: id["f5"], CreatedRevision: 6}, // isolated
+		},
+		Observations: []ConcernGroupNode{
+			{ID: id["o1"], CreatedRevision: 1}, {ID: id["o2"], CreatedRevision: 9}, // o2 isolated
+		},
+		HypothesisObservationLinks: []ConcernGroupObservationLink{
+			{HypothesisID: id["h2"], ObservationID: id["o1"]}, {HypothesisID: id["x"], ObservationID: id["o2"]},
 		},
 		Episodes: []ConcernGroupNode{
 			{ID: id["e1"], CreatedRevision: 2, Label: "knee pain"},
@@ -59,11 +65,14 @@ func TestDeriveConcernGroupsComponents(t *testing.T) {
 	if a.LatestRevision != 7 || a.DisplayTitle != "newer guess" ||
 		!reflect.DeepEqual(a.RelatedHypothesisIDs, []uuid.UUID{id["h1"], id["h2"]}) ||
 		!reflect.DeepEqual(a.RelatedFactIDs, []uuid.UUID{id["f1"], id["f2"]}) ||
-		!reflect.DeepEqual(a.RelatedEpisodeIDs, []uuid.UUID{id["e1"]}) {
+		!reflect.DeepEqual(a.RelatedEpisodeIDs, []uuid.UUID{id["e1"]}) ||
+		!reflect.DeepEqual(a.RelatedObservationIDs, []uuid.UUID{id["o1"]}) {
 		t.Fatalf("bridged group: %#v", a)
 	}
-	if a.ID != uuid.NewSHA1(concernGroupIDNamespace, []byte(id["f1"].String())) {
-		t.Fatalf("group id must be UUIDv5 of earliest member f1")
+	// Anchor = earliest anchor-eligible lineage (episode e1 at rev 2), never
+	// the earlier fact f1: facts and observations do not anchor.
+	if a.ID != ConcernGroupID(id["e1"]) || b.ID != ConcernGroupID(id["e2"]) || c.ID != ConcernGroupID(id["h3"]) {
+		t.Fatalf("group ids must be UUIDv5 of their anchor lineage: %#v", got.Groups)
 	}
 	if a.ID.Version() != 5 {
 		t.Fatalf("not uuidv5: %s", a.ID)
@@ -73,9 +82,16 @@ func TestDeriveConcernGroupsComponents(t *testing.T) {
 		!reflect.DeepEqual(b.RelatedFactIDs, []uuid.UUID{id["f4"]}) {
 		t.Fatalf("episode-only group: %#v", b)
 	}
-	for _, g := range got.Groups {
+	for _, g := range []DerivedConcernGroup{b, c} {
 		if g.RelatedObservationIDs == nil || len(g.RelatedObservationIDs) != 0 {
 			t.Fatalf("observation ids must be empty, non-nil: %#v", g)
+		}
+	}
+	for _, g := range got.Groups {
+		for _, o := range g.RelatedObservationIDs {
+			if o == id["o2"] {
+				t.Fatalf("isolated observation grouped: %#v", g)
+			}
 		}
 		for _, f := range g.RelatedFactIDs {
 			if f == id["f5"] || f == id["f3"] {
@@ -94,6 +110,12 @@ func TestDeriveConcernGroupsDeterministicUnderShuffle(t *testing.T) {
 		c.Hypotheses = append([]ConcernGroupNode(nil), s.Hypotheses...)
 		c.Facts = append([]ConcernGroupNode(nil), s.Facts...)
 		c.Episodes = append([]ConcernGroupNode(nil), s.Episodes...)
+		c.Observations = append([]ConcernGroupNode(nil), s.Observations...)
+		c.HypothesisObservationLinks = append([]ConcernGroupObservationLink(nil), s.HypothesisObservationLinks...)
+		rng.Shuffle(len(c.Observations), func(a, b int) { c.Observations[a], c.Observations[b] = c.Observations[b], c.Observations[a] })
+		rng.Shuffle(len(c.HypothesisObservationLinks), func(a, b int) {
+			c.HypothesisObservationLinks[a], c.HypothesisObservationLinks[b] = c.HypothesisObservationLinks[b], c.HypothesisObservationLinks[a]
+		})
 		c.HypothesisFactLinks = append([]ConcernGroupLink(nil), s.HypothesisFactLinks...)
 		c.EpisodeFactLinks = append([]ConcernGroupLink(nil), s.EpisodeFactLinks...)
 		rng.Shuffle(len(c.Hypotheses), func(a, b int) { c.Hypotheses[a], c.Hypotheses[b] = c.Hypotheses[b], c.Hypotheses[a] })
@@ -132,7 +154,7 @@ func TestDeriveConcernGroupsTieBreakAndEmpty(t *testing.T) {
 	s.Facts = []ConcernGroupNode{{ID: f, CreatedRevision: 2}}
 	s.HypothesisFactLinks = []ConcernGroupLink{{FromID: hi, FactID: f}, {FromID: lo, FactID: f}}
 	merged := DeriveConcernGroups(s)
-	if len(merged.Groups) != 1 || merged.Groups[0].ID != uuid.NewSHA1(concernGroupIDNamespace, []byte(lo.String())) ||
+	if len(merged.Groups) != 1 || merged.Groups[0].ID != ConcernGroupID(lo) ||
 		merged.Groups[0].DisplayTitle != "b" {
 		t.Fatalf("merge: %#v", merged)
 	}

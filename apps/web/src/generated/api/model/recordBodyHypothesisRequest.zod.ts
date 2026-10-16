@@ -15,13 +15,16 @@ export const recordBodyHypothesisRequestStatementMax = 2000;
 
 export const recordBodyHypothesisRequestRelatedFactIdsMax = 20;
 
+export const recordBodyHypothesisRequestRelatedObservationIdsMax = 20;
+
 
 
 export const RecordBodyHypothesisRequest = /*#__PURE__*/ zod.strictObject({
   "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(recordBodyHypothesisRequestIdempotencyKeyMax)),
   "expected_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(recordBodyHypothesisRequestExpectedRevisionMin)),
   "statement": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(recordBodyHypothesisRequestStatementMax)),
-  "related_fact_ids": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.maxLength(recordBodyHypothesisRequestRelatedFactIdsMax)))
+  "related_fact_ids": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.maxLength(recordBodyHypothesisRequestRelatedFactIdsMax))),
+  "related_observation_ids": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.maxLength(recordBodyHypothesisRequestRelatedObservationIdsMax)))
 });
 
 export type RecordBodyHypothesisRequest = zod.input<typeof RecordBodyHypothesisRequest>;

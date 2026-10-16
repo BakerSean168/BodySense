@@ -57,3 +57,45 @@ func TestWithdrawBodyHypothesisCommandValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestRecordBodyHypothesisObservationLinksValidate(t *testing.T) {
+	obs := uuid.New()
+	if err := (RecordBodyHypothesisCommand{IdempotencyKey: "k", Statement: "x", RelatedObservationIDs: []uuid.UUID{obs}}).Validate(); err != nil {
+		t.Fatalf("observation link rejected: %v", err)
+	}
+	tooMany := make([]uuid.UUID, 21)
+	for i := range tooMany {
+		tooMany[i] = uuid.New()
+	}
+	for name, ids := range map[string][]uuid.UUID{
+		"nil": {uuid.Nil}, "duplicate": {obs, obs}, "too many": tooMany,
+	} {
+		c := RecordBodyHypothesisCommand{IdempotencyKey: "k", Statement: "x", RelatedObservationIDs: ids}
+		if err := c.Validate(); !errors.Is(err, ErrInvalidBodyHypothesis) {
+			t.Errorf("%s observation ids: %v", name, err)
+		}
+	}
+}
+
+func TestCorrectBodyHypothesisCommandValidate(t *testing.T) {
+	ok := CorrectBodyHypothesisCommand{IdempotencyKey: "k", ExpectedRevision: 3,
+		Replacement: &BodyHypothesisReplacement{Statement: "actually it is my new shoes",
+			RelatedFactIDs: []uuid.UUID{uuid.New()}, RelatedObservationIDs: []uuid.UUID{}}}
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("valid correction rejected: %v", err)
+	}
+	f := uuid.New()
+	for name, c := range map[string]CorrectBodyHypothesisCommand{
+		"no key":         {Replacement: ok.Replacement},
+		"neg revision":   {IdempotencyKey: "k", ExpectedRevision: -1, Replacement: ok.Replacement},
+		"no replacement": {IdempotencyKey: "k"},
+		"empty":          {IdempotencyKey: "k", Replacement: &BodyHypothesisReplacement{}},
+		"padded":         {IdempotencyKey: "k", Replacement: &BodyHypothesisReplacement{Statement: "x "}},
+		"dup fact":       {IdempotencyKey: "k", Replacement: &BodyHypothesisReplacement{Statement: "x", RelatedFactIDs: []uuid.UUID{f, f}}},
+		"nil obs":        {IdempotencyKey: "k", Replacement: &BodyHypothesisReplacement{Statement: "x", RelatedObservationIDs: []uuid.UUID{uuid.Nil}}},
+	} {
+		if err := c.Validate(); !errors.Is(err, ErrInvalidBodyHypothesis) {
+			t.Errorf("%s: want ErrInvalidBodyHypothesis, got %v", name, err)
+		}
+	}
+}

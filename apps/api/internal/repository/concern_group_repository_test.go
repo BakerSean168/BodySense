@@ -59,7 +59,7 @@ func TestDerivedConcernGroupsFromOneRevisionPostgres(t *testing.T) {
 		!reflect.DeepEqual(bridged.RelatedHypothesisIDs, []uuid.UUID{h1.HypothesisID}) ||
 		!reflect.DeepEqual(bridged.RelatedFactIDs, []uuid.UUID{factA.ID, f1.ID}) ||
 		!reflect.DeepEqual(bridged.RelatedEpisodeIDs, []uuid.UUID{ep.EpisodeID}) ||
-		bridged.ID != uuid.NewSHA1(uuid.MustParse("6f1d7c2e-3b8a-5c41-9e0d-4a2b7f6c1d93"), []byte(factA.ID.String())) {
+		bridged.ID != model.ConcernGroupID(ep.EpisodeID) {
 		t.Fatalf("bridged group: %#v", bridged)
 	}
 	for _, g := range got.Groups {

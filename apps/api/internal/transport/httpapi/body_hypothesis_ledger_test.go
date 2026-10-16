@@ -26,6 +26,7 @@ type hypothesisHTTPFake struct {
 	target   uuid.UUID
 	record   model.RecordBodyHypothesisCommand
 	withdraw model.WithdrawBodyHypothesisCommand
+	correct  model.CorrectBodyHypothesisCommand
 	commit   *model.BodyHypothesisCommit
 	list     *model.BodyHypothesisList
 	groups   *model.DerivedConcernGroupList
@@ -40,6 +41,11 @@ func (f *hypothesisHTTPFake) RecordBodyHypothesis(_ context.Context, owner uuid.
 func (f *hypothesisHTTPFake) WithdrawBodyHypothesis(_ context.Context, owner, target uuid.UUID, c model.WithdrawBodyHypothesisCommand) (*model.BodyHypothesisCommit, error) {
 	f.calls++
 	f.owner, f.target, f.withdraw = owner, target, c
+	return f.commit, f.err
+}
+func (f *hypothesisHTTPFake) CorrectBodyHypothesis(_ context.Context, owner, target uuid.UUID, c model.CorrectBodyHypothesisCommand) (*model.BodyHypothesisCommit, error) {
+	f.calls++
+	f.owner, f.target, f.correct = owner, target, c
 	return f.commit, f.err
 }
 func (f *hypothesisHTTPFake) ListActiveBodyHypotheses(_ context.Context, owner uuid.UUID) (*model.BodyHypothesisList, error) {
@@ -115,6 +121,9 @@ func TestBodyHypothesisHTTPRecordStrictDirectUserOnly(t *testing.T) {
 		strings.Replace(hypothesisJSON, `}`, `,"related_fact_ids":[`+strings.Join(links, ",")+`]}`, 1),
 		strings.Replace(hypothesisJSON, `}`, `,"related_fact_ids":["`+dup+`","`+dup+`"]}`, 1),
 		strings.Replace(hypothesisJSON, `}`, `,"related_fact_ids":["not-a-uuid"]}`, 1),
+		strings.Replace(hypothesisJSON, `}`, `,"related_observation_ids":[`+strings.Join(links, ",")+`]}`, 1),
+		strings.Replace(hypothesisJSON, `}`, `,"related_observation_ids":["`+dup+`","`+dup+`"]}`, 1),
+		strings.Replace(hypothesisJSON, `}`, `,"supersedes_hypothesis_id":"`+dup+`"}`, 1),
 	}
 	for i, body := range invalid {
 		if denied := performJSONAt(router, http.MethodPost, hypothesisPath, body); denied.Code != http.StatusBadRequest || fake.calls != 1 {
@@ -126,6 +135,7 @@ func TestBodyHypothesisHTTPRecordStrictDirectUserOnly(t *testing.T) {
 		"other key":     func(c *model.BodyHypothesisCommit) { c.IdempotencyKey = "other" },
 		"wrong rev":     func(c *model.BodyHypothesisCommit) { c.Revision = 2 },
 		"wrong op":      func(c *model.BodyHypothesisCommit) { c.Operation = "withdraw" },
+		"target set":    func(c *model.BodyHypothesisCommit) { id := uuid.New(); c.TargetHypothesisID = &id },
 	} {
 		fake.commit = sampleHypothesisReceipt(owner, "record", "guess-1", 1)
 		forged(fake.commit)
@@ -136,6 +146,7 @@ func TestBodyHypothesisHTTPRecordStrictDirectUserOnly(t *testing.T) {
 	fake.commit = nil
 	for err, want := range map[error]int{
 		model.ErrBodyHypothesisFactNotFound:                          http.StatusNotFound,
+		model.ErrBodyHypothesisObservationNotFound:                   http.StatusNotFound,
 		fmt.Errorf("%w: x", repository.ErrBodyStateRevisionConflict): http.StatusConflict,
 		model.ErrBodyHypothesisIdempotencyConflict:                   http.StatusConflict,
 		fmt.Errorf("%w: bad", model.ErrInvalidBodyHypothesis):        http.StatusBadRequest,
@@ -160,7 +171,7 @@ func TestBodyHypothesisHTTPWithdrawErrors(t *testing.T) {
 	path := hypothesisPath + "/" + target.String() + "/withdraw"
 	body := `{"idempotency_key":"wd-1","expected_revision":4,"reason":"physio ruled it out"}`
 	receipt := sampleHypothesisReceipt(owner, "withdraw", "wd-1", 5)
-	receipt.HypothesisID = target
+	receipt.HypothesisID, receipt.TargetHypothesisID = target, &target
 	fake := &hypothesisHTTPFake{commit: receipt}
 	router := hypothesisHTTPRouter(t, owner, fake)
 	if ok := performJSONAt(router, http.MethodPost, path, body); ok.Code != http.StatusOK || fake.target != target ||
@@ -199,17 +210,88 @@ func TestBodyHypothesisHTTPWithdrawErrors(t *testing.T) {
 	}
 }
 
+func TestBodyHypothesisHTTPCorrectStrictReceipt(t *testing.T) {
+	owner, target := uuid.New(), uuid.New()
+	path := hypothesisPath + "/" + target.String() + "/correct"
+	fact, obs := uuid.New(), uuid.New()
+	body := `{"idempotency_key":"fix-1","expected_revision":4,"replacement":{"statement":"actually my new shoes",` +
+		`"related_fact_ids":["` + fact.String() + `"],"related_observation_ids":["` + obs.String() + `"]}}`
+	receipt := sampleHypothesisReceipt(owner, "correct", "fix-1", 5)
+	receipt.TargetHypothesisID = &target
+	fake := &hypothesisHTTPFake{commit: receipt}
+	router := hypothesisHTTPRouter(t, owner, fake)
+	ok := performJSONAt(router, http.MethodPost, path, body)
+	if ok.Code != http.StatusOK || fake.target != target || fake.owner != owner || fake.correct.Replacement == nil ||
+		fake.correct.Replacement.Statement != "actually my new shoes" ||
+		len(fake.correct.Replacement.RelatedFactIDs) != 1 || fake.correct.Replacement.RelatedObservationIDs[0] != obs ||
+		strings.Contains(ok.Body.String(), "shoes") || !strings.Contains(ok.Body.String(), `"target_hypothesis_id":"`+target.String()) ||
+		!strings.Contains(ok.Body.String(), `"operation":"correct"`) {
+		t.Fatalf("correct: %d %s", ok.Code, ok.Body.String())
+	}
+	for name, forged := range map[string]func(*model.BodyHypothesisCommit){
+		"no target":      func(c *model.BodyHypothesisCommit) { c.TargetHypothesisID = nil },
+		"other target":   func(c *model.BodyHypothesisCommit) { id := uuid.New(); c.TargetHypothesisID = &id },
+		"self successor": func(c *model.BodyHypothesisCommit) { c.HypothesisID = target },
+		"wrong op":       func(c *model.BodyHypothesisCommit) { c.Operation = "record" },
+		"wrong rev":      func(c *model.BodyHypothesisCommit) { c.Revision = 9 },
+	} {
+		fake.commit = sampleHypothesisReceipt(owner, "correct", "fix-1", 5)
+		fake.commit.TargetHypothesisID = &target
+		forged(fake.commit)
+		if r := performJSONAt(router, http.MethodPost, path, body); r.Code != http.StatusInternalServerError {
+			t.Fatalf("%s correction receipt accepted: %d", name, r.Code)
+		}
+	}
+	fake.commit = nil
+	for err, want := range map[error]string{
+		model.ErrBodyHypothesisNotCurrent:          "HYPOTHESIS_NOT_CURRENT",
+		model.ErrBodyHypothesisNotFound:            "HYPOTHESIS_NOT_FOUND",
+		model.ErrBodyHypothesisFactNotFound:        "HYPOTHESIS_FACT_NOT_FOUND",
+		model.ErrBodyHypothesisObservationNotFound: "HYPOTHESIS_OBSERVATION_NOT_FOUND",
+		model.ErrBodyHypothesisIdempotencyConflict: "HYPOTHESIS_IDEMPOTENCY_CONFLICT",
+	} {
+		fake.err = err
+		if r := performJSONAt(router, http.MethodPost, path, body); !strings.Contains(r.Body.String(), want) {
+			t.Fatalf("%v: %d %s", err, r.Code, r.Body.String())
+		}
+	}
+	calls := fake.calls
+	for i, bad := range []struct{ path, body string }{
+		{hypothesisPath + "/not-a-uuid/correct", body},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4}`},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4,"replacement":{"statement":"x"}}`},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4,"replacement":{"statement":" x","related_fact_ids":[],"related_observation_ids":[]}}`},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4,"replacement":{"statement":"x","related_fact_ids":[],"related_observation_ids":[],"confidence":1}}`},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4,"actor":"agent","replacement":{"statement":"x","related_fact_ids":[],"related_observation_ids":[]}}`},
+		{path, `{"idempotency_key":"fix-1","expected_revision":4,"replacement":{"statement":"x","related_fact_ids":["` + fact.String() + `","` + fact.String() + `"],"related_observation_ids":[]}}`},
+	} {
+		if r := performJSONAt(router, http.MethodPost, bad.path, bad.body); r.Code != http.StatusBadRequest || fake.calls != calls {
+			t.Fatalf("invalid correction[%d] reached service: %d %s", i, r.Code, r.Body.String())
+		}
+	}
+	if anon := performJSONAt(hypothesisHTTPRouter(t, uuid.Nil, fake), http.MethodPost, path, body); anon.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous correction accepted: %d", anon.Code)
+	}
+}
+
 func TestBodyHypothesisHTTPReadsOwnerScopedAndContractChecked(t *testing.T) {
 	owner := uuid.New()
 	rec := model.BodyHypothesisRecord{ID: uuid.New(), UserID: owner, Statement: "maybe posture",
 		Source:         model.BodyHypothesisSource{Actor: "user", Kind: "direct_edit", ID: uuid.New(), Version: 1},
-		RelatedFactIDs: []uuid.UUID{}, AssertionStatus: "asserted", CreatedRevision: 2, RecordedAt: time.Now().UTC()}
+		RelatedFactIDs: []uuid.UUID{}, RelatedObservationIDs: []uuid.UUID{uuid.New()},
+		AssertionStatus: "asserted", CreatedRevision: 2, RecordedAt: time.Now().UTC()}
+	rec.LineageID = rec.ID
 	fake := &hypothesisHTTPFake{list: &model.BodyHypothesisList{UserID: owner, CurrentRevision: 2, Hypotheses: []model.BodyHypothesisRecord{rec}}}
 	router := hypothesisHTTPRouter(t, owner, fake)
 	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusOK || fake.owner != owner ||
 		!strings.Contains(r.Body.String(), `"actor":"user"`) || !strings.Contains(r.Body.String(), "maybe posture") {
 		t.Fatalf("list: %d %s", r.Code, r.Body.String())
 	}
+	fake.list.Hypotheses[0].LineageID = uuid.Nil
+	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusInternalServerError {
+		t.Fatalf("record without lineage exposed: %d", r.Code)
+	}
+	fake.list.Hypotheses[0].LineageID = rec.ID
 	fake.list.Hypotheses[0].UserID = uuid.New()
 	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusInternalServerError {
 		t.Fatalf("foreign record leaked: %d", r.Code)
@@ -234,9 +316,10 @@ func TestBodyHypothesisHTTPReadsOwnerScopedAndContractChecked(t *testing.T) {
 		!strings.Contains(r.Body.String(), `"related_observation_ids":[]`) || !strings.Contains(r.Body.String(), group.ID.String()) {
 		t.Fatalf("groups: %d %s", r.Code, r.Body.String())
 	}
-	fake.groups.Groups[0].RelatedObservationIDs = []uuid.UUID{uuid.New()}
-	if r := performJSONAt(router, http.MethodGet, groupsPath, ""); r.Code != http.StatusInternalServerError {
-		t.Fatalf("unimplemented observation link exposed: %d", r.Code)
+	obs := uuid.New()
+	fake.groups.Groups[0].RelatedObservationIDs = []uuid.UUID{obs}
+	if r := performJSONAt(router, http.MethodGet, groupsPath, ""); r.Code != http.StatusOK || !strings.Contains(r.Body.String(), obs.String()) {
+		t.Fatalf("observation-linked group: %d %s", r.Code, r.Body.String())
 	}
 	fake.groups.Groups[0].RelatedObservationIDs = []uuid.UUID{}
 	fake.groups.Groups[0].RelatedHypothesisIDs = []uuid.UUID{}
@@ -327,5 +410,39 @@ func TestBodyHypothesisHTTPRealRoundTripPostgres(t *testing.T) {
 	if list := performJSONAt(ownerRouter, http.MethodGet, hypothesisPath, ""); list.Code != http.StatusOK ||
 		strings.Contains(list.Body.String(), commit.HypothesisId.String()) || !strings.Contains(list.Body.String(), `"current_revision":2`) {
 		t.Fatalf("withdrawn still listed: %d %s", list.Code, list.Body.String())
+	}
+
+	// Correction: rev3 record, rev4 correct (same lineage), withdrawn target 409.
+	second := performJSONAt(ownerRouter, http.MethodPost, hypothesisPath,
+		`{"idempotency_key":"guess-3","expected_revision":2,"statement":"maybe the new mattress"}`)
+	var secondCommit openapiv1.BodyHypothesisCommit
+	if second.Code != http.StatusOK || json.Unmarshal(second.Body.Bytes(), &secondCommit) != nil {
+		t.Fatalf("second record: %d %s", second.Code, second.Body.String())
+	}
+	correctBody := `{"idempotency_key":"fix","expected_revision":3,"replacement":{"statement":"actually the old pillow",` +
+		`"related_fact_ids":[],"related_observation_ids":[]}}`
+	correctPath := hypothesisPath + "/" + secondCommit.HypothesisId.String() + "/correct"
+	if r := performJSONAt(foreignRouter, http.MethodPost, correctPath, correctBody); r.Code != http.StatusNotFound {
+		t.Fatalf("foreign correction: %d %s", r.Code, r.Body.String())
+	}
+	fixed := performJSONAt(ownerRouter, http.MethodPost, correctPath, correctBody)
+	var fixedCommit openapiv1.BodyHypothesisCommit
+	if fixed.Code != http.StatusOK || json.Unmarshal(fixed.Body.Bytes(), &fixedCommit) != nil || fixedCommit.Revision != 4 ||
+		fixedCommit.TargetHypothesisId == nil || *fixedCommit.TargetHypothesisId != secondCommit.HypothesisId {
+		t.Fatalf("correct: %d %s", fixed.Code, fixed.Body.String())
+	}
+	if r := performJSONAt(ownerRouter, http.MethodPost, correctPath, correctBody); r.Code != http.StatusOK ||
+		!strings.Contains(r.Body.String(), fixedCommit.Id.String()) {
+		t.Fatalf("correction replay: %d %s", r.Code, r.Body.String())
+	}
+	if r := performJSONAt(ownerRouter, http.MethodPost, correctPath,
+		strings.Replace(strings.Replace(correctBody, `"fix"`, `"fix-2"`, 1), `:3,`, `:4,`, 1)); r.Code != http.StatusConflict {
+		t.Fatalf("superseded target corrected again: %d %s", r.Code, r.Body.String())
+	}
+	list := performJSONAt(ownerRouter, http.MethodGet, hypothesisPath, "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), "old pillow") || strings.Contains(list.Body.String(), "mattress") ||
+		!strings.Contains(list.Body.String(), `"lineage_id":"`+secondCommit.HypothesisId.String()) ||
+		!strings.Contains(list.Body.String(), `"supersedes_hypothesis_id":"`+secondCommit.HypothesisId.String()) {
+		t.Fatalf("corrected list: %d %s", list.Code, list.Body.String())
 	}
 }

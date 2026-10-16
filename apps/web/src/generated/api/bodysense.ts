@@ -125,6 +125,7 @@ import type {
   ConversationTitleRequest,
   ConversationUpdateRequest,
   CorrectBodyFactRecordRequest,
+  CorrectBodyHypothesisRequest,
   CorrectBodyObservationRequest,
   CreateEquipmentAssetRequest,
   CreateUploadRequest,
@@ -538,7 +539,7 @@ export const getRecordBodyHypothesisUrl = () => {
 }
 
 /**
- * Direct user edit only. A BodyHypothesis carries no confidence, clinical status or AI provenance; Agent/Diagnosis hypotheses never enter this ledger. Owner, source and revision are assigned server-side. Related facts must be the owner's current asserted BodyFacts. Exact retry with the same idempotency key replays the original receipt.
+ * Direct user edit only. A BodyHypothesis carries no confidence, clinical status or AI provenance; Agent/Diagnosis hypotheses never enter this ledger. Owner, source and revision are assigned server-side. Related facts and observations must be the owner's own current asserted BodyFacts / BodyObservations (foreign or non-current ids are 404 HYPOTHESIS_FACT_NOT_FOUND / HYPOTHESIS_OBSERVATION_NOT_FOUND, checked before the revision). Exact retry with the same idempotency key replays the original receipt.
  * @summary Record the authenticated user's own guess about a cause or possible condition.
  */
 export const recordBodyHypothesis = async (recordBodyHypothesisRequest: RecordBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
@@ -592,7 +593,7 @@ export const getListBodyHypothesisRecordsUrl = () => {
 }
 
 /**
- * Bounded to 100 newest-first records. related_fact_ids lists only facts that are still asserted. Withdrawn hypotheses are excluded.
+ * Bounded to 100 newest-first records. related_fact_ids / related_observation_ids list only facts / observations that are still asserted. Withdrawn and superseded (corrected) hypotheses are excluded; a corrected hypothesis appears as its successor with the same lineage_id.
  * @summary Read the user's current (asserted, source-available) hypotheses from one BodyState revision.
  */
 export const listBodyHypothesisRecords = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisRecordListOutput> => {
@@ -677,6 +678,61 @@ const res = await (fetchFn ?? fetch)(getWithdrawBodyHypothesisRecordUrl(id),
 
 
 
+export const getCorrectBodyHypothesisRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/hypothesis-records/${id}/correct`
+}
+
+/**
+ * Direct user edit only. The target becomes superseded (row, source and links preserved) and a new hypothesis with supersedes_hypothesis_id = target and the same lineage_id carries the complete replacement (statement plus explicit, possibly empty, fact/observation link lists). One BodyState revision (hypothesis.corrected), id-only outbox body_state.hypothesis_corrected and receipt. Identical replacements are 400; a withdrawn or already corrected target is 409 HYPOTHESIS_NOT_CURRENT. Linked facts/observations are never modified.
+ * @summary Correct one of the user's own current hypotheses, keeping the original as superseded history.
+ */
+export const correctBodyHypothesisRecord = async (id: string,
+    correctBodyHypothesisRequest: CorrectBodyHypothesisRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyHypothesisCommitOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCorrectBodyHypothesisRecordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(correctBodyHypothesisRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyHypothesisCommit, status?: number} = new globalThis.Error();
+    const data : BodyHypothesisCommit = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyHypothesisCommit.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
 export const getListDerivedConcernGroupsUrl = () => {
 
 
@@ -686,7 +742,7 @@ export const getListDerivedConcernGroupsUrl = () => {
 }
 
 /**
- * Computed on read, never stored. Hypothesis–fact links and episode–fact links form an undirected graph; every connected component containing at least one hypothesis or episode is one group. Group ids are provisional display ids (UUIDv5 of the earliest member) that may change on merge/split and must never be used as a foreign key or a clinical conclusion.
+ * Computed on read, never stored. Hypothesis–fact, hypothesis–observation and episode–fact links form an undirected graph; every connected component containing at least one hypothesis or episode is one group. Group id (DC-032, rule concern-group-anchor-v2): UUIDv5 of the group's anchor, the anchor-eligible member (current hypothesis lineage or current episode; never a fact or observation) whose lineage began earliest. Stable across linking/unlinking/correcting/withdrawing facts and observations, correcting any hypothesis, recording newer hypotheses, merges (earlier anchor wins) and splits (the part keeping the anchor keeps the id); it changes only when the anchor lineage leaves the group. Still a derived display id: never a foreign key or a clinical conclusion.
  * @summary Read the derived, non-authoritative ConcernGroup organisation of one BodyState revision.
  */
 export const listDerivedConcernGroups = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DerivedConcernGroupListOutput> => {
