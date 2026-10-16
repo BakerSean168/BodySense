@@ -10,6 +10,12 @@
 - Migrations, OpenAPI and generated Go/TS/Zod types, handoff JSON, integration branch and deployment operations are serialized across all ticket owners. A queued ticket with a resource collision waits, even if its DAG prerequisites are complete.
 - All project status values reflect **admission**, not business-readiness. A completed ticket does not mark a domain Gate Ready without independent integration evidence.
 
+## Current checkpoint · 2026-10-16
+
+PR6 A–E is **COMPLETE / MERGED** through #298 (`af3e1993b`), recorded by done ticket `PR6-001` and the handoff `completedPrograms` entry. Native Hypothesis/ConcernGroup, Safety and Web work already shipped; their remaining tickets cover only the residual scope named in `remainingScope`. Do not dispatch the completed PR6 work again.
+
+The frozen baseline is main `af3e1993b1f62930e3b680b54abab5ade456935b`, with exact-main CI including PG18 baseline/recovery/browser PASS. PR #274 remains OPEN/BEHIND and is blocked from admission against this new baseline. Master §0’s big-bang **one designated writer** rule supersedes the historical three-writer pilot and parallel scheduling instructions above/below; this status sync changes no locks, scheduler settings or runtime writer ownership.
+
 ## Scheduling policy
 
 Write a short execution handoff for each thread: `ticketId, threadId, projectId, absolute worktree, branch, expectedHead, provider/model, run status, changed paths, tests, output exact SHA, blockers`. Never retry an ambiguous T3 create/message blindly; first query its durable thread status. Stop a previous writer before ChatGPT Web assumes the same checkout. Existing hourly Track A/C/D tasks must not race new thread owners.
