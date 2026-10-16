@@ -200,7 +200,6 @@ export * from './recordOutcomeRequest.zod';
 export * from './recordSymptomFactInput.zod';
 export * from './recordTrainingFeedbackFactInput.zod';
 export * from './registerKnowledgeSourceRequest.zod';
-export * from './resolveBodyStateSafetyRequest.zod';
 export * from './resolveSafetyRestrictionRequest.zod';
 export * from './resumeConsultationInteractionRequest.zod';
 export * from './reviewBodyStateFactRequest.zod';

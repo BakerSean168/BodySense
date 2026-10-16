@@ -1,8 +1,6 @@
 package model
 
 import (
-	"encoding/json"
-
 	"github.com/google/uuid"
 )
 
@@ -11,5 +9,4 @@ import (
 type BodyStateHead struct {
 	UserID          uuid.UUID
 	CurrentRevision int64
-	SafetyState     json.RawMessage
 }

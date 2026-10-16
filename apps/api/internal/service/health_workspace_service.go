@@ -164,7 +164,13 @@ func deriveWorkspaceCapabilities(
 	revisions []model.TreatmentRevision,
 ) HealthWorkspaceCapabilities {
 	envelope, safetyErr := ProjectSafetyEnvelopeV2(snapshot)
-	requiresSafety := safetyErr != nil || envelope.RequiresReview
+	requiresSafety := safetyErr != nil || envelope.RequiresReview || len(envelope.Coverage.IncompleteSourceRefs) > 0
+	diagnosisBlocked := safetyErr != nil
+	for _, blocker := range envelope.ActiveBlockers {
+		if blocker.RiskLevel == "urgent" {
+			diagnosisBlocked = true
+		}
+	}
 	trainingSafetyIncomplete := requiresSafety || !envelope.Coverage.Complete
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
 	hasAnalysis := analysis != nil
@@ -190,7 +196,7 @@ func deriveWorkspaceCapabilities(
 	return HealthWorkspaceCapabilities{
 		CanContinueConsultation: true,
 		CanEditBodyState:        true,
-		CanRequestDiagnosis:     hasReasoningInput && !requiresSafety,
+		CanRequestDiagnosis:     hasReasoningInput && !diagnosisBlocked,
 		CanReviewDiagnosis:      hasAnalysis,
 		CanGenerateTreatment:    analysisEligible && !trainingSafetyIncomplete,
 		CanAcceptTreatment:      hasAcceptableProposal && !trainingSafetyIncomplete,

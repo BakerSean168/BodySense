@@ -62,6 +62,8 @@ def envelope(*, complete: bool = True, blocked: bool = False) -> SafetyEnvelopeV
                 "source_ref": SCREEN_REF,
                 "source_kind": "safety_screen",
                 "reason": "structured_current_signal",
+                "restriction_id": "90000000-0000-0000-0000-000000000001",
+                "risk_level": "urgent",
             }
         ]
         if blocked
@@ -70,12 +72,11 @@ def envelope(*, complete: bool = True, blocked: bool = False) -> SafetyEnvelopeV
     return SafetyEnvelopeV2.model_validate(
         {
             "schema_revision": "body-state-safety-envelope-v2",
-            "policy_revision": "body-state-safety-policy-v1",
+            "policy_revision": "body-state-safety-policy-v2-native-restrictions",
             "body_state_revision": 12,
             "assertions": assertions,
             "active_blockers": blockers,
             "requires_review": blocked,
-            "legacy_state_present": False,
             "coverage": {
                 "revision": "body-state-safety-coverage-v1",
                 "capture_revision": "body-state-safety-capture-v1",
@@ -124,6 +125,20 @@ async def test_v8_education_does_not_trigger_prose_detector():
     )
     assert result["status"] == "completed"
     assert result["governance"]["verdict"] == "accepted"
+
+
+@pytest.mark.asyncio
+async def test_restricted_training_gate_does_not_terminate_diagnosis():
+    safety = envelope(blocked=True)
+    safety.active_blockers[0].risk_level = "restricted"
+    model = TestModel(call_tools=[], custom_output_args=OUTPUT)
+    result = await DiagnosisService(model_resolver=lambda _: model).generate_diagnosis(
+        body_state_revision=12,
+        configuration_id=CONFIG_ID,
+        body_state=BODY,
+        safety_envelope=safety,
+    )
+    assert result["status"] == "completed"
 
 
 @pytest.mark.parametrize(

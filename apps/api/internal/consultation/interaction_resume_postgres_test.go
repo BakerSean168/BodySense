@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -377,60 +376,4 @@ func TestInteractionResumeRequestCannotCreateAnOrdinaryTurnPostgres(t *testing.T
 	}
 	resumeCount(t, f, "runs", 1)
 	resumeCount(t, f, "messages", 4)
-}
-
-func TestInteractionResumeSafetyFirstCaptureDoesNotRebaseOverOtherWritesPostgres(t *testing.T) {
-	for _, racing := range []bool{false, true} {
-		t.Run(fmt.Sprint(racing), func(t *testing.T) {
-			f := newResumeFixture(t)
-			resumed, err := f.resumes.Claim(context.Background(), f.command("I have no shoulder pain"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			ledger := repository.NewBodyStateRepository(f.db)
-			if racing {
-				command := model.RecordBodyFactsCommand{IdempotencyKey: "another-device", ExpectedRevision: 0, Facts: []model.BodyFactInput{{Kind: "activity", Statement: "I walked today", BodyRegionIDs: []string{}, Temporal: model.FactTemporal{Precision: "unknown"}, Details: json.RawMessage(`{}`)}}}
-				if _, err := ledger.RecordDirectFacts(context.Background(), f.owner, command); err != nil {
-					t.Fatal(err)
-				}
-			}
-			safety := service.NewBodyStateService(ledger)
-			revision, err := safety.RecordSafetyEventWithReceipt(context.Background(), f.owner, json.RawMessage(`{"has_red_flags":true,"flags":[{"category":"synthetic","severity":"warning","message":"fixture"}]}`))
-			if err != nil || revision == nil {
-				t.Fatalf("safety receipt: %v", err)
-			}
-			e := resumed.Envelope
-			state := streamState{UID: f.owner, ConversationID: e.Run.ConversationID, Run: e.Run, ExpectedConfigurationID: service.BodyFactConsultationConfigurationID, AnswerSource: &model.AnswerFactSource{RunID: e.Run.ID, InteractionID: e.Interaction.ID, MessageID: e.UserMessage.ID}}
-			runtime := &Runtime{bodyFacts: service.NewBodyFactService(ledger, service.NewCanonicalBodyRegionIDValidator())}
-			proposal := json.RawMessage(strings.Replace(string(proposedFacts()), `"expected_revision":2`, `"expected_revision":0`, 1))
-			receipt, _, err := runtime.commitBodyFactProposal(context.Background(), state, "answer-capture", proposal, *revision)
-			if racing {
-				if err == nil || receipt != nil {
-					t.Fatal("external change silently rebased")
-				}
-			} else {
-				if err != nil || receipt == nil {
-					t.Fatalf("own safety revision blocked capture: %v", err)
-				}
-				var got model.BodyFact
-				if err := f.db.First(&got, "user_id = ?", f.owner).Error; err != nil {
-					t.Fatal(err)
-				}
-				if got.CreatedRevision != 2 {
-					t.Fatal("capture did not follow own safety commit")
-				}
-			}
-			// No negative screen can silently clear the existing independent restriction.
-			if revision, err := safety.RecordSafetyEventWithReceipt(context.Background(), f.owner, json.RawMessage(`{"has_red_flags":false,"flags":[]}`)); err != nil || revision != nil {
-				t.Fatalf("negative screen mutated safety: %v", err)
-			}
-			snapshot, err := safety.GetBodyState(context.Background(), f.owner, 20)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(string(snapshot.SafetyState), "requires_review") {
-				t.Fatal("safety restriction was relaxed")
-			}
-		})
-	}
 }

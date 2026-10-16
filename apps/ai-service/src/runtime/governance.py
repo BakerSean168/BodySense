@@ -298,7 +298,9 @@ def _collect_issues(
     issues.extend(check_schema_valid(payload, _REQUIRED_FIELDS[kind]))
 
     if kind == "diagnosis" and policy_revision == DIAGNOSIS_GOVERNANCE_POLICY_REVISION_V8:
-        if safety_envelope is not None and safety_envelope.requires_review:
+        if safety_envelope is not None and any(
+            blocker.risk_level == "urgent" for blocker in safety_envelope.active_blockers
+        ):
             issues.append(
                 GovernanceIssue(
                     "schema.structured_safety",

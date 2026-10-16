@@ -13,7 +13,7 @@ const validWorkspaceResponse = {
   body_state: {
     user_id: "55555555-5555-4555-8555-555555555555",
     current_revision: 0,
-    safety_state: {},
+    safety_restrictions: [],
     facts: [],
     observations: [],
     episodes: [],

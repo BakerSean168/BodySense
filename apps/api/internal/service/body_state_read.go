@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/bodysense/api/internal/model"
@@ -12,15 +11,15 @@ import (
 // BodyStateReadModel preserves native V2 records. Legacy candidates and AI
 // hypotheses are never part of this view.
 type BodyStateReadModel struct {
-	UserID          uuid.UUID                     `json:"user_id"`
-	CurrentRevision int64                         `json:"current_revision"`
-	SafetyState     json.RawMessage               `json:"safety_state"`
-	Facts           []model.BodyFact              `json:"facts"`
-	Observations    []model.BodyObservationRecord `json:"observations"`
-	Episodes        []model.EpisodeRecord         `json:"episodes"`
-	Hypotheses      []model.BodyHypothesisRecord  `json:"hypotheses"`
-	RecentRevisions []model.BodyStateRevision     `json:"recent_revisions"`
-	SafetyScreens   []model.SafetyScreen          `json:"-"`
+	UserID             uuid.UUID                       `json:"user_id"`
+	CurrentRevision    int64                           `json:"current_revision"`
+	Facts              []model.BodyFact                `json:"facts"`
+	Observations       []model.BodyObservationRecord   `json:"observations"`
+	Episodes           []model.EpisodeRecord           `json:"episodes"`
+	Hypotheses         []model.BodyHypothesisRecord    `json:"hypotheses"`
+	RecentRevisions    []model.BodyStateRevision       `json:"recent_revisions"`
+	SafetyRestrictions []model.SafetyRestrictionRecord `json:"safety_restrictions"`
+	SafetyScreens      []model.SafetyScreen            `json:"-"`
 }
 
 // GetBodyState freezes all constituents in one read-only database snapshot.
@@ -39,14 +38,12 @@ func (s *BodyStateService) GetBodyState(ctx context.Context, owner uuid.UUID, hi
 			return fmt.Errorf("body state head owner mismatch")
 		}
 		view = &BodyStateReadModel{
-			UserID: owner, CurrentRevision: head.CurrentRevision, SafetyState: head.SafetyState,
+			UserID: owner, CurrentRevision: head.CurrentRevision,
 			Facts: []model.BodyFact{}, Observations: []model.BodyObservationRecord{},
 			Episodes: []model.EpisodeRecord{}, Hypotheses: []model.BodyHypothesisRecord{},
 			RecentRevisions: []model.BodyStateRevision{},
 		}
-		if len(view.SafetyState) == 0 {
-			view.SafetyState = json.RawMessage(`{}`)
-		}
+
 		pinned := func(userID uuid.UUID, revision int64) error {
 			if userID != owner {
 				return fmt.Errorf("body state read owner mismatch")
@@ -153,6 +150,17 @@ func (s *BodyStateService) GetBodyState(ctx context.Context, owner uuid.UUID, hi
 				return errAgentBodyContextNotPinned
 			}
 		}
+		restrictions, err := s.repo.ListSafetyRestrictions(ctx, owner)
+		if err != nil {
+			return err
+		}
+		if restrictions == nil {
+			return fmt.Errorf("native safety unavailable")
+		}
+		if err := pinned(restrictions.UserID, restrictions.CurrentRevision); err != nil {
+			return err
+		}
+		view.SafetyRestrictions = restrictions.Restrictions
 		revisions, err := s.repo.ListRecentRevisions(ctx, owner, historyLimit)
 		if err != nil {
 			return err

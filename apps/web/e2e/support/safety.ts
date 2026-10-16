@@ -4,13 +4,15 @@ import { expect, type APIRequestContext } from "@playwright/test";
  * Structured safety coverage is recorded only from the Go-bound symptom
  * intake. Report a present symptom in the given conversation (the v3 runtime
  * commits it and asks the safety screen for it) and answer the checklist with
- * "none of the above".
+ * the specified signals (default: "none of the above").
  */
 export async function completeStructuredSafetyIntake(
   request: APIRequestContext,
   apiBase: string,
   headers: Record<string, string>,
   conversationId: string,
+  signals: string[] = ["以上均无"],
+  statement = "我昨天肩膀不舒服。",
 ) {
   const run = await request.post(`${apiBase}/api/v1/consultation-runs`, {
     headers,
@@ -20,7 +22,7 @@ export async function completeStructuredSafetyIntake(
       requestId: crypto.randomUUID(),
       message: {
         role: "user",
-        parts: [{ type: "text", text: "我昨天肩膀不舒服。" }],
+        parts: [{ type: "text", text: statement }],
       },
     },
     timeout: 60_000,
@@ -47,7 +49,7 @@ export async function completeStructuredSafetyIntake(
       data: {
         requestId: crypto.randomUUID(),
         answer: {
-          fields: { safety_signals: ["以上均无"] },
+          fields: { safety_signals: signals },
         },
       },
       timeout: 60_000,
@@ -64,9 +66,7 @@ export async function completeStructuredSafetyIntake(
   const body = (await records.json()) as {
     facts: Array<{ id: string; statement: string; created_revision: number }>;
   };
-  const symptoms = body.facts.filter(
-    (fact) => fact.statement === "我昨天肩膀不舒服。",
-  );
+  const symptoms = body.facts.filter((fact) => fact.statement === statement);
   // The accepted checklist must screen the committed fact without duplicating it.
   expect(symptoms).toHaveLength(1);
   return symptoms[0];

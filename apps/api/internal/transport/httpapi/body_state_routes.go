@@ -23,7 +23,6 @@ type bodyStateRouteService interface {
 	AddObservation(context.Context, uuid.UUID, *int64, model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	ReviewObservation(context.Context, uuid.UUID, *int64, uuid.UUID, string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	ListEvidence(context.Context, uuid.UUID, int) ([]model.BodyStateEvidence, error)
-	ResolveSafetyState(context.Context, uuid.UUID, *int64, string, string) (*model.BodyStateRevision, error)
 }
 
 func (s *PublicServer) WithBodyStateRoutes(routes bodyStateRouteService) *PublicServer {
@@ -179,33 +178,6 @@ func (s *PublicServer) ListBodyStateEvidence(
 		return listBodyStateEvidenceError(http.StatusInternalServerError, "INTERNAL_ERROR", "body state evidence violates the public contract"), nil
 	}
 	return openapiv1.ListBodyStateEvidence200JSONResponse(response), nil
-}
-
-func (s *PublicServer) ResolveBodyStateSafety(
-	ctx context.Context,
-	request openapiv1.ResolveBodyStateSafetyRequestObject,
-) (openapiv1.ResolveBodyStateSafetyResponseObject, error) {
-	userID, authErr := authenticatedUserID(ctx)
-	if authErr != nil {
-		return resolveBodyStateSafetyError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.bodyStateRoutes == nil || request.Body == nil {
-		return resolveBodyStateSafetyError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	revision, err := s.bodyStateRoutes.ResolveSafetyState(ctx, userID, &expected, string(request.Body.Resolution), stringValue(request.Body.Note))
-	if err != nil {
-		return resolveBodyStateSafetyClassifiedError(err), nil
-	}
-	var publicRevision *openapiv1.BodyStateRevision
-	if revision != nil {
-		converted, err := revisionToOpenAPI(revision)
-		if err != nil {
-			return resolveBodyStateSafetyError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state response"), nil
-		}
-		publicRevision = &converted
-	}
-	return openapiv1.ResolveBodyStateSafety200JSONResponse{Revision: publicRevision}, nil
 }
 
 func observationFromOpenAPI(input openapiv1.BodyStateObservationInput) (model.BodyStateObservation, error) {
@@ -391,27 +363,5 @@ func reviewBodyStateObservationError(status int, code, message string) openapiv1
 		return openapiv1.ReviewBodyStateObservation503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
 	default:
 		return openapiv1.ReviewBodyStateObservation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
-}
-
-func resolveBodyStateSafetyClassifiedError(err error) openapiv1.ResolveBodyStateSafetyResponseObject {
-	e := classifyBodyStatePublicError(err)
-	return resolveBodyStateSafetyError(e.status, e.code, e.message)
-}
-func resolveBodyStateSafetyError(status int, code, message string) openapiv1.ResolveBodyStateSafetyResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.ResolveBodyStateSafety400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.ResolveBodyStateSafety401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.ResolveBodyStateSafety404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.ResolveBodyStateSafety409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	case http.StatusServiceUnavailable:
-		return openapiv1.ResolveBodyStateSafety503JSONResponse{ValidationUnavailableJSONResponse: openapiv1.ValidationUnavailableJSONResponse(e)}
-	default:
-		return openapiv1.ResolveBodyStateSafety500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
 	}
 }

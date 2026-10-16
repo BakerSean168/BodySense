@@ -40,7 +40,7 @@ func (r *BodyStateRepository) GetCurrent(ctx context.Context, userID uuid.UUID) 
 	var state model.BodyState
 	err := database.FromContext(ctx, r.db).Where("user_id = ?", userID).First(&state).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return &model.BodyState{UserID: userID, SafetyState: datatypes.JSON(`{}`)}, nil
+		return &model.BodyState{UserID: userID}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -744,40 +744,6 @@ func (r *BodyStateRepository) UpdateObservationReviewState(
 	return &stored, committed, nil
 }
 
-// SetSafetyState persists a first-class safety projection. Positive safety
-// findings can therefore constrain Diagnosis/Treatment even after the SSE turn is
-// over. Clearing a safety state should be an explicit later policy decision.
-func (r *BodyStateRepository) SetSafetyState(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	safetyState datatypes.JSON,
-	source string,
-) (*model.BodyStateRevision, error) {
-	var committed *model.BodyStateRevision
-	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
-		if err != nil {
-			return err
-		}
-		safetyState = bodyStateJSON(safetyState, `{}`)
-		if bodyStateSameJSON(state.SafetyState, safetyState, `{}`) {
-			return nil
-		}
-		if err := tx.WithContext(ctx).Model(&model.BodyState{}).
-			Where("user_id = ?", userID).
-			Update("safety_state", safetyState).Error; err != nil {
-			return err
-		}
-		committed, err = bodyStatePersistRevision(ctx, tx, state, next, "safety.updated", source, map[string]any{
-			"before": json.RawMessage(bodyStateJSON(state.SafetyState, `{}`)),
-			"after":  json.RawMessage(safetyState),
-		})
-		return err
-	})
-	return committed, err
-}
-
 // ApplyCurrentContextPatch applies one semantically coherent user context
 // mutation under one aggregate lock and produces at most one revision. It is the
 // batch primitive behind multi-field Lifestyle/body-metrics saves.
@@ -1001,7 +967,7 @@ func bodyStateSameCurrentObservationClaim(current, candidate model.BodyStateObse
 }
 
 func bodyStateLockNextRevision(ctx context.Context, tx *gorm.DB, userID uuid.UUID, expected *int64) (*model.BodyState, int64, error) {
-	seed := model.BodyState{UserID: userID, SafetyState: datatypes.JSON(`{}`)}
+	seed := model.BodyState{UserID: userID}
 	if err := tx.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&seed).Error; err != nil {
 		return nil, 0, err
 	}

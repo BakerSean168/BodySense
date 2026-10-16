@@ -105,3 +105,45 @@ erased evidence makes that resolution ineffective in the native projection.
 - Fixed the shared integration fixture's unclosed database pools after the full
   suite exhausted PostgreSQL connections; the rerun passed without raising limits.
 - Exact-head CI remains required. No deployment or domain readiness claim.
+
+## B4b2b: native Safety consumers
+
+B4b2a is PR #295 (`afb9083ff`), merged as `8b2a6e670` after all required CI passed.
+This slice switches the pinned BodyState/Agent views, Diagnosis and Treatment
+policy/replay to native restrictions. It removes the old JSON column, global
+resolution endpoint and model-warning writes. Restricted training gates do not
+terminate Diagnosis; urgent remains blocking. Source invalidation and overlapping
+restrictions remain conservative. Trainer execution gates are still deferred.
+
+### B4b2b local evidence
+
+- Full isolated PG18 Go suite, build/vet and SA*/S1*/QF* staticcheck passed.
+- Native projection tests preserve overlapping restrictions and reject missing
+  restriction records; restricted allows Diagnosis while urgent blocks it.
+- Red → green: inconsistent coverage previously authorized Treatment; Go now
+  rejects inconsistent coverage and unknown coverage concepts before authorization.
+- Removed AI warning writes, global clearance route and JSON baseline column;
+  Go/TS/Postman regenerated, contracts lint/generated checks and Postman verify
+  (112 operations) passed. Source-invalidated clearance remains conservative.
+- Python native envelope, preflight and output governance now preserve ordinary
+  restricted Diagnosis; 720 unit tests passed. Updated shared fixture and eval
+  schema/input dataset for the native contract. Dataset fingerprint changes and
+  does not qualify any configuration or imply promotion readiness.
+- Fresh migration without down/replay, domain validator, checksum/history and
+  plan checks passed. Web typecheck, ESLint and workspace Vitest passed.
+- Exact-head CI remains required. Full Trainer gates, clinical-document admission,
+  final V2 E2E and release readiness remain deferred; no readiness gate is raised.
+
+### B4b2b browser regression follow-up
+
+The first CI run of PR #296 passed quality/database checks but failed two browser
+assertions deterministically. One still expected AI warning writes and global
+clearance; replace it with a positive user checklist and exact source-bound
+per-restriction clearance. The other expected review_recommended after an Outcome
+created an unscreened symptom; native coverage correctly requires paused until its
+own screen. Preserve that fail-closed assertion instead of weakening Safety.
+
+On an isolated local PG18 + Redis + deterministic Go/Python environment, the
+three tests in longitudinal-health and longitudinal-full-loop passed after these
+changes. Python 720 unit tests, ruff checks, Web typecheck/ESLint and plan checks
+also passed. The updated PR head still requires a complete fresh CI run.

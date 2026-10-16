@@ -27,6 +27,7 @@ async def body_fact_fixture_events(
     corpus = {
         "我每晚睡七小时。": ("lifestyle", "unknown"),
         "我昨天肩膀不舒服。": ("symptom", "present"),
+        "我今天肩膀不舒服。": ("symptom", "present"),
         "我没有肩痛。": ("symptom", "absent"),
     }
     args: dict[str, Any] = {"turn_kind": "other", "facts": []}

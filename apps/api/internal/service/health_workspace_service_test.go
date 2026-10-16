@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -10,13 +9,12 @@ import (
 	"gorm.io/datatypes"
 )
 
-func TestWorkspaceCapabilitiesSafetyBlocksOrdinaryReasoningAndExecution(t *testing.T) {
+func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(t *testing.T) {
 	owner := uuid.New()
 	caps := deriveWorkspaceCapabilities(
 		&BodyStateReadModel{
 			UserID: owner, CurrentRevision: 2,
-			Facts:       []model.BodyFact{{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1}},
-			SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`),
+			Facts: []model.BodyFact{{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1}},
 		},
 		&model.DiagnosisAnalysisRecord{
 			Status:     "completed",
@@ -34,8 +32,8 @@ func TestWorkspaceCapabilitiesSafetyBlocksOrdinaryReasoningAndExecution(t *testi
 	if !caps.RequiresSafetyReview {
 		t.Fatal("expected safety review capability")
 	}
-	if caps.CanRequestDiagnosis || caps.CanGenerateTreatment || caps.CanExecuteTreatment {
-		t.Fatalf("safety state must block ordinary reasoning/execution: %#v", caps)
+	if !caps.CanRequestDiagnosis || caps.CanGenerateTreatment || caps.CanExecuteTreatment {
+		t.Fatalf("unscreened symptom must allow diagnosis collection and block training: %#v", caps)
 	}
 	if !caps.CanContinueConsultation || !caps.CanEditBodyState {
 		t.Fatal("safety review must not disable correction or consultation")

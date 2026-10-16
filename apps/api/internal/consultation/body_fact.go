@@ -33,7 +33,7 @@ type bodyFactProposal struct {
 	Facts            []model.BodyFactInput `json:"facts"`
 }
 
-func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage, ownedSafetyRevisions ...model.BodyStateRevision) (json.RawMessage, []service.CommittedBodyFact, error) {
+func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState, toolCallID string, raw json.RawMessage) (json.RawMessage, []service.CommittedBodyFact, error) {
 	if r.bodyFacts == nil || state.Run == nil || state.UID == uuid.Nil || state.Run.ID == uuid.Nil || state.Run.UserID != state.UID || state.Run.ConversationID != state.ConversationID {
 		return nil, nil, fmt.Errorf("BodyFact persistence or authenticated run is unavailable")
 	}
@@ -60,17 +60,6 @@ func (r *Runtime) commitBodyFactProposal(ctx context.Context, state streamState,
 		IdempotencyKey:   fmt.Sprintf("chat-facts:%s:%x", state.Run.ID, callKey[:12]),
 		ExpectedRevision: *proposal.ExpectedRevision,
 		Facts:            proposal.Facts,
-	}
-	// A safety check in this very stream may have advanced the aggregate before
-	// its extraction proposal arrives. Follow only actual contiguous Go receipts.
-	// Do not fetch "latest" and rebase over an unrelated user/device change;
-	// direct-user writes and amendments keep their original revision checks.
-	for _, revision := range ownedSafetyRevisions {
-		if revision.UserID == state.UID && revision.ID != uuid.Nil &&
-			revision.ChangeType == "safety.updated" && revision.Source == "consultation" &&
-			revision.Revision > 0 && command.ExpectedRevision == revision.Revision-1 {
-			command.ExpectedRevision = revision.Revision
-		}
 	}
 	if err := command.Validate(); err != nil {
 		return nil, nil, err

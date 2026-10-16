@@ -135,7 +135,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/safety/restrictions", wrapper.ListSafetyRestrictions)
 	protected.POST("/body-state/safety/restrictions/:id/resolve", wrapper.ResolveSafetyRestriction)
 	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
-	protected.POST("/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
 
 	// Owner-scoped EquipmentAsset inventory (PC-D2); not BodyState.
 	protected.GET("/equipment", wrapper.ListEquipmentAssets)

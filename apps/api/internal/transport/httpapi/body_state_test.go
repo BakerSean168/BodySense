@@ -47,17 +47,12 @@ func performJSONAt(r http.Handler, method, path, body string) *httptest.Response
 	return rec
 }
 
-func TestResolveSafetyOpenAPIRequiresExpectedRevisionBeforeAdapter(t *testing.T) {
-	rec := performJSONAt(
-		newOpenAPITestRouter(t),
-		http.MethodPost,
-		"/api/v1/body-state/safety/resolve",
-		`{"resolution":"resolved","note":"reviewed"}`,
-	)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
+func TestGlobalSafetyResolutionRouteIsGone(t *testing.T) {
+	rec := performJSONAt(newOpenAPITestRouter(t), http.MethodPost,
+		"/api/v1/body-state/safety/resolve", `{"expected_revision":1,"resolution":"resolved","note":"reviewed"}`)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("global clearance route still exists: %d", rec.Code)
 	}
-	assertErrorCode(t, rec, "INVALID_REQUEST")
 }
 
 // The legacy BodyState fact writers are gone: body statements use the V2

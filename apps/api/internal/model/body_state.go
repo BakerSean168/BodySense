@@ -47,11 +47,10 @@ type BodyStateCurrentContextPatch struct {
 // in their own tables so that current projection reads stay simple without forcing full
 // event replay on every request.
 type BodyState struct {
-	UserID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"user_id"`
-	CurrentRevision int64          `gorm:"not null;default:0" json:"current_revision"`
-	SafetyState     datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"safety_state"`
-	CreatedAt       time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt       time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	UserID          uuid.UUID `gorm:"type:uuid;primaryKey" json:"user_id"`
+	CurrentRevision int64     `gorm:"not null;default:0" json:"current_revision"`
+	CreatedAt       time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt       time.Time `gorm:"not null;default:now()" json:"updated_at"`
 
 	// Projection-only fields populated by BodyStateRepository.GetCurrent.
 	Facts        []BodyStateFact        `gorm:"-" json:"facts"`

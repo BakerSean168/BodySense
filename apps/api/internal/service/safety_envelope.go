@@ -1,11 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -14,7 +12,7 @@ import (
 
 const (
 	SafetyEnvelopeSchemaV2   = "body-state-safety-envelope-v2"
-	SafetyEnvelopePolicyV1   = "body-state-safety-policy-v1"
+	SafetyEnvelopePolicyV1   = "body-state-safety-policy-v2-native-restrictions"
 	SafetyCoverageRevisionV1 = "body-state-safety-coverage-v1"
 	SafetyCaptureRevisionV1  = "body-state-safety-capture-v1"
 )
@@ -62,21 +60,21 @@ type SafetySourceKindV1 string
 
 const (
 	SafetyStructuredScreen SafetySourceKindV1 = "safety_screen"
-	SafetyLegacyStateFact  SafetySourceKindV1 = "legacy_safety_state"
 )
 
 type SafetyBlockerReasonV1 string
 
 const (
 	SafetyStructuredCurrentSignal SafetyBlockerReasonV1 = "structured_current_signal"
-	SafetyLegacyActiveState       SafetyBlockerReasonV1 = "legacy_active_state"
 )
 
 type SafetyBlockerV1 struct {
-	Concept    SafetyConceptV1       `json:"concept"`
-	SourceRef  string                `json:"source_ref"`
-	SourceKind SafetySourceKindV1    `json:"source_kind"`
-	Reason     SafetyBlockerReasonV1 `json:"reason"`
+	RestrictionID uuid.UUID             `json:"restriction_id"`
+	RiskLevel     string                `json:"risk_level"`
+	Concept       SafetyConceptV1       `json:"concept"`
+	SourceRef     string                `json:"source_ref"`
+	SourceKind    SafetySourceKindV1    `json:"source_kind"`
+	Reason        SafetyBlockerReasonV1 `json:"reason"`
 }
 
 type SafetyAssertionV1 struct {
@@ -91,14 +89,13 @@ type SafetyAssertionV1 struct {
 }
 
 type SafetyEnvelopeV2 struct {
-	SchemaRevision     string              `json:"schema_revision"`
-	PolicyRevision     string              `json:"policy_revision"`
-	BodyStateRevision  int64               `json:"body_state_revision"`
-	Assertions         []SafetyAssertionV1 `json:"assertions"`
-	ActiveBlockers     []SafetyBlockerV1   `json:"active_blockers"`
-	RequiresReview     bool                `json:"requires_review"`
-	LegacyStatePresent bool                `json:"legacy_state_present"`
-	Coverage           SafetyCoverageV1    `json:"coverage"`
+	SchemaRevision    string              `json:"schema_revision"`
+	PolicyRevision    string              `json:"policy_revision"`
+	BodyStateRevision int64               `json:"body_state_revision"`
+	Assertions        []SafetyAssertionV1 `json:"assertions"`
+	ActiveBlockers    []SafetyBlockerV1   `json:"active_blockers"`
+	RequiresReview    bool                `json:"requires_review"`
+	Coverage          SafetyCoverageV1    `json:"coverage"`
 }
 
 type SafetyCoverageV1 struct {
@@ -125,12 +122,12 @@ var structuredSafetyDetails = []struct {
 // revision. An absent symptom is not a complaint. No symptom means no coverage.
 //
 // Assertions: each safety screen contributes one confirmed current assertion
-// per concept. A positive concept is an active blocker until an explicit Go
-// safety resolution (ResolveSafetyState) is recorded after that screen.
+// per concept. Native restrictions and source-validated per-restriction
+// resolutions alone determine current blockers; clearance never rewrites symptoms.
 func ProjectSafetyEnvelopeV2(snapshot *BodyStateReadModel) (SafetyEnvelopeV2, error) {
 	input := safetyProjectionInput{}
 	if snapshot != nil {
-		input = safetyProjectionInput{UserID: snapshot.UserID, CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState, Screens: snapshot.SafetyScreens}
+		input = safetyProjectionInput{UserID: snapshot.UserID, CurrentRevision: snapshot.CurrentRevision, Restrictions: snapshot.SafetyRestrictions, Screens: snapshot.SafetyScreens}
 		for _, fact := range snapshot.Facts {
 			if fact.Kind != "symptom" || fact.AssertionStatus != "asserted" {
 				continue
@@ -160,7 +157,7 @@ type safetyCoverageSubject struct {
 type safetyProjectionInput struct {
 	UserID          uuid.UUID
 	CurrentRevision int64
-	SafetyState     json.RawMessage
+	Restrictions    []model.SafetyRestrictionRecord
 	Symptoms        []safetyCoverageSubject
 	Screens         []model.SafetyScreen
 }
@@ -172,18 +169,6 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 		return envelope, fmt.Errorf("safety projection requires a pinned BodyState revision")
 	}
 	envelope.BodyStateRevision = snapshot.CurrentRevision
-	legacyAssertions, legacyActive, legacyPresent, err := adaptLegacySafetyState(snapshot.SafetyState)
-	if err != nil {
-		return envelope, err
-	}
-	envelope.LegacyStatePresent = legacyPresent
-	envelope.Assertions = append(envelope.Assertions, legacyAssertions...)
-	if legacyActive {
-		for _, assertion := range legacyAssertions {
-			envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: assertion.Concept, SourceRef: assertion.SourceRef, SourceKind: assertion.SourceKind, Reason: SafetyLegacyActiveState})
-		}
-	}
-	resolvedAt := legacySafetyResolvedAt(snapshot.SafetyState)
 
 	screens := make([]model.SafetyScreen, 0, len(snapshot.Screens))
 	latestScreenRevision := map[uuid.UUID]int64{}
@@ -192,7 +177,7 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 			return envelope, fmt.Errorf("safety screen owner mismatch")
 		}
 		if screen.ID == uuid.Nil || screen.BodyStateRevision <= 0 || screen.BodyStateRevision > snapshot.CurrentRevision {
-			continue
+			return envelope, fmt.Errorf("invalid safety screen revision")
 		}
 		screens = append(screens, screen)
 		if screen.BodyStateRevision > latestScreenRevision[screen.BodyFactID] {
@@ -212,117 +197,44 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 		}
 	}
 
+	positive := map[string]bool{}
 	for _, screen := range screens {
 		ref := "body-state:safety-screen:" + screen.ID.String()
 		recordedAt := screen.RecordedAt
-		values := map[SafetyConceptV1]bool{
-			SafetyTrauma: screen.Trauma, SafetyRadiatingPain: screen.RadiatingPain, SafetyNumbness: screen.Numbness,
-			SafetyWeakness: screen.Weakness, SafetyDizziness: screen.Dizziness,
-		}
+		values := map[SafetyConceptV1]bool{SafetyTrauma: screen.Trauma, SafetyRadiatingPain: screen.RadiatingPain,
+			SafetyNumbness: screen.Numbness, SafetyWeakness: screen.Weakness, SafetyDizziness: screen.Dizziness}
 		for _, field := range structuredSafetyDetails {
-			polarity, temporality := SafetyAbsent, SafetyCurrent
+			polarity := SafetyAbsent
 			if values[field.concept] {
 				polarity = SafetyPresent
-				if resolvedAt != nil && resolvedAt.After(recordedAt) {
-					temporality = SafetyResolved
-				}
+				positive[screen.ID.String()+":"+string(field.concept)] = true
 			}
-			envelope.Assertions = append(envelope.Assertions, SafetyAssertionV1{Concept: field.concept, Polarity: polarity, Temporality: temporality, ReviewState: SafetyConfirmed, SourceRef: ref, SourceKind: SafetyStructuredScreen, ObservedAt: &recordedAt})
-			if polarity == SafetyPresent && temporality == SafetyCurrent {
-				envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{Concept: field.concept, SourceRef: ref, SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal})
-			}
+			envelope.Assertions = append(envelope.Assertions, SafetyAssertionV1{Concept: field.concept, Polarity: polarity, Temporality: SafetyCurrent, ReviewState: SafetyConfirmed, SourceRef: ref, SourceKind: SafetyStructuredScreen, ObservedAt: &recordedAt})
 		}
 	}
+	restrictions := append([]model.SafetyRestrictionRecord(nil), snapshot.Restrictions...)
+	sort.Slice(restrictions, func(i, j int) bool { return restrictions[i].ID.String() < restrictions[j].ID.String() })
+	for _, row := range restrictions {
+		key := row.SafetyScreenID.String() + ":" + row.Concept
+		if row.UserID != snapshot.UserID || row.ID == uuid.Nil || row.CreatedRevision <= 0 || row.CreatedRevision > snapshot.CurrentRevision || !positive[key] || row.PolicyRevision != model.SafetyScreenRestrictionPolicyV1 || row.RiskLevel != "restricted" || row.ScopeKind != "all_training" || row.LiftPolicy != "professional_clearance" {
+			return envelope, fmt.Errorf("invalid native safety restriction")
+		}
+		if row.Active != (row.Resolution == nil || !row.ClearanceAvailable) {
+			return envelope, fmt.Errorf("inconsistent native safety resolution")
+		}
+		if row.Resolution != nil && (row.Resolution.UserID != snapshot.UserID || row.Resolution.RestrictionID != row.ID || row.Resolution.Revision <= row.CreatedRevision || row.Resolution.Revision > snapshot.CurrentRevision) {
+			return envelope, fmt.Errorf("invalid native safety resolution")
+		}
+		delete(positive, key)
+		if row.Active {
+			envelope.ActiveBlockers = append(envelope.ActiveBlockers, SafetyBlockerV1{RestrictionID: row.ID, RiskLevel: row.RiskLevel, Concept: SafetyConceptV1(row.Concept), SourceRef: "body-state:safety-screen:" + row.SafetyScreenID.String(), SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal})
+		}
+	}
+	if len(positive) > 0 {
+		return envelope, fmt.Errorf("positive safety screen lacks its native restriction")
+	}
+
 	envelope.Coverage.Complete = len(envelope.Coverage.CoveredSourceRefs) > 0 && len(envelope.Coverage.IncompleteSourceRefs) == 0
 	envelope.RequiresReview = len(envelope.ActiveBlockers) > 0
 	return envelope, nil
-}
-
-// legacySafetyResolvedAt returns when the current safety state was explicitly
-// resolved through ResolveSafetyState, or nil. Detector output never resolves.
-func legacySafetyResolvedAt(raw json.RawMessage) *time.Time {
-	var state struct {
-		Status     string     `json:"status"`
-		ResolvedAt *time.Time `json:"resolved_at"`
-	}
-	if len(bytes.TrimSpace(raw)) == 0 || json.Unmarshal(raw, &state) != nil || state.ResolvedAt == nil {
-		return nil
-	}
-	switch strings.TrimSpace(state.Status) {
-	case "resolved", "cleared_by_review", "monitoring":
-		return state.ResolvedAt
-	default:
-		return nil
-	}
-}
-
-func adaptLegacySafetyState(raw json.RawMessage) ([]SafetyAssertionV1, bool, bool, error) {
-	if len(bytes.TrimSpace(raw)) == 0 || string(bytes.TrimSpace(raw)) == "{}" {
-		return nil, false, false, nil
-	}
-	var state map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &state); err != nil || state == nil {
-		return nil, false, false, fmt.Errorf("invalid legacy safety state")
-	}
-	if len(state) == 0 {
-		return nil, false, false, nil
-	}
-	var hasRedFlags bool
-	if err := json.Unmarshal(state["has_red_flags"], &hasRedFlags); err != nil {
-		return nil, false, true, fmt.Errorf("legacy safety state requires boolean has_red_flags")
-	}
-	status := ""
-	if statusRaw, ok := state["status"]; ok {
-		if err := json.Unmarshal(statusRaw, &status); err != nil {
-			return nil, false, true, fmt.Errorf("invalid legacy safety status")
-		}
-		status = strings.TrimSpace(status)
-	}
-	switch status {
-	case "", "requires_review", "active", "monitoring", "resolved", "cleared_by_review":
-	default:
-		return nil, false, true, fmt.Errorf("unknown legacy safety status %q", status)
-	}
-	if hasRedFlags && (status == "" || status == "resolved" || status == "cleared_by_review") || !hasRedFlags && (status == "requires_review" || status == "active" || status == "monitoring") {
-		return nil, false, true, fmt.Errorf("inconsistent legacy safety state")
-	}
-	active := hasRedFlags && (status == "requires_review" || status == "active")
-	if !hasRedFlags {
-		return nil, false, true, nil
-	}
-	concepts := []SafetyConceptV1{}
-	if flagRaw, ok := state["flags"]; ok {
-		var flags []map[string]json.RawMessage
-		if err := json.Unmarshal(flagRaw, &flags); err != nil {
-			return nil, false, true, fmt.Errorf("invalid legacy safety flags")
-		}
-		for _, flag := range flags {
-			var category string
-			categoryRaw := flag["category"]
-			if len(categoryRaw) == 0 {
-				categoryRaw = flag["type"]
-			}
-			if len(categoryRaw) > 0 && json.Unmarshal(categoryRaw, &category) != nil {
-				return nil, false, true, fmt.Errorf("invalid legacy safety flag category")
-			}
-			concepts = append(concepts, legacySafetyConcept(category))
-		}
-	}
-	if len(concepts) == 0 {
-		concepts = append(concepts, SafetyUnknownRedFlag)
-	}
-	assertions := make([]SafetyAssertionV1, 0, len(concepts))
-	for _, concept := range concepts {
-		assertions = append(assertions, SafetyAssertionV1{Concept: concept, Polarity: SafetyPresent, Temporality: SafetyCurrent, ReviewState: SafetyUnverified, SourceRef: "body-state:legacy-safety-state", SourceKind: SafetyLegacyStateFact})
-	}
-	return assertions, active, true, nil
-}
-
-func legacySafetyConcept(category string) SafetyConceptV1 {
-	switch category {
-	case "trauma", "radiating_pain", "numbness", "weakness", "dizziness", "gait_instability", "severe_pain", "worsening", "infection", "systemic":
-		return SafetyConceptV1(category)
-	default:
-		return SafetyUnknownRedFlag
-	}
 }

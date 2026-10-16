@@ -76,7 +76,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	}
 	mustExec("INSERT INTO user_uploads(id,user_id,file_type,original_name,storage_backend,storage_key,file_size,mime_type,ocr_result,ocr_status) VALUES (?,?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo_front", "photo.jpg", "local", uploadKey, len(payload), "image/jpeg", `{"private":"ocr"}`, "completed")
 
-	mustExec("INSERT INTO body_states(user_id,current_revision,safety_state) VALUES (?,?,?)", userID, 1, `{"private":"safety"}`)
+	mustExec("INSERT INTO body_states(user_id,current_revision) VALUES (?,?)", userID, 1)
 	mustExec("INSERT INTO body_state_revisions(user_id,revision,change_type,source,changes) VALUES (?,?,?,?,?)", userID, 1, "synthetic", "integration", `{"private":"state"}`)
 	mustExec("INSERT INTO body_state_facts(user_id,kind,value,origin,created_revision,updated_revision,details) VALUES (?,?,?,?,?,?,?)", userID, "symptom", "private pain", "user", 1, 1, `{"private":true}`)
 
