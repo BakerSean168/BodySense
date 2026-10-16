@@ -1,11 +1,11 @@
 {
   "version": 1,
   "authority": "execution-only; docs/product and v2-handoff-state.json retain authority",
-  "maxParallelWriters": 3,
+  "maxParallelWriters": 1,
   "seedSha": "0e287ab128bb09a8e8fae354c16bf5e49acbe7bf",
   "integrationBranch": "integration/v2-execution-20261014",
   "integrationWorktree": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-integration",
-  "defaultStartPolicy": "blocked-until-int001-accepted-and-project-cwd-verified",
+  "defaultStartPolicy": "single-writer-domain-order-under-master-big-bang-policy",
   "tickets": [
     {
       "id": "INT-001",
@@ -101,7 +101,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "remainingScope": "PR283 already implemented direct-edit user BodyHypothesis and derived ConcernGroup APIs and removed AI hypotheses from BodyState. Only remaining full projection/source variants, stable-group identity, presentation and contract acceptance are queued; do not recreate the implemented ledger/API."
     },
     {
       "id": "BS-AGENT-001",
@@ -116,7 +117,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "remainingScope": "Existing source-bound BodyFact/AskUser commits and native frozen Agent input are implemented. Queue covers remaining authorization/command variants only, not PR6 input migration or deleted intake binding."
     },
     {
       "id": "PC-001",
@@ -132,7 +134,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "Partially delivered: preflight audits #260-#262 and read-only fail-closed GetSoleLiveByUserID seam #266 merged (no runtime caller). Track D holds an uncommitted staged structured_answer source-identity check at 76bc12959 in bodysense-v2-trackd-verification because platform safety control denied commit and native PG18 start on 2026-10-15. Unique DB constraint, serialized per-owner creation and runtime admission not started.",
+      "blockedReason": "Singleton runtime remains unimplemented and not admitted: no unique owner constraint or serialized per-owner creation; PR266 is read-only with no runtime caller. Previous Track D commit/PG18 platform denial and staged patch at 76bc12959 were observed on 2026-10-15, not revalidated in this sync. Apply current Master big-bang policy, not the old data-reconciliation/rollback prerequisites.",
       "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification"
     },
     {
@@ -208,7 +210,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Only remaining Trainer-specific scope/action contract and complete target acceptance are queued; do not reimplement native Safety or old JSON compatibility."
     },
     {
       "id": "TP-D1-001",
@@ -231,7 +234,7 @@
       "id": "TP-PROP-001",
       "title": "TrainingPlan PlanProposal pure precommit admission policy (PR #274)",
       "phase": "1",
-      "status": "in_progress",
+      "status": "blocked",
       "dependsOn": ["TP-D1-001"],
       "sf": "SF-50",
       "owner": "Training Domain Owner",
@@ -245,7 +248,8 @@
       "implementationHead": "681edbd8eef88c504f07df5a2a7e2dadd8be85f9",
       "reviewPr": 274,
       "currentCiRun": "BakerSean168/BodySense/actions/runs/38593599317",
-      "ciAcceptance": "EXACT_HEAD_CI_SUCCESS_ON_EXECUTED_LANES;PG18_baseline_and_recovery_children_SKIPPED;not_merged"
+      "ciAcceptance": "EXACT_HEAD_CI_SUCCESS_ON_EXECUTED_LANES;PG18_baseline_and_recovery_children_SKIPPED;not_merged",
+      "blockedReason": "PR274 is OPEN/BEHIND on historical base e4160a9c7; not admitted against current frozen main. Rebase/review and current exact-head CI are required before integration."
     },
     {
       "id": "TP-002",
@@ -320,7 +324,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "remainingScope": "PR288 completed native Web reads and retained V2 amendments/Episode controls; PR298 full suite accepted. Remaining final Person/Episode and Hypothesis/ConcernGroup presentation/Penpot acceptance only; no legacy snapshot migration remains."
     },
     {
       "id": "UI-DX-001",
@@ -392,18 +397,45 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null
+    },
+    {
+      "id": "PR6-001",
+      "title": "Complete PR6 A-E native BodyState migration and legacy retirement",
+      "phase": "1",
+      "status": "done",
+      "dependsOn": ["INT-001"],
+      "sf": "SF-20/SF-80",
+      "owner": "PR6 Implementation Owner",
+      "exclusiveResources": [
+        "api-body-state",
+        "public-openapi",
+        "database-migrations",
+        "bodyfact-window"
+      ],
+      "document": "docs/plan/tickets/v2/README.md",
+      "threadId": null,
+      "projectId": null,
+      "worktree": null,
+      "acceptedSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+      "acceptedAtUtc": "2026-10-16T11:21:09Z",
+      "mergedMainSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+      "mergedPrs": [
+        284, 285, 286, 287, 290, 291, 292, 294, 295, 296, 297, 288, 293, 298
+      ],
+      "acceptanceCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
+      "acceptanceNote": "All A-E slices COMPLETE and merged. Full post-C Chromium 25/25 recorded in PR298; current exact-main CI including PG18 baseline/recovery/browser SUCCESS. Remaining V2 domains/design/privacy/release are outside this completed ticket."
     }
   ],
-  "mainBaselineSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
-  "mainBaselineCiRun": "BakerSean168/BodySense/actions/runs/38564462755",
-  "mainCandidateRun": "BakerSean168/BodySense/actions/runs/38565576350",
-  "baselineFrozenAtUtc": "2026-10-15T02:40Z",
-  "previousFrozenBaselineSha": "375e5a8215100b50f45fa78f761e4a92e6154c67",
-  "newWriterAdmissionPolicy": "BLOCKED_UNTIL_LATEST_MAIN_CI_AND_TICKET_CWD_AUTHORIZED",
-  "auditedAtUtc": "2026-10-15T02:40Z",
-  "postMergeMainSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
-  "latestObservedMainCiRun": "BakerSean168/BodySense/actions/runs/38590342080",
-  "latestObservedMainCiStatus": "SUCCESS_EXACT_MAIN (observed by Track D 2026-10-15 09:39 CST; staging promotion still gated)",
+  "mainBaselineSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+  "mainBaselineCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
+  "mainCandidateRun": "https://github.com/BakerSean168/BodySense/actions/runs/38894149824",
+  "baselineFrozenAtUtc": "2026-10-16T11:47:49Z",
+  "previousFrozenBaselineSha": "e4160a9c755455ffe9277af2caba88f62df1a032",
+  "newWriterAdmissionPolicy": "SINGLE_DESIGNATED_WRITER_UNDER_MASTER_BIG_BANG_POLICY;status_sync_does_not_admit_runtime_writers",
+  "auditedAtUtc": "2026-10-16T11:47:49Z",
+  "postMergeMainSha": "af3e1993b1f62930e3b680b54abab5ade456935b",
+  "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38893201615",
+  "latestObservedMainCiStatus": "SUCCESS_EXACT_MAIN_including_PG18_baseline_recovery_browser",
   "mergedDomainContractPr": 264,
   "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
   "mainCandidateStatus": "SUCCESS_IMMUTABLE_CANDIDATE_STAGING_PROMOTION_SKIPPED",
@@ -443,6 +475,12 @@
     "classification": "not_ready_schema_and_legacy_service_must_change_together",
     "ticketBoundary": "TP-001_still_restriction_specific_Safety_only"
   },
-  "candidateVerifiedAtUtc": "2026-10-14T12:46:08Z",
-  "alignmentAudit": "docs/plan/active/2026-10-15-v2-implementation-alignment-audit.md"
+  "candidateVerifiedAtUtc": "2026-10-16T11:47:49Z",
+  "alignmentAudit": "docs/plan/active/2026-10-15-v2-implementation-alignment-audit.md",
+  "statusSync": {
+    "auditedAtUtc": "2026-10-16T11:47:49Z",
+    "scope": "PR6 A-E all complete; pending tickets describe residual target-domain work only",
+    "evidence": "docs/plan/archive/2026-10-16-pr6-e-closeout.md",
+    "schedulerState": "not_observed_or_changed;historical_automation_notes_are_not_live_authority"
+  }
 }

@@ -1,5 +1,7 @@
 # PR6 E · Native BodyState closeout
 
+Status: **COMPLETE / MERGED** in [PR #298](https://github.com/BakerSean168/BodySense/pull/298), merge `af3e1993b1f62930e3b680b54abab5ade456935b` (2026-10-16). **All PR6 A–E slices are complete.** This bounded legacy-retirement completion is distinct from the remaining complete V2 product/design/release gates.
+
 Base: main `72bbe661d59b881b36e68d813595e82e01a80d62` (#297).
 
 ## Scope
@@ -21,6 +23,10 @@ Code, baseline and OpenAPI own implementation facts; docs/product owns business 
 
 GitHub merge identities were read on 2026-10-16 and matched the main ancestry:
 
+- A (native outcome writers): #284, `8aa6375aaf7e3e7c0c61415981a015188a9e7d88`.
+- A2 (EquipmentAsset / last legacy fact writer removal): #285, `aa3429f19bb1d3f76dd77efa2640cecc9895f080`.
+- B1 (revision readers): #286, `972c50c3f448b226785830f75f83ff02cd3145cb`.
+- B2a (native frozen Agent inputs): #287, `ca225772b1f565e114633bdb6a684b33d85656bb`.
 - D: #288, `b93ce7c0a2c627748c189f2ce6fac1ef79a623e0`.
 - B2b: #290, `d93a7d9a27ca207927058e802ed98c4b968a77b3`.
 - B3: #291, `b36364ec69ca41b3bdcdb889ed058c1676cbe918`.
@@ -30,6 +36,9 @@ GitHub merge identities were read on 2026-10-16 and matched the main ancestry:
 - B4b2a: #295, `8b2a6e6701e6a88dfa8cefa8e8a4432d11a5fefa`.
 - B4b2b: #296, `4d3dc793c9f11cf02e9c9179454e4dac3fd9aaf6`.
 - C: #297, `72bbe661d59b881b36e68d813595e82e01a80d62` (complete CI at head `96f3eedc1c716c36933dcc206f01f5690f4b550f`).
+- E closeout: #298, `af3e1993b1f62930e3b680b54abab5ade456935b`.
+
+[Exact merged-main CI](https://github.com/BakerSean168/BodySense/actions/runs/38893201615) passed, including PostgreSQL 18 baseline/recovery and browser checks. [The immutable candidate build](https://github.com/BakerSean168/BodySense/actions/runs/38894149824) passed while `Promote coherent staging channel` was skipped by V2 readiness gates. This is not staging/production acceptance.
 
 ## Retirement audit
 
@@ -63,4 +72,4 @@ The restart helper uses only the newly created labeled container and owned API P
 
 Local evidence is retained under `.runtime/schema-first-v2-evidence/vertical-e2e-765881/`: `browser.log`, `api.log`, `ai.log`, `schema-evidence.txt`, `full-suite-runner.sh` and `restart-api.sh` (ignored test artifacts, not committed health data). Runner SHA256: `86f6cdf2ccbbe18d87b25677c6db084aabf7f4b8cab4cd0eb210e7c66d46366d`; restart helper SHA256: `c2e0ef6ad4f5bb7f27e2f3c9b1ef03436407bb1e6ae984820e3f1a458639159e`.
 
-Status: E implementation/documentation and local acceptance COMPLETE. The associated GitHub PR owns exact-head CI and final merge provenance. Complete V2 Diagnosis/Trainer/asset/design/release acceptance remains outside PR6.
+Status: PR6 A–E implementation/documentation and bounded acceptance COMPLETE / MERGED. Complete V2 Diagnosis/Trainer/asset/design/release acceptance remains outside PR6. Queue `PR6-001` and handoff `completedPrograms` record this completion; historical per-ticket pending notes do not reopen these slices.
