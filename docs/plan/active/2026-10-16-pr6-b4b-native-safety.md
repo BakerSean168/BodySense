@@ -133,3 +133,17 @@ restrictions remain conservative. Trainer execution gates are still deferred.
   plan checks passed. Web typecheck, ESLint and workspace Vitest passed.
 - Exact-head CI remains required. Full Trainer gates, clinical-document admission,
   final V2 E2E and release readiness remain deferred; no readiness gate is raised.
+
+### B4b2b browser regression follow-up
+
+The first CI run of PR #296 passed quality/database checks but failed two browser
+assertions deterministically. One still expected AI warning writes and global
+clearance; replace it with a positive user checklist and exact source-bound
+per-restriction clearance. The other expected review_recommended after an Outcome
+created an unscreened symptom; native coverage correctly requires paused until its
+own screen. Preserve that fail-closed assertion instead of weakening Safety.
+
+On an isolated local PG18 + Redis + deterministic Go/Python environment, the
+three tests in longitudinal-health and longitudinal-full-loop passed after these
+changes. Python 720 unit tests, ruff checks, Web typecheck/ESLint and plan checks
+also passed. The updated PR head still requires a complete fresh CI run.

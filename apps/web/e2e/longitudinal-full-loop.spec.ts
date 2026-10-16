@@ -393,7 +393,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     created_revision: feedback.result.outcome.body_state_revision,
   });
   expect(records.facts.some((fact) => fact.id === symptom.id)).toBe(true);
-  expect(finalWorkspace.treatment.status).toBe("review_recommended");
+  // The new Outcome symptom has not been screened: fail closed until its own checklist.
+  expect(finalWorkspace.treatment.status).toBe("paused");
   expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
   expect(

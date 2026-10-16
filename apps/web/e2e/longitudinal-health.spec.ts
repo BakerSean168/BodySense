@@ -309,20 +309,15 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     JSON.parse(firstProposalBody) as { proposal: { id: string } }
   ).proposal;
 
-  const safetyRun = await request.post(`${apiBase}/api/v1/consultation-runs`, {
+  // Only a user-answered, Go-bound positive screen creates Safety authority.
+  await completeStructuredSafetyIntake(
+    request,
+    apiBase,
     headers,
-    data: {
-      conversationId,
-      clientMessageId: `e2e-safety-${Date.now()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "E2E_TRIGGER_SAFETY" }],
-      },
-    },
-  });
-  expect(safetyRun.ok()).toBeTruthy();
-  await safetyRun.text();
+    String(conversationId),
+    ["麻木"],
+    "我今天肩膀不舒服。",
+  );
 
   const blockedAccept = await request.post(
     `${apiBase}/api/v1/treatments/revisions/${firstProposal.id}/accept`,
@@ -334,30 +329,67 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   };
   expect(blockedAcceptError.error?.code).toBe("TREATMENT_SAFETY_BLOCKED");
 
-  const bodyStateAfterSafety = await request.get(
-    `${apiBase}/api/v1/body-state`,
-    {
-      headers,
-    },
+  const restrictionResponse = await request.get(
+    `${apiBase}/api/v1/body-state/safety/restrictions`,
+    { headers },
   );
-  expect(bodyStateAfterSafety.ok()).toBeTruthy();
-  const safetySnapshot = (await bodyStateAfterSafety.json()) as {
+  expect(restrictionResponse.ok()).toBeTruthy();
+  const safety = (await restrictionResponse.json()) as {
     current_revision: number;
+    restrictions: Array<{ id: string; active: boolean; concept: string }>;
   };
-  expect(Number.isInteger(safetySnapshot.current_revision)).toBeTruthy();
+  const active = safety.restrictions.filter((row) => row.active);
+  expect(active).toHaveLength(1);
+  expect(active[0].concept).toBe("numbness");
 
-  const resolveSafety = await request.post(
-    `${apiBase}/api/v1/body-state/safety/resolve`,
+  const statement = "专业人员已针对这条限制及全部训练放行";
+  const clearanceRun = await request.post(
+    `${apiBase}/api/v1/consultation-runs`,
     {
       headers,
       data: {
-        expected_revision: safetySnapshot.current_revision,
-        resolution: "cleared_by_review",
-        note: "E2E reviewed",
+        conversationId,
+        clientMessageId: crypto.randomUUID(),
+        requestId: crypto.randomUUID(),
+        message: { role: "user", parts: [{ type: "text", text: statement }] },
       },
     },
   );
-  expect(resolveSafety.ok()).toBeTruthy();
+  expect(clearanceRun.ok()).toBeTruthy();
+  await clearanceRun.text();
+  const conversationResponse = await request.get(
+    `${apiBase}/api/v1/conversations/${conversationId}`,
+    { headers },
+  );
+  expect(conversationResponse.ok()).toBeTruthy();
+  const conversation = (await conversationResponse.json()) as {
+    messages: Array<{
+      id: string;
+      role: string;
+      parts: Array<{ type: string; text?: string }>;
+    }>;
+  };
+  const source = conversation.messages.find(
+    (message) =>
+      message.role === "user" &&
+      message.parts.some(
+        (part) => part.type === "text" && part.text === statement,
+      ),
+  );
+  expect(source).toBeTruthy();
+  const resolveSafety = await request.post(
+    `${apiBase}/api/v1/body-state/safety/restrictions/${active[0].id}/resolve`,
+    {
+      headers,
+      data: {
+        expected_revision: safety.current_revision,
+        idempotency_key: crypto.randomUUID(),
+        source_message_id: source!.id,
+        statement,
+      },
+    },
+  );
+  expect(resolveSafety.ok(), await resolveSafety.text()).toBeTruthy();
 
   const freshDiagnosisResponse = await request.post(
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
