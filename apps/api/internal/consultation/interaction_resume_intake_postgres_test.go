@@ -88,7 +88,7 @@ func boundIntakeFixture(t *testing.T) (resumeFixture, uuid.UUID) {
 func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t *testing.T) {
 	f, factID := boundIntakeFixture(t)
 	bodyState := intakeBodyState(f)
-	snapshot, err := bodyState.GetSnapshot(context.Background(), f.owner, 10)
+	snapshot, err := bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t
 	resumeCount(t, f, "body_facts", 1)
 	resumeCount(t, f, "safety_screens", 1)
 
-	snapshot, err = bodyState.GetSnapshot(context.Background(), f.owner, 10)
+	snapshot, err = bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t
 	if _, err := bodyState.ResolveSafetyState(context.Background(), f.owner, nil, "cleared_by_review", "synthetic review"); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err = bodyState.GetSnapshot(context.Background(), f.owner, 10)
+	snapshot, err = bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestInteractionResumeNoneOfTheAboveCompletesCoveragePostgres(t *testing.T) 
 	if _, err := f.resumes.WithStructuredIntake(bodyState).Claim(context.Background(), intakeCommand(f, map[string]any{"safety_signals": []string{"以上均无"}})); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := bodyState.GetSnapshot(context.Background(), f.owner, 10)
+	snapshot, err := bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

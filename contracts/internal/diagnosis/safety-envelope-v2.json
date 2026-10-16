@@ -10,15 +10,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -38,7 +37,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 6,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -123,15 +123,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -151,7 +150,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 6,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         },
         {
           "id": "5c000000-0000-0000-0000-000000000002",
@@ -168,7 +168,8 @@
           "weakness": false,
           "dizziness": true,
           "body_state_revision": 7,
-          "recorded_at": "2026-10-15T09:00:00Z"
+          "recorded_at": "2026-10-15T09:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -313,15 +314,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -341,7 +341,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 6,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -446,15 +447,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -474,7 +474,8 @@
           "weakness": false,
           "dizziness": true,
           "body_state_revision": 6,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -564,15 +565,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -592,7 +592,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 6,
-          "recorded_at": "2026-10-15T09:00:00Z"
+          "recorded_at": "2026-10-15T09:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -758,49 +759,45 @@
         "facts": [
           {
             "id": "33333333-3333-3333-3333-333333333333",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
-            "value": "trauma and dizziness",
-            "details": ["not", "an object"]
+            "details": [
+              "not",
+              "an object"
+            ],
+            "statement": "trauma and dizziness",
+            "assertion_status": "asserted"
           },
           {
             "id": "44444444-4444-4444-4444-444444444444",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
             "details": {
               "dizziness": "yes",
               "trauma": {
                 "free_form": "yes"
               }
-            }
+            },
+            "assertion_status": "asserted"
           },
           {
             "id": "55555555-5555-5555-5555-555555555555",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
             "details": {
               "dizziness": true
             },
-            "excluded_from_reasoning": true
+            "assertion_status": "withdrawn"
           },
           {
             "id": "66666666-6666-6666-6666-666666666666",
-            "kind": "discomfort",
-            "value": "已排除",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {},
             "created_revision": 3,
-            "excluded_from_reasoning": true
+            "statement": "已排除",
+            "assertion_status": "withdrawn"
           },
           {
             "id": "77777777-7777-7777-7777-777777777777",
-            "kind": "discomfort",
-            "value": "已缓解",
-            "lifecycle_state": "resolved",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {},
-            "created_revision": 3
+            "created_revision": 3,
+            "statement": "已缓解",
+            "assertion_status": "withdrawn"
           }
         ]
       },
@@ -853,7 +850,8 @@
           "weakness": false,
           "dizziness": true,
           "body_state_revision": 4,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "99999999-9999-4999-8999-999999999999"
         }
       ],
       "envelope": {
@@ -943,15 +941,14 @@
           {
             "id": "11111111-1111-1111-1111-111111111111",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 5
+            "created_revision": 5,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -971,7 +968,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 20,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "11111111-1111-1111-1111-111111111111"
         }
       ],
       "envelope": {
@@ -1010,15 +1008,14 @@
           {
             "id": "00000700-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 40
+            "created_revision": 40,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -1038,7 +1035,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 41,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "00000700-0000-0000-0000-000000000000"
         }
       ],
       "envelope": {
@@ -1123,28 +1121,26 @@
           {
             "id": "00000701-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 40
+            "created_revision": 40,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           },
           {
             "id": "00000702-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 45
+            "created_revision": 45,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -1164,7 +1160,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 42,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "00000701-0000-0000-0000-000000000000"
         }
       ],
       "envelope": {
@@ -1252,10 +1249,9 @@
             "id": "00000703-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
             "kind": "self_measurement",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
             "details": {},
-            "created_revision": 40
+            "created_revision": 40,
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -1275,7 +1271,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 41,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "00000703-0000-0000-0000-000000000000"
         }
       ],
       "envelope": {
@@ -1358,15 +1355,14 @@
           {
             "id": "00000704-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "present"
             },
-            "created_revision": 45
+            "created_revision": 45,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },
@@ -1386,7 +1382,8 @@
           "weakness": false,
           "dizziness": false,
           "body_state_revision": 44,
-          "recorded_at": "2026-10-15T08:00:00Z"
+          "recorded_at": "2026-10-15T08:00:00Z",
+          "body_fact_id": "00000704-0000-0000-0000-000000000000"
         }
       ],
       "envelope": {
@@ -1471,15 +1468,14 @@
           {
             "id": "00000705-0000-0000-0000-000000000000",
             "user_id": "00000000-0000-0000-0000-0000000000aa",
-            "kind": "discomfort",
-            "value": "我腰疼三天了",
-            "lifecycle_state": "active",
-            "review_state": "confirmed",
+            "kind": "symptom",
             "details": {
               "symptom_type": "腰疼",
               "presence": "absent"
             },
-            "created_revision": 45
+            "created_revision": 45,
+            "statement": "我腰疼三天了",
+            "assertion_status": "asserted"
           }
         ]
       },

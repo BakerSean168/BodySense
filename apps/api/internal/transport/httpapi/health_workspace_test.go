@@ -33,14 +33,14 @@ func minimalWorkspace() *service.HealthWorkspace {
 	return &service.HealthWorkspace{
 		GeneratedAt:  time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
 		ProfileReady: true,
-		BodyState: &service.HealthWorkspaceBodyState{
-			CurrentRevision:     0,
-			SafetyState:         json.RawMessage(`{}`),
-			Facts:               []model.BodyStateFact{},
-			PendingFacts:        []model.BodyStateFact{},
-			Observations:        []model.BodyStateObservation{},
-			PendingObservations: []model.BodyStateObservation{},
-			RecentRevisions:     []model.BodyStateRevision{},
+		BodyState: &service.BodyStateReadModel{
+			UserID:   uuid.New(),
+			Episodes: []model.EpisodeRecord{}, Hypotheses: []model.BodyHypothesisRecord{},
+			CurrentRevision: 0,
+			SafetyState:     json.RawMessage(`{}`),
+			Facts:           []model.BodyFact{},
+			Observations:    []model.BodyObservationRecord{},
+			RecentRevisions: []model.BodyStateRevision{},
 		},
 		TreatmentRevisions: []model.TreatmentRevision{},
 		RecentOutcomes:     []model.Outcome{},
@@ -89,8 +89,8 @@ func TestGetHealthWorkspaceMatchesOpenAPIResponseSchema(t *testing.T) {
 	if !ok {
 		t.Fatalf("body_state=%#v", body["body_state"])
 	}
-	if _, exists := bodyState["user_id"]; exists {
-		t.Fatal("workspace body_state must not invent the consultation snapshot user_id field")
+	if _, exists := bodyState["user_id"]; !exists {
+		t.Fatal("native workspace body_state must identify its owner")
 	}
 }
 

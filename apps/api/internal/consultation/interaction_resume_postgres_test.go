@@ -424,7 +424,7 @@ func TestInteractionResumeSafetyFirstCaptureDoesNotRebaseOverOtherWritesPostgres
 			if revision, err := safety.RecordSafetyEventWithReceipt(context.Background(), f.owner, json.RawMessage(`{"has_red_flags":false,"flags":[]}`)); err != nil || revision != nil {
 				t.Fatalf("negative screen mutated safety: %v", err)
 			}
-			snapshot, err := safety.GetSnapshot(context.Background(), f.owner, 20)
+			snapshot, err := safety.GetBodyState(context.Background(), f.owner, 20)
 			if err != nil {
 				t.Fatal(err)
 			}

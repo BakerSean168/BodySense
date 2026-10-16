@@ -121,7 +121,7 @@ func (f *fakeTreatmentDiagnosis) PublicPayload(analysis *model.DiagnosisAnalysis
 }
 
 type fakeTreatmentBodyState struct {
-	snapshot           *BodyStateSnapshot
+	snapshot           *BodyStateReadModel
 	equipment          []AgentEquipmentItem
 	viewOwner          uuid.UUID
 	revisions          []model.BodyStateRevision
@@ -318,7 +318,7 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 				State:       "confirmed",
 			}},
 		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -389,7 +389,7 @@ func TestTreatmentGenerationMapsGovernanceRejectionToSafetyBlock(t *testing.T) {
 				State:       "confirmed",
 			}},
 		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{
 			UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`),
 		}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
@@ -429,7 +429,7 @@ func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *tes
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -457,7 +457,7 @@ func TestTreatmentGenerationBlockedBySafetyState(t *testing.T) {
 	analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), UserID: userID, Status: "completed", Candidates: []model.DiagnosisCandidateRecord{{Name: "x", Confidence: "中"}}}
 	svc := NewTreatmentService(
 		&fakeTreatmentRepo{}, &fakeTreatmentDiagnosis{analysis: analysis},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{CurrentRevision: 3, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{CurrentRevision: 3, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{}`)},
 		testTreatmentUnitOfWork{},
@@ -548,7 +548,7 @@ func TestTreatmentGenerationRequiresCandidateAssessment(t *testing.T) {
 	svc := NewTreatmentService(
 		&fakeTreatmentRepo{},
 		&fakeTreatmentDiagnosis{analysis: analysis},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -578,7 +578,7 @@ func TestTreatmentAcceptRevalidatesSafetyState(t *testing.T) {
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -606,7 +606,7 @@ func TestTreatmentAcceptRejectsStaleDiagnosis(t *testing.T) {
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessStale}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -635,7 +635,7 @@ func TestTreatmentAcceptRejectsRelatedBodyStateChange(t *testing.T) {
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:neck")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
@@ -666,7 +666,7 @@ func TestTreatmentAcceptAllowsUnrelatedChangeAndPinsCheckedRevision(t *testing.T
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:sleep")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
@@ -702,7 +702,7 @@ func TestTreatmentAcceptRejectsConcurrentBodyStateChange(t *testing.T) {
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
@@ -842,7 +842,7 @@ func TestTreatmentGetCurrentIsPure(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
@@ -869,7 +869,7 @@ func TestTreatmentPreviewDerivesReviewWithoutWriting(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
@@ -896,7 +896,7 @@ func TestTreatmentExplicitReviewPersistsDerivedStatus(t *testing.T) {
 			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
 		}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{CurrentRevision: 5, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
@@ -1007,7 +1007,7 @@ func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
 				State:       "confirmed",
 			}},
 		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 12, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 12, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -1049,7 +1049,7 @@ func TestTreatmentProposalPersistsGenerationDecisionTrace(t *testing.T) {
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 14, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 14, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
@@ -1097,7 +1097,7 @@ func TestTreatmentAcceptancePersistsDecisionTraceWithCheckedRevision(t *testing.
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
 		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 16, SafetyState: json.RawMessage(`{}`)},
+			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 16, SafetyState: json.RawMessage(`{}`)},
 			revisions: []model.BodyStateRevision{testFactRecorded(16, "region:sleep")},
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
@@ -1133,7 +1133,7 @@ func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgentOrAcceptance(t *test
 		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 20,
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
-	bodyState := &fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{
+	bodyState := &fakeTreatmentBodyState{snapshot: &BodyStateReadModel{
 		UserID: userID, CurrentRevision: 20,
 		SafetyState: json.RawMessage(`{"has_red_flags":"yes","status":"requires_review"}`),
 	}}
@@ -1183,7 +1183,7 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 30, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 30, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
 			"status":"proposed","summary":"served champion","goal":"reduce load","duration_weeks":4,
@@ -1226,7 +1226,7 @@ func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
 	svc := NewTreatmentService(
 		&fakeTreatmentRepo{},
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 31, SafetyState: json.RawMessage(`{}`)}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 31, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{
 			"status":"proposed","summary":"champion","goal":"reduce load","duration_weeks":4,
@@ -1252,7 +1252,7 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 	}
 	notes := "medium"
 	bodyState := &fakeTreatmentBodyState{
-		snapshot:  &BodyStateSnapshot{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)},
+		snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 9, SafetyState: json.RawMessage(`{}`)},
 		equipment: []AgentEquipmentItem{{ID: uuid.New(), DisplayName: "弹力带", Notes: &notes, AccessKind: "owned"}},
 	}
 	var captured TreatmentRecommendationRequest

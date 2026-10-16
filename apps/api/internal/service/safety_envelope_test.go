@@ -20,7 +20,7 @@ func TestSafetyEnvelopeSharedContract(t *testing.T) {
 		ProvenanceRoundTrip json.RawMessage `json:"provenance_round_trip"`
 		Cases               []struct {
 			Name          string               `json:"name"`
-			Snapshot      BodyStateSnapshot    `json:"snapshot"`
+			Snapshot      BodyStateReadModel   `json:"snapshot"`
 			SafetyScreens []model.SafetyScreen `json:"safety_screens"`
 			Envelope      json.RawMessage      `json:"envelope"`
 			Error         bool                 `json:"error"`
@@ -85,9 +85,9 @@ func TestSafetyEnvelopeSharedContract(t *testing.T) {
 func TestSafetyEnvelopeIgnoresLegacyDetailBooleansAndProse(t *testing.T) {
 	// Only safety screens carry safety authority. Free-form or legacy detail
 	// booleans on facts (whatever their review state) are never assertions.
-	snapshot := &BodyStateSnapshot{CurrentRevision: 3, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyStateFact{
-		{ID: uuid.New(), Kind: "discomfort", Value: "头晕，外伤", Details: datatypes.JSON(`{"additional_notes":"trauma","dizziness":true,"safety_capture_revision":"body-state-safety-capture-v1"}`), LifecycleState: "active", ReviewState: "confirmed", CreatedRevision: 2},
-		{ID: uuid.New(), Details: datatypes.JSON(`{"dizziness":true}`), LifecycleState: "active", ReviewState: "unverified"},
+	snapshot := &BodyStateReadModel{CurrentRevision: 3, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyFact{
+		{ID: uuid.New(), Kind: "symptom", Statement: "头晕，外伤", Details: datatypes.JSON(`{"additional_notes":"trauma","dizziness":true,"safety_capture_revision":"body-state-safety-capture-v1"}`), AssertionStatus: "asserted", CreatedRevision: 2},
+		{ID: uuid.New(), Details: datatypes.JSON(`{"dizziness":true}`), AssertionStatus: "asserted"},
 	}}
 	envelope, err := ProjectSafetyEnvelopeV2(snapshot)
 	if err != nil {
@@ -100,19 +100,19 @@ func TestSafetyEnvelopeIgnoresLegacyDetailBooleansAndProse(t *testing.T) {
 
 func TestSafetyEnvelopeCoverageFollowsScreenRevision(t *testing.T) {
 	owner := uuid.New()
-	symptom := model.BodyStateFact{ID: uuid.New(), UserID: owner, Kind: "discomfort", LifecycleState: "active", ReviewState: "confirmed", Details: datatypes.JSON(`{"presence":"present"}`), CreatedRevision: 4}
-	screen := model.SafetyScreen{ID: uuid.New(), UserID: owner, BodyStateRevision: 4, RecordedAt: time.Now()}
+	symptom := model.BodyFact{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", Details: datatypes.JSON(`{"presence":"present"}`), CreatedRevision: 4}
+	screen := model.SafetyScreen{ID: uuid.New(), UserID: owner, BodyFactID: symptom.ID, BodyStateRevision: 4, RecordedAt: time.Now()}
 	for name, test := range map[string]struct {
 		screens  []model.SafetyScreen
 		complete bool
 	}{
-		"no-screen":          {nil, false},
-		"same-revision":      {[]model.SafetyScreen{screen}, true},
-		"older-screen":       {[]model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyStateRevision: 3}}, false},
-		"other-owner-screen": {[]model.SafetyScreen{{ID: uuid.New(), UserID: uuid.New(), BodyStateRevision: 5}}, false},
-		"older-and-newer":    {[]model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyStateRevision: 2}, {ID: uuid.New(), UserID: owner, BodyStateRevision: 5}}, true},
+		"no-screen":     {nil, false},
+		"same-revision": {[]model.SafetyScreen{screen}, true},
+		"older-screen":  {[]model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyFactID: symptom.ID, BodyStateRevision: 3}}, false},
+
+		"older-and-newer": {[]model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyFactID: symptom.ID, BodyStateRevision: 2}, {ID: uuid.New(), UserID: owner, BodyFactID: symptom.ID, BodyStateRevision: 5}}, true},
 	} {
-		envelope, err := ProjectSafetyEnvelopeV2(&BodyStateSnapshot{UserID: owner, CurrentRevision: 5, Facts: []model.BodyStateFact{symptom}, SafetyScreens: test.screens})
+		envelope, err := ProjectSafetyEnvelopeV2(&BodyStateReadModel{UserID: owner, CurrentRevision: 5, Facts: []model.BodyFact{symptom}, SafetyScreens: test.screens})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -120,7 +120,7 @@ func TestSafetyEnvelopeCoverageFollowsScreenRevision(t *testing.T) {
 			t.Fatalf("%s: coverage complete = %v, want %v (%+v)", name, envelope.Coverage.Complete, test.complete, envelope.Coverage)
 		}
 	}
-	empty, err := ProjectSafetyEnvelopeV2(&BodyStateSnapshot{UserID: owner, CurrentRevision: 5, SafetyScreens: []model.SafetyScreen{screen}})
+	empty, err := ProjectSafetyEnvelopeV2(&BodyStateReadModel{UserID: owner, CurrentRevision: 5, SafetyScreens: []model.SafetyScreen{screen}})
 	if err != nil || empty.Coverage.Complete {
 		t.Fatalf("a screen without any symptom must not complete coverage: %+v %v", empty.Coverage, err)
 	}
@@ -136,7 +136,7 @@ func TestSafetyEnvelopeLegacyMonitoringAndUnknown(t *testing.T) {
 		{`{"has_red_flags":true,"status":"active","flags":[{"category":"unmapped"}]}`, true, false},
 		{`{"has_red_flags":true,"status":"surprise"}`, false, true},
 	} {
-		envelope, err := ProjectSafetyEnvelopeV2(&BodyStateSnapshot{CurrentRevision: 1, SafetyState: json.RawMessage(test.raw)})
+		envelope, err := ProjectSafetyEnvelopeV2(&BodyStateReadModel{CurrentRevision: 1, SafetyState: json.RawMessage(test.raw)})
 		if (err != nil) != test.invalid {
 			t.Fatalf("unexpected error for %s: %v", test.raw, err)
 		}

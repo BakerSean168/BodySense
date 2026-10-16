@@ -21,9 +21,7 @@ type workspaceConsultationSource interface {
 }
 
 type workspaceBodyStateSource interface {
-	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
-	ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error)
-	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)
+	GetBodyState(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateReadModel, error)
 }
 
 type workspaceDiagnosisSource interface {
@@ -104,24 +102,11 @@ func (s *HealthWorkspaceService) Get(
 		}
 	}
 
-	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 30)
+	snapshot, err := s.bodyState.GetBodyState(ctx, userID, 30)
 	if err != nil {
 		return nil, fmt.Errorf("load workspace body state: %w", err)
 	}
-	pendingFacts, err := s.bodyState.ListReviewableFacts(ctx, userID, 50)
-	if err != nil {
-		return nil, fmt.Errorf("load workspace pending facts: %w", err)
-	}
-	pendingObservations, err := s.bodyState.ListReviewableObservations(ctx, userID, 50)
-	if err != nil {
-		return nil, fmt.Errorf("load workspace pending observations: %w", err)
-	}
-	workspace.BodyState = &HealthWorkspaceBodyState{
-		CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState,
-		Facts: snapshot.Facts, PendingFacts: pendingFacts, Observations: snapshot.Observations,
-		PendingObservations: pendingObservations,
-		RecentRevisions:     snapshot.RecentRevisions,
-	}
+	workspace.BodyState = snapshot
 
 	analysis, err := s.diagnosis.GetLatest(ctx, userID)
 	if err != nil {
@@ -161,7 +146,7 @@ func (s *HealthWorkspaceService) Get(
 	if err != nil {
 		return nil, fmt.Errorf("load workspace outcomes: %w", err)
 	}
-	workspace.Trends = deriveWorkspaceTrends(snapshot, workspace.RecentOutcomes)
+	workspace.Trends = deriveWorkspaceTrends(workspace.RecentOutcomes)
 	workspace.Capabilities = deriveWorkspaceCapabilities(
 		snapshot, analysis, freshness, assessments, workspace.Treatment, workspace.TrainingPlan, workspace.TreatmentRevisions,
 	)
@@ -170,7 +155,7 @@ func (s *HealthWorkspaceService) Get(
 }
 
 func deriveWorkspaceCapabilities(
-	snapshot *BodyStateSnapshot,
+	snapshot *BodyStateReadModel,
 	analysis *model.DiagnosisAnalysisRecord,
 	freshness *model.DiagnosisAnalysisFreshness,
 	assessments []model.DiagnosisCandidateAssessment,
@@ -178,7 +163,9 @@ func deriveWorkspaceCapabilities(
 	trainingPlan *model.TrainingPlan,
 	revisions []model.TreatmentRevision,
 ) HealthWorkspaceCapabilities {
-	requiresSafety := bodyStateRequiresSafetyReview(snapshot.SafetyState)
+	envelope, safetyErr := ProjectSafetyEnvelopeV2(snapshot)
+	requiresSafety := safetyErr != nil || envelope.RequiresReview
+	trainingSafetyIncomplete := requiresSafety || !envelope.Coverage.Complete
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
 	hasAnalysis := analysis != nil
 	diagnosisReview := freshness != nil && freshness.State != model.DiagnosisFreshnessFresh
@@ -205,9 +192,9 @@ func deriveWorkspaceCapabilities(
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !requiresSafety,
 		CanReviewDiagnosis:      hasAnalysis,
-		CanGenerateTreatment:    analysisEligible && !requiresSafety,
-		CanAcceptTreatment:      hasAcceptableProposal && !requiresSafety,
-		CanExecuteTreatment:     hasCurrent && treatment.Status == model.TreatmentStatusActive && trainingPlan != nil && trainingPlan.Status == "active" && !requiresSafety,
+		CanGenerateTreatment:    analysisEligible && !trainingSafetyIncomplete,
+		CanAcceptTreatment:      hasAcceptableProposal && !trainingSafetyIncomplete,
+		CanExecuteTreatment:     hasCurrent && treatment.Status == model.TreatmentStatusActive && trainingPlan != nil && trainingPlan.Status == "active" && !trainingSafetyIncomplete,
 		CanRecordOutcome:        hasCurrent,
 		CanReviewTreatment:      hasCurrent,
 		RequiresSafetyReview:    requiresSafety,
@@ -265,21 +252,9 @@ func workspaceTreatmentRoute(conversationID *uuid.UUID) string {
 }
 
 func deriveWorkspaceTrends(
-	snapshot *BodyStateSnapshot,
 	outcomes []model.Outcome,
 ) []HealthWorkspaceTrend {
 	byKey := map[string]*HealthWorkspaceTrend{}
-	for _, fact := range snapshot.Facts {
-		if fact.Trend == "" || fact.Trend == "unknown" {
-			continue
-		}
-		key := strings.Join([]string{fact.ConcernKey, fact.BodyRegion, "fact"}, "|")
-		byKey[key] = &HealthWorkspaceTrend{
-			Key: key, ConcernKey: fact.ConcernKey, BodyRegion: fact.BodyRegion,
-			Kind: "body_state_fact", CurrentTrend: fact.Trend,
-			Points: []HealthWorkspaceTrendPoint{},
-		}
-	}
 	for _, outcome := range outcomes {
 		key := strings.Join([]string{outcome.ConcernKey, outcome.BodyRegion, outcome.Kind}, "|")
 		trend, exists := byKey[key]

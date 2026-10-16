@@ -17,7 +17,7 @@ import (
 )
 
 type bodyStateRouteService interface {
-	GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error)
+	GetBodyState(context.Context, uuid.UUID, int) (*service.BodyStateReadModel, error)
 	UpdateFactTemporal(context.Context, uuid.UUID, *int64, uuid.UUID, string, string, *time.Time) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	ReviewFact(context.Context, uuid.UUID, *int64, uuid.UUID, string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	AddObservation(context.Context, uuid.UUID, *int64, model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
@@ -42,11 +42,11 @@ func (s *PublicServer) GetBodyState(
 	if s.bodyStateRoutes == nil {
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "body state service is unavailable"), nil
 	}
-	snapshot, err := s.bodyStateRoutes.GetSnapshot(ctx, userID, 50)
+	snapshot, err := s.bodyStateRoutes.GetBodyState(ctx, userID, 50)
 	if err != nil {
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load body state"), nil
 	}
-	response, err := strictOpenAPIConvert[openapiv1.BodyStateSnapshot]("BodyStateSnapshot", snapshot)
+	response, err := strictOpenAPIConvert[openapiv1.BodyStateReadModel]("BodyStateReadModel", snapshot)
 	if err != nil {
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "body state violates the public contract"), nil
 	}

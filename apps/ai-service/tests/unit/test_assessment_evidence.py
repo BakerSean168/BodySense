@@ -383,3 +383,47 @@ def test_v4_machine_admissible_lane_keeps_working_and_replay_is_preserved() -> N
         evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
     )
     assert set(replay) == {f"report:upload:{report_upload_id}:indicator:0"}
+
+
+def test_native_v2_statements_and_measurements_keep_identity_and_source_text() -> None:
+    fact_id = "749981d4-d942-44f6-9957-9a708b8b4033"
+    observation_id = "f7aa596f-cc8a-4466-a538-c7ba52110ba9"
+    catalog = build_assessment_evidence_catalog(
+        profile={},
+        body_state={
+            "schema": "agent-body-context-v1",
+            "facts": [
+                {
+                    "id": fact_id,
+                    "kind": "lifestyle",
+                    "statement": "每周跑步两次",
+                    "details": {"habit_type": "exercise"},
+                    "authorship": "user_reported",
+                }
+            ],
+            "observations": [
+                {
+                    "id": observation_id,
+                    "kind": "weight",
+                    "statement": "我体重70公斤",
+                    "raw_value": "70",
+                    "raw_unit": "kg",
+                    "authorship": "user_reported",
+                }
+            ],
+        },
+        report_indicators=[],
+        posture_analysis={},
+    )
+    fact_ref = f"body_state:fact:{fact_id}"
+    observation_ref = f"body_state:observation:{observation_id}"
+    rendered = render_assessment_observations(
+        [
+            {"kind": "exercise_pattern", "evidence_refs": [fact_ref]},
+            {"kind": "anthropometry", "evidence_refs": [observation_ref]},
+        ],
+        catalog,
+    )
+    assert "每周跑步两次" in rendered[0]["description"]
+    assert "我体重70公斤" in rendered[1]["description"]
+    assert catalog[observation_ref].value["authorship"] == "user_reported"

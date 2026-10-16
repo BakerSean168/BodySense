@@ -6,20 +6,9 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
-import { BodyStateFact } from './bodyStateFact.zod';
-import { BodyStateObservation } from './bodyStateObservation.zod';
-import { BodyStateRevision } from './bodyStateRevision.zod';
-import { JsonObject } from './jsonObject.zod';
+import { BodyStateReadModel } from './bodyStateReadModel.zod';
 
-export const HealthWorkspaceBodyState = /*#__PURE__*/ zod.strictObject({
-  "current_revision": /*#__PURE__*/ zod.int(),
-  "safety_state": JsonObject,
-  "facts": /*#__PURE__*/ zod.array(BodyStateFact),
-  "pending_facts": /*#__PURE__*/ zod.array(BodyStateFact),
-  "observations": /*#__PURE__*/ zod.array(BodyStateObservation),
-  "pending_observations": /*#__PURE__*/ zod.array(BodyStateObservation),
-  "recent_revisions": /*#__PURE__*/ zod.array(BodyStateRevision)
-});
+export const HealthWorkspaceBodyState = BodyStateReadModel;
 
 export type HealthWorkspaceBodyState = zod.input<typeof HealthWorkspaceBodyState>;
 export type HealthWorkspaceBodyStateOutput = zod.output<typeof HealthWorkspaceBodyState>;

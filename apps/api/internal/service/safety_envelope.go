@@ -120,20 +120,19 @@ var structuredSafetyDetails = []struct {
 
 // ProjectSafetyEnvelopeV2 is a pure projection over one pinned BodyState snapshot.
 //
-// Coverage: every active asserted symptom (V2 symptom statements projected as
-// discomfort facts; presence=absent is not a complaint) is covered iff a
-// complete safety screen was recorded at a revision >= the symptom's created
-// revision. No symptom means no coverage (fail-closed).
+// Coverage: each asserted positive V2 symptom statement is covered only by a
+// complete safety screen bound to that fact, recorded at or after its creation
+// revision. An absent symptom is not a complaint. No symptom means no coverage.
 //
 // Assertions: each safety screen contributes one confirmed current assertion
 // per concept. A positive concept is an active blocker until an explicit Go
 // safety resolution (ResolveSafetyState) is recorded after that screen.
-func ProjectSafetyEnvelopeV2(snapshot *BodyStateSnapshot) (SafetyEnvelopeV2, error) {
+func ProjectSafetyEnvelopeV2(snapshot *BodyStateReadModel) (SafetyEnvelopeV2, error) {
 	input := safetyProjectionInput{}
 	if snapshot != nil {
 		input = safetyProjectionInput{UserID: snapshot.UserID, CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState, Screens: snapshot.SafetyScreens}
 		for _, fact := range snapshot.Facts {
-			if fact.Kind != "discomfort" || fact.LifecycleState != "active" || fact.ExcludedFromReasoning || (fact.ReviewState != "confirmed" && fact.ReviewState != "unverified") {
+			if fact.Kind != "symptom" || fact.AssertionStatus != "asserted" {
 				continue
 			}
 			var details struct {
@@ -156,7 +155,7 @@ type safetyCoverageSubject struct {
 }
 
 // safetyProjectionInput is everything the Go Safety envelope reads, pinned to
-// one BodyState revision. Both the legacy snapshot and the native V2 agent view
+// one BodyState revision. Both the native read model and the V2 agent view
 // project through it so they cannot disagree.
 type safetyProjectionInput struct {
 	UserID          uuid.UUID
@@ -187,14 +186,17 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 	resolvedAt := legacySafetyResolvedAt(snapshot.SafetyState)
 
 	screens := make([]model.SafetyScreen, 0, len(snapshot.Screens))
-	latestScreenRevision := int64(0)
+	latestScreenRevision := map[uuid.UUID]int64{}
 	for _, screen := range snapshot.Screens {
-		if screen.ID == uuid.Nil || screen.UserID != snapshot.UserID || screen.BodyStateRevision <= 0 || screen.BodyStateRevision > snapshot.CurrentRevision {
+		if screen.UserID != snapshot.UserID {
+			return envelope, fmt.Errorf("safety screen owner mismatch")
+		}
+		if screen.ID == uuid.Nil || screen.BodyStateRevision <= 0 || screen.BodyStateRevision > snapshot.CurrentRevision {
 			continue
 		}
 		screens = append(screens, screen)
-		if screen.BodyStateRevision > latestScreenRevision {
-			latestScreenRevision = screen.BodyStateRevision
+		if screen.BodyStateRevision > latestScreenRevision[screen.BodyFactID] {
+			latestScreenRevision[screen.BodyFactID] = screen.BodyStateRevision
 		}
 	}
 	sort.Slice(screens, func(i, j int) bool { return screens[i].ID.String() < screens[j].ID.String() })
@@ -203,7 +205,7 @@ func projectSafetyEnvelope(snapshot safetyProjectionInput) (SafetyEnvelopeV2, er
 	sort.Slice(symptoms, func(i, j int) bool { return symptoms[i].ID.String() < symptoms[j].ID.String() })
 	for _, symptom := range symptoms {
 		ref := "body-state:fact:" + symptom.ID.String()
-		if symptom.CreatedRevision > 0 && latestScreenRevision >= symptom.CreatedRevision {
+		if symptom.CreatedRevision > 0 && latestScreenRevision[symptom.ID] >= symptom.CreatedRevision {
 			envelope.Coverage.CoveredSourceRefs = append(envelope.Coverage.CoveredSourceRefs, ref)
 		} else {
 			envelope.Coverage.IncompleteSourceRefs = append(envelope.Coverage.IncompleteSourceRefs, ref)
