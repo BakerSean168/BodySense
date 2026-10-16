@@ -204,3 +204,36 @@ Domain order: Conversation/Person → Diagnosis → Training/Safety → Assets, 
 | TP-PROP-001  | done (#274)                                                                    | —    | —                  | done       |
 
 **Next three tasks:** (1) PC-001 slice 1 (api singleton + per-user Run + delete share stack); (2) TP-001 slice 1 (Safety levels/scopes + pure TrainerGate); (3) BS-HYP-001 (observation links, hypothesis correct, stable ConcernGroup id).
+
+## 6. GitHub issues and parallel waves · 2026-10-16
+
+Epic [#301](https://github.com/BakerSean168/BodySense/issues/301) tracks every remaining ticket as a sub-issue with GitHub `blocked by` links; each issue carries scope, slices, invariants and verification. Per user direction (2026-10-16) implementation now runs in **parallel waves**: a ticket may start as soon as its blockers are merged, which replaces the single-writer interleaving of §4 for scheduling. `queue.json` statuses and `maxParallelWriters` are unchanged by this section; PC-001 s1, TP-001 s1 and BS-HYP-001 are already being implemented on `feat/v2-pc001-*`, `feat/v2-tp001-*`, `feat/v2-bshyp001-*`.
+
+| Ticket       | Issue                                                                    | Wave | Blocked by                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| PC-001       | [#302](https://github.com/BakerSean168/BodySense/issues/302)             | 1    | —                                                                                                                                   |
+| TP-001       | [#303](https://github.com/BakerSean168/BodySense/issues/303)             | 1    | —                                                                                                                                   |
+| BS-HYP-001   | [#304](https://github.com/BakerSean168/BodySense/issues/304)             | 1    | —                                                                                                                                   |
+| DX-002       | [#305](https://github.com/BakerSean168/BodySense/issues/305)             | 1    | —                                                                                                                                   |
+| AS-001       | [#306](https://github.com/BakerSean168/BodySense/issues/306)             | 1    | —                                                                                                                                   |
+| PC-RET-001   | [#307](https://github.com/BakerSean168/BodySense/issues/307)             | 2    | PC-001 #302                                                                                                                         |
+| BS-AGENT-001 | [#308](https://github.com/BakerSean168/BodySense/issues/308)             | 2    | BS-HYP-001 #304                                                                                                                     |
+| UI-001       | [#309](https://github.com/BakerSean168/BodySense/issues/309)             | 2    | BS-HYP-001 #304                                                                                                                     |
+| DX-003       | [#310](https://github.com/BakerSean168/BodySense/issues/310)             | 2    | DX-002 #305                                                                                                                         |
+| TP-002       | [#311](https://github.com/BakerSean168/BodySense/issues/311)             | 2    | TP-001 #303                                                                                                                         |
+| UI-DX-001    | [#312](https://github.com/BakerSean168/BodySense/issues/312)             | 3    | DX-003 #310                                                                                                                         |
+| TP-003       | [#313](https://github.com/BakerSean168/BodySense/issues/313)             | 3    | TP-002 #311                                                                                                                         |
+| AS-002       | [#314](https://github.com/BakerSean168/BodySense/issues/314)             | 3    | AS-001 #306, PC-RET-001 #307                                                                                                        |
+| UI-TP-001    | [#315](https://github.com/BakerSean168/BodySense/issues/315)             | 4    | TP-003 #313                                                                                                                         |
+| QA-001       | [#316](https://github.com/BakerSean168/BodySense/issues/316)             | 5    | UI-001 #309, BS-AGENT-001 #308, PC-RET-001 #307, UI-DX-001 #312, UI-TP-001 #315, AS-002 #314                                        |
+| REL-001      | [#317](https://github.com/BakerSean168/BodySense/issues/317)             | 5    | QA-001 #316, BS-AGENT-001 #308, PC-RET-001 #307, DX-003 #310, TP-003 #313, AS-002 #314, UI-001 #309, UI-DX-001 #312, UI-TP-001 #315 |
+| DX-001       | folded into [#305](https://github.com/BakerSean168/BodySense/issues/305) | 1    | —                                                                                                                                   |
+
+Waves: **1** PC-001, TP-001, BS-HYP-001, DX-002, AS-001 · **2** PC-RET-001, BS-AGENT-001, UI-001, DX-003, TP-002 · **3** UI-DX-001, TP-003, AS-002 · **4** UI-TP-001 · **5** QA-001 (slices after each domain, closes last), then REL-001. Issue #268 is closed as superseded by TP-002.
+
+**Shared-hotspot rules for parallel PRs:**
+
+- `000001_vnext_baseline.{up,down}.sql` + `checksums.sha256`: rebase on latest main, regenerate checksums and rerun migration-validator before merge; add your own table/index blocks, never rewrite another ticket's block.
+- OpenAPI / runtime proto + generated code: rebase, then `pnpm contracts:generate` + `pnpm contracts:check-generated`; regenerate instead of hand-merging generated conflicts.
+- `docs/plan/**`, `queue.json`, `v2-handoff-state.json`: implementation PRs do not edit them; the plan owner syncs after each merge.
+- One PR per slice; `gh pr merge <n> --merge --match-head-commit <sha>`, never `--admin`; never touch staging/production or another writer's worktree/branch.

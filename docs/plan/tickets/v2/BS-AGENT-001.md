@@ -6,6 +6,8 @@ Status: QUEUED / NOT ADMITTED. Phase 2. SF cross-reference: SF-12/SF-20.
 
 ## Current remaining scope · 2026-10-16
 
+**GitHub:** [#308](https://github.com/BakerSean168/BodySense/issues/308) (epic [#301](https://github.com/BakerSean168/BodySense/issues/301)) · Wave 2 · size M · blocked by: BS-HYP-001 #304 · blocks: QA-001 #316, REL-001 #317.
+
 Source-bound BodyFact/AskUser commits and native frozen Agent inputs are implemented; PR6 A–E includes removal of the obsolete intake binding. Remaining scope is unimplemented authorization/command variants, not PR6 input migration or binding cleanup.
 
 The original steps below are historical decomposition; perform only their unfulfilled acceptance work, under the Master’s single-writer policy.
