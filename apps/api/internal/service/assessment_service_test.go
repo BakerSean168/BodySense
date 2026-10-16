@@ -73,6 +73,20 @@ func (s *fakeAssessmentBodyState) AddAssessmentObservation(_ context.Context, us
 
 type fakeAssessmentReasoner struct{ raw json.RawMessage }
 
+func TestAssessmentCatalogPreservesNativeSourceReferences(t *testing.T) {
+	factID, sourceID := uuid.New(), uuid.New()
+	body := AgentBodyContext{Facts: []AgentBodyFact{{ID: factID, SourceEvidenceID: sourceID, CreatedRevision: 3, Kind: "lifestyle", Details: json.RawMessage(`{"habit_type":"exercise"}`)}}}
+	catalog := buildAssessmentEvidenceCatalog(AssessmentGenerationRequest{BodyState: rawJSON(body, `{}`)})
+	item, ok := catalog["body_state:fact:"+factID.String()]
+	if !ok {
+		t.Fatal("native fact absent from Assessment catalog")
+	}
+	value, ok := item.Value.(map[string]any)
+	if !ok || value["source_evidence_id"] != sourceID.String() || value["created_revision"] != float64(3) {
+		t.Fatalf("source identity lost: %#v", item)
+	}
+}
+
 func (r fakeAssessmentReasoner) GenerateAssessment(context.Context, AssessmentGenerationRequest) (json.RawMessage, error) {
 	return r.raw, nil
 }

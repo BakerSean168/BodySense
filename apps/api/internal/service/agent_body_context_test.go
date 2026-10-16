@@ -63,7 +63,7 @@ func TestAgentBodyContextKeepsUnscreenedSymptomVisible(t *testing.T) {
 		t.Fatalf("view: %#v", view)
 	}
 	fact := view.Facts[0]
-	if fact.ID != knee.ID || fact.Authorship != AgentAuthorshipUserReported || fact.SafetyScreen != AgentSymptomUnscreened || fact.ConcernKey != "region:knee_right" {
+	if fact.ID != knee.ID || fact.SourceEvidenceID != knee.SourceEvidenceID || fact.Authorship != AgentAuthorshipUserReported || fact.SafetyScreen != AgentSymptomUnscreened || fact.ConcernKey != "region:knee_right" {
 		t.Fatalf("symptom fact: %#v", fact)
 	}
 	if view.Safety.Status != AgentSafetyScreeningIncomplete || view.Safety.CoverageComplete || view.Safety.RequiresReview ||
@@ -132,7 +132,7 @@ func TestAgentBodyContextSectionsAndLabels(t *testing.T) {
 	injury := agentTestFact(owner, "health_history", "去年扭伤脚踝", 2, `{"history_kind":"injury_summary"}`, `[]`)
 	svc, repo := agentTestService(owner, 5, []model.BodyFact{oldSleep, newSleep, injury})
 	repo.memoryBodyContextLedger.observations = []model.BodyObservationRecord{
-		{ID: uuid.New(), UserID: owner, Kind: "weight", Statement: "体重 70 kg", RawValue: "70", RawUnit: "kg", AssertionStatus: "asserted", CreatedRevision: 3},
+		{ID: uuid.New(), UserID: owner, Kind: "weight", Statement: "体重 70 kg", RawValue: "70", RawUnit: "kg", Source: model.BodyObservationSource{ID: uuid.New(), Version: 1}, AssertionStatus: "asserted", CreatedRevision: 3},
 	}
 	episodeFact := uuid.New()
 	repo.memoryBodyContextLedger.episodes = []model.EpisodeRecord{
@@ -163,7 +163,7 @@ func TestAgentBodyContextSectionsAndLabels(t *testing.T) {
 	if len(view.Facts) != 2 || !statements["现在睡 8 小时"] || !statements["去年扭伤脚踝"] || statements["以前睡 6 小时"] {
 		t.Fatalf("keyed context must keep only the newest statement: %#v", view.Facts)
 	}
-	if len(view.Observations) != 1 || view.Observations[0].RawValue != "70" || view.Observations[0].Authorship != AgentAuthorshipUserReported {
+	if len(view.Observations) != 1 || view.Observations[0].RawValue != "70" || view.Observations[0].Source != repo.memoryBodyContextLedger.observations[0].Source || view.Observations[0].Authorship != AgentAuthorshipUserReported {
 		t.Fatalf("observations: %#v", view.Observations)
 	}
 	if len(view.Episodes) != 1 || view.Episodes[0].State != "ongoing" || len(view.Episodes[0].FactIDs) != 1 || view.Episodes[0].FactIDs[0] != episodeFact {
