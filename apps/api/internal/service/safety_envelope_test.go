@@ -85,7 +85,7 @@ func TestSafetyEnvelopeSharedContract(t *testing.T) {
 func TestSafetyEnvelopeIgnoresLegacyDetailBooleansAndProse(t *testing.T) {
 	// Only safety screens carry safety authority. Free-form or legacy detail
 	// booleans on facts (whatever their review state) are never assertions.
-	snapshot := &BodyStateReadModel{CurrentRevision: 3, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyFact{
+	snapshot := &BodyStateReadModel{CurrentRevision: 3, Facts: []model.BodyFact{
 		{ID: uuid.New(), Kind: "symptom", Statement: "头晕，外伤", Details: datatypes.JSON(`{"additional_notes":"trauma","dizziness":true,"safety_capture_revision":"body-state-safety-capture-v1"}`), AssertionStatus: "asserted", CreatedRevision: 2},
 		{ID: uuid.New(), Details: datatypes.JSON(`{"dizziness":true}`), AssertionStatus: "asserted"},
 	}}
@@ -123,28 +123,5 @@ func TestSafetyEnvelopeCoverageFollowsScreenRevision(t *testing.T) {
 	empty, err := ProjectSafetyEnvelopeV2(&BodyStateReadModel{UserID: owner, CurrentRevision: 5, SafetyScreens: []model.SafetyScreen{screen}})
 	if err != nil || empty.Coverage.Complete {
 		t.Fatalf("a screen without any symptom must not complete coverage: %+v %v", empty.Coverage, err)
-	}
-}
-
-func TestSafetyEnvelopeLegacyMonitoringAndUnknown(t *testing.T) {
-	for _, test := range []struct {
-		raw     string
-		blocked bool
-		invalid bool
-	}{
-		{`{"has_red_flags":true,"status":"monitoring"}`, false, false},
-		{`{"has_red_flags":true,"status":"active","flags":[{"category":"unmapped"}]}`, true, false},
-		{`{"has_red_flags":true,"status":"surprise"}`, false, true},
-	} {
-		envelope, err := ProjectSafetyEnvelopeV2(&BodyStateReadModel{CurrentRevision: 1, SafetyState: json.RawMessage(test.raw)})
-		if (err != nil) != test.invalid {
-			t.Fatalf("unexpected error for %s: %v", test.raw, err)
-		}
-		if err == nil && envelope.RequiresReview != test.blocked {
-			t.Fatalf("unexpected blocker for %s", test.raw)
-		}
-		if err == nil && test.blocked && envelope.Assertions[0].Concept != SafetyUnknownRedFlag {
-			t.Fatalf("unmapped legacy concept was lost")
-		}
 	}
 }

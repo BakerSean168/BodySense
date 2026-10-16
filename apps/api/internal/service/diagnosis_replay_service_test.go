@@ -16,8 +16,7 @@ import (
 
 func replayTestInput(t *testing.T, revision int64, owner uuid.UUID) json.RawMessage {
 	t.Helper()
-	bodyState := rawJSON(BodyStateReadModel{UserID: owner, CurrentRevision: revision, SafetyState: json.RawMessage(`{}`),
-		Facts:        []model.BodyFact{{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111"), UserID: owner, Kind: "symptom", Statement: "mild neck load", SourceEvidenceID: uuid.MustParse("22222222-2222-4222-8222-222222222222"), AssertionStatus: "asserted", CreatedRevision: 1}},
+	bodyState := rawJSON(BodyStateReadModel{UserID: owner, CurrentRevision: revision, Facts: []model.BodyFact{{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111"), UserID: owner, Kind: "symptom", Statement: "mild neck load", SourceEvidenceID: uuid.MustParse("22222222-2222-4222-8222-222222222222"), AssertionStatus: "asserted", CreatedRevision: 1}},
 		Observations: []model.BodyObservationRecord{}}, `{}`)
 	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","birth_date":"1996-08-27","age_years":30}`), nil)
 	if err != nil {

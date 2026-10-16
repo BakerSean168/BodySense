@@ -54,7 +54,7 @@ const (
 // (body_facts, body_observations, symptom episodes, user body_hypotheses,
 // safety screens) plus the user's currently usable equipment, pinned to one
 // BodyState revision. It is the frozen agent input; it is never authority:
-// Safety decisions stay in Go (SafetyState feeds Go policy and is not sent).
+// Safety decisions stay in Go; the envelope is never sent to the Agent.
 type AgentBodyContext struct {
 	Schema           string                 `json:"schema"`
 	UserID           uuid.UUID              `json:"user_id"`
@@ -68,9 +68,8 @@ type AgentBodyContext struct {
 	Equipment        []AgentEquipmentItem   `json:"equipment"`
 	// Truncated reports that a bounded section omitted older items.
 	Truncated bool `json:"truncated"`
-	// SafetyState is the Go-owned safety resolution record consumed by Go
-	// Treatment policy only. It is never part of the agent payload.
-	SafetyState json.RawMessage `json:"-"`
+	// SafetyEnvelope is Go policy input, excluded from Agent serialization.
+	SafetyEnvelope *SafetyEnvelopeV2 `json:"-"`
 }
 
 // AgentBodyFact is one currently asserted user statement.
@@ -150,6 +149,7 @@ type AgentEquipmentItem struct {
 // agentBodyContextLedger is the V2 ledger the view reads beyond the facts,
 // observations and screens already in bodyContextLedger.
 type agentBodyContextLedger interface {
+	ListSafetyRestrictions(context.Context, uuid.UUID) (*model.SafetyRestrictionList, error)
 	ListEpisodes(ctx context.Context, owner uuid.UUID, beforeRevision int64) (*model.EpisodePage, error)
 	ListActiveBodyHypotheses(ctx context.Context, owner uuid.UUID) (*model.BodyHypothesisList, error)
 }
@@ -218,10 +218,7 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 	view := &AgentBodyContext{
 		Schema: AgentBodyContextSchemaV1, UserID: owner, CurrentRevision: revision, RecordsAvailable: true,
 		Facts: []AgentBodyFact{}, Observations: []AgentBodyObservation{}, Episodes: []AgentSymptomEpisode{},
-		UserHypotheses: []AgentUserHypothesis{}, Equipment: []AgentEquipmentItem{}, SafetyState: head.SafetyState,
-	}
-	if len(view.SafetyState) == 0 {
-		view.SafetyState = json.RawMessage(`{}`)
+		UserHypotheses: []AgentUserHypothesis{}, Equipment: []AgentEquipmentItem{},
 	}
 
 	// Facts: every asserted statement, newest first. Keyed context (injury
@@ -392,8 +389,15 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			return nil, fmt.Errorf("safety screen owner mismatch")
 		}
 	}
+	restrictions, err := s.repo.ListSafetyRestrictions(ctx, owner)
+	if err != nil {
+		return nil, fmt.Errorf("read native safety: %w", err)
+	}
+	if restrictions == nil || restrictions.UserID != owner || restrictions.CurrentRevision != revision {
+		return nil, errAgentBodyContextNotPinned
+	}
 	applyAgentSafety(view, safetyProjectionInput{
-		UserID: owner, CurrentRevision: revision, SafetyState: view.SafetyState, Symptoms: symptoms, Screens: screens,
+		UserID: owner, CurrentRevision: revision, Restrictions: restrictions.Restrictions, Symptoms: symptoms, Screens: screens,
 	}, allFactsRead)
 
 	if s.equipment != nil {
@@ -437,6 +441,7 @@ func applyAgentSafety(view *AgentBodyContext, input safetyProjectionInput, allSy
 		sortUUIDs(summary.UnscreenedFactIDs)
 		return
 	}
+	view.SafetyEnvelope = &envelope
 	covered := map[uuid.UUID]bool{}
 	for _, ref := range envelope.Coverage.CoveredSourceRefs {
 		if id, parseErr := uuid.Parse(strings.TrimPrefix(ref, "body-state:fact:")); parseErr == nil {

@@ -11,7 +11,7 @@ import { BodyFactRecord } from './bodyFactRecord.zod';
 import { BodyHypothesisRecord } from './bodyHypothesisRecord.zod';
 import { BodyObservationRecord } from './bodyObservationRecord.zod';
 import { BodyStateRevision } from './bodyStateRevision.zod';
-import { JsonObject } from './jsonObject.zod';
+import { SafetyRestrictionRecord } from './safetyRestrictionRecord.zod';
 
 export const bodyStateReadModelCurrentRevisionMin = 0;
 
@@ -20,7 +20,7 @@ export const bodyStateReadModelCurrentRevisionMin = 0;
 export const BodyStateReadModel = /*#__PURE__*/ zod.strictObject({
   "user_id": /*#__PURE__*/ zod.uuid(),
   "current_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(bodyStateReadModelCurrentRevisionMin)),
-  "safety_state": JsonObject,
+  "safety_restrictions": /*#__PURE__*/ zod.array(SafetyRestrictionRecord),
   "facts": /*#__PURE__*/ zod.array(BodyFactRecord),
   "observations": /*#__PURE__*/ zod.array(BodyObservationRecord),
   "episodes": /*#__PURE__*/ zod.array(BodyEpisodeRecord),

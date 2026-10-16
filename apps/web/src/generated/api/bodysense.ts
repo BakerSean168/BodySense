@@ -28,7 +28,6 @@ import {
   BodyStateFactMutationResponse,
   BodyStateObservationMutationResponse,
   BodyStateReadModel,
-  BodyStateRevisionMutationResponse,
   CancelConsultationRunResponse,
   ConsultationRunDecision,
   ConsultationSessionResponse,
@@ -120,7 +119,6 @@ import type {
   BodyStateObservationInput,
   BodyStateObservationMutationResponseOutput,
   BodyStateReadModelOutput,
-  BodyStateRevisionMutationResponseOutput,
   CancelConsultationRunRequest,
   CancelConsultationRunResponseOutput,
   ClientDiagnostic,
@@ -191,7 +189,6 @@ import type {
   RecordBodyObservationRequest,
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
-  ResolveBodyStateSafetyRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
@@ -1413,59 +1410,6 @@ export const listBodyStateEvidence = async ( options?: RequestInit, fetchFn?: ty
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateEvidenceListResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getResolveBodyStateSafetyUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/safety/resolve`
-}
-
-/**
- * @summary Resolve or monitor the durable safety projection.
- */
-export const resolveBodyStateSafety = async (resolveBodyStateSafetyRequest: ResolveBodyStateSafetyRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateRevisionMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getResolveBodyStateSafetyUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(resolveBodyStateSafetyRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateRevisionMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateRevisionMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateRevisionMutationResponse.parse(parsedBody) : parsedBody
   return data
 }
 

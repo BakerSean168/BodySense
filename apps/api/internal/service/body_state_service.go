@@ -12,7 +12,6 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 // bodyStateRepository is deliberately consumer-owned: the application service
@@ -37,7 +36,6 @@ type bodyStateRepository interface {
 	TransitionObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetObservationID uuid.UUID, replacement model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
 	UpdateObservationReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observationID uuid.UUID, reviewState, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	SetSafetyState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, safetyState datatypes.JSON, source string) (*model.BodyStateRevision, error)
 	UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error)
 	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
 	GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error)
@@ -370,58 +368,6 @@ func outcomeUserSymptomStatement(outcome model.Outcome) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-// RecordSafetyEvent promotes a positive runtime safety signal into durable
-// BodyState. A later negative detector result does not silently clear it; safety
-// resolution needs an explicit business policy/review path.
-// ResolveSafetyState is the explicit review path. Negative detector output never
-// calls this method automatically.
-func (s *BodyStateService) ResolveSafetyState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, resolution, note string) (*model.BodyStateRevision, error) {
-	resolution = strings.TrimSpace(resolution)
-	if resolution != "resolved" && resolution != "cleared_by_review" && resolution != "monitoring" {
-		return nil, fmt.Errorf("invalid safety resolution %q", resolution)
-	}
-	hasRedFlags := resolution == "monitoring"
-	state := datatypes.JSON(bodyStateMustJSON(map[string]any{
-		"has_red_flags":   hasRedFlags,
-		"flags":           []any{},
-		"status":          resolution,
-		"resolution_note": strings.TrimSpace(note),
-		"resolved_at":     time.Now().UTC(),
-	}))
-	return s.repo.SetSafetyState(ctx, userID, expectedRevision, state, "safety_review")
-}
-
-func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error {
-	_, err := s.RecordSafetyEventWithReceipt(ctx, userID, payload)
-	return err
-}
-
-// RecordSafetyEventWithReceipt exposes only a committed local revision to the
-// owning runtime. A negative screen is not authorization to relax a restriction.
-func (s *BodyStateService) RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error) {
-	var event struct {
-		HasRedFlags bool            `json:"has_red_flags"`
-		Flags       json.RawMessage `json:"flags"`
-	}
-	if len(payload) == 0 || json.Unmarshal(payload, &event) != nil || !event.HasRedFlags {
-		return nil, nil
-	}
-	flags := event.Flags
-	if len(flags) == 0 {
-		flags = json.RawMessage(`[]`)
-	}
-	state := datatypes.JSON(bodyStateMustJSON(map[string]any{
-		"has_red_flags": true,
-		"flags":         json.RawMessage(flags),
-		"status":        "requires_review",
-	}))
-	revision, err := s.repo.SetSafetyState(ctx, userID, nil, state, "consultation")
-	if err != nil {
-		return nil, err
-	}
-	return revision, nil
 }
 
 func bodyStateCanonicalRegionProjection(display string) (string, *string) {

@@ -32,7 +32,7 @@ func treatmentReplayFixture(t *testing.T, configurationID string) (*model.Treatm
 		DiagnosisStatus:          "completed",
 		CandidateCount:           1,
 		FreshnessState:           model.DiagnosisFreshnessFresh,
-		SafetyState:              json.RawMessage(`{}`),
+		SafetyEnvelope:           testNativeSafetyEnvelope(12),
 		CandidateAssessmentReady: true,
 		CurrentBodyStateRevision: 12,
 		MaterialReviewStatus:     model.TreatmentStatusActive,
@@ -246,7 +246,7 @@ func stringContains(value, needle string) bool {
 
 func TestTreatmentCounterfactualReplayPreflightBlockSkipsAI(t *testing.T) {
 	revision, frozen := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
-	frozen.GenerationFacts.SafetyState = json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)
+	frozen.GenerationFacts.SafetyEnvelope = testBlockedSafetyEnvelope(frozen.GenerationFacts.CurrentBodyStateRevision)
 	raw, err := json.Marshal(frozen)
 	if err != nil {
 		t.Fatal(err)

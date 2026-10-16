@@ -53,8 +53,6 @@ type HTTPError struct {
 
 type runtimeBodyStateService interface {
 	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*service.AgentBodyContext, error)
-	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
-	RecordSafetyEventWithReceipt(ctx context.Context, userID uuid.UUID, payload json.RawMessage) (*model.BodyStateRevision, error)
 }
 
 type runtimeKnowledgeObservationService interface {
@@ -1011,12 +1009,11 @@ type ConsultationExecutionIdentity struct {
 }
 
 type streamResult struct {
-	AssistantParts       []map[string]any
-	Usage                any
-	ProviderResponseID   string
-	GovernanceResult     datatypes.JSON
-	ExecutionIdentity    ConsultationExecutionIdentity
-	OwnedSafetyRevisions []model.BodyStateRevision
+	AssistantParts     []map[string]any
+	Usage              any
+	ProviderResponseID string
+	GovernanceResult   datatypes.JSON
+	ExecutionIdentity  ConsultationExecutionIdentity
 	// CommittedFacts are the BodyFacts Go committed in this stream; a symptom
 	// intake question may bind only to one of them.
 	CommittedFacts []service.CommittedBodyFact
@@ -1247,7 +1244,7 @@ func (r *Runtime) handleAIEvent(
 	case service.ConsultationRuntimeToolResultPayload:
 		var captureErr error
 		if payload.Tool == "record_body_state" {
-			committed, facts, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result, result.OwnedSafetyRevisions...)
+			committed, facts, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result)
 			captureErr = err
 			if err != nil {
 				log.Printf("BodyFact proposal rejected: %v", err)
@@ -1288,21 +1285,8 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", publicEvent.Payload))
 
 	case service.ConsultationRuntimeRedFlagDetectedPayload:
-		var revision *model.BodyStateRevision
-		var safetyErr error
-		if r.bodyStateService == nil {
-			safetyErr = errors.New("BodyState service is not configured")
-		} else {
-			revision, safetyErr = r.bodyStateService.RecordSafetyEventWithReceipt(ctx, state.UID, publicEvent.Payload)
-		}
-		if revision != nil && safetyErr == nil {
-			result.OwnedSafetyRevisions = append(result.OwnedSafetyRevisions, *revision)
-		}
-		if err := safetyErr; err != nil {
-			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
-			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
-			return true
-		}
+		// Model warnings remain conversation output. Only Go-validated user
+		// screens can create restrictions; AI text cannot write Safety authority.
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", publicEvent.Payload))
 
@@ -1764,17 +1748,6 @@ func (r *Runtime) maybeGenerateTitle(ctx context.Context, conversationID, userID
 			log.Printf("failed to trigger title generation for conversation %s: %v", conversationID, err)
 		}
 	}
-}
-
-func (r *Runtime) persistSafetyEvent(
-	ctx context.Context,
-	userID uuid.UUID,
-	payload json.RawMessage,
-) error {
-	if r.bodyStateService == nil {
-		return errors.New("BodyState service is not configured")
-	}
-	return r.bodyStateService.RecordSafetyEvent(ctx, userID, payload)
 }
 
 func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uuid.UUID) {

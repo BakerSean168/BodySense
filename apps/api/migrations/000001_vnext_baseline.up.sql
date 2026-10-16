@@ -452,7 +452,6 @@ CREATE TABLE public.body_state_revisions (
 CREATE TABLE public.body_states (
     user_id uuid NOT NULL,
     current_revision bigint DEFAULT 0 NOT NULL,
-    safety_state jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );

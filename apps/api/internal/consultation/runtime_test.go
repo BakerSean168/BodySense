@@ -174,20 +174,10 @@ func (w *failingResponseWriter) Write([]byte) (int, error) {
 }
 func (w *failingResponseWriter) Flush() {}
 
-type fakeRuntimeBodyState struct {
-	safetyErr error
-}
+type fakeRuntimeBodyState struct{}
 
 func (f *fakeRuntimeBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*service.AgentBodyContext, error) {
 	return &service.AgentBodyContext{Schema: service.AgentBodyContextSchemaV1, UserID: owner, RecordsAvailable: true}, nil
-}
-
-func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, json.RawMessage) error {
-	return f.safetyErr
-}
-
-func (f *fakeRuntimeBodyState) RecordSafetyEventWithReceipt(context.Context, uuid.UUID, json.RawMessage) (*model.BodyStateRevision, error) {
-	return nil, f.safetyErr
 }
 
 func testStreamState() streamState {
@@ -312,11 +302,11 @@ func TestHandleAIEventForwardsExtractedCandidatesWithoutPersisting(t *testing.T)
 	}
 }
 
-func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
+func TestHandleAIWarningHasNoSafetyWriteAuthority(t *testing.T) {
 	state := testStreamState()
 	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
-		bodyStateService: &fakeRuntimeBodyState{safetyErr: errors.New("db unavailable")},
+		bodyStateService: &fakeRuntimeBodyState{},
 		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
@@ -329,14 +319,14 @@ func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
 		"flags":         []any{},
 	})
 
-	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); !stopped {
-		t.Fatal("safety persistence failure must stop the active stream")
+	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); stopped {
+		t.Fatal("untrusted model warning must not write Safety or stop the stream")
 	}
 	body := recorder.Body.String()
-	if !strings.Contains(body, "failed to persist safety state") {
+	if strings.Contains(body, "failed to persist safety state") {
 		t.Fatalf("expected explicit safety persistence failure, got %s", body)
 	}
-	if strings.Contains(body, "safety.red_flag.detected") {
+	if !strings.Contains(body, "safety.red_flag.detected") {
 		t.Fatalf("uncommitted safety signal must not be emitted as successful: %s", body)
 	}
 }

@@ -20,7 +20,7 @@ func TestBodyStateRevisionReadsOwnerIsolationPostgres(t *testing.T) {
 	ctx := context.Background()
 
 	head, err := repo.GetBodyStateHead(ctx, empty)
-	if err != nil || head.CurrentRevision != 0 || string(head.SafetyState) != `{}` || head.UserID != empty {
+	if err != nil || head.CurrentRevision != 0 || head.UserID != empty {
 		t.Fatalf("empty head: %#v %v", head, err)
 	}
 
@@ -45,7 +45,7 @@ func TestBodyStateRevisionReadsOwnerIsolationPostgres(t *testing.T) {
 	}
 
 	head, err = repo.GetBodyStateHead(ctx, owner)
-	if err != nil || head.CurrentRevision != 2 || len(head.SafetyState) == 0 {
+	if err != nil || head.CurrentRevision != 2 {
 		t.Fatalf("owner head: %#v %v", head, err)
 	}
 

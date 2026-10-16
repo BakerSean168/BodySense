@@ -157,17 +157,7 @@ func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t
 	if len(envelope.ActiveBlockers) != 1 || envelope.ActiveBlockers[0].Concept != service.SafetyNumbness || envelope.ActiveBlockers[0].SourceRef != "body-state:safety-screen:"+screen.ID.String() {
 		t.Fatalf("positive screen answer did not block: %+v", envelope.ActiveBlockers)
 	}
-	if _, err := bodyState.ResolveSafetyState(context.Background(), f.owner, nil, "cleared_by_review", "synthetic review"); err != nil {
-		t.Fatal(err)
-	}
-	snapshot, err = bodyState.GetBodyState(context.Background(), f.owner, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	envelope, err = service.ProjectSafetyEnvelopeV2(snapshot)
-	if err != nil || envelope.RequiresReview || !envelope.Coverage.Complete {
-		t.Fatalf("explicit Go resolution did not clear the screen blocker: %+v %v", envelope, err)
-	}
+
 }
 
 func TestInteractionResumeNoneOfTheAboveCompletesCoveragePostgres(t *testing.T) {

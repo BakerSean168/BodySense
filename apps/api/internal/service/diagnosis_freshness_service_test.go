@@ -28,7 +28,7 @@ type fakeDiagnosisFreshnessBodyState struct {
 }
 
 func (s fakeDiagnosisFreshnessBodyState) GetBodyStateHead(_ context.Context, owner uuid.UUID) (*model.BodyStateHead, error) {
-	return &model.BodyStateHead{UserID: owner, CurrentRevision: s.head, SafetyState: []byte(`{}`)}, nil
+	return &model.BodyStateHead{UserID: owner, CurrentRevision: s.head}, nil
 }
 func (s fakeDiagnosisFreshnessBodyState) ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error) {
 	return s.revisions, nil

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -12,7 +11,7 @@ func readyTreatmentDecisionFacts() TreatmentDecisionFacts {
 		DiagnosisStatus:          "completed",
 		CandidateCount:           1,
 		FreshnessState:           model.DiagnosisFreshnessFresh,
-		SafetyState:              json.RawMessage(`{}`),
+		SafetyEnvelope:           testNativeSafetyEnvelope(7),
 		CandidateAssessmentReady: true,
 		ProposalAcceptanceState:  model.TreatmentAcceptanceProposed,
 		SourceBodyStateRevision:  7,
@@ -44,7 +43,7 @@ func TestTreatmentDecisionPolicyDenyOverrides(t *testing.T) {
 		{"diagnosis", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.DiagnosisStatus = "insufficient_information" }, "diagnosis_not_ready"},
 		{"freshness", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.FreshnessState = model.DiagnosisFreshnessStale }, "diagnosis_not_fresh"},
 		{"safety", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) {
-			f.SafetyState = json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)
+			f.SafetyEnvelope = testBlockedSafetyEnvelope(7)
 		}, "active_body_state_safety_concern"},
 		{"assessment", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.CandidateAssessmentReady = false }, "candidate_assessment_required"},
 		{"proposal-state", TreatmentDecisionAcceptance, func(f *TreatmentDecisionFacts) { f.ProposalAcceptanceState = model.TreatmentAcceptanceAccepted }, "proposal_not_proposed"},
@@ -59,26 +58,12 @@ func TestTreatmentDecisionPolicyDenyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			facts := readyTreatmentDecisionFacts()
 			tc.mutate(&facts)
+			facts.SafetyEnvelope.BodyStateRevision = facts.CurrentBodyStateRevision
 			decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, tc.phase, facts)
 			if decision.Outcome != TreatmentBlock || len(decision.Reasons) == 0 || decision.Reasons[0] != tc.reason {
 				t.Fatalf("unexpected decision: %#v", decision)
 			}
 		})
-	}
-}
-
-func TestTreatmentDecisionPolicyMalformedSafetyFailsClosed(t *testing.T) {
-	for _, raw := range []json.RawMessage{
-		json.RawMessage(`{"has_red_flags":"yes","status":"requires_review"}`),
-		json.RawMessage(`{"has_red_flags":false,"status":"requires_review"}`),
-		json.RawMessage(`{"has_red_flags":true,"status":"mystery"}`),
-	} {
-		facts := readyTreatmentDecisionFacts()
-		facts.SafetyState = raw
-		decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts)
-		if decision.Outcome != TreatmentBlock || len(decision.Reasons) == 0 || decision.Reasons[0] != "malformed_or_unknown_safety_state" {
-			t.Fatalf("malformed safety must fail closed: %#v", decision)
-		}
 	}
 }
 
@@ -89,5 +74,16 @@ func TestTreatmentDecisionPolicyUnknownRevisionAndPhaseFailClosed(t *testing.T) 
 	}
 	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, "surprise", facts); decision.Outcome != TreatmentBlock || decision.Reasons[0] != "unsupported_decision_phase" {
 		t.Fatalf("unknown phase must fail closed: %#v", decision)
+	}
+}
+
+func TestTreatmentDecisionPolicyUnavailableSafetyFailsClosed(t *testing.T) {
+	facts := readyTreatmentDecisionFacts()
+	for _, envelope := range []*SafetyEnvelopeV2{nil, {}, testNativeSafetyEnvelope(8)} {
+		facts.SafetyEnvelope = envelope
+		decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts)
+		if decision.Outcome != TreatmentBlock || decision.Reasons[0] != "malformed_or_unknown_safety_state" {
+			t.Fatalf("unavailable Safety allowed: %+v", decision)
+		}
 	}
 }

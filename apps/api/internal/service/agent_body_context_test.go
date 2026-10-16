@@ -39,7 +39,7 @@ func agentTestFact(owner uuid.UUID, kind, statement string, revision int64, deta
 }
 
 func agentTestService(owner uuid.UUID, revision int64, facts []model.BodyFact) (*BodyStateService, *fakeBodyStateRepository) {
-	repo := &fakeBodyStateRepository{current: &model.BodyState{UserID: owner, CurrentRevision: revision, SafetyState: datatypes.JSON(`{}`)}}
+	repo := &fakeBodyStateRepository{current: &model.BodyState{UserID: owner, CurrentRevision: revision}}
 	repo.revision = revision
 	repo.facts = facts // oldest first; ListFacts returns newest first
 	return NewBodyStateService(repo), repo
@@ -90,6 +90,10 @@ func TestAgentBodyContextSafetyScreenStates(t *testing.T) {
 			repo.memoryBodyContextLedger.screens = []model.SafetyScreen{{
 				ID: uuid.New(), UserID: owner, BodyFactID: knee.ID, Numbness: test.positive, BodyStateRevision: 3, RecordedAt: time.Now().UTC(),
 			}}
+			if test.positive {
+				screen := repo.memoryBodyContextLedger.screens[0]
+				repo.restrictions = []model.SafetyRestrictionRecord{{SafetyRestriction: model.SafetyRestriction{ID: uuid.New(), UserID: owner, SafetyScreenID: screen.ID, Concept: "numbness", PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted", ScopeKind: "all_training", LiftPolicy: "professional_clearance", CreatedRevision: 3}, Active: true}}
+			}
 			view, err := svc.GetAgentBodyContext(context.Background(), owner)
 			if err != nil {
 				t.Fatal(err)
@@ -109,12 +113,11 @@ func TestAgentBodyContextSafetyScreenStates(t *testing.T) {
 	}
 }
 
-func TestAgentBodyContextInvalidSafetyStateFailsClosed(t *testing.T) {
+func TestAgentBodyContextMissingNativeRestrictionFailsClosed(t *testing.T) {
 	owner := uuid.New()
 	knee := agentTestFact(owner, "symptom", "膝痛", 2, `{"presence":"present"}`, `[]`)
 	svc, repo := agentTestService(owner, 3, []model.BodyFact{knee})
-	repo.current.SafetyState = datatypes.JSON(`{"has_red_flags":"yes"}`)
-	repo.memoryBodyContextLedger.screens = []model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyFactID: knee.ID, BodyStateRevision: 3, RecordedAt: time.Now().UTC()}}
+	repo.memoryBodyContextLedger.screens = []model.SafetyScreen{{ID: uuid.New(), UserID: owner, BodyFactID: knee.ID, Numbness: true, BodyStateRevision: 3, RecordedAt: time.Now().UTC()}}
 	view, err := svc.GetAgentBodyContext(context.Background(), owner)
 	if err != nil {
 		t.Fatal(err)

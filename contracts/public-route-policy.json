@@ -7,7 +7,13 @@
       "reason": "Operational liveness endpoint, not a browser-facing product API. It remains tested/deployed but is outside the public v1 OpenAPI contract."
     }
   ],
-  "retiredBaselineRoutes": [],
+  "retiredBaselineRoutes": [
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/safety/resolve",
+      "reason": "SAFE-D5 replaces global clear with source-bound resolution of one native restriction."
+    }
+  ],
   "approvedNewRoutes": [
     {
       "method": "GET",

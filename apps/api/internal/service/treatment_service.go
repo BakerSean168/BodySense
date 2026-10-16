@@ -207,7 +207,6 @@ func (s *TreatmentService) GenerateProposal(
 		return nil, fmt.Errorf("Treatment analysis owner mismatch")
 	}
 	facts := TreatmentDecisionFacts{
-		SafetyState:              json.RawMessage(`{}`),
 		CandidateAssessmentReady: true,
 		MaterialReviewStatus:     model.TreatmentStatusActive,
 	}
@@ -215,8 +214,8 @@ func (s *TreatmentService) GenerateProposal(
 		facts.DiagnosisStatus = analysis.Status
 		facts.CandidateCount = len(analysis.Candidates)
 	}
-	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
-		return nil, treatmentDecisionError(decision)
+	if !treatmentDiagnosisFactsReady(facts) {
+		return nil, ErrTreatmentDiagnosisNotReady
 	}
 
 	if s.freshness != nil {
@@ -227,8 +226,8 @@ func (s *TreatmentService) GenerateProposal(
 		if freshness != nil {
 			facts.FreshnessState = freshness.State
 		}
-		if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
-			return nil, treatmentDecisionError(decision)
+		if treatmentFreshnessBlocks(facts.FreshnessState) {
+			return nil, ErrTreatmentDiagnosisNotReady
 		}
 	}
 
@@ -236,7 +235,7 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
-	facts.SafetyState = bodyView.SafetyState
+	facts.SafetyEnvelope = bodyView.SafetyEnvelope
 	facts.CurrentBodyStateRevision = bodyView.CurrentRevision
 	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
 		return nil, treatmentDecisionError(decision)
@@ -375,12 +374,12 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		return nil, fmt.Errorf("only proposed treatment revisions can be accepted")
 	}
 
-	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
+	head, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	facts := TreatmentDecisionFacts{
-		SafetyState:              head.SafetyState,
+		SafetyEnvelope:           head.SafetyEnvelope,
 		CandidateAssessmentReady: true,
 		ProposalAcceptanceState:  revision.AcceptanceState,
 		SourceBodyStateRevision:  revision.SourceBodyStateRevision,
@@ -607,11 +606,15 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	if current.Status == model.TreatmentStatusCompleted || current.Status == model.TreatmentStatusSuperseded {
 		return current.Status, decodeTreatmentReviewReasons(json.RawMessage(current.StatusReasons)), nil
 	}
-	head, err := s.bodyState.GetBodyStateHead(ctx, userID)
+	head, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
 		return "", nil, err
 	}
-	if bodyStateRequiresSafetyReview(head.SafetyState) {
+	activeSafety, safetyErr := strictTreatmentSafetyReview(head.SafetyEnvelope, head.CurrentRevision)
+	if safetyErr != nil {
+		return "", nil, safetyErr
+	}
+	if activeSafety {
 		return model.TreatmentStatusPaused, []TreatmentReviewReason{{
 			Code:    "active_safety_state",
 			Message: "当前安全状态要求暂停普通干预并优先审核。",
@@ -749,11 +752,6 @@ func treatmentCandidateAssessmentsReady(
 		}
 	}
 	return false
-}
-
-func bodyStateRequiresSafetyReview(raw json.RawMessage) bool {
-	requiresReview, err := strictTreatmentSafetyReview(raw)
-	return err != nil || requiresReview
 }
 
 func treatmentDecisionError(decision TreatmentDecision) error {

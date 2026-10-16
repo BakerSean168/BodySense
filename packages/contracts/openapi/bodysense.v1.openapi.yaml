@@ -698,37 +698,6 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-  /api/v1/body-state/safety/resolve:
-    post:
-      operationId: resolveBodyStateSafety
-      summary: Resolve or monitor the durable safety projection.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successful BodyState operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BodyStateRevisionMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '503':
-          $ref: '#/components/responses/ValidationUnavailable'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResolveBodyStateSafetyRequest'
   /api/v1/body-state/safety/restrictions:
     get:
       operationId: listSafetyRestrictions
@@ -5912,7 +5881,7 @@ components:
     BodyStateReadModel:
       type: object
       additionalProperties: false
-      required: [user_id, current_revision, safety_state, facts, observations, episodes, hypotheses, recent_revisions]
+      required: [user_id, current_revision, safety_restrictions, facts, observations, episodes, hypotheses, recent_revisions]
       properties:
         user_id:
           type: string
@@ -5921,8 +5890,10 @@ components:
           type: integer
           format: int64
           minimum: 0
-        safety_state:
-          $ref: '#/components/schemas/JsonObject'
+        safety_restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SafetyRestrictionRecord'
         facts:
           type: array
           items:
@@ -6263,25 +6234,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SafetyRestrictionRecord"
-    ResolveBodyStateSafetyRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_revision
-      - resolution
-      properties:
-        expected_revision:
-          type: integer
-          format: int64
-          minimum: 0
-        resolution:
-          type: string
-          enum:
-          - resolved
-          - cleared_by_review
-          - monitoring
-        note:
-          type: string
     BodyStateRevisionMutationResponse:
       type: object
       additionalProperties: false

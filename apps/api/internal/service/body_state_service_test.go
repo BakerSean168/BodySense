@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -25,25 +24,24 @@ type fakeBodyStateRepository struct {
 	upsertedObservations     []model.BodyStateObservation
 	transitionedObservations []model.BodyStateObservation
 	appliedPatches           []model.BodyStateCurrentContextPatch
-	safetyStates             []datatypes.JSON
-	safetyExpectedRevisions  []*int64
 	returnExistingFact       bool
 	returnExistingObs        bool
+	restrictions             []model.SafetyRestrictionRecord
 	screens                  []model.SafetyScreenCommand
 }
 
 func (r *fakeBodyStateRepository) Ensure(context.Context, uuid.UUID) error { return nil }
 func (r *fakeBodyStateRepository) GetCurrent(context.Context, uuid.UUID) (*model.BodyState, error) {
 	if r.current == nil {
-		return &model.BodyState{SafetyState: datatypes.JSON(`{}`)}, nil
+		return &model.BodyState{}, nil
 	}
 	return r.current, nil
 }
 func (r *fakeBodyStateRepository) GetBodyStateHead(_ context.Context, owner uuid.UUID) (*model.BodyStateHead, error) {
 	if r.current == nil {
-		return &model.BodyStateHead{UserID: owner, SafetyState: []byte(`{}`)}, nil
+		return &model.BodyStateHead{UserID: owner}, nil
 	}
-	return &model.BodyStateHead{UserID: owner, CurrentRevision: r.current.CurrentRevision, SafetyState: []byte(r.current.SafetyState)}, nil
+	return &model.BodyStateHead{UserID: owner, CurrentRevision: r.current.CurrentRevision}, nil
 }
 func (r *fakeBodyStateRepository) ListRecentRevisions(context.Context, uuid.UUID, int) ([]model.BodyStateRevision, error) {
 	return r.revisions, nil
@@ -134,7 +132,7 @@ func (r *fakeBodyStateRepository) UpdateObservationReviewState(_ context.Context
 func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, userID uuid.UUID, _ *int64, patch model.BodyStateCurrentContextPatch, _ string) (*model.BodyStateRevision, error) {
 	r.appliedPatches = append(r.appliedPatches, patch)
 	if r.current == nil {
-		r.current = &model.BodyState{UserID: userID, SafetyState: datatypes.JSON(`{}`)}
+		r.current = &model.BodyState{UserID: userID}
 	}
 	changed := false
 	for _, mutation := range patch.Facts {
@@ -184,16 +182,6 @@ func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, us
 	return &model.BodyStateRevision{Revision: r.current.CurrentRevision}, nil
 }
 
-func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, expectedRevision *int64, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
-	r.safetyStates = append(r.safetyStates, state)
-	if expectedRevision == nil {
-		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, nil)
-	} else {
-		value := *expectedRevision
-		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, &value)
-	}
-	return &model.BodyStateRevision{Revision: int64(len(r.safetyStates))}, nil
-}
 func (r *fakeBodyStateRepository) UpsertEvidence(_ context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error) {
 	evidence.UserID = userID
 	if evidence.ID == uuid.Nil {
@@ -211,41 +199,6 @@ func (r *fakeBodyStateRepository) GetEvidenceByIDs(context.Context, uuid.UUID, [
 func (r *fakeBodyStateRepository) RecordSafetyScreen(_ context.Context, userID uuid.UUID, _ model.AnswerFactSource, command model.SafetyScreenCommand) (*model.SafetyScreen, error) {
 	r.screens = append(r.screens, command)
 	return &model.SafetyScreen{ID: uuid.New(), UserID: userID, CaptureID: command.CaptureID, BodyFactID: command.BodyFactID}, nil
-}
-
-func TestResolveSafetyStatePreservesExpectedRevision(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	expected := int64(7)
-	if _, err := svc.ResolveSafetyState(context.Background(), uuid.New(), &expected, "resolved", "reviewed"); err != nil {
-		t.Fatalf("ResolveSafetyState returned error: %v", err)
-	}
-	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] == nil || *repo.safetyExpectedRevisions[0] != expected {
-		t.Fatalf("expected revision was not preserved: %#v", repo.safetyExpectedRevisions)
-	}
-}
-
-func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	userID := uuid.New()
-
-	if err := svc.RecordSafetyEvent(context.Background(), userID, json.RawMessage(`{"has_red_flags":false,"flags":[]}`)); err != nil {
-		t.Fatalf("negative safety event returned error: %v", err)
-	}
-	if len(repo.safetyStates) != 0 {
-		t.Fatal("negative detector result must not silently clear/create durable safety state")
-	}
-
-	if err := svc.RecordSafetyEvent(context.Background(), userID, json.RawMessage(`{"has_red_flags":true,"flags":[{"type":"weakness"}]}`)); err != nil {
-		t.Fatalf("positive safety event returned error: %v", err)
-	}
-	if len(repo.safetyStates) != 1 {
-		t.Fatalf("expected one durable safety state, got %d", len(repo.safetyStates))
-	}
-	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] != nil {
-		t.Fatalf("internal detector safety update must remain unconditional, got %#v", repo.safetyExpectedRevisions)
-	}
 }
 
 func TestRecordOutcomeSymptomRecordsOnlyUserWordsAsV2Symptom(t *testing.T) {
@@ -310,8 +263,7 @@ func TestUserObservationIsConfirmedAtCreation(t *testing.T) {
 
 func TestBodyStateReadModelNormalizesEmptyCollections(t *testing.T) {
 	repo := &fakeBodyStateRepository{current: &model.BodyState{
-		UserID: uuid.New(), SafetyState: datatypes.JSON(`{}`),
-	}}
+		UserID: uuid.New()}}
 	svc := NewBodyStateService(repo)
 	snapshot, err := svc.GetBodyState(context.Background(), repo.current.UserID, 30)
 	if err != nil {
@@ -489,4 +441,12 @@ func TestApplyCurrentContextPatchRejectsDuplicateKinds(t *testing.T) {
 	if len(repo.appliedPatches) != 0 {
 		t.Fatal("invalid patch must not reach repository")
 	}
+}
+
+func (r *fakeBodyStateRepository) ListSafetyRestrictions(_ context.Context, owner uuid.UUID) (*model.SafetyRestrictionList, error) {
+	revision := r.revision
+	if r.current != nil {
+		revision = r.current.CurrentRevision
+	}
+	return &model.SafetyRestrictionList{UserID: owner, CurrentRevision: revision, Restrictions: r.restrictions}, nil
 }

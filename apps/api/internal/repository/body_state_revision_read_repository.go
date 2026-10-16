@@ -22,10 +22,10 @@ func (r *BodyStateRepository) GetBodyStateHead(ctx context.Context, owner uuid.U
 		return nil, fmt.Errorf("%w: invalid owner", model.ErrInvalidBodyFact)
 	}
 	var state model.BodyState
-	err := database.FromContext(ctx, r.db).Select("user_id", "current_revision", "safety_state").
+	err := database.FromContext(ctx, r.db).Select("user_id", "current_revision").
 		Where("user_id = ?", owner).Take(&state).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return &model.BodyStateHead{UserID: owner, SafetyState: []byte(`{}`)}, nil
+		return &model.BodyStateHead{UserID: owner}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -33,11 +33,7 @@ func (r *BodyStateRepository) GetBodyStateHead(ctx context.Context, owner uuid.U
 	if state.UserID != owner {
 		return nil, fmt.Errorf("body state head owner mismatch")
 	}
-	safety := []byte(state.SafetyState)
-	if len(safety) == 0 {
-		safety = []byte(`{}`)
-	}
-	return &model.BodyStateHead{UserID: owner, CurrentRevision: state.CurrentRevision, SafetyState: safety}, nil
+	return &model.BodyStateHead{UserID: owner, CurrentRevision: state.CurrentRevision}, nil
 }
 
 // GetBodyFactsByIDs resolves V2 fact ids named by revisions, whatever their
