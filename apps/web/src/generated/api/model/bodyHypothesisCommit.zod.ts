@@ -13,8 +13,9 @@ import * as zod from 'zod/mini';
 export const BodyHypothesisCommit = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
-  "operation": /*#__PURE__*/ zod.enum(['record', 'withdraw']),
-  "hypothesis_id": /*#__PURE__*/ zod.uuid(),
+  "operation": /*#__PURE__*/ zod.enum(['record', 'correct', 'withdraw']),
+  "hypothesis_id": /*#__PURE__*/ zod.uuid().check(/*#__PURE__*/ zod.describe('The recorded hypothesis, the new successor of a correction, or the withdrawn hypothesis.')),
+  "target_hypothesis_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.describe('Present for correct (the superseded hypothesis) and withdraw (equal to hypothesis_id); absent for record.')),
   "source_evidence_id": /*#__PURE__*/ zod.uuid(),
   "revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "revision_id": /*#__PURE__*/ zod.uuid(),

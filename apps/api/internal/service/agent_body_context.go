@@ -120,11 +120,13 @@ type AgentSymptomEpisode struct {
 // AgentUserHypothesis is the user's own guess about a cause. It is labelled
 // user-authored so agents never treat it as an established fact.
 type AgentUserHypothesis struct {
-	ID              uuid.UUID   `json:"id"`
-	Statement       string      `json:"statement"`
-	Authorship      string      `json:"authorship"`
-	RelatedFactIDs  []uuid.UUID `json:"related_fact_ids"`
-	CreatedRevision int64       `json:"created_revision"`
+	ID             uuid.UUID   `json:"id"`
+	Statement      string      `json:"statement"`
+	Authorship     string      `json:"authorship"`
+	RelatedFactIDs []uuid.UUID `json:"related_fact_ids"`
+	// RelatedObservationIDs are the user's own observations they linked.
+	RelatedObservationIDs []uuid.UUID `json:"related_observation_ids"`
+	CreatedRevision       int64       `json:"created_revision"`
 }
 
 // AgentSafetySummary is the agent-facing digest of the Go Safety envelope.
@@ -374,9 +376,13 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		if related == nil {
 			related = []uuid.UUID{}
 		}
+		observations := hypothesis.RelatedObservationIDs
+		if observations == nil {
+			observations = []uuid.UUID{}
+		}
 		view.UserHypotheses = append(view.UserHypotheses, AgentUserHypothesis{
 			ID: hypothesis.ID, Statement: hypothesis.Statement, Authorship: AgentAuthorshipUserAuthored,
-			RelatedFactIDs: related, CreatedRevision: hypothesis.CreatedRevision,
+			RelatedFactIDs: related, RelatedObservationIDs: observations, CreatedRevision: hypothesis.CreatedRevision,
 		})
 	}
 

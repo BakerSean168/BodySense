@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS
     public.body_hypotheses,
     public.body_hypothesis_commits,
     public.body_hypothesis_fact_links,
+    public.body_hypothesis_observation_links,
     public.body_observation_commits,
     public.body_observations,
     public.body_state_outbox,

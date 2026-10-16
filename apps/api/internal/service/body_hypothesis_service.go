@@ -14,6 +14,7 @@ import (
 type bodyHypothesisLedger interface {
 	RecordBodyHypothesis(context.Context, uuid.UUID, model.RecordBodyHypothesisCommand) (*model.BodyHypothesisCommit, error)
 	WithdrawBodyHypothesis(context.Context, uuid.UUID, uuid.UUID, model.WithdrawBodyHypothesisCommand) (*model.BodyHypothesisCommit, error)
+	CorrectBodyHypothesis(context.Context, uuid.UUID, uuid.UUID, model.CorrectBodyHypothesisCommand) (*model.BodyHypothesisCommit, error)
 	ListActiveBodyHypotheses(context.Context, uuid.UUID) (*model.BodyHypothesisList, error)
 	ReadConcernGroupSnapshot(context.Context, uuid.UUID) (*model.ConcernGroupSnapshot, error)
 }
@@ -42,6 +43,18 @@ func (s *BodyHypothesisService) WithdrawBodyHypothesis(ctx context.Context, owne
 		return nil, err
 	}
 	return s.ledger.WithdrawBodyHypothesis(ctx, owner, target, cmd)
+}
+
+// CorrectBodyHypothesis supersedes exactly one of the user's own current
+// guesses with a complete replacement in the same lineage (direct edit only).
+func (s *BodyHypothesisService) CorrectBodyHypothesis(ctx context.Context, owner, target uuid.UUID, cmd model.CorrectBodyHypothesisCommand) (*model.BodyHypothesisCommit, error) {
+	if owner == uuid.Nil || target == uuid.Nil {
+		return nil, fmt.Errorf("%w: owner and exact target required", model.ErrInvalidBodyHypothesis)
+	}
+	if err := cmd.Validate(); err != nil {
+		return nil, err
+	}
+	return s.ledger.CorrectBodyHypothesis(ctx, owner, target, cmd)
 }
 
 func (s *BodyHypothesisService) ListActiveBodyHypotheses(ctx context.Context, owner uuid.UUID) (*model.BodyHypothesisList, error) {

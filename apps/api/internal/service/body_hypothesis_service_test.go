@@ -19,6 +19,10 @@ func (f *fakeHypothesisLedger) WithdrawBodyHypothesis(context.Context, uuid.UUID
 	f.calls++
 	return &model.BodyHypothesisCommit{}, nil
 }
+func (f *fakeHypothesisLedger) CorrectBodyHypothesis(context.Context, uuid.UUID, uuid.UUID, model.CorrectBodyHypothesisCommand) (*model.BodyHypothesisCommit, error) {
+	f.calls++
+	return &model.BodyHypothesisCommit{}, nil
+}
 func (f *fakeHypothesisLedger) ListActiveBodyHypotheses(context.Context, uuid.UUID) (*model.BodyHypothesisList, error) {
 	f.calls++
 	return &model.BodyHypothesisList{}, nil
@@ -58,6 +62,16 @@ func TestBodyHypothesisServiceRejectsBeforeLedger(t *testing.T) {
 	}
 	if _, err := svc.ListActiveBodyHypotheses(ctx, uuid.Nil); !errors.Is(err, model.ErrInvalidBodyHypothesis) {
 		t.Fatalf("nil owner list accepted: %v", err)
+	}
+	fix := model.CorrectBodyHypothesisCommand{IdempotencyKey: "k", Replacement: &model.BodyHypothesisReplacement{Statement: "x"}}
+	if _, err := svc.CorrectBodyHypothesis(ctx, uuid.New(), uuid.Nil, fix); !errors.Is(err, model.ErrInvalidBodyHypothesis) {
+		t.Fatalf("nil correction target accepted: %v", err)
+	}
+	if _, err := svc.CorrectBodyHypothesis(ctx, uuid.Nil, uuid.New(), fix); !errors.Is(err, model.ErrInvalidBodyHypothesis) {
+		t.Fatalf("nil correction owner accepted: %v", err)
+	}
+	if _, err := svc.CorrectBodyHypothesis(ctx, uuid.New(), uuid.New(), model.CorrectBodyHypothesisCommand{IdempotencyKey: "k"}); !errors.Is(err, model.ErrInvalidBodyHypothesis) {
+		t.Fatalf("correction without replacement accepted: %v", err)
 	}
 	if ledger.calls != 0 {
 		t.Fatalf("invalid input reached ledger %d times", ledger.calls)

@@ -12,15 +12,20 @@ export const bodyHypothesisRecordStatementMax = 2000;
 
 export const bodyHypothesisRecordRelatedFactIdsMax = 20;
 
+export const bodyHypothesisRecordRelatedObservationIdsMax = 20;
+
 
 
 
 export const BodyHypothesisRecord = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
+  "lineage_id": /*#__PURE__*/ zod.uuid().check(/*#__PURE__*/ zod.describe('Id of the first hypothesis of this correction chain (equal to id when never corrected).')),
+  "supersedes_hypothesis_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.describe('The hypothesis this record corrected, when it is a correction.')),
   "statement": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(bodyHypothesisRecordStatementMax)),
   "source": BodyHypothesisSource,
   "related_fact_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.maxLength(bodyHypothesisRecordRelatedFactIdsMax)),
+  "related_observation_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.maxLength(bodyHypothesisRecordRelatedObservationIdsMax)),
   "assertion_status": /*#__PURE__*/ zod.enum(['asserted']),
   "created_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "recorded_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
