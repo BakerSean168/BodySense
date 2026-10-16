@@ -152,9 +152,7 @@ def evaluate_final_acceptance(
     provider_errors = int(provider_summary.get("errors") or 0)
     provider_contract_failures = int(provider_summary.get("contract_failures") or 0)
     provider_governance_rejections = int(provider_summary.get("governance_rejections") or 0)
-    provider_configuration_mismatches = int(
-        provider_summary.get("configuration_mismatches") or 0
-    )
+    provider_configuration_mismatches = int(provider_summary.get("configuration_mismatches") or 0)
     provider_rate = provider_successes / provider_total if provider_total else 0.0
 
     if provider.get("configuration_id") != policy.configuration_id:

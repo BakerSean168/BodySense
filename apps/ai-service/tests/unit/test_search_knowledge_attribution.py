@@ -48,9 +48,7 @@ async def test_search_knowledge_exposes_published_evidence_ref_only_to_model(mon
 
     assert output["has_results"] is True
     assert "Published Evidence Ref（仅供系统归因，不要展示给用户）" in output["result_text"]
-    assert "published:11111111-1111-1111-1111-111111111111:v3:tfu-example" in output[
-        "result_text"
-    ]
+    assert "published:11111111-1111-1111-1111-111111111111:v3:tfu-example" in output["result_text"]
 
 
 @pytest.mark.asyncio

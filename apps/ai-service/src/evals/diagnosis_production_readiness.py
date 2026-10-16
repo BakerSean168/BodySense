@@ -37,9 +37,7 @@ class DiagnosisProductionPromotionPolicy(BaseModel):
 def load_policy(
     path: Path = DEFAULT_POLICY_PATH,
 ) -> DiagnosisProductionPromotionPolicy:
-    return DiagnosisProductionPromotionPolicy.model_validate_json(
-        path.read_text(encoding="utf-8")
-    )
+    return DiagnosisProductionPromotionPolicy.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def _read_optional_report(relative: str) -> dict[str, Any] | None:

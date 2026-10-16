@@ -60,9 +60,7 @@ def summarize(
         for item in [*direct_candidates, *bibliography_candidates]
     )
     blocking_reason_counts = Counter(
-        str(reason)
-        for item in admissibility
-        for reason in item.get("blocking_reasons", [])
+        str(reason) for item in admissibility for reason in item.get("blocking_reasons", [])
     )
 
     return {
@@ -78,9 +76,7 @@ def summarize(
         "claim_admissibility": {
             "total": len(admissibility),
             "evidence_ready_for_claim_review": sum(
-                1
-                for item in admissibility
-                if item.get("evidence_ready_for_claim_review") is True
+                1 for item in admissibility if item.get("evidence_ready_for_claim_review") is True
             ),
             "publication_eligible": sum(
                 1 for item in admissibility if item.get("publication_eligible") is True

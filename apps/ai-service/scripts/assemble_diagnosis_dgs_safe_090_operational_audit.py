@@ -130,9 +130,7 @@ def main() -> int:
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    print(
-        f"DGS-SAFE-090 operational audit: {'ACCEPTED' if report['accepted'] else 'BLOCKED'}"
-    )
+    print(f"DGS-SAFE-090 operational audit: {'ACCEPTED' if report['accepted'] else 'BLOCKED'}")
     if reasons:
         for reason in reasons:
             print(f"- {reason}")

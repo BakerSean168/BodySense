@@ -31,7 +31,6 @@ AssessmentObservationKind = Literal[
 ]
 
 
-
 class AssessmentObservationDraft(BaseModel):
     """One model-selected evidence classification, never durable prose.
 
