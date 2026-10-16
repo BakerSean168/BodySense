@@ -25,9 +25,8 @@ func ParseAssessmentReportStatus(value string) (AssessmentReportStatus, bool) {
 }
 
 // AssessmentReport is an immutable observation report. It never owns Diagnosis
-// or Treatment truth; projected observations remain unverified in BodyState until
-// the user explicitly confirms them. Runtime reports use only the evidence-grounded
-// v2 contract.
+// or Treatment truth; generated selections stay in the report and are not
+// admitted BodyObservations. Runtime reports use only the evidence-grounded v2 contract.
 type AssessmentReport struct {
 	ID                      uuid.UUID              `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID                  uuid.UUID              `gorm:"type:uuid;index;not null" json:"user_id"`

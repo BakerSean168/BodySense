@@ -19,23 +19,14 @@ type LifestyleSection struct {
 	ReviewState string          `json:"review_state,omitempty"`
 }
 
-type LifestyleCandidate struct {
-	FactID    uuid.UUID       `json:"fact_id"`
-	Kind      string          `json:"kind"`
-	Summary   string          `json:"summary"`
-	Details   json.RawMessage `json:"details"`
-	CreatedAt time.Time       `json:"created_at"`
-}
-
 type LifestyleSnapshot struct {
-	CurrentRevision int64                `json:"current_revision"`
-	Activity        LifestyleSection     `json:"activity"`
-	Sleep           LifestyleSection     `json:"sleep"`
-	Exercise        LifestyleSection     `json:"exercise"`
-	Nutrition       LifestyleSection     `json:"nutrition"`
-	Substances      LifestyleSection     `json:"substances"`
-	Recovery        LifestyleSection     `json:"recovery"`
-	PendingUpdates  []LifestyleCandidate `json:"pending_updates"`
+	CurrentRevision int64            `json:"current_revision"`
+	Activity        LifestyleSection `json:"activity"`
+	Sleep           LifestyleSection `json:"sleep"`
+	Exercise        LifestyleSection `json:"exercise"`
+	Nutrition       LifestyleSection `json:"nutrition"`
+	Substances      LifestyleSection `json:"substances"`
+	Recovery        LifestyleSection `json:"recovery"`
 }
 
 type LifestyleSectionInput struct {
@@ -53,8 +44,4 @@ type UpdateLifestyleRequest struct {
 	Nutrition        *LifestyleSectionInput `json:"nutrition,omitempty"`
 	Substances       *LifestyleSectionInput `json:"substances,omitempty"`
 	Recovery         *LifestyleSectionInput `json:"recovery,omitempty"`
-}
-
-type ReviewLifestyleCandidateRequest struct {
-	ExpectedRevision *int64 `json:"expected_revision,omitempty"`
 }

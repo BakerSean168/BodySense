@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/Button";
 import { errorMessage } from "@/lib/api-client";
 import {
   lifestyleService,
-  type LifestyleCandidate,
   type LifestyleSectionKey,
   type LifestyleSnapshot,
 } from "../../services/lifestyleService";
@@ -54,10 +53,6 @@ const sections: Array<{
   },
 ];
 
-const sectionLabelByKind: Record<string, string> = Object.fromEntries(
-  sections.map((section) => [`lifestyle.${section.key}`, section.label]),
-);
-
 type Draft = Record<LifestyleSectionKey, string>;
 
 function emptyDraft(): Draft {
@@ -77,7 +72,6 @@ export function LifestylePanel() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const syncSnapshot = (data: LifestyleSnapshot) => {
@@ -137,37 +131,6 @@ export function LifestylePanel() {
     }
   };
 
-  const reviewCandidate = async (
-    candidate: LifestyleCandidate,
-    action: "accept" | "reject",
-  ) => {
-    if (!snapshot) return;
-    setReviewingId(candidate.fact_id);
-    setError(null);
-    try {
-      const next =
-        action === "accept"
-          ? await lifestyleService.acceptCandidate(
-              candidate.fact_id,
-              snapshot.current_revision,
-            )
-          : await lifestyleService.rejectCandidate(
-              candidate.fact_id,
-              snapshot.current_revision,
-            );
-      syncSnapshot(next);
-    } catch (cause) {
-      setError(
-        errorMessage(
-          cause,
-          action === "accept" ? "确认更新失败" : "忽略更新失败",
-        ),
-      );
-    } finally {
-      setReviewingId(null);
-    }
-  };
-
   if (loading) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
@@ -182,9 +145,7 @@ export function LifestylePanel() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">生活方式</h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里展示当前已确认的 BodyState
-            生活方式。您直接编辑会立即形成长期记录；对话中由 AI
-            整理出的变化会先作为待确认候选保存，只有您确认后才会替换当前状态并进入推理。
+            这里记录您提供的生活方式信息。保存编辑后，后续分析会使用这些记录。
           </p>
         </div>
         {!editing ? (
@@ -198,58 +159,6 @@ export function LifestylePanel() {
       {error ? (
         <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
-        </div>
-      ) : null}
-
-      {snapshot?.pending_updates?.length ? (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <div className="text-sm font-semibold text-foreground">
-            对话中识别到的待确认更新
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            BodySense
-            从对话中整理出了这些生活方式信息。它们已经持久保存，但目前不会进入健康推理，也不会覆盖当前长期记录。
-          </p>
-          <div className="mt-3 space-y-3">
-            {snapshot.pending_updates.map((candidate) => (
-              <div
-                key={candidate.fact_id}
-                className="rounded-xl border border-border bg-background p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-primary">
-                      {sectionLabelByKind[candidate.kind] || candidate.kind}
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                      {candidate.summary}
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      来自对话整理 ·{" "}
-                      {new Date(candidate.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={reviewingId === candidate.fact_id}
-                      onClick={() => void reviewCandidate(candidate, "reject")}
-                    >
-                      忽略
-                    </Button>
-                    <Button
-                      size="sm"
-                      isLoading={reviewingId === candidate.fact_id}
-                      onClick={() => void reviewCandidate(candidate, "accept")}
-                    >
-                      确认为当前状态
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       ) : null}
 

@@ -13,8 +13,6 @@ import (
 type lifestyleApplication interface {
 	Get(context.Context, uuid.UUID) (*service.LifestyleSnapshot, error)
 	Update(context.Context, uuid.UUID, service.UpdateLifestyleRequest) (*service.LifestyleSnapshot, error)
-	AcceptCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*service.LifestyleSnapshot, error)
-	RejectCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*service.LifestyleSnapshot, error)
 }
 
 type bodyMetricsApplication interface {
@@ -91,54 +89,6 @@ func (s *PublicServer) UpdateLifestyle(
 		return updateLifestyleError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
 	}
 	return openapiv1.UpdateLifestyle200JSONResponse(response), nil
-}
-
-func (s *PublicServer) AcceptLifestyleCandidate(
-	ctx context.Context,
-	request openapiv1.AcceptLifestyleCandidateRequestObject,
-) (openapiv1.AcceptLifestyleCandidateResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return acceptLifestyleCandidateError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.lifestyle == nil || request.Body == nil {
-		return acceptLifestyleCandidateError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	result, err := s.lifestyle.AcceptCandidate(ctx, userID, &expected, request.Id)
-	if err != nil {
-		classified := classifyHealthContextPublicError(err)
-		return acceptLifestyleCandidateError(classified.status, classified.code, classified.message), nil
-	}
-	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
-	if err != nil {
-		return acceptLifestyleCandidateError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
-	}
-	return openapiv1.AcceptLifestyleCandidate200JSONResponse(response), nil
-}
-
-func (s *PublicServer) RejectLifestyleCandidate(
-	ctx context.Context,
-	request openapiv1.RejectLifestyleCandidateRequestObject,
-) (openapiv1.RejectLifestyleCandidateResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return rejectLifestyleCandidateError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if s.lifestyle == nil || request.Body == nil {
-		return rejectLifestyleCandidateError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-	expected := request.Body.ExpectedRevision
-	result, err := s.lifestyle.RejectCandidate(ctx, userID, &expected, request.Id)
-	if err != nil {
-		classified := classifyHealthContextPublicError(err)
-		return rejectLifestyleCandidateError(classified.status, classified.code, classified.message), nil
-	}
-	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
-	if err != nil {
-		return rejectLifestyleCandidateError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
-	}
-	return openapiv1.RejectLifestyleCandidate200JSONResponse(response), nil
 }
 
 func (s *PublicServer) GetBodyMetrics(
@@ -269,8 +219,6 @@ func (s *PublicServer) SubmitOnboardingContext(
 
 func classifyHealthContextPublicError(err error) bodyStatePublicError {
 	switch {
-	case errors.Is(err, service.ErrInvalidLifestyleCandidate):
-		return bodyStatePublicError{status: http.StatusNotFound, code: "LIFESTYLE_CANDIDATE_NOT_FOUND", message: "lifestyle candidate is not reviewable"}
 	case errors.Is(err, service.ErrInvalidBodyMetric):
 		return bodyStatePublicError{status: http.StatusBadRequest, code: "INVALID_BODY_METRIC", message: "height or weight is outside the supported range"}
 	case errors.Is(err, service.ErrInvalidOnboardingContext):
@@ -298,36 +246,6 @@ func updateLifestyleError(status int, code, message string) openapiv1.UpdateLife
 		return openapiv1.UpdateLifestyle409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
 	default:
 		return openapiv1.UpdateLifestyle500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
-}
-func acceptLifestyleCandidateError(status int, code, message string) openapiv1.AcceptLifestyleCandidateResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.AcceptLifestyleCandidate400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.AcceptLifestyleCandidate401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.AcceptLifestyleCandidate404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.AcceptLifestyleCandidate409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	default:
-		return openapiv1.AcceptLifestyleCandidate500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
-	}
-}
-func rejectLifestyleCandidateError(status int, code, message string) openapiv1.RejectLifestyleCandidateResponseObject {
-	e := errorEnvelope(code, message)
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.RejectLifestyleCandidate400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
-	case http.StatusUnauthorized:
-		return openapiv1.RejectLifestyleCandidate401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
-	case http.StatusNotFound:
-		return openapiv1.RejectLifestyleCandidate404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(e)}
-	case http.StatusConflict:
-		return openapiv1.RejectLifestyleCandidate409JSONResponse{RevisionConflictJSONResponse: openapiv1.RevisionConflictJSONResponse(e)}
-	default:
-		return openapiv1.RejectLifestyleCandidate500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
 	}
 }
 func getBodyMetricsError(status int, code, message string) openapiv1.GetBodyMetricsResponseObject {

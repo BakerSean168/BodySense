@@ -294,31 +294,6 @@ func TestRecordOutcomeSymptomDropsNonUserAuthoredOutcomes(t *testing.T) {
 	}
 }
 
-func TestAssessmentObservationRemainsExcludedUntilUserConfirmation(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	stored, revision, err := svc.AddAssessmentObservation(context.Background(), uuid.New(), model.BodyStateObservation{
-		Kind:  "posture_alignment",
-		Value: datatypes.JSON(`{"label":"高低肩倾向"}`),
-	})
-	if err != nil {
-		t.Fatalf("AddAssessmentObservation returned error: %v", err)
-	}
-	if revision == nil || stored.ReviewState != "unverified" || !stored.ExcludedFromReasoning {
-		t.Fatalf("AI observation must be reviewable but excluded: stored=%#v revision=%#v", stored, revision)
-	}
-
-	confirmed, reviewRevision, err := svc.ReviewObservation(
-		context.Background(), uuid.New(), nil, stored.ID, "confirmed",
-	)
-	if err != nil {
-		t.Fatalf("ReviewObservation returned error: %v", err)
-	}
-	if reviewRevision == nil || confirmed.ReviewState != "confirmed" || confirmed.ExcludedFromReasoning {
-		t.Fatalf("confirmed observation must enter reasoning: %#v", confirmed)
-	}
-}
-
 func TestUserObservationIsConfirmedAtCreation(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)

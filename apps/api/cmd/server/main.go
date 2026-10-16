@@ -180,7 +180,6 @@ func main() {
 		uploadRepo,
 		bodyStateService,
 		aiClient,
-		database.NewTransactionManager(database.DB),
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService).
 		WithAssessmentReviews(documentIndicatorReviewRepo)

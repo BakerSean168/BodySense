@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
-import { LifestyleCandidate } from './lifestyleCandidate.zod';
 import { LifestyleSection } from './lifestyleSection.zod';
 
 export const lifestyleSnapshotCurrentRevisionMin = 0;
@@ -20,8 +19,7 @@ export const LifestyleSnapshot = /*#__PURE__*/ zod.strictObject({
   "exercise": LifestyleSection,
   "nutrition": LifestyleSection,
   "substances": LifestyleSection,
-  "recovery": LifestyleSection,
-  "pending_updates": /*#__PURE__*/ zod.array(LifestyleCandidate)
+  "recovery": LifestyleSection
 });
 
 export type LifestyleSnapshot = zod.input<typeof LifestyleSnapshot>;

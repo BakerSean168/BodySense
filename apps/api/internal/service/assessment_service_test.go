@@ -48,27 +48,14 @@ func (s fakeAssessmentUploadSource) GetByUserID(context.Context, uuid.UUID) ([]m
 type fakeAssessmentBodyState struct {
 	facts             []AgentBodyFact
 	stateObservations []AgentBodyObservation
-	observations      []model.BodyStateObservation
 	fail              bool
 }
 
 func (s *fakeAssessmentBodyState) GetAgentBodyContext(_ context.Context, userID uuid.UUID) (*AgentBodyContext, error) {
-	return &AgentBodyContext{UserID: userID, Facts: s.facts, Observations: s.stateObservations}, nil
-}
-
-func (s *fakeAssessmentBodyState) AddAssessmentObservation(_ context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
 	if s.fail {
-		return nil, nil, errors.New("projection failed")
+		return nil, errors.New("source read failed")
 	}
-	observation.ID = uuid.New()
-	observation.UserID = userID
-	observation.ReviewState = "unverified"
-	observation.ExcludedFromReasoning = true
-	revision := int64(len(s.observations) + 1)
-	observation.CreatedRevision = revision
-	observation.UpdatedRevision = revision
-	s.observations = append(s.observations, observation)
-	return &observation, &model.BodyStateRevision{Revision: revision}, nil
+	return &AgentBodyContext{UserID: userID, CurrentRevision: 7, Facts: s.facts, Observations: s.stateObservations}, nil
 }
 
 type fakeAssessmentReasoner struct{ raw json.RawMessage }
@@ -171,50 +158,31 @@ func assessmentOutputWithProvenance(raw json.RawMessage) json.RawMessage {
 	return encoded
 }
 
-func TestAssessmentPersistsReportAndUnverifiedBodyStateObservationsAtomically(t *testing.T) {
-	userID := uuid.New()
+func TestAssessmentPersistsReportWithoutPromotingBodyStateCandidates(t *testing.T) {
+	owner := uuid.New()
 	repo := &fakeAssessmentRepository{}
 	bodyState := exerciseAssessmentBodyState()
-	transactionCalled := false
-	svc := NewAssessmentService(
-		repo,
-		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},
-		fakeAssessmentUploadSource{},
-		bodyState,
-		fakeAssessmentReasoner{raw: assessmentExerciseOutput()},
-		testTreatmentUnitOfWork{called: &transactionCalled},
-	)
-
-	report, err := svc.GenerateAssessment(context.Background(), userID)
+	svc := NewAssessmentService(repo, fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: owner}}, fakeAssessmentUploadSource{}, bodyState, fakeAssessmentReasoner{raw: assessmentExerciseOutput()})
+	report, err := svc.GenerateAssessment(context.Background(), owner)
 	if err != nil {
-		t.Fatalf("GenerateAssessment returned error: %v", err)
+		t.Fatal(err)
 	}
-	if !transactionCalled || repo.created == nil {
-		t.Fatal("report and observations must use the coordinated unit of work")
+	if repo.created == nil {
+		t.Fatal("Assessment must persist only its report, without BodyState candidates")
 	}
-	if report.ContractRevision != assessmentOutputContractV2 {
-		t.Fatalf("unexpected v2 report contract revision: %q", report.ContractRevision)
+	if report.BodyStateRevision == nil || *report.BodyStateRevision != 7 {
+		t.Fatalf("report must pin input revision: %#v", report.BodyStateRevision)
 	}
-	if len(bodyState.observations) != 1 {
-		t.Fatalf("expected one projected observation, got %d", len(bodyState.observations))
+	var observations []map[string]any
+	if err := json.Unmarshal(report.Observations, &observations); err != nil {
+		t.Fatal(err)
 	}
-	observation := bodyState.observations[0]
-	if observation.ReviewState != "unverified" || !observation.ExcludedFromReasoning {
-		t.Fatalf("assessment observation must await explicit review: %#v", observation)
+	if len(observations) != 1 || observations[0]["observation_id"] != nil || observations[0]["review_state"] != nil {
+		t.Fatalf("report claims BodyObservation identity: %#v", observations)
 	}
-	if report.BodyStateRevision == nil || *report.BodyStateRevision != 1 {
-		t.Fatalf("report must link its final BodyState revision: %#v", report.BodyStateRevision)
-	}
-	var reportObservations []map[string]any
-	if err := json.Unmarshal(report.Observations, &reportObservations); err != nil {
-		t.Fatalf("report observations are invalid JSON: %v", err)
-	}
-	if reportObservations[0]["observation_id"] == nil || reportObservations[0]["review_state"] != "unverified" {
-		t.Fatalf("report must expose review identity/state: %#v", reportObservations)
-	}
-	refs, _ := reportObservations[0]["evidence_refs"].([]any)
+	refs, _ := observations[0]["evidence_refs"].([]any)
 	if len(refs) != 1 || refs[0] != "body_state:fact:0" {
-		t.Fatalf("report must persist exact evidence refs: %#v", reportObservations[0])
+		t.Fatalf("report lost source refs: %#v", observations)
 	}
 }
 
@@ -230,7 +198,6 @@ func TestAssessmentRejectsTreatmentLikeLegacyPayload(t *testing.T) {
 			"dimension_scores":{"posture":70},
 			"observations":[],"summary":{"exercise":"do squats"}
 		}`)},
-		testTreatmentUnitOfWork{},
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
 		t.Fatal("legacy grade/score/advice payload must not cross the v2 assessment contract")
@@ -252,7 +219,6 @@ func TestAssessmentDurableProjectionDoesNotTrustUpstreamDerivedCopy(t *testing.T
 		fakeAssessmentUploadSource{},
 		exerciseAssessmentBodyState(),
 		fakeAssessmentReasoner{raw: json.RawMessage(raw)},
-		testTreatmentUnitOfWork{},
 	)
 
 	report, err := svc.GenerateAssessment(context.Background(), userID)
@@ -278,7 +244,6 @@ func TestAssessmentRejectsUnsupportedPostureObservationWithoutVisualEvidence(t *
 		fakeAssessmentUploadSource{},
 		&fakeAssessmentBodyState{},
 		fakeAssessmentReasoner{raw: assessmentPostureOutput("posture:upload:missing:finding:0")},
-		testTreatmentUnitOfWork{},
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil || !strings.Contains(err.Error(), "unavailable evidence") {
 		t.Fatalf("unsupported posture claim must fail closed, got %v", err)
@@ -296,7 +261,6 @@ func TestAssessmentDoesNotReuseUnverifiedBodyStateAsEvidence(t *testing.T) {
 		fakeAssessmentUploadSource{},
 		bodyState,
 		fakeAssessmentReasoner{raw: assessmentExerciseOutput()},
-		testTreatmentUnitOfWork{},
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil || !strings.Contains(err.Error(), "unavailable evidence") {
 		t.Fatalf("unverified BodyState must not bootstrap new Assessment claims, got %v", err)
@@ -318,25 +282,26 @@ func TestAssessmentDurableBoundaryIgnoresUpstreamObservationProse(t *testing.T) 
 		fakeAssessmentUploadSource{},
 		bodyState,
 		fakeAssessmentReasoner{raw: json.RawMessage(raw)},
-		testTreatmentUnitOfWork{},
 	)
-	if _, err := svc.GenerateAssessment(context.Background(), userID); err != nil {
+	report, err := svc.GenerateAssessment(context.Background(), userID)
+	if err != nil {
 		t.Fatalf("upstream prose must be non-authoritative, got %v", err)
 	}
-	if len(bodyState.observations) != 1 {
-		t.Fatalf("expected one rendered observation, got %d", len(bodyState.observations))
+	var observations []map[string]any
+	if err := json.Unmarshal(report.Observations, &observations); err != nil {
+		t.Fatal(err)
 	}
-	var value map[string]any
-	if err := json.Unmarshal(bodyState.observations[0].Value, &value); err != nil {
-		t.Fatalf("decode rendered observation value: %v", err)
+	if len(observations) != 1 {
+		t.Fatalf("expected one report observation: %s", report.Observations)
 	}
+	value := observations[0]
 	description, _ := value["description"].(string)
 	if description != "来源记录：健身；频率：1-2。" || strings.Contains(description, "建议") {
 		t.Fatalf("Go must deterministically render source-only prose, got %q", description)
 	}
 }
 
-func TestAssessmentProjectionFailurePreventsReportPersistence(t *testing.T) {
+func TestAssessmentSourceReadFailurePreventsReportPersistence(t *testing.T) {
 	userID := uuid.New()
 	repo := &fakeAssessmentRepository{}
 	bodyState := exerciseAssessmentBodyState()
@@ -347,13 +312,12 @@ func TestAssessmentProjectionFailurePreventsReportPersistence(t *testing.T) {
 		fakeAssessmentUploadSource{},
 		bodyState,
 		fakeAssessmentReasoner{raw: assessmentExerciseOutput()},
-		testTreatmentUnitOfWork{},
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
-		t.Fatal("BodyState projection failure must fail the assessment write")
+		t.Fatal("BodyState source read failure must fail assessment generation")
 	}
 	if repo.created != nil {
-		t.Fatal("report must not persist after observation projection failure")
+		t.Fatal("report must not persist after source read failure")
 	}
 }
 
@@ -370,7 +334,6 @@ func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 		fakeAssessmentUploadSource{},
 		exerciseAssessmentBodyState(),
 		fakeAssessmentReasoner{raw: assessmentOutputWithProvenance(assessmentExerciseOutput())},
-		testTreatmentUnitOfWork{},
 	).WithAssessmentDeployment(policy)
 
 	report, err := svc.GenerateAssessment(context.Background(), userID)
@@ -407,7 +370,6 @@ func TestAssessmentRejectsIdentityMismatch(t *testing.T) {
 		fakeAssessmentUploadSource{},
 		exerciseAssessmentBodyState(),
 		fakeAssessmentReasoner{raw: wrong},
-		testTreatmentUnitOfWork{},
 	).WithAssessmentDeployment(policy)
 
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
@@ -442,7 +404,6 @@ func TestAssessmentConsumesCompletedPostureAnalysisWithoutRawImageAuthority(t *t
 		}}},
 		&fakeAssessmentBodyState{},
 		reasoner,
-		testTreatmentUnitOfWork{},
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err != nil {
 		t.Fatalf("GenerateAssessment: %v", err)
@@ -480,7 +441,6 @@ func TestAssessmentDerivesInsufficientStatusWhenOnlyProfileExists(t *testing.T) 
 		fakeAssessmentUploadSource{},
 		&fakeAssessmentBodyState{},
 		fakeAssessmentReasoner{raw: raw},
-		testTreatmentUnitOfWork{},
 	)
 
 	report, err := svc.GenerateAssessment(context.Background(), userID)
