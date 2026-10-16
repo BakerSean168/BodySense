@@ -76,8 +76,6 @@ test("assessment output v2 persists only deterministic source-grounded observati
     contract_revision: string;
     status: string;
     observations: Array<{
-      observation_id: string;
-      review_state: string;
       kind: string;
       label: string;
       description: string;
@@ -149,8 +147,8 @@ test("assessment output v2 persists only deterministic source-grounded observati
   // admitted to the native observation ledger and cannot become reasoning input.
   expect(report.observations.length).toBeGreaterThan(0);
   for (const observation of report.observations) {
-    expect(observation.observation_id).toBeTruthy();
-    expect(observation.review_state).toBe("unverified");
+    expect(observation).not.toHaveProperty("observation_id");
+    expect(observation).not.toHaveProperty("review_state");
   }
   const persistedReport = await request.get(
     `${apiBase}/api/v1/assessment/${report.id}`,
@@ -174,9 +172,7 @@ test("assessment output v2 persists only deterministic source-grounded observati
       observations: unknown[];
     };
   };
-  expect(workspace.body_state.current_revision).toBe(
-    before.current_revision + report.observations.length,
-  );
+  expect(workspace.body_state.current_revision).toBe(before.current_revision);
   expect(workspace.body_state.observations).toEqual([]);
 });
 

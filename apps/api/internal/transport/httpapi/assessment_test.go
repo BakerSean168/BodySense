@@ -99,8 +99,7 @@ func validAssessmentV2Report() *model.AssessmentReport {
 			"injury_symptoms":{"status":"missing","evidence_refs":[]}
 		}
 	}`)
-	observationID := uuid.New()
-	observations := json.RawMessage(fmt.Sprintf(`[{"observation_id":%q,"review_state":"unverified","kind":"exercise_pattern","body_region":"","label":"运动记录","description":"每周训练。","method":"assessment_evidence","evidence_refs":["body_state:fact:0"]}]`, observationID.String()))
+	observations := json.RawMessage(`[{"kind":"exercise_pattern","body_region":"","label":"运动记录","description":"每周训练。","method":"assessment_evidence","evidence_refs":["body_state:fact:0"]}]`)
 	now := time.Now().UTC().Truncate(time.Second)
 	revision := int64(4)
 	return &model.AssessmentReport{

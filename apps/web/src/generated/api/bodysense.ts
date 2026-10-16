@@ -193,7 +193,6 @@ import type {
   ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
-  ReviewLifestyleCandidateRequest,
   RuntimeEventListResponseOutput,
   ShareConversationResponseOutput,
   SharedConversationResponseOutput,
@@ -1539,114 +1538,6 @@ const res = await (fetchFn ?? fetch)(getUpdateLifestyleUrl(),
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLifestyleRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
-    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAcceptLifestyleCandidateUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/lifestyle/candidates/${id}/accept`
-}
-
-/**
- * @summary Accept an AI-extracted lifestyle candidate.
- */
-export const acceptLifestyleCandidate = async (id: string,
-    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAcceptLifestyleCandidateUrl(id),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewLifestyleCandidateRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
-    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getRejectLifestyleCandidateUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/lifestyle/candidates/${id}/reject`
-}
-
-/**
- * @summary Reject an AI-extracted lifestyle candidate.
- */
-export const rejectLifestyleCandidate = async (id: string,
-    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getRejectLifestyleCandidateUrl(id),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewLifestyleCandidateRequest)
   }
 )
 

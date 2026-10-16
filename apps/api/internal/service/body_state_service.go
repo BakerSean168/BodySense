@@ -275,21 +275,6 @@ func (s *BodyStateService) AddObservation(ctx context.Context, userID uuid.UUID,
 	return s.repo.UpsertObservation(ctx, userID, expectedRevision, observation, "user_edit")
 }
 
-func (s *BodyStateService) AddAssessmentObservation(
-	ctx context.Context,
-	userID uuid.UUID,
-	observation model.BodyStateObservation,
-) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID, observation.BodyRegion)
-	if err != nil {
-		return nil, nil, err
-	}
-	observation.BodyRegionID = regionID
-	observation.ReviewState = "unverified"
-	observation.ExcludedFromReasoning = true
-	return s.repo.UpsertObservation(ctx, userID, nil, observation, "assessment")
-}
-
 func (s *BodyStateService) ReviewObservation(
 	ctx context.Context,
 	userID uuid.UUID,

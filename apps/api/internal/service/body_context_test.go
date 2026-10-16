@@ -69,7 +69,7 @@ func TestInjuryHistoryRecordsCorrectsAndClearsByWithdrawal(t *testing.T) {
 
 func TestLifestyleUpdateIsPatchLikeAndKeepsHistory(t *testing.T) {
 	store := &memoryBodyContextStore{}
-	svc := NewLifestyleService(&fakeLifestyleBodyState{memoryBodyContextStore: store})
+	svc := NewLifestyleService(store)
 	owner := uuid.New()
 	got, err := svc.Update(context.Background(), owner, UpdateLifestyleRequest{
 		Sleep:    &LifestyleSectionInput{Summary: "平均睡 6 小时"},

@@ -146,8 +146,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Health context commands/read models.
 	protected.GET("/lifestyle", wrapper.GetLifestyle)
 	protected.PUT("/lifestyle", wrapper.UpdateLifestyle)
-	protected.POST("/lifestyle/candidates/:id/accept", wrapper.AcceptLifestyleCandidate)
-	protected.POST("/lifestyle/candidates/:id/reject", wrapper.RejectLifestyleCandidate)
 	protected.GET("/body-metrics", wrapper.GetBodyMetrics)
 	protected.PUT("/body-metrics", wrapper.UpdateBodyMetrics)
 	protected.GET("/health-history/injury", wrapper.GetInjuryHistory)

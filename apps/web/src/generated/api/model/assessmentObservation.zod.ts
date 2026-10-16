@@ -12,14 +12,11 @@ import { AssessmentObservationKind } from './assessmentObservationKind.zod';
 
 
 
-
 export const assessmentObservationEvidenceRefsMax = 1;
 
 
 
 export const AssessmentObservation = /*#__PURE__*/ zod.strictObject({
-  "observation_id": /*#__PURE__*/ zod.uuid(),
-  "review_state": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "kind": AssessmentObservationKind,
   "body_region": /*#__PURE__*/ zod.string(),
   "label": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),

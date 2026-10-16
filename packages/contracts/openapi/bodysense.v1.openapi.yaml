@@ -772,72 +772,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateLifestyleRequest'
-  /api/v1/lifestyle/candidates/{id}/accept:
-    post:
-      operationId: acceptLifestyleCandidate
-      summary: Accept an AI-extracted lifestyle candidate.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LifestyleSnapshot'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
-      parameters: &id002
-      - name: id
-        in: path
-        required: true
-        schema: &id010
-          type: string
-          format: uuid
-  /api/v1/lifestyle/candidates/{id}/reject:
-    post:
-      operationId: rejectLifestyleCandidate
-      summary: Reject an AI-extracted lifestyle candidate.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LifestyleSnapshot'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/RevisionConflict'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
-      parameters: *id002
   /api/v1/body-metrics:
     get:
       operationId: getBodyMetrics
@@ -4391,14 +4325,8 @@ components:
     AssessmentObservation:
       type: object
       additionalProperties: false
-      required: [observation_id, review_state, kind, body_region, label, description, method, evidence_refs]
+      required: [kind, body_region, label, description, method, evidence_refs]
       properties:
-        observation_id:
-          type: string
-          format: uuid
-        review_state:
-          type: string
-          minLength: 1
         kind:
           $ref: '#/components/schemas/AssessmentObservationKind'
         body_region:
@@ -6142,7 +6070,9 @@ components:
       properties:
         kind:
           type: string
-        fact_id: *id010
+        fact_id: &id010
+          type: string
+          format: uuid
         summary:
           type: string
         details:
@@ -6153,24 +6083,6 @@ components:
         updated_at: *id011
         review_state:
           type: string
-    LifestyleCandidate:
-      type: object
-      additionalProperties: false
-      required:
-      - fact_id
-      - kind
-      - summary
-      - details
-      - created_at
-      properties:
-        fact_id: *id010
-        kind:
-          type: string
-        summary:
-          type: string
-        details:
-          $ref: '#/components/schemas/JsonObject'
-        created_at: *id011
     LifestyleSnapshot:
       type: object
       additionalProperties: false
@@ -6182,7 +6094,6 @@ components:
       - nutrition
       - substances
       - recovery
-      - pending_updates
       properties:
         current_revision: &id012
           type: integer
@@ -6200,10 +6111,6 @@ components:
           $ref: '#/components/schemas/LifestyleSection'
         recovery:
           $ref: '#/components/schemas/LifestyleSection'
-        pending_updates:
-          type: array
-          items:
-            $ref: '#/components/schemas/LifestyleCandidate'
     LifestyleSectionInput:
       type: object
       additionalProperties: false
@@ -6233,13 +6140,6 @@ components:
           $ref: '#/components/schemas/LifestyleSectionInput'
         recovery:
           $ref: '#/components/schemas/LifestyleSectionInput'
-    ReviewLifestyleCandidateRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_revision
-      properties:
-        expected_revision: *id012
     BodyMetricValue:
       type: object
       additionalProperties: false

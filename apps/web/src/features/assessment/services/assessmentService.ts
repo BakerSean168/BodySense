@@ -49,8 +49,6 @@ export type AssessmentObservationKind =
 
 /** Evidence-grounded observation rendered by application code, not by the model. */
 export interface AssessmentObservation {
-  observation_id: string;
-  review_state: string;
   kind: AssessmentObservationKind;
   body_region: string;
   label: string;
@@ -145,8 +143,6 @@ function projectEvidenceReport(
         );
       }
       return {
-        observation_id: observation.observation_id,
-        review_state: observation.review_state,
         kind: observation.kind,
         body_region: observation.body_region,
         label: observation.label,

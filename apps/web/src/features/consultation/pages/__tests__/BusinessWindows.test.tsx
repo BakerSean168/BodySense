@@ -260,7 +260,6 @@ beforeEach(() => {
     nutrition: { kind: "nutrition", summary: "", details: {} },
     substances: { kind: "substances", summary: "", details: {} },
     recovery: { kind: "recovery", summary: "", details: {} },
-    pending_updates: [],
   });
 });
 

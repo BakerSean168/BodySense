@@ -31,7 +31,6 @@ type assessmentUploadSource interface {
 
 type assessmentBodyStateSource interface {
 	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
-	AddAssessmentObservation(ctx context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 }
 
 type assessmentReasoner interface {
@@ -45,7 +44,6 @@ type AssessmentService struct {
 	reviews        AssessmentReviewSource
 	bodyState      assessmentBodyStateSource
 	reasoner       assessmentReasoner
-	unitOfWork     treatmentUnitOfWork
 	deployment     *AgentDeploymentPolicy
 	rollout        *AssessmentRolloutService
 }
@@ -56,7 +54,6 @@ func NewAssessmentService(
 	uploads assessmentUploadSource,
 	bodyState assessmentBodyStateSource,
 	reasoner assessmentReasoner,
-	unitOfWork treatmentUnitOfWork,
 ) *AssessmentService {
 	return &AssessmentService{
 		assessmentRepo: assessmentRepo,
@@ -64,7 +61,6 @@ func NewAssessmentService(
 		uploads:        uploads,
 		bodyState:      bodyState,
 		reasoner:       reasoner,
-		unitOfWork:     unitOfWork,
 	}
 }
 
@@ -134,7 +130,7 @@ type assessmentEvidenceProjection struct {
 }
 
 func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.UUID) (*model.AssessmentReport, error) {
-	if s.reasoner == nil || s.bodyState == nil || s.unitOfWork == nil {
+	if s.reasoner == nil || s.bodyState == nil {
 		return nil, errors.New("assessment domain is not fully configured")
 	}
 	profile, err := s.profiles.GetProfile(ctx, userID)
@@ -151,6 +147,9 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	bodySnapshot, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get assessment BodyState: %w", err)
+	}
+	if bodySnapshot == nil || bodySnapshot.UserID != userID {
+		return nil, errors.New("assessment BodyState owner mismatch or unavailable")
 	}
 	bodyStatePayload, err := json.Marshal(bodySnapshot)
 	if err != nil {
@@ -263,57 +262,21 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		ReplayInput:             datatypes.JSON(replayEnvelope),
 		CreatedAt:               time.Now().UTC(),
 	}
-	projected := make([]map[string]any, 0, len(evidenceProjection.Observations))
-	err = s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
-		for index, draft := range evidenceProjection.Observations {
-			value := map[string]any{
-				"label":       draft.Label,
-				"description": draft.Description,
-			}
-			stored, revision, projectionErr := s.bodyState.AddAssessmentObservation(txCtx, userID, model.BodyStateObservation{
-				ConcernKey: bodyStateConcernKey(draft.BodyRegion),
-				Kind:       draft.Kind,
-				BodyRegion: draft.BodyRegion,
-				Method:     "assessment_evidence",
-				Value:      datatypes.JSON(jsonRaw(value, `{}`)),
-				Condition:  datatypes.JSON(`{}`),
-				SourceKey:  fmt.Sprintf("assessment:%s:observation:%d", report.ID, index),
-				Provenance: datatypes.JSON(jsonRaw(map[string]any{
-					"source_type":          "assessment",
-					"assessment_report_id": report.ID,
-					"contract_revision":    payload.ContractRevision,
-					"evidence_selection": map[string]any{
-						"kind": draft.Kind, "evidence_refs": draft.EvidenceRefs,
-					},
-				}, `{}`)),
-				ObservedAt:     &report.CreatedAt,
-				LifecycleState: "active",
-			})
-			if projectionErr != nil {
-				return projectionErr
-			}
-			item := map[string]any{
-				"observation_id": stored.ID,
-				"review_state":   stored.ReviewState,
-				"kind":           draft.Kind,
-				"body_region":    draft.BodyRegion,
-				"label":          draft.Label,
-				"description":    draft.Description,
-				"method":         stored.Method,
-				"evidence_refs":  draft.EvidenceRefs,
-			}
-			projected = append(projected, item)
-			if revision != nil {
-				revisionNumber := revision.Revision
-				report.BodyStateRevision = &revisionNumber
-			}
-		}
-		report.Observations = jsonRaw(projected, `[]`)
-		return s.assessmentRepo.Create(txCtx, report)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("persist assessment and BodyState observations: %w", err)
+	// Generated selections stay in the report (BS-D9). They are not admitted
+	// BodyObservations and never create a BodyState revision.
+	report.BodyStateRevision = &bodySnapshot.CurrentRevision
+	observations := make([]map[string]any, 0, len(evidenceProjection.Observations))
+	for _, draft := range evidenceProjection.Observations {
+		observations = append(observations, map[string]any{
+			"kind": draft.Kind, "body_region": draft.BodyRegion, "label": draft.Label,
+			"description": draft.Description, "method": "assessment_evidence", "evidence_refs": draft.EvidenceRefs,
+		})
 	}
+	report.Observations = jsonRaw(observations, `[]`)
+	if err := s.assessmentRepo.Create(ctx, report); err != nil {
+		return nil, fmt.Errorf("persist assessment report: %w", err)
+	}
+
 	if s.rollout != nil && assessmentRoute != nil {
 		if observeErr := s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID); observeErr != nil {
 			log.Printf("assessment rollout shadow observation failed: %v", observeErr)
