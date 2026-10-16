@@ -173,8 +173,10 @@ func TestThreadProjectionDowngradeRefusesLossOfDistinctRunHistoryPostgres(t *tes
 	db := openBodyStateContextIntegrationDB(t)
 	owner := seedBodyStateContextUser(t, db)
 	repo := NewThreadProjectionRepository(db)
+	other := seedBodyStateContextUser(t, db)
 	first, messages, tools := seedThreadProjectionFixture(t, db, owner)
-	second, messages2, tools2 := seedThreadProjectionFixture(t, db, owner)
+	// Each owner has a single Conversation; the second history belongs to another owner.
+	second, messages2, tools2 := seedThreadProjectionFixture(t, db, other)
 	if err := repo.UpsertSnapshot(context.Background(), first, messages, tools); err != nil {
 		t.Fatal(err)
 	}

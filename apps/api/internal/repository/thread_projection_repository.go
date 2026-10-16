@@ -35,8 +35,6 @@ func (r *ThreadProjectionRepository) UpsertSnapshot(
 				"title",
 				"title_status",
 				"status",
-				"pinned",
-				"pinned_at",
 				"default_model",
 				"active_run_id",
 				"last_message_at",

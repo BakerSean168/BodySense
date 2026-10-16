@@ -432,20 +432,6 @@ CREATE TABLE public.consultation_sessions (
 
 
 --
--- Name: conversation_shares; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.conversation_shares (
-    id uuid DEFAULT uuidv7() NOT NULL,
-    conversation_id uuid NOT NULL,
-    share_token character varying(32) NOT NULL,
-    snapshot_messages jsonb NOT NULL,
-    snapshot_title character varying(200),
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -455,8 +441,6 @@ CREATE TABLE public.conversations (
     title text,
     title_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    pinned boolean DEFAULT false NOT NULL,
-    pinned_at timestamp with time zone,
     default_model text,
     system_prompt_version text,
     provider text,
@@ -469,7 +453,6 @@ CREATE TABLE public.conversations (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     last_message_at timestamp with time zone,
-    deleted_at timestamp with time zone,
     title_agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
     title_agent_configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
     title_execution_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -1323,8 +1306,6 @@ CREATE TABLE public.thread_projections (
     title text,
     title_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    pinned boolean DEFAULT false NOT NULL,
-    pinned_at timestamp with time zone,
     default_model text,
     active_run_id uuid,
     last_message_at timestamp with time zone,
@@ -1801,27 +1782,20 @@ ALTER TABLE ONLY public.consultation_sessions
 
 
 --
--- Name: conversation_shares conversation_shares_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.conversation_shares
-    ADD CONSTRAINT conversation_shares_pkey PRIMARY KEY (id);
-
-
---
--- Name: conversation_shares conversation_shares_share_token_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.conversation_shares
-    ADD CONSTRAINT conversation_shares_share_token_key UNIQUE (share_token);
-
-
---
 -- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.conversations
     ADD CONSTRAINT conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: conversations conversations_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- PC-D4: every user owns exactly one Conversation.
+--
+
+ALTER TABLE ONLY public.conversations
+    ADD CONSTRAINT conversations_user_id_key UNIQUE (user_id);
 
 
 --
@@ -2697,38 +2671,10 @@ CREATE INDEX idx_consultation_rollout_observations_pair_stage ON public.consulta
 
 
 --
--- Name: idx_conversation_shares_conversation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_conversation_shares_conversation ON public.conversation_shares USING btree (conversation_id);
-
-
---
--- Name: idx_conversation_shares_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_conversation_shares_token ON public.conversation_shares USING btree (share_token);
-
-
---
--- Name: idx_conversations_pinned; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_conversations_pinned ON public.conversations USING btree (user_id, pinned, pinned_at DESC) WHERE ((deleted_at IS NULL) AND (pinned = true));
-
-
---
 -- Name: idx_conversations_title_agent_configuration; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_conversations_title_agent_configuration ON public.conversations USING btree (title_agent_configuration_id) WHERE ((title_agent_configuration_id)::text <> ''::text);
-
-
---
--- Name: idx_conversations_user_last; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_conversations_user_last ON public.conversations USING btree (user_id, last_message_at DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -3096,10 +3042,11 @@ CREATE INDEX idx_runs_lease_owner ON public.runs USING btree (lease_owner) WHERE
 
 
 --
--- Name: idx_runs_one_active_per_conversation; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_runs_one_active_per_user; Type: INDEX; Schema: public; Owner: -
+-- PC-D5: at most one running or waiting_user Run per user, across devices.
 --
 
-CREATE UNIQUE INDEX idx_runs_one_active_per_conversation ON public.runs USING btree (conversation_id) WHERE ((status)::text = ANY (ARRAY[('running'::character varying)::text, ('waiting_user'::character varying)::text]));
+CREATE UNIQUE INDEX idx_runs_one_active_per_user ON public.runs USING btree (user_id) WHERE ((status)::text = ANY (ARRAY[('running'::character varying)::text, ('waiting_user'::character varying)::text]));
 
 
 --
@@ -3764,14 +3711,6 @@ ALTER TABLE ONLY public.consultation_rollout_observations
 
 ALTER TABLE ONLY public.consultation_sessions
     ADD CONSTRAINT consultation_sessions_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE CASCADE;
-
-
---
--- Name: conversation_shares conversation_shares_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.conversation_shares
-    ADD CONSTRAINT conversation_shares_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE CASCADE;
 
 
 --

@@ -10,11 +10,7 @@ import { JsonObject } from './jsonObject.zod';
 
 export const Conversation = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
-  "title": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "title_status": /*#__PURE__*/ zod.enum(['pending', 'generating', 'generated', 'failed']),
-  "status": /*#__PURE__*/ zod.enum(['active', 'archived', 'deleted']),
-  "pinned": /*#__PURE__*/ zod.boolean(),
-  "pinned_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
+  "status": /*#__PURE__*/ zod.enum(['active']),
   "default_model": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "last_message_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
   "metadata": JsonObject,

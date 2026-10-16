@@ -19,7 +19,6 @@ DROP TABLE IF EXISTS
     public.body_states,
     public.consultation_rollout_observations,
     public.consultation_sessions,
-    public.conversation_shares,
     public.conversations,
     public.diagnosis_analyses,
     public.diagnosis_analysis_freshness,

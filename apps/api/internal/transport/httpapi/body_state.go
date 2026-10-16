@@ -36,7 +36,6 @@ type PublicServer struct {
 	accounts                 authAccountApplication
 	authSecurity             authConfig
 	conversations            conversationApplication
-	shares                   conversationShareApplication
 	runtimeEvents            runtimeEventApplication
 	consultationRuntime      consultationRuntimeApplication
 	consultationSessions     consultationSessionApplication

@@ -394,8 +394,6 @@ func (s *PublicServer) GetConsultationThread(
 			Title:         projection.Title,
 			TitleStatus:   projection.TitleStatus,
 			Status:        projection.Status,
-			Pinned:        projection.Pinned,
-			PinnedAt:      projection.PinnedAt,
 			DefaultModel:  nullableString(projection.DefaultModel),
 			LastMessageAt: projection.LastMessageAt,
 			Metadata:      rawJSONObject(projection.Metadata),
@@ -427,8 +425,6 @@ type consultationThreadConversationWire struct {
 	Title         string          `json:"title"`
 	TitleStatus   string          `json:"title_status"`
 	Status        string          `json:"status"`
-	Pinned        bool            `json:"pinned"`
-	PinnedAt      *time.Time      `json:"pinned_at"`
 	DefaultModel  *string         `json:"default_model"`
 	LastMessageAt *time.Time      `json:"last_message_at"`
 	Metadata      json.RawMessage `json:"metadata"`

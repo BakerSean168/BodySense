@@ -83,7 +83,7 @@ func (r *BodyStateRepository) ResolveSafetyRestriction(ctx context.Context, owne
 		if err := tx.Table("public.messages AS m").Select("m.*, r.id AS source_run_id").
 			Joins("JOIN public.conversations AS c ON c.id=m.conversation_id").
 			Joins("JOIN public.runs AS r ON r.turn_id=m.turn_id AND r.conversation_id=m.conversation_id").
-			Where("m.id=? AND c.user_id=? AND r.user_id=? AND c.deleted_at IS NULL AND m.role='user' AND m.status='completed'", command.SourceMessageID, owner, owner).
+			Where("m.id=? AND c.user_id=? AND r.user_id=? AND m.role='user' AND m.status='completed'", command.SourceMessageID, owner, owner).
 			Clauses(clause.Locking{Strength: "SHARE"}).Limit(2).Find(&messages).Error; err != nil {
 			return err
 		}

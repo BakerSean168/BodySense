@@ -1232,259 +1232,25 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/conversations:
-    get:
-      operationId: listConversations
-      summary: List the authenticated user's conversations with cursor pagination.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: cursor
-          in: query
-          description: RFC3339 updated-at cursor from a previous page.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Conversations page.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationListResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalError'
-  /api/v1/conversations/{id}:
+  /api/v1/conversation:
     get:
       operationId: getConversation
-      summary: Get one conversation with its ordered messages.
+      summary: Get or lazily create the authenticated user's single Conversation with its ordered messages.
+      description: >-
+        Every user has exactly one Conversation (PC-D4). The first call creates it; later calls,
+        including concurrent calls from other devices, return the same identity. There is no list,
+        create, rename, pin, archive, delete or public share operation.
       security:
         - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
       responses:
         '200':
-          description: Conversation with messages.
+          description: The user's single Conversation.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConversationDetailResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-    patch:
-      operationId: updateConversation
-      summary: Update conversation status (active, archived, or deleted).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConversationUpdateRequest'
-      responses:
-        '200':
-          description: Conversation updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-    delete:
-      operationId: deleteConversation
-      summary: Soft-delete a conversation and revoke its shares.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      responses:
-        '200':
-          description: Conversation deleted.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-  /api/v1/conversations/{id}/pin:
-    patch:
-      operationId: pinConversation
-      summary: Pin or unpin a conversation.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConversationPinRequest'
-      responses:
-        '200':
-          description: Pin state updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-  /api/v1/conversations/{id}/title:
-    put:
-      operationId: renameConversationTitle
-      summary: Rename a conversation title directly.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConversationTitleRequest'
-      responses:
-        '200':
-          description: Title updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-    post:
-      operationId: generateConversationTitle
-      summary: Queue asynchronous agent title generation for a conversation.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      responses:
-        '202':
-          description: Title generation started.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-  /api/v1/conversations/{id}/share:
-    post:
-      operationId: shareConversation
-      summary: Publish a share token and public URL for a conversation.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      responses:
-        '201':
-          description: Share created.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShareConversationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-    delete:
-      operationId: unshareConversation
-      summary: Revoke a conversation share.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/ConversationId'
-      responses:
-        '200':
-          description: Share revoked.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConversationMutationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
-  /api/v1/shared-conversations/{token}:
-    get:
-      operationId: getSharedConversation
-      summary: Read a shared conversation snapshot by public token.
-      security: []
-      parameters:
-        - name: token
-          in: path
-          required: true
-          schema:
-            type: string
-            minLength: 1
-      responses:
-        '200':
-          description: Shared conversation snapshot.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SharedConversationResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/conversations/{id}/runs:
@@ -6591,7 +6357,6 @@ components:
       - id
       - title_status
       - status
-      - pinned
       - metadata
       - message_count
       - created_at
@@ -6600,12 +6365,7 @@ components:
         id: {type: string, format: uuid}
         title: {type: string}
         title_status: {type: string, enum: [pending, generating, generated, failed]}
-        status: {type: string, enum: [active, archived, deleted]}
-        pinned: {type: boolean}
-        pinned_at:
-          anyOf:
-          - {type: string, format: date-time}
-          - {type: 'null'}
+        status: {type: string, enum: [active]}
         default_model:
           anyOf:
           - {type: string}
@@ -6719,9 +6479,7 @@ components:
       additionalProperties: false
       required:
       - id
-      - title_status
       - status
-      - pinned
       - metadata
       - created_at
       - updated_at
@@ -6729,19 +6487,9 @@ components:
         id:
           type: string
           format: uuid
-        title:
-          type: string
-        title_status:
-          type: string
-          enum: [pending, generating, generated, failed]
         status:
           type: string
-          enum: [active, archived, deleted]
-        pinned:
-          type: boolean
-        pinned_at:
-          type: string
-          format: date-time
+          enum: [active]
         default_model:
           type: string
         last_message_at:
@@ -6977,21 +6725,6 @@ components:
           $ref: '#/components/schemas/JsonObject'
         usage:
           $ref: '#/components/schemas/JsonObject'
-    ConversationListResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - conversations
-      - hasMore
-      properties:
-        conversations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Conversation'
-        hasMore:
-          type: boolean
-        nextCursor:
-          type: string
     ConversationDetailResponse:
       type: object
       additionalProperties: false
@@ -7001,68 +6734,6 @@ components:
       properties:
         conversation:
           $ref: '#/components/schemas/Conversation'
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/ConversationMessage'
-    ConversationMutationResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - message
-      properties:
-        message:
-          type: string
-          minLength: 1
-    ConversationUpdateRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        status:
-          type: string
-          enum:
-          - active
-          - archived
-          - deleted
-    ConversationPinRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        pinned:
-          type: boolean
-          default: false
-    ConversationTitleRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - title
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-    ShareConversationResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - shareToken
-      - shareUrl
-      properties:
-        shareToken:
-          type: string
-          minLength: 1
-        shareUrl:
-          type: string
-          minLength: 1
-    SharedConversationResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - title
-      - messages
-      properties:
-        title:
-          type: string
         messages:
           type: array
           items:

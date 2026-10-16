@@ -14,8 +14,6 @@ type ThreadProjection struct {
 	Title                 string            `gorm:"type:text" json:"title,omitempty"`
 	TitleStatus           string            `gorm:"type:varchar(20);not null;default:'pending'" json:"title_status"`
 	Status                string            `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
-	Pinned                bool              `gorm:"not null;default:false" json:"pinned"`
-	PinnedAt              *time.Time        `json:"pinned_at,omitempty"`
 	DefaultModel          string            `gorm:"type:text" json:"default_model,omitempty"`
 	ActiveRunID           *uuid.UUID        `gorm:"type:uuid" json:"active_run_id,omitempty"`
 	LastMessageAt         *time.Time        `json:"last_message_at,omitempty"`

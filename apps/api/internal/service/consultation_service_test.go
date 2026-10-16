@@ -16,12 +16,6 @@ type fakeConsultationRepository struct {
 	sessions       []model.ConsultationSession
 }
 
-func (r *fakeConsultationRepository) Create(ctx context.Context, session *model.ConsultationSession) error {
-	r.createdSession = session
-	r.session = session
-	return nil
-}
-
 func (r *fakeConsultationRepository) GetByConversationID(ctx context.Context, conversationID uuid.UUID) (*model.ConsultationSession, error) {
 	if r.session == nil || r.session.ConversationID != conversationID {
 		return nil, nil
@@ -33,19 +27,8 @@ func (r *fakeConsultationRepository) GetLatestByUserID(ctx context.Context, user
 	return r.session, nil
 }
 
-func (r *fakeConsultationRepository) ListByConversationIDs(ctx context.Context, conversationIDs []uuid.UUID) ([]model.ConsultationSession, error) {
-	return r.sessions, nil
-}
-
 func (r *fakeConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase model.ConsultationPhase) error {
 	r.updatedPhase = phase
-	return nil
-}
-
-func (r *fakeConsultationRepository) Delete(ctx context.Context, conversationID uuid.UUID) error {
-	if r.session != nil && r.session.ConversationID == conversationID {
-		r.session = nil
-	}
 	return nil
 }
 
@@ -58,7 +41,11 @@ func (r *fakeConsultationRepository) CreateRunEnvelope(
 	userMetadata datatypes.JSON,
 	modelName string,
 ) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error) {
+	// Mirrors the repository: nil resolves the user's singleton.
 	resolvedConversationID := uuid.New()
+	if r.session != nil {
+		resolvedConversationID = r.session.ConversationID
+	}
 	if conversationID != nil {
 		resolvedConversationID = *conversationID
 	}
@@ -101,28 +88,6 @@ func (c *fakeConversationOwnershipChecker) GetByID(ctx context.Context, id, user
 		return nil, nil
 	}
 	return conv, nil
-}
-
-func (c *fakeConversationOwnershipChecker) Create(ctx context.Context, conversation *model.Conversation) error {
-	c.conversations[conversation.ID] = conversation
-	return nil
-}
-
-func (c *fakeConversationOwnershipChecker) SoftDelete(ctx context.Context, id, userID uuid.UUID) error {
-	delete(c.conversations, id)
-	return nil
-}
-
-func (c *fakeConversationOwnershipChecker) GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error) {
-	var latest *model.Conversation
-	for _, conv := range c.conversations {
-		if conv.UserID == userID && conv.Status == "active" && conv.LastMessageAt == nil {
-			if latest == nil || conv.CreatedAt.After(latest.CreatedAt) {
-				latest = conv
-			}
-		}
-	}
-	return latest, nil
 }
 
 func TestUpdatePhasePersistsWorkflowPhase(t *testing.T) {
@@ -187,44 +152,6 @@ func TestUpdatePhaseReturnsErrorWhenSessionNotFound(t *testing.T) {
 	}
 }
 
-func TestCreateConsultationCreatesNew(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{session: nil}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	if err := svc.CreateConsultation(context.Background(), conversationID, userID); err != nil {
-		t.Fatalf("CreateConsultation returned error: %v", err)
-	}
-
-	if repo.createdSession == nil {
-		t.Fatal("expected Create to be called")
-	}
-	if repo.createdSession.ConversationID != conversationID {
-		t.Fatalf("expected conversationID %s, got %s", conversationID, repo.createdSession.ConversationID)
-	}
-	if repo.createdSession.Phase != "collecting" {
-		t.Fatalf("expected phase collecting, got %s", repo.createdSession.Phase)
-	}
-}
-
-func TestCreateConsultationFailsOwnershipCheck(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	otherUserID := uuid.New()
-	repo := &fakeConsultationRepository{session: nil}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	err := svc.CreateConsultation(context.Background(), conversationID, otherUserID)
-	if err == nil {
-		t.Fatal("expected error for ownership check failure, got nil")
-	}
-}
-
 func TestGetConsultationReturnsSession(t *testing.T) {
 	conversationID := uuid.New()
 	userID := uuid.New()
@@ -273,33 +200,6 @@ func TestGetConsultationFailsOwnershipCheck(t *testing.T) {
 	}
 }
 
-func TestCreateSessionReusesEmptySession(t *testing.T) {
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{session: nil}
-	ownership := newFakeConversationOwnershipChecker()
-	svc := NewConsultationService(repo, ownership)
-
-	// 1. Create a session, this should create a new conversation and session
-	session1, err := svc.CreateSession(context.Background(), userID)
-	if err != nil {
-		t.Fatalf("CreateSession failed: %v", err)
-	}
-	if session1 == nil {
-		t.Fatal("expected session1 to be created")
-	}
-
-	// 2. Call CreateSession again. Since last_message_at is nil (it's empty), it should reuse session1.
-	session2, err := svc.CreateSession(context.Background(), userID)
-	if err != nil {
-		t.Fatalf("CreateSession failed: %v", err)
-	}
-	if session2 == nil {
-		t.Fatal("expected session2 to be created/reused")
-	}
-	if session2.ConversationID != session1.ConversationID {
-		t.Fatalf("expected session to be reused (same ID), got %s and %s", session1.ConversationID, session2.ConversationID)
-	}
-}
 func TestCreateRunEnvelopeReusesLongLivedConversationWhenIDIsOmitted(t *testing.T) {
 	conversationID := uuid.New()
 	userID := uuid.New()

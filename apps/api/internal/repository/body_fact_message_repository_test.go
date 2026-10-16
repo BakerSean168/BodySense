@@ -18,15 +18,30 @@ import (
 // user message and the run share the same stable TurnID/ConversationID.
 func seedUserMessageFactEnvelope(t *testing.T, db *gorm.DB, userID uuid.UUID, parts datatypes.JSON, role string) model.MessageFactSource {
 	t.Helper()
-	conversation := model.Conversation{ID: uuid.New(), UserID: userID, Status: "active", TitleStatus: "pending"}
-	if err := db.Create(&conversation).Error; err != nil {
+	// Every envelope lands in the owner's single Conversation (PC-D4).
+	conversation, _, _, err := getOrCreateSingletonConversation(context.Background(), db, userID)
+	if err != nil {
 		t.Fatal(err)
 	}
-	run := model.Run{ID: uuid.New(), UserID: userID, ConversationID: conversation.ID, TurnID: uuid.New(), RequestID: uuid.NewString(), Model: "synthetic", Status: model.RunStatusRunning}
+	var seq int
+	if err := db.Model(&model.Message{}).Where("conversation_id = ?", conversation.ID).Select("COALESCE(MAX(seq), 0) + 1").Scan(&seq).Error; err != nil {
+		t.Fatal(err)
+	}
+	// One active Run per user (PC-D5): a later synthetic envelope for the same
+	// owner is recorded as an already-finished turn.
+	status := model.RunStatusRunning
+	var active int64
+	if err := db.Model(&model.Run{}).Where("user_id = ? AND status IN ?", userID, []string{"running", "waiting_user"}).Count(&active).Error; err != nil {
+		t.Fatal(err)
+	}
+	if active > 0 {
+		status = model.RunStatusCompleted
+	}
+	run := model.Run{ID: uuid.New(), UserID: userID, ConversationID: conversation.ID, TurnID: uuid.New(), RequestID: uuid.NewString(), Model: "synthetic", Status: status}
 	if err := db.Create(&run).Error; err != nil {
 		t.Fatal(err)
 	}
-	message := model.Message{ID: uuid.New(), ConversationID: conversation.ID, TurnID: run.TurnID, Role: role, Status: "completed", Seq: 1, Parts: parts}
+	message := model.Message{ID: uuid.New(), ConversationID: conversation.ID, TurnID: run.TurnID, Role: role, Status: "completed", Seq: seq, Parts: parts}
 	if err := db.Create(&message).Error; err != nil {
 		t.Fatal(err)
 	}

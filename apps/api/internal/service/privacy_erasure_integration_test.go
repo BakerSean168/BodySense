@@ -58,7 +58,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	mustExec("INSERT INTO conversations(id,user_id,title) VALUES (?,?,?)", conversationID, userID, "private conversation")
 	mustExec("INSERT INTO messages(id,conversation_id,turn_id,role,seq,parts,content_text) VALUES (?,?,?,?,?,?,?)", uuid.New(), conversationID, turnID, "user", 1, `[{"type":"text","text":"private symptom"}]`, "private symptom")
 	mustExec("INSERT INTO runs(id,conversation_id,turn_id,request_id,user_id,model,status) VALUES (?,?,?,?,?,?,?)", runID, conversationID, turnID, "privacy-run-"+userID.String(), userID, "synthetic", "completed")
-	mustExec("INSERT INTO conversation_shares(conversation_id,share_token,snapshot_messages,snapshot_title) VALUES (?,?,?,?)", conversationID, "share"+userID.String()[:20], `[{"role":"user","text":"private symptom"}]`, "private")
 	mustExec("INSERT INTO jobs(id,run_id,conversation_id,user_id,job_type,status,input) VALUES (?,?,?,?,?,?,?)", uuid.New(), runID, conversationID, userID, "synthetic", "completed", `{"private":"job"}`)
 	mustExec("INSERT INTO ai_output_reviews(run_id,conversation_id,user_id,output_type,raw_output) VALUES (?,?,?,?,?)", runID, conversationID, userID, "diagnosis", `{"private":"raw model output"}`)
 
@@ -127,7 +126,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		{name: "conversations", query: "SELECT COUNT(*) FROM conversations WHERE user_id = ?", arg: userID},
 		{name: "messages", query: "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", arg: conversationID},
 		{name: "runs", query: "SELECT COUNT(*) FROM runs WHERE user_id = ?", arg: userID},
-		{name: "conversation_shares", query: "SELECT COUNT(*) FROM conversation_shares WHERE conversation_id = ?", arg: conversationID},
 		{name: "jobs", query: "SELECT COUNT(*) FROM jobs WHERE user_id = ?", arg: userID},
 		{name: "ai_output_reviews", query: "SELECT COUNT(*) FROM ai_output_reviews WHERE user_id = ?", arg: userID},
 		{name: "user_uploads", query: "SELECT COUNT(*) FROM user_uploads WHERE user_id = ?", arg: userID},

@@ -18,11 +18,6 @@ type RouteSecurity struct {
 	Operator gin.HandlerFunc
 	// Validator enforces the generated OpenAPI request schemas.
 	Validator gin.HandlerFunc
-	// RetireChatShares is an explicit PC-D8 transitional kill-switch.
-	// The legacy default is false until V2 privacy migration admission.
-	// When true, deny anonymous snapshot reads and new public share
-	// creation, but retain owner-authorized revocation of existing tokens.
-	RetireChatShares bool
 }
 
 // routeErrorHandler replaces the generated wrapper's default error writer so
@@ -39,7 +34,6 @@ func routeErrorHandler(c *gin.Context, err error, statusCode int) {
 // contract exactly once, partitioned by security domain:
 //
 //   - auth public:     account session establishment without authentication
-//   - share public:    token-addressed conversation shares without authentication
 //   - knowledge:       authenticated knowledge operator authority
 //   - protected:       authenticated browser user
 //
@@ -58,18 +52,6 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	authPublic.POST("/refresh", wrapper.RefreshAccountSession)
 	authPublic.POST("/logout", wrapper.LogoutAccount)
 
-	// PC-D8 allows an explicit fail-closed transition away from public
-	// health-chat snapshots without changing unrelated generated routes.
-	// The deny handler goes BEFORE public request validation, so a
-	// malformed token cannot reach any snapshot service or disclose data.
-	sharePublic := router.Group("/api/v1/shared-conversations")
-	if security.RetireChatShares {
-		sharePublic.GET("/:token", retiredConversationShare)
-	} else {
-		sharePublic.Use(security.Validator)
-		sharePublic.GET("/:token", wrapper.GetSharedConversation)
-	}
-
 	// Knowledge administration is a distinct authorization domain. Authenticate
 	// first, resolve durable operator role second, then validate the request.
 	// Unauthorized members therefore never reach either request binding or the
@@ -78,16 +60,7 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	registerKnowledgeRoutes(knowledge, wrapper)
 
 	protected := router.Group("/api/v1", security.Auth, security.Validator)
-	registerProtectedRoutes(protected, wrapper, security.RetireChatShares)
-}
-
-// retiredConversationShare returns an identity-free response and never
-// invokes the legacy snapshot provider, even if old share tokens still exist.
-// Database token revocation and copied-source erasure are separate migration
-// tasks and must be verified before V2 release.
-func retiredConversationShare(c *gin.Context) {
-	c.JSON(http.StatusNotFound, dto.NewErrorResponse("NOT_FOUND", "resource not found"))
-	c.Abort()
+	registerProtectedRoutes(protected, wrapper)
 }
 
 func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
@@ -99,7 +72,7 @@ func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInt
 	knowledge.GET("/stats", wrapper.GetKnowledgeStats)
 }
 
-func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper, retireChatShares bool) {
+func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
 	// Approved assertion ledger, protected by the same authenticated owner boundary.
 	protected.POST("/body-state/records", wrapper.RecordBodyFacts)
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
@@ -167,22 +140,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/assessment/:id/replay", wrapper.ReplayAssessment)
 	protected.GET("/assessment/:id/regression-export", wrapper.ExportAssessmentRegressionCase)
 
-	// Conversations, runs, durable events and public shares.
-	protected.GET("/conversations", wrapper.ListConversations)
-	protected.GET("/conversations/:id", wrapper.GetConversation)
-	protected.PATCH("/conversations/:id", wrapper.UpdateConversation)
-	protected.DELETE("/conversations/:id", wrapper.DeleteConversation)
-	protected.PATCH("/conversations/:id/pin", wrapper.PinConversation)
-	protected.PUT("/conversations/:id/title", wrapper.RenameConversationTitle)
-	protected.POST("/conversations/:id/title", wrapper.GenerateConversationTitle)
-	if retireChatShares {
-		protected.POST("/conversations/:id/share", retiredConversationShare)
-	} else {
-		protected.POST("/conversations/:id/share", wrapper.ShareConversation)
-	}
-	// Continue to allow authenticated owners to revoke legacy share tokens
-	// during the migration. It cannot create or read a public snapshot.
-	protected.DELETE("/conversations/:id/share", wrapper.UnshareConversation)
+	// The user's single Conversation (get-or-create), its runs and durable events.
+	// There is no public sharing path (PC-D8).
+	protected.GET("/conversation", wrapper.GetConversation)
 	protected.GET("/conversations/:id/runs", wrapper.ListConversationRuns)
 	protected.GET("/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)
 

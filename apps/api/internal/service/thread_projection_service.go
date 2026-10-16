@@ -198,8 +198,6 @@ func buildThreadProjection(
 		Title:                 conversation.Title,
 		TitleStatus:           conversation.TitleStatus,
 		Status:                conversation.Status,
-		Pinned:                conversation.Pinned,
-		PinnedAt:              conversation.PinnedAt,
 		DefaultModel:          conversation.DefaultModel,
 		ActiveRunID:           conversation.ActiveRunID,
 		LastMessageAt:         conversation.LastMessageAt,
