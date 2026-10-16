@@ -729,6 +729,63 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ResolveBodyStateSafetyRequest'
+  /api/v1/body-state/safety/restrictions:
+    get:
+      operationId: listSafetyRestrictions
+      summary: Read all owner restrictions and source-validated clearance audit.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Native restrictions at one BodyState revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyRestrictionList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/body-state/safety/restrictions/{id}/resolve:
+    post:
+      operationId: resolveSafetyRestriction
+      summary: Submit exact-target user-reported professional clearance.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveSafetyRestrictionRequest"
+      responses:
+        "200":
+          description: Immutable exact-target resolution receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyResolution"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/RevisionConflict"
+        "503":
+          $ref: "#/components/responses/ValidationUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /api/v1/lifestyle:
     get:
       operationId: getLifestyle
@@ -6035,6 +6092,177 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BodyStateEvidence'
+    ResolveSafetyRestrictionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idempotency_key
+        - expected_revision
+        - source_message_id
+        - statement
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        source_message_id:
+          type: string
+          format: uuid
+        statement:
+          type: string
+          enum:
+            - 专业人员已针对这条限制及全部训练放行
+    SafetyResolution:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - restriction_id
+        - source_evidence_id
+        - source_message_id
+        - revision_id
+        - event_id
+        - source_version
+        - basis_kind
+        - source_level
+        - scope_kind
+        - policy_revision
+        - revision
+        - actor
+        - lifted_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        restriction_id:
+          type: string
+          format: uuid
+        source_evidence_id:
+          type: string
+          format: uuid
+        revision_id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        source_message_id:
+          type: string
+          format: uuid
+        source_version:
+          type: integer
+          format: int64
+          enum: [1]
+        basis_kind:
+          type: string
+          enum: [professional_clearance]
+        source_level:
+          type: string
+          enum: [user_reported]
+        scope_kind:
+          type: string
+          enum: [all_training]
+        policy_revision:
+          type: string
+          enum: [user-reported-professional-clearance-v1]
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        actor:
+          type: string
+          enum: [user]
+        lifted_at:
+          type: string
+          format: date-time
+    SafetyRestrictionRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - safety_screen_id
+        - concept
+        - policy_revision
+        - risk_level
+        - scope_kind
+        - lift_policy
+        - reason
+        - created_revision
+        - valid_from
+        - resolution
+        - clearance_available
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        safety_screen_id:
+          type: string
+          format: uuid
+        concept:
+          type: string
+          enum: [trauma, radiating_pain, numbness, weakness, dizziness]
+        policy_revision:
+          type: string
+          enum: [safety-screen-restriction-v1]
+        risk_level:
+          type: string
+          enum: [restricted]
+        scope_kind:
+          type: string
+          enum: [all_training]
+        lift_policy:
+          type: string
+          enum: [professional_clearance]
+        reason:
+          type: string
+          minLength: 1
+        created_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        valid_from:
+          type: string
+          format: date-time
+        resolution:
+          anyOf:
+            - $ref: "#/components/schemas/SafetyResolution"
+            - type: 'null'
+        clearance_available:
+          type: boolean
+        active:
+          type: boolean
+    SafetyRestrictionList:
+      type: object
+      additionalProperties: false
+      required:
+        - user_id
+        - current_revision
+        - restrictions
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        restrictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SafetyRestrictionRecord"
     ResolveBodyStateSafetyRequest:
       type: object
       additionalProperties: false

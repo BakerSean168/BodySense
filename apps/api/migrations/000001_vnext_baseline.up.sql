@@ -4681,6 +4681,37 @@ CREATE TABLE public.safety_restrictions (
 );
 
 
+-- Exact-target user-reported professional clearance, never a global clear.
+ALTER TABLE public.body_state_revisions ADD CONSTRAINT safety_resolution_revision_identity UNIQUE (user_id, revision, id);
+CREATE TABLE public.safety_resolutions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    restriction_id uuid NOT NULL,
+    source_evidence_id uuid NOT NULL,
+    source_message_id uuid NOT NULL,
+    source_version bigint NOT NULL CHECK (source_version = 1),
+    basis_kind text NOT NULL CHECK (basis_kind = 'professional_clearance'),
+    source_level text NOT NULL CHECK (source_level = 'user_reported'),
+    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
+    policy_revision text NOT NULL CHECK (policy_revision = 'user-reported-professional-clearance-v1'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128),
+    fingerprint text NOT NULL CHECK (length(fingerprint) = 64),
+    revision bigint NOT NULL,
+    revision_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    actor text NOT NULL CHECK (actor = 'user'),
+    lifted_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, restriction_id),
+    UNIQUE (user_id, source_message_id),
+    UNIQUE (user_id, idempotency_key),
+    FOREIGN KEY (user_id, restriction_id) REFERENCES public.safety_restrictions(user_id, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, revision, revision_id) REFERENCES public.body_state_revisions(user_id, revision, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) DEFERRABLE INITIALLY DEFERRED
+);
+
 --
 -- PostgreSQL database dump complete
 --

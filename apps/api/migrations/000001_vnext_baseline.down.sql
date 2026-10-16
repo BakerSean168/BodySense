@@ -50,6 +50,7 @@ DROP TABLE IF EXISTS
     public.privacy_erasure_requests,
     public.runs,
     public.runtime_events,
+    public.safety_resolutions,
     public.safety_restrictions,
     public.safety_screens,
     public.statement_evidence,
