@@ -102,7 +102,8 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR283 implemented user BodyHypothesis ledger/records/withdraw and derived ConcernGroup. Remaining: hypothesis-observation links (RelatedObservationIDs is empty), hypothesis correct/supersede, DC-032 stable group identity; UI moves to UI-001."
+      "remainingScope": "PR283 implemented user BodyHypothesis ledger/records/withdraw and derived ConcernGroup. Remaining: hypothesis-observation links (RelatedObservationIDs is empty), hypothesis correct/supersede, DC-032 stable group identity; UI moves to UI-001.",
+      "githubIssue": 304
     },
     {
       "id": "BS-AGENT-001",
@@ -118,7 +119,8 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "Existing source-bound BodyFact/AskUser commits and native frozen Agent input are implemented. Queue covers remaining authorization/command variants only, not PR6 input migration or deleted intake binding."
+      "remainingScope": "Existing source-bound BodyFact/AskUser commits and native frozen Agent input are implemented. Queue covers remaining authorization/command variants only, not PR6 input migration or deleted intake binding.",
+      "githubIssue": 308
     },
     {
       "id": "PC-001",
@@ -135,7 +137,8 @@
       "worktree": null,
       "acceptedSha": null,
       "blockedReason": "Not started under big-bang: no per-owner conversation uniqueness, active-Run index is per conversation not per user, GetSoleLiveByUserID has no caller, share stack still present behind kill-switch. Admit as next domain vertical per 2026-10-16-v2-remaining-plan.md; old Track D platform denial is historical.",
-      "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification"
+      "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification",
+      "githubIssue": 302
     },
     {
       "id": "PC-RET-001",
@@ -150,7 +153,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 307
     },
     {
       "id": "DX-001",
@@ -166,7 +170,9 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "Folded into DX-002 slice 1 under big-bang: the frozen ConditionEntry/Proposal/Decision contract ships as the first commit of the DX-002 vertical; no separate contract-only PR. Q-17 TTL stays undecided."
+      "remainingScope": "Folded into DX-002 slice 1 under big-bang: the frozen ConditionEntry/Proposal/Decision contract ships as the first commit of the DX-002 vertical; no separate contract-only PR. Q-17 TTL stays undecided.",
+      "githubIssue": 305,
+      "githubIssueNote": "folded into DX-002 slice 1"
     },
     {
       "id": "DX-002",
@@ -181,7 +187,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 305
     },
     {
       "id": "DX-003",
@@ -196,7 +203,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 310
     },
     {
       "id": "TP-001",
@@ -212,7 +220,8 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Remaining: advisory/urgent levels, plan/exercise scopes, on_expiry/user_reverification lift, pure Go TrainerGate and per-restriction versioned release (see 2026-10-16-v2-remaining-plan.md)."
+      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Remaining: advisory/urgent levels, plan/exercise scopes, on_expiry/user_reverification lift, pure Go TrainerGate and per-restriction versioned release (see 2026-10-16-v2-remaining-plan.md).",
+      "githubIssue": 303
     },
     {
       "id": "TP-D1-001",
@@ -268,7 +277,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 311
     },
     {
       "id": "TP-003",
@@ -283,7 +293,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 313
     },
     {
       "id": "AS-001",
@@ -298,7 +309,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 306
     },
     {
       "id": "AS-002",
@@ -313,7 +325,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 314
     },
     {
       "id": "UI-001",
@@ -329,7 +342,8 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR288 completed native Web reads and retained V2 amendments/Episode controls; PR298 full suite accepted. Remaining final Person/Episode and Hypothesis/ConcernGroup presentation/Penpot acceptance only; no legacy snapshot migration remains."
+      "remainingScope": "PR288 completed native Web reads and retained V2 amendments/Episode controls; PR298 full suite accepted. Remaining final Person/Episode and Hypothesis/ConcernGroup presentation/Penpot acceptance only; no legacy snapshot migration remains.",
+      "githubIssue": 309
     },
     {
       "id": "UI-DX-001",
@@ -344,7 +358,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 312
     },
     {
       "id": "UI-TP-001",
@@ -359,7 +374,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 315
     },
     {
       "id": "QA-001",
@@ -374,7 +390,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 316
     },
     {
       "id": "REL-001",
@@ -400,7 +417,8 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null
+      "acceptedSha": null,
+      "githubIssue": 317
     },
     {
       "id": "PR6-001",
@@ -487,5 +505,6 @@
     "evidence": "docs/plan/archive/2026-10-16-pr6-e-closeout.md",
     "schedulerState": "not_observed_or_changed;historical_automation_notes_are_not_live_authority"
   },
-  "remainingPlan": "docs/plan/active/2026-10-16-v2-remaining-plan.md"
+  "remainingPlan": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
+  "githubEpic": 301
 }

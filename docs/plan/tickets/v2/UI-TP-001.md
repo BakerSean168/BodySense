@@ -4,6 +4,23 @@ Status: QUEUED / NOT ADMITTED. Phase 3. SF cross-reference: SF-80.
 **Owner role:** React Training Owner. **Dependencies:** `TP-003`.
 **Exclusive resources:** `training-ui`.
 
+## Current remaining scope · 2026-10-16
+
+**GitHub:** [#315](https://github.com/BakerSean168/BodySense/issues/315) (epic [#301](https://github.com/BakerSean168/BodySense/issues/301)) · Wave 4 · size M · blocked by: TP-003 #313 · blocks: QA-001 #316, REL-001 #317.
+
+Code-verified on main `85b9e68a6`. Big-bang policy (Master §0): edit `000001_vnext_baseline` in place, no numbered migrations, no rollback work. The steps further below are historical decomposition; deliver only this scope.
+
+**Missing:**
+
+- 多 plan 列表 + plan detail（revision 内容只读）+ proposal accept/reject（receipt 后才更新）
+- Trainer：session start、per-set performed/skipped、TrainerGate block/warn 禁用状态与原因
+- 删除 Treatment UI（`TreatmentPanel.tsx`）；390px + Penpot states
+
+**Slices (one PR each):**
+
+1. web: plans + proposals — Vitest + Chromium：accept → receipt → 新 revision 显示；stale 409
+2. web: trainer per-set actions + gate states — Chromium：block 时按钮禁用、重复点击幂等、390px
+
 ## Goal and why now
 
 Bind TrainingPlan/Trainer windows to real safety-gated API. This is an execution slice under the approved BodySense V2 Master; it does not approve clinical decisions or establish any readiness gate by itself.

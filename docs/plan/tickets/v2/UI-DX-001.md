@@ -4,6 +4,23 @@ Status: QUEUED / NOT ADMITTED. Phase 3. SF cross-reference: SF-80.
 **Owner role:** React Diagnosis Owner. **Dependencies:** `DX-003`.
 **Exclusive resources:** `diagnosis-ui`.
 
+## Current remaining scope · 2026-10-16
+
+**GitHub:** [#312](https://github.com/BakerSean168/BodySense/issues/312) (epic [#301](https://github.com/BakerSean168/BodySense/issues/301)) · Wave 3 · size M · blocked by: DX-003 #310 · blocks: QA-001 #316, REL-001 #317.
+
+Code-verified on main `85b9e68a6`. Big-bang policy (Master §0): edit `000001_vnext_baseline` in place, no numbered migrations, no rollback work. The steps further below are historical decomposition; deliver only this scope.
+
+**Missing:**
+
+- 绑定 V2 read projection + decide command；partial selection UI
+- 状态：pending / undecided / changed (stale) / rejected / committed（receipt 后）
+- Q-19 visual sign-off（Penpot）+ 390px
+
+**Slices (one PR each):**
+
+1. web: bind DiagnosisWindow to /diagnosis + decide — Vitest VM：stale 409、partial selection、无 receipt 不显示 committed
+2. web: Penpot states + E2E — Chromium：proposal → decide → committed；urgent safety 下 decide 被禁用
+
 ## Goal and why now
 
 Bind the Diagnosis V2 window to exact decision API. This is an execution slice under the approved BodySense V2 Master; it does not approve clinical decisions or establish any readiness gate by itself.
