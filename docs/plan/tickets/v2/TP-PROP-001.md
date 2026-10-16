@@ -1,12 +1,12 @@
 # TP-PROP-001 · TrainingPlan PlanProposal pure precommit admission policy
 
-Status: BLOCKED / NOT ADMITTED TO CURRENT BASELINE. Phase 1. SF cross-reference: SF-50.
+Status: DONE (dormant pure policy) at main `adaa02607a208a1a7d4cc9ba5b70845d6a77f351` via PR #274. Phase 1. SF cross-reference: SF-50.
 **Owner role:** Training Domain Owner. **Dependencies:** `TP-D1-001`. **Exclusive resources:** `domain-trainingplan-go`.
 **Checkout:** `/home/dev/projects/.chatgpt-worktrees/bodysense-v2-privacy`, branch `feat/v2-training-proposal-admission-20261014`, historical base `e4160a9c7…`, head `681edbd8eef88c504f07df5a2a7e2dadd8be85f9`. **Review PR:** #274.
 
-## Current admission checkpoint · 2026-10-16
+## Acceptance · 2026-10-16
 
-PR #274 remains OPEN/BEHIND at head `681edbd8eef88c504f07df5a2a7e2dadd8be85f9`. Its historical CI does not validate integration against current frozen main `af3e1993b1f62930e3b680b54abab5ade456935b`. The queue marks this ticket blocked pending rebase, review and fresh exact-head CI. This is an admission block; it does not change the host PR’s open review state.
+PR #274 was reviewed against main `887f74b6b` (after the #299 status sync): the diff is additive (one new package `apps/api/internal/domain/trainingplan`, its tests and a handoff doc), has no schema/OpenAPI/caller dependency, and still matches INV-43 / TP-22 (owner, pending state, content and relevant-context fingerprints, exact base revision, 7-day PlanProposal TTL). The branch was brought up to date with GitHub update-branch (merge, no history rewrite), exact-head CI run [38900112810](https://github.com/BakerSean168/BodySense/actions/runs/38900112810) passed on all executed lanes (PG18 children skipped: no migration), local `go test -race` and `go vet` on the package passed, and it merged as `adaa02607`. Optional review nit (typed `DecisionKind` constant) is carried into TP-002.
 
 ## Scope
 
