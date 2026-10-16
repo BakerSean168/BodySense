@@ -1,3 +1,4 @@
+import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
 import {
   Suspense,
   lazy,
@@ -110,7 +111,8 @@ export function ConsultationPage() {
   const messages = displayedThread?.messages ?? [];
   const extractedInfo = displayedThread?.extracted_info ?? [];
   const workspace = workspaceQuery.data;
-  const bodyState = workspace?.body_state ?? null;
+  const bodyRecordsQuery = useBodyRecordsQuery();
+  const bodyState = bodyRecordsQuery.isError ? null : (bodyRecordsQuery.data ?? null);
   const handleAskSpatialContext = useCallback(
     (context: ConsultationSpatialContext) => {
       setChatSpatialContext(context);
@@ -368,10 +370,11 @@ export function ConsultationPage() {
         onWindowChange={handleWindowChange}
         windowRequest={windowRequest}
         demonstrationRequest={demonstrationRequest}
-        loading={workspaceQuery.isFetching || isThreadSwitching}
-        error={workspaceUnavailable || hasThreadSwitchError}
+        loading={workspaceQuery.isFetching || bodyRecordsQuery.isFetching || isThreadSwitching}
+        error={workspaceUnavailable || bodyRecordsQuery.isError || hasThreadSwitchError}
         onRetry={() => {
           void workspaceQuery.refetch();
+          void bodyRecordsQuery.refetch();
           threadActions.retryThread();
         }}
       />

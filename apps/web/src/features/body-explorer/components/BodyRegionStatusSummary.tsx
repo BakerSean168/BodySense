@@ -1,22 +1,20 @@
-import type { BodyStateProjection } from "@/features/consultation/types/consultation";
-import { resolveRecordBodyRegion } from "../model/bodyExplorerSelectors";
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
+import { recordBodyRegions } from "../model/bodyExplorerSelectors";
 import { getBodyRegionDefinition, type BodyRegionId } from "../model/bodyRegionOntology";
 
 export function BodyRegionStatusSummary({
   snapshot,
   regionId,
 }: {
-  snapshot: BodyStateProjection | null;
+  snapshot: BodyRecords | null;
   regionId: BodyRegionId | null;
 }) {
   if (!regionId) return null;
 
   const facts = (snapshot?.facts ?? []).filter(
     (fact) =>
-      resolveRecordBodyRegion(fact) === regionId &&
-      fact.lifecycle_state === "active" &&
-      fact.review_state !== "rejected" &&
-      !fact.excluded_from_reasoning,
+      recordBodyRegions(fact).includes(regionId) &&
+      fact.assertion_status === "asserted",
   );
   const label = getBodyRegionDefinition(regionId).labels["zh-CN"];
 
@@ -28,7 +26,7 @@ export function BodyRegionStatusSummary({
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-xs font-semibold text-foreground">{label} · 当前记录</h3>
         <span className="text-[10px] text-muted-foreground">
-          {facts.length ? `${facts.length} 条` : "暂无记录"}
+          {facts.length ? `${facts.length} 条` : snapshot ? "暂无记录" : "记录尚未读取"}
         </span>
       </div>
       {facts.length ? (
@@ -38,19 +36,16 @@ export function BodyRegionStatusSummary({
               key={fact.id}
               className="rounded-lg border border-border/45 bg-background/45 px-3 py-2"
             >
-              <p className="text-xs text-foreground">{fact.value}</p>
+              <p className="text-xs text-foreground">{fact.statement}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                {fact.review_state === "confirmed" ? "已确认记录" : "待核实记录"}
-                {fact.observed_at
-                  ? ` · ${new Date(fact.observed_at).toLocaleDateString("zh-CN")}`
-                  : ""}
+                用户陈述 · {new Date(fact.recorded_at).toLocaleDateString("zh-CN")}
               </p>
             </article>
           ))}
         </div>
       ) : (
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          选择区域不会生成健康结论。这里没有记录时，可以继续提问或补充真实信息。
+          {snapshot ? "选择区域不会生成健康结论。这里没有记录时，可以继续提问或补充真实信息。" : "当前尚未取得区域记录，请等待或重试读取。"}
         </p>
       )}
     </section>

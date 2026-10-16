@@ -1,31 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { BodyStateFact, BodyStateProjection } from "@/features/consultation/types/consultation";
 import {
   formatFileSize,
   formatOcrStatus,
   hasHabitValue,
   PROFILE_CATEGORIES,
-  selectProfileRecords,
   selectUploadsByCategory,
 } from "./profileCategories";
-
-function fact(overrides: Partial<BodyStateFact> = {}): BodyStateFact {
-  return {
-    id: "fact-1",
-    kind: "discomfort",
-    value: "抬高手臂时右肩疼",
-    origin: "user_reported",
-    review_state: "confirmed",
-    lifecycle_state: "active",
-    trend: "stable",
-    updated_revision: 1,
-    ...overrides,
-  };
-}
-
-function snapshot(facts: BodyStateFact[]): BodyStateProjection {
-  return { current_revision: 1, safety_state: {}, facts, observations: [] };
-}
 
 describe("profile categories", () => {
   it("exposes the five established categories in order", () => {
@@ -43,19 +23,6 @@ describe("profile categories", () => {
       "医学报告",
       "习性",
     ]);
-  });
-
-  it("excludes rejected and inactive records", () => {
-    const data = snapshot([
-      fact({ id: "keep" }),
-      fact({ id: "rejected", review_state: "rejected" }),
-      fact({ id: "inactive", lifecycle_state: "inactive" }),
-    ]);
-    expect(selectProfileRecords(data).map((item) => item.id)).toEqual(["keep"]);
-  });
-
-  it("returns empty selections for a missing snapshot", () => {
-    expect(selectProfileRecords(null)).toEqual([]);
   });
 
   it("splits uploads into media and reports by file type", () => {

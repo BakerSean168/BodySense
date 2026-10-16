@@ -1,14 +1,12 @@
-import { ShieldAlert } from "lucide-react";
-import type { BodyStateProjection } from "../../types/consultation";
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import {
   selectBodyZoneSummaries,
   type BodyZone,
-  type BodyZoneSummary,
 } from "../../model/bodyMap";
 import { cn } from "@/lib/utils";
 
 interface BodyOverviewProps {
-  snapshot: BodyStateProjection | null;
+  snapshot: BodyRecords | null;
   className?: string;
 }
 
@@ -21,41 +19,12 @@ const zoneCoordinates: Record<BodyZone, { x: number; y: number }> = {
   legs: { x: 166, y: 418 },
 };
 
-const trendLabel: Record<BodyZoneSummary["trend"], string> = {
-  worsening: "加重",
-  improving: "改善",
-  stable: "稳定",
-  unknown: "待观察",
-};
-
-function markerClass(trend: BodyZoneSummary["trend"]): string {
-  switch (trend) {
-    case "worsening":
-      return "text-destructive";
-    case "improving":
-      return "text-primary";
-    case "stable":
-      return "text-muted-foreground";
-    default:
-      return "text-accent-foreground";
-  }
-}
-
-function hasSafetyReview(snapshot: BodyStateProjection | null): boolean {
-  const safety = snapshot?.safety_state;
-  return Boolean(
-    safety?.has_red_flags &&
-    (safety?.status === "requires_review" || safety?.status === "active"),
-  );
-}
-
 /**
  * Deterministic 2D BodyState projection used when the Vanatome/WebGL surface is
  * unavailable. This is an intentional accessibility and recovery surface.
  */
 export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
   const summaries = selectBodyZoneSummaries(snapshot);
-  const safetyReview = hasSafetyReview(snapshot);
 
   return (
     <section
@@ -66,12 +35,6 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
         身体区域状态
       </h2>
 
-      {safetyReview ? (
-        <span className="absolute right-0 top-0 inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-          <ShieldAlert className="size-3.5" aria-hidden="true" />
-          需优先确认
-        </span>
-      ) : null}
 
       <div className="relative mx-auto mt-2 w-full max-w-[252px]">
         <svg
@@ -82,7 +45,7 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
         >
           <title id="body-map-svg-title">当前身体区域概览</title>
           <desc id="body-map-svg-description">
-            标记仅表示当前状态中存在相关事实或已确认观察，不表示医学诊断。
+            标记仅表示存在关联区域的用户陈述，不表示医学诊断。
           </desc>
           <g
             fill="color-mix(in oklch, var(--muted) 76%, transparent)"
@@ -121,7 +84,7 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
             return (
               <g
                 key={summary.zone}
-                className={markerClass(summary.trend)}
+                className="text-accent-foreground"
                 aria-hidden="true"
               >
                 <circle
@@ -151,10 +114,10 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
       {summaries.length === 0 ? (
         <div className="mx-auto mt-3 w-full max-w-[300px] px-3 pb-2 text-center">
           <p className="text-[13px] font-medium text-foreground/85">
-            还没有身体记录
+            {snapshot ? "还没有关联区域的陈述" : "身体记录尚未读取"}
           </p>
           <p className="mx-auto mt-1 max-w-[240px] text-xs leading-[1.55] text-muted-foreground">
-            和 BodySense 说说最近哪里不舒服，相关区域会逐渐出现在这里。
+            {snapshot ? "和 BodySense 说说最近的真实感受，保存区域关联后会显示在这里。" : "暂时不能判断是否存在关联记录。"}
           </p>
         </div>
       ) : (
@@ -173,8 +136,8 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
                   · {summary.count} 项
                 </span>
               </span>
-              <span className={cn("font-medium", markerClass(summary.trend))}>
-                {trendLabel[summary.trend]}
+              <span className="font-medium">
+                有陈述
               </span>
             </li>
           ))}

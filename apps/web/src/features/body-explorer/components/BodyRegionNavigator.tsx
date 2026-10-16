@@ -1,4 +1,4 @@
-import type { BodyStateProjection } from "@/features/consultation/types/consultation";
+import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { selectBodyRegionVisualSummaries } from "../model/bodyExplorerSelectors";
 import {
   bodyRegionDefinitions,
@@ -10,10 +10,6 @@ import {
 const stateLabels = {
   none: "",
   observed: "有记录",
-  stable: "稳定",
-  improving: "改善",
-  worsening: "加重",
-  safety_review: "需确认",
 } as const;
 
 export function BodyRegionNavigator({
@@ -21,7 +17,7 @@ export function BodyRegionNavigator({
   selectedRegionId,
   onSelectRegion,
 }: {
-  snapshot: BodyStateProjection | null;
+  snapshot: BodyRecords | null;
   selectedRegionId: BodyRegionId | null;
   onSelectRegion: (regionId: BodyRegionId | null) => void;
 }) {
@@ -51,11 +47,7 @@ export function BodyRegionNavigator({
           {bodyRegionDefinitions.map((region) => {
             const summary = summaryByRegion.get(region.id);
             const status = summary ? stateLabels[summary.visualState] : "";
-            const count = summary
-              ? summary.activeFactCount +
-                summary.confirmedObservationCount +
-                summary.pendingObservationCount
-              : 0;
+            const count = summary?.statementCount ?? 0;
             return (
               <option key={region.id} value={region.id}>
                 {region.labels["zh-CN"]}
@@ -71,7 +63,7 @@ export function BodyRegionNavigator({
           ? getBodyRegionDefinition(selectedRegionId).labels["zh-CN"]
           : activeRegionCount > 0
             ? `${activeRegionCount} 个区域有记录`
-            : "暂无区域记录"}
+            : snapshot ? "暂无区域记录" : "区域记录尚未读取"}
       </p>
     </div>
   );
