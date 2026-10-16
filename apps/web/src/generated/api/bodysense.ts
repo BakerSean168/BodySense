@@ -69,6 +69,8 @@ import {
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
   RuntimeEventListResponse,
+  SafetyResolution,
+  SafetyRestrictionList,
   ShareConversationResponse,
   SharedConversationResponse,
   TrainingCheckInResponse,
@@ -190,10 +192,13 @@ import type {
   RecordOutcomeRequest,
   RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
+  ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
   RuntimeEventListResponseOutput,
+  SafetyResolutionOutput,
+  SafetyRestrictionListOutput,
   ShareConversationResponseOutput,
   SharedConversationResponseOutput,
   StartConsultationRunRequest,
@@ -1461,6 +1466,99 @@ const res = await (fetchFn ?? fetch)(getResolveBodyStateSafetyUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateRevisionMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListSafetyRestrictionsUrl = () => {
+
+
+
+
+  return `/api/v1/body-state/safety/restrictions`
+}
+
+/**
+ * @summary Read all owner restrictions and source-validated clearance audit.
+ */
+export const listSafetyRestrictions = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SafetyRestrictionListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListSafetyRestrictionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: SafetyRestrictionList, status?: number} = new globalThis.Error();
+    const data : SafetyRestrictionList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SafetyRestrictionList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getResolveSafetyRestrictionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/safety/restrictions/${id}/resolve`
+}
+
+/**
+ * @summary Submit exact-target user-reported professional clearance.
+ */
+export const resolveSafetyRestriction = async (id: string,
+    resolveSafetyRestrictionRequest: ResolveSafetyRestrictionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SafetyResolutionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getResolveSafetyRestrictionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolveSafetyRestrictionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: SafetyResolution, status?: number} = new globalThis.Error();
+    const data : SafetyResolution = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SafetyResolution.parse(parsedBody) : parsedBody
   return data
 }
 

@@ -23,6 +23,12 @@ func openBodyStateContextIntegrationDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open integration database: %v", err)
 	}
+	pool, err := db.DB()
+	if err != nil {
+		t.Fatalf("get integration database pool: %v", err)
+	}
+	// User fixtures register later and are removed before the pool closes.
+	t.Cleanup(func() { _ = pool.Close() })
 	return db
 }
 

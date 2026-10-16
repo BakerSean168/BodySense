@@ -20,6 +20,7 @@ type authConfig = auth.SecurityConfig
 // HTTP transport types. Generated OpenAPI models stop here and are translated
 // into domain models before service execution.
 type PublicServer struct {
+	safetyRestrictions       safetyRestrictionApplication
 	bodyFacts                bodyFactApplication
 	bodyObservations         bodyObservationApplication
 	bodyHypotheses           bodyHypothesisApplication
