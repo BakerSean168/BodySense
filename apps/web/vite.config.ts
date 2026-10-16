@@ -221,6 +221,14 @@ export function createBodySenseViteConfig({
                 test: /node_modules[\\/]three[\\/]/,
                 priority: 30,
               },
+              // The generated public StreamEvent validator (~300 kB) is only used
+              // by the lazy consultation surface. Keep it in its own lazy chunk
+              // so ConsultationPage stays within the default 500 kB budget.
+              {
+                name: "StreamEventValidator",
+                test: /packages[\\/]contracts[\\/]generated[\\/]stream-event-validator/,
+                priority: 20,
+              },
             ],
           },
         },

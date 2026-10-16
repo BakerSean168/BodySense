@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { consultationApi } from "../services/consultationService";
-import { consultationKeys } from "../services/consultationQueryKeys";
+import { conversationQueryOptions } from "../services/consultationQueryOptions";
 
-export function useConversationQuery(conversationId: string | null) {
-  return useQuery({
-    queryKey: conversationId
-      ? consultationKeys.conversation(conversationId)
-      : consultationKeys.conversationEmpty(),
-    queryFn: () => consultationApi.getConversation(conversationId!),
-    enabled: !!conversationId,
-  });
+/** Resolves the user's single Conversation (created on first use by the API). */
+export function useConversationQuery() {
+  return useQuery(conversationQueryOptions());
 }

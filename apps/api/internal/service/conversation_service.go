@@ -18,18 +18,12 @@ import (
 const defaultTitle = "新对话"
 
 type conversationRepo interface {
-	Create(ctx context.Context, conversation *model.Conversation) error
+	GetOrCreateForUser(ctx context.Context, userID uuid.UUID) (*model.Conversation, bool, error)
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
-	ListByUserID(ctx context.Context, userID uuid.UUID, cursor *time.Time, limit int) ([]model.Conversation, bool, error)
-	Update(ctx context.Context, conversation *model.Conversation) error
-	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
-	UpdatePinned(ctx context.Context, id, userID uuid.UUID, pinned bool) error
-	UpdateManualTitle(ctx context.Context, id, userID uuid.UUID, title string) error
 	UpdateTitleGeneration(ctx context.Context, id, userID uuid.UUID, title, status, configurationID string, configuration, provenance, decisionTrace []byte) error
 	UpdateTitleStatus(ctx context.Context, id, userID uuid.UUID, status string) error
 	UpdateLastMessageAt(ctx context.Context, id, userID uuid.UUID) error
 	UpdateActiveRunID(ctx context.Context, id, userID uuid.UUID, runID *uuid.UUID, streamID string) error
-	UpdateStatus(ctx context.Context, id, userID uuid.UUID, status string) error
 }
 
 type messageRepo interface {
@@ -63,20 +57,11 @@ type runRepo interface {
 	FailExpiredRun(ctx context.Context, id uuid.UUID, now time.Time, errJSON any) (bool, error)
 }
 
-type shareRepo interface {
-	Create(ctx context.Context, share *model.ConversationShare) error
-	GetByToken(ctx context.Context, token string) (*model.ConversationShare, error)
-	GetByConversationID(ctx context.Context, conversationID uuid.UUID) (*model.ConversationShare, error)
-	Delete(ctx context.Context, id uuid.UUID) error
-	DeleteByConversationID(ctx context.Context, conversationID uuid.UUID) error
-}
-
-// ConversationService handles conversation business logic.
+// ConversationService handles the user's single Conversation (PC-D4).
 type ConversationService struct {
 	conversationRepo conversationRepo
 	messageRepo      messageRepo
 	runRepo          runRepo
-	shareRepo        shareRepo
 	aiClient         *AIClient
 	txManager        *database.TransactionManager
 	deployment       *AgentDeploymentPolicy
@@ -87,7 +72,6 @@ func NewConversationService(
 	conversationRepo conversationRepo,
 	messageRepo messageRepo,
 	runRepo runRepo,
-	shareRepo shareRepo,
 	aiClient *AIClient,
 	txManager *database.TransactionManager,
 ) *ConversationService {
@@ -95,7 +79,6 @@ func NewConversationService(
 		conversationRepo: conversationRepo,
 		messageRepo:      messageRepo,
 		runRepo:          runRepo,
-		shareRepo:        shareRepo,
 		aiClient:         aiClient,
 		txManager:        txManager,
 	}
@@ -114,36 +97,18 @@ func (s *ConversationService) titleConfigurationID() string {
 	return defaultTitleConfigurationID
 }
 
-// CreateConversation creates a new conversation for a user with the given model.
-func (s *ConversationService) CreateConversation(ctx context.Context, userID uuid.UUID, modelStr string) (*model.Conversation, error) {
-	conversation := &model.Conversation{
-		ID:           uuid.New(),
-		UserID:       userID,
-		DefaultModel: modelStr,
-		Status:       "active",
-		TitleStatus:  "pending",
-	}
-	if err := s.conversationRepo.Create(ctx, conversation); err != nil {
-		return nil, fmt.Errorf("create conversation: %w", err)
-	}
-	return conversation, nil
-}
-
-// GetConversation retrieves a conversation by ID with ownership check, including its messages.
-func (s *ConversationService) GetConversation(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, []model.Message, error) {
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
+// GetOrCreateConversation returns the user's single Conversation and its
+// ordered messages, lazily creating the Conversation on first use. Concurrent
+// first calls from several devices converge on the same identity.
+func (s *ConversationService) GetOrCreateConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, []model.Message, error) {
+	conversation, _, err := s.conversationRepo.GetOrCreateForUser(ctx, userID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get conversation: %w", err)
+		return nil, nil, fmt.Errorf("get or create conversation: %w", err)
 	}
-	if conversation == nil {
-		return nil, nil, nil
-	}
-
-	messages, err := s.messageRepo.ListByConversationID(ctx, id)
+	messages, err := s.messageRepo.ListByConversationID(ctx, conversation.ID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list messages: %w", err)
 	}
-
 	return conversation, messages, nil
 }
 
@@ -154,45 +119,6 @@ func (s *ConversationService) GetConversationByID(ctx context.Context, id, userI
 		return nil, fmt.Errorf("get conversation: %w", err)
 	}
 	return conversation, nil
-}
-
-// ListConversations retrieves conversations for a user with cursor-based pagination.
-func (s *ConversationService) ListConversations(ctx context.Context, userID uuid.UUID, cursor *time.Time, limit int) ([]model.Conversation, bool, error) {
-	conversations, hasMore, err := s.conversationRepo.ListByUserID(ctx, userID, cursor, limit)
-	if err != nil {
-		return nil, false, fmt.Errorf("list conversations: %w", err)
-	}
-	return conversations, hasMore, nil
-}
-
-// DeleteConversation soft-deletes a conversation and revokes any shares in one
-// transaction. The conversation_shares FK cascade never fires for soft deletes,
-// so revocation must be explicit and atomic with the delete: a failure to revoke
-// rolls the whole operation back instead of leaving share tokens live.
-func (s *ConversationService) DeleteConversation(ctx context.Context, id, userID uuid.UUID) error {
-	if s.txManager == nil {
-		return fmt.Errorf("delete conversation: transaction manager is not configured")
-	}
-	return s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
-		// Verify ownership
-		conversation, err := s.conversationRepo.GetByID(txCtx, id, userID)
-		if err != nil {
-			return fmt.Errorf("get conversation for delete: %w", err)
-		}
-		if conversation == nil {
-			return fmt.Errorf("conversation not found: %s", id)
-		}
-
-		// Revoke shares so shared tokens stop resolving after deletion.
-		if err := s.shareRepo.DeleteByConversationID(txCtx, id); err != nil {
-			return fmt.Errorf("revoke conversation shares: %w", err)
-		}
-
-		if err := s.conversationRepo.SoftDelete(txCtx, id, userID); err != nil {
-			return fmt.Errorf("delete conversation: %w", err)
-		}
-		return nil
-	})
 }
 
 // FinalizeExecutionLostProjection atomically converts the durable conversation
@@ -238,40 +164,6 @@ func (s *ConversationService) FinalizeExecutionLostProjection(
 		return nil, err
 	}
 	return failedMessage, nil
-}
-
-// PinConversation pins or unpins a conversation with ownership check.
-func (s *ConversationService) PinConversation(ctx context.Context, id, userID uuid.UUID, pinned bool) error {
-	// Verify ownership
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("get conversation for pin: %w", err)
-	}
-	if conversation == nil {
-		return fmt.Errorf("conversation not found: %s", id)
-	}
-
-	if err := s.conversationRepo.UpdatePinned(ctx, id, userID, pinned); err != nil {
-		return fmt.Errorf("pin conversation: %w", err)
-	}
-	return nil
-}
-
-// RenameTitle directly updates the title of a conversation and sets status to 'generated'.
-func (s *ConversationService) RenameTitle(ctx context.Context, id, userID uuid.UUID, title string) error {
-	// Verify ownership
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("get conversation for rename: %w", err)
-	}
-	if conversation == nil {
-		return fmt.Errorf("conversation not found: %s", id)
-	}
-
-	if err := s.conversationRepo.UpdateManualTitle(ctx, id, userID, title); err != nil {
-		return fmt.Errorf("persist manual title: %w", err)
-	}
-	return nil
 }
 
 // GenerateTitle asynchronously generates a title for the conversation.
@@ -368,22 +260,6 @@ func (s *ConversationService) UpdateLastMessageAt(ctx context.Context, id, userI
 func (s *ConversationService) UpdateActiveRunID(ctx context.Context, id, userID uuid.UUID, runID *uuid.UUID, streamID string) error {
 	if err := s.conversationRepo.UpdateActiveRunID(ctx, id, userID, runID, streamID); err != nil {
 		return fmt.Errorf("update active_run_id: %w", err)
-	}
-	return nil
-}
-
-// UpdateConversationStatus updates the status of a conversation (active/archived/deleted).
-func (s *ConversationService) UpdateConversationStatus(ctx context.Context, id, userID uuid.UUID, status string) error {
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("get conversation for update: %w", err)
-	}
-	if conversation == nil {
-		return fmt.Errorf("conversation not found: %s", id)
-	}
-
-	if err := s.conversationRepo.UpdateStatus(ctx, id, userID, status); err != nil {
-		return fmt.Errorf("update conversation status: %w", err)
 	}
 	return nil
 }

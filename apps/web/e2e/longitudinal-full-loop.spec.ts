@@ -87,16 +87,15 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   ).toBeTruthy();
   expect(runBody).toContain("event: stream.done");
 
-  const conversations = await expectJson<{
-    conversations: Array<{ id: string }>;
+  const singleton = await expectJson<{
+    conversation: { id: string };
   }>(
-    await request.get(`${apiBase}/api/v1/conversations?limit=20`, {
+    await request.get(`${apiBase}/api/v1/conversation`, {
       headers: authHeaders,
     }),
-    "list conversations",
+    "get the single conversation",
   );
-  expect(conversations.conversations).toHaveLength(1);
-  const conversationId = conversations.conversations[0].id;
+  const conversationId = singleton.conversation.id;
 
   // Capture and screen the same symptom. Screening another symptom must not
   // authorize a separately inserted, unscreened fact.

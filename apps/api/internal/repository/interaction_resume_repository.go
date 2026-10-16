@@ -32,7 +32,7 @@ func (r *ConsultationRepository) ClaimInteractionResume(ctx context.Context, com
 		return nil, resumeLookupError(err)
 	}
 	var conversation model.Conversation
-	if err := db.Clauses(lock).Where("id = ? AND user_id = ? AND deleted_at IS NULL", command.ConversationID, command.UserID).First(&conversation).Error; err != nil {
+	if err := db.Clauses(lock).Where("id = ? AND user_id = ?", command.ConversationID, command.UserID).First(&conversation).Error; err != nil {
 		return nil, resumeLookupError(err)
 	}
 	var interaction model.AgentInteraction

@@ -86,7 +86,7 @@ func (r *BodyStateRepository) RecordSafetyScreen(ctx context.Context, userID uui
 		if err := tx.Table("public.messages AS m").Select("m.*").
 			Joins("JOIN public.runs AS r ON r.turn_id = m.turn_id AND r.conversation_id = m.conversation_id").
 			Joins("JOIN public.conversations AS c ON c.id = m.conversation_id").
-			Where("m.id = ? AND r.id = ? AND r.user_id = ? AND c.user_id = ? AND c.deleted_at IS NULL AND r.status = ? AND m.role = ? AND m.status = ?", source.MessageID, source.RunID, userID, userID, "running", "user", "completed").
+			Where("m.id = ? AND r.id = ? AND r.user_id = ? AND c.user_id = ? AND r.status = ? AND m.role = ? AND m.status = ?", source.MessageID, source.RunID, userID, userID, "running", "user", "completed").
 			Clauses(clause.Locking{Strength: "SHARE"}).Limit(2).Find(&messages).Error; err != nil {
 			return err
 		}

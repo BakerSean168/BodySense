@@ -35,9 +35,7 @@ export interface Conversation {
   id: string;
   title: string | null;
   title_status: "pending" | "generating" | "generated" | "failed";
-  status: "active" | "archived" | "deleted";
-  pinned: boolean;
-  pinned_at: string | null;
+  status: "active";
   default_model: string | null;
   last_message_at: string | null;
   message_count: number;
@@ -231,16 +229,6 @@ export interface DiagnosisAnalysis {
 
 export type Citation = StreamCitation;
 
-export interface ConversationShare {
-  shareToken: string;
-  shareUrl: string;
-}
-
-export interface SharedConversation {
-  title: string;
-  messages: Message[];
-}
-
 export type SSEConversationCreated = ConversationCreatedEvent;
 export type SSEMessagePersisted = MessagePersistedEvent;
 export type SSEMessageCreated = MessageCreatedEvent;
@@ -326,12 +314,6 @@ export interface ToolCallInfo {
   args: unknown;
   result?: unknown;
   status: "running" | "completed";
-}
-
-export interface ConversationListResponse {
-  conversations: Conversation[];
-  next_cursor: string | null;
-  has_more: boolean;
 }
 
 export type RedFlag = StreamRedFlag;

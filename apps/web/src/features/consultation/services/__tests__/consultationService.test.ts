@@ -15,13 +15,10 @@ const conversationWire = {
   title: "Conversation",
   title_status: "generated" as const,
   status: "active" as const,
-  pinned: false,
   metadata: {},
   created_at: "2026-09-13T12:00:00Z",
   updated_at: "2026-09-13T12:00:00Z",
 };
-
-const mutationWire = { message: "ok" };
 
 function mockResponse(body: unknown, ok = true, status = 200): Response {
   const resolvedStatus = ok
@@ -133,198 +130,34 @@ describe("consultationApi", () => {
     });
   });
 
-  describe("listConversations", () => {
-    it("uses the generated OpenAPI client and maps pagination to the feature domain", async () => {
-      mockAuthFetch.mockResolvedValue(
-        mockResponse({ conversations: [], hasMore: false }),
-      );
-
-      const result = await consultationApi.listConversations({
-        cursor: "2026-09-13T12:00:00Z",
-        limit: 10,
-      });
-
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations?cursor=2026-09-13T12%3A00%3A00Z&limit=10",
-        { method: "GET" },
-      );
-      expect(result).toEqual({
-        conversations: [],
-        next_cursor: null,
-        has_more: false,
-      });
-    });
-
-    it("validates and projects public conversation fields", async () => {
+  describe("getConversation", () => {
+    it("resolves the single conversation through the generated client", async () => {
       mockAuthFetch.mockResolvedValue(
         mockResponse({
-          conversations: [conversationWire],
-          hasMore: true,
-          nextCursor: "2026-09-13T12:00:00Z",
-        }),
-      );
-
-      const result = await consultationApi.listConversations();
-
-      expect(mockAuthFetch).toHaveBeenCalledWith("/api/v1/conversations", {
-        method: "GET",
-      });
-      expect(result).toEqual({
-        conversations: [
-          {
+          conversation: {
             id: conversationWire.id,
-            title: "Conversation",
-            title_status: "generated",
             status: "active",
-            pinned: false,
-            pinned_at: null,
-            default_model: null,
-            last_message_at: null,
-            message_count: 0,
             metadata: {},
             created_at: conversationWire.created_at,
             updated_at: conversationWire.updated_at,
           },
-        ],
-        next_cursor: "2026-09-13T12:00:00Z",
-        has_more: true,
+          messages: [],
+        }),
+      );
+
+      const result = await consultationApi.getConversation();
+
+      expect(mockAuthFetch).toHaveBeenCalledWith("/api/v1/conversation", {
+        method: "GET",
       });
+      expect(result).toEqual({ conversationId: conversationWire.id });
     });
 
     it("throws on non-ok response", async () => {
       mockAuthFetch.mockResolvedValue(mockResponse({}, false, 500));
-      await expect(consultationApi.listConversations()).rejects.toThrow(
+      await expect(consultationApi.getConversation()).rejects.toThrow(
         "API 500",
       );
-    });
-  });
-
-  describe("getConversation", () => {
-    it("uses the generated detail client", async () => {
-      mockAuthFetch.mockResolvedValue(
-        mockResponse({ conversation: conversationWire, messages: [] }),
-      );
-
-      const result = await consultationApi.getConversation(conversationWire.id);
-
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}`,
-        { method: "GET" },
-      );
-      expect(result.conversation.id).toBe(conversationWire.id);
-      expect(result.messages).toEqual([]);
-    });
-
-    it("throws on non-ok response", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse({}, false, 404));
-      await expect(consultationApi.getConversation("bad-id")).rejects.toThrow(
-        "API 404",
-      );
-    });
-  });
-
-  describe("deleteConversation", () => {
-    it("DELETEs through the generated client", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
-      await consultationApi.deleteConversation(conversationWire.id);
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}`,
-        { method: "DELETE" },
-      );
-    });
-  });
-
-  describe("pinConversation", () => {
-    it("PATCHes through the generated client", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
-      await consultationApi.pinConversation(conversationWire.id, true);
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}/pin`,
-        expect.objectContaining({
-          method: "PATCH",
-          body: JSON.stringify({ pinned: true }),
-        }),
-      );
-    });
-  });
-
-  describe("generateTitle", () => {
-    it("POSTs through the generated client", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire, true, 202));
-      await consultationApi.generateTitle(conversationWire.id);
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}/title`,
-        { method: "POST" },
-      );
-    });
-  });
-
-  describe("renameTitle", () => {
-    it("PUTs through the generated client", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
-      await consultationApi.renameTitle(conversationWire.id, "New Title");
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}/title`,
-        expect.objectContaining({
-          method: "PUT",
-          body: JSON.stringify({ title: "New Title" }),
-        }),
-      );
-    });
-  });
-
-  describe("shareConversation", () => {
-    it("POSTs through the authenticated generated client", async () => {
-      const share = { shareToken: "tok", shareUrl: "https://x" };
-      mockAuthFetch.mockResolvedValue(mockResponse(share, true, 201));
-
-      const result = await consultationApi.shareConversation(
-        conversationWire.id,
-      );
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}/share`,
-        { method: "POST" },
-      );
-      expect(result).toEqual(share);
-    });
-  });
-
-  describe("unshareConversation", () => {
-    it("DELETEs through the authenticated generated client", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
-      await consultationApi.unshareConversation(conversationWire.id);
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        `/api/v1/conversations/${conversationWire.id}/share`,
-        { method: "DELETE" },
-      );
-    });
-  });
-
-  describe("getSharedConversation", () => {
-    it("uses the public generated client without bearer auth", async () => {
-      const shared = { title: "Shared", messages: [] };
-      const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockResolvedValue(mockResponse(shared) as unknown as Response);
-
-      const result = await consultationApi.getSharedConversation("tok-123");
-      expect(fetchSpy).toHaveBeenCalledWith(
-        "/api/v1/shared-conversations/tok-123",
-        { credentials: "include", method: "GET" },
-      );
-      expect(mockAuthFetch).not.toHaveBeenCalled();
-      expect(result).toEqual(shared);
-
-      fetchSpy.mockRestore();
-    });
-
-    it("normalizes public generated-client errors", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        mockResponse({}, false, 404) as unknown as Response,
-      );
-      await expect(
-        consultationApi.getSharedConversation("bad"),
-      ).rejects.toThrow("API 404");
     });
   });
 

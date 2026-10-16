@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
-import { useConversationsQuery } from "../hooks/useConversationsQuery";
+import { useConversationQuery } from "../hooks/useConversationQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
 import type { ConsultationSpatialContext } from "../types/consultation";
@@ -94,8 +94,8 @@ export function ConsultationPage() {
   const activeConversationIdRef = useRef<string | null>(null);
 
   // --- Server state via TanStack Query ---
-  const conversationsQuery = useConversationsQuery();
-  const conversations = conversationsQuery.data ?? [];
+  const conversationQuery = useConversationQuery();
+  const singletonConversationId = conversationQuery.data?.conversationId ?? null;
   const threadQuery = useConsultationThreadQuery(routeConversationId);
   const threadData = threadQuery.data;
   const displayedConversationId = routeConversationId
@@ -131,23 +131,17 @@ export function ConsultationPage() {
   const pendingInteractions = displayedThread?.pending_interactions ?? [];
   const interactionHistory = displayedThread?.interaction_history ?? [];
 
-  // Resolve the old empty `/consultation` route to the user's existing long-lived
-  // conversation. This prevents a reused backend conversation from looking like an
-  // unaddressable "new" chat in the browser.
+  // Every user has exactly one Conversation (PC-D4). `/consultation`, `/new`
+  // and any stale or foreign id all resolve to that single thread, so a second
+  // tab or device always lands on the same conversation.
   useEffect(() => {
     if (
-      !routeConversationId &&
-      !conversationsQuery.isPending &&
-      conversations.length > 0
+      singletonConversationId &&
+      routeConversationId !== singletonConversationId
     ) {
-      navigateToConversation(conversations[0].id);
+      navigateToConversation(singletonConversationId);
     }
-  }, [
-    routeConversationId,
-    conversationsQuery.isPending,
-    conversations,
-    navigateToConversation,
-  ]);
+  }, [routeConversationId, singletonConversationId, navigateToConversation]);
 
   // Keep rendering the previously resolved conversation until the target thread is ready.
   useEffect(() => {

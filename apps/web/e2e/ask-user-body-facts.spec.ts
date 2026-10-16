@@ -11,11 +11,13 @@ import { refreshBrowserAccessToken } from "./support/auth";
 test.describe.configure({ timeout: 100_000 });
 const api = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
-async function register(page: Page, request: APIRequestContext) {
+async function register(
+  page: Page,
+  request: APIRequestContext,
+  email = `ask-${crypto.randomUUID()}@example.test`,
+) {
   await page.goto("/register");
-  await page
-    .getByLabel("邮箱地址")
-    .fill(`ask-${crypto.randomUUID()}@example.test`);
+  await page.getByLabel("邮箱地址").fill(email);
   await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
   await page.getByLabel("确认密码").fill("BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
@@ -40,7 +42,8 @@ function events(text: string): StreamEvent[] {
 async function startAsk(page: Page, marker = "E2E_BODYFACT_ASK_SELF") {
   await page.goto("/consultation?view=chat");
   const composer = page.getByPlaceholder("和 BodySense 说说你的身体感受…");
-  await expect(composer).toBeVisible();
+  // The lazy chat chunk can take longer than the default assertion budget on a cold Vite server.
+  await expect(composer).toBeVisible({ timeout: 30_000 });
   const responsePromise = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/v1/consultation-runs") &&
@@ -88,6 +91,115 @@ async function anotherOwner(browser: Browser, baseURL: string | undefined) {
   const headers = await register(page, context.request);
   return { context, headers };
 }
+
+test("second device and second tab recover the same pending Ask User and resume its original Run", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const email = `ask-devices-${crypto.randomUUID()}@example.test`;
+  const headers = await register(page, page.context().request, email);
+  const ask = await startAsk(page);
+  // A fresh context logs in independently: no shared cookies or browser storage.
+  const device = await browser.newContext({ baseURL });
+  try {
+    const remote = await device.newPage();
+    await remote.goto("/login");
+    await remote.getByLabel("邮箱地址").fill(email);
+    await remote.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
+    await remote.getByRole("button", { name: "登录", exact: true }).click();
+    await remote.waitForURL(/\/consultation/);
+    const remoteHeaders = {
+      Authorization: `Bearer ${await refreshBrowserAccessToken(remote, api)}`,
+    };
+    const tab = await page.context().newPage();
+    for (const viewer of [remote, tab]) {
+      await viewer.goto("/consultation?view=chat");
+      await expect(viewer).toHaveURL(
+        new RegExp(`/consultation/${ask.conversationId}`),
+      );
+      await expect(
+        viewer.getByTestId("pending-interaction-composer"),
+      ).toBeVisible();
+      await expect(
+        viewer.getByPlaceholder("和 BodySense 说说你的身体感受…"),
+      ).toHaveCount(0);
+    }
+    const thread = await getJSON(device.request, ask.threadURL, remoteHeaders);
+    expect(thread.active_turn_run_id).toBe(ask.runId);
+    expect(thread.pending_interactions).toEqual([
+      expect.objectContaining({ id: ask.interactionId, run_id: ask.runId }),
+    ]);
+    const parallel = await device.request.post(
+      `${api}/api/v1/consultation-runs`,
+      {
+        headers: remoteHeaders,
+        data: {
+          conversationId: ask.conversationId,
+          clientMessageId: crypto.randomUUID(),
+          requestId: crypto.randomUUID(),
+          message: {
+            role: "user",
+            parts: [{ type: "text", text: "No second Run" }],
+          },
+        },
+      },
+    );
+    expect(parallel.status()).toBe(409);
+    const pending = remote.getByTestId("pending-interaction-composer");
+    await pending.getByPlaceholder("输入你的回答...").fill("我没有肩痛。");
+    const responsePromise = remote.waitForResponse((response) =>
+      response.url().includes(`/interrupts/${ask.interactionId}/answers`),
+    );
+    await pending.getByRole("button", { name: "提交", exact: true }).click();
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    const resumed = events(await response.text());
+    expect(
+      resumed.filter((event) => event.type === "run.resumed"),
+    ).toHaveLength(1);
+    expect(resumed.every((event) => event.ids.run_id === ask.runId)).toBe(true);
+    const command = response.request().postDataJSON();
+    // A stale device cannot apply a competing answer after the other device commits.
+    const conflicting = await page.context().request.post(ask.answerURL, {
+      headers,
+      data: {
+        ...command,
+        requestId: crypto.randomUUID(),
+        answer: { text: "我有肩痛。" },
+      },
+    });
+    expect(conflicting.status()).toBe(409);
+    for (const viewer of [page, tab, remote]) {
+      await viewer.reload();
+      await expect(
+        viewer.getByTestId("pending-interaction-composer"),
+      ).toHaveCount(0);
+      await expect(
+        viewer.getByPlaceholder("和 BodySense 说说你的身体感受…"),
+      ).toBeEnabled();
+    }
+    const runs = await getJSON(
+      device.request,
+      `${api}/api/v1/conversations/${ask.conversationId}/runs`,
+      remoteHeaders,
+    );
+    expect(runs.runs).toEqual([
+      expect.objectContaining({ id: ask.runId, status: "completed" }),
+    ]);
+    const ledger = await getJSON(
+      device.request,
+      `${api}/api/v1/body-state/records`,
+      remoteHeaders,
+    );
+    expect(ledger.current_revision).toBe(1);
+    expect(ledger.facts).toHaveLength(1);
+    expect(ledger.facts[0].statement).toBe("我没有肩痛。");
+    await tab.close();
+  } finally {
+    await device.close();
+  }
+});
 
 test("Ask User reload preserves the original Run; accepted answer becomes one source-bound fact", async ({
   page,
@@ -239,7 +351,7 @@ test("Ask User rejects foreign owners, forged choices and cancelled answers with
         answer: { text: "left", selected: ["left"] },
       },
     });
-    expect([403, 404]).toContain(denied.status());
+    expect(denied.status()).toBe(404);
   } finally {
     await other.context.close();
   }

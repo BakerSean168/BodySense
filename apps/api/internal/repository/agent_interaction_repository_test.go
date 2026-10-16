@@ -34,13 +34,13 @@ func TestAgentInteractionRepositoryAggregateScopesToOwner(t *testing.T) {
 	userID := uuid.New()
 	conversationID := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE (conversations.user_id = $1 AND conversations.deleted_at IS NULL) AND agent_interactions.conversation_id = $2 `)+`GROUP BY "agent_interactions"\."status"`).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE conversations.user_id = $1 AND agent_interactions.conversation_id = $2 `)+`GROUP BY "agent_interactions"\."status"`).
 		WithArgs(userID, conversationID).
 		WillReturnRows(sqlmock.NewRows([]string{"status", "count"}).
 			AddRow("answered", 3).
 			AddRow("expired", 1).
 			AddRow("pending", 2))
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE (conversations.user_id = $1 AND conversations.deleted_at IS NULL) AND (agent_interactions.status = $2 AND agent_interactions.answered_at IS NOT NULL) AND agent_interactions.conversation_id = $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE conversations.user_id = $1 AND (agent_interactions.status = $2 AND agent_interactions.answered_at IS NOT NULL) AND agent_interactions.conversation_id = $3`)).
 		WithArgs(userID, "answered", conversationID).
 		WillReturnRows(sqlmock.NewRows([]string{"avg"}).AddRow(12.5))
 
@@ -67,10 +67,10 @@ func TestAgentInteractionRepositoryAggregateWithoutConversationStillScopesToOwne
 
 	userID := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE conversations.user_id = $1 AND conversations.deleted_at IS NULL `) + `GROUP BY "agent_interactions"\."status"`).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT agent_interactions.status, count(*) as count FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE conversations.user_id = $1 `) + `GROUP BY "agent_interactions"\."status"`).
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"status", "count"}).AddRow("answered", 1))
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE (conversations.user_id = $1 AND conversations.deleted_at IS NULL) AND (agent_interactions.status = $2 AND agent_interactions.answered_at IS NOT NULL)`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg FROM "agent_interactions" JOIN conversations ON conversations.id = agent_interactions.conversation_id WHERE conversations.user_id = $1 AND (agent_interactions.status = $2 AND agent_interactions.answered_at IS NOT NULL)`)).
 		WithArgs(userID, "answered").
 		WillReturnRows(sqlmock.NewRows([]string{"avg"}).AddRow(0))
 

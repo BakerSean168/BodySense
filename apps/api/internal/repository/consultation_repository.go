@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -76,15 +76,13 @@ func (r *ConsultationRepository) Delete(ctx context.Context, conversationID uuid
 		Delete(&model.ConsultationSession{}).Error
 }
 
-// GetLatestByUserID resolves the canonical long-lived consultation for a user.
-// Historical conversations are retained, but new product flows reuse the most
-// recently active consultation instead of requiring users to create another one.
+// GetLatestByUserID returns the consultation session of the owner's single
+// Conversation without creating it, or nil when the owner has not chatted yet.
 func (r *ConsultationRepository) GetLatestByUserID(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
 	var session model.ConsultationSession
 	err := r.db.WithContext(ctx).
 		Joins("JOIN conversations ON conversations.id = consultation_sessions.conversation_id").
-		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.deleted_at IS NULL", userID, "active").
-		Order("COALESCE(conversations.last_message_at, conversations.created_at) DESC").
+		Where("conversations.user_id = ?", userID).
 		First(&session).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
@@ -93,17 +91,6 @@ func (r *ConsultationRepository) GetLatestByUserID(ctx context.Context, userID u
 		return nil, err
 	}
 	return &session, nil
-}
-
-// ListByUserID retrieves consultation sessions for a user via the conversations join.
-func (r *ConsultationRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.ConsultationSession, error) {
-	var sessions []model.ConsultationSession
-	err := r.db.WithContext(ctx).
-		Joins("JOIN conversations ON conversations.id = consultation_sessions.conversation_id").
-		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.last_message_at IS NOT NULL", userID, "active").
-		Order("consultation_sessions.created_at DESC").
-		Find(&sessions).Error
-	return sessions, err
 }
 
 // CreateRunEnvelope atomically resolves the conversation/session and creates the run turn envelope.
@@ -124,8 +111,8 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 	var existed bool
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Serialize run creation per user. This also prevents two concurrent
-		// conversation-less requests from creating separate "long-lived" sessions.
+		// Serialize run creation per user (PC-D5). The singleton Conversation and
+		// idx_runs_one_active_per_user are the database backstops.
 		var owner model.User
 		if err := tx.WithContext(ctx).
 			Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -151,14 +138,9 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 		var lockedConversation model.Conversation
 		if err := tx.WithContext(ctx).
 			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND user_id = ? AND deleted_at IS NULL", resolvedConversationID, userID).
+			Where("id = ? AND user_id = ?", resolvedConversationID, userID).
 			First(&lockedConversation).Error; err != nil {
 			return err
-		}
-		if lockedConversation.ActiveRunID != nil {
-			if err := r.handleActiveRun(ctx, tx, resolvedConversationID, *lockedConversation.ActiveRunID); err != nil {
-				return err
-			}
 		}
 
 		var userSeq int
@@ -188,6 +170,9 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 			DoNothing: true,
 		}).Create(run)
 		if result.Error != nil {
+			if isActiveRunPerUserViolation(result.Error) {
+				return model.ErrConversationRunInProgress
+			}
 			return result.Error
 		}
 		if result.RowsAffected == 0 {
@@ -232,7 +217,7 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 		}
 		return tx.WithContext(ctx).
 			Model(&model.Conversation{}).
-			Where("id = ? AND user_id = ? AND deleted_at IS NULL", resolvedConversationID, userID).
+			Where("id = ? AND user_id = ?", resolvedConversationID, userID).
 			Updates(map[string]any{
 				"active_run_id":    run.ID,
 				"active_stream_id": run.ID.String(),
@@ -256,77 +241,56 @@ func runLeaseExpiry() *time.Time {
 	return &expires
 }
 
-// handleActiveRun inspects the conversation's active run and decides whether a
-// new run may proceed. It returns nil when the pointer may be cleared and the
-// caller may proceed (terminal run, or a stale running run whose lease has
-// expired and is reclaimed as failed), or model.ErrConversationRunInProgress
-// when a live run or a run blocked on user input is still in progress.
-func (r *ConsultationRepository) handleActiveRun(
-	ctx context.Context,
-	tx *gorm.DB,
-	conversationID uuid.UUID,
-	activeRunID uuid.UUID,
-) error {
-	var active model.Run
-	err := tx.WithContext(ctx).
-		Where("id = ? AND conversation_id = ?", activeRunID, conversationID).
-		First(&active).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
+// isActiveRunPerUserViolation reports a unique violation of
+// idx_runs_one_active_per_user. Owner locking normally prevents it; the index
+// is the fail-closed backstop for any path that bypasses the lock.
+func isActiveRunPerUserViolation(err error) bool {
+	if err == nil {
+		return false
 	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		// Orphaned pointer: clear and proceed.
-		return r.clearActiveRun(ctx, tx, conversationID)
-	}
-
-	switch active.Status {
-	case "waiting_user":
-		// Blocked on user input is not lease-bound; keep it in progress.
-		return model.ErrConversationRunInProgress
-	case "running":
-		if active.LeaseExpiresAt != nil && time.Now().Before(*active.LeaseExpiresAt) {
-			return model.ErrConversationRunInProgress
-		}
-		// A current running run must own a lease. A missing or expired lease is
-		// non-live state and is reclaimed rather than treated as indefinitely active.
-		now := time.Now()
-		if err := tx.WithContext(ctx).Model(&model.Run{}).
-			Where("id = ?", activeRunID).
-			Updates(map[string]any{
-				"status":       "failed",
-				"error":        datatypes.JSON(`{"message":"run lease expired; execution reclaimed"}`),
-				"completed_at": now,
-			}).Error; err != nil {
-			return err
-		}
-		return r.clearActiveRun(ctx, tx, conversationID)
-	default:
-		// Terminal state: clear the pointer and proceed.
-		return r.clearActiveRun(ctx, tx, conversationID)
-	}
+	message := err.Error()
+	return strings.Contains(message, "idx_runs_one_active_per_user") && strings.Contains(message, "23505")
 }
 
-func (r *ConsultationRepository) clearActiveRun(
-	ctx context.Context,
-	tx *gorm.DB,
-	conversationID uuid.UUID,
-) error {
-	return tx.WithContext(ctx).Model(&model.Conversation{}).
-		Where("id = ?", conversationID).
-		Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error
-}
-
-func (r *ConsultationRepository) ensureConversationRunAvailable(
+// ensureUserRunAvailable enforces one active Run per user (PC-D5) before a new
+// Run is admitted. A live running Run, a Run blocked on the user
+// (waiting_user) or a pending Ask User interaction keeps the user busy and
+// returns model.ErrConversationRunInProgress. A running Run whose lease has
+// expired is reclaimed as failed. The Conversation's active-run pointer is
+// cleared once no Run is in progress.
+func (r *ConsultationRepository) ensureUserRunAvailable(
 	ctx context.Context,
 	tx *gorm.DB,
 	conversation *model.Conversation,
 ) error {
-	if conversation.ActiveRunID != nil {
-		if err := r.handleActiveRun(ctx, tx, conversation.ID, *conversation.ActiveRunID); err != nil {
-			return err
+	var active []model.Run
+	if err := tx.WithContext(ctx).
+		Where("user_id = ? AND status IN ?", conversation.UserID, []string{"running", "waiting_user"}).
+		Find(&active).Error; err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, run := range active {
+		switch run.Status {
+		case "waiting_user":
+			// Blocked on user input is not lease-bound; keep it in progress.
+			return model.ErrConversationRunInProgress
+		case "running":
+			if run.LeaseExpiresAt != nil && now.Before(*run.LeaseExpiresAt) {
+				return model.ErrConversationRunInProgress
+			}
+			// A current running run must own a lease. A missing or expired lease is
+			// non-live state and is reclaimed rather than treated as indefinitely active.
+			if err := tx.WithContext(ctx).Model(&model.Run{}).
+				Where("id = ? AND user_id = ? AND status = ?", run.ID, conversation.UserID, "running").
+				Updates(map[string]any{
+					"status":       "failed",
+					"error":        datatypes.JSON(`{"message":"run lease expired; execution reclaimed"}`),
+					"completed_at": now,
+				}).Error; err != nil {
+				return err
+			}
 		}
-		conversation.ActiveRunID = nil
-		conversation.ActiveStreamID = ""
 	}
 
 	var pendingInteractions int64
@@ -338,93 +302,44 @@ func (r *ConsultationRepository) ensureConversationRunAvailable(
 	if pendingInteractions > 0 {
 		return model.ErrConversationRunInProgress
 	}
+
+	if conversation.ActiveRunID != nil || conversation.ActiveStreamID != "" {
+		if err := tx.WithContext(ctx).Model(&model.Conversation{}).
+			Where("id = ? AND user_id = ?", conversation.ID, conversation.UserID).
+			Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error; err != nil {
+			return err
+		}
+		conversation.ActiveRunID = nil
+		conversation.ActiveStreamID = ""
+	}
 	return nil
 }
 
+// resolveRunConversation resolves (lazily creating) the owner's single
+// Conversation and locks it. A caller-supplied conversation ID must be that
+// Conversation; any other ID is owner-masked as not found.
 func (r *ConsultationRepository) resolveRunConversation(
 	ctx context.Context,
 	tx *gorm.DB,
 	userID uuid.UUID,
 	conversationID *uuid.UUID,
 ) (uuid.UUID, *model.ConsultationSession, error) {
-	if conversationID != nil && *conversationID != uuid.Nil {
-		var conversation model.Conversation
-		if err := tx.WithContext(ctx).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND user_id = ? AND deleted_at IS NULL", *conversationID, userID).
-			First(&conversation).Error; err != nil {
-			return uuid.Nil, nil, err
-		}
-		if err := r.ensureConversationRunAvailable(ctx, tx, &conversation); err != nil {
-			return uuid.Nil, nil, err
-		}
-
-		var session model.ConsultationSession
-		if err := tx.WithContext(ctx).
-			Where("conversation_id = ?", conversation.ID).
-			First(&session).Error; err != nil {
-			return uuid.Nil, nil, err
-		}
-		return conversation.ID, &session, nil
+	singleton, session, _, err := getOrCreateSingletonConversation(ctx, tx, userID)
+	if err != nil {
+		return uuid.Nil, nil, err
 	}
-
+	if conversationID != nil && *conversationID != uuid.Nil && *conversationID != singleton.ID {
+		return uuid.Nil, nil, gorm.ErrRecordNotFound
+	}
 	var conversation model.Conversation
-	err := tx.WithContext(ctx).
-		Joins("JOIN consultation_sessions ON consultation_sessions.conversation_id = conversations.id").
-		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.deleted_at IS NULL", userID, "active").
-		Order("COALESCE(conversations.last_message_at, conversations.created_at) DESC").
-		First(&conversation).Error
-	switch {
-	case err == nil:
-		if err := tx.WithContext(ctx).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND user_id = ? AND deleted_at IS NULL", conversation.ID, userID).
-			First(&conversation).Error; err != nil {
-			return uuid.Nil, nil, err
-		}
-		if err := r.ensureConversationRunAvailable(ctx, tx, &conversation); err != nil {
-			return uuid.Nil, nil, err
-		}
-		var session model.ConsultationSession
-		if err := tx.WithContext(ctx).
-			Where("conversation_id = ?", conversation.ID).
-			First(&session).Error; err == nil {
-			return conversation.ID, &session, nil
-		} else if err != gorm.ErrRecordNotFound {
-			return uuid.Nil, nil, err
-		}
-
-		session = model.ConsultationSession{
-			ConversationID: conversation.ID,
-			ExtractedInfo:  datatypes.JSON("[]"),
-			Phase:          "collecting",
-		}
-		if err := tx.WithContext(ctx).Create(&session).Error; err != nil {
-			return uuid.Nil, nil, err
-		}
-		return conversation.ID, &session, nil
-
-	case err != gorm.ErrRecordNotFound:
+	if err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND user_id = ?", singleton.ID, userID).
+		First(&conversation).Error; err != nil {
 		return uuid.Nil, nil, err
 	}
-
-	conversation = model.Conversation{
-		ID:          uuid.New(),
-		UserID:      userID,
-		Status:      "active",
-		TitleStatus: "pending",
-	}
-	if err := tx.WithContext(ctx).Create(&conversation).Error; err != nil {
+	if err := r.ensureUserRunAvailable(ctx, tx, &conversation); err != nil {
 		return uuid.Nil, nil, err
 	}
-
-	session := model.ConsultationSession{
-		ConversationID: conversation.ID,
-		ExtractedInfo:  datatypes.JSON("[]"),
-		Phase:          "collecting",
-	}
-	if err := tx.WithContext(ctx).Create(&session).Error; err != nil {
-		return uuid.Nil, nil, err
-	}
-	return conversation.ID, &session, nil
+	return conversation.ID, session, nil
 }

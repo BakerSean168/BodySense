@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -14,7 +14,7 @@ import type {
   Conversation,
 } from "../../types/consultation";
 
-const mockUseConversationsQuery = vi.fn();
+const mockUseConversationQuery = vi.fn();
 const mockUseConsultationThreadQuery = vi.fn();
 const mockUseHealthWorkspaceQuery = vi.fn();
 
@@ -24,8 +24,8 @@ vi.mock("../../components/AssistantChatPanel", () => ({
   ),
 }));
 
-vi.mock("../../hooks/useConversationsQuery", () => ({
-  useConversationsQuery: () => mockUseConversationsQuery(),
+vi.mock("../../hooks/useConversationQuery", () => ({
+  useConversationQuery: () => mockUseConversationQuery(),
 }));
 
 vi.mock("../../hooks/useConsultationThreadQuery", () => ({
@@ -43,8 +43,6 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
     title: "肩颈咨询",
     title_status: "generated",
     status: "active",
-    pinned: false,
-    pinned_at: null,
     default_model: null,
     last_message_at: null,
     message_count: 0,
@@ -94,7 +92,7 @@ function renderConsultationPage(path = "/consultation/conv-1") {
 
 describe("ConsultationPage", () => {
   beforeEach(() => {
-    mockUseConversationsQuery.mockReset();
+    mockUseConversationQuery.mockReset();
     mockUseConsultationThreadQuery.mockReset();
     mockUseHealthWorkspaceQuery.mockReset();
     mockUseHealthWorkspaceQuery.mockReturnValue({
@@ -105,8 +103,8 @@ describe("ConsultationPage", () => {
   });
 
   it("keeps the body canvas visible while the target thread is loading", () => {
-    mockUseConversationsQuery.mockReturnValue({
-      data: [makeConversation()],
+    mockUseConversationQuery.mockReturnValue({
+      data: { conversationId: "conv-1" },
       isPending: false,
     });
     mockUseConsultationThreadQuery.mockReturnValue({
@@ -132,8 +130,8 @@ describe("ConsultationPage", () => {
   });
 
   it("opens the deep-linked business window from ?view=", () => {
-    mockUseConversationsQuery.mockReturnValue({
-      data: [makeConversation()],
+    mockUseConversationQuery.mockReturnValue({
+      data: { conversationId: "conv-1" },
       isPending: false,
     });
     mockUseConsultationThreadQuery.mockReturnValue({
@@ -150,8 +148,8 @@ describe("ConsultationPage", () => {
   });
 
   it("ignores an unknown ?view= value and stays body-first", () => {
-    mockUseConversationsQuery.mockReturnValue({
-      data: [makeConversation()],
+    mockUseConversationQuery.mockReturnValue({
+      data: { conversationId: "conv-1" },
       isPending: false,
     });
     mockUseConsultationThreadQuery.mockReturnValue({
@@ -168,29 +166,25 @@ describe("ConsultationPage", () => {
     expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();
   });
 
-  it("keeps the previous thread mounted while switching conversations", async () => {
-    mockUseConversationsQuery.mockReturnValue({
-      data: [
-        makeConversation({ id: "conv-1", title: "旧会话" }),
-        makeConversation({ id: "conv-2", title: "目标会话" }),
-      ],
+  it("resolves any other route id to the user's single conversation", async () => {
+    mockUseConversationQuery.mockReturnValue({
+      data: { conversationId: "conv-1" },
       isPending: false,
     });
     mockUseConsultationThreadQuery.mockReturnValue({
-      data: makeThread({
-        conversation: makeConversation({ id: "conv-1", title: "旧会话" }),
-      }),
+      data: makeThread(),
       isPending: false,
-      isFetching: true,
+      isFetching: false,
       isError: false,
     });
 
     renderConsultationPage("/consultation/conv-2");
 
+    await waitFor(() =>
+      expect(mockUseConsultationThreadQuery).toHaveBeenLastCalledWith("conv-1"),
+    );
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
-    expect(screen.queryByText("目标会话")).not.toBeInTheDocument();
-    // A route change alone must not force a business window open; the body stage
-    // stays in charge of which surface is shown.
     expect(screen.queryByTestId("diagnosis-window")).not.toBeInTheDocument();
   });
+
 });

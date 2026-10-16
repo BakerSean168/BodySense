@@ -70,7 +70,7 @@ func clearanceCommand(t *testing.T, db *gorm.DB, owner uuid.UUID, role, text str
 }
 
 func TestSafetyResolutionRejectsInvalidSourcesAndStaleWritesPostgres(t *testing.T) {
-	for _, name := range []string{"foreign-target", "foreign-source", "assistant", "missing-source", "ordinary-positive", "negated", "quoted", "stale", "changed-key", "already-lifted", "deleted-conversation", "predates-restriction", "reused-source"} {
+	for _, name := range []string{"foreign-target", "foreign-source", "assistant", "missing-source", "ordinary-positive", "negated", "quoted", "stale", "changed-key", "already-lifted", "predates-restriction", "reused-source"} {
 		t.Run(name, func(t *testing.T) {
 			db := openBodyStateContextIntegrationDB(t)
 			owner := seedBodyStateContextUser(t, db)
@@ -102,11 +102,6 @@ func TestSafetyResolutionRejectsInvalidSourcesAndStaleWritesPostgres(t *testing.
 			case "stale":
 				cmd.ExpectedRevision = 0
 				want = ErrBodyStateRevisionConflict
-			case "deleted-conversation":
-				if err := db.Exec("UPDATE conversations SET deleted_at=now() WHERE id=(SELECT conversation_id FROM messages WHERE id=?)", cmd.SourceMessageID).Error; err != nil {
-					t.Fatal(err)
-				}
-				want = model.ErrSafetyResolutionSourceNotFound
 			case "predates-restriction":
 				if err := db.Model(&model.Message{}).Where("id=?", cmd.SourceMessageID).Update("created_at", time.Now().Add(-24*time.Hour)).Error; err != nil {
 					t.Fatal(err)

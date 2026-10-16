@@ -2,10 +2,12 @@ import { queryOptions } from "@tanstack/react-query";
 import { consultationApi } from "./consultationService";
 import { consultationKeys } from "./consultationQueryKeys";
 
-export function conversationsQueryOptions(limit = 50) {
+/** The user's single Conversation (get-or-create on the server). */
+export function conversationQueryOptions() {
   return queryOptions({
-    queryKey: consultationKeys.conversations(),
-    queryFn: () => consultationApi.listConversations({ limit }),
+    queryKey: consultationKeys.conversation(),
+    queryFn: () => consultationApi.getConversation(),
+    staleTime: Infinity,
   });
 }
 

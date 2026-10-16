@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 	"log/slog"
 	"net"
@@ -39,11 +38,6 @@ func main() {
 
 	// Reject invalid privacy-gate configuration before DB/Redis connections,
 	// migrations, background workers or external services are initialized.
-	retireChatShares, err := parseRetireChatShareFlag(os.Getenv("BODYSENSE_V2_RETIRE_CHAT_SHARES"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Database connection
 	dbCfg := database.ConfigFromEnv()
 	db, err := database.Connect(dbCfg)
@@ -101,7 +95,6 @@ func main() {
 	runRepo := repository.NewRunRepository(database.DB)
 	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
-	shareRepo := repository.NewConversationShareRepository(database.DB)
 
 	// User session cache (Redis-backed). Sessions live as long as their refresh
 	// token, so the session TTL matches the refresh-token TTL and outlives the
@@ -135,8 +128,7 @@ func main() {
 	runService := service.NewRunService(runRepo, leaseOwner)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	runService.WithLifecycleEvents(runtimeEventService, database.NewTransactionManager(database.DB))
-	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
-	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	equipmentRepo := repository.NewEquipmentAssetRepository(database.DB)
 	bodyStateService := service.NewBodyStateService(bodyStateRepo).WithBodyRegionIDValidator(
@@ -378,31 +370,17 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
-			Auth:             authMiddleware,
-			Operator:         middleware.RequireKnowledgeOperator(userRepo),
-			Validator:        httpapi.RequestValidator(publicAPISpec),
-			RetireChatShares: retireChatShares,
+			Auth:      authMiddleware,
+			Operator:  middleware.RequireKnowledgeOperator(userRepo),
+			Validator: httpapi.RequestValidator(publicAPISpec),
 		},
 	)
 
 	log.Printf("BodySense API starting on %s", listenAddress)
 	if err := r.Run(listenAddress); err != nil {
 		log.Fatal(err)
-	}
-}
-
-// parseRetireChatShareFlag fails closed on operator typos. A missing flag
-// preserves the legacy behavior until the authorized V2 cutover.
-func parseRetireChatShareFlag(raw string) (bool, error) {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "false":
-		return false, nil
-	case "true":
-		return true, nil
-	default:
-		return false, errors.New("BODYSENSE_V2_RETIRE_CHAT_SHARES must be true or false")
 	}
 }
 

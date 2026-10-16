@@ -149,7 +149,7 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 	q := database.FromContext(ctx, r.db).Model(&model.AgentInteraction{}).
 		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
 		Select("agent_interactions.status, count(*) as count").
-		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
+		Where("conversations.user_id = ?", userID).
 		Group("agent_interactions.status")
 	if conversationID != nil {
 		q = q.Where("agent_interactions.conversation_id = ?", *conversationID)
@@ -177,7 +177,7 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 	wq := database.FromContext(ctx, r.db).Model(&model.AgentInteraction{}).
 		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
 		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg").
-		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
+		Where("conversations.user_id = ?", userID).
 		Where("agent_interactions.status = ? AND agent_interactions.answered_at IS NOT NULL", model.AgentInteractionAnswered)
 	if conversationID != nil {
 		wq = wq.Where("agent_interactions.conversation_id = ?", *conversationID)

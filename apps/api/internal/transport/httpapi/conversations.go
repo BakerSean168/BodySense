@@ -11,31 +11,13 @@ import (
 	"gorm.io/datatypes"
 )
 
-const (
-	conversationDeletedMessage    = "conversation deleted"
-	conversationPinUpdatedMessage = "conversation pin updated"
-	conversationUpdatedMessage    = "conversation updated"
-	conversationUnsharedMessage   = "conversation unshared"
-	conversationTitleUpdatedMsg   = "title updated"
-	conversationTitleStartedMsg   = "title generation started"
-)
-
+// conversationApplication is the singleton Conversation surface (PC-D4):
+// get-or-create plus read-only Run history. There is no list, create, rename,
+// pin, archive, delete or public share operation.
 type conversationApplication interface {
-	ListConversations(ctx context.Context, userID uuid.UUID, cursor *time.Time, limit int) ([]model.Conversation, bool, error)
-	GetConversation(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, []model.Message, error)
+	GetOrCreateConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, []model.Message, error)
 	GetConversationByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
-	DeleteConversation(ctx context.Context, id, userID uuid.UUID) error
-	PinConversation(ctx context.Context, id, userID uuid.UUID, pinned bool) error
-	RenameTitle(ctx context.Context, id, userID uuid.UUID, title string) error
-	GenerateTitle(ctx context.Context, id, userID uuid.UUID) error
-	UpdateConversationStatus(ctx context.Context, id, userID uuid.UUID, status string) error
 	ListRuns(ctx context.Context, conversationID, userID uuid.UUID) ([]model.Run, error)
-}
-
-type conversationShareApplication interface {
-	ShareConversation(ctx context.Context, conversationID, userID uuid.UUID) (*model.ConversationShare, string, error)
-	UnshareConversation(ctx context.Context, conversationID, userID uuid.UUID) error
-	GetSharedConversation(ctx context.Context, token string) (*model.ConversationShare, error)
 }
 
 type runtimeEventApplication interface {
@@ -44,73 +26,27 @@ type runtimeEventApplication interface {
 
 func (s *PublicServer) WithConversations(
 	conversations conversationApplication,
-	shares conversationShareApplication,
 	runtimeEvents runtimeEventApplication,
 ) *PublicServer {
 	s.conversations = conversations
-	s.shares = shares
 	s.runtimeEvents = runtimeEvents
 	return s
 }
 
-func (s *PublicServer) ListConversations(
-	ctx context.Context,
-	request openapiv1.ListConversationsRequestObject,
-) (openapiv1.ListConversationsResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return listConversationsError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-
-	limit := 20
-	if request.Params.Limit != nil {
-		limit = *request.Params.Limit
-	}
-	var cursor *time.Time
-	if request.Params.Cursor != nil && *request.Params.Cursor != "" {
-		parsed, parseErr := time.Parse(time.RFC3339, *request.Params.Cursor)
-		if parseErr != nil {
-			return listConversationsError(http.StatusBadRequest, "INVALID_CURSOR", "cursor must be RFC3339 timestamp"), nil
-		}
-		cursor = &parsed
-	}
-
-	conversations, hasMore, listErr := s.conversations.ListConversations(ctx, userID, cursor, limit)
-	if listErr != nil {
-		return listConversationsError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list conversations"), nil
-	}
-
-	items := make([]conversationWire, 0, len(conversations))
-	for _, conversation := range conversations {
-		items = append(items, newConversationWire(conversation))
-	}
-	wire := conversationListWire{Conversations: items, HasMore: hasMore}
-	if hasMore && len(conversations) > 0 {
-		next := conversations[len(conversations)-1].UpdatedAt.Format(time.RFC3339)
-		wire.NextCursor = &next
-	}
-	body, err := strictOpenAPIConvert[openapiv1.ConversationListResponse]("ConversationListResponse", wire)
-	if err != nil {
-		return listConversationsError(http.StatusInternalServerError, "INTERNAL_ERROR", "conversation page violates the public contract"), nil
-	}
-	return openapiv1.ListConversations200JSONResponse(body), nil
-}
-
+// GetConversation returns the authenticated user's single Conversation,
+// lazily creating it on first use.
 func (s *PublicServer) GetConversation(
 	ctx context.Context,
-	request openapiv1.GetConversationRequestObject,
+	_ openapiv1.GetConversationRequestObject,
 ) (openapiv1.GetConversationResponseObject, error) {
 	userID, err := authenticatedUserID(ctx)
 	if err != nil {
 		return getConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
 	}
 
-	conversation, messages, getErr := s.conversations.GetConversation(ctx, request.Id, userID)
-	if getErr != nil {
+	conversation, messages, getErr := s.conversations.GetOrCreateConversation(ctx, userID)
+	if getErr != nil || conversation == nil {
 		return getConversationError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get conversation"), nil
-	}
-	if conversation == nil {
-		return getConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
 	}
 
 	body, err := strictOpenAPIConvert[openapiv1.ConversationDetailResponse](
@@ -121,146 +57,6 @@ func (s *PublicServer) GetConversation(
 		return getConversationError(http.StatusInternalServerError, "INTERNAL_ERROR", "conversation detail violates the public contract"), nil
 	}
 	return openapiv1.GetConversation200JSONResponse(body), nil
-}
-
-func (s *PublicServer) UpdateConversation(
-	ctx context.Context,
-	request openapiv1.UpdateConversationRequestObject,
-) (openapiv1.UpdateConversationResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return updateConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if request.Body == nil {
-		return updateConversationError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-
-	if request.Body.Status != nil {
-		if err := s.conversations.UpdateConversationStatus(ctx, request.Id, userID, string(*request.Body.Status)); err != nil {
-			return updateConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-		}
-	}
-	return openapiv1.UpdateConversation200JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationUpdatedMessage}), nil
-}
-
-func (s *PublicServer) DeleteConversation(
-	ctx context.Context,
-	request openapiv1.DeleteConversationRequestObject,
-) (openapiv1.DeleteConversationResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return deleteConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-
-	if err := s.conversations.DeleteConversation(ctx, request.Id, userID); err != nil {
-		return deleteConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.DeleteConversation200JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationDeletedMessage}), nil
-}
-
-func (s *PublicServer) PinConversation(
-	ctx context.Context,
-	request openapiv1.PinConversationRequestObject,
-) (openapiv1.PinConversationResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return pinConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if request.Body == nil {
-		return pinConversationError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-
-	pinned := request.Body.Pinned != nil && *request.Body.Pinned
-	if err := s.conversations.PinConversation(ctx, request.Id, userID, pinned); err != nil {
-		return pinConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.PinConversation200JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationPinUpdatedMessage}), nil
-}
-
-func (s *PublicServer) RenameConversationTitle(
-	ctx context.Context,
-	request openapiv1.RenameConversationTitleRequestObject,
-) (openapiv1.RenameConversationTitleResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return renameConversationTitleError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-	if request.Body == nil {
-		return renameConversationTitleError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
-	}
-
-	if err := s.conversations.RenameTitle(ctx, request.Id, userID, request.Body.Title); err != nil {
-		return renameConversationTitleError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.RenameConversationTitle200JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationTitleUpdatedMsg}), nil
-}
-
-func (s *PublicServer) GenerateConversationTitle(
-	ctx context.Context,
-	request openapiv1.GenerateConversationTitleRequestObject,
-) (openapiv1.GenerateConversationTitleResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return generateConversationTitleError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-
-	if err := s.conversations.GenerateTitle(ctx, request.Id, userID); err != nil {
-		return generateConversationTitleError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.GenerateConversationTitle202JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationTitleStartedMsg}), nil
-}
-
-func (s *PublicServer) ShareConversation(
-	ctx context.Context,
-	request openapiv1.ShareConversationRequestObject,
-) (openapiv1.ShareConversationResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return shareConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-
-	share, shareURL, err := s.shares.ShareConversation(ctx, request.Id, userID)
-	if err != nil || share == nil {
-		return shareConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.ShareConversation201JSONResponse(openapiv1.ShareConversationResponse{ShareToken: share.ShareToken, ShareUrl: shareURL}), nil
-}
-
-func (s *PublicServer) UnshareConversation(
-	ctx context.Context,
-	request openapiv1.UnshareConversationRequestObject,
-) (openapiv1.UnshareConversationResponseObject, error) {
-	userID, err := authenticatedUserID(ctx)
-	if err != nil {
-		return unshareConversationError(http.StatusUnauthorized, "UNAUTHORIZED", "authentication required"), nil
-	}
-
-	if err := s.shares.UnshareConversation(ctx, request.Id, userID); err != nil {
-		return unshareConversationError(http.StatusNotFound, "NOT_FOUND", "conversation not found"), nil
-	}
-	return openapiv1.UnshareConversation200JSONResponse(openapiv1.ConversationMutationResponse{Message: conversationUnsharedMessage}), nil
-}
-
-func (s *PublicServer) GetSharedConversation(
-	ctx context.Context,
-	request openapiv1.GetSharedConversationRequestObject,
-) (openapiv1.GetSharedConversationResponseObject, error) {
-	share, err := s.shares.GetSharedConversation(ctx, request.Token)
-	if err != nil {
-		return getSharedConversationError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get shared conversation"), nil
-	}
-	if share == nil {
-		return getSharedConversationError(http.StatusNotFound, "NOT_FOUND", "shared conversation not found"), nil
-	}
-
-	body, err := strictOpenAPIConvert[openapiv1.SharedConversationResponse](
-		"SharedConversationResponse",
-		sharedConversationWire{Title: share.SnapshotTitle, Messages: share.SnapshotMessages},
-	)
-	if err != nil {
-		return getSharedConversationError(http.StatusInternalServerError, "INTERNAL_ERROR", "shared conversation violates the public contract"), nil
-	}
-	return openapiv1.GetSharedConversation200JSONResponse(body), nil
 }
 
 func (s *PublicServer) ListConversationRuns(
@@ -349,11 +145,7 @@ func (s *PublicServer) ListRunEvents(
 
 type conversationWire struct {
 	ID            uuid.UUID      `json:"id"`
-	Title         string         `json:"title,omitempty"`
-	TitleStatus   string         `json:"title_status"`
 	Status        string         `json:"status"`
-	Pinned        bool           `json:"pinned"`
-	PinnedAt      *time.Time     `json:"pinned_at,omitempty"`
 	DefaultModel  string         `json:"default_model,omitempty"`
 	LastMessageAt *time.Time     `json:"last_message_at,omitempty"`
 	Metadata      datatypes.JSON `json:"metadata"`
@@ -364,11 +156,7 @@ type conversationWire struct {
 func newConversationWire(conversation model.Conversation) conversationWire {
 	return conversationWire{
 		ID:            conversation.ID,
-		Title:         conversation.Title,
-		TitleStatus:   conversation.TitleStatus,
 		Status:        conversation.Status,
-		Pinned:        conversation.Pinned,
-		PinnedAt:      conversation.PinnedAt,
 		DefaultModel:  conversation.DefaultModel,
 		LastMessageAt: conversation.LastMessageAt,
 		Metadata:      conversation.Metadata,
@@ -465,12 +253,6 @@ func newRunWires(runs []model.Run) []conversationRunWire {
 	return items
 }
 
-type conversationListWire struct {
-	Conversations []conversationWire `json:"conversations"`
-	HasMore       bool               `json:"hasMore"`
-	NextCursor    *string            `json:"nextCursor,omitempty"`
-}
-
 type conversationDetailWire struct {
 	Conversation conversationWire          `json:"conversation"`
 	Messages     []conversationMessageWire `json:"messages"`
@@ -478,11 +260,6 @@ type conversationDetailWire struct {
 
 type conversationRunListWire struct {
 	Runs []conversationRunWire `json:"runs"`
-}
-
-type sharedConversationWire struct {
-	Title    string         `json:"title"`
-	Messages datatypes.JSON `json:"messages"`
 }
 
 type runtimeEventWire struct {
@@ -500,129 +277,12 @@ type runtimeEventListWire struct {
 	NextAfterSeq *int               `json:"nextAfterSeq,omitempty"`
 }
 
-func listConversationsError(status int, code, message string) openapiv1.ListConversationsResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.ListConversations400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.ListConversations401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.ListConversations500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
 func getConversationError(status int, code, message string) openapiv1.GetConversationResponseObject {
 	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.GetConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
 	case http.StatusUnauthorized:
 		return openapiv1.GetConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.GetConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
 	default:
 		return openapiv1.GetConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func updateConversationError(status int, code, message string) openapiv1.UpdateConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.UpdateConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.UpdateConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.UpdateConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.UpdateConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func deleteConversationError(status int, code, message string) openapiv1.DeleteConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.DeleteConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.DeleteConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.DeleteConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.DeleteConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func pinConversationError(status int, code, message string) openapiv1.PinConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.PinConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.PinConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.PinConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.PinConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func renameConversationTitleError(status int, code, message string) openapiv1.RenameConversationTitleResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.RenameConversationTitle400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.RenameConversationTitle401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.RenameConversationTitle404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.RenameConversationTitle500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func generateConversationTitleError(status int, code, message string) openapiv1.GenerateConversationTitleResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.GenerateConversationTitle400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.GenerateConversationTitle401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.GenerateConversationTitle404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.GenerateConversationTitle500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func shareConversationError(status int, code, message string) openapiv1.ShareConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.ShareConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.ShareConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.ShareConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.ShareConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func unshareConversationError(status int, code, message string) openapiv1.UnshareConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.UnshareConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusUnauthorized:
-		return openapiv1.UnshareConversation401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.UnshareConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.UnshareConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
-	}
-}
-
-func getSharedConversationError(status int, code, message string) openapiv1.GetSharedConversationResponseObject {
-	switch status {
-	case http.StatusBadRequest:
-		return openapiv1.GetSharedConversation400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(errorEnvelope(code, message))}
-	case http.StatusNotFound:
-		return openapiv1.GetSharedConversation404JSONResponse{NotFoundJSONResponse: openapiv1.NotFoundJSONResponse(errorEnvelope(code, message))}
-	default:
-		return openapiv1.GetSharedConversation500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(errorEnvelope(code, message))}
 	}
 }
 
