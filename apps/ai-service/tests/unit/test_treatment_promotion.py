@@ -8,8 +8,7 @@ def test_repository_treatment_promotion_evidence_is_ready_for_shadow() -> None:
     assert report["reasons"] == []
     assert report["qualification_chain"][0]["configuration_id"] == policy.champion_configuration_id
     assert (
-        report["qualification_chain"][-1]["configuration_id"]
-        == policy.challenger_configuration_id
+        report["qualification_chain"][-1]["configuration_id"] == policy.challenger_configuration_id
     )
     assert report["interaction_experiment"]["required"] is False
     assert report["rollout"]["canary_steps_bps"] == [500, 2500, 5000]

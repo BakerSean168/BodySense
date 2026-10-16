@@ -45,7 +45,9 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
     diagnosis = DiagnosisService(model_resolver=lambda _config: deterministic_diagnosis_model())
     diagnosis_result = await diagnosis.generate_diagnosis(
         body_state_revision=1,
-        configuration_id=get_diagnosis_configuration("diag-config-5a4a13627e14b4cf").configuration_id,
+        configuration_id=get_diagnosis_configuration(
+            "diag-config-5a4a13627e14b4cf"
+        ).configuration_id,
         body_state={
             "current_revision": 1,
             "facts": [

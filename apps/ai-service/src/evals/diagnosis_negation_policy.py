@@ -55,8 +55,7 @@ class NegationPolicyBehavior(
 
     def evaluate(self, ctx: EvalContext) -> bool:
         return (
-            ctx.metadata is not None
-            and ctx.output.categories == ctx.metadata.expected_categories
+            ctx.metadata is not None and ctx.output.categories == ctx.metadata.expected_categories
         )
 
 

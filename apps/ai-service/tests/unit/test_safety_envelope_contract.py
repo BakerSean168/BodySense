@@ -87,9 +87,10 @@ def test_blocker_requires_current_positive_assertion(change: dict) -> None:
 
 def test_optional_provenance_round_trip() -> None:
     envelope = json.loads(FIXTURE.read_text())["provenance_round_trip"]
-    assert SafetyEnvelopeV2.model_validate(envelope).model_dump(
-        mode="json", exclude_none=True
-    ) == envelope
+    assert (
+        SafetyEnvelopeV2.model_validate(envelope).model_dump(mode="json", exclude_none=True)
+        == envelope
+    )
 
 
 def test_internal_http_forwards_typed_envelope(client, monkeypatch) -> None:

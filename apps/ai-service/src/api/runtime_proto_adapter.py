@@ -44,7 +44,6 @@ class RuntimeCommandError(ValueError):
     """The private runtime command is malformed or conflicts with its HTTP path."""
 
 
-
 class RuntimeEventError(ValueError):
     """An internal runtime event cannot be represented by the canonical Proto IDL."""
 
@@ -119,9 +118,7 @@ def runtime_event_to_proto(event: ConsultationRuntimeEvent) -> runtime_pb2.Runti
         phase_value: dict[str, Any] = {"to": payload.to, "reason": payload.reason}
         if payload.from_phase is not None:
             phase_value["from"] = payload.from_phase
-        wire.phase_changed.CopyFrom(
-            _parse_runtime_payload(phase_value, runtime_pb2.PhaseChanged())
-        )
+        wire.phase_changed.CopyFrom(_parse_runtime_payload(phase_value, runtime_pb2.PhaseChanged()))
     elif isinstance(payload, CitationAddedRuntimeEvent):
         wire.citation_added.CopyFrom(
             _parse_runtime_payload(
@@ -204,9 +201,7 @@ def runtime_event_to_proto(event: ConsultationRuntimeEvent) -> runtime_pb2.Runti
     try:
         _RUNTIME_VALIDATOR.validate(wire)
     except (ValidationError, TypeError, ValueError) as exc:
-        raise RuntimeEventError(
-            f"invalid private runtime event: {type(payload).__name__}"
-        ) from exc
+        raise RuntimeEventError(f"invalid private runtime event: {type(payload).__name__}") from exc
     return wire
 
 

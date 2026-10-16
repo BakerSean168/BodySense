@@ -59,9 +59,7 @@ def main() -> int:
                     review_status=unit.review_status,
                     lifecycle_status=unit.lifecycle_status,
                     quality_score=unit.quality_score,
-                    publication_eligible=(
-                        claim_admissibility.get("publication_eligible") is True
-                    ),
+                    publication_eligible=(claim_admissibility.get("publication_eligible") is True),
                     source_locator=dict(unit.metadata.get("source_locator") or {}),
                     claim_review=claim_review_payload,
                 )

@@ -23,9 +23,7 @@ async def test_record_lifestyle_context_normalizes_explicit_user_state() -> None
 
 @pytest.mark.asyncio
 async def test_record_lifestyle_context_rejects_unknown_taxonomy() -> None:
-    result = await handle_record_lifestyle_context(
-        {"section": "occupation", "summary": "程序员"}
-    )
+    result = await handle_record_lifestyle_context({"section": "occupation", "summary": "程序员"})
     assert result == {"error": "unsupported lifestyle section"}
 
 

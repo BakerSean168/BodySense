@@ -14,12 +14,8 @@ from src.configuration.diagnosis_agent_config import (
     load_manifest,
 )
 
-DEFAULT_POLICY_PATH = (
-    SERVICE_ROOT / "data/evals/diagnosis_historical_identity_policy.json"
-)
-DEFAULT_REPORT_PATH = (
-    SERVICE_ROOT / "data/evals/reports/diagnosis_historical_identity_audit.json"
-)
+DEFAULT_POLICY_PATH = SERVICE_ROOT / "data/evals/diagnosis_historical_identity_policy.json"
+DEFAULT_REPORT_PATH = SERVICE_ROOT / "data/evals/reports/diagnosis_historical_identity_audit.json"
 
 
 class HistoricalConfigurationExpectation(BaseModel):
@@ -47,9 +43,7 @@ class HistoricalIdentityPolicy(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str
-    configurations: list[HistoricalConfigurationExpectation] = Field(
-        min_length=5, max_length=5
-    )
+    configurations: list[HistoricalConfigurationExpectation] = Field(min_length=5, max_length=5)
     shared_contract: SharedContractExpectation
 
 
@@ -154,9 +148,7 @@ def render_report(report: dict[str, Any]) -> str:
     ]
     for item in report["configurations"]:
         marker = "PASS" if item["passed"] else "FAIL"
-        lines.append(
-            f"- {item['version']} {item['configuration_id']}: {marker}"
-        )
+        lines.append(f"- {item['version']} {item['configuration_id']}: {marker}")
     if report["reasons"]:
         lines.append("reasons:")
         lines.extend(f"- {reason}" for reason in report["reasons"])

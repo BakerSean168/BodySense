@@ -32,8 +32,7 @@ def _main() -> int:
         encoding="utf-8",
     )
     print(
-        f"# Diagnosis Negation Bridge Qualification: "
-        f"{summary['passed']}/{summary['total']} passed"
+        f"# Diagnosis Negation Bridge Qualification: {summary['passed']}/{summary['total']} passed"
     )
     return 1 if summary["failed"] else 0
 
