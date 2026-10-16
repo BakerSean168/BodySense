@@ -20,7 +20,7 @@ The UI must never use copy that implies these operations are equivalent.
 | Authentication identity | `users`, profile, live sessions, refresh families | **Delete/revoke** | Retain while account is active |
 | Conversation history | `conversations`, messages, runs, interactions, runtime events | **Delete** | Retain until user deletes conversation/account |
 | Share state | `conversation_shares` | **Delete/revoke** | Retain only while source conversation is shareable |
-| Longitudinal BodyState | `body_states`, facts, observations, revisions, evidence, hypotheses | **Delete** | Durable source-of-truth while account exists |
+| Longitudinal BodyState | `body_states`, facts, observations, revisions, evidence, hypotheses, `safety_screens`, `safety_restrictions` | **Delete** | Durable source-of-truth while account exists |
 | Diagnosis | analyses, candidates, assessments, freshness, rollout observations | **Delete** | Immutable/revision-pinned while account exists |
 | Treatment | treatment aggregate, revisions, interventions, rollout observations | **Delete** | Immutable revisions while account exists |
 | Training and outcomes | plans, logs, outcomes, assessment reports | **Delete** | Retain while account exists |

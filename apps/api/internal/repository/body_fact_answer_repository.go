@@ -122,13 +122,26 @@ func (r *BodyStateRepository) RecordSafetyScreen(ctx context.Context, userID uui
 			Trauma: answers.Trauma, RadiatingPain: answers.RadiatingPain, Numbness: answers.Numbness,
 			Weakness: answers.Weakness, Dizziness: answers.Dizziness, BodyStateRevision: next, RecordedAt: now,
 		}
+		restrictions := screenRestrictions(*screen)
+		restrictionIDs := make([]uuid.UUID, 0, len(restrictions))
+		for _, restriction := range restrictions {
+			restrictionIDs = append(restrictionIDs, restriction.ID)
+		}
 		// Revision and outbox carry identifiers only.
-		metadata := map[string]any{"safety_screen_id": screen.ID, "body_fact_id": fact.ID}
+		metadata := map[string]any{
+			"safety_screen_id": screen.ID, "body_fact_id": fact.ID,
+			"restriction_ids": restrictionIDs, "policy_revision": model.SafetyScreenRestrictionPolicyV1,
+		}
 		if _, err := bodyStatePersistRevision(ctx, tx, state, next, "safety.screened", "structured_answer", metadata); err != nil {
 			return err
 		}
 		if err := tx.Create(screen).Error; err != nil {
 			return err
+		}
+		if len(restrictions) > 0 {
+			if err := tx.Create(&restrictions).Error; err != nil {
+				return err
+			}
 		}
 		payload, err := json.Marshal(metadata)
 		if err != nil {
@@ -140,6 +153,36 @@ func (r *BodyStateRepository) RecordSafetyScreen(ctx context.Context, userID uui
 		return nil, err
 	}
 	return screen, nil
+}
+
+// screenRestrictions applies the product-approved Go policy, not a clinical
+// urgency classification. Each positive concept retains independent lineage;
+// neither a later negative screen nor source removal clears an earlier risk.
+func screenRestrictions(screen model.SafetyScreen) []model.SafetyRestriction {
+	var restrictions []model.SafetyRestriction
+	for _, signal := range []struct {
+		concept string
+		label   string
+		present bool
+	}{
+		{"trauma", "外伤或创伤", screen.Trauma},
+		{"radiating_pain", "放射痛", screen.RadiatingPain},
+		{"numbness", "麻木", screen.Numbness},
+		{"weakness", "无力", screen.Weakness},
+		{"dizziness", "头晕", screen.Dizziness},
+	} {
+		if !signal.present {
+			continue
+		}
+		restrictions = append(restrictions, model.SafetyRestriction{
+			ID: uuid.New(), UserID: screen.UserID, SafetyScreenID: screen.ID, Concept: signal.concept,
+			PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted",
+			ScopeKind: "all_training", LiftPolicy: "professional_clearance",
+			Reason:          "安全筛查确认“" + signal.label + "”；训练前需有来源的专业放行。",
+			CreatedRevision: screen.BodyStateRevision, ValidFrom: screen.RecordedAt,
+		})
+	}
+	return restrictions
 }
 
 // ListSafetyScreens returns every safety screen of the owner, newest first.
