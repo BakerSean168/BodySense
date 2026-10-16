@@ -25,7 +25,8 @@ var ErrBodyStateRevisionConflict = errors.New("body state revision conflict")
 // tables; body_state_revisions records semantic history without requiring event
 // replay for ordinary reads.
 type BodyStateRepository struct {
-	db *gorm.DB
+	db          *gorm.DB
+	safetyClock func() time.Time
 }
 
 func NewBodyStateRepository(db *gorm.DB) *BodyStateRepository {

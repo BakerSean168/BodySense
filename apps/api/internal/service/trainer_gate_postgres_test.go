@@ -74,7 +74,7 @@ func TestTrainerGateReadsNativeSafetyLedgerPostgres(t *testing.T) {
 			args []any
 		}{
 			{"ALTER TABLE safety_restrictions DROP CONSTRAINT safety_restrictions_screen_policy", nil},
-			{"UPDATE safety_restrictions SET risk_level='advisory', scope_kind='exercise', plan_id=?, lift_policy='user_reverification' WHERE user_id=? AND id=?", []any{planA, owner, restriction.ID}},
+			{"UPDATE safety_restrictions SET risk_level='advisory', scope_kind='exercise', plan_id=?, lift_policy='user_reverification', lift_conditions='[\"reviewed test condition\"]' WHERE user_id=? AND id=?", []any{planA, owner, restriction.ID}},
 			{"INSERT INTO safety_restriction_exercises(user_id, restriction_id, exercise_id) VALUES (?,?,'squat')", []any{owner, restriction.ID}},
 		} {
 			if err := tx.Exec(statement.sql, statement.args...).Error; err != nil {

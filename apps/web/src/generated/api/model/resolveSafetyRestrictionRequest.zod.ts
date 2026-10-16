@@ -12,13 +12,20 @@ export const resolveSafetyRestrictionRequestIdempotencyKeyMax = 128;
 export const resolveSafetyRestrictionRequestExpectedRevisionMin = 0;
 
 
+export const resolveSafetyRestrictionRequestStatementMax = 12000;
+
+
 
 export const ResolveSafetyRestrictionRequest = /*#__PURE__*/ zod.strictObject({
   "idempotency_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resolveSafetyRestrictionRequestIdempotencyKeyMax)),
   "expected_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(resolveSafetyRestrictionRequestExpectedRevisionMin)),
-  "source_message_id": /*#__PURE__*/ zod.uuid(),
-  "statement": /*#__PURE__*/ zod.enum(['专业人员已针对这条限制及全部训练放行'])
-});
+  "expected_restriction_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "basis_kind": /*#__PURE__*/ zod.enum(['expiry', 'user_reverification', 'professional_clearance']),
+  "source_message_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "source_version": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.literal(0),/*#__PURE__*/ zod.literal(1)])),
+  "check_interaction_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "statement": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(resolveSafetyRestrictionRequestStatementMax))).check(/*#__PURE__*/ zod.describe('Exact Go declaration including every reviewed lift condition; arbitrary affirmative prose is rejected.'))
+}).check(/*#__PURE__*/ zod.describe('Exact authenticated user command. Non-expiry bases require source_message_id and source_version=1; reverification also requires check_interaction_id. Expiry accepts no user source and uses only the Go clock. expected_restriction_version is the immutable created_revision of this restriction.'));
 
 export type ResolveSafetyRestrictionRequest = zod.input<typeof ResolveSafetyRestrictionRequest>;
 export type ResolveSafetyRestrictionRequestOutput = zod.output<typeof ResolveSafetyRestrictionRequest>;

@@ -41,7 +41,7 @@ func TestSafetyResolutionOnlyLiftsExactRestrictionPostgres(t *testing.T) {
 	rows := seedSafetyRestrictions(t, db, owner)
 	parts, _ := json.Marshal([]map[string]string{{"type": "text", "text": model.ProfessionalClearanceStatement}})
 	source := seedUserMessageFactEnvelope(t, db, owner, datatypes.JSON(parts), "user")
-	cmd := model.ResolveSafetyRestrictionCommand{IdempotencyKey: "clear-one", ExpectedRevision: 1, SourceMessageID: source.MessageID, Statement: model.ProfessionalClearanceStatement}
+	cmd := model.ResolveSafetyRestrictionCommand{BasisKind: "professional_clearance", SourceVersion: 1, ExpectedRestrictionVersion: 1, IdempotencyKey: "clear-one", ExpectedRevision: 1, SourceMessageID: source.MessageID, Statement: model.ProfessionalClearanceStatement}
 	repo := NewBodyStateRepository(db)
 	receipt, err := repo.ResolveSafetyRestriction(context.Background(), owner, rows[0].ID, cmd)
 	if err != nil || receipt == nil || receipt.RestrictionID != rows[0].ID || receipt.Revision != 2 {
@@ -66,7 +66,7 @@ func clearanceCommand(t *testing.T, db *gorm.DB, owner uuid.UUID, role, text str
 	t.Helper()
 	parts, _ := json.Marshal([]map[string]string{{"type": "text", "text": text}})
 	source := seedUserMessageFactEnvelope(t, db, owner, datatypes.JSON(parts), role)
-	return model.ResolveSafetyRestrictionCommand{IdempotencyKey: uuid.NewString(), ExpectedRevision: 1, SourceMessageID: source.MessageID, Statement: model.ProfessionalClearanceStatement}
+	return model.ResolveSafetyRestrictionCommand{BasisKind: "professional_clearance", SourceVersion: 1, ExpectedRestrictionVersion: 1, IdempotencyKey: uuid.NewString(), ExpectedRevision: 1, SourceMessageID: source.MessageID, Statement: model.ProfessionalClearanceStatement}
 }
 
 func TestSafetyResolutionRejectsInvalidSourcesAndStaleWritesPostgres(t *testing.T) {
@@ -271,12 +271,12 @@ func TestSafetyResolutionAuditOwnerLineageAndAccountErasurePostgres(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mutate := range []func(*model.SafetyResolution){func(r *model.SafetyResolution) { r.RestrictionID = other[0].ID }, func(r *model.SafetyResolution) { r.SourceEvidenceID = uuid.New() }, func(r *model.SafetyResolution) { r.Revision = 1 }, func(r *model.SafetyResolution) { r.SourceLevel = "clinical_document" }} {
+	for _, mutate := range []func(*model.SafetyResolution){func(r *model.SafetyResolution) { r.RestrictionID = other[0].ID }, func(r *model.SafetyResolution) { r.SourceEvidenceID = safetyUUIDPointer(uuid.New()) }, func(r *model.SafetyResolution) { r.Revision = 1 }, func(r *model.SafetyResolution) { r.SourceLevel = "clinical_document" }} {
 		forged := *receipt
 		forged.ID = uuid.New()
 		forged.RestrictionID = rows[1].ID
 		forged.IdempotencyKey = uuid.NewString()
-		forged.SourceMessageID = uuid.New()
+		forged.SourceMessageID = safetyUUIDPointer(uuid.New())
 		mutate(&forged)
 		if err := db.Create(&forged).Error; err == nil {
 			t.Fatalf("forged clearance accepted: %+v", forged)
@@ -304,3 +304,5 @@ func TestSafetyResolutionAuditOwnerLineageAndAccountErasurePostgres(t *testing.T
 	assertBodyFactCount(t, db, "safety_resolutions", owner, 0)
 	assertBodyFactCount(t, db, "safety_restrictions", foreign, 2)
 }
+
+func safetyUUIDPointer(id uuid.UUID) *uuid.UUID { return &id }

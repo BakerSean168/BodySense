@@ -26,6 +26,7 @@ type SafetyRestriction struct {
 	ScopeKind       string     `gorm:"not null" json:"scope_kind"`
 	PlanID          *uuid.UUID `gorm:"type:uuid" json:"plan_id"`
 	LiftPolicy      string     `gorm:"not null" json:"lift_policy"`
+	LiftConditions  []string   `gorm:"serializer:json;type:jsonb;default:'[]'" json:"lift_conditions"`
 	Reason          string     `gorm:"not null" json:"reason"`
 	CreatedRevision int64      `gorm:"not null" json:"created_revision"`
 	ValidFrom       time.Time  `gorm:"not null" json:"valid_from"`

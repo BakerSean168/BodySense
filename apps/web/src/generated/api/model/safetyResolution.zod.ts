@@ -10,21 +10,24 @@ import * as zod from 'zod/mini';
 
 
 
+
 export const SafetyResolution = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
   "restriction_id": /*#__PURE__*/ zod.uuid(),
-  "source_evidence_id": /*#__PURE__*/ zod.uuid(),
+  "source_evidence_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]),
   "revision_id": /*#__PURE__*/ zod.uuid(),
   "event_id": /*#__PURE__*/ zod.uuid(),
-  "source_message_id": /*#__PURE__*/ zod.uuid(),
-  "source_version": /*#__PURE__*/ zod.literal(1),
-  "basis_kind": /*#__PURE__*/ zod.enum(['professional_clearance']),
-  "source_level": /*#__PURE__*/ zod.enum(['user_reported']),
-  "scope_kind": /*#__PURE__*/ zod.enum(['all_training']),
-  "policy_revision": /*#__PURE__*/ zod.enum(['user-reported-professional-clearance-v1']),
+  "restriction_version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "check_interaction_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]),
+  "source_message_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]),
+  "source_version": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.literal(0),/*#__PURE__*/ zod.literal(1)]),
+  "basis_kind": /*#__PURE__*/ zod.enum(['expiry', 'user_reverification', 'professional_clearance']),
+  "source_level": /*#__PURE__*/ zod.enum(['go_policy', 'user_reported']),
+  "scope_kind": /*#__PURE__*/ zod.enum(['all_training', 'plan', 'exercise']),
+  "policy_revision": /*#__PURE__*/ zod.enum(['restriction-lift-v2']),
   "revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
-  "actor": /*#__PURE__*/ zod.enum(['user']),
+  "actor": /*#__PURE__*/ zod.enum(['user', 'system']),
   "lifted_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
 });
 

@@ -23,6 +23,9 @@ func NewAgentInteractionRepository(db *gorm.DB) *AgentInteractionRepository {
 
 // CreatePending creates a new pending interaction.
 func (r *AgentInteractionRepository) CreatePending(ctx context.Context, interaction *model.AgentInteraction) error {
+	if err := bindSafetyReverification(ctx, database.FromContext(ctx, r.db), interaction); err != nil {
+		return err
+	}
 	interaction.Status = model.AgentInteractionPending
 	return database.FromContext(ctx, r.db).
 		Clauses(clause.OnConflict{DoNothing: true}).

@@ -51,7 +51,7 @@ func (s *PublicServer) ResolveSafetyRestriction(ctx context.Context, req openapi
 			return resolveSafetyRestrictionError(http.StatusServiceUnavailable, "SAFETY_UNAVAILABLE", "safety clearance could not be confirmed"), nil
 		}
 	}
-	if receipt == nil || receipt.ID == uuid.Nil || receipt.SourceEvidenceID == uuid.Nil || receipt.RevisionID == uuid.Nil || receipt.EventID == uuid.Nil || receipt.SourceMessageID != command.SourceMessageID || receipt.UserID != owner || receipt.RestrictionID != req.Id || receipt.Revision != command.ExpectedRevision+1 || receipt.IdempotencyKey != command.IdempotencyKey {
+	if receipt == nil || receipt.ID == uuid.Nil || receipt.RevisionID == uuid.Nil || receipt.EventID == uuid.Nil || receipt.UserID != owner || receipt.RestrictionID != req.Id || receipt.Revision != command.ExpectedRevision+1 || receipt.IdempotencyKey != command.IdempotencyKey || receipt.RestrictionVersion != command.ExpectedRestrictionVersion || receipt.BasisKind != command.BasisKind || receipt.SourceVersion != command.SourceVersion || !safetyReceiptSourceMatches(receipt, command) {
 		return resolveSafetyRestrictionError(http.StatusInternalServerError, "INVALID_SAFETY_RECEIPT", "clearance commit not confirmed"), nil
 	}
 	converted, err := strictOpenAPIConvert[openapiv1.SafetyResolution]("SafetyResolution", receipt)
@@ -107,4 +107,17 @@ func resolveSafetyRestrictionError(status int, code, message string) openapiv1.R
 	default:
 		return openapiv1.ResolveSafetyRestriction500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
 	}
+}
+
+func safetyReceiptSourceMatches(r *model.SafetyResolution, c model.ResolveSafetyRestrictionCommand) bool {
+	if c.BasisKind == "expiry" {
+		return r.SourceEvidenceID == nil && r.SourceMessageID == nil && r.CheckInteractionID == nil && r.Actor == "system" && r.SourceLevel == "go_policy"
+	}
+	if r.SourceEvidenceID == nil || *r.SourceEvidenceID == uuid.Nil || r.SourceMessageID == nil || *r.SourceMessageID != c.SourceMessageID || r.Actor != "user" || r.SourceLevel != "user_reported" {
+		return false
+	}
+	if c.BasisKind == "user_reverification" {
+		return r.CheckInteractionID != nil && *r.CheckInteractionID == c.CheckInteractionID
+	}
+	return r.CheckInteractionID == nil
 }
