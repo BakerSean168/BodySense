@@ -19,4 +19,11 @@ Validation: full Go build/vet/staticcheck and PG18 suite after applying baseline
 migrations; domain/migration validators; generated REST/Postman checks; affected
 Python checks and unit tests; plan formatting and `pnpm plan:check`.
 
+CI follow-up: migrate browser assertions from legacy lifestyle values and pending
+workspace candidates to native statements and persisted Assessment reports. The
+longitudinal fixtures now capture and screen the same symptom; an unrelated
+screen cannot authorize an earlier symptom. The Assessment E2E model selects real
+activity evidence through the existing catalog, with a nonempty report assertion
+so source rendering and persistence cannot pass vacuously.
+
 No deployment or staging/production database operations.

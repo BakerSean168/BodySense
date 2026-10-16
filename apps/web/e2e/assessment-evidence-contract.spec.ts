@@ -47,10 +47,16 @@ test("assessment output v2 persists only deterministic source-grounded observati
   expect(beforeState.ok(), await beforeState.text()).toBeTruthy();
   const before = (await beforeState.json()) as {
     current_revision: number;
-    facts: Array<{ id: string; kind: string; value: unknown }>;
+    facts: Array<{
+      id: string;
+      kind: string;
+      statement: string;
+      details: { habit_type?: string };
+    }>;
   };
   const activityFact = before.facts.find(
-    (fact) => fact.kind === "lifestyle.activity",
+    (fact) =>
+      fact.kind === "lifestyle" && fact.details.habit_type === "activity",
   );
   expect(activityFact).toBeTruthy();
   expect(before.current_revision).toBe(1);
@@ -66,9 +72,12 @@ test("assessment output v2 persists only deterministic source-grounded observati
   ).toBe(201);
 
   const report = JSON.parse(generatedText) as {
+    id: string;
     contract_revision: string;
     status: string;
     observations: Array<{
+      observation_id: string;
+      review_state: string;
       kind: string;
       label: string;
       description: string;
@@ -125,7 +134,7 @@ test("assessment output v2 persists only deterministic source-grounded observati
     expect(observation.evidence_refs).toEqual([expectedRef]);
     expect(observation.label).toBe("日常活动记录");
     expect(observation.description).toBe(
-      `来源记录：${String(activityFact?.value)}。`,
+      `来源记录：${activityFact?.statement}。`,
     );
     expect(observation.description).not.toContain("可能");
     expect(observation.description).not.toContain("建议");
@@ -136,9 +145,22 @@ test("assessment output v2 persists only deterministic source-grounded observati
     ),
   ).toBeFalsy();
 
-  // GET /body-state is the confirmed reasoning projection and intentionally hides
-  // unverified Assessment candidates. The health workspace is the product read
-  // model that exposes pending observations for explicit user review.
+  // Assessment candidates remain in the durable report. They have not been
+  // admitted to the native observation ledger and cannot become reasoning input.
+  expect(report.observations.length).toBeGreaterThan(0);
+  for (const observation of report.observations) {
+    expect(observation.observation_id).toBeTruthy();
+    expect(observation.review_state).toBe("unverified");
+  }
+  const persistedReport = await request.get(
+    `${apiBase}/api/v1/assessment/${report.id}`,
+    { headers },
+  );
+  expect(persistedReport.ok(), await persistedReport.text()).toBeTruthy();
+  expect((await persistedReport.json()).observations).toEqual(
+    report.observations,
+  );
+
   const workspaceResponse = await request.get(
     `${apiBase}/api/v1/health-workspace`,
     {
@@ -149,27 +171,13 @@ test("assessment output v2 persists only deterministic source-grounded observati
   const workspace = (await workspaceResponse.json()) as {
     body_state: {
       current_revision: number;
-      pending_observations: Array<{
-        kind: string;
-        value?: { label?: string; description?: string };
-        provenance?: { source_type?: string; evidence_selection?: unknown };
-      }>;
+      observations: unknown[];
     };
   };
   expect(workspace.body_state.current_revision).toBe(
     before.current_revision + report.observations.length,
   );
-  const assessmentObservations =
-    workspace.body_state.pending_observations.filter(
-      (observation) => observation.provenance?.source_type === "assessment",
-    );
-  expect(assessmentObservations).toHaveLength(report.observations.length);
-  for (const observation of assessmentObservations) {
-    expect(observation.kind).toBe("lifestyle_pattern");
-    expect(observation.value?.description).toBe(
-      `来源记录：${String(activityFact?.value)}。`,
-    );
-  }
+  expect(workspace.body_state.observations).toEqual([]);
 });
 
 test("assessment output v2 derives insufficient information without any model request", async ({
