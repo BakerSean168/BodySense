@@ -7,6 +7,8 @@
 > Implementation record: `docs/plan/archive/2026-09-13-bodysense-vnext-engineering-reset.md` and `docs/refactor/vnext/phase-01-contract-foundation.md` through `phase-11-final-simplification.md`
 > Scope: implemented production architecture, compatibility policy, migration sequencing and CI gates. The execution-ticket sections below are retained as the decision/history record for the completed migration.
 
+> **PR6 retirement note (2026-10-16):** The execution-ticket examples below are historical; their legacy BodyState mutation paths were removed through PR #297. Current native endpoints are specified by [OpenAPI](../../packages/contracts/openapi/bodysense.v1.openapi.yaml) and summarized in [Current Longitudinal System](./current-longitudinal-system.md). Do not use the old route examples as serving API instructions.
+
 ---
 
 ## 0. Executive decision

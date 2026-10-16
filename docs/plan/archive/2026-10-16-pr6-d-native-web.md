@@ -1,6 +1,8 @@
 # PR6 D · Native V2 Web reads
 
-Status: local validation passed; PR/CI pending.
+Status: COMPLETE / MERGED as [PR #288](https://github.com/BakerSean168/BodySense/pull/288), merge `b93ce7c0a2c627748c189f2ce6fac1ef79a623e0` (2026-10-16). The local/CI-pending statements below are chronological checkpoints, not current pending work. PR6-C subsequently removed the legacy tables/API; final E acceptance is tracked in [PR6 E closeout](./2026-10-16-pr6-e-closeout.md).
+
+Initial local checkpoint: validation passed before PR/CI.
 
 ## Scope and sequence
 

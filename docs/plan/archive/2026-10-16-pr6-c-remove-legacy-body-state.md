@@ -1,5 +1,7 @@
 # PR6 C · Remove legacy BodyState persistence and API
 
+Status: COMPLETE / MERGED in [PR #297](https://github.com/BakerSean168/BodySense/pull/297), merge `72bbe661d59b881b36e68d813595e82e01a80d62`; complete exact-head CI passed on `96f3eedc1c716c36933dcc206f01f5690f4b550f`.
+
 Base: origin/main `4d3dc793c9f11cf02e9c9179454e4dac3fd9aaf6` (#296).
 
 ## Inventory and scope

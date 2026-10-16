@@ -1,10 +1,10 @@
 # BodySense 3D Body Explorer Architecture
 
-> Status: Implemented / staging validated / final anatomy-boundary visual audit pending
-> Date: 2026-08-27
+> Status: Implemented; historical atlas staging validation predates PR6. Native projection updated through #288; final V2 visual/design acceptance remains open.
+> Date: 2026-08-27; native BodyState projection updated 2026-10-16
 > Decision source: ADR 0006
-> Business source of truth: ADR 0004, Longitudinal BodyState Domain Model
-> UI source of truth: Desktop Workbench UI/UX
+> Business source of truth: [BodyState product contract](../product/domain/bodystate.md); ADR 0004 retains historical architecture decisions.
+> UI source of truth: [current product interface](../product/interface.md); implementation details below retain their explicit proposed/historical labels.
 
 ## 1. Purpose
 
@@ -13,8 +13,8 @@ Body Explorer turns the State workspace body map from a coarse SVG indicator int
 The product goal is not to build an anatomy teaching application. The goal is to let a user answer, with minimal cognitive load:
 
 - **Where** on my body are there current records?
-- What has been observed or confirmed for this area?
-- Is it improving, stable, worsening, or still uncertain?
+- What did the user report for this area, and what source-backed observations exist?
+- What Episode evidence is available, without inferring a symptom lifecycle from record presence?
 - What analysis or plan items relate to this area?
 - If I want more detail, what real anatomical structures are present here?
 - Can I ask BodySense about the selected area without manually restating the context?
@@ -191,11 +191,10 @@ export type BodyExplorerMode = "region" | "anatomy";
 ### 6.4 Region presentation
 
 ```ts
-export type BodyRegionVisualState =
-  "none" | "observed" | "stable" | "improving" | "worsening" | "safety_review";
+export type BodyRegionVisualState = "none" | "observed";
 ```
 
-These states are derived from BodySense data.
+These states describe native record presence only; they do not imply symptom course, diagnosis or Safety.
 
 ## 7. BodyExplorerStore
 
@@ -292,44 +291,28 @@ Unknown or removed anatomy IDs fail validation.
 
 ### 11.1 Source data
 
-The 3D model uses existing durable projection inputs:
+The implemented selector is `bodyExplorerSelectors.ts`, fed by owner/revision-checked native `BodyRecords`:
 
-- active Facts;
-- confirmed Observations;
-- pending observations when explicitly represented as pending;
-- active safety state;
-- trend/lifecycle information.
+- asserted BodyFact statements with canonical region associations;
+- current Episode identities, counted separately from statements;
+- no derived trend, clinical review state or Safety JSON.
 
-Hypotheses may be represented in adjacent UI but should not paint a region as if they were a confirmed body fact.
+Observations currently have no canonical region links and do not paint regions. User hypotheses remain separate from facts and markers. Go workspace capabilities provide Safety prompts; the atlas never decides a gate.
 
 ### 11.2 Region aggregation
 
-A selector groups relevant records by canonical `BodyRegionId`.
-
-Example:
-
 ```text
 shoulder.right
-  facts: 2
-  observations: 1
-  trend: worsening
-  safety: false
+  statementCount: 2
+  episodeCount: 1
+  visualState: observed
 ```
 
-### 11.3 Visual precedence
+The counts do not imply that symptoms are current or that the Episode is ongoing. Web's multi-source reader rejects failed, incomplete, foreign-owner or mixed-revision reads rather than fabricating an empty projection.
 
-Recommended precedence:
+### 11.3 Visual states
 
-```text
-safety_review
-  > worsening
-  > improving
-  > stable
-  > observed
-  > none
-```
-
-Color is never the only status indicator. Text/list equivalents remain adjacent.
+A region with a statement or current Episode identity is `observed`; otherwise it is `none`. Text/list equivalents remain adjacent. Improvement, worsening, clinical confirmation and risk colors must not be inferred from assertion status, atlas identity or record age.
 
 ### 11.4 No anatomy-derived diagnosis
 
