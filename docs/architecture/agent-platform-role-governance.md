@@ -114,7 +114,7 @@ These Agents transform source material into candidate knowledge artifacts. Their
 This is stronger and more domain-correct than pretending an offline source-ingestion batch is a live
 user canary.
 
-### E. Non-LLM mechanisms
+### D. Non-LLM mechanisms
 
 Components: **OCR, ASR, embedding generation, geometric pose estimation**.
 
