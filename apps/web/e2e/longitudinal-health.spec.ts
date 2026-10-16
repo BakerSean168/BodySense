@@ -448,10 +448,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(workspaceResponse.ok()).toBeTruthy();
   const workspace = (await workspaceResponse.json()) as {
     training_plan?: { id: string };
-    body_state: { current_revision: number };
   };
   expect(workspace.training_plan?.id).toBe(accepted.training_plan.id);
-  const revisionBeforeFeedback = workspace.body_state.current_revision;
+  const beforeFacts = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    { headers },
+  );
+  expect(beforeFacts.ok()).toBeTruthy();
+  const revisionBeforeFeedback = (await beforeFacts.json()).current_revision;
 
   await page.goto(`/consultation/${conversationId}?view=treatment`);
   await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
@@ -489,11 +493,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     { headers },
   );
   const finalWorkspace = (await finalWorkspaceResponse.json()) as {
-    body_state: { current_revision: number };
     recent_outcomes: unknown[];
     capabilities: { requires_treatment_review: boolean };
   };
-  expect(finalWorkspace.body_state.current_revision).toBeGreaterThan(
+  const afterFacts = await request.get(`${apiBase}/api/v1/body-state/records`, {
+    headers,
+  });
+  expect(afterFacts.ok()).toBeTruthy();
+  expect((await afterFacts.json()).current_revision).toBeGreaterThan(
     revisionBeforeFeedback,
   );
   expect(finalWorkspace.recent_outcomes.length).toBeGreaterThan(0);

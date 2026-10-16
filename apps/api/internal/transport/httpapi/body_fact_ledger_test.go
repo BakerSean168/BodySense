@@ -168,3 +168,20 @@ func (f *fakeBodyFactApplication) WithdrawDirectFact(_ context.Context, owner, t
 	f.owner = owner
 	return f.receipt, f.err
 }
+
+func TestRetiredBodyStateRoutesAbsent(t *testing.T) {
+	router := newOpenAPITestRouterWith(t, NewPublicServer(), "55555555-5555-4555-8555-555555555555")
+	for _, route := range []struct{ method, path string }{
+		{http.MethodGet, "/api/v1/body-state"},
+		{http.MethodPatch, "/api/v1/body-state/facts/55555555-5555-4555-8555-555555555555/temporal"},
+		{http.MethodPatch, "/api/v1/body-state/facts/55555555-5555-4555-8555-555555555555/review"},
+		{http.MethodPost, "/api/v1/body-state/observations"},
+		{http.MethodPatch, "/api/v1/body-state/observations/55555555-5555-4555-8555-555555555555/review"},
+		{http.MethodGet, "/api/v1/body-state/evidence"},
+	} {
+		response := performJSONAt(router, route.method, route.path, "")
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("%s %s status=%d", route.method, route.path, response.Code)
+		}
+	}
+}

@@ -41,9 +41,12 @@ test("assessment output v2 persists only deterministic source-grounded observati
   });
   expect(lifestyle.ok(), await lifestyle.text()).toBeTruthy();
 
-  const beforeState = await request.get(`${apiBase}/api/v1/body-state`, {
-    headers,
-  });
+  const beforeState = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    {
+      headers,
+    },
+  );
   expect(beforeState.ok(), await beforeState.text()).toBeTruthy();
   const before = (await beforeState.json()) as {
     current_revision: number;
@@ -159,21 +162,20 @@ test("assessment output v2 persists only deterministic source-grounded observati
     report.observations,
   );
 
-  const workspaceResponse = await request.get(
-    `${apiBase}/api/v1/health-workspace`,
-    {
-      headers,
-    },
+  const factsResponse = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    { headers },
   );
-  expect(workspaceResponse.ok(), await workspaceResponse.text()).toBeTruthy();
-  const workspace = (await workspaceResponse.json()) as {
-    body_state: {
-      current_revision: number;
-      observations: unknown[];
-    };
-  };
-  expect(workspace.body_state.current_revision).toBe(before.current_revision);
-  expect(workspace.body_state.observations).toEqual([]);
+  expect(factsResponse.ok()).toBeTruthy();
+  expect((await factsResponse.json()).current_revision).toBe(
+    before.current_revision,
+  );
+  const observationsResponse = await request.get(
+    `${apiBase}/api/v1/body-state/observation-records`,
+    { headers },
+  );
+  expect(observationsResponse.ok()).toBeTruthy();
+  expect((await observationsResponse.json()).observations).toEqual([]);
 });
 
 test("assessment output v2 derives insufficient information without any model request", async ({
@@ -199,9 +201,12 @@ test("assessment output v2 derives insufficient information without any model re
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  const beforeState = await request.get(`${apiBase}/api/v1/body-state`, {
-    headers,
-  });
+  const beforeState = await request.get(
+    `${apiBase}/api/v1/body-state/records`,
+    {
+      headers,
+    },
+  );
   expect(beforeState.ok(), await beforeState.text()).toBeTruthy();
   const before = (await beforeState.json()) as { current_revision: number };
 
@@ -272,14 +277,18 @@ test("assessment output v2 derives insufficient information without any model re
     "skipped_no_evidence",
   );
 
-  const afterState = await request.get(`${apiBase}/api/v1/body-state`, {
+  const afterState = await request.get(`${apiBase}/api/v1/body-state/records`, {
     headers,
   });
   expect(afterState.ok(), await afterState.text()).toBeTruthy();
   const after = (await afterState.json()) as {
     current_revision: number;
-    observations: unknown[];
   };
   expect(after.current_revision).toBe(before.current_revision);
-  expect(after.observations).toEqual([]);
+  const observations = await request.get(
+    `${apiBase}/api/v1/body-state/observation-records`,
+    { headers },
+  );
+  expect(observations.ok()).toBeTruthy();
+  expect((await observations.json()).observations).toEqual([]);
 });

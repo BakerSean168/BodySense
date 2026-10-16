@@ -83,9 +83,6 @@ func TestOnboardingContextCommitsProfileAndV2LedgerPostgres(t *testing.T) {
 	if got := count("body_observations"); got != 2 {
 		t.Fatalf("body_observations=%d, want height + weight", got)
 	}
-	if got := count("body_state_facts") + count("body_state_observations"); got != 0 {
-		t.Fatalf("onboarding must not write retired body_state_* rows, got %d", got)
-	}
 	current, err := NewBodyStateService(repository.NewBodyStateRepository(db)).CurrentBodyContext(context.Background(), userID)
 	if err != nil {
 		t.Fatalf("CurrentBodyContext: %v", err)
@@ -99,11 +96,9 @@ func TestOnboardingContextRollsBackProfileWhenBodyStateRevisionConflictsPostgres
 	db := openOnboardingContextIntegrationDB(t)
 	ctx := context.Background()
 	userID := seedOnboardingContextUser(t, db)
-	bodyState := NewBodyStateService(repository.NewBodyStateRepository(db))
-	if _, _, err := bodyState.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		Kind: "seed.context", Value: "seed", Origin: "user_reported", ReviewState: "confirmed",
-	}); err != nil {
-		t.Fatalf("seed BodyState revision: %v", err)
+	bodyState := repository.NewBodyStateRepository(db)
+	if _, err := bodyState.RecordDirectFacts(ctx, userID, model.RecordBodyFactsCommand{IdempotencyKey: "seed", Facts: []model.BodyFactInput{{Kind: "symptom", Statement: "seed", BodyRegionIDs: []string{}, Temporal: model.FactTemporal{Precision: "unknown"}, Details: []byte(`{}`)}}}); err != nil {
+		t.Fatal(err)
 	}
 
 	svc := newOnboardingIntegrationService(db)

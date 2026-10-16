@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
@@ -67,28 +66,9 @@ func TestBodyFactHTTPRecordReadRetryRoundTripPostgres(t *testing.T) {
 	if len(page.Facts) != 1 || page.Facts[0].Statement != "My shoulder hurts." || page.CurrentRevision != 1 {
 		t.Fatalf("roundtrip=%#v", page)
 	}
-	// The aggregate endpoint now exposes exactly the same native V2 statement,
-	// rather than manufacturing a legacy discomfort/lifecycle projection.
-	state := service.NewBodyStateService(repository.NewBodyStateRepository(db)).WithAgentContextSources(database.NewTransactionManager(db), nil)
-	stateRouter := newOpenAPITestRouterWith(t, NewPublicServer().WithBodyStateRoutes(state), owner.String())
-	native := performJSONAt(stateRouter, http.MethodGet, "/api/v1/body-state", "")
-	if native.Code != http.StatusOK {
-		t.Fatalf("native aggregate status=%d body=%s", native.Code, native.Body.String())
-	}
-	var aggregate service.BodyStateReadModel
-	if err := json.Unmarshal(native.Body.Bytes(), &aggregate); err != nil {
-		t.Fatal(err)
-	}
-	if aggregate.UserID != owner || len(aggregate.Facts) != 1 || aggregate.Facts[0].ID != page.Facts[0].ID || aggregate.Facts[0].Statement != page.Facts[0].Statement {
-		t.Fatalf("native aggregate lost persisted record identity: %s", native.Body.String())
-	}
-	if strings.Contains(native.Body.String(), "lifecycle_state") || strings.Contains(native.Body.String(), "review_state") {
-		t.Fatalf("legacy projection leaked into native aggregate: %s", native.Body.String())
-	}
-	foreignRouter := newOpenAPITestRouterWith(t, NewPublicServer().WithBodyStateRoutes(state), other.String())
-	foreign := performJSONAt(foreignRouter, http.MethodGet, "/api/v1/body-state", "")
-	if foreign.Code != http.StatusOK || strings.Contains(foreign.Body.String(), "My shoulder hurts.") {
-		t.Fatalf("foreign aggregate leaked a statement: %s", foreign.Body.String())
+	retired := performJSONAt(r, http.MethodGet, "/api/v1/body-state", "")
+	if retired.Code != http.StatusNotFound {
+		t.Fatalf("retired aggregate route status=%d", retired.Code)
 	}
 
 	var source model.StatementEvidence

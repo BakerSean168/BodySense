@@ -24,10 +24,6 @@ import {
   BodyMetricsSnapshot,
   BodyObservationCommit,
   BodyObservationRecordPage,
-  BodyStateEvidenceListResponse,
-  BodyStateFactMutationResponse,
-  BodyStateObservationMutationResponse,
-  BodyStateReadModel,
   CancelConsultationRunResponse,
   ConsultationRunDecision,
   ConsultationSessionResponse,
@@ -114,11 +110,6 @@ import type {
   BodyMetricsSnapshotOutput,
   BodyObservationCommitOutput,
   BodyObservationRecordPageOutput,
-  BodyStateEvidenceListResponseOutput,
-  BodyStateFactMutationResponseOutput,
-  BodyStateObservationInput,
-  BodyStateObservationMutationResponseOutput,
-  BodyStateReadModelOutput,
   CancelConsultationRunRequest,
   CancelConsultationRunResponseOutput,
   ClientDiagnostic,
@@ -191,8 +182,6 @@ import type {
   RegisterKnowledgeSourceRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
-  ReviewBodyStateFactRequest,
-  ReviewBodyStateObservationRequest,
   RuntimeEventListResponseOutput,
   SafetyResolutionOutput,
   SafetyRestrictionListOutput,
@@ -215,7 +204,6 @@ import type {
   TreatmentRevisionListResponseOutput,
   TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
-  UpdateBodyStateFactTemporalRequest,
   UpdateEquipmentAssetRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
@@ -1117,299 +1105,6 @@ export const getHealthWorkspace = async ( options?: RequestInit, fetchFn?: typeo
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? HealthWorkspace.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getGetBodyStateUrl = () => {
-
-
-
-
-  return `/api/v1/body-state`
-}
-
-/**
- * @summary Get the current durable BodyState snapshot.
- */
-export const getBodyState = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateReadModelOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getGetBodyStateUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateReadModel, status?: number} = new globalThis.Error();
-    const data : BodyStateReadModel = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateReadModel.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getUpdateBodyStateFactTemporalUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/facts/${id}/temporal`
-}
-
-/**
- * @summary Update temporal state for a previously true fact.
- */
-export const updateBodyStateFactTemporal = async (id: string,
-    updateBodyStateFactTemporalRequest: UpdateBodyStateFactTemporalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getUpdateBodyStateFactTemporalUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateBodyStateFactTemporalRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReviewBodyStateFactUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/facts/${id}/review`
-}
-
-/**
- * @summary Review a BodyState fact.
- */
-export const reviewBodyStateFact = async (id: string,
-    reviewBodyStateFactRequest: ReviewBodyStateFactRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateFactMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getReviewBodyStateFactUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewBodyStateFactRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateFactMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateFactMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAddBodyStateObservationUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/observations`
-}
-
-/**
- * @summary Add a durable BodyState observation.
- */
-export const addBodyStateObservation = async (bodyStateObservationInput: BodyStateObservationInput, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateObservationMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAddBodyStateObservationUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(bodyStateObservationInput)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateObservationMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateObservationMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReviewBodyStateObservationUrl = (id: string,) => {
-
-
-
-
-  return `/api/v1/body-state/observations/${id}/review`
-}
-
-/**
- * @summary Review a BodyState observation.
- */
-export const reviewBodyStateObservation = async (id: string,
-    reviewBodyStateObservationRequest: ReviewBodyStateObservationRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateObservationMutationResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getReviewBodyStateObservationUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reviewBodyStateObservationRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateObservationMutationResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateObservationMutationResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateObservationMutationResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getListBodyStateEvidenceUrl = () => {
-
-
-
-
-  return `/api/v1/body-state/evidence`
-}
-
-/**
- * @summary List durable evidence references used by BodyState reasoning.
- */
-export const listBodyStateEvidence = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyStateEvidenceListResponseOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getListBodyStateEvidenceUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: BodyStateEvidenceListResponse, status?: number} = new globalThis.Error();
-    const data : BodyStateEvidenceListResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? BodyStateEvidenceListResponse.parse(parsedBody) : parsedBody
   return data
 }
 

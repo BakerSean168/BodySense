@@ -106,7 +106,6 @@ func (s *HealthWorkspaceService) Get(
 	if err != nil {
 		return nil, fmt.Errorf("load workspace body state: %w", err)
 	}
-	workspace.BodyState = snapshot
 
 	analysis, err := s.diagnosis.GetLatest(ctx, userID)
 	if err != nil {

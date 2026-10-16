@@ -234,11 +234,6 @@ func TestBodyObservationHTTPRealRoundTripPostgres(t *testing.T) {
 	if hidden.Code != http.StatusOK || strings.Contains(hidden.Body.String(), receipt.ObservationID.String()) {
 		t.Fatalf("blocked source disclosed observation: %d %s", hidden.Code, hidden.Body.String())
 	}
-	// The v11 write never modifies the legacy table as a second source.
-	var oldCount int64
-	if err := db.Table("body_state_observations").Where("user_id=?", owner).Count(&oldCount).Error; err != nil || oldCount != 0 {
-		t.Fatalf("unreviewed legacy observation dual-write: %d %v", oldCount, err)
-	}
 	var facts int64
 	if err := db.Table("body_facts").Where("user_id=?", owner).Count(&facts).Error; err != nil || facts != 0 {
 		t.Fatalf("observation incorrectly persisted as self symptom Fact: %d %v", facts, err)

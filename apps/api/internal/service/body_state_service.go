@@ -21,24 +21,8 @@ type bodyStateRepository interface {
 	agentBodyContextLedger
 	bodyFactLookup
 	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
-	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.BodyState, error)
-	ListRecentRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateRevision, error)
-	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)
-	ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error)
-	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
-	UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	CorrectFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetFactID uuid.UUID, replacement model.BodyStateFact, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	TransitionFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetFactID uuid.UUID, replacement model.BodyStateFact, effectiveAt time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	AcceptCurrentFactCandidate(ctx context.Context, userID uuid.UUID, expectedRevision *int64, candidateID uuid.UUID, effectiveAt time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	UpdateFactTemporal(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, lifecycleState, trend string, validUntil *time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	UpdateFactReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, reviewState, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
-	UpsertObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observation model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	TransitionObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetObservationID uuid.UUID, replacement model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
-	UpdateObservationReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observationID uuid.UUID, reviewState, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error)
-	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
-	GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error)
+	ListRecentRevisions(context.Context, uuid.UUID, int) ([]model.BodyStateRevision, error)
+	ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error)
 }
 
 // BodyStateService is the application boundary around the user-scoped aggregate.
@@ -75,232 +59,8 @@ func (s *BodyStateService) UpdateBodyContext(ctx context.Context, userID uuid.UU
 	return applyBodyContextUpdate(ctx, s.repo, userID, expectedRevision, update, time.Now())
 }
 
-func (s *BodyStateService) ListReviewableObservations(
-	ctx context.Context,
-	userID uuid.UUID,
-	limit int,
-) ([]model.BodyStateObservation, error) {
-	items, err := s.repo.ListReviewableObservations(ctx, userID, limit)
-	if err != nil {
-		return nil, err
-	}
-	if items == nil {
-		items = []model.BodyStateObservation{}
-	}
-	return items, nil
-}
-
-// ApplyCurrentContextPatch is the application boundary for a semantically
-// coherent multi-field current-context save. The repository commits it under
-// one aggregate lock and at most one BodyStateRevision.
-func (s *BodyStateService) ApplyCurrentContextPatch(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	patch model.BodyStateCurrentContextPatch,
-	source string,
-) (*model.BodyStateRevision, error) {
-	seenFacts := map[string]struct{}{}
-	for index := range patch.Facts {
-		kind := strings.TrimSpace(patch.Facts[index].Kind)
-		if kind == "" {
-			return nil, errors.New("body state fact kind is required")
-		}
-		if _, exists := seenFacts[kind]; exists {
-			return nil, fmt.Errorf("duplicate current fact mutation for kind %q", kind)
-		}
-		seenFacts[kind] = struct{}{}
-		patch.Facts[index].Kind = kind
-		if patch.Facts[index].Replacement != nil {
-			patch.Facts[index].Replacement.Kind = kind
-			patch.Facts[index].Replacement.Value = strings.TrimSpace(patch.Facts[index].Replacement.Value)
-			regionID, err := s.normalizeBodyRegionID(
-				patch.Facts[index].Replacement.BodyRegionID,
-				patch.Facts[index].Replacement.BodyRegion,
-			)
-			if err != nil {
-				return nil, err
-			}
-			patch.Facts[index].Replacement.BodyRegionID = regionID
-		}
-	}
-	seenObservations := map[string]struct{}{}
-	for index := range patch.Observations {
-		kind := strings.TrimSpace(patch.Observations[index].Kind)
-		if kind == "" {
-			return nil, errors.New("body state observation kind is required")
-		}
-		if _, exists := seenObservations[kind]; exists {
-			return nil, fmt.Errorf("duplicate current observation mutation for kind %q", kind)
-		}
-		seenObservations[kind] = struct{}{}
-		patch.Observations[index].Kind = kind
-		if patch.Observations[index].Replacement != nil {
-			patch.Observations[index].Replacement.Kind = kind
-			regionID, err := s.normalizeBodyRegionID(
-				patch.Observations[index].Replacement.BodyRegionID,
-				patch.Observations[index].Replacement.BodyRegion,
-			)
-			if err != nil {
-				return nil, err
-			}
-			patch.Observations[index].Replacement.BodyRegionID = regionID
-		}
-	}
-	return s.repo.ApplyCurrentContextPatch(ctx, userID, expectedRevision, patch, source)
-}
-
-func (s *BodyStateService) ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error) {
-	items, err := s.repo.ListReviewableFacts(ctx, userID, limit)
-	if items == nil {
-		items = []model.BodyStateFact{}
-	}
-	return items, err
-}
-
-func (s *BodyStateService) AcceptCurrentFactCandidate(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	candidateID uuid.UUID,
-	effectiveAt time.Time,
-) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return s.repo.AcceptCurrentFactCandidate(
-		ctx, userID, expectedRevision, candidateID, effectiveAt, "user_review",
-	)
-}
-
-// SetCurrentFact is the single-item convenience wrapper. Real later changes are
-// temporal transitions; corrections continue to use CorrectFact explicitly.
-func (s *BodyStateService) SetCurrentFact(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	kind string,
-	replacement *model.BodyStateFact,
-	effectiveAt time.Time,
-	source string,
-) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	revision, err := s.ApplyCurrentContextPatch(ctx, userID, expectedRevision, model.BodyStateCurrentContextPatch{
-		Facts: []model.BodyStateCurrentFactMutation{{
-			Kind: kind, Replacement: replacement, EffectiveAt: effectiveAt,
-		}},
-	}, source)
-	if err != nil {
-		return nil, nil, err
-	}
-	if replacement == nil || strings.TrimSpace(replacement.Value) == "" {
-		return nil, revision, nil
-	}
-	state, err := s.repo.GetCurrent(ctx, userID)
-	if err != nil {
-		return nil, nil, err
-	}
-	for index := range state.Facts {
-		if state.Facts[index].Kind == strings.TrimSpace(kind) && state.Facts[index].ReviewState == "confirmed" {
-			fact := state.Facts[index]
-			return &fact, revision, nil
-		}
-	}
-	return nil, revision, nil
-}
-
-// SetCurrentObservation is the single-item convenience wrapper for singleton
-// current measurements/observations.
-func (s *BodyStateService) SetCurrentObservation(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	kind string,
-	replacement model.BodyStateObservation,
-	source string,
-) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	revision, err := s.ApplyCurrentContextPatch(ctx, userID, expectedRevision, model.BodyStateCurrentContextPatch{
-		Observations: []model.BodyStateCurrentObservationMutation{{
-			Kind: kind, Replacement: &replacement,
-		}},
-	}, source)
-	if err != nil {
-		return nil, nil, err
-	}
-	state, err := s.repo.GetCurrent(ctx, userID)
-	if err != nil {
-		return nil, nil, err
-	}
-	for index := range state.Observations {
-		if state.Observations[index].Kind == strings.TrimSpace(kind) {
-			observation := state.Observations[index]
-			return &observation, revision, nil
-		}
-	}
-	return nil, revision, nil
-}
-
-func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(fact.BodyRegionID, fact.BodyRegion)
-	if err != nil {
-		return nil, nil, err
-	}
-	fact.BodyRegionID = regionID
-	return s.repo.UpsertFact(ctx, userID, expectedRevision, fact, "user_edit")
-}
-
-func (s *BodyStateService) CorrectFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, replacement model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(replacement.BodyRegionID, replacement.BodyRegion)
-	if err != nil {
-		return nil, nil, err
-	}
-	replacement.BodyRegionID = regionID
-	return s.repo.CorrectFact(ctx, userID, expectedRevision, factID, replacement, "user_edit")
-}
-
-func (s *BodyStateService) UpdateFactTemporal(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, lifecycleState, trend string, validUntil *time.Time) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return s.repo.UpdateFactTemporal(ctx, userID, expectedRevision, factID, lifecycleState, trend, validUntil, "user_edit")
-}
-
-func (s *BodyStateService) ReviewFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, reviewState string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return s.repo.UpdateFactReviewState(ctx, userID, expectedRevision, factID, reviewState, "user_review")
-}
-
-func (s *BodyStateService) AddObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID, observation.BodyRegion)
-	if err != nil {
-		return nil, nil, err
-	}
-	observation.BodyRegionID = regionID
-	observation.ReviewState = "confirmed"
-	observation.ExcludedFromReasoning = false
-	return s.repo.UpsertObservation(ctx, userID, expectedRevision, observation, "user_edit")
-}
-
-func (s *BodyStateService) ReviewObservation(
-	ctx context.Context,
-	userID uuid.UUID,
-	expectedRevision *int64,
-	observationID uuid.UUID,
-	reviewState string,
-) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	return s.repo.UpdateObservationReviewState(
-		ctx, userID, expectedRevision, observationID, reviewState, "user_review",
-	)
-}
-
-// ListRevisionsAfter exposes bounded semantic changes for deterministic freshness
-// and treatment-review policies.
 func (s *BodyStateService) ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error) {
 	return s.repo.ListRevisionsAfter(ctx, userID, afterRevision, limit)
-}
-
-func (s *BodyStateService) UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error) {
-	return s.repo.UpsertEvidence(ctx, userID, evidence)
-}
-
-func (s *BodyStateService) ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error) {
-	return s.repo.ListEvidence(ctx, userID, limit)
-}
-
-func (s *BodyStateService) GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error) {
-	return s.repo.GetEvidenceByIDs(ctx, userID, ids)
 }
 
 // RecordOutcomeSymptom is the only BodyState effect of an intervention
@@ -328,7 +88,7 @@ func (s *BodyStateService) RecordOutcomeSymptom(ctx context.Context, userID uuid
 		}
 	}
 	expected := int64(0)
-	state, err := s.repo.GetCurrent(ctx, userID)
+	state, err := s.repo.GetBodyStateHead(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -370,49 +130,7 @@ func outcomeUserSymptomStatement(outcome model.Outcome) (string, bool) {
 	return "", false
 }
 
-func bodyStateCanonicalRegionProjection(display string) (string, *string) {
-	display = strings.TrimSpace(display)
-	if display == "" {
-		return "", nil
-	}
-	id, ok := ResolveCanonicalBodyRegionID(display)
-	if !ok {
-		return "", nil
-	}
-	return display, &id
-}
-
-func bodyStateConcernKey(bodyRegion string) string {
-	region := strings.TrimSpace(strings.ToLower(bodyRegion))
-	if region == "" {
-		return "general"
-	}
-	return "region:" + region
-}
-
 func bodyStateHash(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:8])
-}
-
-func bodyStateString(value any) string {
-	if value == nil {
-		return ""
-	}
-	return strings.TrimSpace(fmt.Sprint(value))
-}
-
-func bodyStateMustJSON(value any) []byte {
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		return []byte(`{}`)
-	}
-	return encoded
-}
-
-func bodyStateDefault(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
 }

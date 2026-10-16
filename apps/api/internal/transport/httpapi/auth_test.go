@@ -405,7 +405,7 @@ func TestAuthRoutesStayPublicWhileProtectedRoutesRequireAuthentication(t *testin
 
 	// A protected generated route must pass through the same middleware.
 	rec = httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/body-state", nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/body-state/records", nil))
 	if rec.Code != http.StatusTeapot {
 		t.Fatalf("protected route status=%d, want 418 via auth middleware", rec.Code)
 	}

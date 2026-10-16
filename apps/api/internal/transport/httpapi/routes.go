@@ -126,15 +126,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/episodes", wrapper.ListBodyEpisodes)
 	protected.GET("/body-state/episodes/:id", wrapper.GetBodyEpisode)
 
-	// Longitudinal BodyState (ADR 0004); legacy consumers migrate by vertical slice.
-	protected.GET("/body-state", wrapper.GetBodyState)
-	protected.PATCH("/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
-	protected.PATCH("/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
-	protected.POST("/body-state/observations", wrapper.AddBodyStateObservation)
-	protected.PATCH("/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
+	// Native owner-scoped Safety restrictions and per-restriction resolutions.
 	protected.GET("/body-state/safety/restrictions", wrapper.ListSafetyRestrictions)
 	protected.POST("/body-state/safety/restrictions/:id/resolve", wrapper.ResolveSafetyRestriction)
-	protected.GET("/body-state/evidence", wrapper.ListBodyStateEvidence)
 
 	// Owner-scoped EquipmentAsset inventory (PC-D2); not BodyState.
 	protected.GET("/equipment", wrapper.ListEquipmentAssets)

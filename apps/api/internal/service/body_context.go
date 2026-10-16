@@ -28,12 +28,12 @@ const (
 var bodyContextLifestyleSections = []string{"activity", "sleep", "exercise", "nutrition", "substances", "recovery"}
 
 var bodyContextLegacyLifestyleKind = map[string]string{
-	"activity":   model.BodyStateFactKindLifestyleActivity,
-	"sleep":      model.BodyStateFactKindLifestyleSleep,
-	"exercise":   model.BodyStateFactKindLifestyleExercise,
-	"nutrition":  model.BodyStateFactKindLifestyleNutrition,
-	"substances": model.BodyStateFactKindLifestyleSubstances,
-	"recovery":   model.BodyStateFactKindLifestyleRecovery,
+	"activity":   "lifestyle.activity",
+	"sleep":      "lifestyle.sleep",
+	"exercise":   "lifestyle.exercise",
+	"nutrition":  "lifestyle.nutrition",
+	"substances": "lifestyle.substances",
+	"recovery":   "lifestyle.recovery",
 }
 
 type bodyContextLedger interface {

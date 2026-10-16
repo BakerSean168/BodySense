@@ -2,41 +2,22 @@ package service
 
 import (
 	"context"
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
-// fakeBodyStateRepository keeps these tests at the application boundary. The
-// SQL/repository transaction details are intentionally separate from service
-// semantics such as projection identity and producer mapping.
 type fakeBodyStateRepository struct {
 	memoryBodyContextLedger
-	current                  *model.BodyState
-	revisions                []model.BodyStateRevision
-	upsertedFacts            []model.BodyStateFact
-	transitionedFacts        []model.BodyStateFact
-	transitionFactTargets    []uuid.UUID
-	upsertedObservations     []model.BodyStateObservation
-	transitionedObservations []model.BodyStateObservation
-	appliedPatches           []model.BodyStateCurrentContextPatch
-	returnExistingFact       bool
-	returnExistingObs        bool
-	restrictions             []model.SafetyRestrictionRecord
-	screens                  []model.SafetyScreenCommand
+	current      *model.BodyState
+	revisions    []model.BodyStateRevision
+	restrictions []model.SafetyRestrictionRecord
+	screens      []model.SafetyScreenCommand
 }
 
 func (r *fakeBodyStateRepository) Ensure(context.Context, uuid.UUID) error { return nil }
-func (r *fakeBodyStateRepository) GetCurrent(context.Context, uuid.UUID) (*model.BodyState, error) {
-	if r.current == nil {
-		return &model.BodyState{}, nil
-	}
-	return r.current, nil
-}
 func (r *fakeBodyStateRepository) GetBodyStateHead(_ context.Context, owner uuid.UUID) (*model.BodyStateHead, error) {
 	if r.current == nil {
 		return &model.BodyStateHead{UserID: owner}, nil
@@ -46,161 +27,9 @@ func (r *fakeBodyStateRepository) GetBodyStateHead(_ context.Context, owner uuid
 func (r *fakeBodyStateRepository) ListRecentRevisions(context.Context, uuid.UUID, int) ([]model.BodyStateRevision, error) {
 	return r.revisions, nil
 }
-func (r *fakeBodyStateRepository) ListReviewableObservations(context.Context, uuid.UUID, int) ([]model.BodyStateObservation, error) {
-	result := make([]model.BodyStateObservation, 0)
-	for _, observation := range r.upsertedObservations {
-		if observation.ReviewState == "unverified" {
-			result = append(result, observation)
-		}
-	}
-	return result, nil
-}
-func (r *fakeBodyStateRepository) ListReviewableFacts(context.Context, uuid.UUID, int) ([]model.BodyStateFact, error) {
-	result := make([]model.BodyStateFact, 0)
-	for _, fact := range r.upsertedFacts {
-		if fact.ReviewState == "unverified" {
-			result = append(result, fact)
-		}
-	}
-	return result, nil
-}
 func (r *fakeBodyStateRepository) ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error) {
 	return r.revisions, nil
 }
-func (r *fakeBodyStateRepository) UpsertFact(_ context.Context, userID uuid.UUID, _ *int64, fact model.BodyStateFact, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	if fact.ID == uuid.Nil {
-		fact.ID = uuid.New()
-	}
-	fact.UserID = userID
-	r.upsertedFacts = append(r.upsertedFacts, fact)
-	if r.returnExistingFact {
-		fact.UpdatedRevision = 17
-		return &fact, nil, nil
-	}
-	return &fact, &model.BodyStateRevision{Revision: int64(len(r.upsertedFacts))}, nil
-}
-func (r *fakeBodyStateRepository) CorrectFact(context.Context, uuid.UUID, *int64, uuid.UUID, model.BodyStateFact, string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return nil, nil, nil
-}
-func (r *fakeBodyStateRepository) TransitionFact(_ context.Context, userID uuid.UUID, _ *int64, target uuid.UUID, replacement model.BodyStateFact, _ time.Time, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	replacement.UserID = userID
-	r.transitionFactTargets = append(r.transitionFactTargets, target)
-	r.transitionedFacts = append(r.transitionedFacts, replacement)
-	return &replacement, &model.BodyStateRevision{Revision: 2}, nil
-}
-func (r *fakeBodyStateRepository) AcceptCurrentFactCandidate(_ context.Context, _ uuid.UUID, _ *int64, candidateID uuid.UUID, _ time.Time, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	for index := range r.upsertedFacts {
-		if r.upsertedFacts[index].ID == candidateID {
-			r.upsertedFacts[index].ReviewState = "confirmed"
-			r.upsertedFacts[index].ExcludedFromReasoning = false
-			fact := r.upsertedFacts[index]
-			return &fact, &model.BodyStateRevision{Revision: 4}, nil
-		}
-	}
-	return nil, nil, nil
-}
-func (r *fakeBodyStateRepository) UpdateFactTemporal(context.Context, uuid.UUID, *int64, uuid.UUID, string, string, *time.Time, string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return nil, nil, nil
-}
-func (r *fakeBodyStateRepository) UpdateFactReviewState(_ context.Context, _ uuid.UUID, _ *int64, factID uuid.UUID, reviewState, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	return &model.BodyStateFact{ID: factID, ReviewState: reviewState}, &model.BodyStateRevision{Revision: 3}, nil
-}
-
-func (r *fakeBodyStateRepository) UpsertObservation(_ context.Context, userID uuid.UUID, _ *int64, observation model.BodyStateObservation, _ string) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	if observation.ID == uuid.Nil {
-		observation.ID = uuid.New()
-	}
-	observation.UserID = userID
-	r.upsertedObservations = append(r.upsertedObservations, observation)
-	if r.returnExistingObs {
-		observation.UpdatedRevision = 18
-		return &observation, nil, nil
-	}
-	return &observation, &model.BodyStateRevision{Revision: int64(len(r.upsertedObservations))}, nil
-}
-func (r *fakeBodyStateRepository) TransitionObservation(_ context.Context, userID uuid.UUID, _ *int64, _ uuid.UUID, replacement model.BodyStateObservation, _ string) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	replacement.UserID = userID
-	r.transitionedObservations = append(r.transitionedObservations, replacement)
-	return &replacement, &model.BodyStateRevision{Revision: 2}, nil
-}
-func (r *fakeBodyStateRepository) UpdateObservationReviewState(_ context.Context, _ uuid.UUID, _ *int64, observationID uuid.UUID, reviewState, _ string) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	return &model.BodyStateObservation{
-		ID: observationID, ReviewState: reviewState,
-		ExcludedFromReasoning: reviewState != "confirmed",
-	}, &model.BodyStateRevision{Revision: 4}, nil
-}
-func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, userID uuid.UUID, _ *int64, patch model.BodyStateCurrentContextPatch, _ string) (*model.BodyStateRevision, error) {
-	r.appliedPatches = append(r.appliedPatches, patch)
-	if r.current == nil {
-		r.current = &model.BodyState{UserID: userID}
-	}
-	changed := false
-	for _, mutation := range patch.Facts {
-		next := make([]model.BodyStateFact, 0, len(r.current.Facts)+1)
-		for _, fact := range r.current.Facts {
-			if fact.Kind != mutation.Kind {
-				next = append(next, fact)
-			}
-		}
-		if mutation.Replacement != nil && mutation.Replacement.Value != "" {
-			fact := *mutation.Replacement
-			if fact.ID == uuid.Nil {
-				fact.ID = uuid.New()
-			}
-			fact.UserID = userID
-			fact.Kind = mutation.Kind
-			fact.LifecycleState = "active"
-			next = append(next, fact)
-		}
-		r.current.Facts = next
-		changed = true
-	}
-	for _, mutation := range patch.Observations {
-		next := make([]model.BodyStateObservation, 0, len(r.current.Observations)+1)
-		for _, observation := range r.current.Observations {
-			if observation.Kind != mutation.Kind {
-				next = append(next, observation)
-			}
-		}
-		if mutation.Replacement != nil {
-			observation := *mutation.Replacement
-			if observation.ID == uuid.Nil {
-				observation.ID = uuid.New()
-			}
-			observation.UserID = userID
-			observation.Kind = mutation.Kind
-			observation.LifecycleState = "active"
-			next = append(next, observation)
-		}
-		r.current.Observations = next
-		changed = true
-	}
-	if !changed {
-		return nil, nil
-	}
-	r.current.CurrentRevision++
-	return &model.BodyStateRevision{Revision: r.current.CurrentRevision}, nil
-}
-
-func (r *fakeBodyStateRepository) UpsertEvidence(_ context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error) {
-	evidence.UserID = userID
-	if evidence.ID == uuid.Nil {
-		evidence.ID = uuid.New()
-	}
-	return &evidence, nil
-}
-func (r *fakeBodyStateRepository) ListEvidence(context.Context, uuid.UUID, int) ([]model.BodyStateEvidence, error) {
-	return nil, nil
-}
-func (r *fakeBodyStateRepository) GetEvidenceByIDs(context.Context, uuid.UUID, []uuid.UUID) ([]model.BodyStateEvidence, error) {
-	return nil, nil
-}
-
-func (r *fakeBodyStateRepository) RecordSafetyScreen(_ context.Context, userID uuid.UUID, _ model.AnswerFactSource, command model.SafetyScreenCommand) (*model.SafetyScreen, error) {
-	r.screens = append(r.screens, command)
-	return &model.SafetyScreen{ID: uuid.New(), UserID: userID, CaptureID: command.CaptureID, BodyFactID: command.BodyFactID}, nil
-}
-
 func TestRecordOutcomeSymptomRecordsOnlyUserWordsAsV2Symptom(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)
@@ -212,8 +41,8 @@ func TestRecordOutcomeSymptomRecordsOnlyUserWordsAsV2Symptom(t *testing.T) {
 	if err != nil || revision == nil || revision.Revision != 1 {
 		t.Fatalf("user-authored outcome symptom must commit one V2 revision: rev=%#v err=%v", revision, err)
 	}
-	if len(repo.facts) != 1 || len(repo.upsertedFacts) != 0 || len(repo.upsertedObservations) != 0 {
-		t.Fatalf("only one V2 fact and no legacy writes expected: v2=%d legacyFacts=%d legacyObs=%d", len(repo.facts), len(repo.upsertedFacts), len(repo.upsertedObservations))
+	if len(repo.facts) != 1 {
+		t.Fatalf("expected one native fact, got %d", len(repo.facts))
 	}
 	fact := repo.facts[0]
 	if fact.Kind != "symptom" || fact.Statement != "抬手时右肩还是疼" || fact.UserID != owner || string(fact.Details) != `{}` {
@@ -240,206 +69,10 @@ func TestRecordOutcomeSymptomDropsNonUserAuthoredOutcomes(t *testing.T) {
 			repo := &fakeBodyStateRepository{}
 			outcome.ID = uuid.New()
 			revision, err := NewBodyStateService(repo).RecordOutcomeSymptom(context.Background(), uuid.New(), outcome)
-			if err != nil || revision != nil || len(repo.facts) != 0 || len(repo.upsertedFacts) != 0 || len(repo.upsertedObservations) != 0 {
+			if err != nil || revision != nil || len(repo.facts) != 0 {
 				t.Fatalf("no BodyState write expected: rev=%#v err=%v", revision, err)
 			}
 		})
-	}
-}
-
-func TestUserObservationIsConfirmedAtCreation(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	stored, _, err := svc.AddObservation(context.Background(), uuid.New(), nil, model.BodyStateObservation{
-		Kind: "self_measurement", Value: datatypes.JSON(`{"value":10}`),
-	})
-	if err != nil {
-		t.Fatalf("AddObservation returned error: %v", err)
-	}
-	if stored.ReviewState != "confirmed" || stored.ExcludedFromReasoning {
-		t.Fatalf("explicit user observation should be confirmed: %#v", stored)
-	}
-}
-
-func TestBodyStateReadModelNormalizesEmptyCollections(t *testing.T) {
-	repo := &fakeBodyStateRepository{current: &model.BodyState{
-		UserID: uuid.New()}}
-	svc := NewBodyStateService(repo)
-	snapshot, err := svc.GetBodyState(context.Background(), repo.current.UserID, 30)
-	if err != nil {
-		t.Fatalf("GetBodyState returned error: %v", err)
-	}
-	if snapshot.Facts == nil || snapshot.Observations == nil || snapshot.RecentRevisions == nil {
-		t.Fatalf("BodyState JSON collections must be empty arrays, not nil: %#v", snapshot)
-	}
-	pending, err := svc.ListReviewableObservations(context.Background(), repo.current.UserID, 50)
-	if err != nil {
-		t.Fatalf("ListReviewableObservations returned error: %v", err)
-	}
-	if pending == nil {
-		t.Fatal("pending observations must serialize as an empty array")
-	}
-}
-
-func TestBodyStateCanonicalRegionIDUsesInjectedAuthority(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
-		return id == "shoulder.right"
-	}))
-	rawRegionID := "  shoulder.right  "
-	stored, revision, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
-		Kind:         "discomfort",
-		BodyRegion:   "右肩",
-		BodyRegionID: &rawRegionID,
-		Value:        "抬手疼痛",
-	})
-	if err != nil {
-		t.Fatalf("UpsertFact returned error: %v", err)
-	}
-	if revision == nil || stored.BodyRegionID == nil || *stored.BodyRegionID != "shoulder.right" {
-		t.Fatalf("canonical region id must round-trip after validation: stored=%#v revision=%#v", stored, revision)
-	}
-	if stored.BodyRegion != "右肩" {
-		t.Fatalf("raw/display body_region must be preserved, got %q", stored.BodyRegion)
-	}
-}
-
-func TestBodyStateUnknownCanonicalRegionIDIsRejectedBeforePersistence(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
-		return id == "shoulder.right"
-	}))
-	unknown := "shoulder.middle"
-	_, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
-		Kind:         "discomfort",
-		BodyRegion:   "肩部",
-		BodyRegionID: &unknown,
-		Value:        "疼痛",
-	})
-	if !errors.Is(err, ErrUnknownBodyRegionID) {
-		t.Fatalf("unknown canonical region must be rejected, got %v", err)
-	}
-	if len(repo.upsertedFacts) != 0 {
-		t.Fatalf("invalid canonical region must not reach persistence: %#v", repo.upsertedFacts)
-	}
-}
-
-func TestBodyStateLocalizedFactRequiresCanonicalResolvableRegion(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	withoutAuthority := NewBodyStateService(repo)
-	canonical := "shoulder.right"
-	_, _, err := withoutAuthority.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
-		Kind:         "discomfort",
-		BodyRegion:   "右肩",
-		BodyRegionID: &canonical,
-		Value:        "疼痛",
-	})
-	if !errors.Is(err, ErrBodyRegionIDValidationUnavailable) {
-		t.Fatalf("canonical region without ontology authority must fail closed, got %v", err)
-	}
-
-	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(NewCanonicalBodyRegionIDValidator())
-	resolved, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
-		Kind:       "discomfort",
-		BodyRegion: "右肩",
-		Value:      "疼痛",
-	})
-	if err != nil {
-		t.Fatalf("unambiguous ontology alias must resolve automatically: %v", err)
-	}
-	if resolved.BodyRegionID == nil || *resolved.BodyRegionID != "shoulder.right" {
-		t.Fatalf("resolved region id=%v want shoulder.right", resolved.BodyRegionID)
-	}
-
-	persistedBefore := len(repo.upsertedFacts)
-	_, _, err = svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
-		Kind:       "discomfort",
-		BodyRegion: "肩颈",
-		Value:      "紧张",
-	})
-	if !errors.Is(err, ErrBodyRegionIDRequired) {
-		t.Fatalf("ambiguous localized fact must fail closed, got %v", err)
-	}
-	if len(repo.upsertedFacts) != persistedBefore {
-		t.Fatalf("ambiguous localized fact reached persistence: %#v", repo.upsertedFacts)
-	}
-}
-
-func TestBodyStateObservationCanonicalRegionRetainsLaterality(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
-		return id == "knee.left" || id == "knee.right"
-	}))
-	left := "knee.left"
-	stored, _, err := svc.AddObservation(context.Background(), uuid.New(), nil, model.BodyStateObservation{
-		Kind:         "self_measurement",
-		BodyRegion:   "左膝",
-		BodyRegionID: &left,
-		Value:        datatypes.JSON(`{"pain":3}`),
-	})
-	if err != nil {
-		t.Fatalf("AddObservation returned error: %v", err)
-	}
-	if stored.BodyRegionID == nil || *stored.BodyRegionID != "knee.left" || stored.BodyRegion != "左膝" {
-		t.Fatalf("observation laterality must round-trip: %#v", stored)
-	}
-}
-
-func TestSetCurrentFactRoutesLifestyleChangeThroughAtomicContextPatch(t *testing.T) {
-	userID := uuid.New()
-	currentID := uuid.New()
-	repo := &fakeBodyStateRepository{current: &model.BodyState{
-		UserID:          userID,
-		CurrentRevision: 7,
-		Facts: []model.BodyStateFact{{
-			ID: currentID, UserID: userID,
-			Kind:           model.BodyStateFactKindLifestyleSleep,
-			Value:          "作息规律，通常睡 7-8 小时",
-			Details:        datatypes.JSON(`{"regularity":"regular"}`),
-			LifecycleState: "active",
-		}},
-	}}
-	svc := NewBodyStateService(repo)
-	expected := int64(7)
-	_, revision, err := svc.SetCurrentFact(
-		context.Background(), userID, &expected,
-		model.BodyStateFactKindLifestyleSleep,
-		&model.BodyStateFact{
-			Value:   "最近换夜班，通常凌晨 5 点睡",
-			Details: datatypes.JSON(`{"shift_work":true}`),
-			Origin:  "user_reported", ReviewState: "confirmed",
-		},
-		time.Date(2026, time.August, 27, 10, 0, 0, 0, time.UTC), "test",
-	)
-	if err != nil {
-		t.Fatalf("SetCurrentFact returned error: %v", err)
-	}
-	if revision == nil || len(repo.appliedPatches) != 1 {
-		t.Fatalf("expected one atomic context patch, revision=%v patches=%d", revision, len(repo.appliedPatches))
-	}
-	patch := repo.appliedPatches[0]
-	if len(patch.Facts) != 1 || patch.Facts[0].Kind != model.BodyStateFactKindLifestyleSleep {
-		t.Fatalf("unexpected patch: %#v", patch)
-	}
-	if patch.Facts[0].Replacement == nil || patch.Facts[0].Replacement.Value != "最近换夜班，通常凌晨 5 点睡" {
-		t.Fatalf("unexpected replacement: %#v", patch.Facts[0].Replacement)
-	}
-}
-
-func TestApplyCurrentContextPatchRejectsDuplicateKinds(t *testing.T) {
-	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
-	_, err := svc.ApplyCurrentContextPatch(context.Background(), uuid.New(), nil, model.BodyStateCurrentContextPatch{
-		Facts: []model.BodyStateCurrentFactMutation{
-			{Kind: model.BodyStateFactKindLifestyleActivity, Replacement: &model.BodyStateFact{Value: "久坐"}},
-			{Kind: model.BodyStateFactKindLifestyleActivity, Replacement: &model.BodyStateFact{Value: "久站"}},
-		},
-	}, "test")
-	if err == nil {
-		t.Fatal("duplicate singleton kinds must be rejected before repository mutation")
-	}
-	if len(repo.appliedPatches) != 0 {
-		t.Fatal("invalid patch must not reach repository")
 	}
 }
 
@@ -449,4 +82,9 @@ func (r *fakeBodyStateRepository) ListSafetyRestrictions(_ context.Context, owne
 		revision = r.current.CurrentRevision
 	}
 	return &model.SafetyRestrictionList{UserID: owner, CurrentRevision: revision, Restrictions: r.restrictions}, nil
+}
+
+func (r *fakeBodyStateRepository) RecordSafetyScreen(_ context.Context, userID uuid.UUID, _ model.AnswerFactSource, command model.SafetyScreenCommand) (*model.SafetyScreen, error) {
+	r.screens = append(r.screens, command)
+	return &model.SafetyScreen{ID: uuid.New(), UserID: userID, CaptureID: command.CaptureID, BodyFactID: command.BodyFactID}, nil
 }
