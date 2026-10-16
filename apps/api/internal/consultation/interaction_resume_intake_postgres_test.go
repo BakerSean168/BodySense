@@ -12,6 +12,7 @@ import (
 	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 func bindIntakeQuestion(t *testing.T, f resumeFixture, toolCallID string, question json.RawMessage) {
@@ -118,6 +119,17 @@ func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t
 		!screen.Numbness || screen.Trauma || screen.RadiatingPain || screen.Weakness || screen.Dizziness || screen.BodyStateRevision != fact.CreatedRevision+1 {
 		t.Fatalf("unexpected safety screen: %#v (fact revision %d)", screen, fact.CreatedRevision)
 	}
+	var restrictions []model.SafetyRestriction
+	if err := f.db.Where("user_id = ?", f.owner).Find(&restrictions).Error; err != nil || len(restrictions) != 1 {
+		t.Fatalf("one positive concept must create one restriction: %+v %v", restrictions, err)
+	}
+	restriction := restrictions[0]
+	if restriction.SafetyScreenID != screen.ID || restriction.Concept != "numbness" ||
+		restriction.PolicyRevision != model.SafetyScreenRestrictionPolicyV1 || restriction.RiskLevel != "restricted" ||
+		restriction.ScopeKind != "all_training" || restriction.LiftPolicy != "professional_clearance" ||
+		restriction.CreatedRevision != screen.BodyStateRevision || !restriction.ValidFrom.Equal(screen.RecordedAt) || restriction.Reason == "" {
+		t.Fatalf("restriction lost the approved Go mapping or exact source revision: %+v", restriction)
+	}
 	var revision model.BodyStateRevision
 	if err := f.db.Where("user_id = ? AND revision = ?", f.owner, screen.BodyStateRevision).First(&revision).Error; err != nil || revision.ChangeType != "safety.screened" {
 		t.Fatalf("screen must commit its own owner revision: %#v %v", revision, err)
@@ -129,6 +141,7 @@ func TestInteractionResumeBoundIntakeRecordsScreenWithoutDuplicateFactPostgres(t
 	}
 	resumeCount(t, f, "body_facts", 1)
 	resumeCount(t, f, "safety_screens", 1)
+	resumeCount(t, f, "safety_restrictions", 1)
 
 	snapshot, err = bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
@@ -163,6 +176,7 @@ func TestInteractionResumeNoneOfTheAboveCompletesCoveragePostgres(t *testing.T) 
 	if _, err := f.resumes.WithStructuredIntake(bodyState).Claim(context.Background(), intakeCommand(f, map[string]any{"safety_signals": []string{"以上均无"}})); err != nil {
 		t.Fatal(err)
 	}
+	resumeCount(t, f, "safety_restrictions", 0)
 	snapshot, err := bodyState.GetBodyState(context.Background(), f.owner, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -179,6 +193,7 @@ func assertIntakeClaimLeftNothing(t *testing.T, f resumeFixture, err error) {
 		t.Fatal("invalid intake binding must fail the claim")
 	}
 	resumeCount(t, f, "safety_screens", 0)
+	resumeCount(t, f, "safety_restrictions", 0)
 	resumeCount(t, f, "interaction_resumes", 0)
 	resumeCount(t, f, "messages", 2)
 	var interaction model.AgentInteraction
@@ -237,4 +252,106 @@ func TestInteractionResumeModelAuthoredIntakeAndMissingRecorderPostgres(t *testi
 		}
 		resumeCount(t, f, "interaction_resumes", 0)
 	})
+}
+
+func TestInteractionResumeAllPositiveConceptsKeepIndependentRestrictionsPostgres(t *testing.T) {
+	f, factID := boundIntakeFixture(t)
+	command := intakeCommand(f, map[string]any{"safety_signals": []string{"外伤或创伤", "放射痛", "麻木", "无力", "头晕"}})
+	if _, err := f.resumes.WithStructuredIntake(intakeBodyState(f)).Claim(context.Background(), command); err != nil {
+		t.Fatal(err)
+	}
+	var rows []model.SafetyRestriction
+	if err := f.db.Where("user_id = ?", f.owner).Order("concept").Find(&rows).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 5 {
+		t.Fatalf("overlapping signals must remain separate, got %+v", rows)
+	}
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if row.CreatedRevision != 2 || row.RiskLevel != "restricted" || row.ScopeKind != "all_training" || row.LiftPolicy != "professional_clearance" || seen[row.Concept] {
+			t.Fatalf("invalid or duplicated restriction: %+v", row)
+		}
+		seen[row.Concept] = true
+	}
+	// The screen and all five restrictions share one revision and one event.
+	resumeCount(t, f, "body_state_revisions", 2)
+	resumeCount(t, f, "body_state_outbox", 2)
+	// Source deletion cannot silently erase restrictions through fact/screen cascades.
+	if err := f.db.Delete(&model.BodyFact{}, "user_id = ? AND id = ?", f.owner, factID).Error; err == nil {
+		t.Fatal("source deletion silently removed unresolved restrictions")
+	}
+	resumeCount(t, f, "safety_restrictions", 5)
+	if _, err := repository.NewBodyStateRepository(f.db).WithdrawDirectFact(context.Background(), f.owner, factID, model.AmendBodyFactCommand{IdempotencyKey: uuid.NewString(), ExpectedRevision: 2}); err != nil {
+		t.Fatal(err)
+	}
+	resumeCount(t, f, "safety_restrictions", 5)
+}
+
+func TestInteractionResumeRestrictionFailureRollsBackScreenAndAnswerPostgres(t *testing.T) {
+	f, _ := boundIntakeFixture(t)
+	injected := errors.New("synthetic restriction storage unavailable")
+	const callback = "test:restriction_storage_failure"
+	if err := f.db.Callback().Create().Before("gorm:create").Register(callback, func(tx *gorm.DB) {
+		if tx.Statement.Table == "safety_restrictions" {
+			tx.AddError(injected)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.db.Callback().Create().Remove(callback) })
+	_, err := f.resumes.WithStructuredIntake(intakeBodyState(f)).Claim(context.Background(), intakeCommand(f, map[string]any{"safety_signals": []string{"麻木"}}))
+	if !errors.Is(err, injected) {
+		t.Fatalf("restriction write failure was swallowed: %v", err)
+	}
+	assertIntakeClaimLeftNothing(t, f, err)
+	resumeCount(t, f, "body_facts", 1)
+	resumeCount(t, f, "body_state_revisions", 1)
+	resumeCount(t, f, "body_state_outbox", 1)
+}
+
+func TestInteractionResumeRestrictionLineageAndErasurePostgres(t *testing.T) {
+	f, _ := boundIntakeFixture(t)
+	if _, err := f.resumes.WithStructuredIntake(intakeBodyState(f)).Claim(context.Background(), intakeCommand(f, map[string]any{"safety_signals": []string{"麻木"}})); err != nil {
+		t.Fatal(err)
+	}
+	var row model.SafetyRestriction
+	if err := f.db.Where("user_id = ?", f.owner).Take(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	foreign, _ := boundIntakeFixture(t)
+	for _, change := range []func(*model.SafetyRestriction){
+		func(r *model.SafetyRestriction) { r.UserID = foreign.owner },
+		func(r *model.SafetyRestriction) { r.CreatedRevision = 1 },
+		func(r *model.SafetyRestriction) { r.RiskLevel = "urgent" },
+	} {
+		forged := row
+		forged.ID = uuid.New()
+		forged.Concept = "weakness" // Avoid testing only the screen/concept uniqueness constraint.
+		change(&forged)
+		if err := f.db.Create(&forged).Error; err == nil {
+			t.Fatalf("forged owner, revision or unapproved medical mapping accepted: %+v", forged)
+		}
+	}
+	counts, err := repository.NewPrivacyErasureRepository(f.db).CountUserData(context.Background(), f.owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, count := range counts {
+		if count.Name == "safety_restrictions" {
+			found = true
+			if count.Count != 1 {
+				t.Fatalf("incorrect privacy count: %+v", count)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("privacy inventory omitted safety restrictions")
+	}
+	if err := f.db.Exec("DELETE FROM users WHERE id = ?", f.owner).Error; err != nil {
+		t.Fatalf("lineage protection must permit whole account erasure: %v", err)
+	}
+	resumeCount(t, f, "safety_restrictions", 0)
+	resumeCount(t, foreign, "body_facts", 1)
 }

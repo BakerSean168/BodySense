@@ -4660,6 +4660,27 @@ ALTER TABLE ONLY public.user_uploads
     ADD CONSTRAINT user_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
+-- Go-owned, immutable restrictions for complete structured Safety screens.
+ALTER TABLE public.safety_screens ADD CONSTRAINT safety_screens_owner_revision_key UNIQUE (user_id, id, body_state_revision);
+CREATE TABLE public.safety_restrictions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    safety_screen_id uuid NOT NULL,
+    concept text NOT NULL CHECK (concept IN ('trauma','radiating_pain','numbness','weakness','dizziness')),
+    policy_revision text NOT NULL CHECK (policy_revision = 'safety-screen-restriction-v1'),
+    risk_level text NOT NULL CHECK (risk_level = 'restricted'),
+    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
+    lift_policy text NOT NULL CHECK (lift_policy = 'professional_clearance'),
+    reason text NOT NULL CHECK (length(btrim(reason)) > 0),
+    created_revision bigint NOT NULL,
+    valid_from timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, safety_screen_id, concept),
+    FOREIGN KEY (user_id, safety_screen_id, created_revision) REFERENCES public.safety_screens(user_id, id, body_state_revision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, created_revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED
+);
+
+
 --
 -- PostgreSQL database dump complete
 --
