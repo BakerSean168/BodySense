@@ -1,8 +1,12 @@
 # TP-PROP-001 · TrainingPlan PlanProposal pure precommit admission policy
 
-Status: IN_PROGRESS / IN REVIEW. Phase 1. SF cross-reference: SF-50.
+Status: BLOCKED / NOT ADMITTED TO CURRENT BASELINE. Phase 1. SF cross-reference: SF-50.
 **Owner role:** Training Domain Owner. **Dependencies:** `TP-D1-001`. **Exclusive resources:** `domain-trainingplan-go`.
-**Checkout:** `/home/dev/projects/.chatgpt-worktrees/bodysense-v2-privacy`, branch `feat/v2-training-proposal-admission-20261014`, base = frozen main `e4160a9c7…`, head `681edbd8eef88c504f07df5a2a7e2dadd8be85f9`. **Review PR:** #274.
+**Checkout:** `/home/dev/projects/.chatgpt-worktrees/bodysense-v2-privacy`, branch `feat/v2-training-proposal-admission-20261014`, historical base `e4160a9c7…`, head `681edbd8eef88c504f07df5a2a7e2dadd8be85f9`. **Review PR:** #274.
+
+## Current admission checkpoint · 2026-10-16
+
+PR #274 remains OPEN/BEHIND at head `681edbd8eef88c504f07df5a2a7e2dadd8be85f9`. Its historical CI does not validate integration against current frozen main `af3e1993b1f62930e3b680b54abab5ade456935b`. The queue marks this ticket blocked pending rebase, review and fresh exact-head CI. This is an admission block; it does not change the host PR’s open review state.
 
 ## Scope
 
@@ -15,6 +19,6 @@ Status: IN_PROGRESS / IN REVIEW. Phase 1. SF cross-reference: SF-50.
 
 ## To accept
 
-1. Optional review fixes: typed constant for `DecisionKind` (`"accept"`); state "no migration, PG18 skip expected" in the merge note.
+1. Rebase and review against the current frozen main; obtain fresh exact-head CI. Optional review fixes: typed constant for `DecisionKind` (`"accept"`); state "no migration, PG18 skip expected" in the merge note.
 2. Merge under normal branch protection; record merged SHA here and set `acceptedSha` in `queue.json`.
 3. The verdict `eligible_for_transactional_commit` must never be presented as acceptance; the persisted transactional write belongs to TP-002.

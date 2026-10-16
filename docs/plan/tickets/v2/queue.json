@@ -134,7 +134,7 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "blockedReason": "Partially delivered: preflight audits #260-#262 and read-only fail-closed GetSoleLiveByUserID seam #266 merged (no runtime caller). Track D holds an uncommitted staged structured_answer source-identity check at 76bc12959 in bodysense-v2-trackd-verification because platform safety control denied commit and native PG18 start on 2026-10-15. Unique DB constraint, serialized per-owner creation and runtime admission not started.",
+      "blockedReason": "Singleton runtime remains unimplemented and not admitted: no unique owner constraint or serialized per-owner creation; PR266 is read-only with no runtime caller. Previous Track D commit/PG18 platform denial and staged patch at 76bc12959 were observed on 2026-10-15, not revalidated in this sync. Apply current Master big-bang policy, not the old data-reconciliation/rollback prerequisites.",
       "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification"
     },
     {
