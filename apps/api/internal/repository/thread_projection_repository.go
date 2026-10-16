@@ -32,8 +32,6 @@ func (r *ThreadProjectionRepository) UpsertSnapshot(
 			Columns: []clause.Column{{Name: "conversation_id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"user_id",
-				"title",
-				"title_status",
 				"status",
 				"default_model",
 				"active_run_id",

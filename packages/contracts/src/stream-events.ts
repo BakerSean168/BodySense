@@ -58,7 +58,6 @@ export type RedFlagDetectedEvent = EventOf<"safety.red_flag.detected">;
 export type OutputReviewedEvent = EventOf<"safety.output_reviewed">;
 export type OutputRejectedEvent = EventOf<"safety.output_rejected">;
 export type UsageReportedEvent = EventOf<"usage.reported">;
-export type TitleGeneratedEvent = EventOf<"title.generated">;
 export type StreamDoneEvent = EventOf<"stream.done">;
 export type StreamErrorEvent = EventOf<"stream.error">;
 export type JobCreatedEvent = EventOf<"job.created">;

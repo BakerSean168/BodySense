@@ -56,9 +56,6 @@ func TestStreamEventFixtureParity(t *testing.T) {
 	if run, ok := byType["run.started"]; !ok || run.Channel != "run" || run.IDs.RunID != "run-1" {
 		t.Fatalf("expected run.started fixture, got %#v", byType["run.started"])
 	}
-	if title, ok := byType["title.generated"]; !ok || title.Channel != "title" {
-		t.Fatalf("expected title.generated fixture, got %#v", byType["title.generated"])
-	}
 	if rev, ok := byType["safety.output_reviewed"]; !ok || rev.Channel != "safety" {
 		t.Fatalf("expected safety.output_reviewed fixture, got %#v", byType)
 	}
@@ -81,7 +78,7 @@ func TestFixtureMatchesSchema(t *testing.T) {
 	channelEnum := map[string]bool{
 		"conversation": true, "run": true, "message": true, "tool": true,
 		"state": true, "source": true, "safety": true, "usage": true,
-		"job": true, "stream": true, "title": true,
+		"job": true, "stream": true,
 	}
 	idKeys := map[string]bool{
 		"conversation_id": true, "run_id": true, "turn_id": true, "message_id": true,

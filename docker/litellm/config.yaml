@@ -28,7 +28,7 @@ model_list:
       api_key: os.environ/PRIMARY_LLM_API_KEY
       timeout: 45
 
-  # Small text generation such as conversation titles.
+  # General text generation for non-conversation consumers.
   - model_name: bodysense-text
     litellm_params:
       model: openai/gemini-3.7-flash

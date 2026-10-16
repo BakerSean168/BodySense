@@ -41,8 +41,8 @@ func seedLeaseRun(t *testing.T, db *gorm.DB, status string, leaseExpiry time.Tim
 	}
 	t.Cleanup(func() { _ = db.Exec("DELETE FROM users WHERE id = ?", userID).Error })
 	if err := db.WithContext(ctx).Exec(
-		"INSERT INTO conversations(id,user_id,title,active_run_id) VALUES (?,?,?,NULL)",
-		conversationID, userID, "lease test",
+		"INSERT INTO conversations(id,user_id,active_run_id) VALUES (?,?,NULL)",
+		conversationID, userID,
 	).Error; err != nil {
 		t.Fatalf("seed conversation: %v", err)
 	}

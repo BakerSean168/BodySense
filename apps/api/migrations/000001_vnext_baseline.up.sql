@@ -438,8 +438,6 @@ CREATE TABLE public.consultation_sessions (
 CREATE TABLE public.conversations (
     id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
-    title text,
-    title_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
     default_model text,
     system_prompt_version text,
@@ -452,11 +450,7 @@ CREATE TABLE public.conversations (
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_message_at timestamp with time zone,
-    title_agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
-    title_agent_configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
-    title_execution_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    title_decision_trace jsonb DEFAULT '{}'::jsonb NOT NULL
+    last_message_at timestamp with time zone
 );
 
 
@@ -1303,8 +1297,6 @@ CREATE TABLE public.thread_projection_tool_calls (
 CREATE TABLE public.thread_projections (
     conversation_id uuid NOT NULL,
     user_id uuid NOT NULL,
-    title text,
-    title_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
     default_model text,
     active_run_id uuid,
@@ -2668,13 +2660,6 @@ CREATE INDEX idx_consultation_phase ON public.consultation_sessions USING btree 
 --
 
 CREATE INDEX idx_consultation_rollout_observations_pair_stage ON public.consultation_rollout_observations USING btree (champion_configuration_id, challenger_configuration_id, stage, canary_bps, created_at DESC);
-
-
---
--- Name: idx_conversations_title_agent_configuration; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_conversations_title_agent_configuration ON public.conversations USING btree (title_agent_configuration_id) WHERE ((title_agent_configuration_id)::text <> ''::text);
 
 
 --

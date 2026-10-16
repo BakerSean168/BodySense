@@ -37,7 +37,7 @@ Python internal runtime protocol
 - durable replay uses the same public semantic contract as live delivery;
 - Web deduplicates by run/sequence semantics and treats transport disconnect separately from business cancellation;
 - `run.cancelled`, `stream.done` and `stream.error` have explicit terminal semantics;
-- channels in v1 include the currently modeled message/run/tool/state/source/safety/usage/stream/job/conversation/title surfaces encoded by the shared schema/fixtures.
+- channels in v1 include the currently modeled message/run/tool/state/source/safety/usage/stream/job/conversation surfaces encoded by the shared schema/fixtures.
 
 ## 3. Runtime Event Log vs Public StreamEvent
 

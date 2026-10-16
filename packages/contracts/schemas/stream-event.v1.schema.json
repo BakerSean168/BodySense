@@ -32,8 +32,7 @@
         "safety",
         "usage",
         "job",
-        "stream",
-        "title"
+        "stream"
       ]
     },
     "type": {
@@ -106,20 +105,11 @@
             "payload": {
               "type": "object",
               "required": [
-                "title",
-                "title_status",
                 "status",
                 "last_message_at",
                 "created_at"
               ],
               "properties": {
-                "title": {
-                  "type": "string"
-                },
-                "title_status": {
-                  "type": "string",
-                  "minLength": 1
-                },
                 "status": {
                   "const": "active"
                 },
@@ -625,7 +615,10 @@
               "properties": {
                 "to": {
                   "type": "string",
-                  "enum": ["collecting", "ready_for_analysis"]
+                  "enum": [
+                    "collecting",
+                    "ready_for_analysis"
+                  ]
                 },
                 "reason": {
                   "type": "string",
@@ -633,7 +626,10 @@
                 },
                 "from": {
                   "type": "string",
-                  "enum": ["collecting", "ready_for_analysis"]
+                  "enum": [
+                    "collecting",
+                    "ready_for_analysis"
+                  ]
                 }
               }
             }
@@ -961,33 +957,6 @@
               ],
               "properties": {
                 "usage": {}
-              }
-            }
-          },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
-        },
-        {
-          "properties": {
-            "type": {
-              "const": "title.generated"
-            },
-            "channel": {
-              "const": "title"
-            },
-            "payload": {
-              "type": "object",
-              "required": [
-                "title"
-              ],
-              "properties": {
-                "title": {
-                  "type": "string",
-                  "minLength": 1
-                }
               }
             }
           },

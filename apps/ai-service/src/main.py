@@ -32,7 +32,6 @@ from .api.routes import (  # noqa: E402
     ocr,
     posture,
     runtime,
-    title,
     treatment,
 )
 from .rag.knowledge_library import knowledge_library_lifespan  # noqa: E402
@@ -69,7 +68,6 @@ app.include_router(runtime.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)
 app.include_router(treatment.router)
-app.include_router(title.router)
 
 
 @app.get("/health")

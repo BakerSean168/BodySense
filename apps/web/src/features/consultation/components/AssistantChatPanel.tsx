@@ -104,7 +104,6 @@ interface AssistantChatPanelProps {
   onExtractedInfoUpdate?: (info: ExtractedInfo[]) => void;
   onPhaseChange?: (phase: ConsultationPhase) => void;
   onCitation?: (citation: Citation) => void;
-  onTitleGenerated?: (title: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onStreamFinished?: () => void;
   spatialContext?: ConsultationSpatialContext | null;
@@ -140,7 +139,6 @@ export function AssistantChatPanel({
   onExtractedInfoUpdate,
   onPhaseChange,
   onCitation,
-  onTitleGenerated,
   onMessagePersisted,
   onConversationCreated,
   onStreamFinished,
@@ -188,15 +186,6 @@ export function AssistantChatPanel({
         onPhaseChange?.(phase);
       },
       onCitation,
-      onTitleGenerated: onTitleGenerated
-        ? (title: string) => {
-            console.debug(
-              "[SSE] ⓪ AssistantChatPanel → 桥接 onTitleGenerated",
-              { title },
-            );
-            onTitleGenerated(title);
-          }
-        : undefined,
       onMessagePersisted,
       onStreamFinished,
       // Refresh durable projections when a commit arrives, even if the same
@@ -211,7 +200,6 @@ export function AssistantChatPanel({
       onExtractedInfoUpdate,
       onPhaseChange,
       onCitation,
-      onTitleGenerated,
       onMessagePersisted,
       onStreamFinished,
     ],

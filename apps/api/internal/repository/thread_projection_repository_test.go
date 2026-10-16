@@ -22,7 +22,7 @@ func seedThreadProjectionFixture(t *testing.T, db *gorm.DB, owner uuid.UUID) (*m
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
-	projection := &model.ThreadProjection{ConversationID: message.ConversationID, UserID: owner, Title: "before", TitleStatus: "generated", Status: "active", Phase: model.ConsultationPhaseCollecting, Metadata: datatypes.JSON(`{}`), ExtractedInfo: datatypes.JSON(`[]`), PendingInteractions: datatypes.JSON(`[]`), InteractionHistory: datatypes.JSON(`[]`), ConversationCreatedAt: now, ConversationUpdatedAt: now, SessionCreatedAt: now, SessionUpdatedAt: now, RefreshedAt: now}
+	projection := &model.ThreadProjection{ConversationID: message.ConversationID, UserID: owner, DefaultModel: "before", Status: "active", Phase: model.ConsultationPhaseCollecting, Metadata: datatypes.JSON(`{}`), ExtractedInfo: datatypes.JSON(`[]`), PendingInteractions: datatypes.JSON(`[]`), InteractionHistory: datatypes.JSON(`[]`), ConversationCreatedAt: now, ConversationUpdatedAt: now, SessionCreatedAt: now, SessionUpdatedAt: now, RefreshedAt: now}
 	messages := []model.ThreadProjectionMessage{{MessageID: message.ID, ConversationID: message.ConversationID, TurnID: message.TurnID, Seq: 1, Role: "user", Status: "completed", Parts: message.Parts, ContentText: "before", Metadata: datatypes.JSON(`{}`), CreatedAt: now, UpdatedAt: now}}
 	tools := []model.ThreadProjectionToolCall{{ToolCallID: "provider-call-1", ConversationID: message.ConversationID, RunID: source.RunID, MessageID: &message.ID, ToolName: "search_knowledge", Arguments: datatypes.JSON(`{}`), Status: "succeeded", Result: datatypes.JSON(`{"marker":"before"}`), Metadata: datatypes.JSON(`{}`), CreatedAt: now, StartedAt: now, FinishedAt: &now}}
 	return projection, messages, tools
@@ -66,12 +66,12 @@ func TestThreadProjectionRepeatedProviderIDsAreRunAndOwnerScopedPostgres(t *test
 	if statuses[tools[0].RunID] != "succeeded" || statuses[secondRun.ID] != "failed" {
 		t.Fatal("tool status crossed run boundaries")
 	}
-	first.Title = "owner refresh"
+	first.DefaultModel = "owner refresh"
 	if err := repo.UpsertSnapshot(ctx, first, messages, tools[:1]); err != nil {
 		t.Fatal(err)
 	}
 	untouched, _, otherRead, err := repo.GetByConversationID(ctx, otherProjection.ConversationID, other)
-	if err != nil || untouched.Title != "before" || len(otherRead) != 1 {
+	if err != nil || untouched.DefaultModel != "before" || len(otherRead) != 1 {
 		t.Fatal("refresh mutated another user's tool")
 	}
 	if projection, _, _, err := repo.GetByConversationID(ctx, first.ConversationID, other); err != nil || projection != nil {
@@ -98,14 +98,14 @@ func TestThreadProjectionFailedSnapshotWriteRollsBackAllPartsPostgres(t *testing
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Callback().Create().Remove(callback) })
-	projection.Title = "failed update"
+	projection.DefaultModel = "failed update"
 	messages[0].ContentText = "failed update"
 	tools[0].Result = datatypes.JSON(`{"marker":"failed update"}`)
 	if err := repo.UpsertSnapshot(ctx, projection, messages, tools); !errors.Is(err, failure) {
 		t.Fatalf("expected injected failure, got %v", err)
 	}
 	stored, storedMessages, storedTools, err := repo.GetByConversationID(ctx, projection.ConversationID, owner)
-	if err != nil || stored.Title != "before" || len(storedMessages) != 1 || storedMessages[0].ContentText != "before" || len(storedTools) != 1 || !strings.Contains(string(storedTools[0].Result), "before") {
+	if err != nil || stored.DefaultModel != "before" || len(storedMessages) != 1 || storedMessages[0].ContentText != "before" || len(storedTools) != 1 || !strings.Contains(string(storedTools[0].Result), "before") {
 		t.Fatalf("snapshot only partially rolled back: %v", err)
 	}
 }
@@ -151,7 +151,7 @@ func TestThreadProjectionReadsOneSnapshotDuringConcurrentRefreshPostgres(t *test
 		close(release)
 		t.Fatal("snapshot barrier timed out")
 	}
-	projection.Title = "after"
+	projection.DefaultModel = "after"
 	messages[0].ContentText = "after"
 	tools[0].Result = datatypes.JSON(`{"marker":"after"}`)
 	err := repo.UpsertSnapshot(ctx, projection, messages, tools)
@@ -160,11 +160,11 @@ func TestThreadProjectionReadsOneSnapshotDuringConcurrentRefreshPostgres(t *test
 		t.Fatal(err)
 	}
 	old := <-done
-	if old.err != nil || old.projection == nil || old.projection.Title != "before" || len(old.messages) != 1 || old.messages[0].ContentText != "before" || len(old.tools) != 1 || !strings.Contains(string(old.tools[0].Result), "before") {
+	if old.err != nil || old.projection == nil || old.projection.DefaultModel != "before" || len(old.messages) != 1 || old.messages[0].ContentText != "before" || len(old.tools) != 1 || !strings.Contains(string(old.tools[0].Result), "before") {
 		t.Fatalf("mixed old metadata and new thread rows: %#v", old)
 	}
 	fresh, freshMessages, freshTools, err := repo.GetByConversationID(ctx, projection.ConversationID, owner)
-	if err != nil || fresh.Title != "after" || freshMessages[0].ContentText != "after" || !strings.Contains(string(freshTools[0].Result), "after") {
+	if err != nil || fresh.DefaultModel != "after" || freshMessages[0].ContentText != "after" || !strings.Contains(string(freshTools[0].Result), "after") {
 		t.Fatal("new read did not see the refreshed snapshot")
 	}
 }

@@ -128,7 +128,7 @@ func main() {
 	runService := service.NewRunService(runRepo, leaseOwner)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	runService.WithLifecycleEvents(runtimeEventService, database.NewTransactionManager(database.DB))
-	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, database.NewTransactionManager(database.DB))
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	equipmentRepo := repository.NewEquipmentAssetRepository(database.DB)
 	bodyStateService := service.NewBodyStateService(bodyStateRepo).WithBodyRegionIDValidator(

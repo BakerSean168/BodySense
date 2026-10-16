@@ -6355,7 +6355,6 @@ components:
       additionalProperties: false
       required:
       - id
-      - title_status
       - status
       - metadata
       - message_count
@@ -6363,8 +6362,6 @@ components:
       - updated_at
       properties:
         id: {type: string, format: uuid}
-        title: {type: string}
-        title_status: {type: string, enum: [pending, generating, generated, failed]}
         status: {type: string, enum: [active]}
         default_model:
           anyOf:

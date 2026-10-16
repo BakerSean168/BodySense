@@ -92,24 +92,7 @@ A future posture challenger must be added as another immutable manifest and qual
 the Go pointer. A live Diagnosis-style canary is not mandatory merely to generate posture observations;
 clinical consumers still apply their own authority/safety rules.
 
-### C. Utility Agent
-
-Role: **Title**.
-
-Conversation title generation is cosmetic and cannot mutate health truth. It therefore requires
-identity and auditability, but not clinical replay/rollout machinery:
-
-- immutable `title-v1` configuration;
-- Go-owned configuration pointer;
-- Python exact-manifest execution through `bodysense-text`;
-- Go fail-closed identity verification;
-- durable configuration/execution provenance + Go decision trace on the conversation;
-- manual rename clears stale AI provenance.
-
-If title generation fails, it may degrade to the normal application fallback rather than escalating a
-health workflow.
-
-### D. Offline content-pipeline Agents
+### C. Offline content-pipeline Agents
 
 Roles: **Knowledge Splitter, Knowledge Curator**.
 
@@ -131,7 +114,7 @@ These Agents transform source material into candidate knowledge artifacts. Their
 This is stronger and more domain-correct than pretending an offline source-ingestion batch is a live
 user canary.
 
-### E. Non-LLM mechanisms
+### D. Non-LLM mechanisms
 
 Components: **OCR, ASR, embedding generation, geometric pose estimation**.
 
@@ -153,7 +136,6 @@ and must enter the universal invariants above.
 | Assessment         | clinical derived decision |        ✅        |         ✅          |            ✅            |           ✅           | qualification + replay + rollout                        |
 | Consultation       | clinical conversational   |        ✅        |         ✅          |            ✅            |           ✅           | multi-turn replay + rollout                             |
 | Posture            | perception                |        ✅        |         ✅          |            ✅            |           ✅           | config qualification/pointer; downstream clinical gates |
-| Title              | utility                   |        ✅        |         ✅          |            ✅            |           ✅           | no clinical rollout required                            |
 | Knowledge Splitter | offline content           |        ✅        | ✅ when LLM enabled |            ✅            |   ✅ source metadata   | publication/review gate                                 |
 | Knowledge Curator  | offline content           |        ✅        |   ✅ when enabled   |            ✅            |   ✅ source metadata   | publication/review gate                                 |
 | OCR                | mechanism                 |       n/a        |         n/a         |           n/a            |  mechanism provenance  | n/a                                                     |
@@ -168,7 +150,6 @@ fall back to a Python default when called by the application:
 - Assessment generation;
 - Consultation turn start;
 - Posture analysis;
-- Title generation;
 - LLM Knowledge splitting/refinement.
 
 Python-side default manifest helpers may remain useful to unit tests, offline tooling or explicit local

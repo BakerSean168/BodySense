@@ -315,8 +315,6 @@ func (r *Runtime) StartRun(
 				TurnID:         turn.String(),
 			},
 			map[string]any{
-				"title":           "",
-				"title_status":    "pending",
 				"status":          "active",
 				"last_message_at": userMsg.CreatedAt.UTC().Format(time.RFC3339),
 				"created_at":      userMsg.CreatedAt.UTC().Format(time.RFC3339),
@@ -351,46 +349,14 @@ func (r *Runtime) StartRun(
 		return nil
 	}
 
-	// --- 10. Generate title for new conversations (non-blocking) ---
-	if isNewConversation {
-		r.generateTitleAndNotify(executionCtx, conversationID, uid, sw, baseIDs)
-	}
-
-	// --- 11. Emit stream.done ---
+	// --- 10. Emit stream.done ---
 	r.sendNewEvent(executionCtx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
 	return nil
 }
 
-// generateTitleAndNotify generates a title synchronously and emits a title.generated SSE event.
-func (r *Runtime) generateTitleAndNotify(
-	ctx context.Context,
-	conversationID uuid.UUID,
-	userID uuid.UUID,
-	sw *stream.StreamWriter,
-	baseIDs dto.StreamEventIDs,
-) {
-	title, err := r.conversationService.GenerateTitleSync(ctx, conversationID, userID)
-	if err != nil {
-		log.Printf("title generation failed for conversation %s: %v", conversationID, err)
-		return
-	}
-
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"title",
-		"title.generated",
-		baseIDs,
-		map[string]any{"title": title},
-		"",
-		"title.generated",
-	)
-	r.refreshThreadProjection(ctx, conversationID, userID)
-}
-
 // executeRunFlow is the shared turn execution path used by StartRun and ResumeInteraction.
 // It loads the profile, starts the AI stream, and processes events. The caller is responsible for
-// setup (idempotency, turn envelope, initial SSE events) and teardown (persist, stream.done, title).
+// setup (idempotency, turn envelope, initial SSE events) and teardown (persist, stream.done).
 func (r *Runtime) executeRunFlow(
 	ctx context.Context,
 	sw *stream.StreamWriter,
@@ -772,7 +738,6 @@ func (r *Runtime) ResumeInteraction(
 		return nil
 	}
 	r.sendNewEvent(executionCtx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
-	r.maybeGenerateTitle(executionCtx, conversationID, uid)
 	return nil
 }
 
@@ -1735,18 +1700,6 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		Payload: json.RawMessage(`{}`),
 	}); err != nil {
 		log.Printf("failed to write replay done for run %s: %v", run.ID, err)
-	}
-}
-
-func (r *Runtime) maybeGenerateTitle(ctx context.Context, conversationID, userID uuid.UUID) {
-	conv, err := r.conversationService.GetConversationByID(ctx, conversationID, userID)
-	if err != nil || conv == nil {
-		return
-	}
-	if conv.TitleStatus == "pending" && conv.Title == "" {
-		if err := r.conversationService.GenerateTitle(ctx, conversationID, userID); err != nil {
-			log.Printf("failed to trigger title generation for conversation %s: %v", conversationID, err)
-		}
 	}
 }
 

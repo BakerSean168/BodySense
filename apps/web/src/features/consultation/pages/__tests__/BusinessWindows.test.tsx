@@ -27,7 +27,14 @@ vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
   bodyFactRecordsService: { list: () => mockListBodyFacts(), record: vi.fn() },
 }));
 vi.mock("@/features/profile/services/bodyEpisodeService", () => ({
-  bodyEpisodeService: { list: async () => ({ user_id: "11111111-1111-4111-8111-111111111111", current_revision: 1, episodes: [], has_more: false }) },
+  bodyEpisodeService: {
+    list: async () => ({
+      user_id: "11111111-1111-4111-8111-111111111111",
+      current_revision: 1,
+      episodes: [],
+      has_more: false,
+    }),
+  },
 }));
 const mockListEquipment = vi.fn();
 const mockUpdateEquipment = vi.fn();
@@ -99,8 +106,6 @@ import type { HealthWorkspace } from "@/features/workspace/types/workspace";
 function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
     id: "conv-1",
-    title: "肩颈咨询",
-    title_status: "generated",
     status: "active",
     default_model: null,
     last_message_at: null,
@@ -753,11 +758,18 @@ describe("body-first business windows", () => {
 
 it("retries failed native body reads from the canvas sync banner", async () => {
   mockReadBodyRecords.mockRejectedValueOnce(new Error("unavailable"));
-  mockUseHealthWorkspaceQuery.mockReturnValue({ data: makeWorkspace(), isFetching: false, isError: false, refetch: vi.fn() });
+  mockUseHealthWorkspaceQuery.mockReturnValue({
+    data: makeWorkspace(),
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
   renderPage();
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("身体信息暂时无法同步");
   await userEvent.click(within(alert).getByRole("button", { name: "重试" }));
   await waitFor(() => expect(mockReadBodyRecords).toHaveBeenCalledTimes(2));
-  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+  );
 });

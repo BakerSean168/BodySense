@@ -14,8 +14,6 @@ export const consultationThreadConversationMessageCountMin = 0;
 
 export const ConsultationThreadConversation = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
-  "title": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "title_status": /*#__PURE__*/ zod.enum(['pending', 'generating', 'generated', 'failed']),
   "status": /*#__PURE__*/ zod.enum(['active']),
   "default_model": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.string(),/*#__PURE__*/ zod.null()])),
   "last_message_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.iso.datetime({"offset":true}),/*#__PURE__*/ zod.null()])),

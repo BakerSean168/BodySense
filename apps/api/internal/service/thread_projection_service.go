@@ -195,8 +195,6 @@ func buildThreadProjection(
 	return &model.ThreadProjection{
 		ConversationID:        conversation.ID,
 		UserID:                conversation.UserID,
-		Title:                 conversation.Title,
-		TitleStatus:           conversation.TitleStatus,
 		Status:                conversation.Status,
 		DefaultModel:          conversation.DefaultModel,
 		ActiveRunID:           conversation.ActiveRunID,

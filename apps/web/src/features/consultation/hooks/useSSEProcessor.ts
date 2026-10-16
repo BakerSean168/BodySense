@@ -39,7 +39,6 @@ import type {
   RedFlagDetectedEvent,
   MessageCompletedEvent,
   MessageFailedEvent,
-  TitleGeneratedEvent,
   StreamDoneEvent,
   StreamErrorEvent,
   RunStartedEvent,
@@ -84,7 +83,6 @@ export interface SSEHandlers {
   onRedFlag?: (data: RedFlagDetectedEvent) => void; // 检测到安全风险时触发
   onMessageCompleted?: (data: MessageCompletedEvent) => void; // AI 回复完整结束时触发
   onMessageFailed?: (data: MessageFailedEvent) => void; // AI 回复失败时触发
-  onTitleGenerated?: (data: TitleGeneratedEvent) => void; // 会话标题生成完成时触发
   onInteractionRequired?: (data: InteractionRequiredEvent) => void; // 需要用户交互（如确认）时触发
   onInteractionAnswered?: (data: InteractionAnsweredEvent) => void; // 用户回答了交互请求时触发
   onInteractionExpired?: (data: InteractionExpiredEvent) => void;
@@ -174,9 +172,6 @@ function dispatchStreamEvent(event: StreamEvent, handlers: SSEHandlers): void {
     case "safety.red_flag.detected":
       handlers.onRedFlag?.(event);
       return;
-    case "title.generated":
-      handlers.onTitleGenerated?.(event);
-      return;
     case "stream.done":
       handlers.onDone?.(event);
       return;
@@ -239,10 +234,7 @@ export function processSSELine(
     // 例如 "event: message.text.delta" → "message.text.delta"
     state.currentEvent = trimmed.slice(7).trim();
     // 🔍 追踪所有 event 行（高频事件只在关注时打开）
-    if (
-      state.currentEvent === "conversation.created" ||
-      state.currentEvent === "title.generated"
-    ) {
+    if (state.currentEvent === "conversation.created") {
       console.debug(`[SSE] ① event 行 → 记住事件类型: "${state.currentEvent}"`);
     }
     return; // event 行只需要记住类型，不做其他处理，直接返回
@@ -272,10 +264,7 @@ export function processSSELine(
         state.maxSeq = event.seq;
       }
 
-      if (
-        eventType === "conversation.created" ||
-        eventType === "title.generated"
-      ) {
+      if (eventType === "conversation.created") {
         console.debug(`[SSE] ② data 行解析成功 → 分发事件: ${eventType}`, {
           conversation_id: event.ids.conversation_id,
           payload: event.payload,

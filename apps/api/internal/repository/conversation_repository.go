@@ -65,10 +65,9 @@ func getOrCreateSingletonConversation(
 		return nil, nil, false, ErrInvalidConversationOwner
 	}
 	candidate := model.Conversation{
-		ID:          uuid.New(),
-		UserID:      userID,
-		Status:      model.ConversationStatusActive,
-		TitleStatus: "pending",
+		ID:     uuid.New(),
+		UserID: userID,
+		Status: model.ConversationStatusActive,
 	}
 	inserted := tx.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
@@ -133,29 +132,6 @@ func (r *ConversationRepository) GetByID(ctx context.Context, id, userID uuid.UU
 		return nil, err
 	}
 	return &conversation, nil
-}
-
-// UpdateTitleGeneration atomically persists the generated title and its immutable Agent provenance.
-func (r *ConversationRepository) UpdateTitleGeneration(ctx context.Context, id, userID uuid.UUID, title, status, configurationID string, configuration, provenance, decisionTrace []byte) error {
-	return r.db.WithContext(ctx).
-		Model(&model.Conversation{}).
-		Where("id = ? AND user_id = ?", id, userID).
-		Updates(map[string]any{
-			"title":                        title,
-			"title_status":                 status,
-			"title_agent_configuration_id": configurationID,
-			"title_agent_configuration":    configuration,
-			"title_execution_provenance":   provenance,
-			"title_decision_trace":         decisionTrace,
-		}).Error
-}
-
-// UpdateTitleStatus updates the title_status of a conversation with ownership check.
-func (r *ConversationRepository) UpdateTitleStatus(ctx context.Context, id, userID uuid.UUID, status string) error {
-	return r.db.WithContext(ctx).
-		Model(&model.Conversation{}).
-		Where("id = ? AND user_id = ?", id, userID).
-		Update("title_status", status).Error
 }
 
 // UpdateLastMessageAt updates the last_message_at of a conversation to now with ownership check.
