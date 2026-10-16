@@ -214,6 +214,7 @@ test("assessment output v2 derives insufficient information without any model re
 
   const report = JSON.parse(generatedText) as {
     contract_revision: string;
+    body_state_revision: number;
     status: string;
     observations: unknown[];
     evidence_coverage: {
@@ -244,6 +245,7 @@ test("assessment output v2 derives insufficient information without any model re
     currentAssessmentEvidencePolicyRevision,
   );
   expect(report.status).toBe("insufficient_information");
+  expect(report.body_state_revision).toBe(0);
   expect(report.observations).toEqual([]);
   expect(report.evidence_coverage.status).toBe("insufficient");
   expect(report.evidence_coverage.available_sources).toEqual([]);

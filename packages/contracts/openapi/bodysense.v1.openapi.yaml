@@ -4385,7 +4385,8 @@ components:
         body_state_revision:
           type: integer
           format: int64
-          minimum: 1
+          minimum: 0
+          description: Frozen input BodyState revision; zero represents an empty ledger.
         agent_configuration_id:
           type: string
         agent_configuration:

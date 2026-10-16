@@ -137,6 +137,32 @@ func TestAssessmentListRejectsInvalidPaginationBeforeApplication(t *testing.T) {
 	assertErrorCode(t, rec, "INVALID_REQUEST")
 }
 
+func TestAssessmentGenerationPreservesZeroInputRevision(t *testing.T) {
+	report := validAssessmentV2Report()
+	revision := int64(0)
+	report.BodyStateRevision = &revision
+	report.Status = model.AssessmentReportInsufficientInformation
+	report.Observations = json.RawMessage(`[]`)
+	assessment := &fakeAssessmentApplication{generateReport: report}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/assessment/generate", nil)
+	req.Header.Set("Authorization", "Bearer validated-by-auth-middleware")
+	rec := httptest.NewRecorder()
+	newAssessmentOpenAPIRouter(t, assessment, nil).ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status=%d want=201 body=%s", rec.Code, rec.Body.String())
+	}
+	assertOpenAPIResponse(t, req, rec)
+	var response struct {
+		BodyStateRevision *int64 `json:"body_state_revision"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.BodyStateRevision == nil || *response.BodyStateRevision != 0 {
+		t.Fatalf("empty input revision must survive serialization: %s", rec.Body.String())
+	}
+}
+
 func TestAssessmentListUsesOpenAPIDefaultsAndValidatesV2Report(t *testing.T) {
 	report := validAssessmentV2Report()
 	assessment := &fakeAssessmentApplication{listReports: []model.AssessmentReport{*report}, listTotal: 1}
