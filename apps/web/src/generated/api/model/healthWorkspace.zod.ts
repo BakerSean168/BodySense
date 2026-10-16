@@ -7,7 +7,6 @@
  */
 import * as zod from 'zod/mini';
 import { DiagnosisWorkspaceProjection } from './diagnosisWorkspaceProjection.zod';
-import { HealthWorkspaceBodyState } from './healthWorkspaceBodyState.zod';
 import { Outcome } from './outcome.zod';
 import { TrainingPlan } from './trainingPlan.zod';
 import { Treatment } from './treatment.zod';
@@ -20,7 +19,6 @@ export const HealthWorkspace = /*#__PURE__*/ zod.strictObject({
   "generated_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "conversation_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "profile_ready": /*#__PURE__*/ zod.boolean(),
-  "body_state": HealthWorkspaceBodyState,
   "diagnosis": /*#__PURE__*/ zod.optional(DiagnosisWorkspaceProjection),
   "treatment": /*#__PURE__*/ zod.optional(Treatment),
   "training_plan": /*#__PURE__*/ zod.optional(TrainingPlan),

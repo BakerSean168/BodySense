@@ -349,9 +349,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(feedback.result.treatment_status).toBe("review_recommended");
 
   const finalWorkspace = await expectJson<{
-    body_state: {
-      current_revision: number;
-    };
     treatment: { status: string };
     capabilities: {
       can_execute_treatment: boolean;
@@ -367,9 +364,6 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       headers: authHeaders,
     }),
     "load reviewed HealthWorkspace",
-  );
-  expect(finalWorkspace.body_state.current_revision).toBeGreaterThan(
-    diagnosis.body_state_revision,
   );
   // The user's own symptom wording became a new V2 symptom statement at the
   // Outcome's revision; the original statement is untouched (no legacy trend).
