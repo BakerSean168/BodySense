@@ -49,16 +49,15 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   expect(run.ok(), await run.text()).toBeTruthy();
 
   const conversationResponse = await request.get(
-    `${apiBase}/api/v1/conversations?limit=20`,
+    `${apiBase}/api/v1/conversation`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
   expect(conversationResponse.ok()).toBeTruthy();
   const conversationData = (await conversationResponse.json()) as {
-    conversations: Array<{ id: string }>;
+    conversation: { id: string };
   };
-  expect(conversationData.conversations).toHaveLength(1);
 
-  await page.goto(`/consultation/${conversationData.conversations[0].id}`);
+  await page.goto(`/consultation/${conversationData.conversation.id}`);
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
   // Body-first: no business window is open until the user opens one, and that
   // choice is mirrored into the route.
@@ -192,14 +191,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   await run.text();
 
   const conversationsResponse = await request.get(
-    `${apiBase}/api/v1/conversations`,
+    `${apiBase}/api/v1/conversation`,
     { headers },
   );
   expect(conversationsResponse.ok()).toBeTruthy();
   const conversationsPayload = (await conversationsResponse.json()) as {
-    conversations: Array<{ id: string }>;
+    conversation: { id: string };
   };
-  const conversationId = conversationsPayload.conversations[0]?.id;
+  const conversationId = conversationsPayload.conversation.id;
   expect(conversationId).toBeTruthy();
 
   // One original symptom and its own Go-bound checklist provide coverage.
@@ -358,7 +357,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(clearanceRun.ok()).toBeTruthy();
   await clearanceRun.text();
   const conversationResponse = await request.get(
-    `${apiBase}/api/v1/conversations/${conversationId}`,
+    `${apiBase}/api/v1/conversation`,
     { headers },
   );
   expect(conversationResponse.ok()).toBeTruthy();

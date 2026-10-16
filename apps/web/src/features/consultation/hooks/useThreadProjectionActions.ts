@@ -5,7 +5,6 @@ import { consultationKeys } from "../services/consultationQueryKeys";
 import type {
   ConsultationPhase,
   ConsultationThread,
-  ConversationListResponse,
   ExtractedInfo,
 } from "../types/consultation";
 
@@ -24,35 +23,13 @@ export function useThreadProjectionActions({
     [activeConversationIdRef, routeConversationId],
   );
 
+  // The server lazily creates the user's single Conversation on the first
+  // turn; record its identity so every consumer resolves the same thread.
   const registerConversation = useCallback(
     (conversationId: string) => {
-      const now = new Date().toISOString();
-      queryClient.setQueryData<ConversationListResponse>(
-        consultationKeys.conversations(),
-        (old) => ({
-          conversations: [
-            {
-              id: conversationId,
-              title: "",
-              title_status: "pending",
-              status: "active",
-              pinned: false,
-              pinned_at: null,
-              default_model: null,
-              last_message_at: now,
-              message_count: 0,
-              metadata: {},
-              created_at: now,
-              updated_at: now,
-            },
-            ...(old?.conversations ?? []).filter(
-              (conversation) => conversation.id !== conversationId,
-            ),
-          ],
-          next_cursor: old?.next_cursor ?? null,
-          has_more: old?.has_more ?? false,
-        }),
-      );
+      queryClient.setQueryData(consultationKeys.conversation(), {
+        conversationId,
+      });
     },
     [queryClient],
   );
@@ -72,20 +49,6 @@ export function useThreadProjectionActions({
                   title,
                   title_status: "generated",
                 },
-              }
-            : old,
-      );
-      queryClient.setQueryData<ConversationListResponse>(
-        consultationKeys.conversations(),
-        (old) =>
-          old
-            ? {
-                ...old,
-                conversations: old.conversations.map((conversation) =>
-                  conversation.id === conversationId
-                    ? { ...conversation, title, title_status: "generated" }
-                    : conversation,
-                ),
               }
             : old,
       );
@@ -156,9 +119,6 @@ export function useThreadProjectionActions({
     if (!conversationId) return;
     void queryClient.invalidateQueries({
       queryKey: consultationKeys.thread(conversationId),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: consultationKeys.conversations(),
     });
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
   }, [queryClient, resolveConversationId]);

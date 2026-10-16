@@ -12,7 +12,7 @@ vi.mock("@/lib/clientDiagnostics", () => ({
   reportClientDiagnostic: vi.fn(),
 }));
 
-const mockUseConversationsQuery = vi.fn();
+const mockUseConversationQuery = vi.fn();
 const mockUseConsultationThreadQuery = vi.fn();
 const mockUseHealthWorkspaceQuery = vi.fn();
 const mockListTrainingPlans = vi.fn();
@@ -48,8 +48,8 @@ vi.mock("@/features/profile/services/equipmentService", () => ({
   }),
 }));
 
-vi.mock("../../hooks/useConversationsQuery", () => ({
-  useConversationsQuery: () => mockUseConversationsQuery(),
+vi.mock("../../hooks/useConversationQuery", () => ({
+  useConversationQuery: () => mockUseConversationQuery(),
 }));
 vi.mock("../../hooks/useConsultationThreadQuery", () => ({
   useConsultationThreadQuery: (conversationId: string | null) =>
@@ -102,8 +102,6 @@ function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
     title: "肩颈咨询",
     title_status: "generated",
     status: "active",
-    pinned: false,
-    pinned_at: null,
     default_model: null,
     last_message_at: null,
     message_count: 0,
@@ -193,7 +191,7 @@ function openDock(name: string) {
 beforeEach(() => {
   mockReadBodyRecords.mockReset();
   mockReadBodyRecords.mockResolvedValue(bodyRecordsFixture());
-  mockUseConversationsQuery.mockReset();
+  mockUseConversationQuery.mockReset();
   mockUseConsultationThreadQuery.mockReset();
   mockUseHealthWorkspaceQuery.mockReset();
   mockListTrainingPlans.mockReset();
@@ -234,8 +232,8 @@ beforeEach(() => {
       },
     ],
   });
-  mockUseConversationsQuery.mockReturnValue({
-    data: [makeConversation()],
+  mockUseConversationQuery.mockReturnValue({
+    data: { conversationId: "conv-1" },
     isPending: false,
   });
   mockUseConsultationThreadQuery.mockReturnValue({

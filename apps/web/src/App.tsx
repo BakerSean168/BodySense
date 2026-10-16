@@ -26,13 +26,6 @@ const loadConsultationPage = () =>
     default: module.ConsultationPage,
   }));
 const ConsultationPage = lazy(loadConsultationPage);
-const SharePage = lazy(() =>
-  retryDynamicImport(
-    () => import("./features/consultation/components/SharePage"),
-  ).then((module) => ({
-    default: module.SharePage,
-  })),
-);
 
 function RouteFallback({
   variant = "default",
@@ -86,14 +79,6 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/consultation/share/:token"
-            element={
-              <Suspense fallback={<RouteFallback variant="consultation" />}>
-                <SharePage />
-              </Suspense>
-            }
-          />
 
           <Route
             path="/onboarding"

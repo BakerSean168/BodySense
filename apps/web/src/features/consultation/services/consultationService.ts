@@ -8,22 +8,14 @@ import {
   analyzeDiagnosis as analyzeDiagnosisOpenApi,
   assessDiagnosisCandidates as assessDiagnosisCandidatesOpenApi,
   cancelConsultationRun as cancelConsultationRunOpenApi,
-  deleteConversation as deleteConversationOpenApi,
-  generateConversationTitle as generateConversationTitleOpenApi,
   getConsultation as getConsultationOpenApi,
   getConsultationInteractionMetrics as getConsultationInteractionMetricsOpenApi,
   getConsultationThread as getConsultationThreadOpenApi,
   getResumeConsultationInteractionUrl,
   getStartConsultationRunUrl,
   getConversation as getConversationOpenApi,
-  getSharedConversation as getSharedConversationOpenApi,
-  listConversations as listConversationsOpenApi,
   listDiagnosisAnalyses as listDiagnosisAnalysesOpenApi,
   listRunEvents as listRunEventsOpenApi,
-  pinConversation as pinConversationOpenApi,
-  renameConversationTitle as renameConversationTitleOpenApi,
-  shareConversation as shareConversationOpenApi,
-  unshareConversation as unshareConversationOpenApi,
 } from "@/generated/api/bodysense";
 import {
   ResumeConsultationInteractionRequest as ResumeConsultationInteractionRequestSchema,
@@ -33,45 +25,22 @@ import type {
   ConsultationSessionResponseOutput as PublicConsultationSession,
   ConsultationThreadResponseOutput as PublicConsultationThread,
   ConversationMessageOutput as PublicConversationMessage,
-  ConversationOutput as PublicConversation,
   DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
 } from "@/generated/api/model";
 import {
   openApiAuthFetch,
-  openApiPublicFetch,
   withOpenApiError,
 } from "@/lib/openapi-client";
 import type {
-  Conversation,
-  ConversationListResponse,
   Message,
   ConsultationSession,
   ConsultationThread,
   DiagnosisAnalysis,
   DiagnosisCandidateAssessmentState,
-  ConversationShare,
-  SharedConversation,
   StreamEvent,
   ProjectedToolCall,
 } from "../types/consultation";
 import { projectPendingInteraction } from "../runtime/pendingInteractionProjection";
-
-function toConversation(input: PublicConversation): Conversation {
-  return {
-    id: input.id,
-    title: input.title ?? null,
-    title_status: input.title_status,
-    status: input.status,
-    pinned: input.pinned,
-    pinned_at: input.pinned_at ?? null,
-    default_model: input.default_model ?? null,
-    last_message_at: input.last_message_at ?? null,
-    message_count: 0,
-    metadata: input.metadata,
-    created_at: input.created_at,
-    updated_at: input.updated_at,
-  };
-}
 
 function toErrorInfo(
   value: Record<string, unknown> | undefined,
@@ -176,8 +145,6 @@ function toConsultationThread(
       title: input.conversation.title ?? null,
       title_status: input.conversation.title_status,
       status: input.conversation.status,
-      pinned: input.conversation.pinned,
-      pinned_at: input.conversation.pinned_at ?? null,
       default_model: input.conversation.default_model ?? null,
       last_message_at: input.conversation.last_message_at ?? null,
       message_count: input.conversation.message_count,
@@ -265,85 +232,14 @@ export const consultationApi = {
   // ===== General Conversation API =====
 
   /**
-   * List conversations with cursor-based pagination.
+   * Get (lazily creating) the user's single Conversation. Every device and
+   * tab resolves the same identity; there is no list, create or share call.
    */
-  async listConversations(params?: {
-    cursor?: string;
-    limit?: number;
-  }): Promise<ConversationListResponse> {
+  async getConversation(): Promise<{ conversationId: string }> {
     const result = await withOpenApiError(() =>
-      listConversationsOpenApi(params, undefined, openApiAuthFetch),
+      getConversationOpenApi(undefined, openApiAuthFetch),
     );
-    return {
-      conversations: result.conversations.map(toConversation),
-      next_cursor: result.nextCursor ?? null,
-      has_more: result.hasMore,
-    };
-  },
-
-  /** Get one conversation with its ordered messages. */
-  async getConversation(
-    id: string,
-  ): Promise<{ conversation: Conversation; messages: Message[] }> {
-    const result = await withOpenApiError(() =>
-      getConversationOpenApi(id, undefined, openApiAuthFetch),
-    );
-    return {
-      conversation: toConversation(result.conversation),
-      messages: result.messages.map(toConversationMessage),
-    };
-  },
-
-  async deleteConversation(id: string): Promise<void> {
-    await withOpenApiError(() =>
-      deleteConversationOpenApi(id, undefined, openApiAuthFetch),
-    );
-  },
-
-  async pinConversation(id: string, pinned: boolean): Promise<void> {
-    await withOpenApiError(() =>
-      pinConversationOpenApi(id, { pinned }, undefined, openApiAuthFetch),
-    );
-  },
-
-  async generateTitle(id: string): Promise<void> {
-    await withOpenApiError(() =>
-      generateConversationTitleOpenApi(id, undefined, openApiAuthFetch),
-    );
-  },
-
-  async renameTitle(id: string, title: string): Promise<void> {
-    await withOpenApiError(() =>
-      renameConversationTitleOpenApi(
-        id,
-        { title },
-        undefined,
-        openApiAuthFetch,
-      ),
-    );
-  },
-
-  async shareConversation(id: string): Promise<ConversationShare> {
-    return withOpenApiError(() =>
-      shareConversationOpenApi(id, undefined, openApiAuthFetch),
-    );
-  },
-
-  async unshareConversation(id: string): Promise<void> {
-    await withOpenApiError(() =>
-      unshareConversationOpenApi(id, undefined, openApiAuthFetch),
-    );
-  },
-
-  /** Fetch shared conversation content through the generated public client. */
-  async getSharedConversation(token: string): Promise<SharedConversation> {
-    const result = await withOpenApiError(() =>
-      getSharedConversationOpenApi(token, undefined, openApiPublicFetch),
-    );
-    return {
-      title: result.title,
-      messages: result.messages.map(toConversationMessage),
-    };
+    return { conversationId: result.conversation.id };
   },
 
   // ===== Consultation Domain API =====
