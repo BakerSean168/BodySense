@@ -476,6 +476,24 @@ func TestDiagnosisTypedEvidenceVersionsPostgres(t *testing.T) {
 	assertBodyFactCount(t, db, "condition_entry_evidence", a.owner, 0)
 }
 
+func TestDiagnosisEpisodeEvidenceRevisionFloorPostgres(t *testing.T) {
+	db := openBodyStateContextIntegrationDB(t)
+	a := seedDiagnosisFixture(t, db)
+	link := model.ConditionEntryEvidence{UserID: a.owner, ConditionID: a.entry.ID,
+		EvidenceType: model.DiagnosisSymptomEpisode, EvidenceID: a.episode,
+		Role: model.DiagnosisSupporting, Rationale: "Synthetic relevance; not causation", AnalyzedByRunID: a.run.ID}
+	// The fixture episode is created at body state revision 2 while revision 1
+	// exists for the same owner; both owner FKs alone would admit the link.
+	link.EvidenceVersion = 1
+	requireDiagnosisSQLState(t, db.Create(&link).Error, "23514")
+	// Rewriting a stored episode link down to a pre-creation revision is the same forgery.
+	link.EvidenceVersion = 2
+	if err := db.Create(&link).Error; err != nil {
+		t.Fatal(err)
+	}
+	requireDiagnosisSQLState(t, db.Model(&link).Update("evidence_version", 1).Error, "23514")
+}
+
 func TestDiagnosisEntryDimensionsPostgres(t *testing.T) {
 	db := openBodyStateContextIntegrationDB(t)
 	f := seedDiagnosisFixture(t, db)

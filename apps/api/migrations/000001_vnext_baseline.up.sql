@@ -4744,6 +4744,28 @@ CREATE TRIGGER diagnosis_decision_immutable BEFORE UPDATE ON public.diagnosis_de
 CREATE TRIGGER diagnosis_revision_immutable BEFORE UPDATE ON public.diagnosis_revisions
     FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
 
+-- A symptom episode evidence version is the frozen BodyState revision at
+-- assessment; it cannot predate the episode's own creation revision. Base
+-- columns are read because stored generated columns are not visible to
+-- BEFORE row triggers; a missing episode stays with the owner FK (23503).
+CREATE FUNCTION public.reject_episode_evidence_before_creation() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+DECLARE
+    episode_created_revision bigint;
+BEGIN
+    IF NEW.evidence_type = 'symptom_episode' THEN
+        SELECT se.created_revision INTO episode_created_revision FROM public.symptom_episodes se
+            WHERE se.user_id = NEW.user_id AND se.id = NEW.evidence_id;
+        IF episode_created_revision IS NOT NULL AND NEW.evidence_version < episode_created_revision THEN
+            RAISE EXCEPTION 'symptom episode evidence version predates episode creation' USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER episode_evidence_revision_floor BEFORE INSERT OR UPDATE ON public.condition_entry_evidence
+    FOR EACH ROW EXECUTE FUNCTION public.reject_episode_evidence_before_creation();
+
 --
 -- PostgreSQL database dump complete
 --

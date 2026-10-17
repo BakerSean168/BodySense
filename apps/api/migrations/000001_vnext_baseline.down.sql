@@ -74,3 +74,4 @@ DROP TABLE IF EXISTS
 DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
 
 DROP FUNCTION IF EXISTS public.reject_diagnosis_audit_update();
+DROP FUNCTION IF EXISTS public.reject_episode_evidence_before_creation();
