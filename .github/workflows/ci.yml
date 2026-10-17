@@ -212,6 +212,12 @@ jobs:
           BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
         run: go test -race ./internal/repository ./internal/service ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode|Diagnosis|UserAsset).*Postgres$' -count=1 -v
 
+      - name: Verify independent TrainingPlan decisions on PostgreSQL 18
+        working-directory: apps/api
+        env:
+          BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
+        run: go test -race ./internal/service -run '^TestIndependentTraining.*Postgres$' -count=1 -v
+
   recovery-migrations-child:
     name: PostgreSQL 18 vNext recovery child
     needs: scope

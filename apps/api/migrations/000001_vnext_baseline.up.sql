@@ -1368,6 +1368,8 @@ CREATE TABLE public.training_plans (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
     consultation_id uuid,
+    title text NOT NULL DEFAULT '',
+    current_accepted_revision_id uuid,
     goal text NOT NULL,
     duration_weeks integer DEFAULT 4 NOT NULL,
     current_week integer DEFAULT 1 NOT NULL,
@@ -2353,6 +2355,7 @@ ALTER TABLE ONLY public.training_logs
 
 ALTER TABLE ONLY public.training_plans
     ADD CONSTRAINT training_plans_pkey PRIMARY KEY (id);
+ALTER TABLE public.training_plans ADD CONSTRAINT training_plans_owner_identity UNIQUE (user_id, id);
 
 
 --
@@ -3189,7 +3192,7 @@ CREATE UNIQUE INDEX idx_training_plans_treatment_revision ON public.training_pla
 -- Name: idx_training_plans_user_active; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_training_plans_user_active ON public.training_plans USING btree (user_id) WHERE ((status)::text = 'active'::text);
+-- Independent plans deliberately have no owner-wide single-active index.
 
 
 --
@@ -4398,7 +4401,7 @@ ALTER TABLE ONLY public.training_logs
 --
 
 ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.training_plans(id) ON DELETE CASCADE;
+    ADD CONSTRAINT training_logs_plan_id_fkey FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE;
 
 
 --
@@ -4828,3 +4831,111 @@ CREATE TABLE public.user_asset_storage_cleanups (
 --
 -- PostgreSQL database dump complete
 --
+
+-- TP-002 slice 1: accepted prescriptions and proposals are separate authorities.
+-- Existing Treatment projection columns are removed with their consumers in slice 3.
+CREATE TABLE public.plan_proposals (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    kind text NOT NULL CHECK (kind IN ('create','update')),
+    state text NOT NULL CHECK (state IN ('pending','accepted','rejected','expired')),
+    initiated_by text NOT NULL CHECK (initiated_by IN ('user','agent')),
+    source_id text NOT NULL CHECK (length(btrim(source_id)) > 0),
+    plan_id uuid,
+    based_on_revision_id uuid,
+    draft jsonb NOT NULL CHECK (jsonb_typeof(draft) = 'object'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    UNIQUE (user_id, idempotency_key),
+    content_fingerprint text NOT NULL CHECK (content_fingerprint ~ '^[0-9a-f]{64}$'),
+    relevant_context_fingerprint text NOT NULL CHECK (relevant_context_fingerprint ~ '^[0-9a-f]{64}$'),
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    decision_id uuid,
+    expired_reason text CHECK (expired_reason IN ('timeout','base_revision_changed','relevant_context_changed')),
+    UNIQUE (user_id, id),
+    CHECK ((kind = 'create' AND plan_id IS NULL AND based_on_revision_id IS NULL)
+        OR (kind = 'update' AND plan_id IS NOT NULL AND based_on_revision_id IS NOT NULL)),
+    CHECK (expires_at > created_at AND expires_at <= created_at + interval '168 hours'),
+    CHECK ((state IN ('accepted','rejected')) = (decision_id IS NOT NULL)),
+    FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id)
+);
+CREATE TABLE public.training_plan_revisions (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    plan_id uuid NOT NULL,
+    parent_revision_id uuid,
+    snapshot jsonb NOT NULL CHECK (jsonb_typeof(snapshot) = 'object'),
+    change_set jsonb NOT NULL CHECK (jsonb_typeof(change_set) = 'array'),
+    source_kind text NOT NULL CHECK (source_kind = 'user_accepted_proposal'),
+    source_id text NOT NULL,
+    authorization_id uuid NOT NULL,
+    created_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, plan_id, id),
+    UNIQUE (user_id, authorization_id),
+    FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, plan_id, parent_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id)
+);
+ALTER TABLE public.training_plans ADD CONSTRAINT training_plans_current_revision_owner_fk
+    FOREIGN KEY (user_id, id, current_accepted_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE public.training_plans ADD CONSTRAINT independent_training_plans_status
+    CHECK (current_accepted_revision_id IS NULL OR status IN ('active','paused','completed'));
+ALTER TABLE public.plan_proposals ADD CONSTRAINT plan_proposals_base_owner_fk
+    FOREIGN KEY (user_id, plan_id, based_on_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id);
+CREATE TABLE public.plan_decision_receipts (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    proposal_id uuid NOT NULL,
+    decision_id uuid NOT NULL,
+    operation text NOT NULL CHECK (operation IN ('accept','reject')),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    fingerprint text NOT NULL CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+    plan_id uuid,
+    revision_id uuid,
+    created_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, decision_id),
+    UNIQUE (user_id, proposal_id),
+    CHECK ((operation = 'accept' AND plan_id IS NOT NULL AND revision_id IS NOT NULL)
+        OR (operation = 'reject' AND plan_id IS NULL AND revision_id IS NULL)),
+    FOREIGN KEY (user_id, proposal_id) REFERENCES public.plan_proposals(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, plan_id, revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id) DEFERRABLE INITIALLY DEFERRED
+);
+ALTER TABLE public.training_plan_revisions ADD CONSTRAINT training_plan_revisions_authorization_owner_fk
+    FOREIGN KEY (user_id, authorization_id) REFERENCES public.plan_decision_receipts(user_id, id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE public.plan_proposals ADD CONSTRAINT plan_proposals_decision_owner_fk
+    FOREIGN KEY (user_id, decision_id) REFERENCES public.plan_decision_receipts(user_id, decision_id) DEFERRABLE INITIALLY DEFERRED;
+
+-- Native body links retain owner identity; source versions are captured in the
+-- immutable snapshot and checked against the live ledger before acceptance.
+CREATE TABLE public.training_plan_revision_body_refs (
+    user_id uuid NOT NULL,
+    revision_id uuid NOT NULL,
+    body_fact_id uuid,
+    symptom_episode_id uuid,
+    body_observation_id uuid,
+    CHECK (num_nonnulls(body_fact_id, symptom_episode_id, body_observation_id) = 1),
+    FOREIGN KEY (user_id, revision_id) REFERENCES public.training_plan_revisions(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, body_fact_id) REFERENCES public.body_facts(user_id, id),
+    FOREIGN KEY (user_id, symptom_episode_id) REFERENCES public.symptom_episodes(user_id, id),
+    FOREIGN KEY (user_id, body_observation_id) REFERENCES public.body_observations(user_id, id)
+);
+CREATE FUNCTION public.prevent_training_revision_update() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'accepted training plan revisions are immutable';
+END;
+$$;
+CREATE TRIGGER training_plan_revisions_immutable BEFORE UPDATE ON public.training_plan_revisions
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_revision_update();
+
+-- Template and entry identities remain owned by one plan across revisions.
+CREATE TABLE public.training_plan_entry_identities (
+    user_id uuid NOT NULL,
+    kind text NOT NULL CHECK (kind IN ('template','exercise')),
+    id text NOT NULL,
+    plan_id uuid NOT NULL,
+    PRIMARY KEY (user_id, kind, id),
+    FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE
+);
