@@ -156,7 +156,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/consultations/:id/interrupts/:interactionId/answers", wrapper.ResumeConsultationInteraction)
 	protected.GET("/consultations/:id/interaction-metrics", wrapper.GetConsultationInteractionMetrics)
 
-	// Diagnosis analysis, assessment and replay surfaces.
+	// A single authenticated owner's committed Diagnosis; no proposal adoption on read.
+	protected.GET("/diagnosis", wrapper.GetNativeDiagnosis)
+	// Legacy per-run analysis, assessment and replay surfaces remain until their separate retirement slice.
 	protected.POST("/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
 	protected.GET("/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
 	protected.GET("/diagnosis-analyses/:analysisId", wrapper.GetDiagnosisAnalysis)
