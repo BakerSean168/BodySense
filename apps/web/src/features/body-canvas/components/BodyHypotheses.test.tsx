@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/stores/authStore";
@@ -396,4 +396,48 @@ it("rejects a correction receipt that does not identify a distinct successor", a
   await user.click(screen.getByRole("button", { name: "保存猜测更正" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("尚未收到匹配");
   expect(screen.queryByText(/猜测更正已保存/)).not.toBeInTheDocument();
+});
+it("moves keyboard focus into the draft and Escape cancels locally then returns focus", async () => {
+  mount();
+  await screen.findByText("还没有你提出的猜测。");
+  const user = userEvent.setup();
+  const opener = screen.getByRole("button", { name: "添加我的猜测" });
+  await user.click(opener);
+  expect(screen.getByLabelText("我的完整猜测")).toHaveFocus();
+  await user.type(screen.getByLabelText("我的完整猜测"), "只是尚未提交的猜测");
+  await user.keyboard("{Escape}");
+  expect(
+    screen.queryByRole("form", { name: "编辑我的猜测" }),
+  ).not.toBeInTheDocument();
+  // The opener is remounted when the draft closes; focus follows its stable ID.
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "添加我的猜测" })).toHaveFocus(),
+  );
+  expect(api.record).not.toHaveBeenCalled();
+});
+it("announces pending submission and does not let Escape imply cancellation of an in-flight commit", async () => {
+  let resolve!: (value: typeof receipt) => void;
+  api.record.mockReturnValue(
+    new Promise((r) => {
+      resolve = r;
+    }),
+  );
+  mount();
+  const user = await addDraft();
+  await user.click(screen.getByRole("button", { name: "保存猜测" }));
+  expect(screen.getByRole("form", { name: "编辑我的猜测" })).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "正在提交，等待保存回执",
+  );
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("form", { name: "编辑我的猜测" }),
+  ).toBeInTheDocument();
+  await act(async () => {
+    resolve(receipt);
+  });
+  expect(await screen.findByText("你的猜测已保存。")).toHaveFocus();
 });

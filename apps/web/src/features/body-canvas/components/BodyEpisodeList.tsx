@@ -1,5 +1,5 @@
 import type { BodyEpisode } from "@/features/profile/services/bodyEpisodeService";
-import { episodeStateLabel } from "../model/bodyEpisodeAssociations";
+import { BodyEpisodeStatus } from "./BodyEpisodeStatus";
 
 interface BodyEpisodeListProps {
   episodes: readonly BodyEpisode[];
@@ -21,9 +21,9 @@ export function BodyEpisodeList({
         {episodes.map((episode) => (
           <li className="bc-record-item" key={episode.id}>
             <strong>{episode.symptom_type}</strong>
-            <p className="bc-window-note">{episodeStateLabel(episode)}</p>
+            <BodyEpisodeStatus episode={episode} />
             <span className="bc-window-note">
-              有效关联陈述 {episode.links.length} 条
+              组织关联陈述 {episode.links.length} 条
             </span>
           </li>
         ))}

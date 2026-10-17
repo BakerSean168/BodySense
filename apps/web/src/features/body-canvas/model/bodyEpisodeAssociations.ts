@@ -115,14 +115,28 @@ export function episodeSourceOption(
   };
 }
 
+/** Presentation stays conservative when a source-qualified projection is incomplete. */
+export function episodeDisplayState(
+  episode: BodyEpisode,
+): BodyEpisode["projection"]["state"] {
+  const { state, reason, basis_fact_ids } = episode.projection;
+  if (episode.identity_status !== "current" || !basis_fact_ids.length)
+    return "unknown";
+  if (state === "ongoing" && reason === "explicit_current_report")
+    return "ongoing";
+  if (state === "ended" && reason === "explicit_resolution") return "ended";
+  return "unknown";
+}
+
 export function episodeStateLabel(episode: BodyEpisode): string {
-  if (episode.identity_status !== "current") return "经历身份已失效";
-  switch (episode.projection.state) {
+  if (episode.identity_status === "superseded") return "经历身份已被替代";
+  if (episode.identity_status === "invalidated") return "经历身份已失效";
+  switch (episodeDisplayState(episode)) {
     case "ongoing":
       return "截至明确报告时仍在持续";
     case "ended":
       return "有明确的结束报告";
-    default:
+    case "unknown":
       return "持续状态尚未确认";
   }
 }
