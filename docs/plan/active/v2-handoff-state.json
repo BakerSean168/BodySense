@@ -560,29 +560,34 @@
       ]
     }
   ],
-  "updatedAtUtc": "2026-10-17T04:40:35Z",
+  "updatedAtUtc": "2026-10-17T06:20:00Z",
   "latestExecution": {
-    "owner": "ChatGPT Web V2 Wave 1 closure reconciliation 2026-10-17",
-    "baselineHead": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
-    "previousBaselineHead": "6687a9e26f9548fdc3f3a43daf14785ba2cda2e6",
-    "state": "Wave1_issue302_303_304_closed;DX002_AS001_TP002_slice1_DRAFT;UI001_in_progress;no_domain_gate_promoted;release_HOLD",
-    "contract": "docs/plan/active/2026-10-17-v2-overall-progress-checkpoint.md",
+    "owner": "ChatGPT Web direct implementation; user handoff 2026-10-17",
+    "baselineHead": "391f3e5151d0b68330a45032c2e726802bfb56f8",
+    "previousBaselineHead": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
+    "state": "CHATGPT_direct;user_paused_hourly_task_not_resumed;bounded_slices_accepted;remaining_V2_open;release_HOLD",
+    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
     "nextTickets": [
       "DX-002",
-      "AS-001",
+      "DX-003",
       "TP-002",
-      "UI-001",
+      "AS-001",
       "PC-RET-001",
       "BS-AGENT-001",
+      "UI-001",
       "QA-001"
     ],
     "verification": {
-      "mergedEvidence": "#302 PR321/324:6456d52d;#303 PR319/325:51b6380f;#304 PR320:107e386c",
-      "currentDrafts": "#322 DX-002 (new exact head CI pending), #326 TP-002 (Diagnosis-context review needed), #327 AS-001 (independent source-removal audit repair needed)",
-      "readiness": "No domain gate raised: all five domain whole-product acceptance sets incomplete",
-      "operations": "Documentation only; no runtime/database/staging/production/scheduler changes"
+      "mergedEvidence": "PR322:0dfc2454e2fd251666d56cf252ef217e24b5950b;PR326:76aa8d22759de7f9eea2db8bcce79b68c2f970ed;PR327:b82a384b7189747e7a2ea2b5cf35f4f311a4545c;PR330:ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48;PR331:165cc8f112670fecc4233fb939ff25e44dbe6eb0;PR332:391f3e5151d0b68330a45032c2e726802bfb56f8",
+      "currentDrafts": "No interrupted V2 code PR remains open in this acceptance batch; unrelated PRs were not touched.",
+      "readiness": "No whole-domain gate raised. #305/#306/#309/#311 remain open for residual scope.",
+      "operations": "Direct ChatGPT source implementation and isolated tests; no provider delegation, scheduler resume, staging/prod DB or release operation.",
+      "validation": "PR326 exact-head 12 SUCCESS; PR331 10 SUCCESS + 2 scoped PG skips; PR332 exact-head 12 SUCCESS; direct full isolated PG18 race/vet suites and 29-test responsive Web regression passed."
     },
-    "auditedAtUtc": "2026-10-17T04:40:35Z"
+    "auditedAtUtc": "2026-10-17T06:20:00Z",
+    "executionMode": "CHATGPT",
+    "schedulerState": "user_paused_do_not_reenable_without_explicit_request",
+    "providerPolicy": "No further exhausted community-provider calls or new T3 sessions for this takeover."
   },
   "previousExecution": {
     "owner": "Codex/User-requested-PR6-status-sync-20261016",

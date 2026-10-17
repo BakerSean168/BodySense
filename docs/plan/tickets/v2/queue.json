@@ -181,9 +181,10 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "Folded into DX-002 slice 1 under big-bang: the frozen ConditionEntry/Proposal/Decision contract ships as the first commit of the DX-002 vertical; no separate contract-only PR. Q-17 TTL stays undecided.",
+      "remainingScope": "Frozen contract shipped with #322. Diagnosis TTL remains undecided; whole read/decision API gate is not complete.",
       "githubIssue": 305,
-      "githubIssueNote": "folded into DX-002 slice 1"
+      "githubIssueNote": "folded into DX-002 slice 1",
+      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
     },
     {
       "id": "DX-002",
@@ -199,7 +200,9 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "githubIssue": 305
+      "githubIssue": 305,
+      "remainingScope": "Persistence #322 and per-choice receipt/audit transaction #332 are merged. Whole-run atomic adoption, evidence-addition rechecks, public read/decide APIs and legacy retirement remain. A recorded choice is not a DiagnosisRevision.",
+      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
     },
     {
       "id": "DX-003",
@@ -295,7 +298,9 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "githubIssue": 311
+      "githubIssue": 311,
+      "remainingScope": "Independent plans/revisions/proposal accept and native Diagnosis/UserAsset qualification merged in #326. Public HTTP/generation integration and Treatment retirement remain.",
+      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
     },
     {
       "id": "TP-003",
@@ -327,7 +332,9 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "githubIssue": 306
+      "githubIssue": 306,
+      "remainingScope": "Native UserAsset/source-removal persistence and known source-copy cleanup merged in #327. Remaining Media/Reports presentation and optional Profile fields; AS-002 verified erasure is separate.",
+      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
     },
     {
       "id": "AS-002",
@@ -359,8 +366,9 @@
       "projectId": null,
       "worktree": null,
       "acceptedSha": null,
-      "remainingScope": "PR288 completed native Web reads and retained V2 amendments/Episode controls; PR298 full suite accepted. Remaining final Person/Episode and Hypothesis/ConcernGroup presentation/Penpot acceptance only; no legacy snapshot migration remains.",
-      "githubIssue": 309
+      "remainingScope": "Hypothesis/ConcernGroup UI #330 and responsive Person/Episode slice #331 merged. Real backend end-to-end and authoritative visual/Penpot acceptance remain; no whole-domain gate is raised.",
+      "githubIssue": 309,
+      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
     },
     {
       "id": "UI-DX-001",
@@ -471,8 +479,8 @@
   "baselineFrozenAtUtc": "2026-10-16T12:34:08Z",
   "previousFrozenBaselineSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
   "newWriterAdmissionPolicy": "SINGLE_DESIGNATED_WRITER_UNDER_MASTER_BIG_BANG_POLICY;status_sync_does_not_admit_runtime_writers",
-  "auditedAtUtc": "2026-10-17T04:40:35Z",
-  "postMergeMainSha": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
+  "auditedAtUtc": "2026-10-17T06:20:00Z",
+  "postMergeMainSha": "391f3e5151d0b68330a45032c2e726802bfb56f8",
   "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38901329790",
   "latestObservedMainCiStatus": "PR249_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
   "mergedDomainContractPr": 264,
@@ -505,6 +513,54 @@
     "obsPrivacyConcealment": {
       "pr": 263,
       "scope": "V12_foreign_revision_conflict_concealment_only;V12_close_out_still_open"
+    },
+    "dx002NativePersistence": {
+      "pr": 322,
+      "sourceHead": "c0caf60d336a353a02dd62720593263906fc31bc",
+      "mergedMainSha": "0dfc2454e2fd251666d56cf252ef217e24b5950b",
+      "mergedAtUtc": "2026-10-17T04:43:09Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39002981553/job/117311269435",
+      "scope": "bounded_slice_only_not_whole_ticket_or_domain_acceptance"
+    },
+    "tp002IndependentPersistence": {
+      "pr": 326,
+      "sourceHead": "c448142f331fc024d0198c9efb45141d2bba33f2",
+      "mergedMainSha": "76aa8d22759de7f9eea2db8bcce79b68c2f970ed",
+      "mergedAtUtc": "2026-10-17T05:45:52Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39006625624/job/117321666843",
+      "scope": "bounded_slice_only_not_whole_ticket_or_domain_acceptance"
+    },
+    "as001NativeSourceLifecycle": {
+      "pr": 327,
+      "sourceHead": "b93ebe2ab33a5fb1a1693bad5d894c545b90ac78",
+      "mergedMainSha": "b82a384b7189747e7a2ea2b5cf35f4f311a4545c",
+      "mergedAtUtc": "2026-10-17T05:31:48Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39006070547/job/117320106703",
+      "scope": "bounded_slice_only_not_whole_ticket_or_domain_acceptance"
+    },
+    "ui001HypothesisWindow": {
+      "pr": 330,
+      "sourceHead": "463bbbbac50bf8583316cc76db74c4fb3e873c58",
+      "mergedMainSha": "ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48",
+      "mergedAtUtc": "2026-10-17T04:59:50Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39004009597/job/117314368141",
+      "scope": "bounded_slice_only_not_whole_ticket_or_domain_acceptance"
+    },
+    "ui001ResponsivePerson": {
+      "pr": 331,
+      "sourceHead": "abfb1e8093bf9f202343cb2d1754b0d85099bcc9",
+      "mergedMainSha": "165cc8f112670fecc4233fb939ff25e44dbe6eb0",
+      "mergedAtUtc": "2026-10-17T05:57:52Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39007572885/job/117324571295",
+      "scope": "bounded_slice_only_not_whole_ticket_or_domain_acceptance"
+    },
+    "dx002DecisionRecording": {
+      "pr": 332,
+      "sourceHead": "f558093bc6253bcf2867c4c3e1d9da670526c561",
+      "mergedMainSha": "391f3e5151d0b68330a45032c2e726802bfb56f8",
+      "mergedAtUtc": "2026-10-17T06:18:55Z",
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39008817155",
+      "scope": "choice_receipts_and_ordered_audit_only_no_whole_run_adoption_or_public_api"
     }
   },
   "tpD1CrossTrackBlockingReproduction": {
@@ -533,5 +589,21 @@
       305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317
     ],
     "note": "Progress-only sync; #322/#326/#327 remain Draft and do not lift domain gates."
+  },
+  "directTakeover": {
+    "asOfUtc": "2026-10-17T06:20:00Z",
+    "mode": "CHATGPT",
+    "scheduler": "explicitly_user_paused",
+    "newProviderCalls": false,
+    "remainingIssueIds": [
+      305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317
+    ],
+    "diagnosisChoiceSlice": {
+      "pr": 332,
+      "head": "f558093bc6253bcf2867c4c3e1d9da670526c561",
+      "state": "MERGED",
+      "scope": "per-choice transaction/audit only; no automatic Diagnosis adoption",
+      "mergeSha": "391f3e5151d0b68330a45032c2e726802bfb56f8"
+    }
   }
 }
