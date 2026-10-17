@@ -165,7 +165,7 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid asset_id"})
 		return fmt.Errorf("invalid asset_id: %w", err)
 	}
-	asset, err := s.assets.GetByID(ctx, assetID)
+	asset, err := s.assets.GetOwnedByID(ctx, assetID, job.UserID)
 	if err != nil {
 		return fmt.Errorf("load OCR asset: %w", err)
 	}
@@ -407,7 +407,7 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid asset_id"})
 		return fmt.Errorf("invalid asset_id: %w", err)
 	}
-	asset, err := s.assets.GetByID(ctx, assetID)
+	asset, err := s.assets.GetOwnedByID(ctx, assetID, job.UserID)
 	if err != nil {
 		return fmt.Errorf("load posture asset: %w", err)
 	}

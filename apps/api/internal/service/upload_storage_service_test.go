@@ -43,10 +43,6 @@ func (r *fakeUserAssetRepository) Create(_ context.Context, asset *model.UserAss
 	return nil
 }
 
-func (r *fakeUserAssetRepository) GetByID(_ context.Context, id uuid.UUID) (*model.UserAsset, error) {
-	return r.byID[id], nil
-}
-
 func (r *fakeUserAssetRepository) GetOwnedByID(_ context.Context, id, userID uuid.UUID) (*model.UserAsset, error) {
 	asset := r.byID[id]
 	if asset == nil || asset.UserID != userID {

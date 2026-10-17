@@ -57,7 +57,7 @@ var ErrUploadSourceUnavailable = errors.New("upload source is unavailable")
 // userAssetRepository is the file-identity port the upload domain needs.
 type userAssetRepository interface {
 	Create(ctx context.Context, asset *model.UserAsset) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.UserAsset, error)
+	GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error)
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserAsset, error)
 	MarkSourceRemoved(ctx context.Context, id, userID uuid.UUID) (bool, error)
 }
@@ -348,7 +348,7 @@ func (s *UploadService) GetUpload(ctx context.Context, userID uuid.UUID, assetID
 // loadOwnedAsset returns the caller's asset or ErrUploadNotFound. A foreign
 // asset is deliberately indistinguishable from a missing one.
 func (s *UploadService) loadOwnedAsset(ctx context.Context, userID, assetID uuid.UUID) (*model.UserAsset, error) {
-	asset, err := s.assets.GetByID(ctx, assetID)
+	asset, err := s.assets.GetOwnedByID(ctx, assetID, userID)
 	if err != nil {
 		return nil, err
 	}

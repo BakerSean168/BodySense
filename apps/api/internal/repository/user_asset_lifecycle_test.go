@@ -152,3 +152,19 @@ func TestUserAssetMarkSourceRemovedOnlyFromAvailable(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUserAssetReadRequiresOwnerInSQL(t *testing.T) {
+	_, _, assets, mock, cleanup := setupLifecycleRepos(t)
+	defer cleanup()
+	id, foreign := uuid.New(), uuid.New()
+	mock.ExpectQuery(`SELECT .* FROM "user_assets" WHERE id = \$1 AND user_id = \$2 .*`).
+		WithArgs(id, foreign, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id"}))
+	asset, err := assets.GetOwnedByID(context.Background(), id, foreign)
+	if err != nil || asset != nil {
+		t.Fatalf("foreign lookup asset=%v err=%v", asset, err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}

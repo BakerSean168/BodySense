@@ -26,24 +26,6 @@ func (r *UserAssetRepository) Create(ctx context.Context, asset *model.UserAsset
 	return database.FromContext(ctx, r.db).Create(asset).Error
 }
 
-// GetByID retrieves an asset by ID without an owner predicate. Callers must
-// treat a foreign asset exactly like a missing one (owner-masked 404);
-// ownership is decided by the caller comparing UserID, never returned.
-// Returns nil if not found (not an error).
-func (r *UserAssetRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.UserAsset, error) {
-	var asset model.UserAsset
-	err := database.FromContext(ctx, r.db).
-		Where("id = ?", id).
-		First(&asset).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &asset, nil
-}
-
 // GetOwnedByID retrieves one asset enforced by owner scope, or nil when the
 // asset does not exist for this owner.
 func (r *UserAssetRepository) GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error) {

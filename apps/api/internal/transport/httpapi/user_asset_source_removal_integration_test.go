@@ -141,6 +141,12 @@ func TestUserAssetSourceRemovalPostgres(t *testing.T) {
 		t.Fatalf("upload report: %v", err)
 	}
 	assetID := view.ID
+	if asset, err := assetRepo.GetOwnedByID(ctx, assetID, foreign); err != nil || asset != nil {
+		t.Fatalf("foreign repository read must return no row: asset=%v err=%v", asset, err)
+	}
+	if asset, err := assetRepo.GetOwnedByID(ctx, assetID, owner); err != nil || asset == nil {
+		t.Fatalf("owner repository read: asset=%v err=%v", asset, err)
+	}
 	pendingRun, err := extractionRepo.GetLatestOwnedByAsset(ctx, assetID, owner)
 	if err != nil || pendingRun == nil || pendingRun.Status != model.DerivedRunPending {
 		t.Fatalf("pending extraction run missing: run=%#v err=%v", pendingRun, err)
