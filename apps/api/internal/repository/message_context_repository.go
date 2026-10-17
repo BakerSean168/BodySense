@@ -53,6 +53,9 @@ func (r *MessageContextRepository) SearchRelevant(
 		Joins("JOIN conversations ON conversations.id = messages.conversation_id").
 		Where("messages.conversation_id = ? AND conversations.user_id = ?", conversationID, userID).
 		Where("messages.seq <= ?", cutoff).
+		// Raw text before the retention context cursor has left the AI
+		// context (PC-RET-001); retained evidence rows stay out of it too.
+		Where("messages.seq >= conversations.context_start_seq").
 		Where("messages.status = ?", "completed").
 		Where("messages.role IN ?", []string{"user", "assistant"}).
 		Where("COALESCE(messages.content_text, '') <> ''")
@@ -65,9 +68,9 @@ func (r *MessageContextRepository) SearchRelevant(
 		}
 		pattern := "%" + escapeLike(term) + "%"
 		if termClause == nil {
-			termClause = r.db.Where("messages.content_text ILIKE ? ESCAPE '\\\\'", pattern)
+			termClause = r.db.Where("messages.content_text ILIKE ? ESCAPE '\\'", pattern)
 		} else {
-			termClause = termClause.Or("messages.content_text ILIKE ? ESCAPE '\\\\'", pattern)
+			termClause = termClause.Or("messages.content_text ILIKE ? ESCAPE '\\'", pattern)
 		}
 	}
 	if termClause == nil {

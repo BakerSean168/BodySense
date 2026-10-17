@@ -450,7 +450,12 @@ CREATE TABLE public.conversations (
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_message_at timestamp with time zone
+    last_message_at timestamp with time zone,
+    processed_through_seq integer DEFAULT 0 NOT NULL,
+    context_start_seq integer DEFAULT 1 NOT NULL,
+    pruned_through_seq integer DEFAULT 0 NOT NULL,
+    retention_revision bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT conversations_retention_cursor_order_check CHECK (((pruned_through_seq >= 0) AND (processed_through_seq >= pruned_through_seq) AND (context_start_seq > pruned_through_seq) AND (context_start_seq <= (processed_through_seq + 1)) AND (retention_revision >= 0)))
 );
 
 

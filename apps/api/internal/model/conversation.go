@@ -29,6 +29,14 @@ type Conversation struct {
 	CreatedAt              time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt              time.Time      `gorm:"not null;default:now()" json:"updated_at"`
 	LastMessageAt          *time.Time     `json:"last_message_at,omitempty"`
+	// Retention cursors (PC-D6, ChatRetentionCursor). They are Go-owned
+	// message seq positions, never message ids, so they stay meaningful after
+	// the rows they passed are physically pruned. Only the retention commands
+	// move them; see model/chat_retention.go for their semantics.
+	ProcessedThroughSeq int   `gorm:"not null;default:0" json:"-"`
+	ContextStartSeq     int   `gorm:"not null;default:1" json:"-"`
+	PrunedThroughSeq    int   `gorm:"not null;default:0" json:"-"`
+	RetentionRevision   int64 `gorm:"not null;default:0" json:"-"`
 }
 
 // TableName specifies the table name for GORM.
