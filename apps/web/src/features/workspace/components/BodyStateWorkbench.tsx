@@ -1,3 +1,4 @@
+import { BodyHypotheses } from "@/features/body-canvas/components/BodyHypotheses";
 import { BodyFactRecords } from "@/features/body-canvas/components/BodyFactRecords";
 import { BodyEpisodeAssociations } from "@/features/body-canvas/components/BodyEpisodeAssociations";
 import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
@@ -10,6 +11,7 @@ export function BodyStateWorkbench({ canEdit }: { canEdit: boolean }) {
     <div className="grid gap-4">
       <BodyFactRecords canEdit={canEdit} />
       <BodyEpisodeAssociations canEdit={canEdit} />
+      <BodyHypotheses canEdit={canEdit} />
       {records.isPending ? (
         <p role="status">正在读取观察记录…</p>
       ) : records.isError ? (
