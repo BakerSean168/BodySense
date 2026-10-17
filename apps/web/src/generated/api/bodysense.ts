@@ -55,7 +55,9 @@ import {
   KnowledgeStats,
   LifestyleSnapshot,
   LogoutAcknowledgement,
+  NativeDiagnosisDecisionReceipt,
   NativeDiagnosisProjection,
+  NativeDiagnosisSettlementReceipt,
   NullableUserProfileResponse,
   OnboardingContextResult,
   OutcomeListResponse,
@@ -159,7 +161,11 @@ import type {
   ListRunEventsParams,
   ListTreatmentRevisionsParams,
   LogoutAcknowledgementOutput,
+  NativeDiagnosisDecisionReceiptOutput,
+  NativeDiagnosisDecisionRequest,
   NativeDiagnosisProjectionOutput,
+  NativeDiagnosisSettlementReceiptOutput,
+  NativeDiagnosisSettlementRequest,
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
@@ -2977,6 +2983,116 @@ export const getNativeDiagnosis = async ( options?: RequestInit, fetchFn?: typeo
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? NativeDiagnosisProjection.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDecideNativeDiagnosisProposalUrl = (runId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis/analysis-runs/${runId}/decisions`
+}
+
+/**
+ * Produces an immutable selection receipt, NOT a DiagnosisRevision or Condition adoption.
+ * @summary Record the authenticated user's explicit choice on one frozen Diagnosis proposal.
+ */
+export const decideNativeDiagnosisProposal = async (runId: string,
+    nativeDiagnosisDecisionRequest: NativeDiagnosisDecisionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisDecisionReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getDecideNativeDiagnosisProposalUrl(runId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(nativeDiagnosisDecisionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisDecisionReceipt, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisDecisionReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisDecisionReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getSettleNativeDiagnosisRunUrl = (runId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis/analysis-runs/${runId}/settlement`
+}
+
+/**
+ * User-controlled CloseRemaining may expire pending choices; only a committed outcome creates DiagnosisRevision.
+ * @summary Commit or close the entire user's formal Diagnosis run atomically.
+ */
+export const settleNativeDiagnosisRun = async (runId: string,
+    nativeDiagnosisSettlementRequest: NativeDiagnosisSettlementRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisSettlementReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getSettleNativeDiagnosisRunUrl(runId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(nativeDiagnosisSettlementRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisSettlementReceipt, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisSettlementReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisSettlementReceipt.parse(parsedBody) : parsedBody
   return data
 }
 

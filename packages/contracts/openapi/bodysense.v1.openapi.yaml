@@ -1582,6 +1582,76 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/analysis-runs/{runId}/decisions:
+    post:
+      operationId: decideNativeDiagnosisProposal
+      summary: Record the authenticated user's explicit choice on one frozen Diagnosis proposal.
+      description: Produces an immutable selection receipt, NOT a DiagnosisRevision or Condition adoption.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisDecisionRequest'}
+      responses:
+        '200':
+          description: Recorded user decision; adoption remains pending explicit whole-run settlement.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisDecisionReceipt'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/analysis-runs/{runId}/settlement:
+    post:
+      operationId: settleNativeDiagnosisRun
+      summary: Commit or close the entire user's formal Diagnosis run atomically.
+      description: User-controlled CloseRemaining may expire pending choices; only a committed outcome creates DiagnosisRevision.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisSettlementRequest'}
+      responses:
+        '200':
+          description: Immutable whole-run settlement outcome; no-change and safety-blocked are not adoption.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisSettlementReceipt'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/diagnosis-analyses:
     get:
       operationId: listDiagnosisAnalyses
@@ -4436,6 +4506,68 @@ components:
       type: array
       items:
         type: string
+    NativeDiagnosisDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [proposalId, presentedFingerprint, expectedRevision, decision, toolCallId, idempotencyKey]
+      properties:
+        proposalId: {type: string, format: uuid}
+        presentedFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        decision: {type: string, enum: [accept, reject]}
+        toolCallId: {type: string, minLength: 1, maxLength: 256, pattern: '^\S(?:.*\S)?$'}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    NativeDiagnosisDecisionReceipt:
+      type: object
+      additionalProperties: false
+      required: [decisionId, proposalId, runId, contentFingerprint, decidedEvidenceRefs, decision, expectedRevision, toolCallId, idempotencyKey, receiptId, decidedAt]
+      properties:
+        decisionId: {type: string, format: uuid}
+        proposalId: {type: string, format: uuid}
+        runId: {type: string, format: uuid}
+        contentFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        decidedEvidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+        decision: {type: string, enum: [accept, reject]}
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        toolCallId: {type: string, minLength: 1}
+        idempotencyKey: {type: string, minLength: 1}
+        receiptId: {type: string, format: uuid}
+        decidedAt: {type: string, format: date-time}
+    NativeDiagnosisDecisionEvidence:
+      type: object
+      additionalProperties: false
+      required: [evidenceType, evidenceId, version]
+      properties:
+        evidenceType: {type: string, enum: [body_fact, body_observation, symptom_episode, document_evidence]}
+        evidenceId: {type: string, format: uuid}
+        version: {type: string, pattern: '^[1-9][0-9]*$'}
+    NativeDiagnosisSettlementRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedRevision, toolCallId, idempotencyKey, closeRemaining]
+      properties:
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        toolCallId: {type: string, minLength: 1, maxLength: 256, pattern: '^\S(?:.*\S)?$'}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+        closeRemaining: {type: boolean}
+    NativeDiagnosisSettlementReceipt:
+      type: object
+      additionalProperties: false
+      required: [settlementId, runId, expectedRevision, revision, outcome, conditionIds, decisionIds, bodyStateRevision, idempotencyKey, toolCallId, receiptId, settledAt]
+      properties:
+        settlementId: {type: string, format: uuid}
+        runId: {type: string, format: uuid}
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        revision: {type: integer, format: int64, minimum: 0}
+        outcome: {type: string, enum: [committed, closed_without_change, safety_blocked]}
+        diagnosisRevisionId: {type: string, format: uuid}
+        conditionIds: {type: array, items: {type: string, format: uuid}}
+        decisionIds: {type: array, items: {type: string, format: uuid}}
+        bodyStateRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {type: string, minLength: 1}
+        toolCallId: {type: string, minLength: 1}
+        receiptId: {type: string, format: uuid}
+        settledAt: {type: string, format: date-time}
     NativeDiagnosisProjection:
       type: object
       additionalProperties: false

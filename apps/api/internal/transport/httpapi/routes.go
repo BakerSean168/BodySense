@@ -158,6 +158,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 
 	// A single authenticated owner's committed Diagnosis; no proposal adoption on read.
 	protected.GET("/diagnosis", wrapper.GetNativeDiagnosis)
+	// Explicit selection is not adoption; only the separately confirmed settlement mutates the Diagnosis head.
+	protected.POST("/diagnosis/analysis-runs/:runId/decisions", wrapper.DecideNativeDiagnosisProposal)
+	protected.POST("/diagnosis/analysis-runs/:runId/settlement", wrapper.SettleNativeDiagnosisRun)
 	// Legacy per-run analysis, assessment and replay surfaces remain until their separate retirement slice.
 	protected.POST("/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
 	protected.GET("/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
