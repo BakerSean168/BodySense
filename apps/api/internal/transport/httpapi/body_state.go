@@ -54,6 +54,7 @@ type PublicServer struct {
 	treatmentTraining        treatmentTrainingApplication
 	treatmentReplay          treatmentReplayApplication
 	training                 trainingApplication
+	trainingPlans            trainingPlanApplication
 	uploads                  uploadApplication
 	healthDocumentReviews    healthDocumentReviewApplication
 	knowledgeSources         knowledgeSourceApplication

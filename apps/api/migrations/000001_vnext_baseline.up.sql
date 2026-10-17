@@ -1382,7 +1382,8 @@ CREATE TABLE public.training_plans (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     treatment_id uuid,
     treatment_revision_id uuid,
-    status character varying(20) DEFAULT 'active'::character varying NOT NULL
+    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    status_revision bigint DEFAULT 0 NOT NULL CHECK (status_revision >= 0)
 );
 
 
@@ -5007,6 +5008,35 @@ CREATE TABLE public.training_plan_revision_conditions (
     FOREIGN KEY (user_id, revision_id) REFERENCES public.training_plan_revisions(user_id, id) ON DELETE CASCADE,
     FOREIGN KEY (user_id, condition_id) REFERENCES public.condition_entries(user_id, id)
 );
+
+-- TP-002 slice 2: plan status is user-managed. Only an explicit user command
+-- changes it, one audited event per status revision; Safety, BodyState,
+-- Diagnosis or feedback never write it (they project review/gate on read).
+CREATE TABLE public.training_plan_status_events (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    plan_id uuid NOT NULL,
+    from_status text NOT NULL CHECK (from_status IN ('active','paused','completed')),
+    to_status text NOT NULL CHECK (to_status IN ('active','paused','completed')),
+    status_revision bigint NOT NULL CHECK (status_revision > 0),
+    source_kind text NOT NULL CHECK (source_kind = 'user_command'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    created_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, plan_id, status_revision),
+    CHECK (from_status <> to_status),
+    CHECK ((from_status, to_status) IN (('active','paused'),('paused','active'),('active','completed'),('paused','completed'),('completed','active'))),
+    FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE
+);
+CREATE FUNCTION public.prevent_training_status_event_update() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'training plan status events are immutable';
+END;
+$$;
+CREATE TRIGGER training_plan_status_events_immutable BEFORE UPDATE ON public.training_plan_status_events
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_status_event_update();
 
 
 -- DX-002 atomic settlement: one immutable whole-run outcome.

@@ -122,3 +122,20 @@ type PlanDecisionReceipt struct {
 }
 
 func (PlanDecisionReceipt) TableName() string { return "plan_decision_receipts" }
+
+// TrainingPlanStatusEvent is the immutable audit of one explicit user status
+// command. It is not a content revision and never changes the prescription.
+type TrainingPlanStatusEvent struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID             uuid.UUID `gorm:"type:uuid"`
+	PlanID             uuid.UUID `gorm:"type:uuid"`
+	FromStatus         trainingplan.PlanStatus
+	ToStatus           trainingplan.PlanStatus
+	StatusRevision     int64
+	SourceKind         string
+	IdempotencyKey     string
+	RequestFingerprint string
+	CreatedAt          time.Time
+}
+
+func (TrainingPlanStatusEvent) TableName() string { return "training_plan_status_events" }

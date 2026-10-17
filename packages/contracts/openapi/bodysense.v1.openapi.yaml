@@ -2165,6 +2165,133 @@ paths:
         '400': {$ref: '#/components/responses/InvalidRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/training-plans:
+    get:
+      operationId: listTrainingPlanRecords
+      summary: List the authenticated user's independent accepted TrainingPlans in every status.
+      description: Several plans may be active at once. Each record carries its current immutable revision content, a read-only review hint and a freshly evaluated Safety execution gate; reading never modifies a plan.
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Owned TrainingPlans, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanRecordListResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '503': {$ref: '#/components/responses/ValidationUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-plans/{planId}:
+    get:
+      operationId: getTrainingPlanRecord
+      summary: Get one owned independent TrainingPlan; another owner's id is not found.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanId'}]
+      responses:
+        '200': {description: Owned TrainingPlan, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanRecord'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ValidationUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-plans/{planId}/revisions/{revisionId}:
+    get:
+      operationId: getTrainingPlanRevisionRecord
+      summary: Get one immutable accepted revision of an owned TrainingPlan.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanId'}, {$ref: '#/components/parameters/PlanRevisionId'}]
+      responses:
+        '200': {description: Immutable accepted revision, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanRevisionRecord'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-plans/{planId}/status:
+    post:
+      operationId: changeTrainingPlanStatus
+      summary: Apply the authenticated user's explicit status change to one owned TrainingPlan.
+      description: User-managed active/paused/completed transitions with an expected status revision and idempotency key. Never changes content, revisions, logs or any other plan, and never grants Trainer execution; the Safety gate stays separate.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanStatusChangeRequest'}}}
+      responses:
+        '200': {description: Immutable status event receipt, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanStatusReceipt'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/plan-proposals:
+    get:
+      operationId: listPlanProposalRecords
+      summary: List the authenticated user's TrainingPlan proposals, newest first.
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: state
+        in: query
+        required: false
+        schema: {$ref: '#/components/schemas/PlanProposalState'}
+      responses:
+        '200': {description: Owned proposals, content: {application/json: {schema: {$ref: '#/components/schemas/PlanProposalRecordListResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      operationId: createPlanProposal
+      summary: Save the authenticated user's own complete plan draft as a pending PlanProposal.
+      description: A user-authored draft (create, or update pinned to the plan's current accepted revision). It is not an accepted plan until a separate explicit accept. Agent generation never uses this route.
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreatePlanProposalRequest'}}}
+      responses:
+        '200': {description: Pending proposal (an exact idempotent retry returns the original), content: {application/json: {schema: {$ref: '#/components/schemas/PlanProposalRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ValidationUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/plan-proposals/{proposalId}:
+    get:
+      operationId: getPlanProposalRecord
+      summary: Get one owned TrainingPlan proposal; another owner's id is not found.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanProposalId'}]
+      responses:
+        '200': {description: Owned proposal, content: {application/json: {schema: {$ref: '#/components/schemas/PlanProposalRecord'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/plan-proposals/{proposalId}/accept:
+    post:
+      operationId: acceptPlanProposal
+      summary: Accept one pending proposal as the authenticated user's explicit decision.
+      description: Under the owner lock, rechecks fingerprint, base revision, 7-day TTL and current BodyState/Diagnosis/Safety context, then writes one immutable revision and receipt. Saving does not authorize execution; the returned gate is a current projection.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanProposalId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlanDecisionRequest'}}}
+      responses:
+        '200': {description: Acceptance receipt, content: {application/json: {schema: {$ref: '#/components/schemas/PlanAcceptanceReceipt'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ValidationUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/plan-proposals/{proposalId}/reject:
+    post:
+      operationId: rejectPlanProposal
+      summary: Reject one pending proposal as the authenticated user's explicit decision; no plan changes.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/PlanProposalId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlanDecisionRequest'}}}
+      responses:
+        '200': {description: Rejection receipt, content: {application/json: {schema: {$ref: '#/components/schemas/PlanRejectionReceipt'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/assets/{id}:
     parameters:
     - name: id
@@ -2745,6 +2872,21 @@ components:
       schema:
         type: string
         format: uuid
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    PlanRevisionId:
+      name: revisionId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    PlanProposalId:
+      name: proposalId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     TrainingPlanId:
       name: id
       in: path
@@ -4556,6 +4698,249 @@ components:
           minLength: 1
         message:
           type: string
+    PlanIdempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    PlanFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+    TrainingPlanStatus:
+      type: string
+      enum: [active, paused, completed]
+      description: User-managed status only. There is no review_recommended status; Safety blocks execution through executionGate without changing it.
+    PlanProposalState: {type: string, enum: [pending, accepted, rejected, expired]}
+    PlanBodyRef:
+      type: object
+      additionalProperties: false
+      required: [kind, id, sourceVersion]
+      properties:
+        kind: {type: string, enum: [body_fact, symptom_episode, body_observation]}
+        id: {type: string, format: uuid}
+        sourceVersion: {type: integer, format: int64, minimum: 1}
+    PlanTarget:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      description: repetitions uses min (and optional max); duration uses seconds; distance uses meters.
+      properties:
+        kind: {type: string, enum: [repetitions, duration, distance]}
+        min: {type: number, format: double, exclusiveMinimum: 0}
+        max: {type: number, format: double, exclusiveMinimum: 0}
+        seconds: {type: number, format: double, exclusiveMinimum: 0}
+        meters: {type: number, format: double, exclusiveMinimum: 0}
+    PlanExercise:
+      type: object
+      additionalProperties: false
+      required: [planExerciseId, exerciseId, nameSnapshot, sets, target]
+      properties:
+        planExerciseId: {type: string, minLength: 1, maxLength: 128}
+        exerciseId: {type: string, minLength: 1, maxLength: 256}
+        nameSnapshot: {type: string, minLength: 1, maxLength: 500}
+        sets: {type: integer, minimum: 1}
+        target: {$ref: '#/components/schemas/PlanTarget'}
+        restSeconds: {type: number, format: double, minimum: 0}
+        side: {type: string, enum: [left, right, both, alternating]}
+        loadOrIntensity: {type: string, maxLength: 500}
+        instructions: {type: string, maxLength: 4000}
+        demoAssetId: {type: string, maxLength: 256}
+    PlanStage:
+      type: object
+      additionalProperties: false
+      required: [phase, exercises]
+      properties:
+        phase: {type: string, enum: [warmup, main, cooldown]}
+        exercises: {type: array, maxItems: 1000, items: {$ref: '#/components/schemas/PlanExercise'}}
+    PlanSessionTemplate:
+      type: object
+      additionalProperties: false
+      required: [templateId, title, stages]
+      properties:
+        templateId: {type: string, minLength: 1, maxLength: 128}
+        title: {type: string, minLength: 1, maxLength: 500}
+        stages: {type: array, minItems: 1, items: {$ref: '#/components/schemas/PlanStage'}}
+    PlanOccurrence:
+      type: object
+      additionalProperties: false
+      required: [occurrenceId, templateId, localDate]
+      properties:
+        occurrenceId: {type: string, minLength: 1, maxLength: 128}
+        templateId: {type: string, minLength: 1, maxLength: 128}
+        localDate: {type: string, format: date}
+    TrainingPlanContent:
+      type: object
+      additionalProperties: false
+      required: [sessions, frequency, schedule, constraints]
+      properties:
+        sessions: {type: array, minItems: 1, maxItems: 100, items: {$ref: '#/components/schemas/PlanSessionTemplate'}}
+        frequency:
+          type: object
+          additionalProperties: false
+          properties:
+            sessionsPerWeek: {type: integer, minimum: 1}
+            description: {type: string, maxLength: 1000}
+        schedule:
+          type: object
+          additionalProperties: false
+          required: [mode]
+          properties:
+            mode: {type: string, enum: [frequency_only, calendar]}
+            timeZone: {type: string, maxLength: 64}
+            occurrences: {type: array, items: {$ref: '#/components/schemas/PlanOccurrence'}}
+        constraints:
+          type: array
+          description: Prescription notes; never a second Safety authority.
+          items: {type: string, maxLength: 1000}
+    TrainingPlanDraft:
+      type: object
+      additionalProperties: false
+      required: [title, goal, relatedConditionIds, relatedBodyRefs, content]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 500}
+        goal: {type: string, minLength: 1, maxLength: 4000}
+        relatedConditionIds: {type: array, maxItems: 200, items: {type: string, format: uuid}}
+        relatedBodyRefs: {type: array, items: {$ref: '#/components/schemas/PlanBodyRef'}}
+        content: {$ref: '#/components/schemas/TrainingPlanContent'}
+    TrainerGateProjection:
+      type: object
+      additionalProperties: false
+      required: [result, permitsExecution, reasons, matchedRestrictionIds, requiresReview, urgentCare, safetyRevision]
+      description: Go TrainerGate evaluated at read/decision time from the native Safety ledger. permitsExecution=false is the Safety execution pause; it never changes plan status, and missing or unscreened Safety is never allow.
+      properties:
+        result: {type: string, enum: [allow, warn, block, unavailable]}
+        permitsExecution: {type: boolean}
+        reasons: {type: array, items: {type: string}}
+        matchedRestrictionIds: {type: array, items: {type: string, format: uuid}}
+        requiresReview: {type: boolean}
+        urgentCare: {type: boolean}
+        safetyRevision: {type: integer, format: int64, minimum: 0}
+        policyRevision: {type: string}
+    TrainingPlanReview:
+      type: object
+      additionalProperties: false
+      required: [recommended]
+      description: Read-only hint that the context this revision was accepted against changed (conservative). Only a newly accepted PlanProposal changes the prescription.
+      properties:
+        recommended: {type: boolean}
+        reason: {type: string, enum: [context_changed_since_acceptance, context_unavailable]}
+    TrainingPlanRecord:
+      type: object
+      additionalProperties: false
+      required: [planId, title, goal, status, statusRevision, currentAcceptedRevisionId, relatedConditionIds, relatedBodyRefs, currentContent, review, executionGate, createdAt]
+      properties:
+        planId: {type: string, format: uuid}
+        title: {type: string}
+        goal: {type: string}
+        status: {$ref: '#/components/schemas/TrainingPlanStatus'}
+        statusRevision: {type: integer, format: int64, minimum: 0}
+        currentAcceptedRevisionId: {type: string, format: uuid}
+        relatedConditionIds: {type: array, items: {type: string, format: uuid}}
+        relatedBodyRefs: {type: array, items: {$ref: '#/components/schemas/PlanBodyRef'}}
+        currentContent: {$ref: '#/components/schemas/TrainingPlanContent'}
+        review: {$ref: '#/components/schemas/TrainingPlanReview'}
+        executionGate: {$ref: '#/components/schemas/TrainerGateProjection'}
+        createdAt: {type: string, format: date-time}
+    TrainingPlanRecordListResponse:
+      type: object
+      additionalProperties: false
+      required: [plans]
+      properties:
+        plans: {type: array, items: {$ref: '#/components/schemas/TrainingPlanRecord'}}
+    TrainingPlanRevisionRecord:
+      type: object
+      additionalProperties: false
+      required: [revisionId, planId, snapshot, sourceKind, sourceProposalId, authorizationReceiptId, createdAt]
+      properties:
+        revisionId: {type: string, format: uuid}
+        planId: {type: string, format: uuid}
+        parentRevisionId: {type: string, format: uuid}
+        snapshot: {$ref: '#/components/schemas/TrainingPlanDraft'}
+        sourceKind: {type: string, enum: [user_accepted_proposal]}
+        sourceProposalId: {type: string, format: uuid}
+        authorizationReceiptId: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+    TrainingPlanStatusChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [status, expectedStatusRevision, idempotencyKey]
+      properties:
+        status: {$ref: '#/components/schemas/TrainingPlanStatus'}
+        expectedStatusRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    TrainingPlanStatusReceipt:
+      type: object
+      additionalProperties: false
+      required: [eventId, planId, fromStatus, toStatus, statusRevision, idempotencyKey, changedAt]
+      properties:
+        eventId: {type: string, format: uuid}
+        planId: {type: string, format: uuid}
+        fromStatus: {$ref: '#/components/schemas/TrainingPlanStatus'}
+        toStatus: {$ref: '#/components/schemas/TrainingPlanStatus'}
+        statusRevision: {type: integer, format: int64, minimum: 1}
+        idempotencyKey: {type: string, minLength: 1}
+        changedAt: {type: string, format: date-time}
+    PlanProposalRecord:
+      type: object
+      additionalProperties: false
+      required: [proposalId, kind, state, initiatedBy, draft, contentFingerprint, createdAt, expiresAt]
+      properties:
+        proposalId: {type: string, format: uuid}
+        kind: {type: string, enum: [create, update]}
+        state: {$ref: '#/components/schemas/PlanProposalState'}
+        initiatedBy: {type: string, enum: [user, agent]}
+        planId: {type: string, format: uuid}
+        basedOnRevisionId: {type: string, format: uuid}
+        draft: {$ref: '#/components/schemas/TrainingPlanDraft'}
+        contentFingerprint: {$ref: '#/components/schemas/PlanFingerprint'}
+        createdAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+        expiredReason: {type: string, enum: [timeout, base_revision_changed, relevant_context_changed]}
+        decisionId: {type: string, format: uuid}
+    PlanProposalRecordListResponse:
+      type: object
+      additionalProperties: false
+      required: [proposals]
+      properties:
+        proposals: {type: array, items: {$ref: '#/components/schemas/PlanProposalRecord'}}
+    CreatePlanProposalRequest:
+      type: object
+      additionalProperties: false
+      required: [draft, idempotencyKey]
+      description: planId and expectedRevisionId are both present (update) or both absent (create).
+      properties:
+        draft: {$ref: '#/components/schemas/TrainingPlanDraft'}
+        planId: {type: string, format: uuid}
+        expectedRevisionId: {type: string, format: uuid}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    PlanDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [decisionId, presentedFingerprint, idempotencyKey]
+      description: The user's explicit decision on the exact presented content. targetPlanId and expectedRevisionId are required for an update proposal and absent for create.
+      properties:
+        decisionId: {type: string, format: uuid}
+        presentedFingerprint: {$ref: '#/components/schemas/PlanFingerprint'}
+        targetPlanId: {type: string, format: uuid}
+        expectedRevisionId: {type: string, format: uuid}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    PlanAcceptanceReceipt:
+      type: object
+      additionalProperties: false
+      required: [receiptId, proposalId, decisionId, planId, revisionId, idempotencyKey, decidedAt, executionGate]
+      properties:
+        receiptId: {type: string, format: uuid}
+        proposalId: {type: string, format: uuid}
+        decisionId: {type: string, format: uuid}
+        planId: {type: string, format: uuid}
+        revisionId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 1}
+        decidedAt: {type: string, format: date-time}
+        executionGate: {$ref: '#/components/schemas/TrainerGateProjection'}
+    PlanRejectionReceipt:
+      type: object
+      additionalProperties: false
+      required: [receiptId, proposalId, decisionId, idempotencyKey, decidedAt]
+      properties:
+        receiptId: {type: string, format: uuid}
+        proposalId: {type: string, format: uuid}
+        decisionId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 1}
+        decidedAt: {type: string, format: date-time}
     ErrorEnvelope:
       type: object
       additionalProperties: false

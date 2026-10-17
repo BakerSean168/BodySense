@@ -64,6 +64,10 @@ import {
   OnboardingContextResult,
   OutcomeListResponse,
   OutcomeMutationResponse,
+  PlanAcceptanceReceipt,
+  PlanProposalRecord,
+  PlanProposalRecordListResponse,
+  PlanRejectionReceipt,
   PostureAnalysisSummary,
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
@@ -76,6 +80,10 @@ import {
   TrainingLogUpdateResponse,
   TrainingPlan,
   TrainingPlanListResponse,
+  TrainingPlanRecord,
+  TrainingPlanRecordListResponse,
+  TrainingPlanRevisionRecord,
+  TrainingPlanStatusReceipt,
   TrainingProgress,
   TreatmentProposalResponse,
   TreatmentReplayReport,
@@ -125,6 +133,7 @@ import type {
   CorrectBodyHypothesisRequest,
   CorrectBodyObservationRequest,
   CreateEquipmentAssetRequest,
+  CreatePlanProposalRequest,
   CreateUploadRequest,
   CurrentTreatmentResponseOutput,
   CurrentUserOutput,
@@ -161,6 +170,7 @@ import type {
   ListDiagnosisAnalysesParams,
   ListNativeDiagnosisRunsParams,
   ListOutcomesParams,
+  ListPlanProposalRecordsParams,
   ListRunEventsParams,
   ListTreatmentRevisionsParams,
   LogoutAcknowledgementOutput,
@@ -176,6 +186,11 @@ import type {
   OnboardingContextResultOutput,
   OutcomeListResponseOutput,
   OutcomeMutationResponseOutput,
+  PlanAcceptanceReceiptOutput,
+  PlanDecisionRequest,
+  PlanProposalRecordListResponseOutput,
+  PlanProposalRecordOutput,
+  PlanRejectionReceiptOutput,
   PostureAnalysisSummaryOutput,
   PrivacyErasureAcceptedOutput,
   PrivacyErasurePlanOutput,
@@ -198,6 +213,11 @@ import type {
   TrainingLogUpdateResponseOutput,
   TrainingPlanListResponseOutput,
   TrainingPlanOutput,
+  TrainingPlanRecordListResponseOutput,
+  TrainingPlanRecordOutput,
+  TrainingPlanRevisionRecordOutput,
+  TrainingPlanStatusChangeRequest,
+  TrainingPlanStatusReceiptOutput,
   TrainingProgressOutput,
   TrainingReassessmentRequest,
   TreatmentProposalRequest,
@@ -4220,6 +4240,429 @@ const res = await (fetchFn ?? fetch)(getReassessTrainingPlanUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? TrainingFeedbackResult.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListTrainingPlanRecordsUrl = () => {
+
+
+
+
+  return `/api/v1/training-plans`
+}
+
+/**
+ * Several plans may be active at once. Each record carries its current immutable revision content, a read-only review hint and a freshly evaluated Safety execution gate; reading never modifies a plan.
+ * @summary List the authenticated user's independent accepted TrainingPlans in every status.
+ */
+export const listTrainingPlanRecords = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanRecordListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListTrainingPlanRecordsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanRecordListResponse, status?: number} = new globalThis.Error();
+    const data : TrainingPlanRecordListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanRecordListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingPlanRecordUrl = (planId: string,) => {
+
+
+
+
+  return `/api/v1/training-plans/${planId}`
+}
+
+/**
+ * @summary Get one owned independent TrainingPlan; another owner's id is not found.
+ */
+export const getTrainingPlanRecord = async (planId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingPlanRecordUrl(planId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanRecord, status?: number} = new globalThis.Error();
+    const data : TrainingPlanRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingPlanRevisionRecordUrl = (planId: string,
+    revisionId: string,) => {
+
+
+
+
+  return `/api/v1/training-plans/${planId}/revisions/${revisionId}`
+}
+
+/**
+ * @summary Get one immutable accepted revision of an owned TrainingPlan.
+ */
+export const getTrainingPlanRevisionRecord = async (planId: string,
+    revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanRevisionRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingPlanRevisionRecordUrl(planId,revisionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanRevisionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingPlanRevisionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanRevisionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getChangeTrainingPlanStatusUrl = (planId: string,) => {
+
+
+
+
+  return `/api/v1/training-plans/${planId}/status`
+}
+
+/**
+ * User-managed active/paused/completed transitions with an expected status revision and idempotency key. Never changes content, revisions, logs or any other plan, and never grants Trainer execution; the Safety gate stays separate.
+ * @summary Apply the authenticated user's explicit status change to one owned TrainingPlan.
+ */
+export const changeTrainingPlanStatus = async (planId: string,
+    trainingPlanStatusChangeRequest: TrainingPlanStatusChangeRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanStatusReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getChangeTrainingPlanStatusUrl(planId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingPlanStatusChangeRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanStatusReceipt, status?: number} = new globalThis.Error();
+    const data : TrainingPlanStatusReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanStatusReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListPlanProposalRecordsUrl = (params?: ListPlanProposalRecordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/plan-proposals?${stringifiedParams}` : `/api/v1/plan-proposals`
+}
+
+/**
+ * @summary List the authenticated user's TrainingPlan proposals, newest first.
+ */
+export const listPlanProposalRecords = async (params?: ListPlanProposalRecordsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListPlanProposalRecordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanProposalRecordListResponse, status?: number} = new globalThis.Error();
+    const data : PlanProposalRecordListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanProposalRecordListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreatePlanProposalUrl = () => {
+
+
+
+
+  return `/api/v1/plan-proposals`
+}
+
+/**
+ * A user-authored draft (create, or update pinned to the plan's current accepted revision). It is not an accepted plan until a separate explicit accept. Agent generation never uses this route.
+ * @summary Save the authenticated user's own complete plan draft as a pending PlanProposal.
+ */
+export const createPlanProposal = async (createPlanProposalRequest: CreatePlanProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreatePlanProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createPlanProposalRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanProposalRecord, status?: number} = new globalThis.Error();
+    const data : PlanProposalRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanProposalRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetPlanProposalRecordUrl = (proposalId: string,) => {
+
+
+
+
+  return `/api/v1/plan-proposals/${proposalId}`
+}
+
+/**
+ * @summary Get one owned TrainingPlan proposal; another owner's id is not found.
+ */
+export const getPlanProposalRecord = async (proposalId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPlanProposalRecordUrl(proposalId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanProposalRecord, status?: number} = new globalThis.Error();
+    const data : PlanProposalRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanProposalRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAcceptPlanProposalUrl = (proposalId: string,) => {
+
+
+
+
+  return `/api/v1/plan-proposals/${proposalId}/accept`
+}
+
+/**
+ * Under the owner lock, rechecks fingerprint, base revision, 7-day TTL and current BodyState/Diagnosis/Safety context, then writes one immutable revision and receipt. Saving does not authorize execution; the returned gate is a current projection.
+ * @summary Accept one pending proposal as the authenticated user's explicit decision.
+ */
+export const acceptPlanProposal = async (proposalId: string,
+    planDecisionRequest: PlanDecisionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanAcceptanceReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAcceptPlanProposalUrl(proposalId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(planDecisionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanAcceptanceReceipt, status?: number} = new globalThis.Error();
+    const data : PlanAcceptanceReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanAcceptanceReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRejectPlanProposalUrl = (proposalId: string,) => {
+
+
+
+
+  return `/api/v1/plan-proposals/${proposalId}/reject`
+}
+
+/**
+ * @summary Reject one pending proposal as the authenticated user's explicit decision; no plan changes.
+ */
+export const rejectPlanProposal = async (proposalId: string,
+    planDecisionRequest: PlanDecisionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanRejectionReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRejectPlanProposalUrl(proposalId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(planDecisionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanRejectionReceipt, status?: number} = new globalThis.Error();
+    const data : PlanRejectionReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanRejectionReceipt.parse(parsedBody) : parsedBody
   return data
 }
 
