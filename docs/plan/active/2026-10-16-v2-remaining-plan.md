@@ -103,12 +103,12 @@ Size: S ≤ 1 PR/≈½ day, M 2–3 PRs, L 4+ PRs.
 - **Exists:** `2026-10-14-ds-dx-01-diagnosis-contract-handoff.md`, `docs/product/domain/diagnosis.md` §3.0–3.9.
 - **Change:** under big-bang there is no separate contract-only PR; the frozen ConditionEntry/Proposal/Decision field list is the first commit of DX-002. Keep Q-17 TTL undecided.
 
-#### DX-002 · Diagnosis aggregate + ConditionEntry + atomic decision — **L**
+#### DX-002 - Diagnosis aggregate, decisions and native API - **L / PARTIALLY ACCEPTED 2026-10-17**
 
-- **Exists:** legacy per-run `diagnosis_analyses`, `diagnosis_candidates` (AI `confidence`), `diagnosis_candidate_assessments`, freshness; `diagnosis_application_service.go`, `diagnosis_decision_policy.go`.
-- **Missing:** tables `diagnoses` (one per user, `current_revision`), `condition_entries` (concept ref, level suspected|likely, source_kind, adopted|inactive), `condition_entry_evidence` (typed EvidenceRef + version), `diagnosis_proposals` (per analysis run, content fingerprint, base revision), `diagnosis_decisions` (+ receipts, idempotency), `diagnosis_revisions`; Go repo/service with one-transaction batch commit; read projection `GET /diagnosis`; delete candidate-assessment legacy path.
-- **Slices:** (1) docs+api: frozen contract + baseline tables + repository; (2) api: decision transaction (partial selection, atomic commit, stale/foreign/replay/urgent-zero-commit negatives); (3) api: OpenAPI read/decide + delete legacy candidate-assessment routes.
-- **Deps:** none (BodyState done). **Acceptance:** decision batch commits once or none; lineage retained.
+- **Merged:** #322 storage/frozen contract; #332 durable user decision/event receipt; #334 whole-run atomic settlement (`74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0`). The kernel now validates exact proposal content/source versions, rechecks accepts and rejects, preserves partial choices, and writes one atomic Diagnosis patch/receipt or none. Urgent risk is a zero-adoption terminal audit.
+- **Remaining:** native public read/decide/settle endpoints and error/receipt contracts, generated Go/TS/Zod clients, authenticated consumer migration, then removal of legacy candidate-assessment routes/models/tables. A service-level test is not UI/Agent acceptance.
+- **Evidence:** #334 exact head `18e56eb1b9c53a93784c207fe3eb7558f4bfef00`, [12/12 CI](https://github.com/BakerSean168/BodySense/actions/runs/39019387899), full isolated PG18 race/vet/staticcheck, 18 targeted Diagnosis groups, 94/94 plan checks and reproducible existing generated contracts.
+- **Dependencies:** BodyState/UserAsset source authorities already merged. **Issue #305 remains OPEN** and still blocks full DX-003 acceptance. No Diagnosis TTL or clinical threshold was invented; scheduler remains user-paused.
 
 #### DX-003 · Diagnosis Go/Agent decision API — **M**
 
@@ -188,7 +188,7 @@ Domain order: Conversation/Person → Diagnosis → Training/Safety → Assets, 
 | BS-HYP-001   | observation links, correct, stable group id                                    | S    | —                  | 3          |
 | UI-001       | hypothesis/concern UI + Penpot states                                          | M    | BS-HYP-001         | 4          |
 | DX-001       | folded into DX-002 s1                                                          | S    | —                  | 5          |
-| DX-002       | Diagnosis/ConditionEntry/proposal/decision tables + atomic commit              | L    | —                  | 5          |
+| DX-002       | Native read/decide/settle APIs + legacy candidate-assessment retirement        | L    | —                  | 5          |
 | BS-AGENT-001 | chat-sourced suggestion envelope → AskUser confirm → Go commit                 | M    | BS-HYP-001         | 6          |
 | DX-003       | agent→proposal ingestion, direct correction                                    | M    | DX-002             | 7          |
 | TP-002       | plans/revisions/proposals, drop Treatment lifecycle                            | L    | TP-001             | 8          |
