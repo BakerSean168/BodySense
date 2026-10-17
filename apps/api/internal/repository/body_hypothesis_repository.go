@@ -67,41 +67,15 @@ func (r *BodyStateRepository) RecordBodyHypothesis(ctx context.Context, owner uu
 			return fmt.Errorf("%w: hypothesis revision %d != current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		now := time.Now().UTC().Truncate(time.Microsecond)
-		commitID, hypothesisID, evidenceID, eventID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
-		metadata := map[string]any{"commit_id": commitID, "hypothesis_id": hypothesisID, "lineage_id": hypothesisID,
-			"source_evidence_id": evidenceID, "related_fact_ids": factIDsOrEmpty(command.RelatedFactIDs),
-			"related_observation_ids": factIDsOrEmpty(command.RelatedObservationIDs)}
-		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "hypothesis.recorded", "direct_edit", metadata)
-		if err != nil {
-			return err
-		}
-		evidence := model.StatementEvidence{ID: evidenceID, UserID: owner, SourceKind: "direct_edit",
+		evidence := model.StatementEvidence{ID: uuid.New(), UserID: owner, SourceKind: "direct_edit",
 			SourceVersion: 1, Excerpt: command.Statement, Availability: "available", RecordedAt: now}
-		if err := tx.Create(&evidence).Error; err != nil {
-			return err
-		}
-		record := model.BodyHypothesis{ID: hypothesisID, UserID: owner, Statement: command.Statement,
-			SourceEvidenceID: evidenceID, AssertionStatus: "asserted", CreatedRevision: next, RecordedAt: now,
-			LineageID: hypothesisID}
-		if err := tx.Create(&record).Error; err != nil {
-			return err
-		}
-		if err := createBodyHypothesisLinks(tx, owner, hypothesisID, command.RelatedFactIDs, command.RelatedObservationIDs); err != nil {
-			return err
-		}
-		payload, err := json.Marshal(metadata)
+		commit, err := persistBodyHypothesisRecord(ctx, tx, state, next, owner, command.IdempotencyKey, fingerprint, command.Statement,
+			command.RelatedFactIDs, command.RelatedObservationIDs, evidence, "direct_edit", nil, now)
 		if err != nil {
 			return err
 		}
-		event := model.BodyStateOutbox{ID: eventID, UserID: owner, Revision: next,
-			EventType: "body_state.hypothesis_recorded", Payload: datatypes.JSON(payload), CreatedAt: now}
-		if err := tx.Create(&event).Error; err != nil {
-			return err
-		}
-		output = model.BodyHypothesisCommit{ID: commitID, UserID: owner, IdempotencyKey: command.IdempotencyKey,
-			Fingerprint: fingerprint, Operation: "record", HypothesisID: hypothesisID, SourceEvidenceID: evidenceID,
-			Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
-		return tx.Create(&output).Error
+		output = *commit
+		return nil
 	})
 	if err != nil {
 		return nil, err
