@@ -1,6 +1,7 @@
 -- BodySense V2 baseline rollback (drops the whole application schema).
 -- Extensions are intentionally retained because they may predate this application schema.
 DROP TABLE IF EXISTS
+    public.training_plan_revision_conditions,
     public.training_plan_entry_identities,
     public.training_plan_revision_body_refs,
     public.plan_decision_receipts,

@@ -94,10 +94,13 @@ func (s *IndependentTrainingPlanService) lock(ctx context.Context, owner uuid.UU
 	}
 	return err
 }
-func (s *IndependentTrainingPlanService) currentContext(ctx context.Context, owner, plan uuid.UUID) (trainingplan.CurrentContext, error) {
-	revision, diagnosis, err := s.repo.LockContext(ctx, owner)
+func (s *IndependentTrainingPlanService) currentContext(ctx context.Context, owner, plan uuid.UUID, conditions []uuid.UUID) (trainingplan.CurrentContext, error) {
+	revision, diagnosis, err := s.repo.LockContext(ctx, owner, conditions)
 	if err != nil {
-		return trainingplan.CurrentContext{}, fmt.Errorf("%w: %v", ErrPlanContextUnavailable, err)
+		if errors.Is(err, ErrPlanNotFound) {
+			return trainingplan.CurrentContext{}, ErrPlanNotFound
+		}
+		return trainingplan.CurrentContext{}, fmt.Errorf("%w: %w", ErrPlanContextUnavailable, err)
 	}
 	snapshot, err := s.body.GetBodyState(ctx, owner, 1)
 	if err != nil || snapshot == nil || snapshot.CurrentRevision != revision {
@@ -160,7 +163,7 @@ func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid
 			proposal = existing
 			return nil
 		}
-		current, err := s.currentContext(ctx, owner, input.PlanID)
+		current, err := s.currentContext(ctx, owner, input.PlanID, input.Draft.RelatedConditionIDs)
 		if err != nil {
 			return err
 		}
@@ -223,16 +226,15 @@ func (s *IndependentTrainingPlanService) Accept(ctx context.Context, owner uuid.
 			result = &PlanAcceptance{Receipt: *receipt, PlanID: *receipt.PlanID, RevisionID: *receipt.RevisionID}
 			// Replay returns the original immutable mutation identity, plus a freshly
 			// evaluated gate. It cannot replay a historical allow after new risk.
-			_, err = s.currentContext(ctx, owner, result.PlanID)
-			if err != nil {
-				return err
-			}
 			rev, err := s.repo.Revision(ctx, owner, result.PlanID, result.RevisionID)
 			if err != nil {
 				return err
 			}
 			var draft model.TrainingPlanDraft
 			if err = json.Unmarshal(rev.Snapshot, &draft); err != nil {
+				return err
+			}
+			if _, err = s.currentContext(ctx, owner, result.PlanID, draft.RelatedConditionIDs); err != nil {
 				return err
 			}
 			result.Gate = s.gate(ctx, owner, result.PlanID, draft, s.now())
@@ -266,7 +268,7 @@ func (s *IndependentTrainingPlanService) Accept(ctx context.Context, owner uuid.
 		if p.PlanID != nil {
 			target = *p.PlanID
 		}
-		current, err := s.currentContext(ctx, owner, target)
+		current, err := s.currentContext(ctx, owner, target, draft.RelatedConditionIDs)
 		if err != nil {
 			return err
 		}

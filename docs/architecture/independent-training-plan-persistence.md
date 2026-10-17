@@ -29,7 +29,7 @@ old execution permission.
 
 The application transaction locks `users FOR NO KEY UPDATE`, then the owner's
 `body_states FOR UPDATE`, the same head used by native BodyState and Safety
-writers. It reads the durable proposal, evaluates `EvaluateAcceptance`,
+writers, then `diagnoses FOR UPDATE`. It reads the durable proposal, evaluates `EvaluateAcceptance`,
 projects TrainerGate from the native ledger, writes a revision and plan CAS,
 and commits the receipt and proposal decision together. Database uniqueness
 and composite owner/plan FKs enforce idempotency and identity. Any write or
@@ -39,11 +39,25 @@ reason, with no accepted revision or decision receipt.
 
 Context freshness is deliberately conservative in this first slice: any native
 BodyState revision, Safety source availability/validity boundary, or change to
-the owner's existing Diagnosis analysis context
-invalidates a pending proposal. Diagnosis reads are bounded to 200 rows and
-fail closed beyond that bound. This is not a clinical relevance algorithm.
-No Diagnosis lifetime or clinical threshold is introduced. The Training
-PlanProposal TTL alone is 168 hours.
+the owner's native `diagnoses.current_revision` invalidates a pending proposal.
+The transaction locks the native Diagnosis head after the BodyState head, so
+concurrent adoption cannot race its snapshot. A missing aggregate is initialized
+at revision zero; it creates no ConditionEntry or DiagnosisRevision and does not
+prevent an independent plan with no Diagnosis association. Legacy
+`diagnosis_analyses` are never read as an acceptance authority.
+
+Related ConditionEntries must belong to the owner, be adopted, and refer to a
+committed revision within the locked head. Their current snapshots and typed
+evidence links enter the fingerprint. Current source availability is re-read
+from owner-bound statement evidence, formal analysis request evidence, and
+admitted document sources; the original assessment-time claim validity is not
+an availability authority. Shared source locks keep the checked source stable
+through commit. Missing, blocked, unresolvable, or unreadable associated sources
+fail closed. These checks preserve existing Diagnosis semantics; they neither
+adopt diagnoses nor infer clinical eligibility from source text. Reads are
+bounded to 200 related conditions and 1,000 evidence links. This is not a
+clinical relevance algorithm. No Diagnosis lifetime or clinical threshold is
+introduced. The Training PlanProposal TTL alone is 168 hours.
 
 Training §4.5 permits saving a prescription under an existing restriction.
 Consequently the returned TrainerGate is a current **execution projection**,
@@ -53,11 +67,11 @@ proposal context expires before any plan write. A Trainer start/continue must
 always perform its own fresh gate check; Trainer sessions/actions are TP-003.
 
 BodyFact, SymptomEpisode, and BodyObservation links validate exact owner and
-creation revision and use composite FKs in revision links. `ConditionEntry`
-persistence is not yet available at this base (DX-002 is independent ongoing
-work): nonempty `relatedConditionIds` are rejected. Integrate the formal
-ConditionEntry identity and accepted Diagnosis context after DX-002 lands;
-never substitute legacy analysis IDs. This is an explicit slice boundary.
+creation revision and use composite FKs in revision links. Native ConditionEntry
+associations use `training_plan_revision_conditions` with owner composite FKs to
+both the immutable plan revision and the native condition. Foreign/missing
+related IDs produce the same owner-masked not-found result at proposal creation
+and acceptance; a known association with unreadable authority is unavailable.
 
 The baseline drops the single-active index. Existing Treatment columns and
 consumers remain until slice 3 retires them; no compatibility adapter or flag

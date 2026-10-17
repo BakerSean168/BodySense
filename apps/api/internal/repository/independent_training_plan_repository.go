@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
@@ -31,7 +30,7 @@ func (r *IndependentTrainingPlanRepository) dbFor(ctx context.Context) *gorm.DB 
 // LockContext locks the same BodyState head used by native fact/screen/lift
 // commands. The owner lock must be held first. Missing BodyState is revision 0,
 // never a clean safety screen. Diagnosis rows are read only as context here.
-func (r *IndependentTrainingPlanRepository) LockContext(ctx context.Context, owner uuid.UUID) (int64, json.RawMessage, error) {
+func (r *IndependentTrainingPlanRepository) LockContext(ctx context.Context, owner uuid.UUID, conditions []uuid.UUID) (int64, json.RawMessage, error) {
 	if !database.HasTransaction(ctx) {
 		return 0, nil, ErrTrainingPlanOwnerLockRequiresTransaction
 	}
@@ -43,19 +42,8 @@ func (r *IndependentTrainingPlanRepository) LockContext(ctx context.Context, own
 	if err := db.Clauses(clause.Locking{Strength: "UPDATE"}).Where("user_id=?", owner).Take(&head).Error; err != nil {
 		return 0, nil, err
 	}
-	// Conservative relevance in slice 1: any native BodyState revision or change
-	// to the owner's Diagnosis context invalidates a pending proposal. No TTL or
-	// clinical inference is introduced. Bound the read instead of omitting rows.
-	var rows []struct{ Snapshot json.RawMessage }
-	err := db.Raw("SELECT to_jsonb(d) AS snapshot FROM diagnosis_analyses d WHERE user_id=? ORDER BY id LIMIT 201", owner).Scan(&rows).Error
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(rows) > 200 {
-		return 0, nil, fmt.Errorf("diagnosis context exceeds bounded read")
-	}
-	encoded, err := json.Marshal(rows)
-	return head.CurrentRevision, encoded, err
+	diagnosis, err := r.lockPlanDiagnosisContext(ctx, owner, conditions, head.CurrentRevision)
+	return head.CurrentRevision, diagnosis, err
 }
 func (r *IndependentTrainingPlanRepository) ProposalByKey(ctx context.Context, owner uuid.UUID, key string) (*model.PlanProposal, error) {
 	var row model.PlanProposal
@@ -153,6 +141,11 @@ func (r *IndependentTrainingPlanRepository) CommitRevision(ctx context.Context, 
 	}
 	if err := db.Create(revision).Error; err != nil {
 		return err
+	}
+	for _, condition := range draft.RelatedConditionIDs {
+		if err := db.Table("training_plan_revision_conditions").Create(map[string]any{"user_id": plan.UserID, "revision_id": revision.ID, "condition_id": condition}).Error; err != nil {
+			return err
+		}
 	}
 	for _, ref := range draft.RelatedBodyRefs {
 		link := map[string]any{"user_id": plan.UserID, "revision_id": revision.ID}

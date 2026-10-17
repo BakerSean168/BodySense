@@ -4939,3 +4939,13 @@ CREATE TABLE public.training_plan_entry_identities (
     PRIMARY KEY (user_id, kind, id),
     FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE
 );
+
+-- A plan revision may relate only to the same owner's native ConditionEntry.
+CREATE TABLE public.training_plan_revision_conditions (
+    user_id uuid NOT NULL,
+    revision_id uuid NOT NULL,
+    condition_id uuid NOT NULL,
+    PRIMARY KEY (user_id, revision_id, condition_id),
+    FOREIGN KEY (user_id, revision_id) REFERENCES public.training_plan_revisions(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, condition_id) REFERENCES public.condition_entries(user_id, id)
+);

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/model"
+	"github.com/google/uuid"
 )
 
 func positivePlanNumber(n float64) bool { return n > 0 && !math.IsNaN(n) && !math.IsInf(n, 0) }
@@ -13,10 +14,15 @@ func validatePlanDraft(d model.TrainingPlanDraft) error {
 	if strings.TrimSpace(d.Title) == "" || strings.TrimSpace(d.Goal) == "" || len(d.Title) > 500 || len(d.Content.Sessions) == 0 || len(d.Content.Sessions) > 100 {
 		return ErrPlanInvalid
 	}
-	// ConditionEntry's new persistence is owned by DX-002. Until its contract is
-	// merged, no unchecked or legacy Diagnosis id may masquerade as that identity.
-	if len(d.RelatedConditionIDs) > 0 {
+	if len(d.RelatedConditionIDs) > 200 {
 		return ErrPlanInvalid
+	}
+	seenConditions := map[uuid.UUID]bool{}
+	for _, id := range d.RelatedConditionIDs {
+		if id == uuid.Nil || seenConditions[id] {
+			return ErrPlanInvalid
+		}
+		seenConditions[id] = true
 	}
 	if n := d.Content.Frequency.SessionsPerWeek; n != nil && *n <= 0 {
 		return ErrPlanInvalid
