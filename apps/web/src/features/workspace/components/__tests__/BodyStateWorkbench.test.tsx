@@ -19,6 +19,10 @@ vi.mock("@/features/body-canvas/components/BodyEpisodeAssociations", () => ({
   BodyEpisodeAssociations: () => <div>Episode 关联</div>,
 }));
 
+vi.mock("@/features/body-canvas/components/BodyHypotheses", () => ({
+  BodyHypotheses: () => <div>我的猜测与分组</div>,
+}));
+
 function renderWorkbench() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
