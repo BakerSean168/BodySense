@@ -198,3 +198,48 @@ func (r *IndependentTrainingPlanRepository) ValidateBodyRefs(ctx context.Context
 	}
 	return nil
 }
+
+// ListProposals returns the owner's proposals, newest first. An empty state
+// lists every state; the caller validates the filter value.
+func (r *IndependentTrainingPlanRepository) ListProposals(ctx context.Context, owner uuid.UUID, state string, limit int) ([]model.PlanProposal, error) {
+	rows := []model.PlanProposal{}
+	q := r.dbFor(ctx).Where("user_id=?", owner)
+	if state != "" {
+		q = q.Where("state=?", state)
+	}
+	err := q.Order("created_at DESC, id DESC").Limit(limit).Find(&rows).Error
+	return rows, err
+}
+func (r *IndependentTrainingPlanRepository) StatusEventByKey(ctx context.Context, owner uuid.UUID, key string) (*model.TrainingPlanStatusEvent, error) {
+	var row model.TrainingPlanStatusEvent
+	err := r.dbFor(ctx).Where("user_id=? AND idempotency_key=?", owner, key).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &row, err
+}
+
+// CommitStatus compare-and-sets one plan's status under the caller's owner
+// lock and appends its immutable audit event. Content, revisions, logs and
+// every other plan are untouched.
+func (r *IndependentTrainingPlanRepository) CommitStatus(ctx context.Context, event *model.TrainingPlanStatusEvent) error {
+	if !database.HasTransaction(ctx) {
+		return ErrTrainingPlanOwnerLockRequiresTransaction
+	}
+	db := r.dbFor(ctx)
+	result := db.Model(&model.TrainingPlan{}).
+		Where("user_id=? AND id=? AND current_accepted_revision_id IS NOT NULL AND status=? AND status_revision=?", event.UserID, event.PlanID, event.FromStatus, event.StatusRevision-1).
+		Updates(map[string]any{"status": event.ToStatus, "status_revision": event.StatusRevision})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return ErrIndependentPlanConflict
+	}
+	err := db.Create(event).Error
+	var conflict *pgconn.PgError
+	if errors.As(err, &conflict) && conflict.Code == "23505" {
+		return ErrIndependentPlanConflict
+	}
+	return err
+}

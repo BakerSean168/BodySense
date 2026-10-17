@@ -9,8 +9,8 @@ boundary. `Propose`, `Accept`, `Reject`, `List`, `Get`, and `Revision` require t
 authenticated owner supplied by the trusted caller. `Accept` and `Reject` are
 explicit manual user commands; an Agent generation result may call `Propose`
 only. The service must never be passed an Agent-invented user decision. There
-are no new HTTP routes or generation adapters in this slice; slice 2 binds
-those adapters to this service instead of adding a second acceptance path.
+HTTP adapters (slice 2, below) bind to this same service; there is no second
+acceptance path.
 
 A proposal stores a complete candidate snapshot, including stable template and
 exercise entry IDs, and the exact base revision for updates. A whole-document
@@ -86,3 +86,45 @@ validates baseline up/down/up and runs the service acceptance tests. Add
 service regressions with `-race`. `TP_D1_EXPECTATION=v2
 scripts/plan/test-tp-d1-multi-active-compat.sh` proves the removed unique index.
 No staging/production access or retained database reset is part of this work.
+
+## Slice 2a · HTTP surface and user-managed lifecycle
+
+Public routes (OpenAPI `bodysense.v1`), all owner-scoped by the authenticated
+user; a foreign or missing id is the same 404:
+
+| Route                                                           | Meaning                                                                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/training-plans`                                    | every accepted plan in any status (several may be active)                                                                             |
+| `GET /api/v1/training-plans/{planId}`                           | one plan: status, `statusRevision`, current content, `review`, `executionGate`                                                        |
+| `GET /api/v1/training-plans/{planId}/revisions/{revisionId}`    | one immutable accepted revision                                                                                                       |
+| `POST /api/v1/training-plans/{planId}/status`                   | explicit user status change: `status`, `expectedStatusRevision`, `idempotencyKey`                                                     |
+| `GET/POST /api/v1/plan-proposals`                               | list (optional `state`) / save the user's own draft as a pending proposal                                                             |
+| `GET /api/v1/plan-proposals/{proposalId}`                       | one proposal (pending past 7 days reads as expired)                                                                                   |
+| `POST /api/v1/plan-proposals/{proposalId}/accept` and `/reject` | the user's explicit decision: `decisionId`, `presentedFingerprint`, `targetPlanId`/`expectedRevisionId` for updates, `idempotencyKey` |
+
+`POST /plan-proposals` always records `initiatedBy=user`; Agent generation
+calls `Propose` in Go and never this route.
+
+**Status is user-managed** (training.md §4.2). `ChangeStatus` takes the owner
+lock (`users FOR NO KEY UPDATE`), checks `expectedStatusRevision`, applies the
+pure `trainingplan.StatusTransitionAllowed` table (active↔paused,
+active/paused→completed, completed→active on the same planId), compare-and-sets
+`training_plans.status/status_revision`, and appends one immutable
+`training_plan_status_events` row (DB CHECK repeats the transition table;
+`UNIQUE(user_id, plan_id, status_revision)` and `UNIQUE(user_id,
+idempotency_key)`). It never touches content, revisions, logs or other plans,
+and never grants execution.
+
+**Nothing else writes a plan.** There is no `review_recommended` status:
+`review` is computed on read by comparing the accepted revision's proposal
+context fingerprint with the current one (same conservative fingerprint as
+acceptance), so any BodyState revision, Safety boundary or native Diagnosis
+change recommends review; an unreadable context reports
+`context_unavailable`. The Safety pause is `executionGate`, the Go TrainerGate
+evaluated on every read: `permitsExecution=false` for block/unavailable, and
+missing, unscreened or unrecognized Safety is never allow. Neither projection
+modifies status, content or revisions.
+
+Still open: Treatment generation → `PlanProposal(create)` (needs the AI
+service to emit `TrainingPlanContent` sessions) and slice 3, which deletes
+Treatment, the legacy `/training/*` projections and their consumers.

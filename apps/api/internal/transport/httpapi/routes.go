@@ -197,6 +197,19 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/uploads/:id/extractions/:runId/reviews", wrapper.AppendHealthDocumentReview)
 	protected.GET("/uploads/:id/extractions/:runId/source", wrapper.GetHealthDocumentSource)
 
+	// Independent TrainingPlans (TP-002): several may be active; status changes
+	// only by explicit user command; Safety/review are read-time projections.
+	protected.GET("/training-plans", wrapper.ListTrainingPlanRecords)
+	protected.GET("/training-plans/:planId", wrapper.GetTrainingPlanRecord)
+	protected.GET("/training-plans/:planId/revisions/:revisionId", wrapper.GetTrainingPlanRevisionRecord)
+	protected.POST("/training-plans/:planId/status", wrapper.ChangeTrainingPlanStatus)
+	// A proposal is never an accepted plan; only the user's accept writes a revision.
+	protected.GET("/plan-proposals", wrapper.ListPlanProposalRecords)
+	protected.POST("/plan-proposals", wrapper.CreatePlanProposal)
+	protected.GET("/plan-proposals/:proposalId", wrapper.GetPlanProposalRecord)
+	protected.POST("/plan-proposals/:proposalId/accept", wrapper.AcceptPlanProposal)
+	protected.POST("/plan-proposals/:proposalId/reject", wrapper.RejectPlanProposal)
+
 	// Training execution, adherence and reassessment surfaces.
 	protected.GET("/training", wrapper.ListTrainingPlans)
 	protected.GET("/training/:id", wrapper.GetTrainingPlan)

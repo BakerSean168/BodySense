@@ -17,6 +17,7 @@ type TrainingPlan struct {
 	TreatmentID               *uuid.UUID      `gorm:"type:uuid;index" json:"treatment_id,omitempty"`
 	TreatmentRevisionID       *uuid.UUID      `gorm:"type:uuid;index" json:"treatment_revision_id,omitempty"`
 	Status                    string          `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+	StatusRevision            int64           `gorm:"not null;default:0" json:"-"`
 	Goal                      string          `gorm:"type:text;not null" json:"goal"`
 	DurationWeeks             int             `gorm:"not null;default:4" json:"duration_weeks"`
 	CurrentWeek               int             `gorm:"not null;default:1" json:"current_week"`
