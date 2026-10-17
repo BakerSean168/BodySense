@@ -4813,6 +4813,18 @@ $$;
 CREATE TRIGGER episode_evidence_revision_floor BEFORE INSERT OR UPDATE ON public.condition_entry_evidence
     FOR EACH ROW EXECUTE FUNCTION public.reject_episode_evidence_before_creation();
 
+-- Write-ahead inventory for source copies; not an AS-002 erasure receipt.
+CREATE TABLE public.user_asset_storage_cleanups (
+ asset_id uuid NOT NULL,
+ user_id uuid NOT NULL,
+ storage_backend varchar(20) NOT NULL,
+ storage_key varchar(500) NOT NULL,
+ PRIMARY KEY (user_id, asset_id, storage_backend, storage_key),
+ CONSTRAINT user_asset_storage_cleanups_owner_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE,
+ CONSTRAINT ck_user_asset_storage_cleanups_backend CHECK (storage_backend IN ('local','oss')),
+ CONSTRAINT ck_user_asset_storage_cleanups_key CHECK (storage_key <> '' AND length(storage_key) <= 492 AND storage_key !~ '^/' AND storage_key !~ '(^|/)\.\.(/|$)' AND position(chr(92) in storage_key) = 0)
+);
+
 --
 -- PostgreSQL database dump complete
 --

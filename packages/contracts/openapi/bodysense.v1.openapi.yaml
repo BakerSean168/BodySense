@@ -2141,6 +2141,9 @@ paths:
         (PC-D7): deletes the private original object and marks the backing
         asset source_removed while retaining adopted evidence history.
         Idempotent; foreign or missing uploads return owner-masked 404.
+        Success requires verified absence of every known source replica; cleanup
+        failures return an error and retain retry state. This is not a receipt
+        for AS-002 erasure of all controlled data.
       security:
       - bearerAuth: []
       responses:
@@ -6905,11 +6908,11 @@ components:
         availability:
           type: string
           enum: [source_removed, erased]
-          description: The asset's resulting file availability. source_removed is the PC-D7 command result; erased is reported when the erasure lifecycle already removed the source.
+          description: The asset's resulting file availability. Successful commands verify all known source replicas are absent. source_removed retains derived evidence; erased preserves the existing erasure lifecycle state. This is not an all-controlled-copy erasure receipt.
         source_removed_at:
           type: string
           format: date-time
-          description: When the source removal was committed. Present when availability is source_removed.
+          description: When source availability was revoked; physical cleanup may require retries. Present when availability is source_removed.
         message: {type: string}
     PostureAnalysisView:
       type: object

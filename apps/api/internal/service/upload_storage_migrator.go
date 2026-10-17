@@ -101,16 +101,23 @@ func (m *UploadStorageMigrator) Migrate(ctx context.Context, fromBackend, toBack
 				}
 				already, copyErr := migrateUploadObject(ctx, source, target, current)
 				if copyErr != nil {
-					return errors.Join(copyErr, deleteSourceReplica(ctx, m.storage, m.repo, targetReplica))
+					// Preserve pre-existing or partially written targets on copy failure.
+					// The ledger keeps them removable/retryable without deleting a
+					// potentially recoverable copy when the source read failed.
+					return copyErr
 				}
 				if already {
 					result.AlreadyVerified++
 				}
 				swapped, swapErr := m.repo.CompareAndSwapStorageBackend(ctx, asset.ID, asset.UserID, fromBackend, asset.StorageKey, toBackend)
 				if swapErr != nil {
-					// A database error may mean an ambiguous commit. Keep both replicas in
-					// the durable inventory; never delete a potentially current target.
-					return fmt.Errorf("advance upload %s storage manifest: %w", asset.ID, swapErr)
+					// Resolve a failed/ambiguous write before deleting anything that may
+					// have become authoritative. Unknown outcomes retain durable intent.
+					current, readErr := m.repo.GetOwnedByID(ctx, asset.ID, asset.UserID)
+					if readErr == nil && current != nil && current.StorageBackend == fromBackend && current.StorageKey == asset.StorageKey {
+						return errors.Join(swapErr, deleteSourceReplica(ctx, m.storage, m.repo, targetReplica))
+					}
+					return errors.Join(fmt.Errorf("advance upload %s storage manifest: %w", asset.ID, swapErr), readErr)
 				}
 				if !swapped {
 					return errors.Join(fmt.Errorf("upload %s storage manifest changed during migration", asset.ID), deleteSourceReplica(ctx, m.storage, m.repo, targetReplica))

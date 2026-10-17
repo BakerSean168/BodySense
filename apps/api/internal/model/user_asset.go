@@ -21,7 +21,9 @@ const (
 
 // UserAssetAvailability keeps source removal strictly distinct from erasure
 // (PC-D7): `source_removed` means the private original is unavailable while
-// adopted evidence history stays readable with a source-unavailable marker;
+// adopted evidence history stays readable with a source-unavailable marker.
+// Physical source cleanup may still require a retry; availability is not a
+// cleanup receipt. A successful removal command verifies all known sources;
 // `erased` is the controlled-copy erasure lifecycle owned by AS-002.
 type UserAssetAvailability string
 

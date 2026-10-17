@@ -479,9 +479,6 @@ func (s *UploadService) RemoveSource(ctx context.Context, userID uuid.UUID, asse
 		if err != nil {
 			return err
 		}
-		if asset.Availability == model.UserAssetErased {
-			return ErrUploadSourceUnavailable
-		}
 		if err := s.assets.TrackStorageReplica(ctx, sourceReplica(asset, asset.StorageBackend)); err != nil {
 			return err
 		}
@@ -495,7 +492,7 @@ func (s *UploadService) RemoveSource(ctx context.Context, userID uuid.UUID, asse
 		if err != nil {
 			return err
 		}
-		if asset.Availability != model.UserAssetSourceRemoved {
+		if asset.Availability != model.UserAssetSourceRemoved && asset.Availability != model.UserAssetErased {
 			return ErrUploadSourceUnavailable
 		}
 		replicas, err := s.assets.ListStorageReplicas(ctx, assetID, userID)

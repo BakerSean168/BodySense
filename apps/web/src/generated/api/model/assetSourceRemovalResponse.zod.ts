@@ -8,8 +8,8 @@
 import * as zod from 'zod/mini';
 
 export const AssetSourceRemovalResponse = /*#__PURE__*/ zod.strictObject({
-  "availability": /*#__PURE__*/ zod.enum(['source_removed', 'erased']).check(/*#__PURE__*/ zod.describe('The asset\'s resulting file availability. source_removed is the PC-D7 command result; erased is reported when the erasure lifecycle already removed the source.')),
-  "source_removed_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})).check(/*#__PURE__*/ zod.describe('When the source removal was committed. Present when availability is source_removed.')),
+  "availability": /*#__PURE__*/ zod.enum(['source_removed', 'erased']).check(/*#__PURE__*/ zod.describe('The asset\'s resulting file availability. Successful commands verify all known source replicas are absent. source_removed retains derived evidence; erased preserves the existing erasure lifecycle state. This is not an all-controlled-copy erasure receipt.')),
+  "source_removed_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})).check(/*#__PURE__*/ zod.describe('When source availability was revoked; physical cleanup may require retries. Present when availability is source_removed.')),
   "message": /*#__PURE__*/ zod.string()
 });
 

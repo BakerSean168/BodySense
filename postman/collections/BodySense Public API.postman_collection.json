@@ -30307,7 +30307,7 @@
                   "request": {
                     "name": "Remove the private source of one owned upload (source removal, not erasure).",
                     "description": {
-                      "content": "Legacy upload-surface alias of the source-removal command (PC-D7): deletes the private original object and marks the backing asset source_removed while retaining adopted evidence history. Idempotent; foreign or missing uploads return owner-masked 404.\n",
+                      "content": "Legacy upload-surface alias of the source-removal command (PC-D7): deletes the private original object and marks the backing asset source_removed while retaining adopted evidence history. Idempotent; foreign or missing uploads return owner-masked 404. Success requires verified absence of every known source replica; cleanup failures return an error and retain retry state. This is not a receipt for AS-002 erasure of all controlled data.\n",
                       "type": "text/plain"
                     },
                     "url": {

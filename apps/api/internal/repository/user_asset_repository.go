@@ -73,7 +73,8 @@ func (r *UserAssetRepository) MarkSourceRemoved(ctx context.Context, id, userID 
 	return result.RowsAffected == 1, nil
 }
 
-// ListByStorageBackend returns a stable batch for one storage backend.
+// ListByStorageBackend returns available assets whose current source or
+// pending source cleanup belongs to this backend, in stable batches.
 func (r *UserAssetRepository) ListByStorageBackend(ctx context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserAsset, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100

@@ -69,6 +69,7 @@ DROP TABLE IF EXISTS
     public.treatment_revisions,
     public.treatment_rollout_observations,
     public.treatments,
+    public.user_asset_storage_cleanups,
     public.user_assets,
     public.user_profiles,
     public.users CASCADE;

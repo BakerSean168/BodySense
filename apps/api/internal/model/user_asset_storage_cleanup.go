@@ -8,7 +8,7 @@ import "github.com/google/uuid"
 // This source-only inventory is not an AS-002 verified-erasure receipt.
 type UserAssetStorageCleanup struct {
 	AssetID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID         uuid.UUID `gorm:"type:uuid;not null"`
+	UserID         uuid.UUID `gorm:"type:uuid;primaryKey"`
 	StorageBackend string    `gorm:"primaryKey"`
 	StorageKey     string    `gorm:"primaryKey"`
 }

@@ -23,8 +23,10 @@ func (s backendAliasStore) Backend() string { return s.backend }
 type fakeUploadMigrationRepo struct {
 	uploads map[uuid.UUID]*model.UserAsset
 	fakeUserAssetRepository
-	beforeLock func()
-	rejectCAS  bool
+	beforeLock      func()
+	casError        error
+	commitWithError bool
+	rejectCAS       bool
 }
 
 func (r *fakeUploadMigrationRepo) ListByStorageBackend(_ context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserAsset, error) {
@@ -48,11 +50,14 @@ func (r *fakeUploadMigrationRepo) ListByStorageBackend(_ context.Context, backen
 
 func (r *fakeUploadMigrationRepo) CompareAndSwapStorageBackend(_ context.Context, id, userID uuid.UUID, fromBackend, storageKey, toBackend string) (bool, error) {
 	upload := r.uploads[id]
+	if r.casError != nil && !r.commitWithError {
+		return false, r.casError
+	}
 	if r.rejectCAS || upload == nil || upload.Availability != model.UserAssetAvailable || upload.UserID != userID || upload.StorageBackend != fromBackend || upload.StorageKey != storageKey {
 		return false, nil
 	}
 	upload.StorageBackend = toBackend
-	return true, nil
+	return true, r.casError
 }
 
 func migrationFixture(t *testing.T, payload []byte) (*uploadstorage.Registry, uploadstorage.Store, uploadstorage.Store, *fakeUploadMigrationRepo, *model.UserAsset) {
@@ -131,6 +136,12 @@ func TestUploadStorageMigratorRejectsConflictingTarget(t *testing.T) {
 	}
 	if repo.uploads[upload.ID].StorageBackend != "local" {
 		t.Fatal("DB manifest advanced despite target checksum mismatch")
+	}
+	if exists, _ := target.Exists(context.Background(), upload.StorageKey); !exists {
+		t.Fatal("conflicting pre-existing target must remain available for investigation")
+	}
+	if !repo.replicas[sourceReplica(upload, "oss")] {
+		t.Fatal("copy failure lost target inventory")
 	}
 }
 
@@ -361,5 +372,48 @@ func TestMigrationCASFailureRetainsFailedTargetCleanupForRetry(t *testing.T) {
 	}
 	if exists, _ := target.Exists(context.Background(), asset.StorageKey); exists {
 		t.Fatal("orphan target remains after cleanup retry")
+	}
+}
+
+func TestMigrationResolvesCASWriteErrorsWithoutDeletingAuthoritativeTarget(t *testing.T) {
+	for _, committed := range []bool{false, true} {
+		t.Run(fmt.Sprint(committed), func(t *testing.T) {
+			registry, source, target, repo, asset := migrationFixture(t, []byte("private-upload"))
+			repo.casError = errors.New("database write outcome error")
+			repo.commitWithError = committed
+			migrator := NewUploadStorageMigrator(repo, registry)
+			if _, err := migrator.Migrate(context.Background(), "local", "oss", false); err == nil {
+				t.Fatal("must report DB error")
+			}
+			if exists, _ := target.Exists(context.Background(), asset.StorageKey); exists != committed {
+				t.Fatalf("target exists=%v committed=%v", exists, committed)
+			}
+			if exists, _ := source.Exists(context.Background(), asset.StorageKey); !exists {
+				t.Fatal("old source deleted before outcome resolved")
+			}
+			repo.casError = nil
+			if _, err := migrator.Migrate(context.Background(), "local", "oss", false); err != nil {
+				t.Fatal(err)
+			}
+			if exists, _ := source.Exists(context.Background(), asset.StorageKey); exists {
+				t.Fatal("old source remains after retry")
+			}
+		})
+	}
+}
+
+func TestRemovalOfErasedAssetStillVerifiesKnownSourceCleanup(t *testing.T) {
+	registry, source, _, repo, asset := migrationFixture(t, []byte("private-upload"))
+	asset.Availability = model.UserAssetErased
+	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+	result, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID)
+	if err != nil || result.Availability != model.UserAssetErased {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if exists, _ := source.Exists(context.Background(), asset.StorageKey); exists {
+		t.Fatal("erased marker must not hide a known remaining source replica")
+	}
+	if len(repo.removed) != 0 {
+		t.Fatal("erasure state must not transition through source removal")
 	}
 }
