@@ -8,6 +8,17 @@ export const REPO_ROOT = path.resolve(
 );
 const STATES = new Set(["queued", "in_progress", "blocked", "done"]);
 const SHA = /^[0-9a-f]{40}$/;
+export const MAX_PARALLEL_WRITERS = 4;
+// Shared generated hotspots (baseline migration + checksums, public OpenAPI and
+// its generated Go/TS/Zod/Postman artifacts, the domain contract). Parallel
+// writers may hold them at the same time: whoever merges second rebases onto
+// main, takes main's generated files, regenerates and re-runs the checks.
+// Every other exclusive resource names domain files and still collides.
+export const SHARED_HOTSPOTS = new Set([
+  "database-migrations",
+  "public-openapi",
+  "domain-contract",
+]);
 
 export function validateQueue(queue, root = REPO_ROOT) {
   const errors = [];
@@ -16,15 +27,22 @@ export function validateQueue(queue, root = REPO_ROOT) {
   if (
     !Number.isInteger(queue.maxParallelWriters) ||
     queue.maxParallelWriters < 1 ||
-    queue.maxParallelWriters > 3
+    queue.maxParallelWriters > MAX_PARALLEL_WRITERS
   )
-    errors.push("maxParallelWriters: bounded pilot must be 1..3");
+    errors.push(
+      "maxParallelWriters: parallel lanes must be 1.." + MAX_PARALLEL_WRITERS,
+    );
   if (!SHA.test(queue.seedSha || ""))
     errors.push("seedSha: expected exact 40-hex SHA");
   if (!SHA.test(queue.mainBaselineSha || ""))
     errors.push("mainBaselineSha: expected exact frozen main SHA");
-  if (!queue.integrationBranch || !queue.integrationWorktree)
-    errors.push("integration checkout mapping missing");
+  // The integration checkout is retired; a recorded one must still be absolute.
+  if (
+    queue.integrationWorktree != null &&
+    (typeof queue.integrationWorktree !== "string" ||
+      !path.isAbsolute(queue.integrationWorktree))
+  )
+    errors.push("integration checkout mapping must be an absolute path");
   const ids = new Set();
   for (const t of queue.tickets) {
     if (!/^[A-Z][A-Z0-9-]+$/.test(t.id || ""))
@@ -102,8 +120,9 @@ export function validateQueue(queue, root = REPO_ROOT) {
     for (let j = i + 1; j < active.length; j++) {
       const a = active[i],
         b = active[j];
-      const shared = (a.exclusiveResources || []).filter((x) =>
-        (b.exclusiveResources || []).includes(x),
+      const shared = (a.exclusiveResources || []).filter(
+        (x) =>
+          !SHARED_HOTSPOTS.has(x) && (b.exclusiveResources || []).includes(x),
       );
       if (shared.length)
         errors.push(

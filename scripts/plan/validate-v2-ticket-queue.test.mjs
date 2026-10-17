@@ -58,9 +58,62 @@ test("T3 thread without project mapping is rejected", () =>
       q.tickets[0].threadId = "some-thread";
     }).some((s) => s.includes("thread without verified project")),
   ));
-test("ticket count cannot silently exceed pilot capacity", () =>
+test("ticket count cannot silently exceed parallel-lane capacity", () =>
   assert.ok(
-    mutate((q) => (q.maxParallelWriters = 8)).some((s) => s.includes("1..3")),
+    mutate((q) => (q.maxParallelWriters = 8)).some((s) => s.includes("1..4")),
+  ));
+
+test("a fifth simultaneous writer is rejected", () =>
+  assert.ok(
+    mutate((q) => {
+      q.maxParallelWriters = 4;
+      const active = q.tickets.filter((t) => t.status === "in_progress");
+      const extra = q.tickets.filter(
+        (t) => t.status === "done" && t.id !== "INT-001" && !active.includes(t),
+      );
+      for (const [i, t] of extra.slice(0, 5 - active.length).entries()) {
+        t.status = "in_progress";
+        t.baseSha = q.mainBaselineSha;
+        t.worktree = "/tmp/lane-" + i;
+        t.exclusiveResources = ["lane-only-" + i];
+      }
+    }).some((s) => s.includes("too many simultaneous active writers")),
+  ));
+
+test("shared generated hotspots do not collide between parallel writers", () => {
+  const errors = mutate((q) => {
+    const [a, b] = q.tickets.filter(
+      (t) => t.status === "done" && t.id !== "INT-001",
+    );
+    for (const [i, t] of [a, b].entries()) {
+      t.status = "in_progress";
+      t.baseSha = q.mainBaselineSha;
+      t.worktree = "/tmp/hotspot-" + i;
+      t.exclusiveResources = [
+        "database-migrations",
+        "public-openapi",
+        "domain-contract",
+        "own-domain-" + i,
+      ];
+    }
+    for (const t of q.tickets)
+      if (t.status === "in_progress" && ![a, b].includes(t))
+        t.status = "queued";
+    for (const t of q.tickets)
+      if (t.status === "queued") t.worktree = t.threadId = t.projectId = null;
+  });
+  assert.ok(!errors.some((s) => s.includes("resource collision")), errors);
+});
+
+test("same-domain resources still collide between parallel writers", () =>
+  assert.ok(
+    mutate((q) => {
+      const active = q.tickets.filter((t) => t.status === "in_progress");
+      active[0].exclusiveResources = ["public-openapi", "agent-tools"];
+      active[1].exclusiveResources = ["public-openapi", "agent-tools"];
+    }).some(
+      (s) => s.includes("resource collision") && s.includes("agent-tools"),
+    ),
   ));
 
 test("cannot admit an active ticket whose prerequisite is not accepted", () =>
