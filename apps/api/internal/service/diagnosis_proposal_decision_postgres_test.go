@@ -109,6 +109,9 @@ func TestDiagnosisProposalDecisionPartialAndReplayPostgres(t *testing.T) {
 	db := openOnboardingContextIntegrationDB(t)
 	f := seedDiagnosisDecisionFixture(t, db)
 	svc := NewDiagnosisProposalDecisionService(db)
+	// PostgreSQL persists microseconds: the first response must match replay,
+	// not expose transient nanoseconds which will disappear on a retry.
+	svc.now = func() time.Time { return time.Date(2026, 10, 17, 0, 0, 0, 123456789, time.UTC) }
 	command := diagnosisDecisionCommand(f, 0)
 	first, err := svc.Record(context.Background(), f.owner, command)
 	if err != nil || first == nil || first.Decision != model.DiagnosisAccept || first.ReceiptID == uuid.Nil {
@@ -128,7 +131,7 @@ func TestDiagnosisProposalDecisionPartialAndReplayPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	replayed, err := svc.Record(context.Background(), f.owner, command)
-	if err != nil || replayed.ID != first.ID || replayed.ReceiptID != first.ReceiptID {
+	if err != nil || replayed.ID != first.ID || replayed.ReceiptID != first.ReceiptID || !replayed.DecidedAt.Equal(first.DecidedAt) {
 		t.Fatalf("replay: %+v %v", replayed, err)
 	}
 	changed := command

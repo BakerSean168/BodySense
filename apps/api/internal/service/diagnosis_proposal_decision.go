@@ -153,7 +153,7 @@ func (s *DiagnosisProposalDecisionService) Record(ctx context.Context, owner uui
 		}
 		for _, blocker := range envelope.ActiveBlockers {
 			if blocker.RiskLevel == "urgent" {
-				if err := s.repo.BlockAnalysisForUrgent(ctx, owner, run.ID, body.CurrentRevision, s.now()); err != nil {
+				if err := s.repo.BlockAnalysisForUrgent(ctx, owner, run.ID, body.CurrentRevision, s.recordTime()); err != nil {
 					return err
 				}
 				terminalError = ErrDiagnosisSafetyBlocked
@@ -172,7 +172,7 @@ func (s *DiagnosisProposalDecisionService) Record(ctx context.Context, owner uui
 				return diagnosisEvidenceError(err)
 			}
 		}
-		result = &model.DiagnosisDecision{UserID: owner, ID: uuid.New(), ProposalID: proposal.ID, RunID: run.ID, ContentFingerprint: proposal.ContentFingerprint, DecidedEvidenceRefs: refs, Decision: command.Decision, ToolCallID: command.ToolCallID, DecidedAt: s.now(), IdempotencyKey: command.IdempotencyKey, RequestFingerprint: fingerprint, ExpectedRevision: command.ExpectedRevision, ReceiptID: uuid.New()}
+		result = &model.DiagnosisDecision{UserID: owner, ID: uuid.New(), ProposalID: proposal.ID, RunID: run.ID, ContentFingerprint: proposal.ContentFingerprint, DecidedEvidenceRefs: refs, Decision: command.Decision, ToolCallID: command.ToolCallID, DecidedAt: s.recordTime(), IdempotencyKey: command.IdempotencyKey, RequestFingerprint: fingerprint, ExpectedRevision: command.ExpectedRevision, ReceiptID: uuid.New()}
 		return s.repo.InsertDecisionWithEvent(ctx, result, body.CurrentRevision)
 	})
 	if err != nil {
@@ -183,6 +183,13 @@ func (s *DiagnosisProposalDecisionService) Record(ctx context.Context, owner uui
 	}
 	return result, nil
 }
+
+// PostgreSQL timestamps retain microseconds. Canonicalize before INSERT so the
+// first returned receipt and an idempotent database replay have identical time.
+func (s *DiagnosisProposalDecisionService) recordTime() time.Time {
+	return s.now().UTC().Truncate(time.Microsecond)
+}
+
 func diagnosisEvidenceError(err error) error {
 	if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, model.ErrDiagnosisNotFound) {
 		return model.ErrDiagnosisNotFound
