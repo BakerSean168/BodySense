@@ -168,3 +168,21 @@ func TestUserAssetReadRequiresOwnerInSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUserAssetStorageCASRequiresAvailable(t *testing.T) {
+	_, _, assets, mock, cleanup := setupLifecycleRepos(t)
+	defer cleanup()
+	id, userID := uuid.New(), uuid.New()
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "user_assets" SET .* WHERE id = \$[0-9]+ AND user_id = \$[0-9]+ AND storage_backend = \$[0-9]+ AND storage_key = \$[0-9]+ AND availability = \$[0-9]+`).
+		WithArgs("oss", id, userID, "local", "key", model.UserAssetAvailable).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+	swapped, err := assets.CompareAndSwapStorageBackend(context.Background(), id, userID, "local", "key", "oss")
+	if err != nil || swapped {
+		t.Fatalf("swapped=%v err=%v", swapped, err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}

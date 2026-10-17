@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 
@@ -13,6 +14,8 @@ import (
 )
 
 type uploadStorageMigrationRepository interface {
+	uploadSourceReplicaRepository
+	GetOwnedByID(context.Context, uuid.UUID, uuid.UUID) (*model.UserAsset, error)
 	ListByStorageBackend(ctx context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserAsset, error)
 	CompareAndSwapStorageBackend(ctx context.Context, id, userID uuid.UUID, fromBackend, storageKey, toBackend string) (bool, error)
 }
@@ -66,23 +69,58 @@ func (m *UploadStorageMigrator) Migrate(ctx context.Context, fromBackend, toBack
 			if dryRun {
 				continue
 			}
-			already, err := migrateUploadObject(ctx, source, target, &asset)
+			err := m.repo.WithStorageLock(ctx, asset.ID, func(ctx context.Context) error {
+				current, err := m.repo.GetOwnedByID(ctx, asset.ID, asset.UserID)
+				if err != nil {
+					return err
+				}
+				if current == nil || current.Availability != model.UserAssetAvailable || current.StorageKey != asset.StorageKey {
+					return fmt.Errorf("upload %s is no longer available on the source backend", asset.ID)
+				}
+				if current.StorageBackend != fromBackend {
+					// Resume cleanup after a committed cutover whose old-object Delete
+					// failed or whose process stopped before cleanup finished.
+					replicas, err := m.repo.ListStorageReplicas(ctx, current.ID, current.UserID)
+					if err != nil {
+						return err
+					}
+					for _, replica := range replicas {
+						if replica.StorageBackend == fromBackend {
+							if err := deleteSourceReplica(ctx, m.storage, m.repo, replica); err != nil {
+								return err
+							}
+						}
+					}
+					return nil
+				}
+				oldReplica, targetReplica := sourceReplica(current, fromBackend), sourceReplica(current, toBackend)
+				for _, replica := range []model.UserAssetStorageCleanup{oldReplica, targetReplica} {
+					if err := m.repo.TrackStorageReplica(ctx, replica); err != nil {
+						return err
+					}
+				}
+				already, copyErr := migrateUploadObject(ctx, source, target, current)
+				if copyErr != nil {
+					return errors.Join(copyErr, deleteSourceReplica(ctx, m.storage, m.repo, targetReplica))
+				}
+				if already {
+					result.AlreadyVerified++
+				}
+				swapped, swapErr := m.repo.CompareAndSwapStorageBackend(ctx, asset.ID, asset.UserID, fromBackend, asset.StorageKey, toBackend)
+				if swapErr != nil {
+					// A database error may mean an ambiguous commit. Keep both replicas in
+					// the durable inventory; never delete a potentially current target.
+					return fmt.Errorf("advance upload %s storage manifest: %w", asset.ID, swapErr)
+				}
+				if !swapped {
+					return errors.Join(fmt.Errorf("upload %s storage manifest changed during migration", asset.ID), deleteSourceReplica(ctx, m.storage, m.repo, targetReplica))
+				}
+				result.Migrated++
+				return deleteSourceReplica(ctx, m.storage, m.repo, oldReplica)
+			})
 			if err != nil {
 				return result, fmt.Errorf("migrate upload %s: %w", asset.ID, err)
 			}
-			if already {
-				result.AlreadyVerified++
-			}
-			swapped, err := m.repo.CompareAndSwapStorageBackend(
-				ctx, asset.ID, asset.UserID, fromBackend, asset.StorageKey, toBackend,
-			)
-			if err != nil {
-				return result, fmt.Errorf("advance upload %s storage manifest: %w", asset.ID, err)
-			}
-			if !swapped {
-				return result, fmt.Errorf("upload %s storage manifest changed during migration", asset.ID)
-			}
-			result.Migrated++
 		}
 		last := assets[len(assets)-1].ID
 		after = &last

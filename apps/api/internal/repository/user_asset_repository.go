@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 
-	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,14 +22,14 @@ func NewUserAssetRepository(db *gorm.DB) *UserAssetRepository {
 
 // Create persists a new user asset manifest.
 func (r *UserAssetRepository) Create(ctx context.Context, asset *model.UserAsset) error {
-	return database.FromContext(ctx, r.db).Create(asset).Error
+	return r.assetDB(ctx).Create(asset).Error
 }
 
 // GetOwnedByID retrieves one asset enforced by owner scope, or nil when the
 // asset does not exist for this owner.
 func (r *UserAssetRepository) GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error) {
 	var asset model.UserAsset
-	err := database.FromContext(ctx, r.db).
+	err := r.assetDB(ctx).
 		Where("id = ? AND user_id = ?", id, userID).
 		First(&asset).Error
 	if err == gorm.ErrRecordNotFound {
@@ -45,7 +44,7 @@ func (r *UserAssetRepository) GetOwnedByID(ctx context.Context, id, userID uuid.
 // ListByUserID retrieves all assets for a user, newest first.
 func (r *UserAssetRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserAsset, error) {
 	var assets []model.UserAsset
-	err := database.FromContext(ctx, r.db).
+	err := r.assetDB(ctx).
 		Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Find(&assets).Error
@@ -61,7 +60,7 @@ func (r *UserAssetRepository) ListByUserID(ctx context.Context, userID uuid.UUID
 // row count means the asset is absent, foreign, or already past available;
 // callers re-read the asset to distinguish the idempotent case.
 func (r *UserAssetRepository) MarkSourceRemoved(ctx context.Context, id, userID uuid.UUID) (bool, error) {
-	result := database.FromContext(ctx, r.db).Model(&model.UserAsset{}).
+	result := r.assetDB(ctx).Model(&model.UserAsset{}).
 		Where("id = ? AND user_id = ? AND availability = ?", id, userID, model.UserAssetAvailable).
 		Updates(map[string]any{
 			"availability":      model.UserAssetSourceRemoved,
@@ -79,7 +78,7 @@ func (r *UserAssetRepository) ListByStorageBackend(ctx context.Context, backend 
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	query := database.FromContext(ctx, r.db).Where("storage_backend = ?", backend)
+	query := r.assetDB(ctx).Where("availability = ? AND (storage_backend = ? OR EXISTS (SELECT 1 FROM user_asset_storage_cleanups c WHERE c.asset_id = user_assets.id AND c.user_id = user_assets.user_id AND c.storage_backend = ?))", model.UserAssetAvailable, backend, backend)
 	if after != nil {
 		query = query.Where("id > ?", *after)
 	}
@@ -95,8 +94,8 @@ func (r *UserAssetRepository) ListByStorageBackend(ctx context.Context, backend 
 func (r *UserAssetRepository) CompareAndSwapStorageBackend(
 	ctx context.Context, id, userID uuid.UUID, fromBackend, storageKey, toBackend string,
 ) (bool, error) {
-	result := database.FromContext(ctx, r.db).Model(&model.UserAsset{}).
-		Where("id = ? AND user_id = ? AND storage_backend = ? AND storage_key = ?", id, userID, fromBackend, storageKey).
+	result := r.assetDB(ctx).Model(&model.UserAsset{}).
+		Where("id = ? AND user_id = ? AND storage_backend = ? AND storage_key = ? AND availability = ?", id, userID, fromBackend, storageKey, model.UserAssetAvailable).
 		Updates(map[string]any{"storage_backend": toBackend, "updated_at": gorm.Expr("NOW()")})
 	if result.Error != nil {
 		return false, result.Error

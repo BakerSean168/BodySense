@@ -28,6 +28,7 @@ type fakeUserAssetRepository struct {
 	createErr error
 	byID      map[uuid.UUID]*model.UserAsset
 	removed   []uuid.UUID
+	replicas  map[model.UserAssetStorageCleanup]bool
 }
 
 func (r *fakeUserAssetRepository) Create(_ context.Context, asset *model.UserAsset) error {
@@ -470,4 +471,28 @@ func TestUploadCreatesDerivedRunManifests(t *testing.T) {
 	if len(extractionRuns.created) != 1 {
 		t.Fatalf("photo upload must not create extraction runs, got %d", len(extractionRuns.created))
 	}
+}
+
+func (r *fakeUserAssetRepository) WithStorageLock(ctx context.Context, _ uuid.UUID, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+func (r *fakeUserAssetRepository) TrackStorageReplica(_ context.Context, replica model.UserAssetStorageCleanup) error {
+	if r.replicas == nil {
+		r.replicas = map[model.UserAssetStorageCleanup]bool{}
+	}
+	r.replicas[replica] = true
+	return nil
+}
+func (r *fakeUserAssetRepository) ListStorageReplicas(_ context.Context, id, userID uuid.UUID) ([]model.UserAssetStorageCleanup, error) {
+	var result []model.UserAssetStorageCleanup
+	for replica := range r.replicas {
+		if replica.AssetID == id && replica.UserID == userID {
+			result = append(result, replica)
+		}
+	}
+	return result, nil
+}
+func (r *fakeUserAssetRepository) ForgetStorageReplica(_ context.Context, replica model.UserAssetStorageCleanup) error {
+	delete(r.replicas, replica)
+	return nil
 }

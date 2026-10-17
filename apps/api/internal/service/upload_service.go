@@ -58,6 +58,7 @@ var ErrUploadSourceUnavailable = errors.New("upload source is unavailable")
 type userAssetRepository interface {
 	Create(ctx context.Context, asset *model.UserAsset) error
 	GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error)
+	uploadSourceReplicaRepository
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserAsset, error)
 	MarkSourceRemoved(ctx context.Context, id, userID uuid.UUID) (bool, error)
 }
@@ -471,38 +472,44 @@ func (s *UploadService) OpenOwnedAssetSource(ctx context.Context, userID, assetI
 // already source-removed asset succeeds again and only retries the object
 // deletion if the first attempt failed.
 func (s *UploadService) RemoveSource(ctx context.Context, userID uuid.UUID, assetID uuid.UUID) (*model.UserAsset, error) {
-	asset, err := s.loadOwnedAsset(ctx, userID, assetID)
-	if err != nil {
-		return nil, err
-	}
-	if asset.Availability == model.UserAssetAvailable {
-		transitioned, err := s.assets.MarkSourceRemoved(ctx, assetID, userID)
+	var asset *model.UserAsset
+	err := s.assets.WithStorageLock(ctx, assetID, func(ctx context.Context) error {
+		var err error
+		asset, err = s.loadOwnedAsset(ctx, userID, assetID)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if !transitioned {
-			// A concurrent caller moved the lifecycle first; reload to observe
-			// the surviving state instead of assuming anything.
-			asset, err = s.loadOwnedAsset(ctx, userID, assetID)
-			if err != nil {
-				return nil, err
+		if asset.Availability == model.UserAssetErased {
+			return ErrUploadSourceUnavailable
+		}
+		if err := s.assets.TrackStorageReplica(ctx, sourceReplica(asset, asset.StorageBackend)); err != nil {
+			return err
+		}
+		if asset.Availability == model.UserAssetAvailable {
+			if _, err := s.assets.MarkSourceRemoved(ctx, assetID, userID); err != nil {
+				return err
 			}
 		}
-	}
-	if asset.Availability == model.UserAssetErased {
-		// The erasure lifecycle (AS-002) already removed the source; nothing
-		// further to remove and nothing to resurrect here.
-		return asset, nil
-	}
-	if s.storage == nil {
-		return nil, errors.New("upload storage is not configured")
-	}
-	store, err := s.storage.Store(asset.StorageBackend)
+		// Always refresh after CAS: both the response and cleanup use durable state.
+		asset, err = s.loadOwnedAsset(ctx, userID, assetID)
+		if err != nil {
+			return err
+		}
+		if asset.Availability != model.UserAssetSourceRemoved {
+			return ErrUploadSourceUnavailable
+		}
+		replicas, err := s.assets.ListStorageReplicas(ctx, assetID, userID)
+		if err != nil {
+			return err
+		}
+		var cleanupErr error
+		for _, replica := range replicas {
+			cleanupErr = errors.Join(cleanupErr, deleteSourceReplica(ctx, s.storage, s.assets, replica))
+		}
+		return cleanupErr
+	})
 	if err != nil {
 		return nil, err
-	}
-	if err := store.Delete(ctx, asset.StorageKey); err != nil {
-		return nil, fmt.Errorf("failed to delete upload object: %w", err)
 	}
 	return asset, nil
 }
