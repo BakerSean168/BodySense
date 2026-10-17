@@ -168,9 +168,15 @@
           "details": "DS-DX-01 contract candidate exists, not accepted/generated ConditionEntry decision API. PR286/290/291 migrated current diagnosis readers and analysis audit to native V2 evidence; target ConditionEntry/exact proposal workflow remains pending."
         },
         "database": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "DS-DX-01",
-          "details": "Legacy diagnosis_analyses/Treatment model remains in the single baseline; target singleton Diagnosis/ConditionEntry/proposal persistence not implemented."
+          "details": "Singleton Diagnosis, typed ConditionEntry evidence and immutable decisions/revisions are merged (#322/#332); settlement receipts, exact relations and disposition audit are merged in #334. Legacy candidate-assessment retirement is still pending; this gate is not ready.",
+          "boundedEvidence": {
+            "pullRequest": 334,
+            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
+            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
+          }
         },
         "design": {
           "state": "in_progress",
@@ -178,14 +184,26 @@
           "details": "Existing Diagnosis window visual baseline; precise confirmation and Q-19 review pending"
         },
         "engineering": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "ENG-DX-01",
-          "details": "Current Diagnosis freshness/read/evidence consumers use native V2 data and analysis-scoped audit after PR286/290/291. Target ConditionEntry/exact atomic proposal decisions are not implemented."
+          "details": "Go decision recording and whole-run atomic settlement are implemented (#332/#334). Create/update/disposition/relation, pending/no-op, Safety, exact source recheck and transaction failure paths have native PG18 tests. Public read/decide/settle and Agent/UI wiring remain.",
+          "boundedEvidence": {
+            "pullRequest": 334,
+            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
+            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
+          }
         },
         "integration": {
-          "state": "not_started",
+          "state": "in_progress",
           "next": "IR-DX-01",
-          "details": "No Diagnosis V2 acceptance"
+          "details": "Exact-head #334 PostgreSQL migration/recovery, broad Go race and Browser CI passed. Real native Diagnosis public-API/Agent/UI acceptance matrix is not complete; no whole-domain integration acceptance.",
+          "boundedEvidence": {
+            "pullRequest": 334,
+            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
+            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
+          }
         }
       }
     },
@@ -560,12 +578,12 @@
       ]
     }
   ],
-  "updatedAtUtc": "2026-10-17T06:20:00Z",
+  "updatedAtUtc": "2026-10-17T09:09:20Z",
   "latestExecution": {
     "owner": "ChatGPT Web direct implementation; user handoff 2026-10-17",
-    "baselineHead": "391f3e5151d0b68330a45032c2e726802bfb56f8",
-    "previousBaselineHead": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
-    "state": "CHATGPT_direct;user_paused_hourly_task_not_resumed;bounded_slices_accepted;remaining_V2_open;release_HOLD",
+    "baselineHead": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+    "previousBaselineHead": "391f3e5151d0b68330a45032c2e726802bfb56f8",
+    "state": "CHATGPT_direct;Diagnosis_storage_decisions_and_atomic_settlement_accepted;native_HTTP_and_legacy_retirement_pending;user_paused_scheduler;release_HOLD",
     "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
     "nextTickets": [
       "DX-002",
@@ -578,13 +596,13 @@
       "QA-001"
     ],
     "verification": {
-      "mergedEvidence": "PR322:0dfc2454e2fd251666d56cf252ef217e24b5950b;PR326:76aa8d22759de7f9eea2db8bcce79b68c2f970ed;PR327:b82a384b7189747e7a2ea2b5cf35f4f311a4545c;PR330:ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48;PR331:165cc8f112670fecc4233fb939ff25e44dbe6eb0;PR332:391f3e5151d0b68330a45032c2e726802bfb56f8",
-      "currentDrafts": "No interrupted V2 code PR remains open in this acceptance batch; unrelated PRs were not touched.",
+      "mergedEvidence": "PR322:0dfc2454e2fd251666d56cf252ef217e24b5950b;PR326:76aa8d22759de7f9eea2db8bcce79b68c2f970ed;PR327:b82a384b7189747e7a2ea2b5cf35f4f311a4545c;PR330:ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48;PR331:165cc8f112670fecc4233fb939ff25e44dbe6eb0;PR332:391f3e5151d0b68330a45032c2e726802bfb56f8;PR334:74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+      "currentDrafts": "No V2 code PR remains open after #334 at this audit. The service-layer kernel is merged; native API wiring and legacy retirement are the next bounded slice.",
       "readiness": "No whole-domain gate raised. #305/#306/#309/#311 remain open for residual scope.",
       "operations": "Direct ChatGPT source implementation and isolated tests; no provider delegation, scheduler resume, staging/prod DB or release operation.",
-      "validation": "PR326 exact-head 12 SUCCESS; PR331 10 SUCCESS + 2 scoped PG skips; PR332 exact-head 12 SUCCESS; direct full isolated PG18 race/vet suites and 29-test responsive Web regression passed."
+      "validation": "PR334 exact head 18e56eb1b9c53a93784c207fe3eb7558f4bfef00 passed 12/12 GitHub CI; native PG18 -race targeted 18 groups, full Go race/vet/staticcheck, migration/domain validators, contracts regeneration equality, Postman and plan:check passed."
     },
-    "auditedAtUtc": "2026-10-17T06:20:00Z",
+    "auditedAtUtc": "2026-10-17T09:09:20Z",
     "executionMode": "CHATGPT",
     "schedulerState": "user_paused_do_not_reenable_without_explicit_request",
     "providerPolicy": "No further exhausted community-provider calls or new T3 sessions for this takeover."

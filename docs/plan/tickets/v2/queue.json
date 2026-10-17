@@ -201,8 +201,19 @@
       "worktree": null,
       "acceptedSha": null,
       "githubIssue": 305,
-      "remainingScope": "Persistence #322 and per-choice receipt/audit transaction #332 are merged. Whole-run atomic adoption, evidence-addition rechecks, public read/decide APIs and legacy retirement remain. A recorded choice is not a DiagnosisRevision.",
-      "executionOwner": "ChatGPT Web direct; no active T3 writer from this handoff"
+      "remainingScope": "Persistence #322, decision recording #332, and whole-run atomic settlement #334 are merged. Native public read/decide/settle APIs, authenticated consumer migration and legacy candidate-assessment retirement remain. Overall #305 is OPEN; no complete-domain gate passed.",
+      "executionOwner": "ChatGPT Web direct; paused scheduler and no T3 writer. This accepted slice has no active writer binding.",
+      "mergedPrs": [322, 332, 334],
+      "boundedDeliveries": {
+        "atomicSettlement": {
+          "head": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
+          "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
+          "pullRequest": 334,
+          "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899",
+          "reviewId": 5557145663,
+          "scope": "Service-layer whole-run atomic adoption, explicit expiry/recheck, immutable settlement receipt; not public API/clinical release readiness."
+        }
+      }
     },
     {
       "id": "DX-003",
@@ -479,8 +490,8 @@
   "baselineFrozenAtUtc": "2026-10-16T12:34:08Z",
   "previousFrozenBaselineSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
   "newWriterAdmissionPolicy": "SINGLE_DESIGNATED_WRITER_UNDER_MASTER_BIG_BANG_POLICY;status_sync_does_not_admit_runtime_writers",
-  "auditedAtUtc": "2026-10-17T06:20:00Z",
-  "postMergeMainSha": "391f3e5151d0b68330a45032c2e726802bfb56f8",
+  "auditedAtUtc": "2026-10-17T09:09:20Z",
+  "postMergeMainSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
   "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38901329790",
   "latestObservedMainCiStatus": "PR249_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
   "mergedDomainContractPr": 264,
