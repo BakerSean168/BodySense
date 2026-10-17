@@ -79,6 +79,7 @@ type Runtime struct {
 	bodyStateService            runtimeBodyStateService
 	bodyFacts                   runtimeBodyFactService
 	interactionResumes          *service.InteractionResumeService
+	suggestionSources           service.BodyStateSuggestionSourceReader
 	contextRetrievalService     *service.ContextRetrievalService
 	diagnosisAnalysisService    *service.DiagnosisAnalysisService
 	diagnosisFreshnessService   *service.DiagnosisFreshnessService
@@ -1354,6 +1355,23 @@ func (r *Runtime) handleInteractionRequired(
 	}
 	if !bound && bytes.Contains(payload.Question, []byte(`"state_binding"`)) {
 		log.Printf("stripped unbound symptom intake binding for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
+	}
+	// A BodyState suggestion is bound only against the owner's own cited user
+	// message and current revision (v3 only); otherwise it is stripped and its
+	// answer can write nothing. It runs after intake binding so the intake
+	// binder never sees (and strips) a Go-written suggestion binding.
+	var suggestionSources service.BodyStateSuggestionSourceReader
+	if sameRunResume {
+		suggestionSources = r.suggestionSources
+	}
+	question, suggestionBound, err := service.BindBodyStateSuggestionQuestion(ctx, suggestionSources, state.UID, state.ConversationID, question)
+	if err != nil {
+		log.Printf("could not bind body state suggestion for run %s: %v", state.Run.ID, err)
+		r.failActiveStream(ctx, sw, state, "invalid user interaction")
+		return true
+	}
+	if !suggestionBound && bytes.Contains(payload.Question, []byte(`"suggestion"`)) {
+		log.Printf("stripped unbindable body state suggestion for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
 	}
 	payload.Question = question
 	var nativeIDs []string

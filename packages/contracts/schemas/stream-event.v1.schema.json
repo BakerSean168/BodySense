@@ -695,7 +695,17 @@
                   "type": "string",
                   "minLength": 1
                 },
-                "answer": {}
+                "answer": {},
+                "body_state_receipt": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/BodyStateSuggestionReceipt"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
               }
             }
           },
@@ -1284,6 +1294,108 @@
         }
       }
     },
+    "BodyStateSuggestionSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_id",
+        "message_seq",
+        "span_start",
+        "span_end",
+        "excerpt_sha256"
+      ],
+      "properties": {
+        "message_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "span_start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "span_end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "excerpt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "BodyStateSuggestionBinding": {
+      "description": "Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "kind",
+        "source",
+        "base_body_state_revision"
+      ],
+      "properties": {
+        "revision": {
+          "const": "body-state-suggestion-v1"
+        },
+        "kind": {
+          "const": "hypothesis"
+        },
+        "source": {
+          "$ref": "#/$defs/BodyStateSuggestionSource"
+        },
+        "base_body_state_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "BodyStateSuggestionReceipt": {
+      "description": "Id-only Go commit receipt of a confirmed BodyState suggestion. Present only after the commit; a declined suggestion carries null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "commit_id",
+        "hypothesis_id",
+        "source_evidence_id",
+        "revision",
+        "event_id",
+        "committed_at"
+      ],
+      "properties": {
+        "kind": {
+          "const": "hypothesis"
+        },
+        "commit_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hypothesis_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "committed_at": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "InteractionQuestion": {
       "type": "object",
       "required": [
@@ -1335,7 +1447,18 @@
           "type": "string"
         },
         "state_binding": {
-          "$ref": "#/$defs/InteractionStateBinding"
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InteractionStateBinding"
+            },
+            {
+              "$ref": "#/$defs/BodyStateSuggestionBinding"
+            }
+          ]
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
