@@ -16,6 +16,10 @@ PR6 A–E is **COMPLETE / MERGED** through #298 (`af3e1993b`), recorded by done 
 
 The frozen baseline is main `af3e1993b1f62930e3b680b54abab5ade456935b`, with exact-main CI including PG18 baseline/recovery/browser PASS. PR #274 (TP-PROP-001) was then updated onto this baseline, passed exact-head CI and merged as `adaa02607`; dependabot #249 (CI action pins only) followed as `6687a9e26`, the current queue baseline. Residual scope per ticket, sizes and order: [2026-10-16 remaining-work plan](../../active/2026-10-16-v2-remaining-plan.md). Master §0’s big-bang **one designated writer** rule supersedes the historical three-writer pilot and parallel scheduling instructions above/below; this status sync changes no locks, scheduler settings or runtime writer ownership.
 
+## Current checkpoint · 2026-10-17 · parallel lanes
+
+At the user's request, Hark now implements V2 in **parallel lanes** with up to four writers (`maxParallelWriters: 4`), replacing the single-writer rule above for scheduling: docs/phase-0 (sole editor of `docs/plan/**`), lane A Diagnosis (#310 → #312 → #341), lane B Training (#311 → #313 → #315), lane C interleaved (#307, #308, #306 → #314, #309). Queue baseline is main `1abcc9f1634bb6039e00c6f9654817118ae5cf4c`. The queue validator now treats only the shared generated hotspots (`database-migrations`, `public-openapi`, `domain-contract`) as concurrent-safe under the rebase rule; every other exclusive resource still collides. GitHub issue checkboxes are the live status; this queue is synced per domain closeout, not per slice. See [remaining plan §7](../../active/2026-10-16-v2-remaining-plan.md#7-parallel-lanes--2026-10-17).
+
 ## Scheduling policy
 
 Write a short execution handoff for each thread: `ticketId, threadId, projectId, absolute worktree, branch, expectedHead, provider/model, run status, changed paths, tests, output exact SHA, blockers`. Never retry an ambiguous T3 create/message blindly; first query its durable thread status. Stop a previous writer before ChatGPT Web assumes the same checkout. Existing hourly Track A/C/D tasks must not race new thread owners.

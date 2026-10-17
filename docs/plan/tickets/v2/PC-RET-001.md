@@ -1,6 +1,6 @@
 # PC-RET-001 · Implement three-cursor retention and controlled pruning
 
-Status: QUEUED / NOT ADMITTED. Phase 2. SF cross-reference: SF-70.
+Status: IN PROGRESS · lane C (Hark parallel lanes, 2026-10-17), worktree `bodysense-pcret001`, base `1abcc9f16`. Phase 2. SF cross-reference: SF-70.
 **Owner role:** Chat Retention Owner. **Dependencies:** `PC-001`.
 **Exclusive resources:** `conversation-schema`, `privacy-erasure`.
 
