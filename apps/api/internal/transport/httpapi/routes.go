@@ -207,6 +207,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// A proposal is never an accepted plan; only the user's accept writes a revision.
 	protected.GET("/plan-proposals", wrapper.ListPlanProposalRecords)
 	protected.POST("/plan-proposals", wrapper.CreatePlanProposal)
+	protected.POST("/plan-proposals/generations", wrapper.GeneratePlanProposal)
 	protected.GET("/plan-proposals/:proposalId", wrapper.GetPlanProposalRecord)
 	protected.POST("/plan-proposals/:proposalId/accept", wrapper.AcceptPlanProposal)
 	protected.POST("/plan-proposals/:proposalId/reject", wrapper.RejectPlanProposal)

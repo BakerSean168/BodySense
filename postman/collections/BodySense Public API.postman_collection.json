@@ -33445,6 +33445,497 @@
               }
             },
             {
+              "id": "2af22c1c-bfac-5b8a-b087-b9bb7727b2db",
+              "name": "Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).",
+              "request": {
+                "name": "Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).",
+                "description": {
+                  "content": "Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.",
+                  "type": "text/plain"
+                },
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "plan-proposals",
+                    "generations"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{bearerToken}}"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"idempotencyKey\": \"<string>\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": false,\n    \"key_1\": 33.949180506169796\n  },\n  \"changeReason\": \"<string>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "id": "d0b6948e-14a5-5d7f-80a0-6dc3c90e7e31",
+                  "name": "Idempotent replay of the stored proposal",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"proposalId\": \"710f30ee-afcf-5d88-1d94-0f824b9bc1c4\",\n  \"kind\": \"update\",\n  \"state\": \"rejected\",\n  \"initiatedBy\": \"user\",\n  \"draft\": {\n    \"title\": \"string\",\n    \"goal\": \"string\",\n    \"relatedConditionIds\": [\n      \"0c5e2772-878e-21e3-5019-777fa3c795ca\",\n      \"5a212bf0-0682-351d-3cdd-b0eb5c58ef46\"\n    ],\n    \"relatedBodyRefs\": [\n      {\n        \"kind\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"sourceVersion\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      {\n        \"kind\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"sourceVersion\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      }\n    ],\n    \"content\": {\n      \"sessions\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"frequency\": {\n        \"sessionsPerWeek\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"description\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"schedule\": {\n        \"mode\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"timeZone\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"occurrences\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"constraints\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  },\n  \"contentFingerprint\": \"4337306e06dc7fa842dd35e3e026eafe0a4ae351e4832b8606f4a07a475834b1\",\n  \"createdAt\": \"1967-06-02T13:48:33.608Z\",\n  \"expiresAt\": \"1985-12-22T14:28:34.477Z\",\n  \"planId\": \"fb6d367b-8384-b910-ace6-14e6a79f018c\",\n  \"basedOnRevisionId\": \"a2df9e74-8145-d3c5-3d63-c5ee0f976a72\",\n  \"expiredReason\": \"base_revision_changed\",\n  \"decisionId\": \"6ee562d0-f60e-57e0-eb38-fe06373e41a1\"\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "ffaaa82a-d7d4-5bac-a7c2-30cede7da156",
+                  "name": "New pending agent proposal",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Created",
+                  "code": 201,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"proposalId\": \"710f30ee-afcf-5d88-1d94-0f824b9bc1c4\",\n  \"kind\": \"update\",\n  \"state\": \"rejected\",\n  \"initiatedBy\": \"user\",\n  \"draft\": {\n    \"title\": \"string\",\n    \"goal\": \"string\",\n    \"relatedConditionIds\": [\n      \"0c5e2772-878e-21e3-5019-777fa3c795ca\",\n      \"5a212bf0-0682-351d-3cdd-b0eb5c58ef46\"\n    ],\n    \"relatedBodyRefs\": [\n      {\n        \"kind\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"sourceVersion\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      {\n        \"kind\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"sourceVersion\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      }\n    ],\n    \"content\": {\n      \"sessions\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"frequency\": {\n        \"sessionsPerWeek\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"description\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"schedule\": {\n        \"mode\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"timeZone\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"occurrences\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"constraints\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  },\n  \"contentFingerprint\": \"4337306e06dc7fa842dd35e3e026eafe0a4ae351e4832b8606f4a07a475834b1\",\n  \"createdAt\": \"1967-06-02T13:48:33.608Z\",\n  \"expiresAt\": \"1985-12-22T14:28:34.477Z\",\n  \"planId\": \"fb6d367b-8384-b910-ace6-14e6a79f018c\",\n  \"basedOnRevisionId\": \"a2df9e74-8145-d3c5-3d63-c5ee0f976a72\",\n  \"expiredReason\": \"base_revision_changed\",\n  \"decisionId\": \"6ee562d0-f60e-57e0-eb38-fe06373e41a1\"\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "0dd53868-60e4-5384-9ea0-44d67b878a81",
+                  "name": "Request body or BodyState fact is invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "fbe71ba9-1365-56e3-840a-5146c2e65b3c",
+                  "name": "Authentication is missing or invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "b5bc69ae-c8b0-5cb1-98ff-70c84f082d63",
+                  "name": "Requested operation conflicts with the durable resource state.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Conflict",
+                  "code": 409,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "be937ee7-7954-5a7b-892f-2d38bb2cf61b",
+                  "name": "Unexpected server failure.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Internal Server Error",
+                  "code": 500,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "c9e1cd61-195e-502c-9b16-c1319c39f21d",
+                  "name": "Upstream generated output failed the trusted application contract.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Gateway",
+                  "code": 502,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "9660477b-b969-5543-934e-06f2a3b63ee5",
+                  "name": "Required application capability is temporarily unavailable.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "plan-proposals",
+                        "generations"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotencyKey\": \"j\",\n  \"diagnosisAnalysisId\": \"<uuid>\",\n  \"userConstraints\": {\n    \"key_0\": true,\n    \"key_1\": 4184.11532882601,\n    \"key_2\": 8373\n  },\n  \"changeReason\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Service Unavailable",
+                  "code": 503,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                }
+              ],
+              "event": [],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              }
+            },
+            {
               "id": "8b1367d6-6cee-5d10-9543-5dac0d9aa15d",
               "name": "{proposalId}",
               "item": [
@@ -33820,7 +34311,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -33836,7 +34327,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"receiptId\": \"b5bab348-c27b-98f5-5033-253faaefd04f\",\n  \"proposalId\": \"55e72d13-ab6a-2b8c-5e93-706e356f5e86\",\n  \"decisionId\": \"f3e1146b-6771-39b9-c1ae-b0f1e34f317d\",\n  \"planId\": \"10c4d806-0afc-acd3-3910-daf06397fe3d\",\n  \"revisionId\": \"319c68de-632f-dc8a-ecaf-23e8cd6c8e76\",\n  \"idempotencyKey\": \"string\",\n  \"decidedAt\": \"1998-10-08T06:21:18.677Z\",\n  \"executionGate\": {\n    \"result\": \"allow\",\n    \"permitsExecution\": false,\n    \"reasons\": [\n      \"string\",\n      \"string\"\n    ],\n    \"matchedRestrictionIds\": [\n      \"8848fe16-d700-cdb0-a623-4099121dd340\",\n      \"3016bc13-6b0b-ca25-2fb6-10e63c505dc4\"\n    ],\n    \"requiresReview\": false,\n    \"urgentCare\": false,\n    \"safetyRevision\": 1013,\n    \"policyRevision\": \"string\"\n  }\n}",
+                      "body": "{\n  \"receiptId\": \"e72d13f1-6a12-8cc5-9307-6e356f5e8665\",\n  \"proposalId\": \"e1146b6d-7153-b99c-ae9b-f1e34f317d99\",\n  \"decisionId\": \"c4d806cd-fc9a-d323-100d-f06397fe3d10\",\n  \"planId\": \"9c68de2d-2fad-8afe-af52-e8cd6c8e7680\",\n  \"revisionId\": \"5ab1e360-2789-f8f8-48fe-63ad7005cdb0\",\n  \"idempotencyKey\": \"string\",\n  \"decidedAt\": \"2010-01-27T05:55:42.767Z\",\n  \"executionGate\": {\n    \"result\": \"block\",\n    \"permitsExecution\": false,\n    \"reasons\": [\n      \"string\",\n      \"string\"\n    ],\n    \"matchedRestrictionIds\": [\n      \"16bc133f-0b5c-25a2-b6d1-e63c505dc420\",\n      \"c1966379-c512-3a2e-bcdf-5878ad3e7cbc\"\n    ],\n    \"requiresReview\": true,\n    \"urgentCare\": false,\n    \"safetyRevision\": 5585,\n    \"policyRevision\": \"string\"\n  }\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33883,7 +34374,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -33946,7 +34437,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34009,7 +34500,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34072,7 +34563,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34135,7 +34626,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34198,7 +34689,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34326,7 +34817,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34342,7 +34833,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"receiptId\": \"7c51213a-8bcd-9587-ad3e-cbc2ca7d8094\",\n  \"proposalId\": \"3d282c2b-f423-97c8-6621-afd026797e99\",\n  \"decisionId\": \"7612654b-f756-7916-2c6a-e0a09b3f1a27\",\n  \"idempotencyKey\": \"string\",\n  \"decidedAt\": \"1973-12-12T02:11:13.012Z\"\n}",
+                      "body": "{\n  \"receiptId\": \"282c2bbe-2379-c836-212a-d026797e99f2\",\n  \"proposalId\": \"12654b99-56e7-16d2-6a8e-a09b3f1a273e\",\n  \"decisionId\": \"a9a03a24-b36e-c436-1175-7bbe6e64d53d\",\n  \"idempotencyKey\": \"string\",\n  \"decidedAt\": \"1968-12-03T00:22:32.647Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -34389,7 +34880,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34452,7 +34943,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34515,7 +35006,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34578,7 +35069,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34641,7 +35132,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"02899320c6a97ea7ecf46bbdb7105b940759a1b598955cfc53a9e21fa4516c88\",\n  \"idempotencyKey\": \"q\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
+                          "raw": "{\n  \"decisionId\": \"<uuid>\",\n  \"presentedFingerprint\": \"8955cfc53a9e21fa4516c883d57d2b6fb5bab348c4c27bc98f5150338253faae\",\n  \"idempotencyKey\": \"r\",\n  \"targetPlanId\": \"<uuid>\",\n  \"expectedRevisionId\": \"<uuid>\"\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -34771,7 +35262,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"1968-03-05T08:59:31.670Z\"\n}",
+              "body": "{\n  \"availability\": \"source_removed\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2005-11-02T02:28:52.870Z\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -35066,7 +35557,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"id\": \"7bbe6e64-3d55-3b2e-0273-5480678864a9\",\n  \"file_type\": \"consultation_photo\",\n  \"original_name\": \"string\",\n  \"file_size\": 6156,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"none\",\n  \"created_at\": \"1981-08-18T15:55:12.191Z\",\n  \"updated_at\": \"1974-09-20T16:05:54.065Z\",\n  \"ocr_result\": {\n    \"key_0\": 2517.848825082183\n  },\n  \"analysis_result\": {\n    \"key_0\": 6556.154175195843,\n    \"key_1\": \"string\",\n    \"key_2\": false,\n    \"key_3\": 9869.44681731984\n  }\n}",
+                  "body": "{\n  \"id\": \"349bb08d-687a-002b-47ae-f5a71a44d755\",\n  \"file_type\": \"photo_front\",\n  \"original_name\": \"string\",\n  \"file_size\": 5102,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"processing\",\n  \"analysis_status\": \"none\",\n  \"created_at\": \"1964-12-09T02:14:19.659Z\",\n  \"updated_at\": \"1990-04-23T06:55:38.681Z\",\n  \"ocr_result\": {\n    \"key_0\": 9828.770279418677\n  },\n  \"analysis_result\": {\n    \"key_0\": 1385\n  }\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -35354,7 +35845,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"1c37e251-f91c-aa24-bad7-38fc9d6a4ec0\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 5534,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"pending\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"1960-01-31T04:50:47.716Z\",\n      \"updated_at\": \"1958-07-17T02:46:58.345Z\",\n      \"ocr_result\": {\n        \"key_0\": false\n      },\n      \"analysis_result\": {\n        \"key_0\": 7199.048299808055,\n        \"key_1\": 5016,\n        \"key_2\": \"string\"\n      }\n    },\n    {\n      \"id\": \"5185a521-90b3-815b-5e69-0d0b31e4e40d\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 3311,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"failed\",\n      \"created_at\": \"1951-05-10T10:11:10.480Z\",\n      \"updated_at\": \"1949-01-20T01:06:35.318Z\",\n      \"ocr_result\": {\n        \"key_0\": 181\n      },\n      \"analysis_result\": {\n        \"key_0\": 6919,\n        \"key_1\": 7135,\n        \"key_2\": true\n      }\n    }\n  ]\n}",
+                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"6a4ec07d-d38c-ff16-3d6d-33bbc26dbb64\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 3397,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"none\",\n      \"created_at\": \"2017-01-01T11:11:15.004Z\",\n      \"updated_at\": \"1997-04-19T14:03:58.691Z\",\n      \"ocr_result\": {\n        \"key_0\": 5909.324095118791\n      },\n      \"analysis_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": 9347.749059088528\n      }\n    },\n    {\n      \"id\": \"b31e4e40-e6b7-558f-aee4-ff5160eb0dcc\",\n      \"file_type\": \"photo_back\",\n      \"original_name\": \"string\",\n      \"file_size\": 7135,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"failed\",\n      \"analysis_status\": \"completed\",\n      \"created_at\": \"1984-02-05T22:13:41.725Z\",\n      \"updated_at\": \"2012-01-05T23:42:02.317Z\",\n      \"ocr_result\": {\n        \"key_0\": false,\n        \"key_1\": 2823\n      },\n      \"analysis_result\": {\n        \"key_0\": false\n      }\n    }\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -35533,7 +36024,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"has_analysis\": true,\n  \"views\": [\n    {\n      \"upload_id\": \"b68be69b-16b9-43f8-df5d-10f96bafe239\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": false,\n        \"key_1\": \"string\"\n      },\n      \"created_at\": \"1949-06-24T09:03:39.741Z\"\n    },\n    {\n      \"upload_id\": \"e83f4e51-2e9d-8295-47a8-7c6420b33ec9\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": \"string\",\n        \"key_1\": \"string\"\n      },\n      \"created_at\": \"2013-02-01T19:53:30.433Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
+                  "body": "{\n  \"has_analysis\": true,\n  \"views\": [\n    {\n      \"upload_id\": \"10f96baf-3986-eb71-e6d5-be2b001dfd2d\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": true\n      },\n      \"created_at\": \"2015-07-20T04:39:13.949Z\"\n    },\n    {\n      \"upload_id\": \"7a8d7c64-b33e-94be-5bd7-e6a460b282fc\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": \"string\",\n        \"key_1\": 8208\n      },\n      \"created_at\": \"1988-06-04T00:15:38.236Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -35737,7 +36228,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"7bbe6e64-3d55-3b2e-0273-5480678864a9\",\n  \"file_type\": \"consultation_photo\",\n  \"original_name\": \"string\",\n  \"file_size\": 6156,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"none\",\n  \"created_at\": \"1981-08-18T15:55:12.191Z\",\n  \"updated_at\": \"1974-09-20T16:05:54.065Z\",\n  \"ocr_result\": {\n    \"key_0\": 2517.848825082183\n  },\n  \"analysis_result\": {\n    \"key_0\": 6556.154175195843,\n    \"key_1\": \"string\",\n    \"key_2\": false,\n    \"key_3\": 9869.44681731984\n  }\n}",
+                      "body": "{\n  \"id\": \"349bb08d-687a-002b-47ae-f5a71a44d755\",\n  \"file_type\": \"photo_front\",\n  \"original_name\": \"string\",\n  \"file_size\": 5102,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"processing\",\n  \"analysis_status\": \"none\",\n  \"created_at\": \"1964-12-09T02:14:19.659Z\",\n  \"updated_at\": \"1990-04-23T06:55:38.681Z\",\n  \"ocr_result\": {\n    \"key_0\": 9828.770279418677\n  },\n  \"analysis_result\": {\n    \"key_0\": 1385\n  }\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36061,7 +36552,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"1968-03-05T08:59:31.670Z\"\n}",
+                      "body": "{\n  \"availability\": \"source_removed\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2005-11-02T02:28:52.870Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36330,7 +36821,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"extraction_run_id\": \"47da8d26-b20e-b5a7-ee7f-3ee42bbd2f86\",\n  \"upload_id\": \"cb470932-2793-a766-b73d-03f8db19692f\",\n  \"source_availability\": \"source_unavailable\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 116,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 6465,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                      "body": "{\n  \"extraction_run_id\": \"ee7f63ee-bbd2-8628-b470-32aa27939a76\",\n  \"upload_id\": \"b73d003f-b196-2fa7-b295-0d3a411c01b3\",\n  \"source_availability\": \"available\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 8132,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 8372,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36683,7 +37174,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 2156,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 5522,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 2991,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 6650,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -37008,7 +37499,7 @@
                             },
                             "body": {
                               "mode": "raw",
-                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 7038,\n    \"key_2\": 2565.8394023776054,\n    \"key_3\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                               "options": {
                                 "raw": {
                                   "language": "json"
@@ -37069,7 +37560,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37085,7 +37576,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"id\": \"024f53b7-5db6-3bf3-6f29-61be63869722\",\n  \"extraction_run_id\": \"24850c3a-9ab4-39c4-9162-b1eb622a25ed\",\n  \"upload_id\": \"aee3eaea-a4aa-04d5-fa3c-9e4d6f886e11\",\n  \"indicator_index\": 4552,\n  \"indicator_id\": \"string\",\n  \"action\": \"reject\",\n  \"created_at\": \"1978-07-27T22:40:39.566Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 1790.4740385711193\n  },\n  \"note\": \"string\"\n}",
+                              "body": "{\n  \"id\": \"3bf3f6f2-61be-3869-2235-4850c3a999ab\",\n  \"extraction_run_id\": \"39c4b916-b1eb-22a2-ed26-ee3eaea7da4a\",\n  \"upload_id\": \"04d54fa3-9e4d-f886-11f7-8e7e89932ec6\",\n  \"indicator_index\": 9236,\n  \"indicator_id\": \"string\",\n  \"action\": \"correct\",\n  \"created_at\": \"2016-09-21T06:17:31.386Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": false,\n    \"key_1\": false\n  },\n  \"note\": \"string\"\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -37141,7 +37632,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37213,7 +37704,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37285,7 +37776,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37357,7 +37848,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37429,7 +37920,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 309\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -37961,7 +38452,7 @@
                     },
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 7225,\n    \"key_1\": \"string\",\n    \"key_2\": \"string\",\n    \"key_3\": 3834.251342341304\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5310.714705847204\n  }\n}",
+                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 3919,\n    \"key_1\": 1748.7594159319997\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": false,\n    \"key_2\": false\n  }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -38004,7 +38495,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38020,7 +38511,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": 8429,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": false,\n    \"key_1\": \"string\"\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": 3816,\n    \"key_1\": false\n  },\n  \"registered_at\": \"1968-10-13T13:47:14.739Z\",\n  \"created_at\": \"1970-02-26T05:44:39.606Z\",\n  \"updated_at\": \"2012-06-06T08:03:17.290Z\",\n  \"canonical_url\": \"https://LDkmmycqgoGgKcYvaLuhWNUFcTgoViY.yhLDXnmHz9NTjzmsNyjispn..HY\"\n}",
+                      "body": "{\n  \"id\": 4605,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": false,\n    \"key_2\": 9285.984658636153,\n    \"key_3\": 1500\n  },\n  \"registered_at\": \"2007-07-16T11:16:07.979Z\",\n  \"created_at\": \"2003-05-23T03:15:43.106Z\",\n  \"updated_at\": \"1988-01-01T17:23:23.182Z\",\n  \"canonical_url\": \"http://mycqgoGg.bzkaon.ZY8VLm\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -38058,7 +38549,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38112,7 +38603,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38166,7 +38657,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38220,7 +38711,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38274,7 +38765,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38328,7 +38819,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 528,\n    \"key_1\": 9288\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": true\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": 6669.228144455701\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -38433,7 +38924,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 1389,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 9871,\n        \"key_1\": false,\n        \"key_2\": false\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": \"string\"\n      },\n      \"registered_at\": \"1965-10-13T00:37:24.839Z\",\n      \"created_at\": \"1994-09-10T06:30:19.794Z\",\n      \"updated_at\": \"1965-04-19T15:29:20.081Z\",\n      \"canonical_url\": \"https://jnMDg.eahdXPN0GcPIlPPc6xW5Fc-l+HVcRI4B932B5wETJTxoUA9Q-3zNShPNNJkJJtOW4YsSEae\"\n    },\n    {\n      \"id\": 1315,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 3335.502799600363\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": false\n      },\n      \"registered_at\": \"2001-08-26T06:15:07.878Z\",\n      \"created_at\": \"1971-12-14T21:58:44.217Z\",\n      \"updated_at\": \"2017-01-19T13:56:31.054Z\",\n      \"canonical_url\": \"https://IWVRqCkWdfEc.rzdep71v\"\n    }\n  ]\n}",
+                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 462,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 1934.2249049805105,\n        \"key_1\": true\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": true\n      },\n      \"registered_at\": \"1981-12-04T12:19:19.623Z\",\n      \"created_at\": \"2000-12-30T18:33:58.755Z\",\n      \"updated_at\": \"1954-05-14T03:38:28.668Z\",\n      \"canonical_url\": \"https://DY.ynUoyAd0LaQSXVzKN.1,CN0GcPSTPGUW5F\"\n    },\n    {\n      \"id\": 5296,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\",\n        \"key_1\": 7384\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": false,\n        \"key_1\": 1460.9813294373453\n      },\n      \"registered_at\": \"1959-07-24T13:06:16.460Z\",\n      \"created_at\": \"2020-06-03T03:04:50.544Z\",\n      \"updated_at\": \"1993-06-06T09:00:23.733Z\",\n      \"canonical_url\": \"http://NqOeeSafdmWfBp.rhcuu.ZteBTP57X8aGyUiw-+reG,wwbx\"\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -38736,7 +39227,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"job\": {\n    \"id\": \"975c9140-3c01-2312-14e4-4eab66b379f8\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 1989,\n    \"max_attempts\": 7070,\n    \"created_at\": \"1970-04-13T19:50:20.050Z\",\n    \"updated_at\": \"1960-03-20T14:31:05.825Z\",\n    \"progress\": {\n      \"key_0\": 3278,\n      \"key_1\": true,\n      \"key_2\": 3343\n    },\n    \"result\": {\n      \"key_0\": 5551\n    },\n    \"error\": {\n      \"key_0\": 2920,\n      \"key_1\": \"string\"\n    },\n    \"started_at\": \"2008-07-31T11:33:21.174Z\",\n    \"finished_at\": \"1956-05-19T22:08:39.323Z\"\n  },\n  \"idempotent_hit\": true\n}",
+                      "body": "{\n  \"job\": {\n    \"id\": \"459cabfa-acfb-b657-1e7e-2975c9140b43\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 1855,\n    \"max_attempts\": 901,\n    \"created_at\": \"1955-11-18T19:55:15.054Z\",\n    \"updated_at\": \"2018-09-07T00:02:17.056Z\",\n    \"progress\": {\n      \"key_0\": 6966.82816138491,\n      \"key_1\": 6237.459359690547,\n      \"key_2\": 8975,\n      \"key_3\": true\n    },\n    \"result\": {\n      \"key_0\": 9068\n    },\n    \"error\": {\n      \"key_0\": true,\n      \"key_1\": 3278\n    },\n    \"started_at\": \"1965-05-11T07:07:17.730Z\",\n    \"finished_at\": \"1976-04-12T01:37:28.839Z\"\n  },\n  \"idempotent_hit\": false\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -39173,7 +39664,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"bd5a77c7-4493-792f-5575-1541631a8e37\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 7796,\n  \"max_attempts\": 7632,\n  \"created_at\": \"1958-05-31T08:26:28.476Z\",\n  \"updated_at\": \"1957-07-08T04:22:55.066Z\",\n  \"progress\": {\n    \"key_0\": \"string\",\n    \"key_1\": 3247.7677427232265\n  },\n  \"result\": {\n    \"key_0\": \"string\",\n    \"key_1\": 4268.061316106468\n  },\n  \"error\": {\n    \"key_0\": false\n  },\n  \"started_at\": \"2007-08-14T04:16:23.367Z\",\n  \"finished_at\": \"1954-05-28T02:55:16.779Z\"\n}",
+                      "body": "{\n  \"id\": \"5ebb4d28-3cd5-7024-a016-d5a77c74f449\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 3267,\n  \"max_attempts\": 4488,\n  \"created_at\": \"1968-10-16T22:01:26.186Z\",\n  \"updated_at\": \"2000-02-09T21:39:26.850Z\",\n  \"progress\": {\n    \"key_0\": 5165\n  },\n  \"result\": {\n    \"key_0\": 3892.1842188574374\n  },\n  \"error\": {\n    \"key_0\": true\n  },\n  \"started_at\": \"1973-02-16T06:58:20.555Z\",\n  \"finished_at\": \"1951-01-16T06:03:32.453Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -39616,7 +40107,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"results\": [\n    {\n      \"id\": 670,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 2499.547677580267,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 8749,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 7855.169861577451,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 4137\n}",
+                  "body": "{\n  \"results\": [\n    {\n      \"id\": 2671,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 4262.878897134215,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 6623,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 3112.9577895626426,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 5058\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -39975,7 +40466,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"knowledge_sources\": 2537,\n  \"knowledge_segments\": 1272,\n  \"knowledge_units\": 1420,\n  \"knowledge_clips\": 4104\n}",
+                  "body": "{\n  \"knowledge_sources\": 4952,\n  \"knowledge_segments\": 3862,\n  \"knowledge_units\": 7497,\n  \"knowledge_clips\": 3543\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },

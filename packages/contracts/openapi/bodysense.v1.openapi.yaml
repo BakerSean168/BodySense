@@ -2287,6 +2287,24 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ValidationUnavailable'}
         '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/plan-proposals/generations:
+    post:
+      operationId: generatePlanProposal
+      summary: Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
+      description: Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/GeneratePlanProposalRequest'}}}
+      responses:
+        '201': {description: New pending agent proposal, content: {application/json: {schema: {$ref: '#/components/schemas/PlanProposalRecord'}}}}
+        '200': {description: Idempotent replay of the stored proposal, content: {application/json: {schema: {$ref: '#/components/schemas/PlanProposalRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '502': {$ref: '#/components/responses/BadGateway'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/plan-proposals/{proposalId}:
     get:
       operationId: getPlanProposalRecord
@@ -4946,6 +4964,16 @@ components:
         draft: {$ref: '#/components/schemas/TrainingPlanDraft'}
         planId: {type: string, format: uuid}
         expectedRevisionId: {type: string, format: uuid}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    GeneratePlanProposalRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey]
+      description: The user's generation command. Without diagnosisAnalysisId the latest analysis is used. The owner always comes from auth.
+      properties:
+        diagnosisAnalysisId: {type: string, format: uuid}
+        userConstraints: {$ref: '#/components/schemas/JsonObject'}
+        changeReason: {type: string, maxLength: 1000}
         idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
     PlanDecisionRequest:
       type: object
