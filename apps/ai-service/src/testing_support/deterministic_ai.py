@@ -90,6 +90,32 @@ def deterministic_treatment_model(*, call_tools: list[str] | Literal["all"] = "a
             "review_triggers": ["症状持续加重或出现新不适"],
             "safety_notes": [],
             "evidence_ids": [],
+            "plan": {
+                "title": "颈肩温和活动计划",
+                "sessions": [
+                    {
+                        "title": "每日颈肩活动",
+                        "stages": [
+                            {
+                                "phase": "main",
+                                "exercises": [
+                                    {
+                                        "exercise_key": "chin_tuck",
+                                        "name": "下巴微收",
+                                        "sets": 2,
+                                        "target": {"kind": "repetitions", "min": 8},
+                                        "rest_seconds": 30,
+                                        "instructions": "动作轻柔，不追求大幅度。",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                "sessions_per_week": 7,
+                "frequency_description": "每日一次",
+                "constraints": ["疼痛或麻木明显加重时停止"],
+            },
         },
     )
 
