@@ -5002,3 +5002,81 @@ CREATE TABLE public.training_plan_revision_conditions (
     FOREIGN KEY (user_id, revision_id) REFERENCES public.training_plan_revisions(user_id, id) ON DELETE CASCADE,
     FOREIGN KEY (user_id, condition_id) REFERENCES public.condition_entries(user_id, id)
 );
+
+
+-- DX-002 atomic settlement: one immutable whole-run outcome.
+ALTER TABLE public.diagnosis_revisions ADD CONSTRAINT diagnosis_revision_settlement_identity
+    UNIQUE (user_id, id, run_id, revision);
+CREATE TABLE public.diagnosis_settlements (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    expected_revision bigint NOT NULL CHECK (expected_revision >= 0),
+    revision bigint NOT NULL,
+    diagnosis_revision_id uuid,
+    outcome text NOT NULL CHECK (outcome IN ('committed','closed_without_change','safety_blocked')),
+    condition_ids jsonb NOT NULL CHECK (jsonb_typeof(condition_ids)='array'),
+    decision_ids jsonb NOT NULL CHECK (jsonb_typeof(decision_ids)='array'),
+    body_state_revision bigint NOT NULL CHECK (body_state_revision >= 0),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key=btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    tool_call_id text NOT NULL CHECK (length(tool_call_id) BETWEEN 1 AND 256 AND tool_call_id=btrim(tool_call_id)),
+    receipt_id uuid NOT NULL UNIQUE,
+    settled_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id,id),
+    UNIQUE (user_id,run_id),
+    UNIQUE (user_id,idempotency_key),
+    CHECK ((outcome='committed' AND diagnosis_revision_id IS NOT NULL AND revision=expected_revision+1)
+        OR (outcome IN ('closed_without_change','safety_blocked') AND diagnosis_revision_id IS NULL AND revision=expected_revision)),
+    FOREIGN KEY (user_id,run_id,expected_revision)
+        REFERENCES public.condition_analysis_runs(user_id,id,based_on_diagnosis_revision),
+    FOREIGN KEY (user_id,diagnosis_revision_id,run_id,revision)
+        REFERENCES public.diagnosis_revisions(user_id,id,run_id,revision) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE TABLE public.condition_relations (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    from_condition_id uuid NOT NULL,
+    to_condition_id uuid NOT NULL,
+    kind text NOT NULL CHECK (kind IN ('differential_with','supersedes','coexisting')),
+    basis_evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(basis_evidence_refs)='array'),
+    rationale text NOT NULL,
+    latest_decision_id uuid NOT NULL,
+    latest_decision_kind text GENERATED ALWAYS AS ('accept'::text) STORED,
+    committed_revision bigint NOT NULL CHECK (committed_revision > 0),
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id,from_condition_id,to_condition_id,kind),
+    CHECK (from_condition_id <> to_condition_id),
+    FOREIGN KEY (user_id,from_condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id,to_condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id,latest_decision_id,latest_decision_kind)
+        REFERENCES public.diagnosis_decisions(user_id,id,decision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id,committed_revision)
+        REFERENCES public.diagnosis_revisions(user_id,revision) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE TABLE public.condition_disposition_changes (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    condition_id uuid NOT NULL,
+    from_disposition text NOT NULL CHECK (from_disposition IN ('adopted','inactive')),
+    to_disposition text NOT NULL CHECK (to_disposition IN ('adopted','inactive')),
+    reason text NOT NULL CHECK (reason IN ('user_withdrawal','superseded_by_new_conclusion','no_longer_applicable','readopted')),
+    related_condition_id uuid,
+    evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(evidence_refs)='array'),
+    details text NOT NULL,
+    decision_id uuid NOT NULL,
+    decision_kind text GENERATED ALWAYS AS ('accept'::text) STORED,
+    committed_revision bigint NOT NULL CHECK (committed_revision > 0),
+    changed_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id,id),
+    UNIQUE (user_id,decision_id),
+    CHECK (from_disposition <> to_disposition),
+    CHECK ((to_disposition='adopted' AND reason='readopted') OR (to_disposition='inactive' AND reason <> 'readopted')),
+    FOREIGN KEY (user_id,condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id,related_condition_id) REFERENCES public.condition_entries(user_id,id),
+    FOREIGN KEY (user_id,decision_id,decision_kind) REFERENCES public.diagnosis_decisions(user_id,id,decision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id,committed_revision) REFERENCES public.diagnosis_revisions(user_id,revision) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE TRIGGER diagnosis_settlement_immutable BEFORE UPDATE ON public.diagnosis_settlements
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+CREATE TRIGGER condition_disposition_change_immutable BEFORE UPDATE ON public.condition_disposition_changes
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
