@@ -12,8 +12,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// DiagnosisRepository provides storage reads only, plus idempotent empty-head
-// initialization. The future application service owns adoption transactions.
+// DiagnosisRepository owns owner-bound reads, empty-head initialization and
+// decision/event recording. A recorded choice does not adopt a condition;
+// whole-run adoption belongs to the separate settlement transaction.
 type DiagnosisRepository struct{ db *gorm.DB }
 
 func NewDiagnosisRepository(db *gorm.DB) *DiagnosisRepository { return &DiagnosisRepository{db: db} }

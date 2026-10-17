@@ -4816,6 +4816,59 @@ $$;
 CREATE TRIGGER episode_evidence_revision_floor BEFORE INSERT OR UPDATE ON public.condition_entry_evidence
     FOR EACH ROW EXECUTE FUNCTION public.reject_episode_evidence_before_creation();
 
+-- DX-002 decision recording: durable selections and terminal events are not adoption.
+ALTER TABLE public.diagnosis_decisions ADD CONSTRAINT dx_decision_event_identity
+    UNIQUE (user_id, id, proposal_id, run_id);
+CREATE TABLE public.condition_analysis_events (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    sequence bigint NOT NULL CHECK (sequence > 0),
+    kind text NOT NULL CHECK (kind IN ('run_started','evidence_added','hypothesis_added',
+        'proposal_created','proposal_superseded','proposal_expired','decision_recorded',
+        'decision_rechecked','insufficient_evidence','safety_blocked','committed','closed_without_change')),
+    proposal_id uuid,
+    decision_id uuid,
+    body_state_revision bigint NOT NULL CHECK (body_state_revision >= 0),
+    details jsonb NOT NULL CHECK (jsonb_typeof(details) = 'object'),
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, run_id, sequence),
+    CHECK ((kind IN ('decision_recorded','decision_rechecked') AND proposal_id IS NOT NULL AND decision_id IS NOT NULL) OR
+           (kind NOT IN ('decision_recorded','decision_rechecked') AND decision_id IS NULL)),
+    FOREIGN KEY (user_id, run_id) REFERENCES public.condition_analysis_runs(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, proposal_id, run_id) REFERENCES public.diagnosis_proposals(user_id,id,run_id),
+    FOREIGN KEY (user_id, decision_id, proposal_id, run_id)
+        REFERENCES public.diagnosis_decisions(user_id,id,proposal_id,run_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX condition_analysis_one_terminal
+    ON public.condition_analysis_events(user_id,run_id)
+    WHERE kind IN ('committed','closed_without_change','safety_blocked');
+CREATE FUNCTION public.guard_condition_analysis_event_append() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+DECLARE expected_sequence bigint;
+BEGIN
+    PERFORM 1 FROM public.condition_analysis_runs WHERE user_id=NEW.user_id AND id=NEW.run_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'analysis run not found' USING ERRCODE='23503';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.condition_analysis_events WHERE user_id=NEW.user_id AND run_id=NEW.run_id
+        AND kind IN ('committed','closed_without_change','safety_blocked')) THEN
+        RAISE EXCEPTION 'analysis run already settled' USING ERRCODE='23514';
+    END IF;
+    SELECT COALESCE(MAX(sequence),0)+1 INTO expected_sequence FROM public.condition_analysis_events
+        WHERE user_id=NEW.user_id AND run_id=NEW.run_id;
+    IF NEW.sequence <> expected_sequence THEN
+        RAISE EXCEPTION 'analysis event sequence must be contiguous' USING ERRCODE='23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER condition_analysis_event_order BEFORE INSERT ON public.condition_analysis_events
+    FOR EACH ROW EXECUTE FUNCTION public.guard_condition_analysis_event_append();
+CREATE TRIGGER condition_analysis_event_immutable BEFORE UPDATE ON public.condition_analysis_events
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+
 -- Write-ahead inventory for source copies; not an AS-002 erasure receipt.
 CREATE TABLE public.user_asset_storage_cleanups (
  asset_id uuid NOT NULL,
