@@ -1562,6 +1562,26 @@ paths:
           $ref: '#/components/responses/BadGateway'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis:
+    get:
+      operationId: getNativeDiagnosis
+      summary: Read the authenticated user's single committed Diagnosis aggregate.
+      description: Does not create an aggregate or treat undecided Agent proposals as adopted Conditions.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Repeatable-read projection of the committed head and its typed evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeDiagnosisProjection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/diagnosis-analyses:
     get:
       operationId: listDiagnosisAnalyses
@@ -4416,6 +4436,102 @@ components:
       type: array
       items:
         type: string
+    NativeDiagnosisProjection:
+      type: object
+      additionalProperties: false
+      required: [userId, currentRevision, conditionEntries]
+      properties:
+        userId: {type: string, format: uuid}
+        currentRevision: {type: integer, format: int64, minimum: 0}
+        updatedAt: {type: string, format: date-time}
+        conditionEntries:
+          type: array
+          items: {$ref: '#/components/schemas/NativeDiagnosisCondition'}
+    NativeDiagnosisCondition:
+      type: object
+      additionalProperties: false
+      required: [conditionId, medicalName, disposition, committedRevision, latestDecisionId, sourceClaimRefs, evidenceLinks, causeAnalysis, informationGaps, handlingPlan, createdAt, updatedAt]
+      properties:
+        conditionId: {type: string, format: uuid}
+        medicalName: {type: string, minLength: 1, maxLength: 240}
+        conceptRef:
+          type: object
+          additionalProperties: false
+          required: [system, code]
+          properties:
+            system: {type: string, minLength: 1}
+            code: {type: string, minLength: 1}
+            display: {type: string}
+        qualifiers:
+          type: object
+          additionalProperties: false
+          properties:
+            regionIds: {type: array, items: {type: string}}
+            laterality: {type: string}
+            notes: {type: string}
+        assessment:
+          type: object
+          additionalProperties: false
+          required: [level, rationale, informationGaps, differentialNotes, basedOnRunId]
+          properties:
+            level: {type: string, enum: [suspected, likely]}
+            rationale: {type: string}
+            informationGaps: {type: array, items: {type: string}}
+            differentialNotes: {type: array, items: {type: string}}
+            basedOnRunId: {type: string, format: uuid}
+        sourceClaimRefs:
+          type: array
+          items: {$ref: '#/components/schemas/NativeDiagnosisSourceClaim'}
+        evidenceLinks:
+          type: array
+          items: {$ref: '#/components/schemas/NativeDiagnosisEvidenceLink'}
+        causeAnalysis:
+          type: object
+          additionalProperties: false
+          required: [summary, rationale]
+          properties:
+            summary: {type: string}
+            rationale: {type: string}
+        informationGaps: {type: array, items: {type: string}}
+        handlingPlan:
+          type: object
+          additionalProperties: false
+          required: [summary, actions, cautionNotes]
+          properties:
+            summary: {type: string}
+            actions: {type: array, items: {type: string}}
+            cautionNotes: {type: array, items: {type: string}}
+        disposition: {type: string, enum: [adopted, inactive]}
+        latestDecisionId: {type: string, format: uuid}
+        lastAnalysisRunId: {type: string, format: uuid}
+        committedRevision: {type: integer, format: int64, minimum: 1}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    NativeDiagnosisSourceClaim:
+      type: object
+      additionalProperties: false
+      required: [claimId, sourceKind, sourceId, sourceVersion, statement, recordedAt, validityAtAssessment]
+      properties:
+        claimId: {type: string, minLength: 1}
+        sourceKind: {type: string, enum: [user_suspicion, agent_analysis, user_reported_clinical, clinical_document]}
+        sourceId: {type: string, minLength: 1}
+        sourceVersion: {type: string}
+        statement: {type: string}
+        assertedAt: {type: string, format: date-time}
+        recordedAt: {type: string, format: date-time}
+        evidenceAdmissionId: {type: string}
+        validityAtAssessment: {type: string, enum: [current, corrected, withdrawn, ineligible]}
+    NativeDiagnosisEvidenceLink:
+      type: object
+      additionalProperties: false
+      required: [evidenceType, evidenceId, evidenceVersion, role, rationale, analyzedByRunId]
+      properties:
+        evidenceType: {type: string, enum: [body_fact, body_observation, symptom_episode, document_evidence]}
+        evidenceId: {type: string, format: uuid}
+        evidenceVersion: {type: string, pattern: '^[1-9][0-9]*$'}
+        role: {type: string, enum: [supporting, counter, context]}
+        rationale: {type: string}
+        analyzedByRunId: {type: string, format: uuid}
     DiagnosisCandidate:
       type: object
       additionalProperties: false

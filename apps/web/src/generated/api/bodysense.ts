@@ -55,6 +55,7 @@ import {
   KnowledgeStats,
   LifestyleSnapshot,
   LogoutAcknowledgement,
+  NativeDiagnosisProjection,
   NullableUserProfileResponse,
   OnboardingContextResult,
   OutcomeListResponse,
@@ -158,6 +159,7 @@ import type {
   ListRunEventsParams,
   ListTreatmentRevisionsParams,
   LogoutAcknowledgementOutput,
+  NativeDiagnosisProjectionOutput,
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
@@ -2935,6 +2937,46 @@ export const analyzeDiagnosis = async (id: string, options?: RequestInit, fetchF
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? DiagnosisWorkspaceProjection.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetNativeDiagnosisUrl = () => {
+
+
+
+
+  return `/api/v1/diagnosis`
+}
+
+/**
+ * Does not create an aggregate or treat undecided Agent proposals as adopted Conditions.
+ * @summary Read the authenticated user's single committed Diagnosis aggregate.
+ */
+export const getNativeDiagnosis = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisProjectionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetNativeDiagnosisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisProjection, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisProjection = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisProjection.parse(parsedBody) : parsedBody
   return data
 }
 

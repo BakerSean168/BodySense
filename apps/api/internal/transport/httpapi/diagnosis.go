@@ -80,6 +80,8 @@ func (r diagnosisHTTPErrorResponse) VisitExportDiagnosisRegressionCaseResponse(w
 	return r.write(w)
 }
 
+func (r diagnosisHTTPErrorResponse) VisitGetNativeDiagnosisResponse(w http.ResponseWriter) error { return r.write(w) }
+
 func diagnosisUnauthorized() diagnosisHTTPErrorResponse {
 	return diagnosisHTTPErrorResponse{status: http.StatusUnauthorized, code: "UNAUTHORIZED", message: "missing authenticated user"}
 }
