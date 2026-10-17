@@ -5495,13 +5495,10 @@ components:
         message:
           type: string
     ResolveSafetyRestrictionRequest:
+      description: Exact authenticated user command. Non-expiry bases require source_message_id and source_version=1; reverification also requires check_interaction_id. Expiry accepts no user source and uses only the Go clock. expected_restriction_version is the immutable created_revision of this restriction.
       type: object
       additionalProperties: false
-      required:
-        - idempotency_key
-        - expected_revision
-        - source_message_id
-        - statement
+      required: [idempotency_key, expected_revision, expected_restriction_version, basis_kind]
       properties:
         idempotency_key:
           type: string
@@ -5511,13 +5508,28 @@ components:
           type: integer
           format: int64
           minimum: 0
+        expected_restriction_version:
+          type: integer
+          format: int64
+          minimum: 1
+        basis_kind:
+          type: string
+          enum: [expiry, user_reverification, professional_clearance]
         source_message_id:
+          type: string
+          format: uuid
+        source_version:
+          type: integer
+          format: int64
+          enum: [0, 1]
+        check_interaction_id:
           type: string
           format: uuid
         statement:
           type: string
-          enum:
-            - 专业人员已针对这条限制及全部训练放行
+          description: Exact Go declaration including every reviewed lift condition; arbitrary affirmative prose is rejected.
+          minLength: 1
+          maxLength: 12000
     SafetyResolution:
       type: object
       additionalProperties: false
@@ -5525,6 +5537,8 @@ components:
         - id
         - user_id
         - restriction_id
+        - restriction_version
+        - check_interaction_id
         - source_evidence_id
         - source_message_id
         - revision_id
@@ -5548,40 +5562,53 @@ components:
           type: string
           format: uuid
         source_evidence_id:
-          type: string
-          format: uuid
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
         revision_id:
           type: string
           format: uuid
         event_id:
           type: string
           format: uuid
+        restriction_version:
+          type: integer
+          format: int64
+          minimum: 1
+        check_interaction_id:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
         source_message_id:
-          type: string
-          format: uuid
+          anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
         source_version:
           type: integer
           format: int64
-          enum: [1]
+          enum: [0, 1]
         basis_kind:
           type: string
-          enum: [professional_clearance]
+          enum: [expiry, user_reverification, professional_clearance]
         source_level:
           type: string
-          enum: [user_reported]
+          enum: [go_policy, user_reported]
         scope_kind:
           type: string
-          enum: [all_training]
+          enum: [all_training, plan, exercise]
         policy_revision:
           type: string
-          enum: [user-reported-professional-clearance-v1]
+          enum: [restriction-lift-v2]
         revision:
           type: integer
           format: int64
           minimum: 1
         actor:
           type: string
-          enum: [user]
+          enum: [user, system]
         lifted_at:
           type: string
           format: date-time
@@ -5599,6 +5626,7 @@ components:
         - plan_id
         - exercise_ids
         - lift_policy
+        - lift_conditions
         - reason
         - created_revision
         - valid_from
@@ -5644,6 +5672,13 @@ components:
         lift_policy:
           type: string
           enum: [on_expiry, user_reverification, professional_clearance]
+        lift_conditions:
+          description: Explicit conditions from a reviewed Go policy, never model-authored. Reverification requires every condition affirmed through the exact bound AskUser answer.
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
         reason:
           type: string
           minLength: 1

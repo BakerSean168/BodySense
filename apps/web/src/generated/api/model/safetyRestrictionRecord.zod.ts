@@ -11,6 +11,9 @@ import { SafetyResolution } from './safetyResolution.zod';
 export const safetyRestrictionRecordExerciseIdsItemMax = 128;
 
 
+export const safetyRestrictionRecordLiftConditionsMax = 20;
+
+
 
 
 
@@ -25,6 +28,7 @@ export const SafetyRestrictionRecord = /*#__PURE__*/ zod.strictObject({
   "plan_id": /*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()]).check(/*#__PURE__*/ zod.describe('Required for plan scope, optional for exercise scope, null for all_training.')),
   "exercise_ids": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(safetyRestrictionRecordExerciseIdsItemMax))).check(/*#__PURE__*/ zod.describe('Standard exercise concept ids (or stable custom ids); non-empty only for exercise scope.')),
   "lift_policy": /*#__PURE__*/ zod.enum(['on_expiry', 'user_reverification', 'professional_clearance']),
+  "lift_conditions": /*#__PURE__*/ zod.array(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1))).check(/*#__PURE__*/ zod.maxLength(safetyRestrictionRecordLiftConditionsMax)).check(/*#__PURE__*/ zod.describe('Explicit conditions from a reviewed Go policy, never model-authored. Reverification requires every condition affirmed through the exact bound AskUser answer.')),
   "reason": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "created_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "valid_from": /*#__PURE__*/ zod.iso.datetime({"offset":true}),

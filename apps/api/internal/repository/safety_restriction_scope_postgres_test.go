@@ -105,7 +105,7 @@ func TestSafetyRestrictionScopeConstraintsPostgres(t *testing.T) {
 		}{
 			{"UPDATE safety_restrictions SET risk_level='advisory', scope_kind='exercise', plan_id=?, lift_policy='on_expiry', valid_until=valid_from + interval '7 days' WHERE user_id=? AND id=?", []any{plan, owner, target}},
 			{"INSERT INTO safety_restriction_exercises(user_id, restriction_id, exercise_id) VALUES (?,?,'squat'), (?,?,'deadlift')", []any{owner, target, owner, target}},
-			{"UPDATE safety_restrictions SET scope_kind='plan', plan_id=?, lift_policy='user_reverification' WHERE user_id=? AND id=?", []any{plan, owner, rows[1].ID}},
+			{"UPDATE safety_restrictions SET scope_kind='plan', plan_id=?, lift_policy='user_reverification', lift_conditions='[\"confirmed condition\"]' WHERE user_id=? AND id=?", []any{plan, owner, rows[1].ID}},
 		} {
 			if err := tx.Exec(statement.sql, statement.args...).Error; err != nil {
 				t.Fatalf("widened shape rejected: %v", err)

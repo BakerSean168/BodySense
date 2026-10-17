@@ -4462,6 +4462,8 @@ CREATE TABLE public.safety_restrictions (
     scope_kind text NOT NULL CHECK (scope_kind IN ('all_training','plan','exercise')),
     plan_id uuid,
     lift_policy text NOT NULL CHECK (lift_policy IN ('on_expiry','user_reverification','professional_clearance')),
+    lift_conditions jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(lift_conditions) = 'array' AND jsonb_array_length(lift_conditions) <= 20),
+    CONSTRAINT safety_restrictions_reverification_conditions CHECK (lift_policy <> 'user_reverification' OR jsonb_array_length(lift_conditions) > 0),
     reason text NOT NULL CHECK (length(btrim(reason)) > 0),
     created_revision bigint NOT NULL,
     valid_from timestamptz NOT NULL,
@@ -4469,6 +4471,7 @@ CREATE TABLE public.safety_restrictions (
     valid_until timestamptz,
     PRIMARY KEY (user_id, id),
     UNIQUE (user_id, safety_screen_id, concept),
+    UNIQUE (user_id, id, created_revision),
     CONSTRAINT safety_restrictions_scope_plan CHECK (
         (scope_kind = 'all_training' AND plan_id IS NULL)
         OR (scope_kind = 'plan' AND plan_id IS NOT NULL)
@@ -4502,32 +4505,42 @@ CREATE TABLE public.safety_restriction_exercises (
 );
 
 
--- Exact-target user-reported professional clearance, never a global clear.
+-- Per-restriction Go-authorized expiry or exact user evidence; never a global clear.
+ALTER TABLE public.statement_evidence ADD CONSTRAINT safety_resolution_evidence_identity UNIQUE (user_id, id, source_message_id, source_version);
+ALTER TABLE public.interaction_resumes ADD CONSTRAINT safety_resolution_answer_identity UNIQUE (user_id, interaction_id, user_message_id);
 ALTER TABLE public.body_state_revisions ADD CONSTRAINT safety_resolution_revision_identity UNIQUE (user_id, revision, id);
 CREATE TABLE public.safety_resolutions (
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     id uuid NOT NULL,
     restriction_id uuid NOT NULL,
-    source_evidence_id uuid NOT NULL,
-    source_message_id uuid NOT NULL,
-    source_version bigint NOT NULL CHECK (source_version = 1),
-    basis_kind text NOT NULL CHECK (basis_kind = 'professional_clearance'),
-    source_level text NOT NULL CHECK (source_level = 'user_reported'),
-    scope_kind text NOT NULL CHECK (scope_kind = 'all_training'),
-    policy_revision text NOT NULL CHECK (policy_revision = 'user-reported-professional-clearance-v1'),
+    restriction_version bigint NOT NULL CHECK (restriction_version > 0),
+    source_evidence_id uuid,
+    source_message_id uuid,
+    check_interaction_id uuid,
+    source_version bigint NOT NULL,
+    basis_kind text NOT NULL CHECK (basis_kind IN ('expiry','user_reverification','professional_clearance')),
+    source_level text NOT NULL CHECK (source_level IN ('go_policy','user_reported')),
+    scope_kind text NOT NULL CHECK (scope_kind IN ('all_training','plan','exercise')),
+    policy_revision text NOT NULL CHECK (policy_revision = 'restriction-lift-v2'),
     idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128),
     fingerprint text NOT NULL CHECK (length(fingerprint) = 64),
     revision bigint NOT NULL,
     revision_id uuid NOT NULL,
     event_id uuid NOT NULL,
-    actor text NOT NULL CHECK (actor = 'user'),
+    actor text NOT NULL CHECK (actor IN ('user','system')),
     lifted_at timestamptz NOT NULL,
+    CONSTRAINT safety_resolutions_basis_source CHECK (
+        (basis_kind = 'expiry' AND source_evidence_id IS NULL AND source_message_id IS NULL AND check_interaction_id IS NULL AND source_version = 0 AND source_level = 'go_policy' AND actor = 'system')
+        OR (basis_kind = 'professional_clearance' AND source_evidence_id IS NOT NULL AND source_message_id IS NOT NULL AND check_interaction_id IS NULL AND source_version = 1 AND source_level = 'user_reported' AND actor = 'user')
+        OR (basis_kind = 'user_reverification' AND source_evidence_id IS NOT NULL AND source_message_id IS NOT NULL AND check_interaction_id IS NOT NULL AND source_version = 1 AND source_level = 'user_reported' AND actor = 'user')),
     PRIMARY KEY (user_id, id),
     UNIQUE (user_id, restriction_id),
     UNIQUE (user_id, source_message_id),
+    UNIQUE (user_id, check_interaction_id),
     UNIQUE (user_id, idempotency_key),
-    FOREIGN KEY (user_id, restriction_id) REFERENCES public.safety_restrictions(user_id, id) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (user_id, source_evidence_id) REFERENCES public.statement_evidence(user_id, id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, check_interaction_id, source_message_id) REFERENCES public.interaction_resumes(user_id, interaction_id, user_message_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, restriction_id, restriction_version) REFERENCES public.safety_restrictions(user_id, id, created_revision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, source_evidence_id, source_message_id, source_version) REFERENCES public.statement_evidence(user_id, id, source_message_id, source_version) DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (user_id, revision) REFERENCES public.body_state_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (user_id, revision, revision_id) REFERENCES public.body_state_revisions(user_id, revision, id) DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) DEFERRABLE INITIALLY DEFERRED

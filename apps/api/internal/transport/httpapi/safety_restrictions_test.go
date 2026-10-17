@@ -37,8 +37,9 @@ func (f *fakeSafetyRestrictions) ListSafetyRestrictions(context.Context, uuid.UU
 
 func TestSafetyRestrictionHTTPExplicitSourceAndFailureMapping(t *testing.T) {
 	owner, target, message := uuid.New(), uuid.New(), uuid.New()
-	body := fmt.Sprintf(`{"expected_revision":4,"idempotency_key":"clear-one","source_message_id":%q,"statement":%q}`, message, model.ProfessionalClearanceStatement)
-	receipt := &model.SafetyResolution{ID: uuid.New(), SourceEvidenceID: uuid.New(), SourceMessageID: message, SourceVersion: 1, BasisKind: "professional_clearance", SourceLevel: "user_reported", ScopeKind: "all_training", PolicyRevision: model.SafetyResolutionPolicyV1, Revision: 5, RevisionID: uuid.New(), EventID: uuid.New(), Actor: "user", LiftedAt: time.Now().UTC()}
+	body := fmt.Sprintf(`{"expected_revision":4,"expected_restriction_version":1,"basis_kind":"professional_clearance","source_version":1,"idempotency_key":"clear-one","source_message_id":%q,"statement":%q}`, message, model.ProfessionalClearanceStatement)
+	evidenceID := uuid.New()
+	receipt := &model.SafetyResolution{ID: uuid.New(), SourceEvidenceID: &evidenceID, SourceMessageID: &message, RestrictionVersion: 1, SourceVersion: 1, BasisKind: "professional_clearance", SourceLevel: "user_reported", ScopeKind: "all_training", PolicyRevision: model.SafetyResolutionPolicyV1, Revision: 5, RevisionID: uuid.New(), EventID: uuid.New(), Actor: "user", LiftedAt: time.Now().UTC()}
 	app := &fakeSafetyRestrictions{receipt: receipt}
 	router := newOpenAPITestRouterWith(t, NewPublicServer().WithSafetyRestrictions(app), owner.String())
 	path := "/api/v1/body-state/safety/restrictions/" + target.String() + "/resolve"
@@ -49,7 +50,7 @@ func TestSafetyRestrictionHTTPExplicitSourceAndFailureMapping(t *testing.T) {
 	for _, tc := range []struct {
 		err    error
 		status int
-	}{{model.ErrSafetyRestrictionNotFound, 404}, {model.ErrSafetyResolutionSourceNotFound, 404}, {model.ErrInvalidSafetyResolution, 400}, {model.ErrSafetyResolutionIdempotencyConflict, 409}, {repository.ErrBodyStateRevisionConflict, 409}, {errors.New("database offline"), 503}} {
+	}{{model.ErrSafetyRestrictionNotFound, 404}, {model.ErrSafetyResolutionSourceNotFound, 404}, {model.ErrInvalidSafetyResolution, 400}, {model.ErrSafetyResolutionIdempotencyConflict, 409}, {fmt.Errorf("%w: stale restriction version", repository.ErrBodyStateRevisionConflict), 409}, {errors.New("database offline"), 503}} {
 		app.err = tc.err
 		rec = performJSONAt(router, http.MethodPost, path, body)
 		if rec.Code != tc.status {
@@ -57,7 +58,7 @@ func TestSafetyRestrictionHTTPExplicitSourceAndFailureMapping(t *testing.T) {
 		}
 	}
 	before := app.calls
-	rec = performJSONAt(router, http.MethodPost, path, `{"expected_revision":4,"idempotency_key":"bad","source_message_id":"`+message.String()+`","statement":"我没事了","risk_level":"urgent"}`)
+	rec = performJSONAt(router, http.MethodPost, path, `{"expected_revision":4,"expected_restriction_version":1,"basis_kind":"professional_clearance","source_version":1,"idempotency_key":"bad","source_message_id":"`+message.String()+`","statement":"我没事了","risk_level":"urgent"}`)
 	if rec.Code != 400 || app.calls != before {
 		t.Fatalf("unknown/unsourced command reached app: %d", rec.Code)
 	}
@@ -81,7 +82,7 @@ func TestSafetyRestrictionHTTPReadFailsClosed(t *testing.T) {
 		ID: uuid.New(), UserID: owner, SafetyScreenID: uuid.New(), Concept: "numbness",
 		PolicyRevision: model.SafetyScreenRestrictionPolicyV1, RiskLevel: "restricted", ScopeKind: "all_training",
 		LiftPolicy: "professional_clearance", Reason: "synthetic", CreatedRevision: 1, ValidFrom: time.Now().UTC(),
-		ExerciseIDs: []string{},
+		ExerciseIDs: []string{}, LiftConditions: []string{},
 	}, Active: true}}
 	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 200 {
 		t.Fatalf("native restriction with null resolution: %d %s", rec.Code, rec.Body.String())
@@ -107,5 +108,30 @@ func TestSafetyRestrictionHTTPReadFailsClosed(t *testing.T) {
 	app.err = errors.New("read unavailable")
 	if rec := performJSONAt(router, http.MethodGet, path, ""); rec.Code != 503 {
 		t.Fatalf("unavailable read allowed: %d", rec.Code)
+	}
+}
+
+func TestSafetyRestrictionHTTPExpiryAndReverificationReceipts(t *testing.T) {
+	owner, target, message, interaction, evidence := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	for _, basis := range []string{"expiry", "user_reverification"} {
+		t.Run(basis, func(t *testing.T) {
+			receipt := &model.SafetyResolution{ID: uuid.New(), RestrictionVersion: 1, BasisKind: basis, SourceVersion: 0, SourceLevel: "go_policy", ScopeKind: "all_training", PolicyRevision: model.SafetyResolutionPolicyV1, Revision: 5, RevisionID: uuid.New(), EventID: uuid.New(), Actor: "system", LiftedAt: time.Now().UTC()}
+			body := `{"expected_revision":4,"expected_restriction_version":1,"idempotency_key":"lift","basis_kind":"expiry"}`
+			if basis == "user_reverification" {
+				receipt.SourceMessageID, receipt.SourceEvidenceID, receipt.CheckInteractionID = &message, &evidence, &interaction
+				receipt.SourceVersion, receipt.SourceLevel, receipt.Actor = 1, "user_reported", "user"
+				body = fmt.Sprintf(`{"expected_revision":4,"expected_restriction_version":1,"idempotency_key":"lift","basis_kind":"user_reverification","source_version":1,"source_message_id":%q,"check_interaction_id":%q}`, message, interaction)
+			}
+			app := &fakeSafetyRestrictions{receipt: receipt}
+			router := newOpenAPITestRouterWith(t, NewPublicServer().WithSafetyRestrictions(app), owner.String())
+			path := "/api/v1/body-state/safety/restrictions/" + target.String() + "/resolve"
+			if res := performJSONAt(router, http.MethodPost, path, body); res.Code != 200 {
+				t.Fatalf("%d %s", res.Code, res.Body.String())
+			}
+			receipt.RestrictionVersion = 2
+			if res := performJSONAt(router, http.MethodPost, path, body); res.Code != 500 {
+				t.Fatal("unbound receipt accepted")
+			}
+		})
 	}
 }

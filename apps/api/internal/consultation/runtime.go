@@ -1374,7 +1374,7 @@ func (r *Runtime) handleInteractionRequired(
 				InteractionID string          `json:"interaction_id"`
 				Question      json.RawMessage `json:"question"`
 				CreatedAt     string          `json:"created_at"`
-			}{InteractionID: interactionID, Question: payload.Question, CreatedAt: interaction.CreatedAt.UTC().Format(time.RFC3339Nano)}
+			}{InteractionID: interactionID, Question: json.RawMessage(interaction.Question), CreatedAt: interaction.CreatedAt.UTC().Format(time.RFC3339Nano)}
 			patched, err := json.Marshal(publicPayload)
 			if err != nil {
 				return nil, err

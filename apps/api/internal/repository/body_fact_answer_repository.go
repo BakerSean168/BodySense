@@ -24,17 +24,20 @@ func (r *BodyStateRepository) RecordAnswerFacts(ctx context.Context, userID uuid
 	return r.recordFacts(ctx, userID, command, &model.MessageFactSource{RunID: source.RunID, MessageID: source.MessageID}, &source)
 }
 
-func verifyBodyFactAnswer(tx *gorm.DB, owner uuid.UUID, source model.AnswerFactSource, message model.Message) (*model.AgentInteraction, string, error) {
+func verifyBodyFactAnswer(tx *gorm.DB, owner uuid.UUID, source model.AnswerFactSource, message model.Message, locking ...bool) (*model.AgentInteraction, string, error) {
 	invalid := func() (*model.AgentInteraction, string, error) {
 		return nil, "", fmt.Errorf("%w: exact accepted answer source unavailable", model.ErrInvalidBodyFact)
 	}
 	var resume model.InteractionResume
-	lock := clause.Locking{Strength: "SHARE"}
-	if err := tx.Clauses(lock).Where("interaction_id = ? AND user_id = ? AND run_id = ? AND user_message_id = ? AND conversation_id = ?", source.InteractionID, owner, source.RunID, source.MessageID, message.ConversationID).First(&resume).Error; err != nil {
+	query := tx
+	if len(locking) == 0 || locking[0] {
+		query = tx.Clauses(clause.Locking{Strength: "SHARE"}).Session(&gorm.Session{})
+	}
+	if err := query.Where("interaction_id = ? AND user_id = ? AND run_id = ? AND user_message_id = ? AND conversation_id = ?", source.InteractionID, owner, source.RunID, source.MessageID, message.ConversationID).First(&resume).Error; err != nil {
 		return invalid()
 	}
 	var interaction model.AgentInteraction
-	if err := tx.Clauses(lock).Where("id = ? AND run_id = ? AND conversation_id = ? AND status = ?", source.InteractionID, source.RunID, message.ConversationID, model.AgentInteractionAnswered).First(&interaction).Error; err != nil {
+	if err := query.Where("id = ? AND run_id = ? AND conversation_id = ? AND status = ?", source.InteractionID, source.RunID, message.ConversationID, model.AgentInteractionAnswered).First(&interaction).Error; err != nil {
 		return invalid()
 	}
 	if message.RunID == nil || *message.RunID != source.RunID || interaction.ToolName != "ask_user" || strings.TrimSpace(interaction.ToolCallID) == "" || len(interaction.ToolCallID) > 256 {

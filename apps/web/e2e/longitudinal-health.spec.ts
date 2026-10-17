@@ -335,7 +335,12 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(restrictionResponse.ok()).toBeTruthy();
   const safety = (await restrictionResponse.json()) as {
     current_revision: number;
-    restrictions: Array<{ id: string; active: boolean; concept: string }>;
+    restrictions: Array<{
+      id: string;
+      active: boolean;
+      concept: string;
+      created_revision: number;
+    }>;
   };
   const active = safety.restrictions.filter((row) => row.active);
   expect(active).toHaveLength(1);
@@ -382,6 +387,9 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
       headers,
       data: {
         expected_revision: safety.current_revision,
+        expected_restriction_version: active[0].created_revision,
+        basis_kind: "professional_clearance",
+        source_version: 1,
         idempotency_key: crypto.randomUUID(),
         source_message_id: source!.id,
         statement,
@@ -389,6 +397,13 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     },
   );
   expect(resolveSafety.ok(), await resolveSafety.text()).toBeTruthy();
+  expect(await resolveSafety.json()).toMatchObject({
+    restriction_id: active[0].id,
+    restriction_version: active[0].created_revision,
+    basis_kind: "professional_clearance",
+    source_message_id: source!.id,
+    source_version: 1,
+  });
 
   const freshDiagnosisResponse = await request.post(
     `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
