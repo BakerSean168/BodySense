@@ -46,6 +46,11 @@ def deterministic_diagnosis_model(*, call_tools: list[str] | Literal["all"] = "a
                     "supporting_evidence_ids": [],
                     "counterevidence_ids": [],
                     "reasoning_summary": "候选仅表达当前资料支持的可能性，不构成医学诊断。",
+                    "assessment_level": "suspected",
+                    "cause_summary": "可能与长时间久坐带来的颈肩负荷有关，因果尚未确立。",
+                    "handling_summary": "建议记录变化，如持续或加重请寻求专业评估。",
+                    "handling_actions": [],
+                    "caution_notes": [],
                     "missing_information": [],
                     "safety_notes": [],
                 }

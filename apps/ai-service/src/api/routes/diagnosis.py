@@ -11,6 +11,7 @@ from ...configuration.diagnosis_agent_config import get_diagnosis_configuration
 from ...models.diagnosis import DIAGNOSIS_OUTPUT_SCHEMA_REVISION_V3
 from ...models.evidence import EvidenceAcquisitionTrace, EvidenceBudget, ExternalEvidenceStatus
 from ...models.safety import SafetyEnvelopeV2
+from ...services.diagnosis_formal_proposals import build_formal_proposals
 from ...services.diagnosis_service import get_diagnosis_service
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,11 @@ async def analyze_diagnosis(request: DiagnosisRequest):
                     "supporting_evidence_ids": [],
                     "counterevidence_ids": [],
                     "reasoning_summary": "deterministic e2e candidate",
+                    "assessment_level": "suspected",
+                    "cause_summary": "deterministic e2e cause summary",
+                    "handling_summary": "deterministic e2e handling summary",
+                    "handling_actions": [],
+                    "caution_notes": [],
                     "missing_information": [],
                     "safety_notes": [],
                 }
@@ -113,6 +119,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             # when the deterministic E2E fixture observes no new safety signal.
             # Go DecisionAuthority intentionally fails closed when it is absent.
             response["safety_findings"] = []
+        response["formal_proposals"] = build_formal_proposals(response, request.body_state)
         return response
 
     """Generate a typed possible-diagnosis analysis from durable BodyState."""
@@ -121,7 +128,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
         kwargs: dict[str, Any] = {}
         if request.safety_envelope is not None:
             kwargs["safety_envelope"] = request.safety_envelope
-        return await get_diagnosis_service().generate_diagnosis(
+        result = await get_diagnosis_service().generate_diagnosis(
             user_id=request.user_id,
             body_state_revision=request.body_state_revision,
             configuration_id=request.configuration_id,
@@ -130,6 +137,9 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             profile=request.profile,
             **kwargs,
         )
+        # Go ingests only this block into a formal run; it validates it strictly.
+        result["formal_proposals"] = build_formal_proposals(result, request.body_state)
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

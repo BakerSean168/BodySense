@@ -88,6 +88,23 @@ class DiagnosisCandidateDraft(BaseModel):
     missing_information: list[str] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
 
+    # Native formal-analysis fields projected into diagnosis-agent-proposals-v1.
+    # They are the Agent's own read-only judgment: never a user fact, adoption or
+    # clinical confirmation. Go rejects a formal proposal that lacks them.
+    assessment_level: Literal["suspected", "likely"] | None = Field(
+        default=None,
+        description=(
+            "AI 对该具名诊断的判断强度：suspected（怀疑）或 likely（较可能）；"
+            "不是用户采纳或临床确诊。"
+        ),
+    )
+    cause_summary: str = Field(default="", description="可能成因的简要分析，不得断言因果已确立。")
+    handling_summary: str = Field(
+        default="", description="建议的处理方向摘要（例如寻求专业评估），不是处方或训练计划。"
+    )
+    handling_actions: list[str] = Field(default_factory=list)
+    caution_notes: list[str] = Field(default_factory=list)
+
 
 class DiagnosisAgentOutput(BaseModel):
     """Structured result of one Diagnosis run.
