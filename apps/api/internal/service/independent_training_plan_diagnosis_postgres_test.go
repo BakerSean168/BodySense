@@ -216,6 +216,63 @@ func TestIndependentTrainingConditionOwnerAndAvailabilityPostgres(t *testing.T) 
 		}
 	}
 }
+
+// A committed document review remains in diagnosis history after removal, but
+// cannot authorize acceptance of a fresh TrainingPlan using an unavailable original.
+func TestIndependentTrainingRemovedReportBlocksPlanAcceptancePostgres(t *testing.T) {
+	db := openOnboardingContextIntegrationDB(t)
+	owner := seedOnboardingContextUser(t, db)
+	condition, _ := seedPlanDiagnosis(t, db, owner)
+	var entry model.ConditionEntry
+	if err := db.Where("user_id=? AND id=?", owner, condition).Take(&entry).Error; err != nil {
+		t.Fatal(err)
+	}
+	assetID, extractionID, reviewID := uuid.New(), uuid.New(), uuid.New()
+	hash := strings.Repeat("f", 64)
+	if err := db.Exec(`INSERT INTO user_assets(id,user_id,kind,original_name,mime_type,byte_size,content_sha256,storage_backend,storage_key)
+ VALUES (?,?,'report','plan-evidence.pdf','application/pdf',1,?,'local',?)`, assetID, owner, hash, "tp002/"+assetID.String()).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO document_extraction_runs(id,user_id,asset_id,configuration_id,mechanism_revision,document_sha256,result_sha256,raw_text_sha256)
+ VALUES (?,?,?,'synthetic','1',?,?,?)`, extractionID, owner, assetID, hash, hash, hash).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO document_indicator_reviews(id,user_id,asset_id,extraction_run_id,indicator_index,action,idempotency_key,reviewer_user_id)
+ VALUES (?,?,?,?,0,'confirm',?,?)`, reviewID, owner, assetID, extractionID, uuid.NewString(), owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	action := "confirm"
+	link := model.ConditionEntryEvidence{
+		UserID: owner, ConditionID: condition,
+		EvidenceType: model.DiagnosisDocumentEvidence, EvidenceID: reviewID, EvidenceVersion: 1,
+		Role: model.DiagnosisSupporting, Rationale: "synthetic reviewed report",
+		AnalyzedByRunID: *entry.LastAnalysisRunID, DocumentReviewAction: &action,
+	}
+	if err := db.Create(&link).Error; err != nil {
+		t.Fatal(err)
+	}
+	svc := NewIndependentTrainingPlanService(db)
+	draft := independentDraft("Reviewed report")
+	draft.RelatedConditionIDs = []uuid.UUID{condition}
+	pending := independentProposal(t, svc, owner, draft, uuid.Nil, uuid.Nil)
+
+	// The immutable review is not erased, but the private source is unavailable
+	// and must be re-checked under an owner-fenced SHARE lock on acceptance.
+	if err := db.Exec("UPDATE user_assets SET availability='source_removed',source_removed_at=now() WHERE user_id=? AND id=?", owner, assetID).Error; err != nil {
+		t.Fatal(err)
+	}
+	accepted, err := svc.Accept(context.Background(), owner, independentDecision(pending))
+	if !errors.Is(err, ErrPlanContextUnavailable) || accepted != nil {
+		t.Fatalf("removed report accepted into plan: receipt=%+v err=%v", accepted, err)
+	}
+	for _, table := range []string{"training_plan_revisions", "plan_decision_receipts"} {
+		var count int64
+		if err := db.Table(table).Where("user_id=?", owner).Count(&count).Error; err != nil || count != 0 {
+			t.Fatalf("failed report-source admission wrote %s: %d %v", table, count, err)
+		}
+	}
+}
+
 func conditionRunID(t *testing.T, db *gorm.DB, owner, condition uuid.UUID) uuid.UUID {
 	t.Helper()
 	var entry model.ConditionEntry

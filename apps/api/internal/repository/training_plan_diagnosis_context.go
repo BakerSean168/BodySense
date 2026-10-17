@@ -116,18 +116,26 @@ func (r *IndependentTrainingPlanRepository) planClaimSource(ctx context.Context,
 		return fmt.Errorf("unknown condition source kind")
 	}
 }
-func (r *IndependentTrainingPlanRepository) planDocumentSource(ctx context.Context, owner, reviewID uuid.UUID, uploadID *uuid.UUID) error {
+func (r *IndependentTrainingPlanRepository) planDocumentSource(ctx context.Context, owner, reviewID uuid.UUID, assetID *uuid.UUID) error {
 	var review model.DocumentIndicatorReview
 	if err := r.dbFor(ctx).Clauses(clause.Locking{Strength: "SHARE"}).Where("user_id=? AND id=?", owner, reviewID).Take(&review).Error; err != nil {
 		return err
 	}
-	if (review.Action != "confirm" && review.Action != "correct") || (uploadID != nil && *uploadID != review.UploadID) {
+	if (review.Action != "confirm" && review.Action != "correct") || (assetID != nil && *assetID != review.AssetID) {
 		return fmt.Errorf("document source admission unavailable")
 	}
-	// This checks original source availability only; a review is not proof of a
-	// clinical diagnosis and never creates or reclassifies an adopted condition.
-	var upload model.UserUpload
-	return r.dbFor(ctx).Clauses(clause.Locking{Strength: "SHARE"}).Where("user_id=? AND id=?", owner, review.UploadID).Take(&upload).Error
+	// UserAsset is the sole physical source identity. An immutable review can
+	// remain readable after source removal, but a new plan admission must fail
+	// closed when its report original is unavailable. SHARE locks keep this
+	// qualification stable against concurrent source-removal CAS until commit.
+	var asset model.UserAsset
+	if err := r.dbFor(ctx).Clauses(clause.Locking{Strength: "SHARE"}).Where("user_id=? AND id=?", owner, review.AssetID).Take(&asset).Error; err != nil {
+		return err
+	}
+	if asset.Kind != model.UserAssetKindReport || asset.Availability != model.UserAssetAvailable {
+		return fmt.Errorf("document source unavailable")
+	}
+	return nil
 }
 func (r *IndependentTrainingPlanRepository) planEvidenceSource(ctx context.Context, owner uuid.UUID, link model.ConditionEntryEvidence, bodyRevision int64) error {
 	db := r.dbFor(ctx).Clauses(clause.Locking{Strength: "SHARE"})
