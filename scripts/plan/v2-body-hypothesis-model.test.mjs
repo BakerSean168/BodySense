@@ -608,3 +608,121 @@ test("BS-15/SEC-01: invalid and foreign concern links never leak facts", () => {
   assert.deepEqual(result[0].relatedFactIds, ["fact-1"]);
   assert.equal(result[0].freshness, "needs_review");
 });
+
+// BH-03: existing owner-bound linked records cannot be replaced by another
+// owner's valid-looking references, even when that owner supplied real IDs.
+test("BH-03: cross-owner Fact and Observation references reject atomically", () => {
+  const state = fixture();
+  state.facts.push({
+    id: "foreign-fact",
+    userId: "other",
+    statement: "private",
+    assertionStatus: "asserted",
+  });
+  state.observations.push({
+    id: "foreign-observation",
+    userId: "other",
+    rawValue: "private",
+    assertionStatus: "asserted",
+  });
+  const snapshot = JSON.stringify(state);
+  for (const patch of [
+    { relatedFactIds: ["fact-1", "foreign-fact"] },
+    { relatedObservationIds: ["obs-1", "foreign-observation"] },
+  ]) {
+    const result = executeRecordHypothesis(state, input(patch), "owner");
+    assert.equal(result.outcome, "rejected");
+    assert.strictEqual(result.state, state);
+  }
+  assert.equal(JSON.stringify(state), snapshot);
+});
+
+// BH-04/BH-05: replay is bound to original target, action, source and
+// payload. A new key cannot bypass the non-current assertion guard.
+test("BH-04/BH-05: corrected hypothesis refuses altered retry and second amendment", () => {
+  const first = recordHypothesis(fixture(), input());
+  const command = {
+    ...input({
+      sourceId: "msg-2",
+      idempotencyKey: "correct-once",
+      expectedRevision: 2,
+    }),
+    operation: "correct",
+    targetId: first.receipt.id,
+    statement: "my corrected suspicion",
+  };
+  const updated = amendHypothesis(first.state, command);
+  assert.equal(updated.outcome, "corrected");
+  for (const patch of [
+    { operation: "withdraw", statement: undefined },
+    { targetId: updated.receipt.successorId },
+    { statement: "different replacement" },
+    { sourceId: "direct-1", sourceKind: "direct_edit" },
+  ]) {
+    const denied = amendHypothesis(updated.state, { ...command, ...patch });
+    assert.equal(denied.outcome, "rejected");
+    assert.strictEqual(denied.state, updated.state);
+  }
+  const second = amendHypothesis(updated.state, {
+    ...command,
+    idempotencyKey: "second-write",
+    expectedRevision: 3,
+  });
+  assert.equal(second.outcome, "rejected");
+  assert.equal(updated.state.hypotheses.length, 2);
+  assert.equal(updated.state.hypotheses[0].assertionStatus, "superseded");
+});
+
+// BH-07/BH-08: derived grouping consumes untrusted candidate references,
+// reveals only owner-valid IDs and cannot create independent health state.
+test("BH-07/BH-08: mixed foreign, malformed and missing group references are read-only", () => {
+  const state = fixture();
+  const first = recordHypothesis(state, input());
+  const model = first.state;
+  model.hypotheses.push({
+    id: "foreign-hypothesis",
+    userId: "other",
+    statement: "private",
+    assertionStatus: "asserted",
+  });
+  model.episodes = [
+    { id: "own-episode", userId: "owner" },
+    { id: "foreign-episode", userId: "other" },
+  ];
+  const snapshot = JSON.stringify(model);
+  const results = queryConcernGroups(
+    model,
+    "owner",
+    [
+      {
+        relatedFactIds: ["fact-1", "no-such-fact"],
+        relatedObservationIds: "not-a-list",
+        relatedHypothesisIds: [first.receipt.id, "foreign-hypothesis"],
+        relatedEpisodeIds: ["own-episode", "foreign-episode"],
+        guessDiagnosis: "must not leak",
+      },
+      {
+        relatedFactIds: ["fact-1"],
+        relatedHypothesisIds: [first.receipt.id],
+        relatedEpisodeIds: ["own-episode"],
+      },
+    ],
+    "owner",
+  );
+  assert.deepEqual(results[0], {
+    relatedFactIds: ["fact-1"],
+    relatedObservationIds: [],
+    relatedHypothesisIds: [first.receipt.id],
+    relatedEpisodeIds: ["own-episode"],
+    freshness: "needs_review",
+  });
+  assert.deepEqual(results[1], {
+    relatedFactIds: ["fact-1"],
+    relatedObservationIds: [],
+    relatedHypothesisIds: [first.receipt.id],
+    relatedEpisodeIds: ["own-episode"],
+    freshness: "current",
+  });
+  assert.equal(JSON.stringify(model), snapshot);
+  assert.equal(model.revision, first.receipt.revision);
+});
