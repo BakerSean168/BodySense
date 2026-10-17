@@ -90,4 +90,5 @@ DROP FUNCTION IF EXISTS public.reject_diagnosis_audit_update();
 DROP FUNCTION IF EXISTS public.reject_episode_evidence_before_creation();
 DROP FUNCTION IF EXISTS public.prevent_training_status_event_update();
 DROP FUNCTION IF EXISTS public.prevent_training_revision_update();
+DROP FUNCTION IF EXISTS public.prevent_plan_proposal_content_update();
 DROP FUNCTION IF EXISTS public.guard_condition_analysis_event_append();
