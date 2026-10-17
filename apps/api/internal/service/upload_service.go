@@ -20,7 +20,6 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 const (
@@ -30,14 +29,6 @@ const (
 )
 
 // Allowed file types
-var allowedMimeTypes = map[string]bool{
-	"image/jpeg":      true,
-	"image/png":       true,
-	"image/webp":      true,
-	"application/pdf": true,
-}
-
-// Allowed file type values
 var allowedFileTypes = map[string]bool{
 	"consultation_photo": true, // ad-hoc chat attachment (no auto posture job)
 	"photo_front":        true,
@@ -46,41 +37,76 @@ var allowedFileTypes = map[string]bool{
 	"report":             true,
 }
 
-type uploadRepository interface {
-	Create(ctx context.Context, upload *model.UserUpload) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.UserUpload, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
-	Delete(ctx context.Context, id, userID uuid.UUID) error
-	BeginOCR(ctx context.Context, id, userID uuid.UUID) (bool, error)
-	CompleteOCR(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
-	FailOCR(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
-	BeginAnalysis(ctx context.Context, id, userID uuid.UUID) (bool, error)
-	CompleteAnalysis(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
-	FailAnalysis(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
-	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string) error
-	GetLatestPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
+// Allowed MIME types
+var allowedMimeTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+	"application/pdf": true,
 }
 
+// ErrUploadNotFound is the owner-masked absence error: a missing asset and a
+// foreign asset are indistinguishable to the caller.
+var ErrUploadNotFound = errors.New("upload not found")
+
+// ErrUploadSourceUnavailable means the asset exists but its private original
+// is no longer readable (source removal or erasure); no caller may treat the
+// historical extraction as a currently verifiable original.
+var ErrUploadSourceUnavailable = errors.New("upload source is unavailable")
+
+// userAssetRepository is the file-identity port the upload domain needs.
+type userAssetRepository interface {
+	Create(ctx context.Context, asset *model.UserAsset) error
+	GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error)
+	uploadSourceReplicaRepository
+	ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserAsset, error)
+	MarkSourceRemoved(ctx context.Context, id, userID uuid.UUID) (bool, error)
+}
+
+// documentExtractionRunRepository is the derived OCR-run port: run creation,
+// lifecycle transitions and owner-scoped reads.
 type documentExtractionRunRepository interface {
 	Create(ctx context.Context, run *model.DocumentExtractionRun) error
+	GetOwnedByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
+	GetLatestOwnedByAsset(ctx context.Context, assetID uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.DocumentExtractionRun, error)
+	BeginProcessing(ctx context.Context, runID, userID, jobID uuid.UUID) (bool, error)
+	CompleteRun(ctx context.Context, run *model.DocumentExtractionRun) (bool, error)
+	FailRun(ctx context.Context, runID, userID uuid.UUID, payload json.RawMessage) (bool, error)
 }
 
-// UploadService handles upload business logic.
+// postureAnalysisRunRepository is the derived posture-run port.
+type postureAnalysisRunRepository interface {
+	Create(ctx context.Context, run *model.PostureAnalysisRun) error
+	GetOwnedByAsset(ctx context.Context, assetID, userID uuid.UUID) (*model.PostureAnalysisRun, error)
+	ListCompletedByUser(ctx context.Context, userID uuid.UUID) ([]model.PostureAnalysisRun, error)
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.PostureAnalysisRun, error)
+	BeginProcessing(ctx context.Context, runID, userID, jobID uuid.UUID) (bool, error)
+	CompleteRun(ctx context.Context, runID, userID uuid.UUID, agentConfigurationID string, payload json.RawMessage) (bool, error)
+	FailRun(ctx context.Context, runID, userID uuid.UUID, payload json.RawMessage) (bool, error)
+}
+
+// UploadService owns the asset file identity, its derived AI runs and the
+// source-removal command. It never mutates extraction runs after completion
+// and never deletes adopted evidence.
 type UploadService struct {
-	uploadRepo               uploadRepository
+	assets                   userAssetRepository
+	extractionRuns           documentExtractionRunRepository
+	postureRuns              postureAnalysisRunRepository
 	jobRuntime               *JobRuntime
 	outputReviewService      *OutputReviewService
 	aiServiceURL             string
 	healthDocumentServiceURL string
 	deployment               *AgentDeploymentPolicy
 	healthDocumentDeployment *HealthDocumentDeploymentPolicy
-	documentExtractionRuns   documentExtractionRunRepository
 	storage                  *uploadstorage.Registry
 }
 
 // NewUploadService creates a new UploadService.
 func NewUploadService(
-	uploadRepo uploadRepository,
+	assets userAssetRepository,
+	extractionRuns documentExtractionRunRepository,
+	postureRuns postureAnalysisRunRepository,
 	jobRuntime *JobRuntime,
 	outputReviewService *OutputReviewService,
 	storage *uploadstorage.Registry,
@@ -94,7 +120,9 @@ func NewUploadService(
 		healthDocumentServiceURL = aiServiceURL
 	}
 	return &UploadService{
-		uploadRepo:               uploadRepo,
+		assets:                   assets,
+		extractionRuns:           extractionRuns,
+		postureRuns:              postureRuns,
 		jobRuntime:               jobRuntime,
 		outputReviewService:      outputReviewService,
 		aiServiceURL:             aiServiceURL,
@@ -115,20 +143,25 @@ func (s *UploadService) WithHealthDocumentDeployment(deployment *HealthDocumentD
 	return s
 }
 
-func (s *UploadService) WithDocumentExtractionRuns(repo documentExtractionRunRepository) *UploadService {
-	s.documentExtractionRuns = repo
-	return s
+func (s *UploadService) resolveHealthDocumentConfigurationID() string {
+	if s.healthDocumentDeployment != nil {
+		return s.healthDocumentDeployment.ConfigurationID()
+	}
+	return defaultHealthDocumentChampionID
 }
 
-// UploadFile validates an owned upload, commits the immutable storage object,
-// creates its DB manifest, and only then enqueues derived AI work. Storage is
-// written before the row so the database never points at an object that was not
-// durably committed; a DB failure attempts an idempotent object rollback.
-func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *multipart.FileHeader, fileType string) (*model.UserUpload, error) {
+// UploadFile validates an owned upload, commits the immutable storage object
+// (hashing the exact bytes it stores), creates the user_assets manifest plus
+// the derived pending run rows, and only then enqueues the AI work. Storage
+// is written before any row so the database never points at an object that
+// was not durably committed; a DB failure attempts an idempotent object
+// rollback.
+func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *multipart.FileHeader, fileType string) (*model.UserUploadView, error) {
 	if s.storage == nil {
 		return nil, errors.New("upload storage is not configured")
 	}
-	if !allowedFileTypes[fileType] {
+	kind, photoView, known := model.UserAssetKindFromFileType(fileType)
+	if !known {
 		return nil, errors.New("invalid file type: must be consultation_photo, photo_front, photo_side, photo_back, or report")
 	}
 	if file.Size > MaxFileSize {
@@ -160,94 +193,250 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		return nil, fmt.Errorf("declared MIME type %s does not match detected content %s", mimeType, detectedType)
 	}
 
-	uploadID := uuid.New()
-	storageKey, err := uploadstorage.BuildObjectKey(userID, uploadID, detectedType)
+	assetID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate asset identity: %w", err)
+	}
+	storageKey, err := uploadstorage.BuildObjectKey(userID, assetID, detectedType)
 	if err != nil {
 		return nil, err
 	}
 	store := s.storage.DefaultStore()
-	body := io.MultiReader(bytes.NewReader(buf[:n]), src)
+	contentHasher := sha256.New()
+	body := io.TeeReader(io.MultiReader(bytes.NewReader(buf[:n]), src), contentHasher)
 	if err := store.Put(ctx, storageKey, body, file.Size, detectedType); err != nil {
 		return nil, fmt.Errorf("failed to store upload object: %w", err)
 	}
 
-	analysisStatus := model.UploadAnalysisNone
-	switch fileType {
-	case "photo_front", "photo_side", "photo_back":
-		analysisStatus = model.UploadAnalysisPending
-	}
 	now := time.Now()
-	upload := &model.UserUpload{
-		ID:             uploadID,
+	asset := &model.UserAsset{
+		ID:             assetID,
 		UserID:         userID,
-		FileType:       fileType,
+		Kind:           kind,
+		PhotoView:      photoViewPtr(photoView),
 		OriginalName:   file.Filename,
+		MimeType:       mimeType,
+		ByteSize:       file.Size,
+		ContentSHA256:  hex.EncodeToString(contentHasher.Sum(nil)),
 		StorageBackend: store.Backend(),
 		StorageKey:     storageKey,
-		FileSize:       file.Size,
-		MimeType:       mimeType,
-		OCRStatus:      model.UploadOCRPending,
-		AnalysisStatus: analysisStatus,
+		Availability:   model.UserAssetAvailable,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
-	if err := s.uploadRepo.Create(ctx, upload); err != nil {
+	if err := s.assets.Create(ctx, asset); err != nil {
 		if cleanupErr := store.Delete(ctx, storageKey); cleanupErr != nil {
 			return nil, fmt.Errorf("failed to save upload record: %w; rollback upload object: %v", err, cleanupErr)
 		}
 		return nil, fmt.Errorf("failed to save upload record: %w", err)
 	}
 
+	if err := s.createDerivedRuns(ctx, asset); err != nil {
+		log.Printf("failed to create derived run rows for asset %s: %v", asset.ID, err)
+	}
+
 	switch fileType {
 	case "report":
-		if _, _, err := s.enqueueOCRJob(ctx, upload.ID, userID); err != nil {
-			log.Printf("failed to enqueue OCR job for upload %s: %v", upload.ID, err)
+		if _, _, err := s.enqueueOCRJob(ctx, asset.ID, userID); err != nil {
+			log.Printf("failed to enqueue OCR job for asset %s: %v", asset.ID, err)
 		}
 	case "photo_front", "photo_side", "photo_back":
-		if _, _, err := s.enqueuePostureJob(ctx, upload.ID, userID, fileType); err != nil {
-			log.Printf("failed to enqueue posture job for upload %s: %v", upload.ID, err)
+		if _, _, err := s.enqueuePostureJob(ctx, asset.ID, userID, fileType); err != nil {
+			log.Printf("failed to enqueue posture job for asset %s: %v", asset.ID, err)
 		}
 	}
-	return upload, nil
+	return s.projectAssetView(ctx, asset)
 }
 
-// GetUploads retrieves all uploads for a user.
-func (s *UploadService) GetUploads(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error) {
-	return s.uploadRepo.GetByUserID(ctx, userID)
+// photoViewPtr converts the empty concrete-view value into a NULL column.
+func photoViewPtr(view model.PostureView) *model.PostureView {
+	if view == "" {
+		return nil
+	}
+	return &view
 }
 
-// GetUpload retrieves a single upload by ID, verifying ownership.
-func (s *UploadService) GetUpload(ctx context.Context, userID uuid.UUID, uploadID uuid.UUID) (*model.UserUpload, error) {
-	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
+// createDerivedRuns persists the pending derived-run manifests of one asset:
+// one document-extraction run per report, one posture-analysis run per
+// posture photo. Their rows exist before any AI work is enqueued so the run
+// lifecycle is always observable and never implicit in job state.
+func (s *UploadService) createDerivedRuns(ctx context.Context, asset *model.UserAsset) error {
+	switch {
+	case asset.Kind == model.UserAssetKindReport:
+		run := &model.DocumentExtractionRun{
+			UserID:          asset.UserID,
+			AssetID:         asset.ID,
+			Status:          model.DerivedRunPending,
+			ConfigurationID: s.resolveHealthDocumentConfigurationID(),
+			CreatedAt:       asset.CreatedAt,
+			UpdatedAt:       asset.UpdatedAt,
+		}
+		return s.extractionRuns.Create(ctx, run)
+	case asset.IsPosturePhoto():
+		run := &model.PostureAnalysisRun{
+			UserID:    asset.UserID,
+			AssetID:   asset.ID,
+			View:      string(*asset.PhotoView),
+			Status:    model.DerivedRunPending,
+			CreatedAt: asset.CreatedAt,
+			UpdatedAt: asset.UpdatedAt,
+		}
+		return s.postureRuns.Create(ctx, run)
+	default:
+		return nil
+	}
+}
+
+// GetUploads assembles the caller's upload views from the asset manifests and
+// the latest derived run state of each asset.
+func (s *UploadService) GetUploads(ctx context.Context, userID uuid.UUID) ([]model.UserUploadView, error) {
+	assets, err := s.assets.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if upload == nil {
-		return nil, errors.New("upload not found")
+	extractionRuns, err := s.extractionRuns.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
 	}
-	if upload.UserID != userID {
-		return nil, errors.New("unauthorized")
+	postureRuns, err := s.postureRuns.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
 	}
-	return upload, nil
+	latestExtractionByAsset := make(map[uuid.UUID]model.DocumentExtractionRun)
+	for _, run := range extractionRuns {
+		if existing, ok := latestExtractionByAsset[run.AssetID]; !ok || !extractionRunNewer(run, existing) {
+			latestExtractionByAsset[run.AssetID] = run
+		}
+	}
+	postureRunByAsset := make(map[uuid.UUID]model.PostureAnalysisRun)
+	for _, run := range postureRuns {
+		postureRunByAsset[run.AssetID] = run
+	}
+	views := make([]model.UserUploadView, 0, len(assets))
+	for i := range assets {
+		view := assetToUploadView(&assets[i])
+		if run, ok := latestExtractionByAsset[assets[i].ID]; ok {
+			applyExtractionToView(&view, &run)
+		}
+		if run, ok := postureRunByAsset[assets[i].ID]; ok {
+			applyPostureToView(&view, &run)
+		}
+		views = append(views, view)
+	}
+	return views, nil
 }
 
-// ReadImageDataURL loads an owned image through UploadStorage and returns a
-// data URL suitable for multimodal LLM input. The object manifest size is
-// checked before any bytes cross the model boundary.
-func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, uploadID uuid.UUID) (string, string, error) {
-	upload, err := s.GetUpload(ctx, userID, uploadID)
+func extractionRunNewer(candidate, current model.DocumentExtractionRun) bool {
+	if candidate.CreatedAt.After(current.CreatedAt) {
+		return true
+	}
+	if candidate.CreatedAt.Before(current.CreatedAt) {
+		return false
+	}
+	return candidate.ID.String() > current.ID.String()
+}
+
+// GetUpload assembles one owned upload view. Foreign and missing assets are
+// the same owner-masked absence.
+func (s *UploadService) GetUpload(ctx context.Context, userID uuid.UUID, assetID uuid.UUID) (*model.UserUploadView, error) {
+	asset, err := s.loadOwnedAsset(ctx, userID, assetID)
+	if err != nil {
+		return nil, err
+	}
+	return s.projectAssetView(ctx, asset)
+}
+
+// loadOwnedAsset returns the caller's asset or ErrUploadNotFound. A foreign
+// asset is deliberately indistinguishable from a missing one.
+func (s *UploadService) loadOwnedAsset(ctx context.Context, userID, assetID uuid.UUID) (*model.UserAsset, error) {
+	asset, err := s.assets.GetOwnedByID(ctx, assetID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if asset == nil || asset.UserID != userID {
+		return nil, ErrUploadNotFound
+	}
+	return asset, nil
+}
+
+// projectAssetView assembles the public upload projection of one asset with
+// its latest derived run state.
+func (s *UploadService) projectAssetView(ctx context.Context, asset *model.UserAsset) (*model.UserUploadView, error) {
+	view := assetToUploadView(asset)
+	if asset.Kind == model.UserAssetKindReport {
+		run, err := s.extractionRuns.GetLatestOwnedByAsset(ctx, asset.ID, asset.UserID)
+		if err != nil {
+			return nil, err
+		}
+		applyExtractionToView(&view, run)
+	}
+	if asset.IsPosturePhoto() {
+		run, err := s.postureRuns.GetOwnedByAsset(ctx, asset.ID, asset.UserID)
+		if err != nil {
+			return nil, err
+		}
+		applyPostureToView(&view, run)
+	}
+	return &view, nil
+}
+
+func assetToUploadView(asset *model.UserAsset) model.UserUploadView {
+	return model.UserUploadView{
+		ID:             asset.ID,
+		UserID:         asset.UserID,
+		FileType:       asset.FileType(),
+		OriginalName:   asset.OriginalName,
+		FileSize:       asset.ByteSize,
+		MimeType:       asset.MimeType,
+		OCRStatus:      "pending",
+		AnalysisStatus: "none",
+		Availability:   asset.Availability,
+		CreatedAt:      asset.CreatedAt,
+		UpdatedAt:      asset.UpdatedAt,
+	}
+}
+
+func applyExtractionToView(view *model.UserUploadView, run *model.DocumentExtractionRun) {
+	if run == nil {
+		return
+	}
+	view.OCRStatus = string(run.Status)
+	if len(run.ResultPayload) > 0 {
+		view.OCRResult = json.RawMessage(run.ResultPayload)
+	}
+}
+
+func applyPostureToView(view *model.UserUploadView, run *model.PostureAnalysisRun) {
+	if run == nil {
+		return
+	}
+	view.AnalysisStatus = string(run.Status)
+	if len(run.ResultPayload) > 0 {
+		view.AnalysisResult = json.RawMessage(run.ResultPayload)
+	}
+}
+
+// ReadImageDataURL loads an owned, still-available image through
+// UploadStorage and returns a data URL suitable for multimodal LLM input.
+// The object manifest size is checked before any bytes cross the model
+// boundary.
+func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, assetID uuid.UUID) (string, string, error) {
+	asset, err := s.loadOwnedAsset(ctx, userID, assetID)
 	if err != nil {
 		return "", "", err
 	}
-	mime := upload.MimeType
+	if asset.Availability != model.UserAssetAvailable {
+		return "", "", ErrUploadSourceUnavailable
+	}
+	mime := asset.MimeType
 	if !strings.HasPrefix(mime, "image/") {
 		return "", "", errors.New("upload is not an image")
 	}
 	const maxBytes = 8 << 20 // 8 MiB
-	if upload.FileSize > maxBytes {
+	if asset.ByteSize > maxBytes {
 		return "", "", errors.New("image too large for consultation multimodal input")
 	}
-	data, err := readUploadObject(ctx, s.storage, upload, maxBytes)
+	data, err := readUploadObject(ctx, s.storage, asset, maxBytes)
 	if err != nil {
 		return "", "", fmt.Errorf("read upload object: %w", err)
 	}
@@ -255,755 +444,69 @@ func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, uploadID u
 	return fmt.Sprintf("data:%s;base64,%s", mime, encoded), mime, nil
 }
 
-// DeleteUpload removes the private storage object before deleting its DB
-// manifest. Storage deletion is idempotent, so a DB failure remains retryable.
-func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uploadID uuid.UUID) error {
-	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
+// OpenOwnedAssetSource streams the private original of one owned asset after
+// the availability check. Source-removed and erased assets fail closed: the
+// historical extraction evidence stays readable, but nobody may present the
+// original as currently verifiable.
+func (s *UploadService) OpenOwnedAssetSource(ctx context.Context, userID, assetID uuid.UUID) (io.ReadCloser, *model.UserAsset, error) {
+	asset, err := s.loadOwnedAsset(ctx, userID, assetID)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	if upload == nil {
-		return errors.New("upload not found")
+	if asset.Availability != model.UserAssetAvailable {
+		return nil, nil, ErrUploadSourceUnavailable
 	}
-	if upload.UserID != userID {
-		return errors.New("unauthorized")
-	}
-	if s.storage == nil {
-		return errors.New("upload storage is not configured")
-	}
-	store, err := s.storage.Store(upload.StorageBackend)
+	reader, _, err := openUploadObject(ctx, s.storage, asset)
 	if err != nil {
-		return err
+		return nil, nil, fmt.Errorf("open upload source: %w", err)
 	}
-	if err := store.Delete(ctx, upload.StorageKey); err != nil {
-		return fmt.Errorf("failed to delete upload object: %w", err)
-	}
-	return s.uploadRepo.Delete(ctx, uploadID, userID)
+	return reader, asset, nil
 }
 
-// executeOCRCall streams an already-authorized upload to the bounded health-document
-// runtime. Go remains the blob authority; Python receives only the request body,
-// never OSS credentials or an object-store location.
-func (s *UploadService) executeOCRCall(reader io.Reader, mimeType, configurationID string) ([]byte, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
-		"Content-Type":        {mimeType},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create form part: %w", err)
-	}
-	if _, err = io.Copy(part, reader); err != nil {
-		return nil, fmt.Errorf("failed to copy file content: %w", err)
-	}
-	if err := writer.WriteField("configuration_id", configurationID); err != nil {
-		return nil, fmt.Errorf("failed to write OCR configuration id: %w", err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("failed to finalize OCR multipart body: %w", err)
-	}
-
-	baseURL := s.healthDocumentServiceURL
-	if baseURL == "" {
-		baseURL = s.aiServiceURL
-	}
-	resp, err := http.Post(baseURL+"/api/ocr/extract", writer.FormDataContentType(), body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to health-document service: %w", err)
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read OCR response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OCR service returned status %d", resp.StatusCode)
-	}
-	return respBody, nil
-}
-
-type ocrJobInput struct {
-	UploadID        string `json:"upload_id"`
-	ConfigurationID string `json:"configuration_id,omitempty"`
-}
-
-// StartUploadWorker starts a background worker that recovers and processes
-// both OCR and posture-analysis jobs. It replaces the OCR-only worker so a
-// single loop drives every upload-derived AI job type.
-func (s *UploadService) StartUploadWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
-	go func() {
-		ticker := time.NewTicker(pollInterval)
-		defer ticker.Stop()
-
-		for {
-			if _, err := s.RecoverUploadJobs(ctx, 10, staleRunningAfter); err != nil {
-				log.Printf("upload job recovery failed: %v", err)
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-			}
-		}
-	}()
-}
-
-// uploadJobType describes how a recoverable upload job is processed and timed
-// out. Adding a new upload-derived AI job type is a matter of registering one
-// entry here.
-type uploadJobType struct {
-	name    string
-	process func(ctx context.Context, job model.Job) error
-	timeout func(ctx context.Context, job model.Job) error
-}
-
-func (s *UploadService) uploadJobTypes() []uploadJobType {
-	return []uploadJobType{
-		{name: ocrJobType, process: s.processOCRJob, timeout: s.timeoutOCRJob},
-		{name: postureJobType, process: s.processPostureJob, timeout: s.timeoutPostureJob},
-	}
-}
-
-// RecoverUploadJobs processes pending jobs and times out stale running jobs
-// across every registered upload job type.
-func (s *UploadService) RecoverUploadJobs(ctx context.Context, limit int, staleRunningAfter time.Duration) (int, error) {
-	if s.jobRuntime == nil {
-		return 0, nil
-	}
-
-	processed := 0
-	for _, jt := range s.uploadJobTypes() {
-		jobs, err := s.jobRuntime.ListRecoverable(ctx, jt.name, staleRunningAfter, limit)
+// RemoveSource executes the PC-D7 source-removal command: it removes the
+// private original object and marks the asset source_removed while keeping
+// the asset row, every derived run and every adopted indicator review, so
+// historical evidence stays readable with an explicit source-unavailable
+// marker. It is not erasure (AS-002 owns that lifecycle) and it never
+// revokes historical admission. Repeating the command is idempotent: an
+// already source-removed asset succeeds again and only retries the object
+// deletion if the first attempt failed.
+func (s *UploadService) RemoveSource(ctx context.Context, userID uuid.UUID, assetID uuid.UUID) (*model.UserAsset, error) {
+	var asset *model.UserAsset
+	err := s.assets.WithStorageLock(ctx, assetID, func(ctx context.Context) error {
+		var err error
+		asset, err = s.loadOwnedAsset(ctx, userID, assetID)
 		if err != nil {
-			return processed, err
+			return err
 		}
-		for _, job := range jobs {
-			switch job.Status {
-			case "pending":
-				if err := jt.process(ctx, job); err != nil {
-					log.Printf("failed to process %s job %s: %v", jt.name, job.ID, err)
-				}
-				processed++
-			case "running":
-				if err := jt.timeout(ctx, job); err != nil {
-					log.Printf("failed to timeout stale %s job %s: %v", jt.name, job.ID, err)
-				}
-				processed++
+		if err := s.assets.TrackStorageReplica(ctx, sourceReplica(asset, asset.StorageBackend)); err != nil {
+			return err
+		}
+		if asset.Availability == model.UserAssetAvailable {
+			if _, err := s.assets.MarkSourceRemoved(ctx, assetID, userID); err != nil {
+				return err
 			}
 		}
-	}
-	return processed, nil
-}
-
-func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid.UUID) (*model.Job, bool, error) {
-	idempotencyKey := fmt.Sprintf("upload_ocr:%s", uploadID.String())
-	configurationID := defaultHealthDocumentChampionID
-	if s.healthDocumentDeployment != nil {
-		configurationID = s.healthDocumentDeployment.ConfigurationID()
-	}
-	inputJSON, _ := json.Marshal(ocrJobInput{UploadID: uploadID.String(), ConfigurationID: configurationID})
-	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, ocrJobType, inputJSON, idempotencyKey, nil, nil)
-	if err != nil {
-		return nil, false, err
-	}
-	return job, existed, nil
-}
-
-func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error {
-	input, err := parseOCRJobInput(job)
-	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-	uploadID, err := uuid.Parse(input.UploadID)
-	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid upload_id"})
-		return fmt.Errorf("invalid upload_id: %w", err)
-	}
-	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
-	if err != nil {
-		return fmt.Errorf("load OCR upload: %w", err)
-	}
-	if upload == nil || upload.UserID != job.UserID {
-		err := errors.New("OCR upload is missing or not owned by job user")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusRunning, nil, nil); err != nil {
-		return fmt.Errorf("start OCR job: %w", err)
-	}
-	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_processing", "percent": 10})
-	started, err := s.uploadRepo.BeginOCR(ctx, uploadID, job.UserID)
-	if err != nil {
-		return fmt.Errorf("begin OCR upload lifecycle: %w", err)
-	}
-	if !started {
-		return fmt.Errorf("begin OCR upload lifecycle: terminal or competing transition already won")
-	}
-
-	reader, _, err := openUploadObject(ctx, s.storage, upload)
-	if err != nil {
-		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, err, json.RawMessage(`{"error":"upload object unavailable"}`))
-	}
-	documentHasher := sha256.New()
-	respBody, callErr := s.executeOCRCall(io.TeeReader(reader, documentHasher), upload.MimeType, input.ConfigurationID)
-	closeErr := reader.Close()
-	if callErr == nil && closeErr != nil {
-		callErr = closeErr
-	}
-	if callErr != nil {
-		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
-		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, callErr, errPayload)
-	}
-	validatedBody, err := validateHealthDocumentResponse(respBody, input.ConfigurationID)
-	if err != nil {
-		errPayload, _ := json.Marshal(map[string]string{"error": "health-document response validation failed"})
-		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
-	}
-	respBody = validatedBody
-	if s.documentExtractionRuns == nil {
-		err := errors.New("document extraction run repository is not configured")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-	documentSHA256 := hex.EncodeToString(documentHasher.Sum(nil))
-	extractionRun, err := buildDocumentExtractionRun(
-		validatedBody, documentSHA256, uploadID, job.UserID, job.ID, input.ConfigurationID,
-	)
-	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-	if err := s.documentExtractionRuns.Create(ctx, extractionRun); err != nil {
-		cause := fmt.Errorf("persist document extraction audit run: %w", err)
-		errPayload, _ := json.Marshal(map[string]string{"error": "persist document extraction audit run"})
-		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, cause, errPayload)
-	}
-
-	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_completed", "percent": 100})
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(respBody), nil); err != nil {
-		return fmt.Errorf("complete OCR job lifecycle: %w", err)
-	}
-	completed, err := s.uploadRepo.CompleteOCR(ctx, uploadID, job.UserID, respBody)
-	if err != nil {
-		return fmt.Errorf("complete OCR upload lifecycle: %w", err)
-	}
-	if !completed {
-		return fmt.Errorf("complete OCR upload lifecycle: competing terminal transition already won")
-	}
-	return nil
-}
-
-func (s *UploadService) timeoutOCRJob(ctx context.Context, job model.Job) error {
-	input, err := parseOCRJobInput(job)
-	if err != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": err.Error()})
-	}
-	uploadID, parseErr := uuid.Parse(input.UploadID)
-	if parseErr != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": "stale OCR job timed out"})
-	}
-	return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusTimedOut, nil, json.RawMessage(`{"error":"stale OCR job timed out"}`))
-}
-
-func (s *UploadService) finalizeOCRFailure(
-	ctx context.Context,
-	job model.Job,
-	uploadID uuid.UUID,
-	jobStatus model.JobStatus,
-	cause error,
-	payload json.RawMessage,
-) error {
-	message := "OCR processing failed"
-	if cause != nil {
-		message = cause.Error()
-	} else if jobStatus == model.JobStatusTimedOut {
-		message = "stale OCR job timed out"
-	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, jobStatus, nil, map[string]string{"error": message}); err != nil {
-		return fmt.Errorf("finalize OCR job lifecycle: %w", err)
-	}
-	updated, err := s.uploadRepo.FailOCR(ctx, uploadID, job.UserID, payload)
-	if err != nil {
-		return fmt.Errorf("fail OCR upload lifecycle: %w", err)
-	}
-	if !updated {
-		return fmt.Errorf("fail OCR upload lifecycle: competing terminal transition already won")
-	}
-	return cause
-}
-
-func (s *UploadService) finalizeAnalysisFailure(
-	ctx context.Context,
-	job model.Job,
-	uploadID uuid.UUID,
-	jobStatus model.JobStatus,
-	cause error,
-	payload json.RawMessage,
-) error {
-	message := "posture analysis failed"
-	if cause != nil {
-		message = cause.Error()
-	} else if jobStatus == model.JobStatusTimedOut {
-		message = "stale posture job timed out"
-	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, jobStatus, nil, map[string]string{"error": message}); err != nil {
-		return fmt.Errorf("finalize posture job lifecycle: %w", err)
-	}
-	updated, err := s.uploadRepo.FailAnalysis(ctx, uploadID, job.UserID, payload)
-	if err != nil {
-		return fmt.Errorf("fail posture upload lifecycle: %w", err)
-	}
-	if !updated {
-		return fmt.Errorf("fail posture upload lifecycle: competing terminal transition already won")
-	}
-	return cause
-}
-
-func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
-	var input ocrJobInput
-	if err := json.Unmarshal(job.Input, &input); err != nil {
-		return input, fmt.Errorf("parse OCR job input: %w", err)
-	}
-	if input.UploadID == "" {
-		return input, fmt.Errorf("OCR job input missing upload_id")
-	}
-	if input.ConfigurationID == "" {
-		// Jobs created before health-document configuration pinning retain the
-		// exact Tesseract behavior they were enqueued under.
-		input.ConfigurationID = tesseractChampionConfigurationID
-	}
-	if _, ok := knownHealthDocumentConfigurations[input.ConfigurationID]; !ok {
-		return input, fmt.Errorf("unknown health-document configuration id %q", input.ConfigurationID)
-	}
-	return input, nil
-}
-
-// ---------------------------------------------------------------------------
-// Posture analysis pipeline (mirrors the OCR pipeline above)
-// ---------------------------------------------------------------------------
-
-type postureJobInput struct {
-	UploadID        string `json:"upload_id"`
-	View            string `json:"view"` // "front" | "side" | "back"
-	ConfigurationID string `json:"configuration_id,omitempty"`
-}
-
-// photoTypeToView maps the upload file_type to the analysis view sent to the
-// AI service.
-var photoTypeToView = map[string]string{
-	"photo_front": "front",
-	"photo_side":  "side",
-	"photo_back":  "back",
-}
-
-// executePostureCall sends a photo to the AI service posture endpoint together
-// with its view and returns the raw response body.
-func (s *UploadService) executePostureCall(reader io.Reader, mimeType, view, configurationID string) ([]byte, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	if err := writer.WriteField("view", view); err != nil {
-		return nil, fmt.Errorf("failed to write view field: %w", err)
-	}
-	if strings.TrimSpace(configurationID) == "" {
-		return nil, fmt.Errorf("posture configuration id is required")
-	}
-	if err := writer.WriteField("configuration_id", configurationID); err != nil {
-		return nil, fmt.Errorf("failed to write configuration_id field: %w", err)
-	}
-	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
-		"Content-Type":        {mimeType},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create form part: %w", err)
-	}
-	if _, err = io.Copy(part, reader); err != nil {
-		return nil, fmt.Errorf("failed to copy file content: %w", err)
-	}
-	if err := writer.WriteField("configuration_id", configurationID); err != nil {
-		return nil, fmt.Errorf("failed to write OCR configuration id: %w", err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("failed to finalize posture multipart body: %w", err)
-	}
-	resp, err := http.Post(s.aiServiceURL+"/api/posture/analyze", writer.FormDataContentType(), body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read posture response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("posture service returned status %d", resp.StatusCode)
-	}
-	return respBody, nil
-}
-
-func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID uuid.UUID, fileType string) (*model.Job, bool, error) {
-	view, ok := photoTypeToView[fileType]
-	if !ok {
-		return nil, false, fmt.Errorf("unsupported photo file_type: %s", fileType)
-	}
-	if s.deployment == nil {
-		return nil, false, errors.New("posture deployment policy is not configured")
-	}
-	idempotencyKey := fmt.Sprintf("posture_analyze:%s", uploadID.String())
-	inputJSON, _ := json.Marshal(postureJobInput{
-		UploadID:        uploadID.String(),
-		View:            view,
-		ConfigurationID: s.deployment.PostureConfigurationID(),
-	})
-	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, postureJobType, inputJSON, idempotencyKey, nil, nil)
-	if err != nil {
-		return nil, false, err
-	}
-	return job, existed, nil
-}
-
-func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) error {
-	input, err := parsePostureJobInput(job)
-	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-	uploadID, err := uuid.Parse(input.UploadID)
-	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid upload_id"})
-		return fmt.Errorf("invalid upload_id: %w", err)
-	}
-	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
-	if err != nil {
-		return fmt.Errorf("load posture upload: %w", err)
-	}
-	if upload == nil || upload.UserID != job.UserID {
-		err := errors.New("posture upload is missing or not owned by job user")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
-		return err
-	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusRunning, nil, nil); err != nil {
-		return fmt.Errorf("start posture job: %w", err)
-	}
-	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_analyzing", "percent": 10})
-	started, err := s.uploadRepo.BeginAnalysis(ctx, uploadID, job.UserID)
-	if err != nil {
-		return fmt.Errorf("begin posture upload lifecycle: %w", err)
-	}
-	if !started {
-		return fmt.Errorf("begin posture upload lifecycle: terminal or competing transition already won")
-	}
-
-	reader, _, err := openUploadObject(ctx, s.storage, upload)
-	if err != nil {
-		errPayload, _ := json.Marshal(map[string]string{"error": "upload object unavailable"})
-		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
-	}
-	respBody, callErr := s.executePostureCall(reader, upload.MimeType, input.View, input.ConfigurationID)
-	closeErr := reader.Close()
-	if callErr == nil && closeErr != nil {
-		callErr = closeErr
-	}
-	if callErr != nil {
-		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
-		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, callErr, errPayload)
-	}
-
-	analysisPayload, err := validatePostureAgentResponse(respBody, input.ConfigurationID)
-	if err != nil {
-		errPayload, _ := json.Marshal(map[string]string{"error": "posture agent identity validation failed"})
-		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
-	}
-	s.recordPostureGovernance(ctx, job, analysisPayload)
-	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(respBody), nil); err != nil {
-		return fmt.Errorf("complete posture job lifecycle: %w", err)
-	}
-	completed, err := s.uploadRepo.CompleteAnalysis(ctx, uploadID, job.UserID, analysisPayload)
-	if err != nil {
-		return fmt.Errorf("complete posture upload lifecycle: %w", err)
-	}
-	if !completed {
-		return fmt.Errorf("complete posture upload lifecycle: competing terminal transition already won")
-	}
-	if input.ConfigurationID != "" {
-		_ = s.uploadRepo.UpdateAgentConfiguration(ctx, uploadID, input.ConfigurationID)
-	}
-	return nil
-}
-
-func validatePostureAgentResponse(respBody []byte, expectedConfigurationID string) ([]byte, error) {
-	registration, ok := knownPostureConfigurations[strings.TrimSpace(expectedConfigurationID)]
-	if !ok {
-		return nil, fmt.Errorf("unknown Posture Agent configuration id %q", expectedConfigurationID)
-	}
-	var envelope struct {
-		Status string         `json:"status"`
-		Result map[string]any `json:"result"`
-	}
-	if err := json.Unmarshal(respBody, &envelope); err != nil {
-		return nil, fmt.Errorf("decode posture agent response: %w", err)
-	}
-	if envelope.Status != "completed" || envelope.Result == nil {
-		return nil, fmt.Errorf("posture agent returned incomplete response")
-	}
-	configuration, ok := envelope.Result["agent_configuration"].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("posture agent response missing agent_configuration")
-	}
-	if id, _ := configuration["id"].(string); id != expectedConfigurationID {
-		return nil, fmt.Errorf("posture agent configuration mismatch: got %q want %q", id, expectedConfigurationID)
-	}
-	if role, _ := configuration["role"].(string); role != "posture" {
-		return nil, fmt.Errorf("posture agent role mismatch: %q", role)
-	}
-	if policy, _ := configuration["decision_policy_revision"].(string); policy != registration.DecisionPolicyRevision {
-		return nil, fmt.Errorf("posture decision policy mismatch: %q", policy)
-	}
-	if logicalModel, _ := configuration["logical_model"].(string); logicalModel != registration.LogicalModel {
-		return nil, fmt.Errorf("posture logical model mismatch: %q", logicalModel)
-	}
-	if registration.MechanismRevision != "" {
-		if revision, _ := configuration["geometry_mechanism_revision"].(string); revision != registration.MechanismRevision {
-			return nil, fmt.Errorf("posture configuration mechanism mismatch: %q", revision)
+		// Always refresh after CAS: both the response and cleanup use durable state.
+		asset, err = s.loadOwnedAsset(ctx, userID, assetID)
+		if err != nil {
+			return err
 		}
-	}
-	execution, ok := envelope.Result["execution_provenance"].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("posture agent response missing execution_provenance")
-	}
-	if logicalModel, _ := execution["logical_model"].(string); logicalModel != registration.LogicalModel {
-		return nil, fmt.Errorf("posture execution logical model mismatch: %q", logicalModel)
-	}
-	if err := validatePostureMechanismProvenance(envelope.Result, registration); err != nil {
+		if asset.Availability != model.UserAssetSourceRemoved && asset.Availability != model.UserAssetErased {
+			return ErrUploadSourceUnavailable
+		}
+		replicas, err := s.assets.ListStorageReplicas(ctx, assetID, userID)
+		if err != nil {
+			return err
+		}
+		var cleanupErr error
+		for _, replica := range replicas {
+			cleanupErr = errors.Join(cleanupErr, deleteSourceReplica(ctx, s.storage, s.assets, replica))
+		}
+		return cleanupErr
+	})
+	if err != nil {
 		return nil, err
 	}
-	trace := map[string]any{
-		"decision":                 "persist",
-		"authority":                "go",
-		"agent_configuration_id":   expectedConfigurationID,
-		"decision_policy_revision": registration.DecisionPolicyRevision,
-		"logical_model":            registration.LogicalModel,
-	}
-	if registration.MechanismRevision != "" {
-		trace["mechanism_revision"] = registration.MechanismRevision
-		trace["model_sha256"] = registration.ModelSHA256
-		trace["threshold_revision"] = registration.ThresholdRevision
-		trace["threshold_sha256"] = registration.ThresholdSHA256
-	}
-	envelope.Result["generation_decision_trace"] = trace
-	return json.Marshal(envelope.Result)
-}
-
-func validatePostureMechanismProvenance(
-	result map[string]any,
-	registration postureConfigurationRegistration,
-) error {
-	if registration.MechanismRevision == "" {
-		return nil
-	}
-	mechanism, ok := result["mechanism_provenance"].(map[string]any)
-	if !ok {
-		return errors.New("posture agent response missing mechanism_provenance")
-	}
-	if status, _ := mechanism["status"].(string); status != "verified" {
-		return fmt.Errorf("posture mechanism status mismatch: %q", status)
-	}
-	expected := map[string]string{
-		"mechanism_revision": registration.MechanismRevision,
-		"engine":             registration.Engine,
-		"engine_version":     registration.EngineVersion,
-		"model_uri":          registration.ModelURI,
-		"model_sha256":       registration.ModelSHA256,
-		"threshold_revision": registration.ThresholdRevision,
-		"threshold_sha256":   registration.ThresholdSHA256,
-	}
-	for field, want := range expected {
-		got, _ := mechanism[field].(string)
-		if got != want {
-			return fmt.Errorf("posture mechanism %s mismatch: got %q want %q", field, got, want)
-		}
-	}
-	return nil
-}
-
-// recordPostureGovernance audits the P2 gate result for posture analysis jobs.
-func (s *UploadService) recordPostureGovernance(ctx context.Context, job model.Job, respBody []byte) {
-	if s.outputReviewService == nil || len(respBody) == 0 {
-		return
-	}
-
-	var parsed map[string]any
-	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return
-	}
-
-	verdict := "unknown"
-	issues := datatypes.JSON("[]")
-	var validated datatypes.JSON
-
-	if gov, ok := parsed["governance"].(map[string]any); ok {
-		if v, ok := gov["verdict"].(string); ok && v != "" {
-			verdict = v
-		}
-		if rawIssues, ok := gov["issues"]; ok {
-			if b, err := json.Marshal(rawIssues); err == nil {
-				issues = datatypes.JSON(b)
-			}
-		}
-	}
-
-	if verdict == "accepted" || verdict == "degraded" {
-		safe := make(map[string]any, len(parsed))
-		for k, v := range parsed {
-			if k == "governance" || k == "safety_fallback" {
-				continue
-			}
-			safe[k] = v
-		}
-		if b, err := json.Marshal(safe); err == nil {
-			validated = datatypes.JSON(b)
-		}
-	}
-
-	jobID := job.ID
-	userID := job.UserID
-	s.outputReviewService.RecordReview(
-		ctx,
-		"posture",
-		verdict,
-		&userID,
-		nil,
-		&jobID,
-		nil,
-		issues,
-		validated,
-		datatypes.JSON(respBody),
-	)
-}
-
-func (s *UploadService) timeoutPostureJob(ctx context.Context, job model.Job) error {
-	input, err := parsePostureJobInput(job)
-	if err != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": err.Error()})
-	}
-	uploadID, parseErr := uuid.Parse(input.UploadID)
-	if parseErr != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": "stale posture job timed out"})
-	}
-	return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusTimedOut, nil, json.RawMessage(`{"error":"stale posture job timed out"}`))
-}
-
-func parsePostureJobInput(job model.Job) (postureJobInput, error) {
-	var input postureJobInput
-	if err := json.Unmarshal(job.Input, &input); err != nil {
-		return input, fmt.Errorf("parse posture job input: %w", err)
-	}
-	if input.UploadID == "" || input.View == "" || input.ConfigurationID == "" {
-		return input, fmt.Errorf("posture job input missing required fields")
-	}
-	return input, nil
-}
-
-// GetPostureAnalyses returns the user's completed three-view posture analyses.
-// Used by the profile summary and (Phase 3-B1) the consultation Agent tool.
-func (s *UploadService) GetPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error) {
-	return s.uploadRepo.GetLatestPostureAnalyses(ctx, userID)
-}
-
-// PostureAnalysisView is one completed single-view analysis, stripped of raw
-// file metadata so consultation tools and assessment can consume it safely.
-type PostureAnalysisView struct {
-	UploadID       string          `json:"upload_id"`
-	View           string          `json:"view"`
-	FileType       string          `json:"file_type"`
-	AnalysisStatus string          `json:"analysis_status"`
-	Analysis       json.RawMessage `json:"analysis"`
-	CreatedAt      time.Time       `json:"created_at"`
-}
-
-// PostureAnalysisSummary is the Agent/assessment-facing aggregate of the
-// user's latest completed three-view posture analyses.
-type PostureAnalysisSummary struct {
-	HasAnalysis bool                  `json:"has_analysis"`
-	Views       []PostureAnalysisView `json:"views"`
-	// Findings is a flattened list of finding objects across views for quick use.
-	Findings []any `json:"findings"`
-	// Summaries is per-view summary_markdown text when present.
-	Summaries []string `json:"summaries"`
-}
-
-// viewFromFileType maps upload file_type to the posture view id.
-func viewFromFileType(fileType string) string {
-	switch fileType {
-	case "photo_front":
-		return "front"
-	case "photo_side":
-		return "side"
-	case "photo_back":
-		return "back"
-	default:
-		return fileType
-	}
-}
-
-// BuildPostureAnalysisSummary collapses completed posture uploads into the
-// compact shape shared by the read-only HTTP endpoint, consultation business
-// context, and assessment reuse. Prefer the newest completed row per view.
-func BuildPostureAnalysisSummary(uploads []model.UserUpload) PostureAnalysisSummary {
-	summary := PostureAnalysisSummary{
-		HasAnalysis: false,
-		Views:       []PostureAnalysisView{},
-		Findings:    []any{},
-		Summaries:   []string{},
-	}
-	if len(uploads) == 0 {
-		return summary
-	}
-
-	seenView := map[string]bool{}
-	for _, upload := range uploads {
-		view := viewFromFileType(upload.FileType)
-		if seenView[view] {
-			continue
-		}
-		if len(upload.AnalysisResult) == 0 {
-			continue
-		}
-		seenView[view] = true
-		summary.HasAnalysis = true
-		summary.Views = append(summary.Views, PostureAnalysisView{
-			UploadID:       upload.ID.String(),
-			View:           view,
-			FileType:       upload.FileType,
-			AnalysisStatus: string(upload.AnalysisStatus),
-			Analysis:       upload.AnalysisResult,
-			CreatedAt:      upload.CreatedAt,
-		})
-
-		var parsed map[string]any
-		if err := json.Unmarshal(upload.AnalysisResult, &parsed); err == nil {
-			if findings, ok := parsed["findings"].([]any); ok {
-				summary.Findings = append(summary.Findings, findings...)
-			}
-			if text, ok := parsed["summary_markdown"].(string); ok && text != "" {
-				summary.Summaries = append(summary.Summaries, text)
-			}
-		}
-	}
-	return summary
-}
-
-// GetPostureAnalysisSummary loads and collapses the caller's completed posture
-// analyses. Empty result (no completed analysis) is not an error.
-func (s *UploadService) GetPostureAnalysisSummary(ctx context.Context, userID uuid.UUID) (PostureAnalysisSummary, error) {
-	uploads, err := s.GetPostureAnalyses(ctx, userID)
-	if err != nil {
-		return PostureAnalysisSummary{}, err
-	}
-	return BuildPostureAnalysisSummary(uploads), nil
+	return asset, nil
 }

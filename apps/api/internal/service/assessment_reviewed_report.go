@@ -24,14 +24,14 @@ var reviewedAssessmentActions = map[string]bool{
 // one user's upload. Assessment uses this authoritative source instead of
 // mutating OCRResult/evidence_admissibility.
 type AssessmentReviewSource interface {
-	ListByUpload(ctx context.Context, uploadID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
+	ListByAsset(ctx context.Context, assetID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
 }
 
 // buildReviewedCandidate projects one retained (confirm/correct) review row into
 // the Assessment report lane with immutable candidate and source provenance.
 func buildReviewedCandidate(row model.DocumentIndicatorReview) (map[string]any, bool) {
 	if !reviewedAssessmentActions[row.Action] ||
-		row.ID == uuid.Nil || row.UserID == uuid.Nil || row.UploadID == uuid.Nil ||
+		row.ID == uuid.Nil || row.UserID == uuid.Nil || row.AssetID == uuid.Nil ||
 		row.ExtractionRunID == uuid.Nil || row.ReviewerUserID == uuid.Nil || row.IndicatorIndex < 0 {
 		return nil, false
 	}
@@ -56,7 +56,7 @@ func buildReviewedCandidate(row model.DocumentIndicatorReview) (map[string]any, 
 		return nil, false
 	}
 	return map[string]any{
-		"upload_id":         row.UploadID.String(),
+		"upload_id":         row.AssetID.String(),
 		"indicator_index":   row.IndicatorIndex,
 		"indicator_id":      machineID,
 		"extraction_run_id": row.ExtractionRunID.String(),
@@ -153,17 +153,17 @@ func reviewedRowNewer(candidate, current model.DocumentIndicatorReview) bool {
 // superseded candidates are excluded because only the latest decision per
 // (upload, extraction-run, indicator-index) is considered.
 func buildAssessmentReviewedIndicators(
-	uploads []model.UserUpload,
+	uploads []model.UserUploadView,
 	reviewsByUpload map[uuid.UUID][]model.DocumentIndicatorReview,
 ) []map[string]any {
 	latest := map[reviewedScope]model.DocumentIndicatorReview{}
 	for _, upload := range uploads {
 		for _, row := range reviewsByUpload[upload.ID] {
 			// Never let an unexpected repository row cross upload scope.
-			if row.UploadID != upload.ID {
+			if row.AssetID != upload.ID {
 				continue
 			}
-			key := reviewedScope{upload: row.UploadID, run: row.ExtractionRunID, index: row.IndicatorIndex}
+			key := reviewedScope{upload: row.AssetID, run: row.ExtractionRunID, index: row.IndicatorIndex}
 			if existing, ok := latest[key]; ok && !reviewedRowNewer(row, existing) {
 				continue
 			}

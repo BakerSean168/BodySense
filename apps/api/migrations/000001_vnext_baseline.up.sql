@@ -570,21 +570,26 @@ CREATE TABLE public.diagnosis_rollout_observations (
 
 CREATE TABLE public.document_extraction_runs (
     id uuid DEFAULT uuidv7() NOT NULL,
-    upload_id uuid NOT NULL,
     user_id uuid NOT NULL,
+    asset_id uuid NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     job_id uuid,
     configuration_id character varying(80) NOT NULL,
-    mechanism_revision character varying(120) NOT NULL,
-    document_sha256 character(64) NOT NULL,
-    result_sha256 character(64) NOT NULL,
-    raw_text_sha256 character(64) NOT NULL,
+    mechanism_revision character varying(120),
+    document_sha256 character(64),
+    result_sha256 character(64),
+    raw_text_sha256 character(64),
+    result_payload jsonb,
     indicator_snapshot jsonb DEFAULT '[]'::jsonb NOT NULL,
     source_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
     mechanism_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT document_extraction_runs_document_sha256_check CHECK ((document_sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT document_extraction_runs_raw_text_sha256_check CHECK ((raw_text_sha256 ~ '^[0-9a-f]{64}$'::text)),
-    CONSTRAINT document_extraction_runs_result_sha256_check CHECK ((result_sha256 ~ '^[0-9a-f]{64}$'::text))
+    CONSTRAINT document_extraction_runs_result_sha256_check CHECK ((result_sha256 ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT document_extraction_runs_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text]))),
+    CONSTRAINT document_extraction_runs_completed_audit_check CHECK (((status)::text <> 'completed'::text) OR ((document_sha256 IS NOT NULL) AND (result_sha256 IS NOT NULL) AND (raw_text_sha256 IS NOT NULL) AND (mechanism_revision IS NOT NULL) AND (result_payload IS NOT NULL)))
 );
 
 
@@ -595,7 +600,7 @@ CREATE TABLE public.document_extraction_runs (
 CREATE TABLE public.document_indicator_reviews (
     id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
-    upload_id uuid NOT NULL,
+    asset_id uuid NOT NULL,
     extraction_run_id uuid NOT NULL,
     indicator_index integer NOT NULL,
     action character varying(20) NOT NULL,
@@ -1095,6 +1100,26 @@ CREATE TABLE public.outcomes (
 
 
 --
+-- Name: posture_analysis_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.posture_analysis_runs (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    asset_id uuid NOT NULL,
+    view character varying(10) NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    job_id uuid,
+    agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
+    result_payload jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT posture_analysis_runs_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text]))),
+    CONSTRAINT posture_analysis_runs_view_check CHECK (((view)::text = ANY (ARRAY[('front'::character varying)::text, ('side'::character varying)::text, ('back'::character varying)::text])))
+);
+
+
+--
 -- Name: privacy_erasure_requests; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1448,29 +1473,33 @@ CREATE TABLE public.user_profiles (
 
 
 --
--- Name: user_uploads; Type: TABLE; Schema: public; Owner: -
+-- Name: user_assets; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_uploads (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+CREATE TABLE public.user_assets (
+    id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
-    file_type character varying(50) NOT NULL,
+    kind character varying(20) NOT NULL,
+    photo_view character varying(10),
     original_name character varying(255) NOT NULL,
-    file_size bigint NOT NULL,
     mime_type character varying(100) NOT NULL,
-    ocr_result jsonb,
-    ocr_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    analysis_status character varying(20) DEFAULT 'none'::character varying NOT NULL,
-    analysis_result jsonb,
-    agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
+    byte_size bigint NOT NULL,
+    content_sha256 character(64) NOT NULL,
     storage_backend character varying(20) NOT NULL,
     storage_key character varying(500) NOT NULL,
-    CONSTRAINT ck_user_uploads_storage_backend CHECK (((storage_backend)::text = ANY (ARRAY[('local'::character varying)::text, ('oss'::character varying)::text]))),
-    CONSTRAINT ck_user_uploads_storage_key CHECK ((((storage_key)::text <> ''::text) AND (length((storage_key)::text) <= 492) AND ((storage_key)::text !~ '^/'::text) AND ((storage_key)::text !~ '(^|/)\.\.(/|$)'::text) AND (POSITION((chr(92)) IN (storage_key)) = 0))),
-    CONSTRAINT user_uploads_analysis_status_check CHECK (((analysis_status)::text = ANY (ARRAY[('none'::character varying)::text, ('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text]))),
-    CONSTRAINT user_uploads_ocr_status_check CHECK (((ocr_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text])))
+    availability character varying(20) DEFAULT 'available'::character varying NOT NULL,
+    source_removed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT ck_user_assets_availability CHECK (((availability)::text = ANY (ARRAY[('available'::character varying)::text, ('source_removed'::character varying)::text, ('erased'::character varying)::text]))),
+    CONSTRAINT ck_user_assets_byte_size CHECK ((byte_size >= 0)),
+    CONSTRAINT ck_user_assets_content_sha256 CHECK ((content_sha256 ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT ck_user_assets_kind CHECK (((kind)::text = ANY (ARRAY[('photo'::character varying)::text, ('report'::character varying)::text, ('document'::character varying)::text]))),
+    CONSTRAINT ck_user_assets_photo_view CHECK (((photo_view IS NULL) OR ((photo_view)::text = ANY (ARRAY[('front'::character varying)::text, ('side'::character varying)::text, ('back'::character varying)::text])))),
+    CONSTRAINT ck_user_assets_report_no_view CHECK (((kind)::text <> 'report'::text) OR (photo_view IS NULL)),
+    CONSTRAINT ck_user_assets_source_removed_at CHECK (((availability)::text <> 'source_removed'::text) OR (source_removed_at IS NOT NULL)),
+    CONSTRAINT ck_user_assets_storage_backend CHECK (((storage_backend)::text = ANY (ARRAY[('local'::character varying)::text, ('oss'::character varying)::text]))),
+    CONSTRAINT ck_user_assets_storage_key CHECK ((((storage_key)::text <> ''::text) AND (length((storage_key)::text) <= 492) AND ((storage_key)::text !~ '^/'::text) AND ((storage_key)::text !~ '(^|/)\.\.(/|$)'::text) AND (POSITION((chr(92)) IN (storage_key)) = 0)))
 );
 
 
@@ -2159,6 +2188,22 @@ ALTER TABLE ONLY public.outcomes
 
 
 --
+-- Name: posture_analysis_runs posture_analysis_runs_asset_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posture_analysis_runs
+    ADD CONSTRAINT posture_analysis_runs_asset_key UNIQUE (user_id, asset_id);
+
+
+--
+-- Name: posture_analysis_runs posture_analysis_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posture_analysis_runs
+    ADD CONSTRAINT posture_analysis_runs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: privacy_erasure_requests privacy_erasure_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2351,19 +2396,27 @@ ALTER TABLE ONLY public.treatments
 
 
 --
+-- Name: user_assets user_assets_owner_identity_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_assets
+    ADD CONSTRAINT user_assets_owner_identity_key UNIQUE (user_id, id);
+
+
+--
+-- Name: user_assets user_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_assets
+    ADD CONSTRAINT user_assets_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_profiles user_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_profiles
     ADD CONSTRAINT user_profiles_pkey PRIMARY KEY (id);
-
-
---
--- Name: user_uploads user_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_uploads
-    ADD CONSTRAINT user_uploads_pkey PRIMARY KEY (id);
 
 
 --
@@ -2712,6 +2765,13 @@ CREATE INDEX idx_diagnosis_rollout_observations_pair_stage ON public.diagnosis_r
 
 
 --
+-- Name: idx_document_extraction_runs_asset_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_document_extraction_runs_asset_created ON public.document_extraction_runs USING btree (user_id, asset_id, created_at DESC);
+
+
+--
 -- Name: idx_document_extraction_runs_configuration; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2719,17 +2779,17 @@ CREATE INDEX idx_document_extraction_runs_configuration ON public.document_extra
 
 
 --
--- Name: idx_document_extraction_runs_upload_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_document_extraction_runs_upload_created ON public.document_extraction_runs USING btree (upload_id, created_at DESC);
-
-
---
 -- Name: idx_document_extraction_runs_user_created; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_document_extraction_runs_user_created ON public.document_extraction_runs USING btree (user_id, created_at DESC);
+
+
+--
+-- Name: idx_document_indicator_reviews_asset_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_document_indicator_reviews_asset_created ON public.document_indicator_reviews USING btree (user_id, asset_id, created_at DESC);
 
 
 --
@@ -2744,13 +2804,6 @@ CREATE INDEX idx_document_indicator_reviews_extraction_run ON public.document_in
 --
 
 CREATE UNIQUE INDEX idx_document_indicator_reviews_idem ON public.document_indicator_reviews USING btree (user_id, extraction_run_id, indicator_index, idempotency_key);
-
-
---
--- Name: idx_document_indicator_reviews_upload_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_document_indicator_reviews_upload_created ON public.document_indicator_reviews USING btree (upload_id, created_at DESC);
 
 
 --
@@ -2999,6 +3052,13 @@ CREATE INDEX idx_outcomes_user_occurred ON public.outcomes USING btree (user_id,
 
 
 --
+-- Name: idx_posture_analysis_runs_user_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_posture_analysis_runs_user_status ON public.posture_analysis_runs USING btree (user_id, status, created_at DESC);
+
+
+--
 -- Name: idx_privacy_erasure_requests_recovery; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3175,38 +3235,17 @@ CREATE UNIQUE INDEX idx_user_profiles_user_id ON public.user_profiles USING btre
 
 
 --
--- Name: idx_user_uploads_agent_configuration; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_user_assets_user_created; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_user_uploads_agent_configuration ON public.user_uploads USING btree (agent_configuration_id) WHERE ((agent_configuration_id)::text <> ''::text);
-
-
---
--- Name: idx_user_uploads_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_uploads_created_at ON public.user_uploads USING btree (created_at);
+CREATE INDEX idx_user_assets_user_created ON public.user_assets USING btree (user_id, created_at DESC);
 
 
 --
--- Name: idx_user_uploads_file_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_user_assets_user_kind_created; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_user_uploads_file_type ON public.user_uploads USING btree (file_type);
-
-
---
--- Name: idx_user_uploads_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_uploads_user_id ON public.user_uploads USING btree (user_id);
-
-
---
--- Name: idx_user_uploads_user_type_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_uploads_user_type_created ON public.user_uploads USING btree (user_id, file_type, created_at DESC);
+CREATE INDEX idx_user_assets_user_kind_created ON public.user_assets USING btree (user_id, kind, created_at DESC);
 
 
 --
@@ -3273,10 +3312,10 @@ CREATE UNIQUE INDEX uq_privacy_erasure_requests_active_subject ON public.privacy
 
 
 --
--- Name: uq_user_uploads_storage_identity; Type: INDEX; Schema: public; Owner: -
+-- Name: uq_user_assets_storage_identity; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX uq_user_uploads_storage_identity ON public.user_uploads USING btree (storage_backend, storage_key);
+CREATE UNIQUE INDEX uq_user_assets_storage_identity ON public.user_assets USING btree (storage_backend, storage_key);
 
 
 --
@@ -3771,11 +3810,11 @@ ALTER TABLE ONLY public.document_extraction_runs
 
 
 --
--- Name: document_extraction_runs document_extraction_runs_upload_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: document_extraction_runs document_extraction_runs_user_asset_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.document_extraction_runs
-    ADD CONSTRAINT document_extraction_runs_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES public.user_uploads(id) ON DELETE CASCADE;
+    ADD CONSTRAINT document_extraction_runs_user_asset_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE;
 
 
 --
@@ -3803,11 +3842,11 @@ ALTER TABLE ONLY public.document_indicator_reviews
 
 
 --
--- Name: document_indicator_reviews document_indicator_reviews_upload_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: document_indicator_reviews document_indicator_reviews_user_asset_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.document_indicator_reviews
-    ADD CONSTRAINT document_indicator_reviews_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES public.user_uploads(id) ON DELETE CASCADE;
+    ADD CONSTRAINT document_indicator_reviews_user_asset_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE;
 
 
 --
@@ -4179,6 +4218,14 @@ ALTER TABLE ONLY public.messages
 
 
 --
+-- Name: posture_analysis_runs posture_analysis_runs_user_asset_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posture_analysis_runs
+    ADD CONSTRAINT posture_analysis_runs_user_asset_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE;
+
+
+--
 -- Name: outcomes outcomes_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4435,19 +4482,19 @@ ALTER TABLE ONLY public.treatments
 
 
 --
+-- Name: user_assets user_assets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_assets
+    ADD CONSTRAINT user_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_profiles user_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_profiles
     ADD CONSTRAINT user_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: user_uploads user_uploads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_uploads
-    ADD CONSTRAINT user_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 -- Go-owned, immutable restrictions for complete structured Safety screens.
@@ -4765,6 +4812,18 @@ END;
 $$;
 CREATE TRIGGER episode_evidence_revision_floor BEFORE INSERT OR UPDATE ON public.condition_entry_evidence
     FOR EACH ROW EXECUTE FUNCTION public.reject_episode_evidence_before_creation();
+
+-- Write-ahead inventory for source copies; not an AS-002 erasure receipt.
+CREATE TABLE public.user_asset_storage_cleanups (
+ asset_id uuid NOT NULL,
+ user_id uuid NOT NULL,
+ storage_backend varchar(20) NOT NULL,
+ storage_key varchar(500) NOT NULL,
+ PRIMARY KEY (user_id, asset_id, storage_backend, storage_key),
+ CONSTRAINT user_asset_storage_cleanups_owner_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE,
+ CONSTRAINT ck_user_asset_storage_cleanups_backend CHECK (storage_backend IN ('local','oss')),
+ CONSTRAINT ck_user_asset_storage_cleanups_key CHECK (storage_key <> '' AND length(storage_key) <= 492 AND storage_key !~ '^/' AND storage_key !~ '(^|/)\.\.(/|$)' AND position(chr(92) in storage_key) = 0)
+);
 
 --
 -- PostgreSQL database dump complete

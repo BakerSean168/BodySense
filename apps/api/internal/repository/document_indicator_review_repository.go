@@ -43,16 +43,16 @@ func (r *DocumentIndicatorReviewRepository) ByOwnerScope(
 	return rows, err
 }
 
-// ListByUpload returns all review rows for a given upload owned by userId,
+// ListByAsset returns all review rows for a given asset owned by userId,
 // ordered ascending (append-only replay order).
-func (r *DocumentIndicatorReviewRepository) ListByUpload(
+func (r *DocumentIndicatorReviewRepository) ListByAsset(
 	ctx context.Context,
-	uploadID uuid.UUID,
+	assetID uuid.UUID,
 	userID uuid.UUID,
 ) ([]model.DocumentIndicatorReview, error) {
 	var rows []model.DocumentIndicatorReview
 	err := r.db.WithContext(ctx).
-		Where("upload_id = ? AND user_id = ?", uploadID, userID).
+		Where("asset_id = ? AND user_id = ?", assetID, userID).
 		Order("created_at ASC").
 		Find(&rows).Error
 	return rows, err

@@ -382,18 +382,18 @@ func TestDiagnosisCompositeIdentityConstraintsPostgres(t *testing.T) {
 
 func seedDiagnosisDocumentReview(t *testing.T, db *gorm.DB, owner uuid.UUID, action string) uuid.UUID {
 	t.Helper()
-	upload, extraction, review := uuid.New(), uuid.New(), uuid.New()
-	if err := db.Exec(`INSERT INTO user_uploads(id,user_id,file_type,original_name,file_size,mime_type,storage_backend,storage_key)
- VALUES (?,?,'report','synthetic.pdf',1,'application/pdf','local',?)`, upload, owner, "dx002/"+upload.String()).Error; err != nil {
-		t.Fatal(err)
-	}
+	assetID, extraction, review := uuid.New(), uuid.New(), uuid.New()
 	hash := strings.Repeat("f", 64)
-	if err := db.Exec(`INSERT INTO document_extraction_runs(id,user_id,upload_id,configuration_id,mechanism_revision,document_sha256,result_sha256,raw_text_sha256)
- VALUES (?,?,?,'synthetic','1',?,?,?)`, extraction, owner, upload, hash, hash, hash).Error; err != nil {
+	if err := db.Exec(`INSERT INTO user_assets(id,user_id,kind,original_name,mime_type,byte_size,content_sha256,storage_backend,storage_key)
+ VALUES (?,?,'report','synthetic.pdf','application/pdf',1,?,'local',?)`, assetID, owner, hash, "dx002/"+assetID.String()).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Exec(`INSERT INTO document_indicator_reviews(id,user_id,upload_id,extraction_run_id,indicator_index,action,idempotency_key,reviewer_user_id)
- VALUES (?,?,?,?,0,?,?,?)`, review, owner, upload, extraction, action, uuid.NewString(), owner).Error; err != nil {
+	if err := db.Exec(`INSERT INTO document_extraction_runs(id,user_id,asset_id,configuration_id,mechanism_revision,document_sha256,result_sha256,raw_text_sha256)
+ VALUES (?,?,?,'synthetic','1',?,?,?)`, extraction, owner, assetID, hash, hash, hash).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO document_indicator_reviews(id,user_id,asset_id,extraction_run_id,indicator_index,action,idempotency_key,reviewer_user_id)
+ VALUES (?,?,?,?,0,?,?,?)`, review, owner, assetID, extraction, action, uuid.NewString(), owner).Error; err != nil {
 		t.Fatal(err)
 	}
 	return review

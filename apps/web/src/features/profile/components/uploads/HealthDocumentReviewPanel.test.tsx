@@ -22,6 +22,7 @@ function context(
   return {
     extraction_run_id: runId,
     upload_id: uploadId,
+    source_availability: "available",
     review_candidates: [
       {
         indicator_index: 0,

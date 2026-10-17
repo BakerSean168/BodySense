@@ -39,10 +39,17 @@ func (s fakeAssessmentProfileSource) GetProfile(context.Context, uuid.UUID) (*mo
 	return s.profile, nil
 }
 
-type fakeAssessmentUploadSource struct{ uploads []model.UserUpload }
+type fakeAssessmentUploadSource struct {
+	uploads []model.UserUploadView
+	posture PostureAnalysisSummary
+}
 
-func (s fakeAssessmentUploadSource) GetByUserID(context.Context, uuid.UUID) ([]model.UserUpload, error) {
+func (s fakeAssessmentUploadSource) GetUploads(context.Context, uuid.UUID) ([]model.UserUploadView, error) {
 	return s.uploads, nil
+}
+
+func (s fakeAssessmentUploadSource) GetPostureAnalysisSummary(context.Context, uuid.UUID) (PostureAnalysisSummary, error) {
+	return s.posture, nil
 }
 
 type fakeAssessmentBodyState struct {
@@ -394,14 +401,26 @@ func TestAssessmentConsumesCompletedPostureAnalysisWithoutRawImageAuthority(t *t
 	svc := NewAssessmentService(
 		&fakeAssessmentRepository{},
 		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},
-		fakeAssessmentUploadSource{uploads: []model.UserUpload{{
-			ID: uploadID, UserID: userID, FileType: "photo_front", OriginalName: "front.png",
-			MimeType: "image/png", AnalysisStatus: "completed",
-			AnalysisResult: json.RawMessage(`{
-				"view":"front",
-				"findings":[{"key":"uneven_shoulders","label":"肩部对称性待复核","evidence":"右侧肩峰位置略高"}]
-			}`),
-		}}},
+		fakeAssessmentUploadSource{
+			uploads: []model.UserUploadView{{
+				ID: uploadID, UserID: userID, FileType: "photo_front", OriginalName: "front.png",
+				MimeType: "image/png", AnalysisStatus: "completed",
+				AnalysisResult: json.RawMessage(`{
+					"view":"front",
+					"findings":[{"key":"uneven_shoulders","label":"肩部对称性待复核","evidence":"右侧肩峰位置略高"}]
+				}`),
+			}},
+			posture: PostureAnalysisSummary{
+				HasAnalysis: true,
+				Views: []PostureAnalysisView{{
+					UploadID: uploadID.String(), View: "front", FileType: "photo_front",
+					AnalysisStatus: "completed",
+					Analysis:       json.RawMessage(`{"view":"front","findings":[{"key":"uneven_shoulders","label":"肩部对称性待复核","evidence":"右侧肩峰位置略高"}]}`),
+				}},
+				Findings:  []any{map[string]any{"key": "uneven_shoulders"}},
+				Summaries: []string{},
+			},
+		},
 		&fakeAssessmentBodyState{},
 		reasoner,
 	)

@@ -39,23 +39,31 @@ var ErrReviewContextUnavailable = errors.New("health document review context una
 // service needs from the extraction-run repository.
 type documentExtractionRunReader interface {
 	GetOwnedByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
-	GetLatestOwnedByUpload(ctx context.Context, uploadID uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
+	GetLatestOwnedByAsset(ctx context.Context, assetID uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
 }
 
 // documentIndicatorReviewWriter is the append-only write/read side for reviews.
 type documentIndicatorReviewWriter interface {
 	Create(ctx context.Context, review *model.DocumentIndicatorReview) error
 	ByOwnerScope(ctx context.Context, userID uuid.UUID, extractionRunID uuid.UUID, indicatorIndex int, idempotencyKey string) ([]model.DocumentIndicatorReview, error)
-	ListByUpload(ctx context.Context, uploadID uuid.UUID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
+	ListByAsset(ctx context.Context, assetID uuid.UUID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
 	ListByExtractionRun(ctx context.Context, extractionRunID uuid.UUID) ([]model.DocumentIndicatorReview, error)
+}
+
+// userAssetAvailabilityReader exposes the owner-scoped asset availability so
+// evidence reads can be marked source-unavailable without ever revoking the
+// historical admission (CD-D4).
+type userAssetAvailabilityReader interface {
+	GetOwnedByID(ctx context.Context, id, userID uuid.UUID) (*model.UserAsset, error)
 }
 
 // HealthDocumentReviewService implements the append-only human review flow on
 // top of persisted document extraction runs. It never mutates
-// document_extraction_runs or user_uploads.ocr_result.
+// document_extraction_runs or the asset manifest.
 type HealthDocumentReviewService struct {
 	runs    documentExtractionRunReader
 	reviews documentIndicatorReviewWriter
+	assets  userAssetAvailabilityReader
 	now     func() time.Time
 }
 
@@ -63,8 +71,23 @@ type HealthDocumentReviewService struct {
 func NewHealthDocumentReviewService(
 	runs documentExtractionRunReader,
 	reviews documentIndicatorReviewWriter,
+	assets userAssetAvailabilityReader,
 ) *HealthDocumentReviewService {
-	return &HealthDocumentReviewService{runs: runs, reviews: reviews, now: time.Now}
+	return &HealthDocumentReviewService{runs: runs, reviews: reviews, assets: assets, now: time.Now}
+}
+
+// SourceAvailability projects the asset file lifecycle onto the CD-D4 evidence
+// vocabulary: historical admission stays readable, but a removed or erased
+// original is explicitly not currently verifiable.
+func SourceAvailability(availability model.UserAssetAvailability) string {
+	switch availability {
+	case model.UserAssetAvailable:
+		return "available"
+	case model.UserAssetSourceRemoved:
+		return "source_unavailable"
+	default:
+		return "erased"
+	}
 }
 
 // reviewCandidateSnapshot decodes one persisted machine candidate drawn from
@@ -110,11 +133,12 @@ type DocumentIndicatorCandidate struct {
 }
 
 // DocumentIndicatorReviewRecord is one immutable review row as exposed to
-// clients; it never includes storage backend/key or raw OCR text.
+// clients; it never includes storage backend/key or raw OCR text. upload_id
+// carries the user-asset identity that backs the /uploads review surface.
 type DocumentIndicatorReviewRecord struct {
 	ReviewID        uuid.UUID       `json:"id"`
 	ExtractionRunID uuid.UUID       `json:"extraction_run_id"`
-	UploadID        uuid.UUID       `json:"upload_id"`
+	AssetID         uuid.UUID       `json:"upload_id"`
 	IndicatorIndex  int             `json:"indicator_index"`
 	IndicatorID     string          `json:"indicator_id"`
 	Action          string          `json:"action"`
@@ -138,10 +162,14 @@ type DocumentIndicatorReviewProjection struct {
 // HealthDocumentReviewContext binds the Web review experience to the exact
 // latest server-owned extraction run. Clients use this returned run id for
 // append-review and source-stream requests; they never invent a run identity.
+// source_availability keeps CD-D4 explicit: evidence stays readable after the
+// original was removed, but it is marked source_unavailable, never presented
+// as a currently verifiable original.
 type HealthDocumentReviewContext struct {
-	ExtractionRunID  uuid.UUID                           `json:"extraction_run_id"`
-	UploadID         uuid.UUID                           `json:"upload_id"`
-	ReviewCandidates []DocumentIndicatorReviewProjection `json:"review_candidates"`
+	ExtractionRunID    uuid.UUID                           `json:"extraction_run_id"`
+	AssetID            uuid.UUID                           `json:"upload_id"`
+	SourceAvailability string                              `json:"source_availability"`
+	ReviewCandidates   []DocumentIndicatorReviewProjection `json:"review_candidates"`
 }
 
 // ListCandidates projects the machine candidates of one extraction run plus
@@ -208,19 +236,28 @@ func (s *HealthDocumentReviewService) ListCandidates(
 	return projections, nil
 }
 
-// CurrentContext resolves the exact newest owned extraction run for an upload
-// and returns its review projection. Missing/historical uploads fail closed
-// instead of asking the browser to infer a run id from OCRResult.
+// CurrentContext resolves the exact newest owned extraction run for an asset
+// and returns its review projection together with the asset's source
+// availability. Missing/foreign assets fail closed instead of asking the
+// browser to infer a run id. A source-removed asset still returns its
+// evidence — marked source_unavailable (PC-D7/CD-D4), never revoked.
 func (s *HealthDocumentReviewService) CurrentContext(
 	ctx context.Context,
 	userID uuid.UUID,
-	uploadID uuid.UUID,
+	assetID uuid.UUID,
 ) (*HealthDocumentReviewContext, error) {
-	if uploadID == uuid.Nil {
+	if assetID == uuid.Nil {
 		return nil, ErrReviewContextUnavailable
 	}
-	run, err := s.runs.GetLatestOwnedByUpload(ctx, uploadID, userID)
-	if err != nil || run == nil || run.ID == uuid.Nil || run.UploadID != uploadID {
+	asset, err := s.assets.GetOwnedByID(ctx, assetID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if asset == nil {
+		return nil, ErrReviewContextUnavailable
+	}
+	run, err := s.runs.GetLatestOwnedByAsset(ctx, assetID, userID)
+	if err != nil || run == nil || run.ID == uuid.Nil || run.AssetID != assetID {
 		return nil, ErrReviewContextUnavailable
 	}
 	candidates, err := s.ListCandidates(ctx, userID, run.ID)
@@ -234,9 +271,10 @@ func (s *HealthDocumentReviewService) CurrentContext(
 		candidates = []DocumentIndicatorReviewProjection{}
 	}
 	return &HealthDocumentReviewContext{
-		ExtractionRunID:  run.ID,
-		UploadID:         uploadID,
-		ReviewCandidates: candidates,
+		ExtractionRunID:    run.ID,
+		AssetID:            assetID,
+		SourceAvailability: SourceAvailability(asset.Availability),
+		ReviewCandidates:   candidates,
 	}, nil
 }
 
@@ -345,7 +383,7 @@ func (s *HealthDocumentReviewService) ApplyReview(
 	now := s.now().UTC()
 	row := &model.DocumentIndicatorReview{
 		UserID:           userID,
-		UploadID:         run.UploadID,
+		AssetID:          run.AssetID,
 		ExtractionRunID:  run.ID,
 		IndicatorIndex:   req.IndicatorIndex,
 		Action:           action,
@@ -365,22 +403,22 @@ func (s *HealthDocumentReviewService) ApplyReview(
 	return &rec, nil
 }
 
-// EnsureUploadOwnsRun verifies that the given extraction run belongs to the
-// given user AND that the run is attached to the given upload, so agents in the
-// handler cannot bind a review against a run that belongs to a different upload
+// EnsureAssetOwnsRun verifies that the given extraction run belongs to the
+// given user AND that the run is attached to the given asset, so agents in the
+// handler cannot bind a review against a run that belongs to a different asset
 // of the same owner. Returns ErrReviewCandidateMismatch when they disagree and
 // ErrReviewAccessDenied when the run is not owned by the caller.
-func (s *HealthDocumentReviewService) EnsureUploadOwnsRun(
+func (s *HealthDocumentReviewService) EnsureAssetOwnsRun(
 	ctx context.Context,
 	userID uuid.UUID,
-	uploadID, runID uuid.UUID,
+	assetID, runID uuid.UUID,
 ) error {
 	run, err := s.runs.GetOwnedByID(ctx, runID, userID)
 	if err != nil {
 		return ErrReviewAccessDenied
 	}
-	if run.UploadID != uploadID {
-		return fmt.Errorf("%w: extraction run does not belong to the referenced upload", ErrReviewCandidateMismatch)
+	if run.AssetID != assetID {
+		return fmt.Errorf("%w: extraction run does not belong to the referenced asset", ErrReviewCandidateMismatch)
 	}
 	return nil
 }

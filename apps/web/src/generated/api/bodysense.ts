@@ -11,6 +11,7 @@ import {
   AssessmentRegressionExport,
   AssessmentReplayReport,
   AssessmentReportV2,
+  AssetSourceRemovalResponse,
   AuthSession,
   BodyEpisodeCommandReceipt,
   BodyEpisodePage,
@@ -75,7 +76,6 @@ import {
   TreatmentReplayReport,
   TreatmentRevision,
   TreatmentRevisionListResponse,
-  UploadDeleteResponse,
   UploadListResponse,
   UserProfileResponse,
   UserUpload
@@ -89,6 +89,7 @@ import type {
   AssessmentReplayReportOutput,
   AssessmentReplayRequest,
   AssessmentReportV2Output,
+  AssetSourceRemovalResponseOutput,
   AuthLoginRequest,
   AuthRegisterRequest,
   AuthSessionOutput,
@@ -197,7 +198,6 @@ import type {
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
-  UploadDeleteResponseOutput,
   UploadListResponseOutput,
   UserProfileResponseOutput,
   UserUploadOutput,
@@ -3975,6 +3975,46 @@ const res = await (fetchFn ?? fetch)(getReassessTrainingPlanUrl(id),
 
 
 
+export const getDeleteAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/assets/${id}`
+}
+
+/**
+ * PC-D7 source removal: the private original object is deleted and the asset becomes source_removed. Adopted evidence history, derived run audit rows and review records are retained and stay readable with a source-unavailable marker. This is not a health-data erasure request and never revokes historical admission. Repeating the command is idempotent. Foreign or missing assets return owner-masked 404.
+ * @summary Remove the private source of one owned asset (source removal, not erasure).
+ */
+export const deleteAsset = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AssetSourceRemovalResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteAssetUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AssetSourceRemovalResponse, status?: number} = new globalThis.Error();
+    const data : AssetSourceRemovalResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AssetSourceRemovalResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
 export const getCreateUploadUrl = () => {
 
 
@@ -4104,6 +4144,7 @@ export const getGetUploadUrl = (id: string,) => {
 }
 
 /**
+ * Foreign and missing uploads are indistinguishable (owner-masked 404).
  * @summary Get one private upload manifest owned by the authenticated user.
  */
 export const getUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserUploadOutput> => {
@@ -4143,9 +4184,10 @@ export const getDeleteUploadUrl = (id: string,) => {
 }
 
 /**
- * @summary Delete one owned private upload object and its manifest.
+ * Legacy upload-surface alias of the source-removal command (PC-D7): deletes the private original object and marks the backing asset source_removed while retaining adopted evidence history. Idempotent; foreign or missing uploads return owner-masked 404. Success requires verified absence of every known source replica; cleanup failures return an error and retain retry state. This is not a receipt for AS-002 erasure of all controlled data.
+ * @summary Remove the private source of one owned upload (source removal, not erasure).
  */
-export const deleteUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UploadDeleteResponseOutput> => {
+export const deleteUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AssetSourceRemovalResponseOutput> => {
 
   const res = await (fetchFn ?? fetch)(getDeleteUploadUrl(id),
   {
@@ -4160,14 +4202,14 @@ export const deleteUpload = async (id: string, options?: RequestInit, fetchFn?: 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   if (!res.ok) {
 
-    const err: globalThis.Error & {info?: UploadDeleteResponse, status?: number} = new globalThis.Error();
-    const data : UploadDeleteResponse = body ? JSON.parse(body) : {}
+    const err: globalThis.Error & {info?: AssetSourceRemovalResponse, status?: number} = new globalThis.Error();
+    const data : AssetSourceRemovalResponse = body ? JSON.parse(body) : {}
     err.info = data;
     err.status = res.status;
     throw err;
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? UploadDeleteResponse.parse(parsedBody) : parsedBody
+  const data = contentType.includes('json') ? AssetSourceRemovalResponse.parse(parsedBody) : parsedBody
   return data
 }
 

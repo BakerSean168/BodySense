@@ -110,7 +110,7 @@ Confirm application/schema health and current storage distribution:
 ```bash
 "${compose[@]}" exec -T postgres \
   psql -U bodysense -d bodysense -Atc \
-  "select storage_backend, count(*) from user_uploads group by storage_backend order by storage_backend;"
+  "select storage_backend, count(*) from user_assets group by storage_backend order by storage_backend;"
 
 "${compose[@]}" exec -T api /app/upload-storage-migrator \
   --from local --to oss --dry-run
@@ -127,23 +127,18 @@ Run the migrator with the API still defaulting new writes to local:
   --from local --to oss
 ```
 
-For every row the migrator performs:
+For each available asset, the migrator acquires the same asset-scoped database lock used by source removal, re-reads owner-scoped state, and commits both source and target backend/key identities to `user_asset_storage_cleanups` before copying. It then verifies source size, copies or verifies the existing target by SHA-256, verifies target size/hash, and advances the manifest with an `availability=available` compare-and-swap. After cutover it deletes the old source and confirms absence before clearing its cleanup record.
 
-1. read the source object and verify size against the DB manifest;
-2. compute SHA-256;
-3. write the target object immutably, or verify an already-existing target object byte-for-byte by SHA-256;
-4. verify target size/hash;
-5. compare-and-swap only that row from `storage_backend=local` to `oss`;
-6. leave the source local object in place.
+Source-removed and erased assets are never copied. A definitive CAS failure cleans and verifies the orphan target. Copy/cleanup errors retain the write-ahead inventory for safe retry; an ambiguous database outcome retains both identities. Re-running the same migration also resumes old-backend cleanup after a committed cutover. Do not remove a configured backend while its cleanup inventory remains.
 
-A conflicting target key, missing source, size mismatch, checksum mismatch, storage error, or manifest race fails closed. The source object is not automatically deleted.
+Source removal makes the original unavailable first, then deletes and verifies every known source replica under the same lock. A failed Delete or failed absence check returns an error and preserves retry state; retry the source-removal command. This inventories source objects only, retains the asset and derived evidence, and is not the AS-002 all-controlled-copy verified-erasure lifecycle or receipt.
 
 After migration:
 
 ```bash
 "${compose[@]}" exec -T postgres \
   psql -U bodysense -d bodysense -Atc \
-  "select storage_backend, count(*) from user_uploads group by storage_backend order by storage_backend;"
+  "select storage_backend, count(*) from user_assets group by storage_backend order by storage_backend;"
 ```
 
 Expected before the default-backend switch: no row that was selected for migration remains `local`.
@@ -174,11 +169,9 @@ Do not print object contents, STS credentials or health data into operator logs.
 
 Changing `UPLOAD_STORAGE_BACKEND=local` affects **new writes only**. Existing rows continue reading from their persisted `storage_backend`, so a blind environment flip is not a data migration.
 
-Application rollback is safe while the new schema/binary remains available because rows select their own adapter. A schema downgrade from migration 55 is intentionally blocked while any `storage_backend <> 'local'` row exists.
+Rollback must use a compatible schema and binary that honors persisted backend identities and the cleanup inventory. Do not manually update `storage_backend` or downgrade a data-bearing schema without a separately approved, verified recovery procedure.
 
-To return manifests to local after OSS cutover, first prove the retained local source object for every OSS row is still byte-identical, then run an explicit reverse migration using an operator-reviewed procedure/tooling. Do not manually update `storage_backend`, and do not run migration 55 down while OSS-backed rows remain.
-
-Keep the local volume until the controlled rollback window closes and a separate cleanup ticket proves every retained source object can be deleted safely. Privacy erasure already sweeps every configured backend so duplicated cutover copies do not survive account deletion.
+To return available manifests to local after OSS cutover, use an explicit reverse migration (`--from oss --to local`) after operator review. The old local copies are deleted after verified cutover, so rollback must read the current authoritative OSS objects. Source-removed assets remain unavailable and must not be restored by rollback. Keep backend adapters and their configuration until all pending source cleanup is verified; AS-002 erasure acceptance remains separate.
 
 ## Evidence required to close BS-PROD-013
 

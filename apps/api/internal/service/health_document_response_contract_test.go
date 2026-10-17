@@ -157,10 +157,12 @@ func TestBuildDocumentExtractionRunStoresHashesAndStructuredSnapshotOnly(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if run.ConfigurationID != healthDocumentCandidateConfigurationID || run.MechanismRevision != reg.MechanismRevision {
+	if run.ConfigurationID != healthDocumentCandidateConfigurationID ||
+		run.MechanismRevision == nil || *run.MechanismRevision != reg.MechanismRevision {
 		t.Fatalf("unexpected run identity: %+v", run)
 	}
-	if len(run.ResultSHA256) != 64 || len(run.RawTextSHA256) != 64 || run.DocumentSHA256 != strings.Repeat("d", 64) {
+	if run.ResultSHA256 == nil || len(*run.ResultSHA256) != 64 || run.RawTextSHA256 == nil || len(*run.RawTextSHA256) != 64 ||
+		run.DocumentSHA256 == nil || *run.DocumentSHA256 != strings.Repeat("d", 64) {
 		t.Fatalf("missing durable hashes: %+v", run)
 	}
 	if strings.Contains(string(run.SourceSummary), "private report text") || strings.Contains(string(run.MechanismProvenance), "private report text") {

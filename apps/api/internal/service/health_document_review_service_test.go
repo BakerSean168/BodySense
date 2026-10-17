@@ -14,6 +14,8 @@ import (
 
 const testIndicatorRef = "page:1:ocr-block:5"
 
+func strPtr(value string) *string { return &value }
+
 func mustReviewJSON(t *testing.T, v any) datatypes.JSON {
 	t.Helper()
 	b, err := json.Marshal(v)
@@ -39,13 +41,13 @@ func testExtractionRun(t *testing.T, uploadID, userID, runID uuid.UUID) *model.D
 	}
 	return &model.DocumentExtractionRun{
 		ID:                runID,
-		UploadID:          uploadID,
+		AssetID:           uploadID,
 		UserID:            userID,
 		ConfigurationID:   "c1",
-		MechanismRevision: "m1",
-		DocumentSHA256:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		ResultSHA256:      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-		RawTextSHA256:     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+		MechanismRevision: strPtr("m1"),
+		DocumentSHA256:    strPtr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		ResultSHA256:      strPtr("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		RawTextSHA256:     strPtr("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"),
 		IndicatorSnapshot: mustReviewJSON(t, []any{indicator}),
 		SourceSummary:     mustReviewJSON(t, sourceSummary),
 		CreatedAt:         time.Now(),
@@ -64,10 +66,10 @@ func (f *fakeReviewRunReader) GetOwnedByID(_ context.Context, id, userID uuid.UU
 	return run, nil
 }
 
-func (f *fakeReviewRunReader) GetLatestOwnedByUpload(_ context.Context, uploadID, userID uuid.UUID) (*model.DocumentExtractionRun, error) {
+func (f *fakeReviewRunReader) GetLatestOwnedByAsset(_ context.Context, assetID, userID uuid.UUID) (*model.DocumentExtractionRun, error) {
 	var latest *model.DocumentExtractionRun
 	for _, run := range f.runs {
-		if run.UploadID != uploadID || run.UserID != userID {
+		if run.AssetID != assetID || run.UserID != userID {
 			continue
 		}
 		if latest == nil || run.CreatedAt.After(latest.CreatedAt) || (run.CreatedAt.Equal(latest.CreatedAt) && run.ID.String() > latest.ID.String()) {
@@ -114,14 +116,37 @@ func (f *fakeReviewWriter) ListByExtractionRun(_ context.Context, runID uuid.UUI
 	}
 	return out, nil
 }
-func (f *fakeReviewWriter) ListByUpload(_ context.Context, uploadID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error) {
+func (f *fakeReviewWriter) ListByAsset(_ context.Context, assetID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error) {
 	var out []model.DocumentIndicatorReview
 	for _, r := range f.rows {
-		if r.UploadID == uploadID && r.UserID == userID {
+		if r.AssetID == assetID && r.UserID == userID {
 			out = append(out, r)
 		}
 	}
 	return out, nil
+}
+
+// fakeReviewAssetReader backs the review service with owner-scoped asset
+// availability so CurrentContext can mark evidence source_unavailable.
+type fakeReviewAssetReader struct {
+	assets map[uuid.UUID]model.UserAsset
+}
+
+func (f *fakeReviewAssetReader) GetOwnedByID(_ context.Context, id, userID uuid.UUID) (*model.UserAsset, error) {
+	asset, ok := f.assets[id]
+	if !ok || asset.UserID != userID {
+		return nil, nil
+	}
+	return &asset, nil
+}
+
+func reviewAssetForRun(run *model.DocumentExtractionRun, availability model.UserAssetAvailability) *fakeReviewAssetReader {
+	if run == nil {
+		return &fakeReviewAssetReader{assets: map[uuid.UUID]model.UserAsset{}}
+	}
+	return &fakeReviewAssetReader{assets: map[uuid.UUID]model.UserAsset{
+		run.AssetID: {ID: run.AssetID, UserID: run.UserID, Availability: availability},
+	}}
 }
 
 func newReviewTestService(t *testing.T, run *model.DocumentExtractionRun) (*HealthDocumentReviewService, *fakeReviewWriter) {
@@ -131,7 +156,7 @@ func newReviewTestService(t *testing.T, run *model.DocumentExtractionRun) (*Heal
 		reader.runs[run.ID] = run
 	}
 	writer := &fakeReviewWriter{}
-	svc := NewHealthDocumentReviewService(reader, writer)
+	svc := NewHealthDocumentReviewService(reader, writer, reviewAssetForRun(run, model.UserAssetAvailable))
 	return svc, writer
 }
 
@@ -143,14 +168,20 @@ func TestCurrentReviewContextResolvesLatestOwnedRunAndProjectsSourceRegion(t *te
 	latest := testExtractionRun(t, uploadID, userID, uuid.New())
 	latest.CreatedAt = time.Now()
 	reader := &fakeReviewRunReader{runs: map[uuid.UUID]*model.DocumentExtractionRun{older.ID: older, latest.ID: latest}}
-	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{})
+	assets := &fakeReviewAssetReader{assets: map[uuid.UUID]model.UserAsset{
+		uploadID: {ID: uploadID, UserID: userID, Availability: model.UserAssetSourceRemoved},
+	}}
+	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{}, assets)
 
 	context, err := svc.CurrentContext(context.Background(), userID, uploadID)
 	if err != nil {
 		t.Fatalf("CurrentContext: %v", err)
 	}
-	if context.ExtractionRunID != latest.ID || context.UploadID != uploadID {
-		t.Fatalf("context ids=%s/%s want %s/%s", context.ExtractionRunID, context.UploadID, latest.ID, uploadID)
+	if context.ExtractionRunID != latest.ID || context.AssetID != uploadID {
+		t.Fatalf("context ids=%s/%s want %s/%s", context.ExtractionRunID, context.AssetID, latest.ID, uploadID)
+	}
+	if context.SourceAvailability != "source_unavailable" {
+		t.Fatalf("context source availability=%q want source_unavailable", context.SourceAvailability)
 	}
 	if len(context.ReviewCandidates) != 1 {
 		t.Fatalf("candidates=%d want 1", len(context.ReviewCandidates))
@@ -174,7 +205,7 @@ func TestCurrentReviewContextFailsClosedForMissingOrForeignUpload(t *testing.T) 
 	uploadID := uuid.New()
 	run := testExtractionRun(t, uploadID, owner, uuid.New())
 	reader := &fakeReviewRunReader{runs: map[uuid.UUID]*model.DocumentExtractionRun{run.ID: run}}
-	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{})
+	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{}, reviewAssetForRun(run, model.UserAssetAvailable))
 
 	if _, err := svc.CurrentContext(context.Background(), foreign, uploadID); !errors.Is(err, ErrReviewContextUnavailable) {
 		t.Fatalf("foreign err=%v want ErrReviewContextUnavailable", err)
@@ -446,10 +477,10 @@ func TestEnsureUploadOwnsRunRejectsCrossUploadBinding(t *testing.T) {
 	runID := uuid.New()
 	run := testExtractionRun(t, uploadID, userID, runID)
 	svc, _ := newReviewTestService(t, run)
-	if err := svc.EnsureUploadOwnsRun(context.Background(), userID, uploadID, runID); err != nil {
+	if err := svc.EnsureAssetOwnsRun(context.Background(), userID, uploadID, runID); err != nil {
 		t.Fatalf("valid binding rejected: %v", err)
 	}
-	if err := svc.EnsureUploadOwnsRun(context.Background(), userID, otherUpload, runID); !errors.Is(err, ErrReviewCandidateMismatch) {
+	if err := svc.EnsureAssetOwnsRun(context.Background(), userID, otherUpload, runID); !errors.Is(err, ErrReviewCandidateMismatch) {
 		t.Fatalf("cross-upload binding err=%v want mismatch", err)
 	}
 }

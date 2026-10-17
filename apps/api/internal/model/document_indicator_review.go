@@ -25,7 +25,7 @@ const (
 type DocumentIndicatorReview struct {
 	ID               uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
 	UserID           uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	UploadID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"upload_id"`
+	AssetID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"asset_id"`
 	ExtractionRunID  uuid.UUID      `gorm:"type:uuid;not null;index" json:"extraction_run_id"`
 	IndicatorIndex   int            `gorm:"not null" json:"indicator_index"`
 	Action           string         `gorm:"type:varchar(20);not null" json:"action"`

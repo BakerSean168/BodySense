@@ -26,7 +26,8 @@ type assessmentProfileSource interface {
 }
 
 type assessmentUploadSource interface {
-	GetByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
+	GetUploads(ctx context.Context, userID uuid.UUID) ([]model.UserUploadView, error)
+	GetPostureAnalysisSummary(ctx context.Context, userID uuid.UUID) (PostureAnalysisSummary, error)
 }
 
 type assessmentBodyStateSource interface {
@@ -156,19 +157,23 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		return nil, fmt.Errorf("encode assessment BodyState: %w", err)
 	}
 
-	uploads, err := s.uploads.GetByUserID(ctx, userID)
+	uploads, err := s.uploads.GetUploads(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("load assessment uploads: %w", err)
 	}
-	reportIndicators, completedPosture := assessmentInputsFromUploads(uploads)
+	reportIndicators := assessmentInputsFromUploads(uploads)
 	reportIndicatorsPayload, _ := json.Marshal(reportIndicators)
 	reviewedEvidencePayload, err := s.collectReviewedReportEvidence(ctx, userID, uploads)
 	if err != nil {
 		return nil, err
 	}
 	posturePayload := json.RawMessage(`{}`)
-	if len(completedPosture) > 0 {
-		posturePayload, _ = json.Marshal(BuildPostureAnalysisSummary(completedPosture))
+	postureSummary, err := s.uploads.GetPostureAnalysisSummary(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("load assessment posture analysis: %w", err)
+	}
+	if postureSummary.HasAnalysis {
+		posturePayload, _ = json.Marshal(postureSummary)
 	}
 
 	configurationID := ""
@@ -341,18 +346,18 @@ func parseAssessmentAgentPayload(raw json.RawMessage, expectedEvidencePolicyRevi
 	return &payload, nil
 }
 
-func (s *AssessmentService) collectReviewedReportEvidence(ctx context.Context, userID uuid.UUID, uploads []model.UserUpload) (json.RawMessage, error) {
+func (s *AssessmentService) collectReviewedReportEvidence(ctx context.Context, userID uuid.UUID, uploads []model.UserUploadView) (json.RawMessage, error) {
 	if s.reviews == nil {
 		return json.RawMessage(`[]`), nil
 	}
-	reportUploads := make([]model.UserUpload, 0, len(uploads))
+	reportUploads := make([]model.UserUploadView, 0, len(uploads))
 	reviewsByUpload := make(map[uuid.UUID][]model.DocumentIndicatorReview, len(uploads))
 	for _, upload := range uploads {
 		if upload.FileType != "report" {
 			continue
 		}
 		reportUploads = append(reportUploads, upload)
-		rows, err := s.reviews.ListByUpload(ctx, upload.ID, userID)
+		rows, err := s.reviews.ListByAsset(ctx, upload.ID, userID)
 		if err != nil {
 			return nil, fmt.Errorf("load document indicator reviews for upload %s: %w", upload.ID, err)
 		}
@@ -368,15 +373,10 @@ func (s *AssessmentService) collectReviewedReportEvidence(ctx context.Context, u
 	return encoded, nil
 }
 
-func assessmentInputsFromUploads(uploads []model.UserUpload) ([]any, []model.UserUpload) {
+func assessmentInputsFromUploads(uploads []model.UserUploadView) []any {
 	reportIndicators := make([]any, 0)
-	completedPosture := make([]model.UserUpload, 0, 3)
 	for _, upload := range uploads {
 		switch upload.FileType {
-		case "photo_front", "photo_side", "photo_back":
-			if upload.AnalysisStatus == "completed" && len(upload.AnalysisResult) > 0 {
-				completedPosture = append(completedPosture, upload)
-			}
 		case "report":
 			if upload.OCRStatus != "completed" {
 				continue
@@ -397,7 +397,7 @@ func assessmentInputsFromUploads(uploads []model.UserUpload) ([]any, []model.Use
 			}
 		}
 	}
-	return reportIndicators, completedPosture
+	return reportIndicators
 }
 
 func jsonRaw(value any, fallback string) json.RawMessage {

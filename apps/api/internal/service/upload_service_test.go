@@ -134,14 +134,14 @@ func TestIdempotencyKey_Format(t *testing.T) {
 
 func TestParseOCRJobInput(t *testing.T) {
 	job := model.Job{
-		Input: datatypes.JSON(`{"upload_id":"upload-1","file_path":"uploads/u/report.pdf","mime_type":"application/pdf"}`),
+		Input: datatypes.JSON(`{"asset_id":"upload-1","file_path":"uploads/u/report.pdf","mime_type":"application/pdf"}`),
 	}
 
 	input, err := parseOCRJobInput(job)
 	if err != nil {
 		t.Fatalf("parseOCRJobInput: %v", err)
 	}
-	if input.UploadID != "upload-1" {
+	if input.AssetID != "upload-1" {
 		t.Fatalf("unexpected input: %+v", input)
 	}
 	if input.ConfigurationID != tesseractChampionConfigurationID {
@@ -158,22 +158,24 @@ func TestParseOCRJobInputMissingFields(t *testing.T) {
 
 func TestBuildPostureAnalysisSummaryPrefersNewestPerView(t *testing.T) {
 	userID := mustParseUUID("11111111-1111-1111-1111-111111111111")
-	sideOld := model.UserUpload{
-		ID:             mustParseUUID("22222222-2222-2222-2222-222222222221"),
-		UserID:         userID,
-		FileType:       "photo_side",
-		AnalysisStatus: "completed",
-		AnalysisResult: json.RawMessage(`{"view":"side","findings":[{"key":"old","label":"旧发现"}],"summary_markdown":"旧摘要"}`),
+	sideOld := model.PostureAnalysisRun{
+		ID:            mustParseUUID("22222222-2222-2222-2222-222222222221"),
+		UserID:        userID,
+		AssetID:       mustParseUUID("33333333-3333-3333-3333-333333333331"),
+		View:          "side",
+		Status:        model.DerivedRunCompleted,
+		ResultPayload: datatypes.JSON(`{"view":"side","findings":[{"key":"old","label":"旧发现"}],"summary_markdown":"旧摘要"}`),
 	}
-	sideNew := model.UserUpload{
-		ID:             mustParseUUID("22222222-2222-2222-2222-222222222222"),
-		UserID:         userID,
-		FileType:       "photo_side",
-		AnalysisStatus: "completed",
-		AnalysisResult: json.RawMessage(`{"view":"side","findings":[{"key":"forward_head","label":"头前移倾向","severity":"mild","evidence":"耳垂前移"}],"summary_markdown":"新摘要"}`),
+	sideNew := model.PostureAnalysisRun{
+		ID:            mustParseUUID("22222222-2222-2222-2222-222222222222"),
+		UserID:        userID,
+		AssetID:       mustParseUUID("33333333-3333-3333-3333-333333333332"),
+		View:          "side",
+		Status:        model.DerivedRunCompleted,
+		ResultPayload: datatypes.JSON(`{"view":"side","findings":[{"key":"forward_head","label":"头前移倾向","severity":"mild","evidence":"耳垂前移"}],"summary_markdown":"新摘要"}`),
 	}
-	// Newest first, matching GetLatestPostureAnalyses order.
-	summary := BuildPostureAnalysisSummary([]model.UserUpload{sideNew, sideOld})
+	// Newest first, matching ListCompletedByUser order.
+	summary := BuildPostureAnalysisSummary([]model.PostureAnalysisRun{sideNew, sideOld})
 	if !summary.HasAnalysis {
 		t.Fatal("expected has_analysis")
 	}
@@ -339,12 +341,12 @@ func TestValidatePostureAgentResponseRejectsMechanismHashMismatch(t *testing.T) 
 }
 
 func TestUploadJobInputsDoNotPersistStorageCoordinates(t *testing.T) {
-	ocrPayload, err := json.Marshal(ocrJobInput{UploadID: "upload-1"})
+	ocrPayload, err := json.Marshal(ocrJobInput{AssetID: "upload-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	posturePayload, err := json.Marshal(postureJobInput{
-		UploadID: "upload-2", View: "front", ConfigurationID: defaultPostureConfigurationID,
+		AssetID: "upload-2", View: "front", ConfigurationID: defaultPostureConfigurationID,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -13,22 +13,21 @@ import (
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
-	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
 )
 
 type uploadApplication interface {
-	UploadFile(context.Context, uuid.UUID, *multipart.FileHeader, string) (*model.UserUpload, error)
-	GetUploads(context.Context, uuid.UUID) ([]model.UserUpload, error)
-	GetUpload(context.Context, uuid.UUID, uuid.UUID) (*model.UserUpload, error)
+	UploadFile(context.Context, uuid.UUID, *multipart.FileHeader, string) (*model.UserUploadView, error)
+	GetUploads(context.Context, uuid.UUID) ([]model.UserUploadView, error)
+	GetUpload(context.Context, uuid.UUID, uuid.UUID) (*model.UserUploadView, error)
 	GetPostureAnalysisSummary(context.Context, uuid.UUID) (service.PostureAnalysisSummary, error)
-	DeleteUpload(context.Context, uuid.UUID, uuid.UUID) error
-	OpenUploadObject(context.Context, *model.UserUpload) (io.ReadCloser, uploadstorage.ObjectInfo, error)
+	RemoveSource(context.Context, uuid.UUID, uuid.UUID) (*model.UserAsset, error)
+	OpenOwnedAssetSource(context.Context, uuid.UUID, uuid.UUID) (io.ReadCloser, *model.UserAsset, error)
 }
 
 type healthDocumentReviewApplication interface {
 	CurrentContext(context.Context, uuid.UUID, uuid.UUID) (*service.HealthDocumentReviewContext, error)
-	EnsureUploadOwnsRun(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
+	EnsureAssetOwnsRun(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	ListCandidates(context.Context, uuid.UUID, uuid.UUID) ([]service.DocumentIndicatorReviewProjection, error)
 	ApplyReview(context.Context, uuid.UUID, service.ReviewRequest) (*service.DocumentIndicatorReviewRecord, error)
 }
@@ -66,6 +65,9 @@ func (r uploadHTTPErrorResponse) VisitGetUploadResponse(w http.ResponseWriter) e
 func (r uploadHTTPErrorResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }
+func (r uploadHTTPErrorResponse) VisitDeleteAssetResponse(w http.ResponseWriter) error {
+	return r.write(w)
+}
 func (r uploadHTTPErrorResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }
@@ -87,18 +89,10 @@ func uploadInternal(message string) uploadHTTPErrorResponse {
 	return uploadHTTPErrorResponse{status: http.StatusInternalServerError, code: "INTERNAL_ERROR", message: message}
 }
 
-func ownedUploadError(err error, operation string) uploadHTTPErrorResponse {
-	if err == nil {
-		return uploadInternal(operation)
-	}
-	switch err.Error() {
-	case "upload not found":
-		return uploadHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: "upload not found"}
-	case "unauthorized":
-		return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "upload is not accessible"}
-	default:
-		return uploadInternal(operation)
-	}
+// uploadOwnerMaskedNotFound is the single owner-masked absence response: a
+// missing upload/asset and a foreign one are indistinguishable.
+func uploadOwnerMaskedNotFound(message string) uploadHTTPErrorResponse {
+	return uploadHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: message}
 }
 
 func (s *PublicServer) CreateUpload(
@@ -186,6 +180,27 @@ func (s *PublicServer) GetUpload(
 	return openapiv1.GetUpload200JSONResponse(projected), nil
 }
 
+// removeSourceResponse projects the surviving asset state after the
+// source-removal command. Repeating the command returns the same shape.
+func removeSourceResponse(asset *model.UserAsset) (openapiv1.AssetSourceRemovalResponse, error) {
+	if asset == nil {
+		return openapiv1.AssetSourceRemovalResponse{}, errors.New("asset is nil")
+	}
+	response := openapiv1.AssetSourceRemovalResponse{
+		Availability: openapiv1.AssetSourceRemovalResponseAvailabilityErased,
+		Message:      "asset source removed; adopted evidence history retained",
+	}
+	if asset.Availability != model.UserAssetErased {
+		response.Availability = openapiv1.AssetSourceRemovalResponseAvailabilitySourceRemoved
+		response.Message = "asset source removed; adopted evidence history retained"
+	}
+	response.SourceRemovedAt = asset.SourceRemovedAt
+	return response, nil
+}
+
+// DeleteUpload is the legacy upload-surface alias of the source-removal
+// command (PC-D7). It removes the private original and marks the backing
+// asset source_removed; it is idempotent and never deletes evidence.
 func (s *PublicServer) DeleteUpload(
 	ctx context.Context,
 	request openapiv1.DeleteUploadRequestObject,
@@ -197,10 +212,40 @@ func (s *PublicServer) DeleteUpload(
 	if s.uploads == nil {
 		return uploadHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "UPLOAD_DOMAIN_UNAVAILABLE", message: "upload service is not configured"}, nil
 	}
-	if err := s.uploads.DeleteUpload(ctx, uid, request.Id); err != nil {
-		return ownedUploadError(err, "failed to delete upload"), nil
+	asset, err := s.uploads.RemoveSource(ctx, uid, request.Id)
+	if err != nil {
+		return ownedUploadError(err, "failed to remove upload source"), nil
 	}
-	return openapiv1.DeleteUpload200JSONResponse{Message: "upload deleted successfully"}, nil
+	response, err := removeSourceResponse(asset)
+	if err != nil {
+		return nil, err
+	}
+	return openapiv1.DeleteUpload200JSONResponse(response), nil
+}
+
+// DeleteAsset executes the source-removal command on the sole asset
+// identity: DELETE /api/v1/assets/{id}. Owner-masked 404 for missing and
+// foreign assets; idempotent for already-removed sources.
+func (s *PublicServer) DeleteAsset(
+	ctx context.Context,
+	request openapiv1.DeleteAssetRequestObject,
+) (openapiv1.DeleteAssetResponseObject, error) {
+	uid, err := authenticatedUserID(ctx)
+	if err != nil {
+		return uploadUnauthorized(), nil
+	}
+	if s.uploads == nil {
+		return uploadHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "UPLOAD_DOMAIN_UNAVAILABLE", message: "upload service is not configured"}, nil
+	}
+	asset, err := s.uploads.RemoveSource(ctx, uid, request.Id)
+	if err != nil {
+		return ownedUploadError(err, "failed to remove asset source"), nil
+	}
+	response, err := removeSourceResponse(asset)
+	if err != nil {
+		return nil, err
+	}
+	return openapiv1.DeleteAsset200JSONResponse(response), nil
 }
 
 func (s *PublicServer) GetPostureAnalysis(
@@ -239,7 +284,7 @@ func (s *PublicServer) GetHealthDocumentReviewContext(
 	value, err := s.healthDocumentReviews.CurrentContext(ctx, uid, request.Id)
 	if err != nil {
 		if errors.Is(err, service.ErrReviewContextUnavailable) || errors.Is(err, service.ErrReviewAccessDenied) {
-			return uploadHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: "review context unavailable"}, nil
+			return uploadOwnerMaskedNotFound("review context unavailable"), nil
 		}
 		return uploadInternal("failed to load review context"), nil
 	}
@@ -248,6 +293,20 @@ func (s *PublicServer) GetHealthDocumentReviewContext(
 		return nil, err
 	}
 	return openapiv1.GetHealthDocumentReviewContext200JSONResponse(projected), nil
+}
+
+// reviewTargetGuard maps the ownership guard of the extraction endpoints to
+// owner-masked responses: neither a foreign run nor a wrong asset binding may
+// reveal whether the target exists.
+func reviewTargetGuard(err error) uploadHTTPErrorResponse {
+	switch {
+	case errors.Is(err, service.ErrReviewAccessDenied):
+		return uploadOwnerMaskedNotFound("review target not found")
+	case errors.Is(err, service.ErrReviewCandidateMismatch):
+		return uploadOwnerMaskedNotFound("review target not found")
+	default:
+		return uploadInternal("failed to verify review target")
+	}
 }
 
 func (s *PublicServer) ListHealthDocumentReviewCandidates(
@@ -261,13 +320,13 @@ func (s *PublicServer) ListHealthDocumentReviewCandidates(
 	if s.healthDocumentReviews == nil {
 		return uploadHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "REVIEW_DOMAIN_UNAVAILABLE", message: "health document review service is not configured"}, nil
 	}
-	if err := s.healthDocumentReviews.EnsureUploadOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
-		return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "review target not accessible"}, nil
+	if err := s.healthDocumentReviews.EnsureAssetOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
+		return reviewTargetGuard(err), nil
 	}
 	items, err := s.healthDocumentReviews.ListCandidates(ctx, uid, request.RunId)
 	if err != nil {
 		if errors.Is(err, service.ErrReviewAccessDenied) {
-			return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "extraction run not accessible"}, nil
+			return uploadOwnerMaskedNotFound("extraction run not found"), nil
 		}
 		return uploadInternal("failed to load review candidates"), nil
 	}
@@ -289,8 +348,8 @@ func (s *PublicServer) AppendHealthDocumentReview(
 	if s.healthDocumentReviews == nil || request.Body == nil {
 		return uploadHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "REVIEW_DOMAIN_UNAVAILABLE", message: "health document review service is not configured"}, nil
 	}
-	if err := s.healthDocumentReviews.EnsureUploadOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
-		return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "review target not accessible"}, nil
+	if err := s.healthDocumentReviews.EnsureAssetOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
+		return reviewTargetGuard(err), nil
 	}
 	var reviewedPayload json.RawMessage
 	if request.Body.ReviewedPayload != nil {
@@ -312,7 +371,7 @@ func (s *PublicServer) AppendHealthDocumentReview(
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrReviewAccessDenied):
-			return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "review target not accessible"}, nil
+			return uploadOwnerMaskedNotFound("review target not found"), nil
 		case errors.Is(err, service.ErrReviewCandidateMismatch):
 			return uploadHTTPErrorResponse{status: http.StatusConflict, code: "REVIEW_CANDIDATE_STALE", message: "review candidate is stale; reload the extraction run"}, nil
 		case errors.Is(err, service.ErrReviewDuplicateConflict):
@@ -355,6 +414,11 @@ func (r healthDocumentSourceResponse) VisitGetHealthDocumentSourceResponse(w htt
 	return err
 }
 
+// GetHealthDocumentSource streams the authenticated private source document
+// for one exact owned extraction run. After source removal the original is
+// not readable anymore (CD-D4): the endpoint fails closed with 404 while the
+// review context keeps serving the historical evidence with its
+// source-unavailable marker.
 func (s *PublicServer) GetHealthDocumentSource(
 	ctx context.Context,
 	request openapiv1.GetHealthDocumentSourceRequestObject,
@@ -366,21 +430,34 @@ func (s *PublicServer) GetHealthDocumentSource(
 	if s.uploads == nil || s.healthDocumentReviews == nil {
 		return uploadHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "REVIEW_DOMAIN_UNAVAILABLE", message: "health document source service is not configured"}, nil
 	}
-	if err := s.healthDocumentReviews.EnsureUploadOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
-		return uploadHTTPErrorResponse{status: http.StatusForbidden, code: "FORBIDDEN", message: "source not accessible"}, nil
+	if err := s.healthDocumentReviews.EnsureAssetOwnsRun(ctx, uid, request.Id, request.RunId); err != nil {
+		return reviewTargetGuard(err), nil
 	}
-	upload, err := s.uploads.GetUpload(ctx, uid, request.Id)
+	reader, asset, err := s.uploads.OpenOwnedAssetSource(ctx, uid, request.Id)
 	if err != nil {
-		return ownedUploadError(err, "failed to load upload"), nil
+		return ownedUploadError(err, "failed to open upload source"), nil
 	}
-	reader, _, err := s.uploads.OpenUploadObject(ctx, upload)
-	if err != nil {
-		return uploadInternal("failed to open upload source"), nil
-	}
-	return healthDocumentSourceResponse{body: reader, length: upload.FileSize, mime: upload.MimeType}, nil
+	return healthDocumentSourceResponse{body: reader, length: asset.ByteSize, mime: asset.MimeType}, nil
 }
 
-func strictUserUpload(upload *model.UserUpload) (openapiv1.UserUpload, error) {
+// ownedUploadError maps service-layer absence/unavailability errors to
+// owner-masked responses. Only ErrUploadNotFound and
+// ErrUploadSourceUnavailable are 404; anything else is an internal failure.
+func ownedUploadError(err error, operation string) uploadHTTPErrorResponse {
+	if err == nil {
+		return uploadInternal(operation)
+	}
+	switch {
+	case errors.Is(err, service.ErrUploadNotFound):
+		return uploadOwnerMaskedNotFound("upload not found")
+	case errors.Is(err, service.ErrUploadSourceUnavailable):
+		return uploadHTTPErrorResponse{status: http.StatusNotFound, code: "SOURCE_UNAVAILABLE", message: "upload source is unavailable"}
+	default:
+		return uploadInternal(operation)
+	}
+}
+
+func strictUserUpload(upload *model.UserUploadView) (openapiv1.UserUpload, error) {
 	if upload == nil {
 		return openapiv1.UserUpload{}, errors.New("upload is nil")
 	}
@@ -392,8 +469,13 @@ func strictUserUpload(upload *model.UserUpload) (openapiv1.UserUpload, error) {
 	if err := json.Unmarshal(encoded, &projected); err != nil {
 		return openapiv1.UserUpload{}, err
 	}
+	// The view already hides user_id, availability and storage identity;
+	// the deletes keep the guard explicit against future field additions.
 	delete(projected, "user_id")
+	delete(projected, "availability")
 	delete(projected, "agent_configuration_id")
+	delete(projected, "storage_backend")
+	delete(projected, "storage_key")
 	return strictOpenAPIConvert[openapiv1.UserUpload]("UserUpload", projected)
 }
 
@@ -455,9 +537,10 @@ func strictHealthDocumentReviewContext(value *service.HealthDocumentReviewContex
 		return openapiv1.HealthDocumentReviewContext{}, err
 	}
 	return openapiv1.HealthDocumentReviewContext{
-		ExtractionRunId:  value.ExtractionRunID,
-		UploadId:         value.UploadID,
-		ReviewCandidates: projected,
+		ExtractionRunId:    value.ExtractionRunID,
+		UploadId:           value.AssetID,
+		SourceAvailability: openapiv1.HealthDocumentReviewContextSourceAvailability(value.SourceAvailability),
+		ReviewCandidates:   projected,
 	}, nil
 }
 

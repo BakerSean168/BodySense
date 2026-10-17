@@ -301,7 +301,7 @@ func reviewRecordFromRow(row model.DocumentIndicatorReview) DocumentIndicatorRev
 	record := DocumentIndicatorReviewRecord{
 		ReviewID:        row.ID,
 		ExtractionRunID: row.ExtractionRunID,
-		UploadID:        row.UploadID,
+		AssetID:         row.AssetID,
 		IndicatorIndex:  row.IndicatorIndex,
 		Action:          row.Action,
 		Note:            row.Note,

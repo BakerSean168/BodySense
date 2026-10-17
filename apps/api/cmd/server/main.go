@@ -72,8 +72,9 @@ func main() {
 	knowledgeSourceRepo := repository.NewKnowledgeSourceRepository(database.DB)
 	knowledgeSourceRegistry := service.NewKnowledgeSourceRegistry(knowledgeSourceRepo)
 	profileRepo := repository.NewProfileRepository(database.DB)
-	uploadRepo := repository.NewUploadRepository(database.DB)
+	userAssetRepo := repository.NewUserAssetRepository(database.DB)
 	documentExtractionRunRepo := repository.NewDocumentExtractionRunRepository(database.DB)
+	postureAnalysisRunRepo := repository.NewPostureAnalysisRunRepository(database.DB)
 	uploadStorage, err := uploadstorage.NewRegistryFromEnv()
 	if err != nil {
 		log.Fatalf("Upload storage configuration failed: %v", err)
@@ -166,10 +167,17 @@ func main() {
 		assessmentReplayService,
 	)
 	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
+	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
+	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
+	uploadService := service.NewUploadService(userAssetRepo, documentExtractionRunRepo, postureAnalysisRunRepo, jobRuntime, outputReviewService, uploadStorage).
+		WithDeployment(agentDeploymentPolicy).
+		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy)
+	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
 		profileService,
-		uploadRepo,
+		uploadService,
 		bodyStateService,
 		aiClient,
 	).WithAssessmentDeployment(agentDeploymentPolicy).
@@ -181,14 +189,6 @@ func main() {
 	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB)).WithLifecycleEvents(runtimeEventService)
 	interactionService.StartInteractionExpiryWorker(context.Background(), time.Minute, nil)
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
-	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
-	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService, uploadStorage).
-		WithDeployment(agentDeploymentPolicy).
-		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy).
-		WithDocumentExtractionRuns(documentExtractionRunRepo)
-	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
-	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo)
 	consultationRuntime := consultationruntime.NewRuntime(
 		conversationService,
 		consultationService,
