@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS
     public.consultation_rollout_observations,
     public.consultation_sessions,
     public.conversations,
+    public.condition_analysis_events,
     public.condition_analysis_runs,
     public.condition_entry_evidence,
     public.condition_entries,
@@ -84,3 +85,4 @@ DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
 DROP FUNCTION IF EXISTS public.reject_diagnosis_audit_update();
 DROP FUNCTION IF EXISTS public.reject_episode_evidence_before_creation();
 DROP FUNCTION IF EXISTS public.prevent_training_revision_update();
+DROP FUNCTION IF EXISTS public.guard_condition_analysis_event_append();
