@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useBusinessWindowFocus } from "../hooks/useBusinessWindowFocus";
 import { X } from "lucide-react";
 import {
   BUSINESS_WINDOW_LAYOUT,
@@ -57,15 +58,18 @@ export function BusinessWindowHost({
   const layout = BUSINESS_WINDOW_LAYOUT[windowId];
   const offset = desktopWindowOffset(stackIndex);
   const headingId = `bc-window-title-${windowId}`;
+  const hostRef = useBusinessWindowFocus(windowId, isActive, minimized);
 
   return (
     <div
+      ref={hostRef}
       className={mobile ? "bc-business-sheet" : "bc-business-window"}
       data-window={windowId}
       data-active={isActive ? "true" : "false"}
       data-minimized={minimized ? "true" : "false"}
       data-hidden={mobile ? (minimized ? "true" : "false") : undefined}
       hidden={minimized}
+      tabIndex={isActive && !minimized ? -1 : undefined}
       role={mobile ? "dialog" : "region"}
       aria-modal={mobile ? "false" : undefined}
       aria-labelledby={hideTitle ? undefined : headingId}
@@ -98,10 +102,16 @@ export function BusinessWindowHost({
           </button>
         </div>
       </header>
-      <div className={mobile ? "bc-business-sheet-content" : "bc-business-window-content"}>
+      <div
+        className={
+          mobile ? "bc-business-sheet-content" : "bc-business-window-content"
+        }
+      >
         {children}
       </div>
-      {mobile && footer ? <div className="bc-business-sheet-footer">{footer}</div> : null}
+      {mobile && footer ? (
+        <div className="bc-business-sheet-footer">{footer}</div>
+      ) : null}
     </div>
   );
 }
