@@ -175,6 +175,7 @@ export * from './nativeDiagnosisRunProjection.zod';
 export * from './nativeDiagnosisRunProposal.zod';
 export * from './nativeDiagnosisRunScope.zod';
 export * from './nativeDiagnosisRunSettlement.zod';
+export * from './nativeDiagnosisRunStartRequest.zod';
 export * from './nativeDiagnosisRunSummary.zod';
 export * from './nativeDiagnosisSettlementReceipt.zod';
 export * from './nativeDiagnosisSettlementRequest.zod';

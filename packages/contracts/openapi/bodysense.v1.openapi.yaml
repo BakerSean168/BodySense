@@ -1615,6 +1615,46 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/ValidationUnavailable'
+    post:
+      operationId: startNativeDiagnosisRun
+      summary: Start a formal Diagnosis analysis from the authenticated user's own request statement.
+      description: >
+        Go freezes the BodyState/Safety input, applies Go Safety and decision policy,
+        runs the Diagnosis Agent and persists its output only as pending proposals on a
+        new formal run. A proposal is never a ConditionEntry; adoption still requires the
+        user's explicit decisions and whole-run settlement. Retrying an idempotencyKey
+        replays the original run (200) without re-running the Agent; malformed, foreign
+        or stale Agent output is rejected without any partial write.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisRunStartRequest'}
+      responses:
+        '201':
+          description: New formal run with its pending proposals or terminal no-proposal outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisRunProjection'}
+        '200':
+          description: Idempotent replay of the run already started with this key.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisRunProjection'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/diagnosis/analysis-runs/{runId}:
     get:
       operationId: getNativeDiagnosisRun
@@ -5099,6 +5139,19 @@ components:
         evidenceType: {type: string, enum: [body_fact, body_observation, symptom_episode, document_evidence]}
         evidenceId: {type: string, format: uuid}
         version: {type: string, pattern: '^[1-9][0-9]*$'}
+    NativeDiagnosisRunStartRequest:
+      type: object
+      additionalProperties: false
+      required: [requestEvidenceId, trigger, expectedRevision, idempotencyKey]
+      properties:
+        requestEvidenceId:
+          type: string
+          format: uuid
+          description: The user's own available versioned request statement (statement evidence).
+        trigger: {type: string, enum: [new_analysis]}
+        scopeDescription: {type: string, maxLength: 500}
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
     NativeDiagnosisSettlementRequest:
       type: object
       additionalProperties: false

@@ -159,6 +159,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// A single authenticated owner's committed Diagnosis; no proposal adoption on read.
 	protected.GET("/diagnosis", wrapper.GetNativeDiagnosis)
 	protected.GET("/diagnosis/analysis-runs", wrapper.ListNativeDiagnosisRuns)
+	protected.POST("/diagnosis/analysis-runs", wrapper.StartNativeDiagnosisRun)
 	protected.GET("/diagnosis/analysis-runs/:runId", wrapper.GetNativeDiagnosisRun)
 	// Explicit selection is not adoption; only the separately confirmed settlement mutates the Diagnosis head.
 	protected.POST("/diagnosis/analysis-runs/:runId/decisions", wrapper.DecideNativeDiagnosisProposal)

@@ -68,7 +68,7 @@ func (r *DiagnosisRepository) AnalysisClosed(ctx context.Context, owner, run uui
 	if count > 0 {
 		return true, nil
 	}
-	err := r.ownerDB(ctx, owner).Model(&model.ConditionAnalysisEvent{}).Where("run_id=? AND kind IN ?", run, []string{"committed", "closed_without_change", "safety_blocked"}).Count(&count).Error
+	err := r.ownerDB(ctx, owner).Model(&model.ConditionAnalysisEvent{}).Where("run_id=? AND kind IN ?", run, []string{"committed", "closed_without_change", "safety_blocked", "insufficient_evidence"}).Count(&count).Error
 	return count > 0, err
 }
 func (r *DiagnosisRepository) ProposalUnavailable(ctx context.Context, owner, run, proposal uuid.UUID) (bool, error) {
