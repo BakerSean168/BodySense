@@ -26,6 +26,7 @@ from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
     deterministic_treatment_model,
 )
+from .treatment_plan_proposal import project_plan_proposal
 
 ModelResolver = Callable[[TreatmentAgentManifest], Model]
 EvidenceSearcherFactory = Callable[[str], EvidenceSearcher]
@@ -121,6 +122,7 @@ class TreatmentAgentService:
             emitted["evidence_acquisition"] = evidence_acquirer.trace().model_dump(mode="json")
         emitted["agent_configuration"] = config.provenance()
         emitted["execution_provenance"] = _execution_provenance(result, config)
+        emitted["plan_proposal"] = project_plan_proposal(emitted)
         return emitted
 
 
