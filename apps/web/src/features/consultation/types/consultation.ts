@@ -21,6 +21,7 @@ import type {
   ExtractedInfo as StreamExtractedInfo,
   Citation as StreamCitation,
   RedFlag as StreamRedFlag,
+  InteractionQuestion,
 } from "@bodysense/contracts";
 
 export type {
@@ -294,14 +295,14 @@ export interface AskUserQuestion {
   context?: string;
   /** Optional multi-field form. When present, UI collects all fields once. */
   fields?: AskUserField[];
-  /** Go-owned safety screen binding. Never authored by ordinary UI input. */
-  purpose?: "symptom_intake" | string;
-  state_binding?: {
-    revision: string;
-    capture_id: string;
-    body_fact_id: string;
-    field_map: Record<string, string>;
-  };
+  /**
+   * Go-owned binding (symptom intake safety screen or source-cited BodyState
+   * suggestion). Never authored by ordinary UI input.
+   */
+  purpose?: "symptom_intake" | "body_state_suggestion" | string;
+  state_binding?: InteractionQuestion["state_binding"];
+  /** Go-copied excerpt of the user's own message for a bound suggestion. */
+  quote?: string;
 }
 
 export interface ToolCallInfo {
