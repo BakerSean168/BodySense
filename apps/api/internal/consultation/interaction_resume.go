@@ -18,6 +18,12 @@ func (r *Runtime) AttachInteractionResumeService(resumes *service.InteractionRes
 	r.interactionResumes = resumes
 }
 
+// AttachBodyStateSuggestionSources lets the runtime bind source-cited
+// BodyState suggestions; without it every suggestion is stripped.
+func (r *Runtime) AttachBodyStateSuggestionSources(reader service.BodyStateSuggestionSourceReader) {
+	r.suggestionSources = reader
+}
+
 func (r *Runtime) resumeBodyFactInteraction(ctx context.Context, w http.ResponseWriter, uid uuid.UUID, session *model.ConsultationSession, interaction *model.AgentInteraction, req ResumeInteractionInput) *HTTPError {
 	if r.interactionResumes == nil {
 		return httpErr(http.StatusServiceUnavailable, ConsultationErrorInteractionNotResumable, "interaction resume is unavailable")
@@ -148,6 +154,10 @@ func interactionResumeHTTPError(err error) *HTTPError {
 		return httpErr(http.StatusConflict, ConsultationErrorInteractionExpired, "interaction expired; old authorization is not reused")
 	case errors.Is(err, model.ErrInteractionResumeConflict):
 		return httpErr(http.StatusConflict, "INTERACTION_CONFLICT", "interaction was answered differently, stopped, or is no longer current")
+	case errors.Is(err, model.ErrBodyStateSuggestionStale):
+		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "body state changed since this suggestion; nothing was recorded")
+	case errors.Is(err, model.ErrBodyStateSuggestionRejected):
+		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "the cited statement is no longer available; nothing was recorded")
 	case errors.Is(err, model.ErrInteractionResumeUnavailable):
 		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "interaction is missing verified resume provenance")
 	default:

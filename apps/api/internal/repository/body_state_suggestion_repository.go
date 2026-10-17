@@ -136,8 +136,18 @@ func (r *BodyStateRepository) ConfirmBodyHypothesisSuggestion(ctx context.Contex
 		if len(answers) != 1 {
 			return fmt.Errorf("%w: exactly one live accepted answer is required", model.ErrBodyStateSuggestionRejected)
 		}
-		if _, _, err := verifyBodyFactAnswer(tx, owner, answer, answers[0]); err != nil {
+		interaction, _, err := verifyBodyFactAnswer(tx, owner, answer, answers[0])
+		if err != nil {
 			return fmt.Errorf("%w: %v", model.ErrBodyStateSuggestionRejected, err)
+		}
+		// The command must be exactly the Go binding persisted in the answered
+		// question, and the accepted answer must be the explicit confirmation.
+		bound, matched, err := model.ParseBoundBodyStateSuggestion(interaction.Question)
+		if !matched || err != nil || bound != command {
+			return fmt.Errorf("%w: command does not match the bound question", model.ErrBodyStateSuggestionRejected)
+		}
+		if confirmed, err := model.BodyStateSuggestionConfirmed(interaction.Answer); err != nil || !confirmed {
+			return fmt.Errorf("%w: the accepted answer is not a confirmation", model.ErrBodyStateSuggestionRejected)
 		}
 		// Re-read the cited user span under a share lock: a withdrawn, pruned,
 		// edited or foreign source rejects the commit instead of trusting the

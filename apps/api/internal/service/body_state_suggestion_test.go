@@ -150,3 +150,61 @@ func suggestionJSON(t *testing.T, value any) json.RawMessage {
 	}
 	return raw
 }
+
+type suggestionLedgerRepository struct {
+	fakeBodyStateRepository
+	commands []model.ConfirmBodyHypothesisSuggestionCommand
+	receipt  func(owner uuid.UUID) *model.BodyHypothesisCommit
+}
+
+func (r *suggestionLedgerRepository) ConfirmBodyHypothesisSuggestion(_ context.Context, owner uuid.UUID, _ model.AnswerFactSource, command model.ConfirmBodyHypothesisSuggestionCommand) (*model.BodyHypothesisCommit, error) {
+	r.commands = append(r.commands, command)
+	if r.receipt != nil {
+		return r.receipt(owner), nil
+	}
+	return &model.BodyHypothesisCommit{ID: uuid.New(), UserID: owner, HypothesisID: uuid.New(), EventID: uuid.New(), RevisionID: uuid.New(), Revision: 8}, nil
+}
+
+func boundSuggestionInteraction(t *testing.T, answer string) *model.AgentInteraction {
+	t.Helper()
+	owner, conversation, reader := suggestionFixture()
+	bound, ok, err := BindBodyStateSuggestionQuestion(context.Background(), reader, owner, conversation, suggestionQuestion(t, reader.source.ID, 4, 13, 7, nil))
+	if err != nil || !ok {
+		t.Fatalf("bind = %v %v", ok, err)
+	}
+	return &model.AgentInteraction{ID: uuid.New(), ToolName: "ask_user", ToolCallID: "call_s", Question: []byte(bound), Answer: []byte(answer)}
+}
+
+func TestRecordBodyStateSuggestionAnswerCommitsOnlyConfirmation(t *testing.T) {
+	owner := uuid.New()
+	source := model.AnswerFactSource{RunID: uuid.New(), InteractionID: uuid.New(), MessageID: uuid.New()}
+	repo := &suggestionLedgerRepository{}
+	svc := NewBodyStateService(repo)
+
+	confirm := boundSuggestionInteraction(t, `{"text":"记录为我的猜测","selected":["记录为我的猜测"]}`)
+	receipt, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, confirm)
+	if err != nil || receipt == nil || len(repo.commands) != 1 || repo.commands[0].BaseBodyStateRevision != 7 || repo.commands[0].Source.SpanEnd != 13 {
+		t.Fatalf("confirm = %+v %v %+v", receipt, err, repo.commands)
+	}
+	decline := boundSuggestionInteraction(t, `{"text":"不记录","selected":["不记录"]}`)
+	if receipt, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, decline); err != nil || receipt != nil || len(repo.commands) != 1 {
+		t.Fatalf("decline wrote: %+v %v", receipt, err)
+	}
+	plain := &model.AgentInteraction{ID: uuid.New(), Question: []byte(`{"question":"哪里疼？","answer_type":"text"}`), Answer: []byte(`{"text":"膝盖"}`)}
+	if receipt, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, plain); err != nil || receipt != nil || len(repo.commands) != 1 {
+		t.Fatalf("ordinary answer wrote: %+v %v", receipt, err)
+	}
+	forged := &model.AgentInteraction{ID: uuid.New(), Question: []byte(`{"purpose":"body_state_suggestion","question":"q","answer_type":"single_choice","options":["记录为我的猜测","不记录"]}`), Answer: []byte(`{"selected":["记录为我的猜测"]}`)}
+	if _, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, forged); !errors.Is(err, model.ErrBodyStateSuggestionRejected) || len(repo.commands) != 1 {
+		t.Fatalf("forged binding not refused: %v", err)
+	}
+	repo.receipt = func(uuid.UUID) *model.BodyHypothesisCommit {
+		return &model.BodyHypothesisCommit{ID: uuid.New(), UserID: uuid.New(), HypothesisID: uuid.New(), EventID: uuid.New(), RevisionID: uuid.New(), Revision: 9}
+	}
+	if _, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, confirm); err == nil {
+		t.Fatal("foreign receipt accepted")
+	}
+	if _, err := NewBodyStateService(&fakeBodyStateRepository{}).RecordBodyStateSuggestionAnswer(context.Background(), owner, source, confirm); err == nil {
+		t.Fatal("missing ledger silently dropped a confirmation")
+	}
+}

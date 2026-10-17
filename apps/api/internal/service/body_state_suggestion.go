@@ -125,3 +125,42 @@ func IsBoundBodyStateSuggestion(question json.RawMessage) bool {
 	_, matched, _ := model.ParseBoundBodyStateSuggestion(question)
 	return matched
 }
+
+type bodyStateSuggestionLedger interface {
+	ConfirmBodyHypothesisSuggestion(ctx context.Context, owner uuid.UUID, answer model.AnswerFactSource, command model.ConfirmBodyHypothesisSuggestionCommand) (*model.BodyHypothesisCommit, error)
+}
+
+// RecordBodyStateSuggestionAnswer commits the user's decision on a Go-bound
+// suggestion inside the interaction-resume claim transaction. Confirmation
+// commits exactly one user-authored BodyHypothesis whose statement Go
+// re-reads from the cited message; decline writes nothing. Questions without
+// the suggestion purpose record nothing; a forged binding is refused.
+func (s *BodyStateService) RecordBodyStateSuggestionAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) (*model.BodyHypothesisCommit, error) {
+	if interaction == nil {
+		return nil, nil
+	}
+	command, matched, err := model.ParseBoundBodyStateSuggestion(interaction.Question)
+	if !matched {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	confirmed, err := model.BodyStateSuggestionConfirmed(interaction.Answer)
+	if err != nil || !confirmed {
+		return nil, err
+	}
+	ledger, ok := s.repo.(bodyStateSuggestionLedger)
+	if !ok {
+		return nil, errors.New("body state suggestion ledger is not configured")
+	}
+	receipt, err := ledger.ConfirmBodyHypothesisSuggestion(ctx, userID, source, command)
+	if err != nil {
+		return nil, err
+	}
+	if receipt == nil || receipt.UserID != userID || receipt.ID == uuid.Nil || receipt.HypothesisID == uuid.Nil ||
+		receipt.EventID == uuid.Nil || receipt.RevisionID == uuid.Nil || receipt.Revision <= 0 {
+		return nil, errors.New("body state suggestion receipt is missing or does not match its owner")
+	}
+	return receipt, nil
+}
