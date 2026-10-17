@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-IMAGE="${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}"
+IMAGE="${LITELLM_IMAGE:-ghcr.io/berriai/litellm:v1.104.2}"
 MASTER_KEY="sk-bodysense-gateway-smoke"
 NAME="bodysense-litellm-smoke-$$"
 CONFIG="$ROOT/docker/litellm/config.smoke.yaml"
