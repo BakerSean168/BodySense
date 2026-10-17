@@ -57,6 +57,8 @@ import {
   LogoutAcknowledgement,
   NativeDiagnosisDecisionReceipt,
   NativeDiagnosisProjection,
+  NativeDiagnosisRunPage,
+  NativeDiagnosisRunProjection,
   NativeDiagnosisSettlementReceipt,
   NullableUserProfileResponse,
   OnboardingContextResult,
@@ -157,6 +159,7 @@ import type {
   ListBodyFactRecordsParams,
   ListBodyObservationRecordsParams,
   ListDiagnosisAnalysesParams,
+  ListNativeDiagnosisRunsParams,
   ListOutcomesParams,
   ListRunEventsParams,
   ListTreatmentRevisionsParams,
@@ -164,6 +167,8 @@ import type {
   NativeDiagnosisDecisionReceiptOutput,
   NativeDiagnosisDecisionRequest,
   NativeDiagnosisProjectionOutput,
+  NativeDiagnosisRunPageOutput,
+  NativeDiagnosisRunProjectionOutput,
   NativeDiagnosisSettlementReceiptOutput,
   NativeDiagnosisSettlementRequest,
   NullableUserProfileResponseOutput,
@@ -2983,6 +2988,93 @@ export const getNativeDiagnosis = async ( options?: RequestInit, fetchFn?: typeo
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? NativeDiagnosisProjection.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListNativeDiagnosisRunsUrl = (params?: ListNativeDiagnosisRunsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/diagnosis/analysis-runs?${stringifiedParams}` : `/api/v1/diagnosis/analysis-runs`
+}
+
+/**
+ * Owner-scoped keyset page. Terminal status is derived from append-only audit events and settlement receipts; no read creates or adopts a diagnosis.
+ * @summary Recover the authenticated user's formal analysis runs in immutable start order.
+ */
+export const listNativeDiagnosisRuns = async (params?: ListNativeDiagnosisRunsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisRunPageOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListNativeDiagnosisRunsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisRunPage, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisRunPage = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisRunPage.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetNativeDiagnosisRunUrl = (runId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis/analysis-runs/${runId}`
+}
+
+/**
+ * Uses one read-only repeatable-read snapshot; presented contentFingerprint and baseRevision are for explicit user choice, not an Agent adoption. A read never substitutes for settlement-time Safety and source validation.
+ * @summary Read immutable formal run, exact proposed content and user decision state.
+ */
+export const getNativeDiagnosisRun = async (runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisRunProjectionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetNativeDiagnosisRunUrl(runId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisRunProjection, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisRunProjection = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisRunProjection.parse(parsedBody) : parsedBody
   return data
 }
 

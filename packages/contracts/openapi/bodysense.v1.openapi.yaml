@@ -1582,6 +1582,68 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/analysis-runs:
+    get:
+      operationId: listNativeDiagnosisRuns
+      summary: Recover the authenticated user's formal analysis runs in immutable start order.
+      description: >
+        Owner-scoped keyset page. Terminal status is derived from append-only
+        audit events and settlement receipts; no read creates or adopts a diagnosis.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      - name: beforeRunId
+        in: query
+        required: false
+        description: Opaque owner-owned prior run ID cursor for descending keyset pagination.
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Bounded formal run recovery index.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisRunPage'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+  /api/v1/diagnosis/analysis-runs/{runId}:
+    get:
+      operationId: getNativeDiagnosisRun
+      summary: Read immutable formal run, exact proposed content and user decision state.
+      description: >
+        Uses one read-only repeatable-read snapshot; presented contentFingerprint
+        and baseRevision are for explicit user choice, not an Agent adoption.
+        A read never substitutes for settlement-time Safety and source validation.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Owner-owned run and typed proposals/choices/terminal audit view.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisRunProjection'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
   /api/v1/diagnosis/analysis-runs/{runId}/decisions:
     post:
       operationId: decideNativeDiagnosisProposal
@@ -4506,6 +4568,117 @@ components:
       type: array
       items:
         type: string
+    NativeDiagnosisRunPage:
+      type: object
+      additionalProperties: false
+      required: [runs, hasMore]
+      properties:
+        runs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunSummary'}}
+        hasMore: {type: boolean}
+        nextBeforeRunId: {type: string, format: uuid}
+    NativeDiagnosisRunSummary:
+      type: object
+      additionalProperties: false
+      required: [runId, trigger, basedOnBodyStateRevision, basedOnDiagnosisRevision, startedAt, state]
+      properties:
+        runId: {type: string, format: uuid}
+        trigger: {type: string, enum: [new_analysis, partial_update, full_reanalysis]}
+        basedOnBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        basedOnDiagnosisRevision: {type: integer, format: int64, minimum: 0}
+        startedAt: {type: string, format: date-time}
+        state: {type: string, enum: [open, committed, closed_without_change]}
+        outcome: {type: string, enum: [committed, closed_without_change, safety_blocked, insufficient_evidence]}
+        committedDiagnosisRevision: {type: integer, format: int64, minimum: 1}
+    NativeDiagnosisRunProjection:
+      type: object
+      additionalProperties: false
+      required: [runId, trigger, basedOnBodyStateRevision, basedOnDiagnosisRevision, startedAt, state, currentDiagnosisRevision, requestMessageId, requestEvidenceId, requestSourceVersion, scope, inputEvidenceRefs, agentHypotheses, proposals, events]
+      properties:
+        runId: {type: string, format: uuid}
+        trigger: {type: string, enum: [new_analysis, partial_update, full_reanalysis]}
+        basedOnBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        basedOnDiagnosisRevision: {type: integer, format: int64, minimum: 0}
+        startedAt: {type: string, format: date-time}
+        state: {type: string, enum: [open, committed, closed_without_change]}
+        outcome: {type: string, enum: [committed, closed_without_change, safety_blocked, insufficient_evidence]}
+        committedDiagnosisRevision: {type: integer, format: int64, minimum: 1}
+        currentDiagnosisRevision: {type: integer, format: int64, minimum: 0}
+        requestMessageId: {type: string, format: uuid}
+        requestEvidenceId: {type: string, format: uuid}
+        requestSourceVersion: {type: integer, format: int64, minimum: 1}
+        scope: {$ref: '#/components/schemas/NativeDiagnosisRunScope'}
+        inputEvidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+        agentHypotheses: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunHypothesis'}}
+        proposals: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunProposal'}}
+        events: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunEvent'}}
+        settlement: {$ref: '#/components/schemas/NativeDiagnosisRunSettlement'}
+    NativeDiagnosisRunScope:
+      type: object
+      additionalProperties: false
+      required: [conditionIds, evidenceRefs, description]
+      properties:
+        conditionIds: {type: array, items: {type: string, format: uuid}}
+        evidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+        description: {type: string}
+    NativeDiagnosisRunHypothesis:
+      type: object
+      additionalProperties: false
+      required: [statement, evidenceRefs]
+      properties:
+        statement: {type: string}
+        evidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+    NativeDiagnosisRunProposal:
+      type: object
+      additionalProperties: false
+      required: [proposalId, runId, changeKind, content, contentFingerprint, baseRevision, evidenceRefs, counterEvidenceRefs, createdAt, state]
+      properties:
+        proposalId: {type: string, format: uuid}
+        runId: {type: string, format: uuid}
+        targetConditionId: {type: string, format: uuid}
+        changeKind: {type: string, enum: [create, update, set_disposition, update_relation]}
+        content: {type: object, additionalProperties: true}
+        contentFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        baseRevision: {type: integer, format: int64, minimum: 0}
+        evidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+        counterEvidenceRefs: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisDecisionEvidence'}}
+        supersedesProposalId: {type: string, format: uuid}
+        supersededByProposalId: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+        state: {type: string, enum: [pending, decided, superseded, expired]}
+        reason: {type: string, enum: [timeout, base_revision_changed, run_closed, safety_blocked, revised_after_supplement, evidence_changed]}
+        decision: {$ref: '#/components/schemas/NativeDiagnosisRunDecision'}
+    NativeDiagnosisRunDecision:
+      type: object
+      additionalProperties: false
+      required: [decisionId, decision, contentFingerprint, receiptId, decidedAt]
+      properties:
+        decisionId: {type: string, format: uuid}
+        decision: {type: string, enum: [accept, reject]}
+        contentFingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        receiptId: {type: string, format: uuid}
+        decidedAt: {type: string, format: date-time}
+    NativeDiagnosisRunEvent:
+      type: object
+      additionalProperties: false
+      required: [sequence, kind, recordedAt]
+      properties:
+        sequence: {type: integer, format: int64, minimum: 1}
+        kind: {type: string, enum: [run_started, evidence_added, hypothesis_added, proposal_created, proposal_superseded, proposal_expired, decision_recorded, decision_rechecked, insufficient_evidence, safety_blocked, committed, closed_without_change]}
+        proposalId: {type: string, format: uuid}
+        decisionId: {type: string, format: uuid}
+        reason: {type: string, enum: [timeout, base_revision_changed, run_closed, safety_blocked, revised_after_supplement, evidence_changed]}
+        recordedAt: {type: string, format: date-time}
+    NativeDiagnosisRunSettlement:
+      type: object
+      additionalProperties: false
+      required: [settlementId, outcome, revision, receiptId, settledAt]
+      properties:
+        settlementId: {type: string, format: uuid}
+        outcome: {type: string, enum: [committed, closed_without_change, safety_blocked]}
+        revision: {type: integer, format: int64, minimum: 0}
+        diagnosisRevisionId: {type: string, format: uuid}
+        receiptId: {type: string, format: uuid}
+        settledAt: {type: string, format: date-time}
     NativeDiagnosisDecisionRequest:
       type: object
       additionalProperties: false

@@ -42,6 +42,7 @@ type PublicServer struct {
 	consultationInteractions consultationInteractionApplication
 	consultationReplay       consultationReplayApplication
 	consultationThreads      consultationThreadApplication
+	nativeDiagnosisRuns      nativeDiagnosisRunReadApplication
 	nativeDiagnosis          nativeDiagnosisReadApplication
 	nativeDiagnosisDecisions nativeDiagnosisDecisionApplication
 	nativeDiagnosisSettlements nativeDiagnosisSettlementApplication
