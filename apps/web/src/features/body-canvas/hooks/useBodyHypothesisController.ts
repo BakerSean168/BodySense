@@ -65,12 +65,8 @@ export function useBodyHypothesisController(owner: string, canEdit: boolean) {
     !!groups.data &&
     data.current_revision === groups.data.current_revision &&
     data.current_revision >= committedRevision;
-  const ready =
-    consistent &&
-    !records.isError &&
-    !groups.isError &&
-    !records.isFetching &&
-    !groups.isFetching;
+  const readable = consistent && !records.isError && !groups.isError;
+  const ready = readable && !records.isFetching && !groups.isFetching;
   function refresh() {
     void records.refetch();
     void groups.refetch();
@@ -192,6 +188,7 @@ export function useBodyHypothesisController(owner: string, canEdit: boolean) {
     groups,
     data,
     consistent,
+    readable,
     ready,
     draft,
     statement,

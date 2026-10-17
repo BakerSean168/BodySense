@@ -1811,3 +1811,117 @@
   .body-canvas-theme .bc-chat-composer-area { padding-top: 12px; }
   .body-canvas-theme .ask-user-submit { min-height: 44px; }
 }
+
+/* Person keeps one scroll boundary in the existing window/sheet at every width. */
+.bc-person,
+.bc-person-body {
+  min-width: 0;
+}
+.bc-person-body {
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+  overflow-wrap: anywhere;
+}
+.bc-person-body > *,
+.bc-person-body .bc-record-editor,
+.bc-person-body .bc-equipment-form > * {
+  min-width: 0;
+}
+.bc-person-body[data-category="records"] .bc-equipment-form,
+.bc-person-body[data-category="habits"] .bc-equipment-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+.bc-person-body
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea,
+    fieldset
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.bc-person-body textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  font: inherit;
+}
+.bc-person-body .bc-record-actions > :is(button, .bc-window-note) {
+  min-width: 0;
+  max-width: 100%;
+}
+.bc-person-body .bc-record-actions > button {
+  white-space: normal;
+  height: auto;
+}
+.bc-person-body :is(button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-hypotheses {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.bc-hypothesis-form {
+  align-items: stretch;
+}
+.bc-hypothesis-form fieldset {
+  display: grid;
+  gap: 8px;
+}
+.bc-hypothesis-form .bc-hypothesis-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding-block: 6px;
+  font-size: 12px;
+}
+.bc-hypothesis-form .bc-hypothesis-choice input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--bc-primary);
+}
+.bc-episode-status {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-block: 8px;
+}
+.bc-episode-status p {
+  margin: 0;
+}
+.bc-episode-badge {
+  max-width: 100%;
+  border: 1px solid var(--bc-line);
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: var(--bc-secondary);
+  background: var(--bc-subtle);
+  font-size: 11px;
+  font-weight: 600;
+}
+.bc-episode-badge[data-state="ongoing"] {
+  color: var(--bc-primary);
+  background: var(--bc-primary-soft);
+}
+@media (max-width: 760px) {
+  .bc-person-body .bc-record-actions > button {
+    min-height: 44px;
+  }
+  .bc-person-body
+    :is(textarea, select, input:not([type="checkbox"]):not([type="radio"])) {
+    font-size: 16px;
+  }
+}

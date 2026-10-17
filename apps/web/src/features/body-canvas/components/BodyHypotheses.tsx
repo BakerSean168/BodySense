@@ -1,3 +1,4 @@
+import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
 
@@ -21,6 +22,7 @@ function HypothesisPanel({
     groups,
     data,
     consistent,
+    readable,
     ready,
     draft,
     statement,
@@ -37,18 +39,56 @@ function HypothesisPanel({
     submit,
     cancel,
   } = useBodyHypothesisController(owner, canEdit);
+  const id = useId();
+  const root = useRef<HTMLElement>(null);
+  const editor = useRef<HTMLFormElement>(null);
+  const returnFocus = useRef<string | null>(null);
+  const hadDraft = useRef(false);
+  useLayoutEffect(() => {
+    if (draft && !hadDraft.current) {
+      editor.current
+        ?.querySelector<HTMLElement>("textarea, button[type=submit]")
+        ?.focus();
+    } else if (!draft && hadDraft.current) {
+      const feedback =
+        error || notice
+          ? root.current?.querySelector<HTMLElement>("[data-feedback]")
+          : null;
+      const trigger = returnFocus.current
+        ? document.getElementById(returnFocus.current)
+        : null;
+      (feedback ?? trigger ?? root.current)?.focus();
+    }
+    hadDraft.current = Boolean(draft);
+  }, [draft, error, notice]);
+  useEffect(() => {
+    if (saving) editor.current?.focus();
+  }, [saving]);
+  function begin(next: Parameters<typeof open>[0], trigger: HTMLButtonElement) {
+    returnFocus.current = trigger.id;
+    open(next);
+  }
   const toggle = (ids: string[], id: string) =>
     ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
   return (
-    <section aria-label="我的猜测与相关记录" className="grid gap-3">
+    <section
+      ref={root}
+      tabIndex={-1}
+      aria-label="我的猜测与相关记录"
+      className="bc-hypotheses"
+    >
       <h3 className="text-sm font-medium">我的猜测</h3>
       <p className="bc-window-note">
         仅记录你本人提出的可能原因或疾病，不代表诊断。Agent
         的推测不会自动成为你的记录。
       </p>
-      {notice && <p role="status">{notice}</p>}
+      {notice && (
+        <p role="status" tabIndex={-1} data-feedback>
+          {notice}
+        </p>
+      )}
       {error && (
-        <p role="alert" className="bc-error">
+        <p role="alert" tabIndex={-1} data-feedback className="bc-error">
           {error}
         </p>
       )}
@@ -71,12 +111,12 @@ function HypothesisPanel({
       >
         重新读取猜测与分组
       </button>
-      {ready && data ? (
+      {readable && data ? (
         <>
           {!data.hypotheses.length && <p>还没有你提出的猜测。</p>}
           {data.hypotheses.map((record) => (
             <article key={record.id} className="bc-record-item">
-              <p>{record.statement}</p>
+              <p className="bc-record-statement">{record.statement}</p>
               <p className="bc-window-note">
                 用户本人猜测 ·{" "}
                 {record.supersedes_hypothesis_id ? "更正后的版本" : "本人记录"}{" "}
@@ -90,14 +130,28 @@ function HypothesisPanel({
                   <button
                     className="bc-text-button"
                     type="button"
-                    onClick={() => open({ mode: "correct", target: record })}
+                    id={`${id}-correct-${record.id}`}
+                    disabled={!ready}
+                    onClick={(event) =>
+                      begin(
+                        { mode: "correct", target: record },
+                        event.currentTarget,
+                      )
+                    }
                   >
                     更正猜测
                   </button>
                   <button
                     className="bc-text-button"
                     type="button"
-                    onClick={() => open({ mode: "withdraw", target: record })}
+                    id={`${id}-withdraw-${record.id}`}
+                    disabled={!ready}
+                    onClick={(event) =>
+                      begin(
+                        { mode: "withdraw", target: record },
+                        event.currentTarget,
+                      )
+                    }
                   >
                     撤回猜测
                   </button>
@@ -112,20 +166,40 @@ function HypothesisPanel({
           className="bc-button"
           type="button"
           disabled={!ready}
-          onClick={() => open({ mode: "record" })}
+          id={`${id}-add`}
+          onClick={(event) => begin({ mode: "record" }, event.currentTarget)}
         >
           添加我的猜测
         </button>
       )}
       {draft && (
         <form
-          className="bc-equipment-form"
+          ref={editor}
+          tabIndex={-1}
+          className="bc-equipment-form bc-hypothesis-form"
           aria-label="编辑我的猜测"
+          aria-describedby={`${id}-save-state`}
+          aria-busy={saving}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!saving) cancel();
+          }}
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
           }}
         >
+          <p
+            id={`${id}-save-state`}
+            role={saving ? "status" : undefined}
+            className="bc-window-note"
+          >
+            {saving
+              ? "正在提交，等待保存回执。"
+              : "尚未保存。收到提交回执后才显示保存成功。"}
+          </p>
           {draft.mode === "withdraw" ? (
             <p>
               确认撤回「{statement}
@@ -133,9 +207,9 @@ function HypothesisPanel({
             </p>
           ) : (
             <>
-              <label htmlFor="hypothesis-statement">我的完整猜测</label>
+              <label htmlFor={`${id}-statement`}>我的完整猜测</label>
               <textarea
-                id="hypothesis-statement"
+                id={`${id}-statement`}
                 value={statement}
                 maxLength={2000}
                 rows={3}
@@ -150,7 +224,7 @@ function HypothesisPanel({
               <fieldset disabled={saving || !ready}>
                 <legend>相关事实</legend>
                 {data?.facts.map((fact) => (
-                  <label key={fact.id}>
+                  <label key={fact.id} className="bc-hypothesis-choice">
                     <input
                       type="checkbox"
                       checked={facts.includes(fact.id)}
@@ -164,7 +238,7 @@ function HypothesisPanel({
               <fieldset disabled={saving || !ready}>
                 <legend>相关观察</legend>
                 {data?.observations.map((observation) => (
-                  <label key={observation.id}>
+                  <label key={observation.id} className="bc-hypothesis-choice">
                     <input
                       type="checkbox"
                       checked={observations.includes(observation.id)}
@@ -211,7 +285,7 @@ function HypothesisPanel({
       <p className="bc-window-note">
         只读派生视图，组织事实、观察、经历和用户猜测，不形成新的事实或诊断。
       </p>
-      {ready && data && groups.data ? (
+      {readable && data && groups.data ? (
         groups.data.groups.length ? (
           groups.data.groups.map((group) => (
             <article key={group.id} className="bc-record-item">

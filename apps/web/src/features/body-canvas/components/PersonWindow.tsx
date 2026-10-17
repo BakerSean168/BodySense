@@ -602,6 +602,7 @@ export function PersonWindow({
 
       <div
         className="bc-person-body"
+        tabIndex={0}
         role="region"
         aria-label={meta.regionLabel}
         data-category={category}
