@@ -101,7 +101,7 @@ func NewTrainingService(
 	return service
 }
 
-// AcceptTreatmentAndEnsurePlan is the only activation boundary. Treatment
+// AcceptTreatmentAndEnsurePlan is the legacy Treatment activation boundary. Treatment
 // acceptance and its executable TrainingPlan projection commit or roll back as
 // one synchronous database transaction.
 func (s *TrainingService) AcceptTreatmentAndEnsurePlan(

@@ -42,7 +42,7 @@ func NewTrainingRepository(db *gorm.DB) *TrainingRepository {
 // with itself, so same-owner activations serialize, but not with the
 // FOR KEY SHARE that PostgreSQL foreign-key checks take on users, so the
 // owner's concurrent Chat/BodyFact/Observation inserts are not blocked.
-// This is dormant until a V2 owner explicitly opts into independent plans.
+// IndependentTrainingPlanService uses this before every proposal decision.
 func (r *TrainingRepository) LockOwnerForPlanActivation(ctx context.Context, userID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return ErrTrainingPlanOwnerNotFound
@@ -239,7 +239,7 @@ func (r *TrainingRepository) SupersedePlansExcept(
 	userID, treatmentRevisionID uuid.UUID,
 ) error {
 	return database.FromContext(ctx, r.db).Model(&model.TrainingPlan{}).
-		Where("user_id = ? AND (treatment_revision_id IS NULL OR treatment_revision_id <> ?) AND status = ?", userID, treatmentRevisionID, "active").
+		Where("current_accepted_revision_id IS NULL AND user_id = ? AND (treatment_revision_id IS NULL OR treatment_revision_id <> ?) AND status = ?", userID, treatmentRevisionID, "active").
 		Update("status", "superseded").Error
 }
 

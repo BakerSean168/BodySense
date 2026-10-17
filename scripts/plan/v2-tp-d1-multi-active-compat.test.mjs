@@ -37,7 +37,7 @@ test("TP-D1 preflight uses canonical schema but never a shared database", () => 
   assert.doesNotMatch(harness, /\b(?:kubectl|ssh|scp|pg_dump)\b/);
 });
 
-test("TP-D1 future V2 mode fails while the single-active legacy index remains", () => {
+test("TP-D1 V2 mode requires the baseline to allow independent active plans", () => {
   assert.match(harness, /TP_D1_EXPECTATION:-legacy/);
   assert.match(harness, /legacy\|v2/);
   assert.match(
@@ -46,7 +46,7 @@ test("TP-D1 future V2 mode fails while the single-active legacy index remains", 
   );
   assert.match(harness, /TP-D1 V2 BLOCKED/);
   assert.match(harness, /TP_D1_MULTI_ACTIVE_DB_COMPATIBILITY=PASS/);
-  assert.match(
+  assert.doesNotMatch(
     baseline,
     /CREATE UNIQUE INDEX idx_training_plans_user_active\b/,
   );
