@@ -20,6 +20,13 @@ DROP TABLE IF EXISTS
     public.consultation_rollout_observations,
     public.consultation_sessions,
     public.conversations,
+    public.condition_analysis_runs,
+    public.condition_entry_evidence,
+    public.condition_entries,
+    public.diagnoses,
+    public.diagnosis_proposals,
+    public.diagnosis_decisions,
+    public.diagnosis_revisions,
     public.diagnosis_analyses,
     public.diagnosis_analysis_freshness,
     public.diagnosis_candidate_assessments,
@@ -65,3 +72,6 @@ DROP TABLE IF EXISTS
     public.user_uploads,
     public.users CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
+
+DROP FUNCTION IF EXISTS public.reject_diagnosis_audit_update();
+DROP FUNCTION IF EXISTS public.reject_episode_evidence_before_creation();

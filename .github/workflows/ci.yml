@@ -210,7 +210,7 @@ jobs:
         working-directory: apps/api
         env:
           BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
-        run: go test -race ./internal/repository ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode).*Postgres$' -count=1 -v
+        run: go test -race ./internal/repository ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode|Diagnosis).*Postgres$' -count=1 -v
 
   recovery-migrations-child:
     name: PostgreSQL 18 vNext recovery child

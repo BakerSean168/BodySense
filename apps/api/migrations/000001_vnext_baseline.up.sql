@@ -4546,6 +4546,226 @@ CREATE TABLE public.safety_resolutions (
     FOREIGN KEY (user_id, event_id) REFERENCES public.body_state_outbox(user_id, id) DEFERRABLE INITIALLY DEFERRED
 );
 
+-- DX-002 slice 1: owner-bound Diagnosis storage. No decision/adoption API.
+-- Formal analysis identities are independent of legacy per-inference analyses.
+ALTER TABLE public.statement_evidence ADD CONSTRAINT dx_request_source_identity
+    UNIQUE (user_id, id, source_message_id, source_version);
+ALTER TABLE public.body_facts ADD CONSTRAINT dx_fact_version_identity UNIQUE (user_id, id, created_revision);
+ALTER TABLE public.body_observations ADD CONSTRAINT dx_observation_version_identity UNIQUE (user_id, id, created_revision);
+ALTER TABLE public.document_indicator_reviews ADD CONSTRAINT dx_document_admission_identity UNIQUE (user_id, id, action);
+
+CREATE TABLE public.diagnoses (
+    user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+    current_revision bigint NOT NULL DEFAULT 0 CHECK (current_revision >= 0),
+    head_revision bigint GENERATED ALWAYS AS (nullif(current_revision, 0)) STORED,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.condition_analysis_runs (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    request_message_id uuid NOT NULL,
+    request_evidence_id uuid NOT NULL,
+    request_source_version bigint NOT NULL CHECK (request_source_version > 0),
+    trigger text NOT NULL CHECK (trigger IN ('new_analysis','partial_update','full_reanalysis')),
+    scope jsonb NOT NULL CHECK (jsonb_typeof(scope) = 'object'),
+    based_on_body_state_revision bigint NOT NULL CHECK (based_on_body_state_revision >= 0),
+    based_on_diagnosis_revision bigint NOT NULL CHECK (based_on_diagnosis_revision >= 0),
+    input_evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(input_evidence_refs) = 'array'),
+    agent_hypotheses jsonb NOT NULL CHECK (jsonb_typeof(agent_hypotheses) = 'array'),
+    replay_input jsonb NOT NULL CHECK (jsonb_typeof(replay_input) = 'object'),
+    execution_provenance jsonb NOT NULL CHECK (jsonb_typeof(execution_provenance) = 'object'),
+    idempotency_key text NOT NULL CHECK (length(btrim(idempotency_key)) BETWEEN 1 AND 128),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    started_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, id, based_on_diagnosis_revision),
+    FOREIGN KEY (user_id) REFERENCES public.diagnoses(user_id),
+    FOREIGN KEY (user_id, request_evidence_id, request_message_id, request_source_version)
+        REFERENCES public.statement_evidence(user_id, id, source_message_id, source_version) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE public.diagnosis_proposals (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    target_condition_id uuid,
+    change_kind text NOT NULL CHECK (change_kind IN ('create','update','set_disposition','update_relation')),
+    content jsonb NOT NULL CHECK (jsonb_typeof(content) = 'object'),
+    content_fingerprint text NOT NULL CHECK (content_fingerprint ~ '^[0-9a-f]{64}$'),
+    base_revision bigint NOT NULL CHECK (base_revision >= 0),
+    evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(evidence_refs) = 'array'),
+    counter_evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(counter_evidence_refs) = 'array'),
+    supersedes_proposal_id uuid,
+    created_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, id, run_id),
+    UNIQUE (user_id, id, run_id, content_fingerprint, base_revision),
+    CHECK ((change_kind = 'create' AND target_condition_id IS NULL) OR
+           (change_kind IN ('update','set_disposition') AND target_condition_id IS NOT NULL) OR
+           change_kind = 'update_relation'),
+    CHECK (supersedes_proposal_id IS NULL OR supersedes_proposal_id <> id),
+    FOREIGN KEY (user_id, run_id, base_revision)
+        REFERENCES public.condition_analysis_runs(user_id, id, based_on_diagnosis_revision),
+    FOREIGN KEY (user_id, supersedes_proposal_id, run_id)
+        REFERENCES public.diagnosis_proposals(user_id, id, run_id) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE public.diagnosis_decisions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    proposal_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    content_fingerprint text NOT NULL CHECK (content_fingerprint ~ '^[0-9a-f]{64}$'),
+    decided_evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(decided_evidence_refs) = 'array'),
+    decision text NOT NULL CHECK (decision IN ('accept','reject')),
+    tool_call_id text NOT NULL CHECK (length(btrim(tool_call_id)) BETWEEN 1 AND 256),
+    decided_at timestamptz NOT NULL,
+    idempotency_key text NOT NULL CHECK (length(btrim(idempotency_key)) BETWEEN 1 AND 128),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    expected_revision bigint NOT NULL CHECK (expected_revision >= 0),
+    receipt_id uuid NOT NULL UNIQUE,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, proposal_id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, id, decision),
+    FOREIGN KEY (user_id, proposal_id, run_id, content_fingerprint, expected_revision)
+        REFERENCES public.diagnosis_proposals(user_id, id, run_id, content_fingerprint, base_revision)
+);
+
+CREATE TABLE public.diagnosis_revisions (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    previous_revision bigint NOT NULL CHECK (previous_revision >= 0),
+    revision bigint NOT NULL CHECK (revision = previous_revision + 1),
+    run_id uuid,
+    direct_edit_id uuid,
+    patch jsonb NOT NULL CHECK (jsonb_typeof(patch) = 'array' AND jsonb_array_length(patch) > 0),
+    decision_ids jsonb NOT NULL CHECK (jsonb_typeof(decision_ids) = 'array'),
+    body_state_revision bigint NOT NULL CHECK (body_state_revision >= 0),
+    evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(evidence_refs) = 'array'),
+    replay_input jsonb NOT NULL CHECK (jsonb_typeof(replay_input) = 'object'),
+    execution_provenance jsonb NOT NULL CHECK (jsonb_typeof(execution_provenance) = 'object'),
+    idempotency_key text NOT NULL CHECK (length(btrim(idempotency_key)) BETWEEN 1 AND 128),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    receipt_id uuid NOT NULL UNIQUE,
+    committed_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    UNIQUE (user_id, revision),
+    UNIQUE (user_id, run_id),
+    UNIQUE (user_id, direct_edit_id),
+    UNIQUE (user_id, idempotency_key),
+    CHECK ((run_id IS NOT NULL) <> (direct_edit_id IS NOT NULL)),
+    FOREIGN KEY (user_id) REFERENCES public.diagnoses(user_id),
+    FOREIGN KEY (user_id, run_id, previous_revision)
+        REFERENCES public.condition_analysis_runs(user_id, id, based_on_diagnosis_revision)
+);
+ALTER TABLE public.diagnoses ADD CONSTRAINT diagnosis_head_receipt_fk
+    FOREIGN KEY (user_id, head_revision) REFERENCES public.diagnosis_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED;
+
+CREATE TABLE public.condition_entries (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    medical_name text NOT NULL CHECK (length(btrim(medical_name)) BETWEEN 1 AND 240),
+    concept_ref jsonb CHECK (concept_ref IS NULL OR COALESCE((jsonb_typeof(concept_ref) = 'object' AND
+        length(btrim(concept_ref->>'system')) > 0 AND length(btrim(concept_ref->>'code')) > 0 AND
+        concept_ref ? 'system' AND concept_ref ? 'code'), false)),
+    qualifiers jsonb CHECK (qualifiers IS NULL OR jsonb_typeof(qualifiers) = 'object'),
+    assessment jsonb CHECK (assessment IS NULL OR COALESCE((jsonb_typeof(assessment) = 'object' AND
+        assessment ? 'level' AND assessment->>'level' IN ('suspected','likely') AND
+        assessment ? 'basedOnRunId' AND assessment->>'basedOnRunId' IS NOT NULL), false)),
+    assessment_run_id uuid GENERATED ALWAYS AS ((assessment->>'basedOnRunId')::uuid) STORED,
+    source_claim_refs jsonb NOT NULL CHECK (jsonb_typeof(source_claim_refs) = 'array'),
+    cause_analysis jsonb NOT NULL CHECK (jsonb_typeof(cause_analysis) = 'object'),
+    information_gaps jsonb NOT NULL CHECK (jsonb_typeof(information_gaps) = 'array'),
+    handling_plan jsonb NOT NULL CHECK (jsonb_typeof(handling_plan) = 'object'),
+    disposition text NOT NULL CHECK (disposition IN ('adopted','inactive')),
+    latest_decision_id uuid NOT NULL,
+    latest_decision_kind text GENERATED ALWAYS AS ('accept'::text) STORED,
+    last_analysis_run_id uuid,
+    committed_revision bigint NOT NULL CHECK (committed_revision > 0),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, id),
+    FOREIGN KEY (user_id) REFERENCES public.diagnoses(user_id),
+    FOREIGN KEY (user_id, latest_decision_id, latest_decision_kind)
+        REFERENCES public.diagnosis_decisions(user_id, id, decision) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id, last_analysis_run_id) REFERENCES public.condition_analysis_runs(user_id, id),
+    FOREIGN KEY (user_id, assessment_run_id) REFERENCES public.condition_analysis_runs(user_id, id),
+    FOREIGN KEY (user_id, committed_revision) REFERENCES public.diagnosis_revisions(user_id, revision) DEFERRABLE INITIALLY DEFERRED
+);
+ALTER TABLE public.diagnosis_proposals ADD CONSTRAINT diagnosis_proposal_target_fk
+    FOREIGN KEY (user_id, target_condition_id) REFERENCES public.condition_entries(user_id, id) DEFERRABLE INITIALLY DEFERRED;
+
+CREATE TABLE public.condition_entry_evidence (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    condition_id uuid NOT NULL,
+    evidence_type text NOT NULL CHECK (evidence_type IN ('body_fact','body_observation','symptom_episode','document_evidence')),
+    evidence_id uuid NOT NULL,
+    evidence_version bigint NOT NULL CHECK (evidence_version > 0),
+    role text NOT NULL CHECK (role IN ('supporting','counter','context')),
+    rationale text NOT NULL CHECK (length(btrim(rationale)) > 0),
+    analyzed_by_run_id uuid NOT NULL,
+    document_review_action varchar(20),
+    body_fact_id uuid GENERATED ALWAYS AS (CASE WHEN evidence_type = 'body_fact' THEN evidence_id END) STORED,
+    body_observation_id uuid GENERATED ALWAYS AS (CASE WHEN evidence_type = 'body_observation' THEN evidence_id END) STORED,
+    symptom_episode_id uuid GENERATED ALWAYS AS (CASE WHEN evidence_type = 'symptom_episode' THEN evidence_id END) STORED,
+    episode_body_state_revision bigint GENERATED ALWAYS AS (CASE WHEN evidence_type = 'symptom_episode' THEN evidence_version END) STORED,
+    document_review_id uuid GENERATED ALWAYS AS (CASE WHEN evidence_type = 'document_evidence' THEN evidence_id END) STORED,
+    PRIMARY KEY (user_id, condition_id, evidence_type, evidence_id, evidence_version, role),
+    CHECK ((evidence_type = 'document_evidence' AND evidence_version = 1 AND
+            document_review_action IS NOT NULL AND document_review_action IN ('confirm','correct')) OR
+           (evidence_type <> 'document_evidence' AND document_review_action IS NULL)),
+    FOREIGN KEY (user_id, condition_id) REFERENCES public.condition_entries(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, analyzed_by_run_id) REFERENCES public.condition_analysis_runs(user_id, id),
+    FOREIGN KEY (user_id, body_fact_id, evidence_version) REFERENCES public.body_facts(user_id, id, created_revision),
+    FOREIGN KEY (user_id, body_observation_id, evidence_version) REFERENCES public.body_observations(user_id, id, created_revision),
+    FOREIGN KEY (user_id, symptom_episode_id) REFERENCES public.symptom_episodes(user_id, id),
+    FOREIGN KEY (user_id, episode_body_state_revision) REFERENCES public.body_state_revisions(user_id, revision),
+    FOREIGN KEY (user_id, document_review_id, document_review_action) REFERENCES public.document_indicator_reviews(user_id, id, action)
+);
+
+-- Audit bases and replay material are immutable. Projection/event writes arrive
+-- in slice 2. Deletion remains possible for authorized privacy erasure/cascades.
+CREATE FUNCTION public.reject_diagnosis_audit_update() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'Diagnosis audit records are immutable' USING ERRCODE = '23514';
+END;
+$$;
+CREATE TRIGGER condition_analysis_run_immutable BEFORE UPDATE ON public.condition_analysis_runs
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+CREATE TRIGGER diagnosis_proposal_immutable BEFORE UPDATE ON public.diagnosis_proposals
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+CREATE TRIGGER diagnosis_decision_immutable BEFORE UPDATE ON public.diagnosis_decisions
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+CREATE TRIGGER diagnosis_revision_immutable BEFORE UPDATE ON public.diagnosis_revisions
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+
+-- A symptom episode evidence version is the frozen BodyState revision at
+-- assessment; it cannot predate the episode's own creation revision. Base
+-- columns are read because stored generated columns are not visible to
+-- BEFORE row triggers; a missing episode stays with the owner FK (23503).
+CREATE FUNCTION public.reject_episode_evidence_before_creation() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+DECLARE
+    episode_created_revision bigint;
+BEGIN
+    IF NEW.evidence_type = 'symptom_episode' THEN
+        SELECT se.created_revision INTO episode_created_revision FROM public.symptom_episodes se
+            WHERE se.user_id = NEW.user_id AND se.id = NEW.evidence_id;
+        IF episode_created_revision IS NOT NULL AND NEW.evidence_version < episode_created_revision THEN
+            RAISE EXCEPTION 'symptom episode evidence version predates episode creation' USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER episode_evidence_revision_floor BEFORE INSERT OR UPDATE ON public.condition_entry_evidence
+    FOR EACH ROW EXECUTE FUNCTION public.reject_episode_evidence_before_creation();
+
 --
 -- PostgreSQL database dump complete
 --
