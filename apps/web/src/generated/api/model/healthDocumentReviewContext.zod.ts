@@ -11,6 +11,7 @@ import { DocumentIndicatorReviewProjection } from './documentIndicatorReviewProj
 export const HealthDocumentReviewContext = /*#__PURE__*/ zod.strictObject({
   "extraction_run_id": /*#__PURE__*/ zod.uuid(),
   "upload_id": /*#__PURE__*/ zod.uuid(),
+  "source_availability": /*#__PURE__*/ zod.enum(['available', 'source_unavailable', 'erased']).check(/*#__PURE__*/ zod.describe('CD-D4 source availability of the backing user asset. Historical admission stays readable after the original was removed, but the evidence is marked source_unavailable and never presented as a currently verifiable original.\n')),
   "review_candidates": /*#__PURE__*/ zod.array(DocumentIndicatorReviewProjection)
 });
 

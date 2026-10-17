@@ -2013,6 +2013,39 @@ paths:
         '400': {$ref: '#/components/responses/InvalidRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/assets/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    delete:
+      operationId: deleteAsset
+      summary: Remove the private source of one owned asset (source removal, not erasure).
+      description: >
+        PC-D7 source removal: the private original object is deleted and the
+        asset becomes source_removed. Adopted evidence history, derived run
+        audit rows and review records are retained and stay readable with a
+        source-unavailable marker. This is not a health-data erasure request
+        and never revokes historical admission. Repeating the command is
+        idempotent. Foreign or missing assets return owner-masked 404.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Asset source removed (or already removed; idempotent).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetSourceRemovalResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/uploads:
     post:
       operationId: createUpload
@@ -2082,6 +2115,7 @@ paths:
     get:
       operationId: getUpload
       summary: Get one private upload manifest owned by the authenticated user.
+      description: Foreign and missing uploads are indistinguishable (owner-masked 404).
       security:
       - bearerAuth: []
       responses:
@@ -2095,30 +2129,29 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
     delete:
       operationId: deleteUpload
-      summary: Delete one owned private upload object and its manifest.
+      summary: Remove the private source of one owned upload (source removal, not erasure).
+      description: >
+        Legacy upload-surface alias of the source-removal command
+        (PC-D7): deletes the private original object and marks the backing
+        asset source_removed while retaining adopted evidence history.
+        Idempotent; foreign or missing uploads return owner-masked 404.
       security:
       - bearerAuth: []
       responses:
         '200':
-          description: Upload deleted.
+          description: Upload source removed (or already removed; idempotent).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadDeleteResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
+                $ref: '#/components/schemas/AssetSourceRemovalResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -6864,11 +6897,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserUpload'
-    UploadDeleteResponse:
+    AssetSourceRemovalResponse:
       type: object
       additionalProperties: false
-      required: [message]
+      required: [availability, message]
       properties:
+        availability:
+          type: string
+          enum: [source_removed, erased]
+          description: The asset's resulting file availability. source_removed is the PC-D7 command result; erased is reported when the erasure lifecycle already removed the source.
+        source_removed_at:
+          type: string
+          format: date-time
+          description: When the source removal was committed. Present when availability is source_removed.
         message: {type: string}
     PostureAnalysisView:
       type: object
@@ -6974,10 +7015,18 @@ components:
     HealthDocumentReviewContext:
       type: object
       additionalProperties: false
-      required: [extraction_run_id, upload_id, review_candidates]
+      required: [extraction_run_id, upload_id, source_availability, review_candidates]
       properties:
         extraction_run_id: {type: string, format: uuid}
         upload_id: {type: string, format: uuid}
+        source_availability:
+          type: string
+          enum: [available, source_unavailable, erased]
+          description: >
+            CD-D4 source availability of the backing user asset. Historical
+            admission stays readable after the original was removed, but the
+            evidence is marked source_unavailable and never presented as a
+            currently verifiable original.
         review_candidates:
           type: array
           items:

@@ -51,6 +51,7 @@ DROP TABLE IF EXISTS
     public.knowledge_units,
     public.messages,
     public.outcomes,
+    public.posture_analysis_runs,
     public.privacy_erasure_requests,
     public.runs,
     public.runtime_events,
@@ -68,8 +69,8 @@ DROP TABLE IF EXISTS
     public.treatment_revisions,
     public.treatment_rollout_observations,
     public.treatments,
+    public.user_assets,
     public.user_profiles,
-    public.user_uploads,
     public.users CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
 

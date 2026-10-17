@@ -19,10 +19,10 @@ type backendAliasStore struct {
 func (s backendAliasStore) Backend() string { return s.backend }
 
 type fakeUploadMigrationRepo struct {
-	uploads map[uuid.UUID]*model.UserUpload
+	uploads map[uuid.UUID]*model.UserAsset
 }
 
-func (r *fakeUploadMigrationRepo) ListByStorageBackend(_ context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserUpload, error) {
+func (r *fakeUploadMigrationRepo) ListByStorageBackend(_ context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserAsset, error) {
 	ids := make([]uuid.UUID, 0, len(r.uploads))
 	for id, upload := range r.uploads {
 		if upload.StorageBackend == backend && (after == nil || id.String() > after.String()) {
@@ -33,7 +33,7 @@ func (r *fakeUploadMigrationRepo) ListByStorageBackend(_ context.Context, backen
 	if len(ids) > limit {
 		ids = ids[:limit]
 	}
-	result := make([]model.UserUpload, 0, len(ids))
+	result := make([]model.UserAsset, 0, len(ids))
 	for _, id := range ids {
 		result = append(result, *r.uploads[id])
 	}
@@ -49,7 +49,7 @@ func (r *fakeUploadMigrationRepo) CompareAndSwapStorageBackend(_ context.Context
 	return true, nil
 }
 
-func migrationFixture(t *testing.T, payload []byte) (*uploadstorage.Registry, uploadstorage.Store, uploadstorage.Store, *fakeUploadMigrationRepo, *model.UserUpload) {
+func migrationFixture(t *testing.T, payload []byte) (*uploadstorage.Registry, uploadstorage.Store, uploadstorage.Store, *fakeUploadMigrationRepo, *model.UserAsset) {
 	t.Helper()
 	source, err := uploadstorage.NewLocalStore(t.TempDir())
 	if err != nil {
@@ -64,15 +64,15 @@ func migrationFixture(t *testing.T, payload []byte) (*uploadstorage.Registry, up
 	if err != nil {
 		t.Fatal(err)
 	}
-	upload := &model.UserUpload{
+	upload := &model.UserAsset{
 		ID: uuid.New(), UserID: uuid.New(), StorageBackend: "local",
 		StorageKey: "11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/original.png",
-		FileSize:   int64(len(payload)), MimeType: "image/png",
+		ByteSize:   int64(len(payload)), MimeType: "image/png",
 	}
 	if err := source.Put(context.Background(), upload.StorageKey, bytes.NewReader(payload), int64(len(payload)), upload.MimeType); err != nil {
 		t.Fatal(err)
 	}
-	repo := &fakeUploadMigrationRepo{uploads: map[uuid.UUID]*model.UserUpload{upload.ID: upload}}
+	repo := &fakeUploadMigrationRepo{uploads: map[uuid.UUID]*model.UserAsset{upload.ID: upload}}
 	return registry, source, target, repo, upload
 }
 
@@ -137,12 +137,12 @@ func TestUploadStorageMigratorDryRunDoesNotRequireTargetProvisioning(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	upload := &model.UserUpload{
+	upload := &model.UserAsset{
 		ID: uuid.New(), UserID: uuid.New(), StorageBackend: "local",
 		StorageKey: "11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/original.png",
-		FileSize:   7, MimeType: "image/png",
+		ByteSize:   7, MimeType: "image/png",
 	}
-	repo := &fakeUploadMigrationRepo{uploads: map[uuid.UUID]*model.UserUpload{upload.ID: upload}}
+	repo := &fakeUploadMigrationRepo{uploads: map[uuid.UUID]*model.UserAsset{upload.ID: upload}}
 	result, err := NewUploadStorageMigrator(repo, registry).Migrate(ctx, "local", "oss", true)
 	if err != nil {
 		t.Fatalf("dry run should not require target provisioning: %v", err)

@@ -13,7 +13,7 @@ import (
 )
 
 type uploadStorageMigrationRepository interface {
-	ListByStorageBackend(ctx context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserUpload, error)
+	ListByStorageBackend(ctx context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserAsset, error)
 	CompareAndSwapStorageBackend(ctx context.Context, id, userID uuid.UUID, fromBackend, storageKey, toBackend string) (bool, error)
 }
 
@@ -53,45 +53,45 @@ func (m *UploadStorageMigrator) Migrate(ctx context.Context, fromBackend, toBack
 	}
 	var after *uuid.UUID
 	for {
-		uploads, err := m.repo.ListByStorageBackend(ctx, fromBackend, after, 100)
+		assets, err := m.repo.ListByStorageBackend(ctx, fromBackend, after, 100)
 		if err != nil {
 			return result, fmt.Errorf("list %s uploads: %w", fromBackend, err)
 		}
-		if len(uploads) == 0 {
+		if len(assets) == 0 {
 			break
 		}
-		for i := range uploads {
-			upload := uploads[i]
+		for i := range assets {
+			asset := assets[i]
 			result.Scanned++
 			if dryRun {
 				continue
 			}
-			already, err := migrateUploadObject(ctx, source, target, &upload)
+			already, err := migrateUploadObject(ctx, source, target, &asset)
 			if err != nil {
-				return result, fmt.Errorf("migrate upload %s: %w", upload.ID, err)
+				return result, fmt.Errorf("migrate upload %s: %w", asset.ID, err)
 			}
 			if already {
 				result.AlreadyVerified++
 			}
 			swapped, err := m.repo.CompareAndSwapStorageBackend(
-				ctx, upload.ID, upload.UserID, fromBackend, upload.StorageKey, toBackend,
+				ctx, asset.ID, asset.UserID, fromBackend, asset.StorageKey, toBackend,
 			)
 			if err != nil {
-				return result, fmt.Errorf("advance upload %s storage manifest: %w", upload.ID, err)
+				return result, fmt.Errorf("advance upload %s storage manifest: %w", asset.ID, err)
 			}
 			if !swapped {
-				return result, fmt.Errorf("upload %s storage manifest changed during migration", upload.ID)
+				return result, fmt.Errorf("upload %s storage manifest changed during migration", asset.ID)
 			}
 			result.Migrated++
 		}
-		last := uploads[len(uploads)-1].ID
+		last := assets[len(assets)-1].ID
 		after = &last
 	}
 	return result, nil
 }
 
-func migrateUploadObject(ctx context.Context, source, target uploadstorage.Store, upload *model.UserUpload) (bool, error) {
-	reader, info, err := source.Open(ctx, upload.StorageKey)
+func migrateUploadObject(ctx context.Context, source, target uploadstorage.Store, asset *model.UserAsset) (bool, error) {
+	reader, info, err := source.Open(ctx, asset.StorageKey)
 	if err != nil {
 		return false, fmt.Errorf("open source object: %w", err)
 	}
@@ -103,32 +103,32 @@ func migrateUploadObject(ctx context.Context, source, target uploadstorage.Store
 	if closeErr != nil {
 		return false, closeErr
 	}
-	if int64(len(payload)) != upload.FileSize || info.Size != upload.FileSize {
-		return false, fmt.Errorf("source object size mismatch: manifest=%d object=%d read=%d", upload.FileSize, info.Size, len(payload))
+	if int64(len(payload)) != asset.ByteSize || info.Size != asset.ByteSize {
+		return false, fmt.Errorf("source object size mismatch: manifest=%d object=%d read=%d", asset.ByteSize, info.Size, len(payload))
 	}
 	sourceHash := sha256.Sum256(payload)
-	exists, err := target.Exists(ctx, upload.StorageKey)
+	exists, err := target.Exists(ctx, asset.StorageKey)
 	if err != nil {
 		return false, fmt.Errorf("check target object: %w", err)
 	}
 	if !exists {
-		if err := target.Put(ctx, upload.StorageKey, bytes.NewReader(payload), int64(len(payload)), upload.MimeType); err != nil {
+		if err := target.Put(ctx, asset.StorageKey, bytes.NewReader(payload), int64(len(payload)), asset.MimeType); err != nil {
 			return false, fmt.Errorf("write target object: %w", err)
 		}
 	} else {
-		if err := verifyMigratedUploadObject(ctx, target, upload, sourceHash); err != nil {
+		if err := verifyMigratedUploadObject(ctx, target, asset, sourceHash); err != nil {
 			return false, err
 		}
 		return true, nil
 	}
-	if err := verifyMigratedUploadObject(ctx, target, upload, sourceHash); err != nil {
+	if err := verifyMigratedUploadObject(ctx, target, asset, sourceHash); err != nil {
 		return false, err
 	}
 	return false, nil
 }
 
-func verifyMigratedUploadObject(ctx context.Context, target uploadstorage.Store, upload *model.UserUpload, wantHash [32]byte) error {
-	reader, info, err := target.Open(ctx, upload.StorageKey)
+func verifyMigratedUploadObject(ctx context.Context, target uploadstorage.Store, asset *model.UserAsset, wantHash [32]byte) error {
+	reader, info, err := target.Open(ctx, asset.StorageKey)
 	if err != nil {
 		return fmt.Errorf("open target object: %w", err)
 	}
@@ -140,7 +140,7 @@ func verifyMigratedUploadObject(ctx context.Context, target uploadstorage.Store,
 	if closeErr != nil {
 		return closeErr
 	}
-	if info.Size != upload.FileSize || int64(len(payload)) != upload.FileSize {
+	if info.Size != asset.ByteSize || int64(len(payload)) != asset.ByteSize {
 		return fmt.Errorf("target object size mismatch")
 	}
 	if got := sha256.Sum256(payload); got != wantHash {

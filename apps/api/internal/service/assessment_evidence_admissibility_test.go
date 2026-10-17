@@ -47,16 +47,16 @@ func TestAssessmentEvidenceRejectsForgedAdmissibilityPolicyRevision(t *testing.T
 
 func TestAssessmentUploadOCRAdmissibilitySurvivesInputAssemblyAndGatesDurableEvidence(t *testing.T) {
 	uploadID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
-	uploads := []model.UserUpload{{
+	uploads := []model.UserUploadView{{
 		ID:        uploadID,
 		FileType:  "report",
 		OCRStatus: "completed",
 		OCRResult: json.RawMessage(`{"status":"completed","result":{"confidence":"medium","indicators":[{"name":"Vitamin D","value":"25.3","unit":"ng/mL","confidence":"high","evidence_admissibility":{"status":"needs_review","policy_revision":"ocr-indicator-admissibility-v1","reason_codes":["ocr_confidence_medium"]}}]}}`),
 	}}
 
-	indicators, posture := assessmentInputsFromUploads(uploads)
-	if len(posture) != 0 || len(indicators) != 1 {
-		t.Fatalf("completed OCR indicator must remain available for review/transport: indicators=%#v posture=%#v", indicators, posture)
+	indicators := assessmentInputsFromUploads(uploads)
+	if len(indicators) != 1 {
+		t.Fatalf("completed OCR indicator must remain available for review/transport: indicators=%#v", indicators)
 	}
 	encoded, err := json.Marshal(indicators)
 	if err != nil {

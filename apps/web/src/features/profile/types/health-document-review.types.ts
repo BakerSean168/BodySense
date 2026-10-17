@@ -46,6 +46,8 @@ export interface DocumentIndicatorReviewProjection {
 export interface HealthDocumentReviewContext {
   extraction_run_id: string;
   upload_id: string;
+  /** CD-D4 source availability of the backing asset; evidence stays readable after source removal. */
+  source_availability: "available" | "source_unavailable" | "erased";
   review_candidates: DocumentIndicatorReviewProjection[];
 }
 

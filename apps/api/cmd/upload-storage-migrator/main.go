@@ -30,7 +30,7 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := service.NewUploadStorageMigrator(repository.NewUploadRepository(db), registry).
+	result, err := service.NewUploadStorageMigrator(repository.NewUserAssetRepository(db), registry).
 		Migrate(ctx, *from, *to, *dryRun)
 	if err != nil {
 		log.Fatalf("migrate upload storage: %v", err)

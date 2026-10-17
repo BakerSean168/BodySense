@@ -20,7 +20,7 @@ func reviewedTestReview(
 	return model.DocumentIndicatorReview{
 		ID:               reviewID,
 		UserID:           uuid.New(),
-		UploadID:         uploadID,
+		AssetID:          uploadID,
 		ExtractionRunID:  runID,
 		IndicatorIndex:   index,
 		Action:           action,
@@ -142,7 +142,7 @@ func TestAssessmentReviewedDerivesOnlyLatestEffectiveReview(t *testing.T) {
 		json.RawMessage(`{"indicator_id":"hb","name":"hb","value":"140.0","unit":"g/L"}`),
 		now,
 	)
-	uploads := []model.UserUpload{{ID: uploadID, FileType: "report"}}
+	uploads := []model.UserUploadView{{ID: uploadID, FileType: "report"}}
 	entries := buildAssessmentReviewedIndicators(uploads, map[uuid.UUID][]model.DocumentIndicatorReview{
 		uploadID: {rejected, corrected},
 	})
@@ -163,7 +163,7 @@ func TestAssessmentReviewedEvidenceNeverExposesRejectedOrUnresolved(t *testing.T
 		nil, time.Now(),
 	)
 	entries := buildAssessmentReviewedIndicators(
-		[]model.UserUpload{{ID: uploadID, FileType: "report"}},
+		[]model.UserUploadView{{ID: uploadID, FileType: "report"}},
 		map[uuid.UUID][]model.DocumentIndicatorReview{uploadID: {rejected}},
 	)
 	if len(entries) != 0 {
@@ -171,7 +171,7 @@ func TestAssessmentReviewedEvidenceNeverExposesRejectedOrUnresolved(t *testing.T
 	}
 	// An unresolved candidate (no review rows) yields nothing either.
 	if res := buildAssessmentReviewedIndicators(
-		[]model.UserUpload{{ID: uploadID, FileType: "report"}}, nil,
+		[]model.UserUploadView{{ID: uploadID, FileType: "report"}}, nil,
 	); len(res) != 0 {
 		t.Fatalf("an unresolved candidate must be absent: %#v", res)
 	}

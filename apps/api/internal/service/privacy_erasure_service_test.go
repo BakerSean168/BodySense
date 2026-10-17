@@ -128,7 +128,7 @@ func TestPrivacyErasureRequestRequiresExactConfirmation(t *testing.T) {
 }
 
 func TestPrivacyErasureRequestCompletesAndAnonymizesAudit(t *testing.T) {
-	store := &fakePrivacyStore{counts: []repository.PrivacyDataCount{{Name: "account", Count: 1}, {Name: "uploads", Count: 2}}}
+	store := &fakePrivacyStore{counts: []repository.PrivacyDataCount{{Name: "account", Count: 1}, {Name: "user_assets", Count: 2}}}
 	objects := &fakePrivacyObjects{}
 	service, auth, users, tx := newFakePrivacyService(store, objects)
 	userID := uuid.New()

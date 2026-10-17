@@ -73,7 +73,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	if err := uploadStorage.DefaultStore().Put(ctx, uploadKey, bytes.NewReader(payload), int64(len(payload)), "image/jpeg"); err != nil {
 		t.Fatal(err)
 	}
-	mustExec("INSERT INTO user_uploads(id,user_id,file_type,original_name,storage_backend,storage_key,file_size,mime_type,ocr_result,ocr_status) VALUES (?,?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo_front", "photo.jpg", "local", uploadKey, len(payload), "image/jpeg", `{"private":"ocr"}`, "completed")
+	mustExec("INSERT INTO user_assets(id,user_id,kind,photo_view,original_name,mime_type,byte_size,content_sha256,storage_backend,storage_key,availability) VALUES (?,?,?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo", "front", "photo.jpg", "image/jpeg", len(payload), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "local", uploadKey, "available")
 
 	if _, err := repository.NewBodyStateRepository(db).RecordDirectFacts(ctx, userID, model.RecordBodyFactsCommand{IdempotencyKey: "privacy-seed", Facts: []model.BodyFactInput{{Kind: "symptom", Statement: "private pain", BodyRegionIDs: []string{}, Temporal: model.FactTemporal{Precision: "unknown"}, Details: []byte(`{}`)}}}); err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		{name: "runs", query: "SELECT COUNT(*) FROM runs WHERE user_id = ?", arg: userID},
 		{name: "jobs", query: "SELECT COUNT(*) FROM jobs WHERE user_id = ?", arg: userID},
 		{name: "ai_output_reviews", query: "SELECT COUNT(*) FROM ai_output_reviews WHERE user_id = ?", arg: userID},
-		{name: "user_uploads", query: "SELECT COUNT(*) FROM user_uploads WHERE user_id = ?", arg: userID},
+		{name: "user_assets", query: "SELECT COUNT(*) FROM user_assets WHERE user_id = ?", arg: userID},
 		{name: "body_states", query: "SELECT COUNT(*) FROM body_states WHERE user_id = ?", arg: userID},
 		{name: "body_state_revisions", query: "SELECT COUNT(*) FROM body_state_revisions WHERE user_id = ?", arg: userID},
 		{name: "body_facts", query: "SELECT COUNT(*) FROM body_facts WHERE user_id = ?", arg: userID},

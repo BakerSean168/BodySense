@@ -15,7 +15,7 @@ import (
 func buildDocumentExtractionRun(
 	validatedBody []byte,
 	documentSHA256 string,
-	uploadID uuid.UUID,
+	assetID uuid.UUID,
 	userID uuid.UUID,
 	jobID uuid.UUID,
 	expectedConfigurationID string,
@@ -74,18 +74,25 @@ func buildDocumentExtractionRun(
 	rawHash := sha256.Sum256([]byte(rawText))
 	jobCopy := jobID
 	return &model.DocumentExtractionRun{
-		UploadID:            uploadID,
+		AssetID:             assetID,
 		UserID:              userID,
 		JobID:               &jobCopy,
 		ConfigurationID:     configurationID,
-		MechanismRevision:   mechanismRevision,
-		DocumentSHA256:      documentSHA256,
-		ResultSHA256:        hex.EncodeToString(resultHash[:]),
-		RawTextSHA256:       hex.EncodeToString(rawHash[:]),
+		MechanismRevision:   &mechanismRevision,
+		DocumentSHA256:      &documentSHA256,
+		ResultSHA256:        ptrOfHex(resultHash[:]),
+		RawTextSHA256:       ptrOfHex(rawHash[:]),
 		IndicatorSnapshot:   datatypes.JSON(indicatorSnapshot),
 		SourceSummary:       datatypes.JSON(sourceSummary),
 		MechanismProvenance: datatypes.JSON(mechanismJSON),
 	}, nil
+}
+
+// ptrOfHex copies one digest into a heap string so the nullable audit
+// columns receive the exact lowercase hex encoding.
+func ptrOfHex(digest []byte) *string {
+	encoded := hex.EncodeToString(digest)
+	return &encoded
 }
 
 func collectionLength(value any) int {

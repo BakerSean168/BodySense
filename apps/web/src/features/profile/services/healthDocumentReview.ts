@@ -85,6 +85,7 @@ function toContext(value: ReviewContextWire): HealthDocumentReviewContext {
   return {
     extraction_run_id: value.extraction_run_id,
     upload_id: value.upload_id,
+    source_availability: value.source_availability,
     review_candidates: value.review_candidates.map(toProjection),
   };
 }

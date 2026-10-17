@@ -32,7 +32,7 @@ func TestDocumentIndicatorReviewRepositoryAppendsAndNeverExposesMutation(t *test
 	ctx := context.Background()
 	row := &model.DocumentIndicatorReview{
 		UserID:           uuid.New(),
-		UploadID:         uuid.New(),
+		AssetID:          uuid.New(),
 		ExtractionRunID:  uuid.New(),
 		IndicatorIndex:   0,
 		Action:           string(model.ReviewActionConfirm),
@@ -56,7 +56,7 @@ func TestDocumentIndicatorReviewRepositoryListByExtractionRun(t *testing.T) {
 	repo, mock, cleanup := setupReviewRepo(t)
 	defer cleanup()
 	runID := uuid.New()
-	cols := []string{"id", "user_id", "upload_id", "extraction_run_id", "indicator_index", "action", "idempotency_key", "reviewed_payload", "machine_candidate", "source_refs", "page_ref", "reviewer_user_id", "note", "created_at"}
+	cols := []string{"id", "user_id", "asset_id", "extraction_run_id", "indicator_index", "action", "idempotency_key", "reviewed_payload", "machine_candidate", "source_refs", "page_ref", "reviewer_user_id", "note", "created_at"}
 	mock.ExpectQuery(`SELECT \* FROM "document_indicator_reviews" WHERE extraction_run_id = \$[0-9]+ ORDER BY created_at ASC`).
 		WillReturnRows(sqlmock.NewRows(cols).
 			AddRow(uuid.New(), uuid.New(), uuid.New(), runID, 0, "confirm", "k", datatypes.JSON(`{}`), datatypes.JSON(`{}`), datatypes.JSON(`[]`), datatypes.JSON(`{}`), uuid.New(), "", time.Now()))
@@ -79,6 +79,6 @@ var _ appendOnlyReviewStore = (*DocumentIndicatorReviewRepository)(nil)
 type appendOnlyReviewStore interface {
 	Create(ctx context.Context, review *model.DocumentIndicatorReview) error
 	ByOwnerScope(ctx context.Context, userID uuid.UUID, extractionRunID uuid.UUID, indicatorIndex int, idempotencyKey string) ([]model.DocumentIndicatorReview, error)
-	ListByUpload(ctx context.Context, uploadID uuid.UUID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
+	ListByAsset(ctx context.Context, assetID uuid.UUID, userID uuid.UUID) ([]model.DocumentIndicatorReview, error)
 	ListByExtractionRun(ctx context.Context, extractionRunID uuid.UUID) ([]model.DocumentIndicatorReview, error)
 }
