@@ -267,7 +267,7 @@ func (s *failingDeleteStore) Delete(ctx context.Context, key string) error {
 }
 
 func TestMigrationCleanupRetriesAfterCommittedCutover(t *testing.T) {
-	registry, source, target, repo, asset := migrationFixture(t, []byte("private-upload"))
+	_, source, target, repo, asset := migrationFixture(t, []byte("private-upload"))
 	failing := &failingDeleteStore{Store: source, failures: 1}
 	registry, err := uploadstorage.NewRegistryFromStores("local", failing, target)
 	if err != nil {
