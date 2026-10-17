@@ -92,7 +92,7 @@
       "id": "BS-HYP-001",
       "title": "Finalize Observation/Hypothesis/ConcernGroup projections",
       "phase": "1",
-      "status": "queued",
+      "status": "done",
       "dependsOn": ["INT-001"],
       "sf": "SF-20",
       "owner": "Domain Contract Owner",
@@ -101,9 +101,15 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null,
-      "remainingScope": "PR283 implemented user BodyHypothesis ledger/records/withdraw and derived ConcernGroup. Remaining: hypothesis-observation links (RelatedObservationIDs is empty), hypothesis correct/supersede, DC-032 stable group identity; UI moves to UI-001.",
-      "githubIssue": 304
+      "acceptedSha": "107e386cc828faa182ec5dc02a630f0228145583",
+      "githubIssue": 304,
+      "mergedMainSha": "107e386cc828faa182ec5dc02a630f0228145583",
+      "implementationHead": "126d8aa5bf76acb9f0208cc8c5513e343bcf9510",
+      "mergedPrs": [320],
+      "acceptedAtUtc": "2026-10-16T13:49:46Z",
+      "acceptanceCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38909662125",
+      "ciAcceptance": "EXACT_HEAD_REQUIRED_CI_SUCCESS_MERGED",
+      "acceptanceNote": "BS-HYP-001 observation links, exact user correction, stable ConcernGroup id accepted; Person presentation is UI-001/#309."
     },
     {
       "id": "BS-AGENT-001",
@@ -126,7 +132,7 @@
       "id": "PC-001",
       "title": "Enforce one Conversation and one serial Run",
       "phase": "1",
-      "status": "blocked",
+      "status": "done",
       "dependsOn": ["INT-001"],
       "sf": "SF-30",
       "owner": "Chat Runtime Owner",
@@ -135,10 +141,15 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null,
-      "blockedReason": "Not started under big-bang: no per-owner conversation uniqueness, active-Run index is per conversation not per user, GetSoleLiveByUserID has no caller, share stack still present behind kill-switch. Admit as next domain vertical per 2026-10-16-v2-remaining-plan.md; old Track D platform denial is historical.",
-      "ownerWorktreeObserved": "/home/dev/projects/.chatgpt-worktrees/bodysense-v2-trackd-verification",
-      "githubIssue": 302
+      "acceptedSha": "6456d52dbf5b0be14dc37a7ee5d499bd36b0c96d",
+      "githubIssue": 302,
+      "mergedMainSha": "6456d52dbf5b0be14dc37a7ee5d499bd36b0c96d",
+      "implementationHead": "a90e6da045cd750d6f89a5151b855dc2837bdd45",
+      "mergedPrs": [321, 324],
+      "acceptedAtUtc": "2026-10-16T15:03:23Z",
+      "acceptanceCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38919273673",
+      "ciAcceptance": "EXACT_HEAD_REQUIRED_CI_SUCCESS_MERGED",
+      "acceptanceNote": "PC-001 singleton Conversation and serial active Run merged via #321; old chat title stack retired in #324. Three-cursor retention is separately tracked in PC-RET-001/#307."
     },
     {
       "id": "PC-RET-001",
@@ -210,7 +221,7 @@
       "id": "TP-001",
       "title": "Finish restriction-specific fail-closed Safety model",
       "phase": "1",
-      "status": "queued",
+      "status": "done",
       "dependsOn": ["INT-001"],
       "sf": "SF-50",
       "owner": "Training/Safety Domain Owner",
@@ -219,9 +230,15 @@
       "threadId": null,
       "projectId": null,
       "worktree": null,
-      "acceptedSha": null,
-      "remainingScope": "PR294-296 completed native per-restriction recording, source-bound clearance and consumer cutover. Remaining: advisory/urgent levels, plan/exercise scopes, on_expiry/user_reverification lift, pure Go TrainerGate and per-restriction versioned release (see 2026-10-16-v2-remaining-plan.md).",
-      "githubIssue": 303
+      "acceptedSha": "51b6380fec608fe65a5feca554941fc88cc3731b",
+      "githubIssue": 303,
+      "mergedMainSha": "51b6380fec608fe65a5feca554941fc88cc3731b",
+      "implementationHead": "a57c173a85ed9203d080a686109d81ac731186dd",
+      "mergedPrs": [319, 325],
+      "acceptedAtUtc": "2026-10-17T01:43:42Z",
+      "acceptanceCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38934324609",
+      "ciAcceptance": "EXACT_HEAD_REQUIRED_CI_SUCCESS_MERGED",
+      "acceptanceNote": "TP-001 restriction-scoped Go Safety and pure TrainerGate in #319, exact source-bound versioned lift with AskUser and expiry in #325; TP-002/#311 remains separate."
     },
     {
       "id": "TP-D1-001",
@@ -454,8 +471,8 @@
   "baselineFrozenAtUtc": "2026-10-16T12:34:08Z",
   "previousFrozenBaselineSha": "adaa02607a208a1a7d4cc9ba5b70845d6a77f351",
   "newWriterAdmissionPolicy": "SINGLE_DESIGNATED_WRITER_UNDER_MASTER_BIG_BANG_POLICY;status_sync_does_not_admit_runtime_writers",
-  "auditedAtUtc": "2026-10-16T12:34:08Z",
-  "postMergeMainSha": "6687a9e26f9548fdc3f3a43daf14785ba2cda2e6",
+  "auditedAtUtc": "2026-10-17T04:40:35Z",
+  "postMergeMainSha": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
   "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/38901329790",
   "latestObservedMainCiStatus": "PR249_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
   "mergedDomainContractPr": 264,
@@ -506,5 +523,15 @@
     "schedulerState": "not_observed_or_changed;historical_automation_notes_are_not_live_authority"
   },
   "remainingPlan": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
-  "githubEpic": 301
+  "githubEpic": 301,
+  "wave1ClosureSync": {
+    "asOfUtc": "2026-10-17T04:40:35Z",
+    "mainAtAudit": "8a4ea6aec2b7a762bc03b31e494c9f4fb50ce3bf",
+    "closedIssues": [302, 303, 304],
+    "closedPrs": [319, 320, 321, 324, 325],
+    "stillOpenIssues": [
+      305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317
+    ],
+    "note": "Progress-only sync; #322/#326/#327 remain Draft and do not lift domain gates."
+  }
 }
