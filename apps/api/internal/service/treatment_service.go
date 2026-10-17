@@ -88,6 +88,7 @@ type TreatmentService struct {
 	unitOfWork treatmentUnitOfWork
 	deployment treatmentDeploymentPolicy
 	rollout    treatmentRolloutObserver
+	plans      treatmentPlanProposer
 }
 
 func NewTreatmentService(
@@ -162,6 +163,7 @@ type treatmentAgentPayload struct {
 	AgentConfiguration  json.RawMessage                    `json:"agent_configuration"`
 	ExecutionProvenance json.RawMessage                    `json:"execution_provenance"`
 	EvidenceAcquisition json.RawMessage                    `json:"evidence_acquisition"`
+	PlanProposal        json.RawMessage                    `json:"plan_proposal"`
 }
 
 func (s *TreatmentService) GenerateProposalForLatest(
@@ -189,6 +191,85 @@ func (s *TreatmentService) GenerateProposal(
 	userID uuid.UUID,
 	input TreatmentProposalInput,
 ) (*model.TreatmentRevision, error) {
+	gen, err := s.runGeneration(ctx, userID, input)
+	if err != nil {
+		return nil, err
+	}
+	route, configurationID, analysis, facts, generationDecision, payload :=
+		gen.route, gen.configurationID, gen.analysis, gen.facts, gen.decision, gen.payload
+	plan := model.TreatmentPlanContent{
+		Summary: payload.Summary, Goal: payload.Goal, DurationWeeks: payload.DurationWeeks,
+		Interventions: payload.Interventions, DailyHabits: payload.DailyHabits,
+		ExpectedTimeline: payload.ExpectedTimeline, WarningSigns: payload.WarningSigns,
+		ReviewTriggers: payload.ReviewTriggers, SafetyNotes: payload.SafetyNotes,
+	}
+	if err := validateTreatmentPlan(plan); err != nil {
+		return nil, err
+	}
+	interventions := make([]model.Intervention, 0, len(plan.Interventions))
+	for _, item := range plan.Interventions {
+		interventions = append(interventions, model.Intervention{
+			Kind: item.Kind, Title: item.Title, Description: item.Description,
+			Prescription: datatypes.JSON(rawJSON(item.Prescription, `{}`)),
+		})
+	}
+	generationTrace := buildTreatmentDecisionTrace(
+		generationDecision,
+		facts,
+		analysis.ID,
+		configurationID,
+	)
+	_, revision, err := s.repo.CreateProposal(ctx, userID, model.TreatmentRevision{
+		SourceBodyStateRevision:   gen.bodyRevision,
+		SourceDiagnosisAnalysisID: analysis.ID,
+		Goal:                      plan.Goal,
+		DurationWeeks:             plan.DurationWeeks,
+		Plan:                      datatypes.JSON(rawJSON(plan, `{}`)),
+		UserConstraints:           datatypes.JSON(gen.constraints),
+		EvidenceIDs:               datatypes.JSON(rawJSON(payload.EvidenceIDs, `[]`)),
+		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
+		AgentConfigurationID:      configurationID,
+		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
+		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
+		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
+		GenerationDecisionTrace:   generationTrace,
+		ReplayInput:               datatypes.JSON(gen.replayInput),
+		RolloutProvenance:         datatypes.JSON(rawJSON(route, `{}`)),
+		ChangeReason:              strings.TrimSpace(input.ChangeReason),
+	}, interventions)
+	if err != nil {
+		return nil, err
+	}
+	if s.rollout != nil && route.ShadowConfigurationID != "" {
+		if observeErr := s.rollout.ObserveProposal(ctx, userID, route, revision.ID); observeErr != nil {
+			log.Printf("failed to record Treatment %s shadow observation for revision %s: %v", route.Stage, revision.ID, observeErr)
+		}
+	}
+	return revision, nil
+}
+
+// treatmentGeneration is one gated, frozen, governed Treatment Agent run,
+// before anything is persisted.
+type treatmentGeneration struct {
+	route           TreatmentRouteSelection
+	configurationID string
+	analysis        *model.DiagnosisAnalysisRecord
+	facts           TreatmentDecisionFacts
+	decision        TreatmentDecision
+	bodyRevision    int64
+	constraints     json.RawMessage
+	replayInput     json.RawMessage
+	payload         *treatmentAgentPayload
+}
+
+// runGeneration applies the Go decision policy, freezes the Agent input, calls
+// the Agent and checks its identity, governance and evidence trace. It writes
+// nothing; callers decide what the governed output may become.
+func (s *TreatmentService) runGeneration(
+	ctx context.Context,
+	userID uuid.UUID,
+	input TreatmentProposalInput,
+) (*treatmentGeneration, error) {
 	if s.deployment == nil {
 		return nil, errors.New("treatment deployment policy is not configured")
 	}
@@ -311,55 +392,11 @@ func (s *TreatmentService) GenerateProposal(
 	if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, payload.EvidenceAcquisition); err != nil {
 		return nil, err
 	}
-	plan := model.TreatmentPlanContent{
-		Summary: payload.Summary, Goal: payload.Goal, DurationWeeks: payload.DurationWeeks,
-		Interventions: payload.Interventions, DailyHabits: payload.DailyHabits,
-		ExpectedTimeline: payload.ExpectedTimeline, WarningSigns: payload.WarningSigns,
-		ReviewTriggers: payload.ReviewTriggers, SafetyNotes: payload.SafetyNotes,
-	}
-	if err := validateTreatmentPlan(plan); err != nil {
-		return nil, err
-	}
-	interventions := make([]model.Intervention, 0, len(plan.Interventions))
-	for _, item := range plan.Interventions {
-		interventions = append(interventions, model.Intervention{
-			Kind: item.Kind, Title: item.Title, Description: item.Description,
-			Prescription: datatypes.JSON(rawJSON(item.Prescription, `{}`)),
-		})
-	}
-	generationTrace := buildTreatmentDecisionTrace(
-		generationDecision,
-		facts,
-		analysis.ID,
-		configurationID,
-	)
-	_, revision, err := s.repo.CreateProposal(ctx, userID, model.TreatmentRevision{
-		SourceBodyStateRevision:   bodyView.CurrentRevision,
-		SourceDiagnosisAnalysisID: analysis.ID,
-		Goal:                      plan.Goal,
-		DurationWeeks:             plan.DurationWeeks,
-		Plan:                      datatypes.JSON(rawJSON(plan, `{}`)),
-		UserConstraints:           datatypes.JSON(constraintsPayload),
-		EvidenceIDs:               datatypes.JSON(rawJSON(payload.EvidenceIDs, `[]`)),
-		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
-		AgentConfigurationID:      configurationID,
-		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
-		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
-		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
-		GenerationDecisionTrace:   generationTrace,
-		ReplayInput:               datatypes.JSON(replayInput),
-		RolloutProvenance:         datatypes.JSON(rawJSON(route, `{}`)),
-		ChangeReason:              strings.TrimSpace(input.ChangeReason),
-	}, interventions)
-	if err != nil {
-		return nil, err
-	}
-	if s.rollout != nil && route.ShadowConfigurationID != "" {
-		if observeErr := s.rollout.ObserveProposal(ctx, userID, route, revision.ID); observeErr != nil {
-			log.Printf("failed to record Treatment %s shadow observation for revision %s: %v", route.Stage, revision.ID, observeErr)
-		}
-	}
-	return revision, nil
+	return &treatmentGeneration{
+		route: route, configurationID: configurationID, analysis: analysis, facts: facts,
+		decision: generationDecision, bodyRevision: bodyView.CurrentRevision,
+		constraints: constraintsPayload, replayInput: replayInput, payload: payload,
+	}, nil
 }
 
 func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionID uuid.UUID) (*model.Treatment, error) {
