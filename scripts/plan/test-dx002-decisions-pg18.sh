@@ -35,6 +35,6 @@ if [[ "${DX002_FULL_CHECKS:-0}" == 1 ]]; then
  GOMAXPROCS=2 go vet ./...
  GOMAXPROCS=2 go test -p 1 -race -count=1 ./...
 else
- GOMAXPROCS=2 go test -p 1 -count=1 -v ./internal/service -run '^TestDiagnosisProposalDecision' "$@"
+ GOMAXPROCS=2 go test -p 1 -count=1 -v ./internal/service -run '^TestDiagnosis(ProposalDecision|Settlement)' "$@"
 
 fi
