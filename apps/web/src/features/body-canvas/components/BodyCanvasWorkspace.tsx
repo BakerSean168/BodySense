@@ -1,5 +1,5 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, BoxSelect, Brush, ChevronDown, Clock3, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Sun, Undo2, X } from "lucide-react";
 import { AppUserMenu } from "@/components/layout/AppUserMenu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -141,6 +141,20 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const [trainerLaunch, setTrainerLaunch] = useState<TrainerLaunch | null>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
+  // A mobile sheet starts below the safety banner instead of sliding under it,
+  // so the banner's real height (it can wrap) is reserved in the sheet layout.
+  const [safetyBannerHeight, setSafetyBannerHeight] = useState<number | null>(null);
+  const safetyBannerObserver = useRef<ResizeObserver | null>(null);
+  const measureSafetyBanner = useCallback((node: HTMLDivElement | null) => {
+    safetyBannerObserver.current?.disconnect();
+    safetyBannerObserver.current = null;
+    if (!node) { setSafetyBannerHeight(null); return; }
+    const update = () => setSafetyBannerHeight(node.offsetHeight || null);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    safetyBannerObserver.current = new ResizeObserver(update);
+    safetyBannerObserver.current.observe(node);
+  }, []);
   const activeWindow = activeBusinessWindow(windows);
   const trainingOpen = isBusinessWindowVisible(windows, "training") || isBusinessWindowVisible(windows, "trainer");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -620,7 +634,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       <div className="bc-account"><span className="bc-private-label">你的身体，由你确认</span><button className="bc-icon-button" onClick={() => setDark((value) => !value)} aria-label={dark ? "切换浅色" : "切换深色"} title={dark ? "切换浅色" : "切换深色"}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button><AppUserMenu compact onOpenProfile={() => openWindow("person")} /></div>
     </header>
 
-    <section className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}`} aria-label="身体画布">
+    <section className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}`} aria-label="身体画布" style={safetyBannerHeight ? ({ "--bc-safety-banner-height": `${safetyBannerHeight}px` } as CSSProperties) : undefined}>
       <div className="bc-render-area" ref={sceneRef}>
         {!textOnly ? <Suspense fallback={sceneFallback}><BodyCanvasScene tool={tool} selectedRegions={selection.regions} motion={motion} playing={effectivePlaying} speed={speed} seek={seek} resetKey={resetKey} annotationEpoch={annotationEpoch} dark={dark} onSelect={select} onGestureStart={() => setPlaying(false)} onPhaseChange={setPhase} onTextFallback={onTextFallback} /></Suspense> : <div className="bc-text-scene"><PersonStanding size={100} strokeWidth={.7} /><h2>用区域名称，一样能开始。</h2><p>3D 不是查看身体记录或提问的前提。</p><button className="bc-button" onClick={() => setTextOnly(false)}>恢复 3D 视图</button></div>}
       </div>
@@ -629,7 +643,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         {!motionMode && !props.loading && !props.error && <div className="bc-attention"><span className="bc-status">{attention.length ? `${attention.length} 个有记录的区域` : "还没有区域记录"}</span>{attention.slice(0, 3).map((summary) => <button className="bc-region-link" key={summary.regionId} onClick={() => select([summary.regionId])}><span>{getBodyRegionDefinition(summary.regionId).labels["zh-CN"]}</span><ArrowRight size={15} /></button>)}{!attention.length && <p className="bc-onboarding-note">点击身体，或直接描述你的感受。<br />不需要先填满所有信息。</p>}</div>}
       </div>
 
-      {safetyReview && <div role="alert" className="bc-safety-banner"><ShieldAlert size={19} /><span>需要先处理安全提醒，动作播放已暂停。</span><button onClick={() => openWindow("person")}>查看记录<ArrowRight size={15} /></button></div>}
+      {safetyReview && <div ref={measureSafetyBanner} role="alert" className="bc-safety-banner" data-testid="safety-banner"><ShieldAlert size={19} /><span>需要先处理安全提醒，动作播放已暂停。</span><button onClick={() => openWindow("person")}>查看记录<ArrowRight size={15} /></button></div>}
       {props.error && <div role="alert" className="bc-sync-banner">身体信息暂时无法同步。{props.onRetry && <button onClick={props.onRetry}>重试</button>}现有对话与参考模型仍可使用。</div>}
       {props.loading && <span className="bc-sync-indicator" role="status"><LoaderCircle size={14} className="animate-spin" />正在同步身体记录</span>}
 
