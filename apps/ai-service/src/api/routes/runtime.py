@@ -69,6 +69,17 @@ async def _e2e_safety_screen_question(question: dict[str, Any]) -> tuple[str, di
 
 def _e2e_intake_tool_id(run_id: str, answer: dict[str, Any]) -> str:
     """The pending E2E interrupt's tool call: the safety screen for a form answer."""
+    from ...testing_support.body_state_suggestion_fixture import SUGGESTION_ANSWER_OPTIONS
+
+    selected = answer.get("selected")
+    if (
+        isinstance(selected, list)
+        and len(selected) == 1
+        and selected[0] in SUGGESTION_ANSWER_OPTIONS
+    ):
+        from ...runtime.body_state_suggestion import suggestion_tool_call_id
+
+        return suggestion_tool_call_id(run_id)
     if not isinstance(answer.get("fields"), dict):
         return f"ask-bodyfact:{run_id}"
     from ...services.consultation_state_acquisition import safety_screen_capture_id
@@ -119,6 +130,8 @@ class UserInput(BaseModel):
     type: str = "user_message"
     text: str
     images: list[ImageRef] = Field(default_factory=list)
+    # Go's persisted id of this user message (the only citable message).
+    message_id: str | None = None
 
 
 class ConsultationRuntimeState(BaseModel):
@@ -251,6 +264,59 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                         tool_call_id=item.get("id"),
                     )
                     seq += 1
+            suggestion: dict[str, Any] | None = None
+            if (
+                manifest.intake
+                and manifest.intake.policy_revision == "body-fact-intake-v1"
+                and intake_question is None
+            ):
+                from ...runtime.body_state_suggestion import suggestion_tool_call_id
+                from ...testing_support.body_state_suggestion_fixture import (
+                    body_state_suggestion_fixture,
+                )
+
+                suggestion = await body_state_suggestion_fixture(
+                    request.input.text,
+                    request.business_context.body_state,
+                    manifest,
+                    request.run_id,
+                    request.input.message_id,
+                    pending_revisions=int(
+                        any(item["type"] == "tool_result" for item in fixture_events)
+                    ),
+                )
+            if suggestion is not None:
+                # The production proposer's typed suggestion; Go binds it to the
+                # cited user message or replaces it with an unverified notice.
+                tool_id = suggestion_tool_call_id(request.run_id)
+                placeholder = {
+                    "question": "要把你说过的这句话记录下来吗？",
+                    "answer_type": "single_choice",
+                    "options": ["记录", "不记录"],
+                    "allow_custom_input": False,
+                    "required": True,
+                }
+                yield _stub_event(
+                    seq=seq,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    tool_call_id=tool_id,
+                    event=ToolCallRuntimeEvent(tool="ask_user", args=placeholder),
+                )
+                yield _stub_event(
+                    seq=seq + 1,
+                    run_id=request.run_id,
+                    conversation_id=request.conversation_id,
+                    tool_call_id=tool_id,
+                    event=InteractionRequiredRuntimeEvent(
+                        interaction_id=uuid5(
+                            NAMESPACE_URL, f"bodysense:e2e:ask:{request.run_id}"
+                        ).hex,
+                        question=placeholder,
+                        suggestion=suggestion,
+                    ),
+                )
+                return
             if intake_question is not None or request.input.text in {
                 "E2E_BODYFACT_ASK_SELF",
                 "E2E_BODYFACT_ASK_CHOICE",
@@ -343,6 +409,7 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 run_id=request.run_id,
                 user_id=request.user_id,
                 user_message=request.input.text,
+                user_message_id=request.input.message_id,
                 images=[img.model_dump() for img in request.input.images],
                 profile=request.business_context.profile,
                 body_state=request.business_context.body_state,

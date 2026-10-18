@@ -86,6 +86,10 @@ from ..services.consultation_state_acquisition import (
 )
 from ..services.red_flag_detector import get_red_flag_detector
 from .body_fact_capture import acquire_body_fact_answer, acquire_body_fact_turn
+from .body_state_suggestion import (
+    confirm_body_state_suggestion,
+    propose_body_state_suggestion,
+)
 from .checkpoint_retention import segment_runs, tag_runtime_message
 from .checkpointing import get_runtime_checkpointer
 
@@ -155,6 +159,9 @@ class ConsultationThreadState(TypedDict, total=False):
     phase: str
     current_user_message: str
     latest_user_message: str
+    # Go's persisted id of the turn's user message (the only citable message).
+    current_user_message_id: str
+    latest_user_message_id: str
     pending_user_images: list[dict[str, Any]]
     runtime_messages: list[dict[str, Any]]
     # Go's chat retention context cursor for this turn (PC-RET-001):
@@ -176,6 +183,11 @@ class ConsultationThreadState(TypedDict, total=False):
     answer_attributions: list[dict[str, Any]]
     intake_result: dict[str, Any]
     intake_question: dict[str, Any] | None
+    # BS-AGENT-001: fact batches this stream proposed since Go last sent
+    # body_state (Go commits each one as one revision before continuing), and
+    # the one typed suggestion awaiting the user's confirmation.
+    body_state_pending_revisions: int
+    body_state_suggestion: dict[str, Any] | None
 
 
 _ai_service_instance: AIService | None = None
@@ -598,7 +610,11 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
     return {
         "runtime_messages": runtime_messages,
         "latest_user_message": current_user_message,
+        "latest_user_message_id": state.get("current_user_message_id") or "",
         "current_user_message": "",
+        "current_user_message_id": "",
+        "body_state_pending_revisions": 0,
+        "body_state_suggestion": None,
         "pending_user_images": [],
         "pending_tool_calls": [],
         "accumulated_text": "",
@@ -622,7 +638,9 @@ async def acquire_turn_state(
         return {"intake_result": {}, "intake_question": None}
 
     if manifest.intake.policy_revision == BODY_FACT_INTAKE_POLICY:
-        return await acquire_body_fact_turn(dict(state), writer=writer, manifest=manifest)
+        acquired = await acquire_body_fact_turn(dict(state), writer=writer, manifest=manifest)
+        proposed = acquired["intake_result"].get("capture_status") == "proposed"
+        return {**acquired, "body_state_pending_revisions": 1 if proposed else 0}
 
     output = await _get_intake_service().assess(
         latest_user_message=latest_user_message,
@@ -728,6 +746,17 @@ async def enforce_state_acquisition(
     if completed is not None:
         update["extracted_symptoms"] = [completed]
     return update
+
+
+async def propose_suggestion(state: ConsultationThreadState) -> dict[str, Any]:
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+    return await propose_body_state_suggestion(dict(state), manifest=manifest)
+
+
+async def confirm_suggestion(
+    state: ConsultationThreadState, *, writer: StreamWriter
+) -> dict[str, Any]:
+    return await confirm_body_state_suggestion(dict(state), writer=writer)
 
 
 def _is_non_interactive_question(question: str) -> bool:
@@ -1285,6 +1314,8 @@ def _build_graph(checkpointer: Any):
     graph.add_node("acquire_turn_state", acquire_turn_state)
     graph.add_node("safety_check", safety_check)
     graph.add_node("enforce_state_acquisition", enforce_state_acquisition)
+    graph.add_node("propose_suggestion", propose_suggestion)
+    graph.add_node("confirm_suggestion", confirm_suggestion)
     graph.add_node("llm_turn", llm_turn)
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("decide_phase", decide_phase)
@@ -1294,7 +1325,9 @@ def _build_graph(checkpointer: Any):
     graph.add_edge("prepare_turn", "acquire_turn_state")
     graph.add_edge("acquire_turn_state", "safety_check")
     graph.add_edge("safety_check", "enforce_state_acquisition")
-    graph.add_edge("enforce_state_acquisition", "llm_turn")
+    graph.add_edge("enforce_state_acquisition", "propose_suggestion")
+    graph.add_edge("propose_suggestion", "confirm_suggestion")
+    graph.add_edge("confirm_suggestion", "llm_turn")
     graph.add_conditional_edges("llm_turn", route_after_model)
     graph.add_conditional_edges("execute_tool", route_after_tool)
     graph.add_edge("decide_phase", "emit_done")
@@ -1408,6 +1441,7 @@ async def stream_thread_turn(
     run_id: str,
     user_id: str,
     user_message: str,
+    user_message_id: str | None = None,
     images: list[dict[str, Any]] | None = None,
     profile: dict[str, Any],
     extracted_info: list[dict[str, Any]],
@@ -1450,6 +1484,7 @@ async def stream_thread_turn(
             "phase": phase,
             "extracted_symptoms": extracted_info,
             "current_user_message": user_message,
+            "current_user_message_id": user_message_id or "",
             "pending_user_images": list(images or []),
             "posture_analysis": posture_analysis
             or {
@@ -1474,6 +1509,7 @@ async def stream_thread_turn(
             InteractionRequiredRuntimeEvent(
                 interaction_id=pending_interrupt.id,
                 question=payload.get("question", {}),
+                suggestion=payload.get("suggestion"),
             ),
             run_id=run_id,
             tool_call_id=payload.get("tool_call_id") or None,
@@ -1586,6 +1622,11 @@ async def resume_thread_interrupt(
             resume=answer,
             update={
                 **({"intake_result": answer_intake} if answer_intake is not None else {}),
+                # body_state below is fresh from Go, so only this resume's own
+                # answer facts are still pending as revisions.
+                "body_state_pending_revisions": (
+                    1 if (answer_intake or {}).get("capture_status") == "proposed" else 0
+                ),
                 **({"red_flag_result": answer_safety} if answer_safety is not None else {}),
                 "profile": profile or {},
                 "body_state": body_state or {},
@@ -1612,6 +1653,7 @@ async def resume_thread_interrupt(
             InteractionRequiredRuntimeEvent(
                 interaction_id=pending_interrupt.id,
                 question=payload.get("question", {}),
+                suggestion=payload.get("suggestion"),
             ),
             run_id=run_id,
             tool_call_id=payload.get("tool_call_id") or None,
