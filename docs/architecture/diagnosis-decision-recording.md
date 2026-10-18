@@ -115,3 +115,38 @@ lightweight ConditionDirectEdit of diagnosis.md §3.5 without a formal run.
 Validation: `bash scripts/plan/test-dx002-decisions-pg18.sh` now includes the
 `TestDiagnosisDirectEdit*` PG18 cases (withdraw, metadata, stale/foreign/
 replay/concurrency/Safety negatives and receipt immutability).
+
+## Analysis request binding and review prompt dismissal (UI-DX-001)
+
+Two user-only helpers sit around a formal run. Neither adopts, edits or
+re-analyses anything, and no Agent tool reaches them.
+
+- `POST /api/v1/diagnosis/analysis-requests` binds one of the owner's own
+  completed, user-authored chat messages, verbatim, as `user_message`
+  statement evidence (source version 1) — the request statement
+  `startNativeDiagnosisRun` must cite (R-DX-06: the user starts a formal
+  analysis explicitly). Structured Ask User answers, assistant, unfinished,
+  foreign or unknown messages are refused (masked 404 / 400). Binding the same
+  message again returns the evidence already bound to it (200), under a
+  per-message advisory lock.
+- `POST /api/v1/diagnosis/conditions/{conditionId}/review-prompt-dismissals`
+  is the §3.6 "暂不处理": an append-only `diagnosis_review_prompt_dismissals`
+  row with the Condition, its analysis basis (`based_on_body_state_revision`),
+  the BodyState revision the prompt was evaluated at, the Diagnosis revision
+  and the reason codes shown. Only an adopted `review_recommended` Condition
+  has a dismissable prompt; `current` and `stale` are 409
+  `REVIEW_PROMPT_NOT_SHOWN` (a stale Condition is never hidden). The Diagnosis
+  and evaluated BodyState revisions must still be current (409
+  `REVISION_CONFLICT`); a key retry replays, a reused key for another prompt is
+  409 `IDEMPOTENCY_KEY_REUSED`.
+- `GET /diagnosis` then carries `reviewPromptDismissal` on a Condition only
+  while the latest dismissal covers every reason freshness shows: same basis,
+  no stale code, every revision-attributed reason at or before the dismissed
+  revision, every unattributed reason one the user saw. Newer evidence raises
+  the prompt again; a new formal analysis resets it. Freshness, plan admission
+  (`DIAGNOSIS_STALE`) and Agent inputs are unchanged by a dismissal.
+
+Validation: `TestDiagnosisReviewPrompt*` / `TestDiagnosisAnalysisRequest*`
+PG18 cases (append-only trigger, audit tables untouched, re-raise on new
+evidence, stale refusal, owner masking, verbatim binding accepted by the
+formal-run `UserRequest` source check).

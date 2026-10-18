@@ -2641,6 +2641,74 @@
             ]
         },
         {
+            "table": "diagnosis_review_prompt_dismissals",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "based_on_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "dismissed_through_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "diagnosis_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "reason_codes",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "dismissed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "diagnosis_revisions",
             "columns": [
                 {

@@ -41,6 +41,7 @@ DROP TABLE IF EXISTS
     public.diagnosis_proposals,
     public.diagnosis_settlements,
     public.condition_relations,
+    public.diagnosis_review_prompt_dismissals,
     public.condition_disposition_changes,
     public.condition_direct_edits,
     public.diagnosis_decisions,

@@ -165,6 +165,9 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/diagnosis/analysis-runs/:runId/decisions", wrapper.DecideNativeDiagnosisProposal)
 	protected.POST("/diagnosis/analysis-runs/:runId/settlement", wrapper.SettleNativeDiagnosisRun)
 	protected.POST("/diagnosis/conditions/:conditionId/direct-edits", wrapper.DirectEditNativeDiagnosisCondition)
+	// User-only helpers: bind the user's own message as a request statement; §3.6 review prompt "not now".
+	protected.POST("/diagnosis/analysis-requests", wrapper.CreateNativeDiagnosisAnalysisRequest)
+	protected.POST("/diagnosis/conditions/:conditionId/review-prompt-dismissals", wrapper.DismissNativeDiagnosisReviewPrompt)
 
 	// Outcome feedback surfaces.
 	protected.POST("/outcomes", wrapper.RecordOutcome)

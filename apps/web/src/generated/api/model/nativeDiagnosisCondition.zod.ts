@@ -8,6 +8,7 @@
 import * as zod from 'zod/mini';
 import { NativeDiagnosisEvidenceLink } from './nativeDiagnosisEvidenceLink.zod';
 import { NativeDiagnosisFreshness } from './nativeDiagnosisFreshness.zod';
+import { NativeDiagnosisReviewPromptDismissalState } from './nativeDiagnosisReviewPromptDismissalState.zod';
 import { NativeDiagnosisSourceClaim } from './nativeDiagnosisSourceClaim.zod';
 
 export const nativeDiagnosisConditionMedicalNameMax = 240;
@@ -55,7 +56,8 @@ export const NativeDiagnosisCondition = /*#__PURE__*/ zod.strictObject({
   "committedRevision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "createdAt": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "updatedAt": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
-  "freshness": NativeDiagnosisFreshness
+  "freshness": NativeDiagnosisFreshness,
+  "reviewPromptDismissal": /*#__PURE__*/ zod.optional(NativeDiagnosisReviewPromptDismissalState)
 });
 
 export type NativeDiagnosisCondition = zod.input<typeof NativeDiagnosisCondition>;

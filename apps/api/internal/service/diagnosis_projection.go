@@ -49,6 +49,9 @@ type NativeDiagnosisCondition struct {
 	// Freshness is set only by ReviewedNativeDiagnosisReader. It is derived
 	// on every read and never persisted or sent to an Agent.
 	Freshness *DiagnosisFreshness `json:"freshness,omitempty"`
+	// ReviewPromptDismissal is set only by ReviewedNativeDiagnosisReader while
+	// the user's latest "not now" still covers the review prompt (§3.6).
+	ReviewPromptDismissal *NativeDiagnosisReviewPromptDismissal `json:"reviewPromptDismissal,omitempty"`
 }
 type NativeDiagnosisEvidenceLink struct {
 	EvidenceType    model.DiagnosisEvidenceType `json:"evidenceType"`
@@ -137,8 +140,20 @@ type diagnosisConditionFreshnessEvaluator interface {
 // closed: a Condition is never presented without an evaluated freshness. The
 // Agent-facing readers keep using NativeDiagnosisReadService directly.
 type ReviewedNativeDiagnosisReader struct {
-	reader    *NativeDiagnosisReadService
-	freshness diagnosisConditionFreshnessEvaluator
+	reader     *NativeDiagnosisReadService
+	freshness  diagnosisConditionFreshnessEvaluator
+	dismissals diagnosisReviewPromptDismissalReader
+}
+
+type diagnosisReviewPromptDismissalReader interface {
+	LatestReviewPromptDismissals(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]model.DiagnosisReviewPromptDismissal, error)
+}
+
+// WithReviewPromptDismissals lets the read say which review prompts the user
+// already put aside. Freshness itself is never changed by a dismissal.
+func (r *ReviewedNativeDiagnosisReader) WithReviewPromptDismissals(dismissals diagnosisReviewPromptDismissalReader) *ReviewedNativeDiagnosisReader {
+	r.dismissals = dismissals
+	return r
 }
 
 func NewReviewedNativeDiagnosisReader(reader *NativeDiagnosisReadService, freshness diagnosisConditionFreshnessEvaluator) *ReviewedNativeDiagnosisReader {
@@ -163,6 +178,32 @@ func (r *ReviewedNativeDiagnosisReader) Read(ctx context.Context, owner uuid.UUI
 			return nil, errors.New("diagnosis condition freshness missing")
 		}
 		view.ConditionEntries[i].Freshness = &freshness
+	}
+	if r.dismissals == nil {
+		return view, nil
+	}
+	prompted := make([]uuid.UUID, 0, len(view.ConditionEntries))
+	for _, condition := range view.ConditionEntries {
+		if condition.Freshness.State == DiagnosisFreshnessReviewRecommended {
+			prompted = append(prompted, condition.ConditionID)
+		}
+	}
+	if len(prompted) == 0 {
+		return view, nil
+	}
+	latest, err := r.dismissals.LatestReviewPromptDismissals(ctx, owner, prompted)
+	if err != nil {
+		return nil, err
+	}
+	for i := range view.ConditionEntries {
+		condition := &view.ConditionEntries[i]
+		dismissal, ok := latest[condition.ConditionID]
+		if ok && diagnosisReviewPromptDismissed(condition.Freshness, &dismissal) {
+			condition.ReviewPromptDismissal = &NativeDiagnosisReviewPromptDismissal{
+				DismissalID: dismissal.ID, DismissedThroughBodyStateRevision: dismissal.DismissedThroughBodyStateRevision,
+				DismissedAt: dismissal.DismissedAt,
+			}
+		}
 	}
 	return view, nil
 }
