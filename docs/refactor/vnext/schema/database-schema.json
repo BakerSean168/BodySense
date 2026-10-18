@@ -516,6 +516,170 @@
             ]
         },
         {
+            "table": "asset_erasure_requests",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "asset_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "inventory_revision",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "status",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "attempt_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "lease_owner",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "lease_expires_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "requested_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "erased_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "asset_erasure_targets",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "request_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "target",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "state",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "erased_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "outstanding_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "failure_code",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "attempt_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "verified_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "body_fact_commits",
             "columns": [
                 {
@@ -6980,6 +7144,13 @@
                 {
                     "udt": "timestamptz",
                     "name": "source_removed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "erased_at",
                     "type": "timestamp with time zone",
                     "default": null,
                     "nullable": true

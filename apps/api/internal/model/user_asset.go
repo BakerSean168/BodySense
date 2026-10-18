@@ -74,6 +74,7 @@ type UserAsset struct {
 	StorageKey      string                `gorm:"type:varchar(500);not null" json:"-"`
 	Availability    UserAssetAvailability `gorm:"type:varchar(20);not null;default:'available'" json:"availability"`
 	SourceRemovedAt *time.Time            `gorm:"" json:"source_removed_at,omitempty"`
+	ErasedAt        *time.Time            `gorm:"" json:"erased_at,omitempty"`
 	CreatedAt       time.Time             `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt       time.Time             `gorm:"not null;default:now()" json:"updated_at"`
 }
