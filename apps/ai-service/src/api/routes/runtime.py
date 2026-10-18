@@ -35,6 +35,7 @@ from ...models.consultation_runtime_event import (
     ToolCallRuntimeEvent,
     ToolResultRuntimeEvent,
 )
+from ...runtime.asset_erasure import erase_asset_runtime_copies
 from ...runtime.checkpoint_retention import (
     CheckpointCleanupError,
     UnsupportedCheckpointerError,
@@ -551,4 +552,51 @@ async def cleanup_checkpoints(thread_id: UUID, request: CheckpointCleanupRequest
         "retained_messages": receipt.retained_messages,
         "deleted_checkpoints": receipt.deleted_checkpoints,
         "remaining_run_ids": receipt.remaining_run_ids,
+    }
+
+
+class AssetRuntimeErasureRequest(BaseModel):
+    """Go asks to erase one asset from the user's consultation threads (AS-002)."""
+
+    user_id: UUID
+    # The asset's content hash: inline image copies are matched by the
+    # SHA-256 of their decoded bytes, derived copies by the asset id.
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    # Every consultation thread (= Conversation) of the user, and the subset a
+    # message attached the asset to.
+    thread_ids: list[UUID] = Field(max_length=1_000)
+    attached_thread_ids: list[UUID] = Field(default_factory=list, max_length=1_000)
+
+
+@router.post("/assets/{asset_id}/erasure")
+async def erase_asset_runtime(asset_id: UUID, request: AssetRuntimeErasureRequest):
+    if not set(request.attached_thread_ids) <= set(request.thread_ids):
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "thread_mismatch", "message": "attached threads must be listed"},
+        )
+    try:
+        receipt = await erase_asset_runtime_copies(
+            await get_runtime_graph(),
+            asset_id=str(asset_id),
+            content_sha256=request.content_sha256,
+            thread_ids=[str(thread_id) for thread_id in request.thread_ids],
+            attached_thread_ids=[str(thread_id) for thread_id in request.attached_thread_ids],
+        )
+    except UnsupportedCheckpointerError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": str(exc)})
+    return {
+        "status": receipt.status,
+        "asset_id": receipt.asset_id,
+        "threads": [
+            {
+                "thread_id": item.thread_id,
+                "status": item.status,
+                "checkpoint_id": item.checkpoint_id,
+                "redacted_refs": item.redacted_refs,
+                "deleted_checkpoints": item.deleted_checkpoints,
+                "failure_code": item.failure_code,
+            }
+            for item in receipt.threads
+        ],
     }

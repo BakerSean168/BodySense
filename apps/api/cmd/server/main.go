@@ -177,7 +177,9 @@ func main() {
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	// AS-002: per-asset erasure of the source and every controlled copy; the
 	// worker resumes interrupted passes and retries transient target failures.
-	assetErasureService := service.NewAssetErasureService(repository.NewAssetErasureRepository(database.DB), uploadService)
+	// The ai-service erases and verifies the consultation runtime copies.
+	assetErasureService := service.NewAssetErasureService(repository.NewAssetErasureRepository(database.DB), uploadService).
+		WithRuntimeEraser(aiClient)
 	assetErasureService.StartWorker(context.Background(), time.Minute)
 	// PC-RET-001: prune jobs run only when something enqueues them; a pass
 	// moves no cursor until the ai-service checkpoint cleanup is verified.

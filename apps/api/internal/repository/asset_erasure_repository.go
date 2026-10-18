@@ -220,8 +220,6 @@ func (r *AssetErasureRepository) ExecuteDatabaseTarget(ctx context.Context, requ
 			outcome, err = eraseAssetDocumentExtractions(tx, request.UserID, request.AssetID)
 		case model.AssetErasureAssessmentReports:
 			outcome, err = inventoryOnly(tx, countAssetAssessmentRefs, request, model.AssetErasureTargetBlocked, model.AssetErasureCodeAssessmentFrozen)
-		case model.AssetErasureRuntimeCheckpoints:
-			outcome, err = inventoryOnly(tx, countAssetRuntimeRefs, request, model.AssetErasureTargetUnsupported, model.AssetErasureCodeRuntimeHookPending)
 		default:
 			err = fmt.Errorf("target %s is not a database target", target)
 		}
@@ -400,12 +398,35 @@ func countAssetAssessmentRefs(tx *gorm.DB, userID, assetID uuid.UUID) (int, erro
 	return countRowsMentioning(tx, "assessment_reports", userID, []string{assetID.String()})
 }
 
-// countAssetRuntimeRefs counts conversations a message attached the asset to.
-// Their runtime checkpoints may hold the inline image the runtime received.
-func countAssetRuntimeRefs(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
-	return countRows(tx, `SELECT count(DISTINCT m.conversation_id) FROM messages m
- JOIN conversations c ON c.id = m.conversation_id
- WHERE c.user_id = ? AND m.parts @> jsonb_build_array(jsonb_build_object('upload_id', ?::text))`, userID, assetID.String())
+// RuntimeScope lists what the runtime_checkpoints target hands the
+// ai-service: every Conversation of the owner (thread id = Conversation id),
+// those a message attached the asset to, and the asset's content hash.
+// Messages keep only the upload_id pointer; they are conversation records,
+// not copies, so they never block erasure.
+func (r *AssetErasureRepository) RuntimeScope(ctx context.Context, userID, assetID uuid.UUID) (model.AssetRuntimeScope, error) {
+	var scope model.AssetRuntimeScope
+	var rows []struct {
+		ID       uuid.UUID
+		Attached bool
+	}
+	if err := r.conn(ctx).Raw(`SELECT c.id, EXISTS (
+    SELECT 1 FROM messages m
+    WHERE m.conversation_id = c.id
+      AND m.parts @> jsonb_build_array(jsonb_build_object('upload_id', ?::text))) AS attached
+ FROM conversations c WHERE c.user_id = ? ORDER BY c.id`, assetID.String(), userID).Scan(&rows).Error; err != nil {
+		return scope, fmt.Errorf("asset runtime scope: %w", err)
+	}
+	for _, row := range rows {
+		scope.ThreadIDs = append(scope.ThreadIDs, row.ID)
+		if row.Attached {
+			scope.AttachedThreadIDs = append(scope.AttachedThreadIDs, row.ID)
+		}
+	}
+	if err := r.conn(ctx).Raw(`SELECT coalesce(content_sha256, '') FROM user_assets WHERE user_id = ? AND id = ?`,
+		userID, assetID).Scan(&scope.ContentSHA256).Error; err != nil {
+		return scope, fmt.Errorf("asset runtime scope: %w", err)
+	}
+	return scope, nil
 }
 
 // countRowsMentioning matches the whole owner-scoped row as JSON text, so a
@@ -489,6 +510,9 @@ WHERE user_id = ? AND id = ?`, now, now, request.UserID, request.ID).Error; err 
 
 // recheckAssetCopies re-counts every database family under the asset row
 // lock; composite-FK inserts against the asset wait for this transaction.
+// Runtime checkpoints live outside this database: their target verifies on
+// the ai-service receipt, and no new copy can appear once the source is
+// unavailable (images are resolved from it) and the posture runs are gone.
 func recheckAssetCopies(tx *gorm.DB, userID, assetID uuid.UUID) (map[model.AssetErasureTargetName]int, error) {
 	found := map[model.AssetErasureTargetName]int{}
 	jobs, _, err := assetJobIDs(tx, userID, assetID)
@@ -511,7 +535,6 @@ func recheckAssetCopies(tx *gorm.DB, userID, assetID uuid.UUID) (map[model.Asset
 		{model.AssetErasureDiagnosisRecords, countAssetDiagnosisRefs},
 		{model.AssetErasureDocumentExtractions, countAssetDocumentCopies},
 		{model.AssetErasureAssessmentReports, countAssetAssessmentRefs},
-		{model.AssetErasureRuntimeCheckpoints, countAssetRuntimeRefs},
 	}
 	for _, check := range checks {
 		n, err := check.count(tx, userID, assetID)

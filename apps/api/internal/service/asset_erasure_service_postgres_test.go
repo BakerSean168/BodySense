@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -260,5 +261,117 @@ func TestUserAssetErasureWorkerRecoveryPostgres(t *testing.T) {
 	receipt, _ = f.erasure.Receipt(ctx, f.owner, f.photo.ID)
 	if receipt.Request.AttemptCount != attempts {
 		t.Fatal("erased request re-run")
+	}
+}
+
+type fakeRuntimeEraser struct {
+	scopes   []model.AssetRuntimeScope
+	receipts []func(asset uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error)
+}
+
+func (f *fakeRuntimeEraser) EraseAssetRuntimeCopies(_ context.Context, _ uuid.UUID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+	f.scopes = append(f.scopes, scope)
+	next := f.receipts[0]
+	if len(f.receipts) > 1 {
+		f.receipts = f.receipts[1:]
+	}
+	return next(assetID, scope)
+}
+
+func runtimeReceipt(status string, threads ...model.AssetRuntimeThreadReceipt) func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+	return func(asset uuid.UUID, _ model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+		return &model.AssetRuntimeErasureReceipt{Status: status, AssetID: asset.String(), Threads: threads}, nil
+	}
+}
+
+// seedPhotoConversation creates the owner's Conversation with one user
+// message attaching the photo asset.
+func (f *assetErasureFixture) seedPhotoConversation(t *testing.T) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	if err := f.db.Exec(`INSERT INTO conversations(id,user_id) VALUES (?,?)`, id, f.owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	parts := `[{"type":"image","upload_id":"` + f.photo.ID.String() + `"}]`
+	if err := f.db.Exec(`INSERT INTO messages(conversation_id,turn_id,role,status,seq,parts) VALUES (?,?,'user','completed',1,?::jsonb)`,
+		id, uuid.New(), parts).Error; err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// The runtime target hands the ai-service every conversation of the owner
+// (one today; marking the attached ones) and verifies only on a receipt covering all of
+// them. A conversation waiting on Ask User keeps the asset outstanding (never
+// erased early); the worker retries, and the attaching message itself stays.
+func TestUserAssetErasureRuntimeCheckpointsPostgres(t *testing.T) {
+	f := newAssetErasureFixture(t)
+	ctx := context.Background()
+	f.erasure.retryAfter = 0
+	attached := f.seedPhotoConversation(t)
+	busy := "thread_busy"
+	runtime := &fakeRuntimeEraser{receipts: []func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error){
+		func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+			return nil, errors.New("synthetic ai-service outage")
+		},
+		runtimeReceipt("outstanding",
+			model.AssetRuntimeThreadReceipt{ThreadID: attached.String(), Status: "outstanding", FailureCode: &busy}),
+		runtimeReceipt("erased",
+			model.AssetRuntimeThreadReceipt{ThreadID: attached.String(), Status: "erased", RedactedRefs: 1, DeletedCheckpoints: 6}),
+	}}
+
+	// Without a runtime eraser the target cannot verify.
+	receipt, err := f.erasure.Request(ctx, f.owner, f.photo.ID, "runtime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := targetState(receipt, model.AssetErasureRuntimeCheckpoints)
+	if receipt.Request.Status != model.AssetErasureOutstanding || target.State != model.AssetErasureTargetFailed ||
+		target.FailureCode == nil || *target.FailureCode != model.AssetErasureCodeRuntimeUnavailable || target.OutstandingCount != 1 {
+		t.Fatalf("no eraser: request=%s target=%+v", receipt.Request.Status, target)
+	}
+
+	f.erasure.WithRuntimeEraser(runtime)
+	wantRuntime := func(state model.AssetErasureTargetState, code string, status model.AssetErasureStatus) *model.AssetErasureReceipt {
+		t.Helper()
+		if _, err := f.erasure.Recover(ctx, 50); err != nil {
+			t.Fatal(err)
+		}
+		receipt, err := f.erasure.Receipt(ctx, f.owner, f.photo.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		target := targetState(receipt, model.AssetErasureRuntimeCheckpoints)
+		gotCode := ""
+		if target.FailureCode != nil {
+			gotCode = *target.FailureCode
+		}
+		if target.State != state || gotCode != code || receipt.Request.Status != status {
+			t.Fatalf("runtime target=%+v code=%s request=%s", target, gotCode, receipt.Request.Status)
+		}
+		return receipt
+	}
+	wantRuntime(model.AssetErasureTargetFailed, model.AssetErasureCodeRuntimeUnavailable, model.AssetErasureOutstanding)
+	wantRuntime(model.AssetErasureTargetFailed, model.AssetErasureCodeRuntimeThreadBusy, model.AssetErasureOutstanding)
+	photo, _ := f.assets.GetOwnedByID(ctx, f.photo.ID, f.owner)
+	if photo.Availability != model.UserAssetSourceRemoved {
+		t.Fatalf("asset erased while runtime copies are outstanding: %s", photo.Availability)
+	}
+	receipt = wantRuntime(model.AssetErasureTargetVerified, "", model.AssetErasureErased)
+	if target := targetState(receipt, model.AssetErasureRuntimeCheckpoints); target.ErasedCount != 7 {
+		t.Fatalf("runtime erased count=%d", target.ErasedCount)
+	}
+
+	scope := runtime.scopes[len(runtime.scopes)-1]
+	if !slices.Equal(scope.ThreadIDs, []uuid.UUID{attached}) || !slices.Equal(scope.AttachedThreadIDs, []uuid.UUID{attached}) ||
+		scope.ContentSHA256 != f.photo.ContentSHA256 {
+		t.Fatalf("scope=%+v", scope)
+	}
+	if n := f.count(t, `SELECT count(*) FROM messages WHERE conversation_id=?`, attached); n != 1 {
+		t.Fatalf("attaching message removed: %d", n)
+	}
+	calls := len(runtime.scopes)
+	if _, err := f.erasure.Request(ctx, f.owner, f.photo.ID, "runtime"); err != nil || len(runtime.scopes) != calls {
+		t.Fatalf("erased request called the runtime again: %v", err)
 	}
 }

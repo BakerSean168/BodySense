@@ -134,8 +134,8 @@ func TestUserAssetErasureDiagnosisPinnedPostgres(t *testing.T) {
 	}
 }
 
-// Each target verifies on its own: live work, frozen assessment input and an
-// unsupported runtime store leave the request outstanding while every other
+// Each target verifies on its own: live work, frozen assessment input and a
+// runtime target without a receipt leave the request outstanding while every other
 // family is erased; a copy that reappears reopens its target; only an
 // all-verified request tombstones the asset, and erased is terminal.
 func TestUserAssetErasureTargetsPostgres(t *testing.T) {
@@ -190,8 +190,25 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	}
 	wantErasureOutcome(t, "assessment", execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports),
 		model.AssetErasureTargetBlocked, model.AssetErasureCodeAssessmentFrozen, 1)
-	wantErasureOutcome(t, "runtime", execErasureTarget(t, repo, request, model.AssetErasureRuntimeCheckpoints),
-		model.AssetErasureTargetUnsupported, model.AssetErasureCodeRuntimeHookPending, 1)
+	// The runtime target is executed by the ai-service; the repository only
+	// scopes it: every Conversation of the owner, the attached ones, the hash.
+	scope, err := repo.RuntimeScope(ctx, owner, asset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scope.ThreadIDs) != 1 || len(scope.AttachedThreadIDs) != 1 || scope.AttachedThreadIDs[0] != scope.ThreadIDs[0] ||
+		len(scope.ContentSHA256) != 64 {
+		t.Fatalf("runtime scope=%+v", scope)
+	}
+	if unrelatedScope, err := repo.RuntimeScope(ctx, owner, unrelated); err != nil || len(unrelatedScope.ThreadIDs) != 1 || len(unrelatedScope.AttachedThreadIDs) != 0 {
+		t.Fatalf("unrelated scope=%+v err=%v", unrelatedScope, err)
+	}
+	if foreignScope, err := repo.RuntimeScope(ctx, foreign, asset); err != nil || len(foreignScope.ThreadIDs) != 0 || foreignScope.ContentSHA256 != "" {
+		t.Fatalf("foreign scope=%+v err=%v", foreignScope, err)
+	}
+	if _, err := repo.ExecuteDatabaseTarget(ctx, request, model.AssetErasureRuntimeCheckpoints); err == nil {
+		t.Fatal("runtime checkpoints are not a database target")
+	}
 	if err := repo.RecordOutcome(ctx, request, model.AssetErasureSourceObjects, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: 1}); err != nil {
 		t.Fatal(err)
 	}
@@ -221,11 +238,12 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	if err := db.Exec(`DELETE FROM assessment_reports WHERE user_id=?`, owner).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Exec(`DELETE FROM messages WHERE parts @> jsonb_build_array(jsonb_build_object('upload_id',?::text))`, asset.String()).Error; err != nil {
+	execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
+	// A verified runtime receipt; the attaching message stays (a conversation
+	// record holding only the upload_id pointer) and never blocks finalize.
+	if err := repo.RecordOutcome(ctx, request, model.AssetErasureRuntimeCheckpoints, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: 2}); err != nil {
 		t.Fatal(err)
 	}
-	execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
-	execErasureTarget(t, repo, request, model.AssetErasureRuntimeCheckpoints)
 	// A copy written after its target verified reopens that target.
 	seedErasureExtraction(t, db, owner, asset, false)
 	if erased, err := repo.Finalize(ctx, request); err != nil || erased {
@@ -268,6 +286,9 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	}
 	if err := db.Exec(`UPDATE asset_erasure_requests SET status='outstanding', erased_at=NULL WHERE id=?`, request.ID).Error; err == nil {
 		t.Fatal("erased request reopened")
+	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM messages WHERE parts @> jsonb_build_array(jsonb_build_object('upload_id',?::text))`, asset.String()); n != 1 {
+		t.Fatalf("attaching message: %d", n)
 	}
 	// Unrelated sources of the same owner are untouched.
 	if n := erasureRows(t, db, `SELECT count(*) FROM document_indicator_reviews WHERE asset_id=?`, unrelated); n != 1 {
