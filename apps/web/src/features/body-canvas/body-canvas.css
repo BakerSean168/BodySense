@@ -2225,3 +2225,5 @@
 .bc-dx-state .bc-dx-icon-button { margin-top: 12px; background: var(--dx-idle-bg); color: var(--dx-ok); }
 .bc-dx-receipt-ref { font-size: 11px; }
 .bc-diagnosis-context .bc-window-context-select { font-size: 14px; }
+.bc-dx-decided { flex-wrap: nowrap; }
+.bc-dx-decided-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

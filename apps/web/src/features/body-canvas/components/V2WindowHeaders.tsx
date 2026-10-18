@@ -17,16 +17,18 @@ export interface DiagnosisWindowHeaderProps {
 const MODE_LABELS = { analysis: "正式分析", receipt: "提交回执" } as const;
 
 /** Penpot "Window / Title Diagnosis": 🩺 诊断 / <selector>. */
-function DiagnosisTitle() {
+function DiagnosisTitle({ separator = true }: { separator?: boolean }) {
   return (
     <>
       <span className="bc-window-context-title">
         <Stethoscope size={18} aria-hidden="true" />
         诊断
       </span>
-      <span className="bc-window-context-sep" aria-hidden="true">
-        /
-      </span>
+      {separator ? (
+        <span className="bc-window-context-sep" aria-hidden="true">
+          /
+        </span>
+      ) : null}
     </>
   );
 }
@@ -61,7 +63,7 @@ export function DiagnosisWindowHeader({
   if (view.confirmed.length === 0)
     return (
       <div className="bc-window-context bc-diagnosis-context">
-        <DiagnosisTitle />
+        <DiagnosisTitle separator={false} />
       </div>
     );
 
