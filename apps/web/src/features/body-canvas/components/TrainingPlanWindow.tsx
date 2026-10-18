@@ -5,7 +5,6 @@ import {
   Check,
   CircleHelp,
   Clock3,
-  Dumbbell,
   Eye,
   LoaderCircle,
   MessageCircle,
@@ -28,6 +27,7 @@ import {
   type TrainingTone,
   type TrainingWindowView,
 } from "../model/trainingPlans";
+import { TrainingIcon } from "./TrainingIcon";
 
 /**
  * Penpot "03 App" Training boards on the V2 plan records: Empty, Accepted,
@@ -459,7 +459,7 @@ export function TrainingPlanWindow({ state, controls, canExecute }: TrainingPlan
         <div className="bc-dx-outcome bc-tp-empty" data-testid="training-empty">
           <div className="bc-dx-state">
             <span className="bc-dx-state-halo" aria-hidden="true">
-              <Dumbbell size={22} />
+              <TrainingIcon size={22} />
             </span>
             <p className="bc-dx-state-title">还没有训练计划</p>
             <p className="bc-dx-state-text">确认诊断后，可在对话里生成训练建议</p>

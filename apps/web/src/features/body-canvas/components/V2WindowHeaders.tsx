@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Clock3, Dumbbell, Stethoscope } from "lucide-react";
+import { ChevronDown, Clock3, Stethoscope } from "lucide-react";
+import { TrainingIcon } from "./TrainingIcon";
 import type { TrainingSelection } from "../model/trainingPlanSelection";
 
 export interface DiagnosisWindowHeaderProps {
@@ -108,7 +109,7 @@ export function TrainingWindowHeader({ view, onSelectPlan }: TrainingWindowHeade
   const title = (separator: boolean) => (
     <>
       <span className="bc-window-context-title">
-        <Dumbbell size={18} aria-hidden="true" />
+        <TrainingIcon size={18} aria-hidden="true" />
         训练
       </span>
       {separator ? (
