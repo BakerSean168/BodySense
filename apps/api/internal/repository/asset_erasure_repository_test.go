@@ -132,6 +132,66 @@ func TestUserAssetErasureDiagnosisPinnedPostgres(t *testing.T) {
 	if err := db.Raw(`SELECT availability FROM user_assets WHERE id=?`, asset).Scan(&availability).Error; err != nil || availability != "source_removed" {
 		t.Fatalf("availability=%q err=%v", availability, err)
 	}
+	// The receipt names what needs review: the adopted condition citing it.
+	receipt, err = repo.GetByAsset(ctx, f.owner, asset)
+	if err != nil || len(receipt.Reviews) != 1 || receipt.Reviews[0].Subject != model.ErasureReviewDiagnosisCondition || receipt.Reviews[0].SubjectID != f.entry.ID {
+		t.Fatalf("reviews=%+v err=%v", receipt, err)
+	}
+	// Frozen assessment input naming a pinned asset stays until the review.
+	if err := db.Exec(`INSERT INTO assessment_reports(user_id,status,observations) VALUES (?,'completed',?::jsonb)`,
+		f.owner, `[{"ref":"report:upload:`+asset.String()+`:indicator:0"}]`).Error; err != nil {
+		t.Fatal(err)
+	}
+	got = execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
+	wantErasureOutcome(t, model.AssetErasureAssessmentReports, got, model.AssetErasureTargetBlocked, model.AssetErasureCodeAssessmentFrozen, 1)
+
+	// The user withdraws the condition: the pin is released. The Diagnosis
+	// still links to the review, so the evidence becomes a content-free
+	// tombstone in place; nothing in the Diagnosis changes.
+	before := erasureRows(t, db, `SELECT count(*) FROM condition_entry_evidence WHERE user_id=?`, f.owner)
+	if err := db.Exec(`UPDATE condition_entries SET disposition='inactive' WHERE user_id=? AND id=?`, f.owner, f.entry.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	wantErasureOutcome(t, "diagnosis", execErasureTarget(t, repo, request, model.AssetErasureDiagnosisRecords), model.AssetErasureTargetVerified, "", 0)
+	if err := db.Exec(`UPDATE document_extraction_runs SET status='failed' WHERE asset_id=?`, asset).Error; err != nil {
+		t.Fatal(err)
+	}
+	got = execErasureTarget(t, repo, request, model.AssetErasureDocumentExtractions)
+	if got.State != model.AssetErasureTargetVerified || got.Erased != 2 {
+		t.Fatalf("extractions after withdrawal: %+v", got)
+	}
+	got = execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
+	if got.State != model.AssetErasureTargetVerified || got.Erased != 1 {
+		t.Fatalf("assessment after withdrawal: %+v", got)
+	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM document_indicator_reviews WHERE id=? AND erased_at IS NOT NULL
+ AND reviewed_payload='{}' AND machine_candidate='{}' AND note=''`, review); n != 1 {
+		t.Fatalf("review tombstone: %d", n)
+	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM document_extraction_runs WHERE asset_id=? AND erased_at IS NOT NULL
+ AND result_payload IS NULL AND document_sha256 IS NULL`, asset); n != 1 {
+		t.Fatalf("run tombstone: %d", n)
+	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM condition_entry_evidence WHERE user_id=?`, f.owner); n != before {
+		t.Fatalf("diagnosis evidence changed: %d -> %d", before, n)
+	}
+	if rows, err := NewDocumentIndicatorReviewRepository(db).ListByAsset(ctx, asset, f.owner); err != nil || len(rows) != 0 {
+		t.Fatalf("tombstone listed: %d %v", len(rows), err)
+	}
+	if err := db.Exec(`UPDATE document_indicator_reviews SET note='back' WHERE id=?`, review).Error; err == nil {
+		t.Fatal("tombstone revived")
+	}
+	for _, target := range []model.AssetErasureTargetName{model.AssetErasureSourceObjects, model.AssetErasureDerivedJobs, model.AssetErasurePostureAnalyses, model.AssetErasureRuntimeCheckpoints} {
+		if err := repo.RecordOutcome(ctx, request, target, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if erased, err := repo.Finalize(ctx, request); err != nil || !erased {
+		t.Fatalf("finalize after review: erased=%v err=%v", erased, err)
+	}
+	if receipt, err = repo.GetByAsset(ctx, f.owner, asset); err != nil || len(receipt.Reviews) != 0 || receipt.Request.Status != model.AssetErasureErased {
+		t.Fatalf("receipt after review=%+v err=%v", receipt, err)
+	}
 }
 
 // Each target verifies on its own: live work, frozen assessment input and a
@@ -184,12 +244,22 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	}
 	wantErasureOutcome(t, "posture", execErasureTarget(t, repo, request, model.AssetErasurePostureAnalyses), model.AssetErasureTargetVerified, "", 0)
 	wantErasureOutcome(t, "diagnosis", execErasureTarget(t, repo, request, model.AssetErasureDiagnosisRecords), model.AssetErasureTargetVerified, "", 0)
+	if err := db.Exec(`UPDATE document_extraction_runs SET status='failed' WHERE asset_id=?`, asset).Error; err != nil {
+		t.Fatal(err)
+	}
 	got = execErasureTarget(t, repo, request, model.AssetErasureDocumentExtractions)
 	if got.State != model.AssetErasureTargetVerified || got.Erased != 2 {
 		t.Fatalf("extractions: %+v", got)
 	}
-	wantErasureOutcome(t, "assessment", execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports),
-		model.AssetErasureTargetBlocked, model.AssetErasureCodeAssessmentFrozen, 1)
+	// No adopted condition cites the asset: the report whose frozen input names
+	// it is deleted whole (never rewritten).
+	got = execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
+	if got.State != model.AssetErasureTargetVerified || got.Erased != 1 {
+		t.Fatalf("assessment: %+v", got)
+	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM assessment_reports WHERE user_id=?`, owner); n != 0 {
+		t.Fatalf("assessment reports kept: %d", n)
+	}
 	// The runtime target is executed by the ai-service; the repository only
 	// scopes it: every Conversation of the owner, the attached ones, the hash.
 	scope, err := repo.RuntimeScope(ctx, owner, asset)
@@ -227,18 +297,13 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 		outstanding = append(outstanding, string(target.Target))
 	}
 	sort.Strings(outstanding)
-	if strings.Join(outstanding, ",") != "assessment_reports,asset_manifest,runtime_checkpoints" {
+	if strings.Join(outstanding, ",") != "asset_manifest,runtime_checkpoints" {
 		t.Fatalf("outstanding=%v", outstanding)
 	}
 	if _, err := repo.GetByAsset(ctx, foreign, asset); !errors.Is(err, model.ErrAssetErasureNotFound) {
 		t.Fatalf("foreign receipt read: %v", err)
 	}
 
-	// The later slices' handlers/decisions remove these copies; simulate that.
-	if err := db.Exec(`DELETE FROM assessment_reports WHERE user_id=?`, owner).Error; err != nil {
-		t.Fatal(err)
-	}
-	execErasureTarget(t, repo, request, model.AssetErasureAssessmentReports)
 	// A verified runtime receipt; the attaching message stays (a conversation
 	// record holding only the upload_id pointer) and never blocks finalize.
 	if err := repo.RecordOutcome(ctx, request, model.AssetErasureRuntimeCheckpoints, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: 2}); err != nil {

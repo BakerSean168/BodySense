@@ -209,13 +209,15 @@ CREATE TABLE public.body_facts (
     created_revision bigint NOT NULL,
     recorded_at timestamp with time zone NOT NULL,
     supersedes_fact_id uuid,
+    erased_at timestamp with time zone,
+    CONSTRAINT body_facts_erased_check CHECK (((erased_at IS NULL) OR ((assertion_status <> 'asserted'::text) AND (statement = ''::text) AND (details = '{}'::jsonb) AND (body_region_ids = '[]'::jsonb) AND (temporal = '{"precision": "unknown"}'::jsonb)))),
     CONSTRAINT body_facts_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text, 'withdrawn'::text]))),
     CONSTRAINT body_facts_body_region_ids_check CHECK (((jsonb_typeof(body_region_ids) = 'array'::text) AND (jsonb_array_length(body_region_ids) <= 20))),
     CONSTRAINT body_facts_created_revision_check CHECK ((created_revision > 0)),
     CONSTRAINT body_facts_details_check CHECK ((jsonb_typeof(details) = 'object'::text)),
     CONSTRAINT body_facts_kind_check CHECK ((kind = ANY (ARRAY['symptom'::text, 'health_history'::text, 'activity'::text, 'lifestyle'::text, 'training_feedback'::text]))),
     CONSTRAINT body_facts_no_self_supersession CHECK (((supersedes_fact_id IS NULL) OR (supersedes_fact_id <> id))),
-    CONSTRAINT body_facts_statement_check CHECK ((((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (char_length(btrim(statement)) > 0))),
+    CONSTRAINT body_facts_statement_check CHECK (((erased_at IS NOT NULL) OR (((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (char_length(btrim(statement)) > 0)))),
     CONSTRAINT body_facts_subject_check CHECK ((subject = 'self'::text)),
     CONSTRAINT body_facts_temporal_check CHECK (((jsonb_typeof(temporal) = 'object'::text) AND (temporal ? 'precision'::text) AND (jsonb_typeof((temporal -> 'precision'::text)) = 'string'::text) AND ((temporal ->> 'precision'::text) = ANY (ARRAY['exact'::text, 'day'::text, 'range'::text, 'approximate'::text, 'unknown'::text]))))
 );
@@ -238,10 +240,12 @@ CREATE TABLE public.body_hypotheses (
     withdrawal_reason text,
     supersedes_hypothesis_id uuid,
     lineage_id uuid NOT NULL,
+    erased_at timestamp with time zone,
+    CONSTRAINT body_hypotheses_erased_check CHECK (((erased_at IS NULL) OR ((assertion_status <> 'asserted'::text) AND (statement = ''::text) AND (withdrawal_reason IS NULL)))),
     CONSTRAINT body_hypotheses_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text, 'withdrawn'::text]))),
     CONSTRAINT body_hypotheses_created_revision_check CHECK ((created_revision > 0)),
     CONSTRAINT body_hypotheses_lineage_check CHECK ((((supersedes_hypothesis_id IS NULL) AND (lineage_id = id)) OR ((supersedes_hypothesis_id IS NOT NULL) AND (supersedes_hypothesis_id <> id) AND (lineage_id <> id)))),
-    CONSTRAINT body_hypotheses_statement_check CHECK ((((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (statement = btrim(statement)))),
+    CONSTRAINT body_hypotheses_statement_check CHECK (((erased_at IS NOT NULL) OR (((char_length(statement) >= 1) AND (char_length(statement) <= 2000)) AND (statement = btrim(statement))))),
     CONSTRAINT body_hypotheses_withdrawal_check CHECK ((((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text])) AND (withdrawn_at IS NULL) AND (withdrawn_revision IS NULL) AND (withdrawal_reason IS NULL)) OR ((assertion_status = 'withdrawn'::text) AND (withdrawn_at IS NOT NULL) AND (withdrawn_revision > created_revision)))),
     CONSTRAINT body_hypotheses_withdrawal_reason_check CHECK (((withdrawal_reason IS NULL) OR (((char_length(withdrawal_reason) >= 1) AND (char_length(withdrawal_reason) <= 500)) AND (withdrawal_reason = btrim(withdrawal_reason)))))
 );
@@ -341,6 +345,8 @@ CREATE TABLE public.body_observations (
     supersedes_observation_id uuid,
     created_revision bigint NOT NULL,
     recorded_at timestamp with time zone NOT NULL,
+    erased_at timestamp with time zone,
+    CONSTRAINT body_observations_erased_check CHECK (((erased_at IS NULL) OR ((assertion_status <> 'asserted'::text) AND (raw_value = ''::text) AND (raw_unit = ''::text) AND (method = ''::text) AND (measurement_context = ''::text) AND (observed_at = '{"precision": "unknown"}'::jsonb)))),
     CONSTRAINT body_observations_assertion_status_check CHECK ((assertion_status = ANY (ARRAY['asserted'::text, 'superseded'::text, 'withdrawn'::text]))),
     CONSTRAINT body_observations_check CHECK (((raw_value <> ''::text) OR (raw_unit = ''::text))),
     CONSTRAINT body_observations_check1 CHECK (((supersedes_observation_id IS NULL) OR (supersedes_observation_id <> id))),
@@ -480,11 +486,13 @@ CREATE TABLE public.document_extraction_runs (
     mechanism_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    erased_at timestamp with time zone,
     CONSTRAINT document_extraction_runs_document_sha256_check CHECK ((document_sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT document_extraction_runs_raw_text_sha256_check CHECK ((raw_text_sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT document_extraction_runs_result_sha256_check CHECK ((result_sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT document_extraction_runs_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text]))),
-    CONSTRAINT document_extraction_runs_completed_audit_check CHECK (((status)::text <> 'completed'::text) OR ((document_sha256 IS NOT NULL) AND (result_sha256 IS NOT NULL) AND (raw_text_sha256 IS NOT NULL) AND (mechanism_revision IS NOT NULL) AND (result_payload IS NOT NULL)))
+    CONSTRAINT document_extraction_runs_erased_check CHECK (((erased_at IS NULL) OR ((result_payload IS NULL) AND (document_sha256 IS NULL) AND (result_sha256 IS NULL) AND (raw_text_sha256 IS NULL) AND (indicator_snapshot = '[]'::jsonb) AND (source_summary = '{}'::jsonb)))),
+    CONSTRAINT document_extraction_runs_completed_audit_check CHECK (((status)::text <> 'completed'::text) OR (erased_at IS NOT NULL) OR ((document_sha256 IS NOT NULL) AND (result_sha256 IS NOT NULL) AND (raw_text_sha256 IS NOT NULL) AND (mechanism_revision IS NOT NULL) AND (result_payload IS NOT NULL)))
 );
 
 
@@ -507,6 +515,8 @@ CREATE TABLE public.document_indicator_reviews (
     reviewer_user_id uuid NOT NULL,
     note text DEFAULT ''::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    erased_at timestamp with time zone,
+    CONSTRAINT document_indicator_reviews_erased_check CHECK (((erased_at IS NULL) OR ((reviewed_payload = '{}'::jsonb) AND (machine_candidate = '{}'::jsonb) AND (source_refs = '[]'::jsonb) AND (page_ref = '{}'::jsonb) AND (note = ''::text)))),
     CONSTRAINT document_indicator_reviews_action_check CHECK (((action)::text = ANY (ARRAY[('confirm'::character varying)::text, ('correct'::character varying)::text, ('reject'::character varying)::text]))),
     CONSTRAINT document_indicator_reviews_idempotency_key_check CHECK (((idempotency_key)::text <> ''::text)),
     CONSTRAINT document_indicator_reviews_indicator_index_check CHECK ((indicator_index >= 0))
@@ -1105,8 +1115,8 @@ CREATE TABLE public.statement_evidence (
     source_tool_call_id text,
     question_excerpt text,
     CONSTRAINT statement_evidence_availability_check CHECK ((availability = ANY (ARRAY['available'::text, 'blocked'::text, 'erased'::text]))),
-    CONSTRAINT statement_evidence_chat_binding_check CHECK ((((source_kind = 'direct_edit'::text) AND (source_conversation_id IS NULL) AND (source_run_id IS NULL) AND (source_message_id IS NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'user_message'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'structured_answer'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NOT NULL) AND (source_tool_call_id IS NOT NULL) AND ((length(source_tool_call_id) >= 1) AND (length(source_tool_call_id) <= 256)) AND (question_excerpt IS NOT NULL) AND ((length(question_excerpt) >= 1) AND (length(question_excerpt) <= 2000))))),
-    CONSTRAINT statement_evidence_check CHECK (((availability <> 'erased'::text) OR (excerpt = ''::text))),
+    CONSTRAINT statement_evidence_chat_binding_check CHECK ((((source_kind = 'direct_edit'::text) AND (source_conversation_id IS NULL) AND (source_run_id IS NULL) AND (source_message_id IS NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'user_message'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NULL) AND (source_tool_call_id IS NULL) AND (question_excerpt IS NULL)) OR ((source_kind = 'structured_answer'::text) AND (source_conversation_id IS NOT NULL) AND (source_run_id IS NOT NULL) AND (source_message_id IS NOT NULL) AND (source_interaction_id IS NOT NULL) AND (source_tool_call_id IS NOT NULL) AND ((length(source_tool_call_id) >= 1) AND (length(source_tool_call_id) <= 256)) AND (((question_excerpt IS NOT NULL) AND ((length(question_excerpt) >= 1) AND (length(question_excerpt) <= 2000))) OR ((availability = 'erased'::text) AND (question_excerpt IS NULL)))))),
+    CONSTRAINT statement_evidence_check CHECK (((availability <> 'erased'::text) OR ((excerpt = ''::text) AND (question_excerpt IS NULL)))),
     CONSTRAINT statement_evidence_excerpt_check CHECK ((char_length(excerpt) <= 2000)),
     CONSTRAINT statement_evidence_source_kind_check CHECK ((source_kind = ANY (ARRAY['direct_edit'::text, 'user_message'::text, 'structured_answer'::text]))),
     CONSTRAINT statement_evidence_source_version_check CHECK ((source_version > 0))
@@ -4776,3 +4786,117 @@ END;
 $$;
 CREATE TRIGGER asset_erasure_request_guard BEFORE UPDATE ON public.asset_erasure_requests
     FOR EACH ROW EXECUTE FUNCTION public.guard_asset_erasure_request();
+-- AS-002 slice 3: document evidence a withdrawn condition still links to is
+-- erased in place. The tombstone keeps identity and the link target; its
+-- content is gone and it never comes back.
+CREATE FUNCTION public.guard_document_evidence_tombstone() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.erased_at IS NOT NULL THEN
+        RAISE EXCEPTION 'erased document evidence is terminal' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER document_extraction_run_tombstone BEFORE UPDATE ON public.document_extraction_runs
+    FOR EACH ROW EXECUTE FUNCTION public.guard_document_evidence_tombstone();
+CREATE TRIGGER document_indicator_review_tombstone BEFORE UPDATE ON public.document_indicator_reviews
+    FOR EACH ROW EXECUTE FUNCTION public.guard_document_evidence_tombstone();
+-- AS-002 slice 3: verified erasure of one user statement (statement_evidence)
+-- and the BodyState records derived from it. Same lifecycle as an asset
+-- erasure, plus one honest terminal outcome: frozen replay inputs (Diagnosis
+-- runs, revisions and proposals, plan proposal snapshots) are never rewritten,
+-- so a target holding them ends retained_by_policy with a retention reason and
+-- the request ends erased_with_retention, never erased.
+CREATE TABLE public.statement_erasure_requests (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    statement_id uuid NOT NULL,
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    inventory_revision text NOT NULL CHECK (length(btrim(inventory_revision)) > 0),
+    status text NOT NULL CHECK (status IN ('pending','running','outstanding','erased','erased_with_retention')),
+    attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    lease_owner text,
+    lease_expires_at timestamptz,
+    requested_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    erased_at timestamptz,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, statement_id),
+    UNIQUE (user_id, idempotency_key),
+    FOREIGN KEY (user_id, statement_id) REFERENCES public.statement_evidence(user_id, id) ON DELETE CASCADE,
+    CHECK ((status IN ('erased','erased_with_retention')) = (erased_at IS NOT NULL)),
+    CHECK ((status = 'running') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL))
+);
+CREATE INDEX idx_statement_erasure_requests_recovery ON public.statement_erasure_requests (status, updated_at)
+    WHERE status IN ('pending','running','outstanding');
+CREATE TABLE public.statement_erasure_targets (
+    user_id uuid NOT NULL,
+    request_id uuid NOT NULL,
+    target text NOT NULL CHECK (target IN ('diagnosis_records','training_plans','body_records',
+        'assessment_reports','decision_records','runtime_checkpoints','statement_manifest')),
+    state text NOT NULL CHECK (state IN ('pending','verified','failed','blocked','unsupported','retained_by_policy')),
+    erased_count integer NOT NULL DEFAULT 0 CHECK (erased_count >= 0),
+    outstanding_count integer NOT NULL DEFAULT 0 CHECK (outstanding_count >= 0),
+    failure_code text CHECK (failure_code IS NULL OR failure_code ~ '^[a-z][a-z0-9_]{0,63}$'),
+    retention_reason text CHECK (retention_reason IS NULL OR retention_reason ~ '^[a-z][a-z0-9_]{0,63}$'),
+    attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    verified_at timestamptz,
+    updated_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, request_id, target),
+    FOREIGN KEY (user_id, request_id) REFERENCES public.statement_erasure_requests(user_id, id) ON DELETE CASCADE,
+    CHECK ((state = 'verified') = (verified_at IS NOT NULL)),
+    CHECK (state <> 'verified' OR (outstanding_count = 0 AND failure_code IS NULL)),
+    CHECK ((state IN ('pending','verified','retained_by_policy')) = (failure_code IS NULL)),
+    CHECK ((state = 'retained_by_policy') = (retention_reason IS NOT NULL)),
+    CHECK (state <> 'retained_by_policy' OR target = 'decision_records')
+);
+-- Both terminal states are reached only once the statement itself is erased.
+-- erased needs all seven targets verified; erased_with_retention needs the
+-- other six verified and decision_records retained_by_policy.
+CREATE FUNCTION public.guard_statement_erasure_request() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+DECLARE
+    verified integer;
+    retained integer;
+BEGIN
+    IF OLD.status IN ('erased','erased_with_retention') THEN
+        RAISE EXCEPTION 'statement erasure request is already terminal' USING ERRCODE = '23514';
+    END IF;
+    IF NEW.status IN ('erased','erased_with_retention') THEN
+        SELECT count(*) FILTER (WHERE t.state = 'verified'), count(*) FILTER (WHERE t.state = 'retained_by_policy')
+          INTO verified, retained
+          FROM public.statement_erasure_targets t WHERE t.user_id = NEW.user_id AND t.request_id = NEW.id;
+        IF NOT EXISTS (SELECT 1 FROM public.statement_evidence e
+             WHERE e.user_id = NEW.user_id AND e.id = NEW.statement_id AND e.availability = 'erased')
+           OR (NEW.status = 'erased' AND (verified <> 7 OR retained <> 0))
+           OR (NEW.status = 'erased_with_retention' AND (verified <> 6 OR retained <> 1)) THEN
+            RAISE EXCEPTION 'statement erasure has unverified targets' USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    IF (NEW.id, NEW.user_id, NEW.statement_id, NEW.idempotency_key, NEW.inventory_revision, NEW.requested_at)
+       IS DISTINCT FROM
+       (OLD.id, OLD.user_id, OLD.statement_id, OLD.idempotency_key, OLD.inventory_revision, OLD.requested_at) THEN
+        RAISE EXCEPTION 'statement erasure request identity is immutable' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER statement_erasure_request_guard BEFORE UPDATE ON public.statement_erasure_requests
+    FOR EACH ROW EXECUTE FUNCTION public.guard_statement_erasure_request();
+-- An erased BodyState record (text cleared once withdrawn) never comes back.
+CREATE FUNCTION public.guard_body_record_tombstone() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.erased_at IS NOT NULL THEN
+        RAISE EXCEPTION 'erased body record is terminal' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER body_fact_tombstone BEFORE UPDATE ON public.body_facts
+    FOR EACH ROW EXECUTE FUNCTION public.guard_body_record_tombstone();
+CREATE TRIGGER body_observation_tombstone BEFORE UPDATE ON public.body_observations
+    FOR EACH ROW EXECUTE FUNCTION public.guard_body_record_tombstone();
+CREATE TRIGGER body_hypothesis_tombstone BEFORE UPDATE ON public.body_hypotheses
+    FOR EACH ROW EXECUTE FUNCTION public.guard_body_record_tombstone();

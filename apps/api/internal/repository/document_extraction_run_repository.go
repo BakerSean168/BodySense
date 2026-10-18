@@ -35,7 +35,7 @@ func (r *DocumentExtractionRunRepository) GetLatestOwnedByAsset(
 ) (*model.DocumentExtractionRun, error) {
 	var run model.DocumentExtractionRun
 	err := database.FromContext(ctx, r.db).
-		Where("asset_id = ? AND user_id = ?", assetID, userID).
+		Where("asset_id = ? AND user_id = ? AND erased_at IS NULL", assetID, userID).
 		Order("created_at DESC").
 		Order("id DESC").
 		First(&run).Error
@@ -55,7 +55,7 @@ func (r *DocumentExtractionRunRepository) ListByUser(
 ) ([]model.DocumentExtractionRun, error) {
 	var runs []model.DocumentExtractionRun
 	err := database.FromContext(ctx, r.db).
-		Where("user_id = ?", userID).
+		Where("user_id = ? AND erased_at IS NULL", userID).
 		Order("created_at DESC").
 		Order("id DESC").
 		Find(&runs).Error
@@ -72,7 +72,7 @@ func (r *DocumentExtractionRunRepository) GetOwnedByID(
 ) (*model.DocumentExtractionRun, error) {
 	var run model.DocumentExtractionRun
 	err := database.FromContext(ctx, r.db).
-		Where("id = ? AND user_id = ?", id, userID).
+		Where("id = ? AND user_id = ? AND erased_at IS NULL", id, userID).
 		First(&run).Error
 	if err != nil {
 		return nil, err

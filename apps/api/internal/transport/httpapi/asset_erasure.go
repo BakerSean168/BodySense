@@ -106,6 +106,7 @@ func assetErasureReceiptView(receipt *model.AssetErasureReceipt) openapiv1.Asset
 		ErasedAt:           receipt.Request.ErasedAt,
 		Targets:            make([]openapiv1.AssetErasureTargetReceipt, 0, len(receipt.Targets)),
 		OutstandingTargets: []openapiv1.AssetErasureTargetName{},
+		Reviews:            erasureReviewViews(receipt.Reviews),
 	}
 	for _, target := range receipt.Targets {
 		item := openapiv1.AssetErasureTargetReceipt{
@@ -125,4 +126,16 @@ func assetErasureReceiptView(receipt *model.AssetErasureReceipt) openapiv1.Asset
 		}
 	}
 	return view
+}
+
+func erasureReviewViews(reviews []model.ErasureReview) []openapiv1.ErasureReview {
+	out := make([]openapiv1.ErasureReview, 0, len(reviews))
+	for _, review := range reviews {
+		out = append(out, openapiv1.ErasureReview{
+			Subject:    openapiv1.ErasureReviewSubject(review.Subject),
+			SubjectId:  review.SubjectID,
+			RevisionId: review.RevisionID,
+		})
+	}
+	return out
 }

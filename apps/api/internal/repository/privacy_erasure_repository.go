@@ -40,6 +40,7 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "training_plans", table: "training_plans", column: "user_id"},
 	{name: "user_assets", table: "user_assets", column: "user_id"},
 	{name: "asset_erasure_requests", table: "asset_erasure_requests", column: "user_id"},
+	{name: "statement_erasure_requests", table: "statement_erasure_requests", column: "user_id"},
 	{name: "thread_projections", table: "thread_projections", column: "user_id"},
 	{name: "body_state", table: "body_states", column: "user_id"},
 	{name: "body_facts", table: "body_facts", column: "user_id"},

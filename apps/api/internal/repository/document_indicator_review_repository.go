@@ -52,7 +52,7 @@ func (r *DocumentIndicatorReviewRepository) ListByAsset(
 ) ([]model.DocumentIndicatorReview, error) {
 	var rows []model.DocumentIndicatorReview
 	err := r.db.WithContext(ctx).
-		Where("asset_id = ? AND user_id = ?", assetID, userID).
+		Where("asset_id = ? AND user_id = ? AND erased_at IS NULL", assetID, userID).
 		Order("created_at ASC").
 		Find(&rows).Error
 	return rows, err
@@ -66,7 +66,7 @@ func (r *DocumentIndicatorReviewRepository) ListByExtractionRun(
 ) ([]model.DocumentIndicatorReview, error) {
 	var rows []model.DocumentIndicatorReview
 	err := r.db.WithContext(ctx).
-		Where("extraction_run_id = ?", extractionRunID).
+		Where("extraction_run_id = ? AND erased_at IS NULL", extractionRunID).
 		Order("created_at ASC").
 		Find(&rows).Error
 	return rows, err

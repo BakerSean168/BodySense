@@ -12,34 +12,34 @@ func TestAssetRuntimeScopeOutcome(t *testing.T) {
 	scope := AssetRuntimeScope{ThreadIDs: []uuid.UUID{a, b}, AttachedThreadIDs: []uuid.UUID{a}, ContentSHA256: "x"}
 	busy := "thread_busy"
 	conflict := "checkpoint_conflict"
-	thread := func(id uuid.UUID, status string, code *string) AssetRuntimeThreadReceipt {
-		return AssetRuntimeThreadReceipt{ThreadID: id.String(), Status: status, RedactedRefs: 2, DeletedCheckpoints: 3, FailureCode: code}
+	thread := func(id uuid.UUID, status string, code *string) RuntimeThreadReceipt {
+		return RuntimeThreadReceipt{ThreadID: id.String(), Status: status, RedactedRefs: 2, DeletedCheckpoints: 3, FailureCode: code}
 	}
 	cases := []struct {
 		name    string
-		receipt *AssetRuntimeErasureReceipt
+		receipt *RuntimeErasureReceipt
 		want    AssetErasureOutcome
 	}{
-		{"verified", &AssetRuntimeErasureReceipt{Status: "erased", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
+		{"verified", &RuntimeErasureReceipt{Status: "erased", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetVerified, Erased: 5}},
-		{"busy", &AssetRuntimeErasureReceipt{Status: "outstanding", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "outstanding", &busy), thread(b, "absent", nil)}},
+		{"busy", &RuntimeErasureReceipt{Status: "outstanding", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "outstanding", &busy), thread(b, "absent", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 1, FailureCode: AssetErasureCodeRuntimeThreadBusy}},
-		{"conflict", &AssetRuntimeErasureReceipt{Status: "outstanding", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "outstanding", &busy), thread(b, "outstanding", &conflict)}},
+		{"conflict", &RuntimeErasureReceipt{Status: "outstanding", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "outstanding", &busy), thread(b, "outstanding", &conflict)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 2, FailureCode: AssetErasureCodeRuntimeUnverified}},
-		{"missing thread", &AssetRuntimeErasureReceipt{Status: "erased", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "erased", nil)}},
+		{"missing thread", &RuntimeErasureReceipt{Status: "erased", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "erased", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 1, FailureCode: AssetErasureCodeRuntimeUnverified}},
-		{"other asset", &AssetRuntimeErasureReceipt{Status: "erased", AssetID: uuid.NewString(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
+		{"other asset", &RuntimeErasureReceipt{Status: "erased", SubjectID: uuid.NewString(),
+			Threads: []RuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 2, FailureCode: AssetErasureCodeRuntimeUnverified}},
-		{"contradictory status", &AssetRuntimeErasureReceipt{Status: "outstanding", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
+		{"contradictory status", &RuntimeErasureReceipt{Status: "outstanding", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "erased", nil), thread(b, "absent", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 2, FailureCode: AssetErasureCodeRuntimeUnverified}},
-		{"unknown thread status", &AssetRuntimeErasureReceipt{Status: "erased", AssetID: asset.String(),
-			Threads: []AssetRuntimeThreadReceipt{thread(a, "cleaned", nil), thread(b, "absent", nil)}},
+		{"unknown thread status", &RuntimeErasureReceipt{Status: "erased", SubjectID: asset.String(),
+			Threads: []RuntimeThreadReceipt{thread(a, "cleaned", nil), thread(b, "absent", nil)}},
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 1, FailureCode: AssetErasureCodeRuntimeUnverified}},
 		{"no receipt", nil,
 			AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: 2, FailureCode: AssetErasureCodeRuntimeUnverified}},
