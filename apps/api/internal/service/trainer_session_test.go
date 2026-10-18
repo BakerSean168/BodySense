@@ -41,19 +41,42 @@ func TestTrainerCommandsValidateBeforeStorage(t *testing.T) {
 	if _, err := svc.Start(ctx, owner, StartTrainerSessionCommand{PlanID: uuid.New(), ExpectedPlanRevisionID: uuid.New(), TemplateID: "t", TimeZone: "UTC", IdempotencyKey: "k"}); !errors.Is(err, ErrTrainerInvalid) {
 		t.Fatalf("start without safety revision: %v", err)
 	}
-	for _, kind := range []string{"", "completed", "corrected"} {
-		cmd := TrainerSetActionCommand{SessionID: uuid.New(), PlanExerciseID: "e", SetNumber: 1, Kind: kind, ExpectedSafetyRevision: 1, IdempotencyKey: "k"}
+	valid := TrainerSetActionCommand{SessionID: uuid.New(), PlanExerciseID: "e", Scope: TrainerScopeSet, SetNumber: 1, Kind: TrainerSetPerformed, ExpectedSafetyRevision: 1, IdempotencyKey: "k"}
+	if !valid.valid() {
+		t.Fatal("valid command rejected")
+	}
+	zero, five, tooMany, tooLong := 0, 5, 1001, 86401
+	invalid := map[string]func(*TrainerSetActionCommand){
+		"empty kind":            func(c *TrainerSetActionCommand) { c.Kind = "" },
+		"completed kind":        func(c *TrainerSetActionCommand) { c.Kind = "completed" },
+		"correction w/o target": func(c *TrainerSetActionCommand) { c.Kind = TrainerSetCorrected },
+		"target w/o correction": func(c *TrainerSetActionCommand) { c.CorrectsActionID = uuid.New() },
+		"no scope":              func(c *TrainerSetActionCommand) { c.Scope = "" },
+		"set number 0":          func(c *TrainerSetActionCommand) { c.SetNumber = 0 },
+		"exercise with set":     func(c *TrainerSetActionCommand) { c.Scope, c.Kind = TrainerScopeExercise, TrainerSetSkipped },
+		"exercise performed":    func(c *TrainerSetActionCommand) { c.Scope, c.SetNumber = TrainerScopeExercise, 0 },
+		"zero reps":             func(c *TrainerSetActionCommand) { c.ActualReps = &zero },
+		"too many reps":         func(c *TrainerSetActionCommand) { c.ActualReps = &tooMany },
+		"too long":              func(c *TrainerSetActionCommand) { c.ActualDurationSeconds = &tooLong },
+		"actuals on a skip":     func(c *TrainerSetActionCommand) { c.Kind, c.ActualReps = TrainerSetSkipped, &five },
+	}
+	for name, mutate := range invalid {
+		cmd := valid
+		mutate(&cmd)
 		if _, err := svc.RecordSetAction(ctx, owner, cmd); !errors.Is(err, ErrTrainerInvalid) {
-			t.Fatalf("set kind %q: %v", kind, err)
+			t.Fatalf("%s: %v", name, err)
 		}
 	}
-	if _, err := svc.RecordSetAction(ctx, owner, TrainerSetActionCommand{SessionID: uuid.New(), PlanExerciseID: "e", SetNumber: 0, Kind: TrainerSetPerformed, ExpectedSafetyRevision: 1, IdempotencyKey: "k"}); !errors.Is(err, ErrTrainerInvalid) {
-		t.Fatalf("set number 0: %v", err)
+	if _, err := svc.Pause(ctx, owner, TrainerTransitionCommand{SessionID: uuid.New(), ExpectedSafetyRevision: 1, IdempotencyKey: "k"}); !errors.Is(err, ErrTrainerInvalid) {
+		t.Fatalf("pause with safety revision: %v", err)
+	}
+	if _, err := svc.Resume(ctx, owner, TrainerTransitionCommand{SessionID: uuid.New(), IdempotencyKey: "k"}); !errors.Is(err, ErrTrainerInvalid) {
+		t.Fatalf("resume without safety revision: %v", err)
 	}
 	if _, err := svc.Finish(ctx, owner, FinishTrainerSessionCommand{SessionID: uuid.New(), EndedReason: "abandoned", IdempotencyKey: "k"}); !errors.Is(err, ErrTrainerInvalid) {
 		t.Fatalf("finish reason: %v", err)
 	}
-	if _, err := svc.List(ctx, owner, "paused"); !errors.Is(err, ErrTrainerInvalid) {
+	if _, err := svc.List(ctx, owner, "stopped"); !errors.Is(err, ErrTrainerInvalid) {
 		t.Fatalf("list state: %v", err)
 	}
 }

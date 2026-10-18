@@ -150,8 +150,12 @@ func trainerActionWire(owner uuid.UUID, a model.TrainingSetAction) (trainerSetAc
 	if a.UserID != owner {
 		return trainerSetActionWire{}, errors.New("set action owner mismatch")
 	}
+	setNumber := 0
+	if a.SetNumber != nil {
+		setNumber = *a.SetNumber
+	}
 	return trainerSetActionWire{
-		ActionID: a.ID, SessionID: a.SessionID, PlanExerciseID: a.PlanExerciseID, ExerciseID: a.ExerciseID, SetNumber: a.SetNumber,
+		ActionID: a.ID, SessionID: a.SessionID, PlanExerciseID: a.PlanExerciseID, ExerciseID: a.ExerciseID, SetNumber: setNumber,
 		Kind: a.Kind, SessionRevision: a.SessionRevision, IdempotencyKey: a.IdempotencyKey, RecordedAt: a.RecordedAt,
 		Gate: trainerGateReceiptWire{Result: a.GateResult, SafetyRevision: a.SafetyRevision, PolicyRevision: a.GatePolicyRevision},
 	}, nil
@@ -267,7 +271,7 @@ func (s *PublicServer) RecordTrainingSetAction(ctx context.Context, req openapiv
 		return trainerBadRequest, nil
 	}
 	cmd := service.TrainerSetActionCommand{
-		SessionID: uuid.UUID(req.SessionId), PlanExerciseID: req.Body.PlanExerciseId, SetNumber: req.Body.SetNumber, Kind: string(req.Body.Kind),
+		SessionID: uuid.UUID(req.SessionId), PlanExerciseID: req.Body.PlanExerciseId, Scope: service.TrainerScopeSet, SetNumber: req.Body.SetNumber, Kind: string(req.Body.Kind),
 		ExpectedSessionRevision: req.Body.ExpectedSessionRevision, ExpectedSafetyRevision: req.Body.ExpectedSafetyRevision,
 		IdempotencyKey: string(req.Body.IdempotencyKey),
 	}

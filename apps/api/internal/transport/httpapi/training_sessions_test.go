@@ -55,7 +55,7 @@ func (f *trainerFake) RecordSetAction(_ context.Context, owner uuid.UUID, cmd se
 		return nil, f.err
 	}
 	return &model.TrainingSetAction{ID: uuid.New(), UserID: f.rowOwner(owner), SessionID: cmd.SessionID, PlanExerciseID: cmd.PlanExerciseID, ExerciseID: "squat",
-		SetNumber: cmd.SetNumber, Kind: cmd.Kind, SessionRevision: cmd.ExpectedSessionRevision + 1, IdempotencyKey: cmd.IdempotencyKey,
+		Scope: cmd.Scope, SetNumber: &cmd.SetNumber, Kind: cmd.Kind, SessionRevision: cmd.ExpectedSessionRevision + 1, IdempotencyKey: cmd.IdempotencyKey,
 		SafetyRevision: cmd.ExpectedSafetyRevision, GateResult: "warn", GatePolicyRevision: safety.GatePolicyRevision, RecordedAt: time.Now().UTC()}, nil
 }
 func (f *trainerFake) Finish(_ context.Context, owner uuid.UUID, cmd service.FinishTrainerSessionCommand) (*service.TrainerSessionView, error) {
