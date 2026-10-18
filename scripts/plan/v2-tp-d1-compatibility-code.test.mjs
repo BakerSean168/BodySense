@@ -28,7 +28,7 @@ test("legacy /training no longer creates, supersedes or activates plans from a T
   // TP-002 slice 3 removed the Treatment aggregate and with it the TP-D1
   // opt-in compatibility path; plans are created only via PlanProposals.
   for (const legacy of [
-    /SupersedePlansExcept/,
+    /SupersedePlans/,
     /AcceptTreatmentAndEnsurePlan/,
     /EnsurePlanForTreatment/,
     /GetPlanByTreatmentRevision/,

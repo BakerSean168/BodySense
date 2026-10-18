@@ -173,7 +173,7 @@ fi
 echo "DIAGNOSIS_BASELINE_VALIDATION=PASS current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}"
 
 # Treatment Agent generation persists only pending agent PlanProposals
-# (TP-002 slice 3 removed treatment_revisions and rollout observations).
+# (TP-002 slice 3 removed the Treatment revision and rollout tables).
 treatment_agent_sql() {
   "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "$1"
 }
