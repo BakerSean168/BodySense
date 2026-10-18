@@ -139,4 +139,6 @@ Diagnosis runs, revisions and proposals, and plan proposal snapshots and accepte
 
 Not copies, by design: the user's own chat message the statement was quoted from and assistant replies are conversation records (chat retention / conversation deletion); commit receipts, episode links and safety lift bases hold ids only. `TestBodyFactStatementErasureInventoryCoversSchemaPostgres` fails when a new table references statements without being inventoried.
 
-Later slice: the web deletion flows and their Chromium E2E.
+### Web flow (slice 4)
+
+Person Records offers **彻底删除** on each record. After an explicit confirmation the web sends the command and renders the receipt: _in progress_ (pending / running), _outstanding_ (only automatically retried targets, with their reason), _review needed_ (a blocked target or a review: the window names what still rests on the statement and never edits it; withdrawing this very record is offered as a second explicit step, then the command is repeated), _done_ (`erased`) and _retained by policy_ (`erased_with_retention`, listing the retained target and its reason; never shown as a full erasure). Chromium E2E `statement-erasure.spec.ts` (390 px) covers the real review → withdraw → erased path and the remaining receipt states.
