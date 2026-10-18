@@ -2374,7 +2374,8 @@
 
 /* Penpot Home / trainer-active · trainer-paused: the way back to a live session. */
 .bc-trainer-chip {
-  position: absolute; z-index: 19; left: 22px; top: calc(50% - 240px);
+  /* Desktop: on the tool-rail column, just below the rail (the intro holds the top-left). */
+  position: absolute; z-index: 19; left: 22px; top: calc(50% + 150px);
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px 6px 14px;
   border: 1px solid var(--bc-line); border-radius: 14px;
   background: color-mix(in srgb, var(--bc-paper) 94%, transparent); color: var(--bc-primary);
