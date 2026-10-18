@@ -31704,274 +31704,1190 @@
           "event": []
         },
         {
-          "id": "eea99c9f-26aa-5705-ab4b-eece65e4895c",
-          "name": "Remove the private source of one owned asset (source removal, not erasure).",
-          "request": {
-            "name": "Remove the private source of one owned asset (source removal, not erasure).",
-            "description": {
-              "content": "PC-D7 source removal: the private original object is deleted and the asset becomes source_removed. Adopted evidence history, derived run audit rows and review records are retained and stay readable with a source-unavailable marker. This is not a health-data erasure request and never revokes historical admission. Repeating the command is idempotent. Foreign or missing assets return owner-masked 404.\n",
-              "type": "text/plain"
-            },
-            "url": {
-              "path": [
-                "api",
-                "v1",
-                "assets",
-                ":id"
-              ],
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "query": [],
-              "variable": [
-                {
-                  "disabled": false,
-                  "type": "any",
-                  "value": "<uuid>",
-                  "key": "id",
-                  "description": "(Required) "
+          "id": "4e578897-ff47-5170-b669-ccca50548e3e",
+          "name": "assets/{id}",
+          "item": [
+            {
+              "id": "eea99c9f-26aa-5705-ab4b-eece65e4895c",
+              "name": "Remove the private source of one owned asset (source removal, not erasure).",
+              "request": {
+                "name": "Remove the private source of one owned asset (source removal, not erasure).",
+                "description": {
+                  "content": "PC-D7 source removal: the private original object is deleted and the asset becomes source_removed. Adopted evidence history, derived run audit rows and review records are retained and stay readable with a source-unavailable marker. This is not a health-data erasure request and never revokes historical admission. Repeating the command is idempotent. Foreign or missing assets return owner-masked 404.\n",
+                  "type": "text/plain"
+                },
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "assets",
+                    ":id"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "<uuid>",
+                      "key": "id",
+                      "description": "(Required) "
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "DELETE",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{bearerToken}}"
+                    }
+                  ]
                 }
-              ]
-            },
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
+              },
+              "response": [
+                {
+                  "id": "d0f0340e-edb9-5c08-8465-41318b61af37",
+                  "name": "Asset source removed (or already removed; idempotent).",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "DELETE",
+                    "body": {}
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2017-03-07T20:57:19.967Z\"\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "674cd7bc-6bd2-571c-856a-a53d2c68ec4c",
+                  "name": "Authentication is missing or invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "DELETE",
+                    "body": {}
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "46b6a42d-46f6-5038-ac1f-fcae26fb8fc5",
+                  "name": "Referenced BodyState item does not exist.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "DELETE",
+                    "body": {}
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "9e66e27b-4191-5e78-b351-01ad35cf1bdd",
+                  "name": "Unexpected server failure.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "DELETE",
+                    "body": {}
+                  },
+                  "status": "Internal Server Error",
+                  "code": 500,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                }
+              ],
+              "event": [],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
               }
-            ],
-            "method": "DELETE",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{bearerToken}}"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "id": "d0f0340e-edb9-5c08-8465-41318b61af37",
-              "name": "Asset source removed (or already removed; idempotent).",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "api",
-                    "v1",
-                    "assets",
-                    ":id"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<uuid>",
-                      "key": "id",
-                      "description": "(Required) "
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: bearer",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "Bearer <token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2017-03-07T20:57:19.967Z\"\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
             },
             {
-              "id": "674cd7bc-6bd2-571c-856a-a53d2c68ec4c",
-              "name": "Authentication is missing or invalid.",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "api",
-                    "v1",
-                    "assets",
-                    ":id"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<uuid>",
-                      "key": "id",
-                      "description": "(Required) "
-                    }
-                  ]
-                },
-                "header": [
-                  {
+              "id": "c5d03e03-ed0b-5499-b7c5-d74ee227c577",
+              "name": "erasure",
+              "item": [
+                {
+                  "id": "1da4accd-6949-59c7-8483-3ec50e815a91",
+                  "name": "Erase one owned asset's source and every controlled copy, with a verified receipt.",
+                  "request": {
+                    "name": "Erase one owned asset's source and every controlled copy, with a verified receipt.",
                     "description": {
-                      "content": "Added as a part of security scheme: bearer",
+                      "content": "AS-002 per-asset erasure. Unlike source removal (DELETE /api/v1/assets/{id}) it goes after every inventoried controlled copy of the asset (object replicas, derived jobs and AI output reviews, posture and extraction runs, indicator reviews) and verifies each target on its own. The asset becomes unavailable at once but is reported erased only after every target verified; until then the receipt lists the outstanding targets with a failure code. Evidence a Diagnosis still cites, frozen assessment input and consultation runtime state are never removed silently: they stay outstanding for review or for a later handler, and no Diagnosis or training plan is changed. One erasure exists per asset; repeating the command (with any key) retries it and returns the same receipt. An idempotency key already used for another asset is a 409. Foreign or missing assets return owner-masked 404.\n",
                       "type": "text/plain"
                     },
-                    "key": "Authorization",
-                    "value": "Bearer <token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "46b6a42d-46f6-5038-ac1f-fcae26fb8fc5",
-              "name": "Referenced BodyState item does not exist.",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "api",
-                    "v1",
-                    "assets",
-                    ":id"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<uuid>",
-                      "key": "id",
-                      "description": "(Required) "
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id",
+                        "erasure"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{bearerToken}}"
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     }
-                  ]
+                  },
+                  "response": [
+                    {
+                      "id": "4d0bdec5-345a-5e6e-bc37-a0742ca9b209",
+                      "name": "Every target verified; the asset is erased.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"request_id\": \"6aa82e23-f00c-f518-c706-dfbb83c53dc5\",\n  \"asset_id\": \"01066924-337b-ee44-b7b0-5d6641156238\",\n  \"status\": \"erased\",\n  \"inventory_revision\": \"string\",\n  \"requested_at\": \"1977-02-14T22:11:59.808Z\",\n  \"targets\": [\n    {\n      \"target\": \"diagnosis_records\",\n      \"state\": \"pending\",\n      \"erased_count\": 2935,\n      \"outstanding_count\": 3773,\n      \"failure_code\": \"execution_error\",\n      \"verified_at\": \"2020-11-03T20:29:47.435Z\"\n    },\n    {\n      \"target\": \"assessment_reports\",\n      \"state\": \"blocked\",\n      \"erased_count\": 2158,\n      \"outstanding_count\": 1899,\n      \"failure_code\": \"targets_outstanding\",\n      \"verified_at\": \"1955-03-15T06:53:52.062Z\"\n    }\n  ],\n  \"outstanding_targets\": [\n    \"asset_manifest\",\n    \"derived_jobs\"\n  ],\n  \"erased_at\": \"2013-07-23T21:01:52.078Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "9c614fd8-7526-5452-8341-607088f7725f",
+                      "name": "Erasure accepted; some targets are still outstanding (see the receipt).",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Accepted",
+                      "code": 202,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"request_id\": \"6aa82e23-f00c-f518-c706-dfbb83c53dc5\",\n  \"asset_id\": \"01066924-337b-ee44-b7b0-5d6641156238\",\n  \"status\": \"erased\",\n  \"inventory_revision\": \"string\",\n  \"requested_at\": \"1977-02-14T22:11:59.808Z\",\n  \"targets\": [\n    {\n      \"target\": \"diagnosis_records\",\n      \"state\": \"pending\",\n      \"erased_count\": 2935,\n      \"outstanding_count\": 3773,\n      \"failure_code\": \"execution_error\",\n      \"verified_at\": \"2020-11-03T20:29:47.435Z\"\n    },\n    {\n      \"target\": \"assessment_reports\",\n      \"state\": \"blocked\",\n      \"erased_count\": 2158,\n      \"outstanding_count\": 1899,\n      \"failure_code\": \"targets_outstanding\",\n      \"verified_at\": \"1955-03-15T06:53:52.062Z\"\n    }\n  ],\n  \"outstanding_targets\": [\n    \"asset_manifest\",\n    \"derived_jobs\"\n  ],\n  \"erased_at\": \"2013-07-23T21:01:52.078Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "f921c7f7-4102-50e1-ad8b-ee2d1b6563d0",
+                      "name": "Request body or BodyState fact is invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Bad Request",
+                      "code": 400,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "9f2d37cc-e407-5511-b3f2-9f7d880b9519",
+                      "name": "Authentication is missing or invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "1b73e5b2-3336-55a3-89a1-64a65e650af6",
+                      "name": "Referenced BodyState item does not exist.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "3964046d-4bed-52e1-aaf9-5d5e9cfd73bf",
+                      "name": "Requested operation conflicts with the durable resource state.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Conflict",
+                      "code": 409,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "852c6dbb-a540-5a61-8434-652bd489150c",
+                      "name": "Unexpected server failure.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Internal Server Error",
+                      "code": 500,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "7fea9174-bbf7-55da-acfc-4b558b7c8ca8",
+                      "name": "Required application capability is temporarily unavailable.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"idempotency_key\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Service Unavailable",
+                      "code": 503,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ],
+                  "event": [],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  }
                 },
-                "header": [
-                  {
+                {
+                  "id": "59cb60d2-1a21-575c-b44c-7c77d89b036c",
+                  "name": "Read the erasure receipt of one owned asset.",
+                  "request": {
+                    "name": "Read the erasure receipt of one owned asset.",
                     "description": {
-                      "content": "Added as a part of security scheme: bearer",
+                      "content": "Returns the current receipt, including outstanding targets. 404 when the asset is foreign, missing or has no erasure.",
                       "type": "text/plain"
                     },
-                    "key": "Authorization",
-                    "value": "Bearer <token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Not Found",
-              "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "9e66e27b-4191-5e78-b351-01ad35cf1bdd",
-              "name": "Unexpected server failure.",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "api",
-                    "v1",
-                    "assets",
-                    ":id"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<uuid>",
-                      "key": "id",
-                      "description": "(Required) "
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: bearer",
-                      "type": "text/plain"
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "assets",
+                        ":id",
+                        "erasure"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "id",
+                          "description": "(Required) "
+                        }
+                      ]
                     },
-                    "key": "Authorization",
-                    "value": "Bearer <token>"
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{bearerToken}}"
+                        }
+                      ]
+                    }
                   },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
+                  "response": [
+                    {
+                      "id": "c1bcd55c-d9b2-5880-ba72-3bce10a0a115",
+                      "name": "Current erasure receipt.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"request_id\": \"6aa82e23-f00c-f518-c706-dfbb83c53dc5\",\n  \"asset_id\": \"01066924-337b-ee44-b7b0-5d6641156238\",\n  \"status\": \"erased\",\n  \"inventory_revision\": \"string\",\n  \"requested_at\": \"1977-02-14T22:11:59.808Z\",\n  \"targets\": [\n    {\n      \"target\": \"diagnosis_records\",\n      \"state\": \"pending\",\n      \"erased_count\": 2935,\n      \"outstanding_count\": 3773,\n      \"failure_code\": \"execution_error\",\n      \"verified_at\": \"2020-11-03T20:29:47.435Z\"\n    },\n    {\n      \"target\": \"assessment_reports\",\n      \"state\": \"blocked\",\n      \"erased_count\": 2158,\n      \"outstanding_count\": 1899,\n      \"failure_code\": \"targets_outstanding\",\n      \"verified_at\": \"1955-03-15T06:53:52.062Z\"\n    }\n  ],\n  \"outstanding_targets\": [\n    \"asset_manifest\",\n    \"derived_jobs\"\n  ],\n  \"erased_at\": \"2013-07-23T21:01:52.078Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "212fc4b9-acc6-5b13-943c-07a095904530",
+                      "name": "Authentication is missing or invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "b73a52fe-6834-5e9a-beae-f5a49238ff16",
+                      "name": "Referenced BodyState item does not exist.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "d2ef700f-4ae9-592a-8174-c92b3407b829",
+                      "name": "Unexpected server failure.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Internal Server Error",
+                      "code": 500,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "a52d4e4d-14ad-5bf7-a832-e2ca2343fa8b",
+                      "name": "Required application capability is temporarily unavailable.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "assets",
+                            ":id",
+                            "erasure"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "id",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Service Unavailable",
+                      "code": 503,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ],
+                  "event": [],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
                   }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Internal Server Error",
-              "code": 500,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
                 }
               ],
-              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
+              "event": []
             }
           ],
-          "event": [],
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          }
+          "event": []
         },
         {
           "id": "20766eff-3919-503b-bd1b-508a2c8260cf",
@@ -32096,7 +33012,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"id\": \"82e2379f-c6f5-8ac7-6adf-b83c53dc5290\",\n  \"file_type\": \"consultation_photo\",\n  \"original_name\": \"string\",\n  \"file_size\": 2949,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"processing\",\n  \"analysis_status\": \"failed\",\n  \"created_at\": \"1952-11-21T21:37:36.080Z\",\n  \"updated_at\": \"2002-05-10T20:30:05.761Z\",\n  \"ocr_result\": {\n    \"key_0\": 3329.8603422008455,\n    \"key_1\": 3800.2797681838274\n  },\n  \"analysis_result\": {\n    \"key_0\": \"string\"\n  }\n}",
+                  "body": "{\n  \"id\": \"b5d6a26b-8435-4546-95d7-3dd53bfb3509\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 7065,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"processing\",\n  \"created_at\": \"1974-04-25T14:10:53.948Z\",\n  \"updated_at\": \"1970-06-21T08:35:33.204Z\",\n  \"ocr_result\": {\n    \"key_0\": 4761.208251584321\n  },\n  \"analysis_result\": {\n    \"key_0\": false,\n    \"key_1\": \"string\",\n    \"key_2\": false\n  }\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -32384,7 +33300,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"69334e64-1155-6bbc-3a33-fe91fd3b272c\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 9073,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"failed\",\n      \"created_at\": \"1974-10-07T15:35:04.732Z\",\n      \"updated_at\": \"1995-04-11T08:41:45.712Z\",\n      \"ocr_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": 3025.5006277002394,\n        \"key_2\": true,\n        \"key_3\": false\n      },\n      \"analysis_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": \"string\"\n      }\n    },\n    {\n      \"id\": \"fb2d91ce-acb4-0c15-4a98-f460c0ce47a1\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 2155,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"processing\",\n      \"analysis_status\": \"pending\",\n      \"created_at\": \"2015-04-01T12:03:35.031Z\",\n      \"updated_at\": \"1953-07-29T19:51:58.819Z\",\n      \"ocr_result\": {\n        \"key_0\": true\n      },\n      \"analysis_result\": {\n        \"key_0\": 3595,\n        \"key_1\": \"string\"\n      }\n    }\n  ]\n}",
+                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"f5c3b22e-e60e-9e35-9552-1927efeca2ae\",\n      \"file_type\": \"photo_back\",\n      \"original_name\": \"string\",\n      \"file_size\": 5427,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"failed\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"2016-02-27T14:42:06.741Z\",\n      \"updated_at\": \"1969-01-03T13:46:31.196Z\",\n      \"ocr_result\": {\n        \"key_0\": 6651.938334107399\n      },\n      \"analysis_result\": {\n        \"key_0\": 5953.597605694085,\n        \"key_1\": 5864,\n        \"key_2\": \"string\"\n      }\n    },\n    {\n      \"id\": \"1b699f89-539c-7acf-b1b3-5aa0a56a9473\",\n      \"file_type\": \"photo_front\",\n      \"original_name\": \"string\",\n      \"file_size\": 2640,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"processing\",\n      \"analysis_status\": \"failed\",\n      \"created_at\": \"2023-07-02T23:42:20.328Z\",\n      \"updated_at\": \"1970-11-14T13:34:03.217Z\",\n      \"ocr_result\": {\n        \"key_0\": false,\n        \"key_1\": 6159,\n        \"key_2\": \"string\"\n      },\n      \"analysis_result\": {\n        \"key_0\": false,\n        \"key_1\": 1787.874347064644,\n        \"key_2\": 9044.654979370534\n      }\n    }\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -32563,7 +33479,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"has_analysis\": true,\n  \"views\": [\n    {\n      \"upload_id\": \"aeea7112-c9ef-7a16-6165-7a0baf579799\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": 9854\n      },\n      \"created_at\": \"1976-04-02T11:42:51.405Z\"\n    },\n    {\n      \"upload_id\": \"9cf7acff-b315-a0a5-a947-9510954b3b74\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": 6159,\n        \"key_1\": \"string\",\n        \"key_2\": 7984,\n        \"key_3\": true\n      },\n      \"created_at\": \"2015-12-29T20:38:15.074Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
+                  "body": "{\n  \"has_analysis\": true,\n  \"views\": [\n    {\n      \"upload_id\": \"cfd1787b-5e33-436e-c8ea-a804a669bed2\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": \"string\",\n        \"key_1\": 7567.498330026865,\n        \"key_2\": 136.44840801134706\n      },\n      \"created_at\": \"1955-04-06T14:19:59.350Z\"\n    },\n    {\n      \"upload_id\": \"1af6763d-59e0-5451-28fb-62948f00757a\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": 6938,\n        \"key_1\": 4310.688914265484,\n        \"key_2\": \"string\",\n        \"key_3\": true,\n        \"key_4\": 6421\n      },\n      \"created_at\": \"1976-01-13T14:17:41.438Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -32767,7 +33683,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"82e2379f-c6f5-8ac7-6adf-b83c53dc5290\",\n  \"file_type\": \"consultation_photo\",\n  \"original_name\": \"string\",\n  \"file_size\": 2949,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"processing\",\n  \"analysis_status\": \"failed\",\n  \"created_at\": \"1952-11-21T21:37:36.080Z\",\n  \"updated_at\": \"2002-05-10T20:30:05.761Z\",\n  \"ocr_result\": {\n    \"key_0\": 3329.8603422008455,\n    \"key_1\": 3800.2797681838274\n  },\n  \"analysis_result\": {\n    \"key_0\": \"string\"\n  }\n}",
+                      "body": "{\n  \"id\": \"b5d6a26b-8435-4546-95d7-3dd53bfb3509\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 7065,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"processing\",\n  \"created_at\": \"1974-04-25T14:10:53.948Z\",\n  \"updated_at\": \"1970-06-21T08:35:33.204Z\",\n  \"ocr_result\": {\n    \"key_0\": 4761.208251584321\n  },\n  \"analysis_result\": {\n    \"key_0\": false,\n    \"key_1\": \"string\",\n    \"key_2\": false\n  }\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33360,7 +34276,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"extraction_run_id\": \"787b825e-1436-fc8e-8a80-a669bed2f31a\",\n  \"upload_id\": \"e8cf6dc3-a97c-706e-29b1-f6763dd959e0\",\n  \"source_availability\": \"available\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 9417,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 5004,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                      "body": "{\n  \"extraction_run_id\": \"5e632a98-1c28-48cf-ae6a-4c76c2fe195c\",\n  \"upload_id\": \"06d5fccd-ef41-ae49-8e59-20a4bfe160db\",\n  \"source_availability\": \"available\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 1329,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 4068,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33713,7 +34629,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 6517,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 474,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 6927,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 6324,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -34038,7 +34954,7 @@
                             },
                             "body": {
                               "mode": "raw",
-                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 7407.372307498008,\n    \"key_1\": 1209\n  },\n  \"note\": \"<string>\"\n}",
+                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 7321.617959532887\n  },\n  \"note\": \"<string>\"\n}",
                               "options": {
                                 "raw": {
                                   "language": "json"
@@ -34099,7 +35015,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34115,7 +35031,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"id\": \"80985bf5-0f89-8bfd-41a5-9bcb1f12936b\",\n  \"extraction_run_id\": \"884ef77c-366d-c6a9-aa66-509dbbeabe4e\",\n  \"upload_id\": \"ba1645fb-4bb8-fc57-4e30-472310925bd2\",\n  \"indicator_index\": 9408,\n  \"indicator_id\": \"string\",\n  \"action\": \"confirm\",\n  \"created_at\": \"1985-12-20T15:57:12.059Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": 4297,\n    \"key_1\": 6502\n  },\n  \"note\": \"string\"\n}",
+                              "body": "{\n  \"id\": \"9c1cbdcc-1625-cf10-6b1a-e294fcc70bad\",\n  \"extraction_run_id\": \"23d6c178-e1fc-3e43-a00b-f5bd2e5a4bef\",\n  \"upload_id\": \"40a88179-b0a2-5ccf-5d71-3d3d5d26c339\",\n  \"indicator_index\": 8787,\n  \"indicator_id\": \"string\",\n  \"action\": \"confirm\",\n  \"created_at\": \"2022-01-21T19:39:32.748Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": 9229\n  },\n  \"note\": \"string\"\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -34171,7 +35087,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34243,7 +35159,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34315,7 +35231,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34387,7 +35303,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34459,7 +35375,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8783,\n    \"key_1\": 588.382538408041,\n    \"key_2\": 3562.843131367117\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 680,\n    \"key_1\": 6559.110374655575\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34991,7 +35907,7 @@
                     },
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\",\n    \"key_1\": false,\n    \"key_2\": \"string\",\n    \"key_3\": \"string\"\n  }\n}",
+                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 3250.6783795543015,\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": \"string\"\n  }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -35034,7 +35950,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35050,7 +35966,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": 5983,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": false\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": \"string\"\n  },\n  \"registered_at\": \"2005-10-26T14:49:42.599Z\",\n  \"created_at\": \"2018-03-14T20:28:34.120Z\",\n  \"updated_at\": \"1960-10-06T12:30:31.714Z\",\n  \"canonical_url\": \"https://areCz.yoIW9qZbS\"\n}",
+                      "body": "{\n  \"id\": 4608,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": 1397,\n    \"key_1\": true\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": 4296,\n    \"key_1\": \"string\"\n  },\n  \"registered_at\": \"2003-02-02T07:35:36.386Z\",\n  \"created_at\": \"1953-02-18T22:38:11.784Z\",\n  \"updated_at\": \"1955-06-13T12:54:09.199Z\",\n  \"canonical_url\": \"https://YoloBMahvMPoD.unBJpdCEMEgLXgdQZXYvhoCUW+ReJ.LDzm8u1KPnVSyBJuGd5v3\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -35088,7 +36004,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35142,7 +36058,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35196,7 +36112,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35250,7 +36166,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35304,7 +36220,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35358,7 +36274,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": false,\n    \"key_1\": 6692.630331963301,\n    \"key_2\": 9008,\n    \"key_3\": 1259.1643584892154\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5392.153728753328\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": true,\n    \"key_1\": 8383.018218446523,\n    \"key_2\": 1967\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 2643\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35463,7 +36379,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 7987,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 4189.227900933474\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": true\n      },\n      \"registered_at\": \"2021-08-31T09:36:08.014Z\",\n      \"created_at\": \"1946-06-22T10:59:13.994Z\",\n      \"updated_at\": \"1967-01-10T14:33:53.395Z\",\n      \"canonical_url\": \"http://yEyfLwMfcHZmMNv.dflsqwqjvOwQ4yjn,IX5sP3BvJJzoJCSgX1sA.6DTXJZJpd\"\n    },\n    {\n      \"id\": 5387,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 7444,\n        \"key_1\": \"string\"\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": false,\n        \"key_1\": 8574.257290456444,\n        \"key_2\": 5514\n      },\n      \"registered_at\": \"2014-10-12T02:50:36.238Z\",\n      \"created_at\": \"1994-01-20T13:25:55.146Z\",\n      \"updated_at\": \"2017-09-24T15:33:31.086Z\",\n      \"canonical_url\": \"http://VF.trcbbZIzU-onKpvs,jX9F-QpEY1VTgUjVGxjqzTjIlUkKIgulrRC2\"\n    }\n  ]\n}",
+                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 6505,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\",\n        \"key_1\": 9778.161393478513\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": 1510.8215156942606\n      },\n      \"registered_at\": \"1986-04-21T01:22:02.240Z\",\n      \"created_at\": \"1970-10-01T15:37:20.035Z\",\n      \"updated_at\": \"1983-11-03T02:33:24.030Z\",\n      \"canonical_url\": \"https://DWvHHDmnamRjmtPOA.jmiIgulrRC2bO2XRgeR-YVtXxKFxHJMi1t6ux6nfIzi0SPL0MJd6kai80NA2b1sI7EZE\"\n    },\n    {\n      \"id\": 5933,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\"\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": false\n      },\n      \"registered_at\": \"1983-07-24T16:42:48.568Z\",\n      \"created_at\": \"1960-08-22T17:29:03.352Z\",\n      \"updated_at\": \"1948-11-17T10:02:01.667Z\",\n      \"canonical_url\": \"https://QmpnHjtMIW.dqgKsxb1HNETO2HEFrValg0I7a-OEeT0PlG,\"\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -35766,7 +36682,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"job\": {\n    \"id\": \"48e7c789-aa93-03d2-6cc8-67ec079f7dbf\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 4646,\n    \"max_attempts\": 5837,\n    \"created_at\": \"1954-12-11T14:16:14.456Z\",\n    \"updated_at\": \"2006-06-08T23:36:48.866Z\",\n    \"progress\": {\n      \"key_0\": 8770,\n      \"key_1\": 7356.403837911785\n    },\n    \"result\": {\n      \"key_0\": \"string\",\n      \"key_1\": \"string\"\n    },\n    \"error\": {\n      \"key_0\": true,\n      \"key_1\": false\n    },\n    \"started_at\": \"1983-07-24T16:42:48.568Z\",\n    \"finished_at\": \"1960-08-22T17:29:03.352Z\"\n  },\n  \"idempotent_hit\": true\n}",
+                      "body": "{\n  \"job\": {\n    \"id\": \"7ccc2d61-74eb-02f6-5b7a-0c385af53551\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 6014,\n    \"max_attempts\": 4557,\n    \"created_at\": \"2013-02-17T17:53:22.215Z\",\n    \"updated_at\": \"1976-07-17T18:55:18.370Z\",\n    \"progress\": {\n      \"key_0\": 8849\n    },\n    \"result\": {\n      \"key_0\": \"string\"\n    },\n    \"error\": {\n      \"key_0\": \"string\",\n      \"key_1\": false,\n      \"key_2\": true\n    },\n    \"started_at\": \"1953-09-03T18:31:54.201Z\",\n    \"finished_at\": \"1963-10-12T14:18:10.779Z\"\n  },\n  \"idempotent_hit\": false\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36203,7 +37119,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"897a9dae-4b02-c8e0-f971-1cc527f4d344\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 1258,\n  \"max_attempts\": 2390,\n  \"created_at\": \"1996-02-27T10:40:01.214Z\",\n  \"updated_at\": \"1998-07-20T07:45:48.850Z\",\n  \"progress\": {\n    \"key_0\": true\n  },\n  \"result\": {\n    \"key_0\": true,\n    \"key_1\": 1509.3934838660061\n  },\n  \"error\": {\n    \"key_0\": 1279.6379951760173,\n    \"key_1\": true,\n    \"key_2\": 9079.365069046617\n  },\n  \"started_at\": \"1991-06-06T16:21:49.677Z\",\n  \"finished_at\": \"1960-01-17T10:25:05.088Z\"\n}",
+                      "body": "{\n  \"id\": \"8b0c4a14-b88a-2045-39aa-724eaa7823b2\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 1971,\n  \"max_attempts\": 14,\n  \"created_at\": \"1992-11-18T22:20:33.954Z\",\n  \"updated_at\": \"1948-02-21T22:30:31.880Z\",\n  \"progress\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\",\n    \"key_2\": 5362.428026273847\n  },\n  \"result\": {\n    \"key_0\": false\n  },\n  \"error\": {\n    \"key_0\": \"string\"\n  },\n  \"started_at\": \"1953-10-21T03:42:52.118Z\",\n  \"finished_at\": \"1969-06-17T09:32:32.088Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36646,7 +37562,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"results\": [\n    {\n      \"id\": 6894,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 1995.7590918056667,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 5079,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 1560.010053217411,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 488\n}",
+                  "body": "{\n  \"results\": [\n    {\n      \"id\": 8915,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 498.9734757691622,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 9630,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 8625.135098118335,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 7067\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -37005,7 +37921,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"knowledge_sources\": 1031,\n  \"knowledge_segments\": 5920,\n  \"knowledge_units\": 7159,\n  \"knowledge_clips\": 5567\n}",
+                  "body": "{\n  \"knowledge_sources\": 1337,\n  \"knowledge_segments\": 7655,\n  \"knowledge_units\": 3398,\n  \"knowledge_clips\": 939\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },

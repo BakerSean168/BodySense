@@ -1256,19 +1256,21 @@ CREATE TABLE public.user_assets (
     original_name character varying(255) NOT NULL,
     mime_type character varying(100) NOT NULL,
     byte_size bigint NOT NULL,
-    content_sha256 character(64) NOT NULL,
+    content_sha256 character(64),
     storage_backend character varying(20) NOT NULL,
     storage_key character varying(500) NOT NULL,
     availability character varying(20) DEFAULT 'available'::character varying NOT NULL,
     source_removed_at timestamp with time zone,
+    erased_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT ck_user_assets_availability CHECK (((availability)::text = ANY (ARRAY[('available'::character varying)::text, ('source_removed'::character varying)::text, ('erased'::character varying)::text]))),
     CONSTRAINT ck_user_assets_byte_size CHECK ((byte_size >= 0)),
-    CONSTRAINT ck_user_assets_content_sha256 CHECK ((content_sha256 ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT ck_user_assets_content_sha256 CHECK (CASE WHEN ((availability)::text = 'erased'::text) THEN (content_sha256 IS NULL) ELSE COALESCE((content_sha256 ~ '^[0-9a-f]{64}$'::text), false) END),
     CONSTRAINT ck_user_assets_kind CHECK (((kind)::text = ANY (ARRAY[('photo'::character varying)::text, ('report'::character varying)::text, ('document'::character varying)::text]))),
     CONSTRAINT ck_user_assets_photo_view CHECK (((photo_view IS NULL) OR ((photo_view)::text = ANY (ARRAY[('front'::character varying)::text, ('side'::character varying)::text, ('back'::character varying)::text])))),
     CONSTRAINT ck_user_assets_report_no_view CHECK (((kind)::text <> 'report'::text) OR (photo_view IS NULL)),
+    CONSTRAINT ck_user_assets_erased_at CHECK ((((availability)::text = 'erased'::text) = (erased_at IS NOT NULL))),
     CONSTRAINT ck_user_assets_source_removed_at CHECK (((availability)::text <> 'source_removed'::text) OR (source_removed_at IS NOT NULL)),
     CONSTRAINT ck_user_assets_storage_backend CHECK (((storage_backend)::text = ANY (ARRAY[('local'::character varying)::text, ('oss'::character varying)::text]))),
     CONSTRAINT ck_user_assets_storage_key CHECK ((((storage_key)::text <> ''::text) AND (length((storage_key)::text) <= 492) AND ((storage_key)::text !~ '^/'::text) AND ((storage_key)::text !~ '(^|/)\.\.(/|$)'::text) AND (POSITION((chr(92)) IN (storage_key)) = 0)))
@@ -4676,3 +4678,74 @@ CREATE TRIGGER diagnosis_settlement_immutable BEFORE UPDATE ON public.diagnosis_
     FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
 CREATE TRIGGER condition_disposition_change_immutable BEFORE UPDATE ON public.condition_disposition_changes
     FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+
+-- AS-002 slice 1: verified erasure of one asset's source and controlled copies.
+-- One request per asset. Each inventoried target is executed and verified on
+-- its own, so a partial failure stays visible as an outstanding target. The
+-- request (and the asset) may become erased only once every target verified.
+CREATE TABLE public.asset_erasure_requests (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    asset_id uuid NOT NULL,
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    inventory_revision text NOT NULL CHECK (length(btrim(inventory_revision)) > 0),
+    status text NOT NULL CHECK (status IN ('pending','running','outstanding','erased')),
+    attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    lease_owner text,
+    lease_expires_at timestamptz,
+    requested_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    erased_at timestamptz,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, asset_id),
+    UNIQUE (user_id, idempotency_key),
+    FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE,
+    CHECK ((status = 'erased') = (erased_at IS NOT NULL)),
+    CHECK ((status = 'running') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL))
+);
+CREATE INDEX idx_asset_erasure_requests_recovery ON public.asset_erasure_requests (status, updated_at)
+    WHERE status IN ('pending','running','outstanding');
+CREATE TABLE public.asset_erasure_targets (
+    user_id uuid NOT NULL,
+    request_id uuid NOT NULL,
+    target text NOT NULL CHECK (target IN ('source_objects','derived_jobs','posture_analyses',
+        'document_extractions','assessment_reports','diagnosis_records','runtime_checkpoints','asset_manifest')),
+    state text NOT NULL CHECK (state IN ('pending','verified','failed','blocked','unsupported')),
+    erased_count integer NOT NULL DEFAULT 0 CHECK (erased_count >= 0),
+    outstanding_count integer NOT NULL DEFAULT 0 CHECK (outstanding_count >= 0),
+    failure_code text CHECK (failure_code IS NULL OR failure_code ~ '^[a-z][a-z0-9_]{0,63}$'),
+    attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    verified_at timestamptz,
+    updated_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id, request_id, target),
+    FOREIGN KEY (user_id, request_id) REFERENCES public.asset_erasure_requests(user_id, id) ON DELETE CASCADE,
+    CHECK ((state = 'verified') = (verified_at IS NOT NULL)),
+    CHECK (state <> 'verified' OR (outstanding_count = 0 AND failure_code IS NULL)),
+    CHECK ((state IN ('pending','verified')) = (failure_code IS NULL))
+);
+-- Erased is terminal and is never reported early: every inventoried target
+-- must be verified and the asset itself must already be erased.
+CREATE FUNCTION public.guard_asset_erasure_request() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.status = 'erased' THEN
+        RAISE EXCEPTION 'asset erasure request is already erased' USING ERRCODE = '23514';
+    END IF;
+    IF NEW.status = 'erased' THEN
+        IF (SELECT count(*) FROM public.asset_erasure_targets t
+             WHERE t.user_id = NEW.user_id AND t.request_id = NEW.id AND t.state = 'verified') <> 8
+           OR NOT EXISTS (SELECT 1 FROM public.user_assets a
+             WHERE a.user_id = NEW.user_id AND a.id = NEW.asset_id AND a.availability = 'erased') THEN
+            RAISE EXCEPTION 'asset erasure has unverified targets' USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    IF (NEW.id, NEW.user_id, NEW.asset_id, NEW.idempotency_key, NEW.inventory_revision, NEW.requested_at)
+       IS DISTINCT FROM
+       (OLD.id, OLD.user_id, OLD.asset_id, OLD.idempotency_key, OLD.inventory_revision, OLD.requested_at) THEN
+        RAISE EXCEPTION 'asset erasure request identity is immutable' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER asset_erasure_request_guard BEFORE UPDATE ON public.asset_erasure_requests
+    FOR EACH ROW EXECUTE FUNCTION public.guard_asset_erasure_request();

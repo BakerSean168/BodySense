@@ -173,6 +173,8 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Asset source removal and the private uploads, posture analysis and
 	// health-document review surfaces.
 	protected.DELETE("/assets/:id", wrapper.DeleteAsset)
+	protected.POST("/assets/:id/erasure", wrapper.RequestAssetErasure)
+	protected.GET("/assets/:id/erasure", wrapper.GetAssetErasure)
 	protected.POST("/uploads", wrapper.CreateUpload)
 	protected.GET("/uploads", wrapper.ListUploads)
 	protected.GET("/uploads/posture-analysis", wrapper.GetPostureAnalysis)

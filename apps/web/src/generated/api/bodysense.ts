@@ -10,6 +10,7 @@ import {
   AssessmentRegressionExport,
   AssessmentReplayReport,
   AssessmentReportV2,
+  AssetErasureReceipt,
   AssetSourceRemovalResponse,
   AuthSession,
   BodyEpisodeCommandReceipt,
@@ -86,6 +87,7 @@ import type {
   AssessmentReplayReportOutput,
   AssessmentReplayRequest,
   AssessmentReportV2Output,
+  AssetErasureReceiptOutput,
   AssetSourceRemovalResponseOutput,
   AuthLoginRequest,
   AuthRegisterRequest,
@@ -183,6 +185,7 @@ import type {
   RecordTrainingSessionFeedbackRequest,
   RecordTrainingSetActionRequest,
   RegisterKnowledgeSourceRequest,
+  RequestAssetErasureRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
   ResumeTrainingSessionRequest,
@@ -4278,6 +4281,101 @@ export const deleteAsset = async (id: string, options?: RequestInit, fetchFn?: t
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? AssetSourceRemovalResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRequestAssetErasureUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/assets/${id}/erasure`
+}
+
+/**
+ * AS-002 per-asset erasure. Unlike source removal (DELETE /api/v1/assets/{id}) it goes after every inventoried controlled copy of the asset (object replicas, derived jobs and AI output reviews, posture and extraction runs, indicator reviews) and verifies each target on its own. The asset becomes unavailable at once but is reported erased only after every target verified; until then the receipt lists the outstanding targets with a failure code. Evidence a Diagnosis still cites, frozen assessment input and consultation runtime state are never removed silently: they stay outstanding for review or for a later handler, and no Diagnosis or training plan is changed. One erasure exists per asset; repeating the command (with any key) retries it and returns the same receipt. An idempotency key already used for another asset is a 409. Foreign or missing assets return owner-masked 404.
+ * @summary Erase one owned asset's source and every controlled copy, with a verified receipt.
+ */
+export const requestAssetErasure = async (id: string,
+    requestAssetErasureRequest: RequestAssetErasureRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AssetErasureReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRequestAssetErasureUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestAssetErasureRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AssetErasureReceipt, status?: number} = new globalThis.Error();
+    const data : AssetErasureReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AssetErasureReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetAssetErasureUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/assets/${id}/erasure`
+}
+
+/**
+ * Returns the current receipt, including outstanding targets. 404 when the asset is foreign, missing or has no erasure.
+ * @summary Read the erasure receipt of one owned asset.
+ */
+export const getAssetErasure = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AssetErasureReceiptOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetAssetErasureUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AssetErasureReceipt, status?: number} = new globalThis.Error();
+    const data : AssetErasureReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AssetErasureReceipt.parse(parsedBody) : parsedBody
   return data
 }
 
