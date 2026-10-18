@@ -62,3 +62,31 @@ func TestStartTurnCommandRejectsAnInvalidContextWindow(t *testing.T) {
 		}
 	}
 }
+
+func TestStartTurnCommandCarriesTheCitableUserMessage(t *testing.T) {
+	read := func(req StartConsultationTurnRequest) map[string]any {
+		body, err := marshalStartTurnCommand(testRuntimeThreadID, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var command struct {
+			Input map[string]any `json:"input"`
+		}
+		if err := json.Unmarshal(body, &command); err != nil {
+			t.Fatal(err)
+		}
+		return command.Input
+	}
+	if _, ok := read(validStartConsultationTurnRequest())["message_id"]; ok {
+		t.Fatal("absent message id was sent")
+	}
+	req := validStartConsultationTurnRequest()
+	req.Input.MessageID = testRuntimeRunID
+	if got := read(req)["message_id"]; got != testRuntimeRunID {
+		t.Fatalf("message_id = %v", got)
+	}
+	req.Input.MessageID = "not-a-uuid"
+	if _, err := marshalStartTurnCommand(testRuntimeThreadID, req); err == nil {
+		t.Fatal("a non-uuid message id was accepted")
+	}
+}

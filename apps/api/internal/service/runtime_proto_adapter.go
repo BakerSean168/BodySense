@@ -45,6 +45,10 @@ func marshalStartTurnCommand(threadID string, req StartConsultationTurnRequest) 
 		},
 		BusinessContext: businessContext,
 	}
+	// The persisted user message is the only one a suggestion may cite.
+	if req.Input.MessageID != "" {
+		command.Input.MessageId = &req.Input.MessageID
+	}
 	return validateAndMarshalRuntimeCommand(command)
 }
 
