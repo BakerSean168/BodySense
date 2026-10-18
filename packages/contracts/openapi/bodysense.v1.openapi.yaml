@@ -790,7 +790,11 @@ paths:
           $ref: '#/components/responses/InternalError'
     put:
       operationId: updateUserProfile
-      summary: Replace the editable stable identity fields.
+      summary: Replace the editable optional Profile fields and preferences.
+      description: >-
+        Optimistic concurrency on the profile revision (409 PROFILE_REVISION_CONFLICT when it
+        moved). An exact replay of the update that produced the current revision returns the
+        current profile. A foreign, missing or unavailable avatar asset is 400 PROFILE_AVATAR_UNAVAILABLE.
       security:
       - bearerAuth: []
       requestBody:
@@ -810,6 +814,8 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/equipment:
@@ -6428,16 +6434,32 @@ components:
     UserProfile:
       type: object
       additionalProperties: false
+      description: >-
+        Minimal optional Profile (PC-D1): display identity and preferences only. Body
+        measurements, lifestyle, symptoms and history are BodyState facts and never appear
+        here. Absent optional fields mean "not provided"; the service never infers them.
+        revision is the concurrency token for updates, not a user-facing value.
       required:
       - id
       - user_id
+      - preferences
+      - revision
       - created_at
       - updated_at
       properties:
         id: *id013
         user_id: *id013
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        avatar_asset_id:
+          type: string
+          format: uuid
+          description: Owner's available photo UserAsset; omitted once that source is removed or erased.
         gender:
           type: string
+          description: Self-reported gender. Not a physiological or medical determination.
           enum:
           - male
           - female
@@ -6448,15 +6470,86 @@ components:
           type: integer
           minimum: 0
           maximum: 150
+          description: Derived from birth_date on read; never stored.
+        preferences:
+          $ref: '#/components/schemas/ProfilePreferences'
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
         created_at: &id014
           type: string
           format: date-time
         updated_at: *id014
+    ProfilePreferences:
+      type: object
+      additionalProperties: false
+      description: >-
+        Presentation preferences. An absent value means the client default applies and must be
+        shown as a default. Changing a preference never rewrites stored Observation values or
+        units, Trainer training dates or historical occurrence times.
+      properties:
+        locale:
+          type: string
+          maxLength: 35
+          pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$'
+        time_zone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: IANA time zone identifier.
+        unit_preference:
+          type: string
+          enum:
+          - metric
+          - imperial
+    UpdateProfilePreferences:
+      type: object
+      additionalProperties: false
+      required: [locale, time_zone, unit_preference]
+      properties:
+        locale:
+          type:
+          - string
+          - 'null'
+          maxLength: 35
+          pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$'
+        time_zone:
+          type:
+          - string
+          - 'null'
+          maxLength: 64
+          description: IANA time zone identifier, or null to follow the client default.
+        unit_preference:
+          type:
+          - string
+          - 'null'
+          enum:
+          - metric
+          - imperial
+          - null
     UpdateUserProfileRequest:
       type: object
       additionalProperties: false
-      minProperties: 1
+      description: >-
+        Full replacement of the editable Profile fields; null clears a field. expected_revision
+        is the profile revision that was read, or 0 when no profile exists yet.
+      required: [expected_revision, display_name, avatar_asset_id, gender, birth_date, preferences]
       properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        display_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 40
+        avatar_asset_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
         gender:
           type:
           - string
@@ -6470,6 +6563,8 @@ components:
           - string
           - 'null'
           format: date
+        preferences:
+          $ref: '#/components/schemas/UpdateProfilePreferences'
     NullableUserProfileResponse:
       type: object
       additionalProperties: false

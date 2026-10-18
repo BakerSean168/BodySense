@@ -9,6 +9,8 @@ const profile: UserProfile = {
   gender: "male",
   birth_date: "1998-05-20",
   age_years: 28,
+  preferences: {},
+  revision: 1,
   created_at: "2026-08-27T00:00:00Z",
   updated_at: "2026-08-27T00:00:00Z",
 };

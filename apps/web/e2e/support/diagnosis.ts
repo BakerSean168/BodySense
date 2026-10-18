@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./auth";
+import { profileReplacement } from "./profile";
 import { completeStructuredSafetyIntake } from "./safety";
 
 interface NativeRunProposal {
@@ -169,7 +170,7 @@ export async function seedUserWithSymptom(
   };
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers,
-    data: { gender: "female", birth_date: "1994-03-12" },
+    data: profileReplacement({ gender: "female", birth_date: "1994-03-12" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
   const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {

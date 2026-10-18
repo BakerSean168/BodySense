@@ -862,7 +862,9 @@ func (r *Runtime) loadProfileJSON(ctx context.Context, uid uuid.UUID) (json.RawM
 		return json.RawMessage(`{}`), nil
 	}
 
-	data, err := json.Marshal(profile)
+	// Only the allowlisted identity context reaches the Agent; display name,
+	// avatar and preferences stay presentation data.
+	data, err := json.Marshal(profile.AgentContext())
 	if err != nil {
 		return nil, err
 	}

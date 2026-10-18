@@ -1,5 +1,6 @@
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 // These cases include registration, real Go/Python/DB calls and full reloads.
 // Keep each expectation's normal timeout; allow a cold 3D/browser startup on
@@ -30,7 +31,7 @@ async function registerAndProfile(page: Page): Promise<string> {
     .context()
     .request.put(`${apiBase}/api/v1/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
-      data: { gender: "male", birth_date: "1996-08-27" },
+      data: profileReplacement({ gender: "male", birth_date: "1996-08-27" }),
     });
   expect(profile.ok(), await profile.text()).toBeTruthy();
   return accessToken;

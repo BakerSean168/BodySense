@@ -194,7 +194,7 @@ func (s *TreatmentService) runGeneration(
 	profilePayload := json.RawMessage(`{}`)
 	if s.profiles != nil {
 		if profile, profileErr := s.profiles.GetProfile(ctx, userID); profileErr == nil && profile != nil {
-			profilePayload = rawJSON(profile, `{}`)
+			profilePayload = rawJSON(profile.AgentContext(), `{}`)
 		}
 	}
 	evidencePayload, err := treatmentDiagnosisEvidence(userID, diagnosis)

@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { expect, test, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -28,7 +29,7 @@ async function registerBrowser(page: Page): Promise<void> {
     .context()
     .request.put(`${apiBase}/api/v1/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
-      data: { gender: "male", birth_date: "1996-08-27" },
+      data: profileReplacement({ gender: "male", birth_date: "1996-08-27" }),
     });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 

@@ -14,7 +14,7 @@ import (
 
 type profileApplication interface {
 	GetProfile(context.Context, uuid.UUID) (*model.UserProfile, error)
-	CreateOrUpdateProfile(context.Context, uuid.UUID, *model.UserProfile) error
+	ReplaceProfile(context.Context, uuid.UUID, model.ReplaceProfileCommand) (*model.UserProfile, error)
 }
 
 func (s *PublicServer) WithProfile(profile profileApplication) *PublicServer {
@@ -76,27 +76,44 @@ func (s *PublicServer) UpdateUserProfile(
 		return updateUserProfileError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
 	}
 
-	profile := &model.UserProfile{}
-	if request.Body.Gender != nil {
-		gender := string(*request.Body.Gender)
-		profile.Gender = &gender
+	body := request.Body
+	command := model.ReplaceProfileCommand{
+		ExpectedRevision: body.ExpectedRevision,
+		ProfileFields: model.ProfileFields{
+			DisplayName:   body.DisplayName,
+			AvatarAssetID: body.AvatarAssetId,
+			Locale:        body.Preferences.Locale,
+			TimeZone:      body.Preferences.TimeZone,
+		},
 	}
-	if request.Body.BirthDate != nil {
-		birthDate, parseErr := model.ParseDateOnly(request.Body.BirthDate.String())
+	if body.Gender != nil {
+		gender := string(*body.Gender)
+		command.Gender = &gender
+	}
+	if body.Preferences.UnitPreference != nil {
+		unit := string(*body.Preferences.UnitPreference)
+		command.UnitPreference = &unit
+	}
+	if body.BirthDate != nil {
+		birthDate, parseErr := model.ParseDateOnly(body.BirthDate.String())
 		if parseErr != nil {
 			return updateUserProfileError(http.StatusBadRequest, "INVALID_PROFILE", "birth_date must use YYYY-MM-DD"), nil
 		}
-		profile.BirthDate = &birthDate
+		command.BirthDate = &birthDate
 	}
-	if err := s.profile.CreateOrUpdateProfile(ctx, userID, profile); err != nil {
-		if errors.Is(err, service.ErrInvalidProfile) {
+	stored, err := s.profile.ReplaceProfile(applicationRequestContext(ctx), userID, command)
+	if err != nil {
+		switch {
+		case errors.Is(err, model.ErrProfileRevisionConflict):
+			return updateUserProfileError(http.StatusConflict, "PROFILE_REVISION_CONFLICT", "profile changed since it was read"), nil
+		case errors.Is(err, model.ErrProfileAvatarUnavailable):
+			return updateUserProfileError(http.StatusBadRequest, "PROFILE_AVATAR_UNAVAILABLE", "avatar asset is not an available photo"), nil
+		case errors.Is(err, service.ErrInvalidProfile):
 			return updateUserProfileError(http.StatusBadRequest, "INVALID_PROFILE", err.Error()), nil
 		}
 		return updateUserProfileError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update profile"), nil
 	}
-
-	stored, err := s.profile.GetProfile(ctx, userID)
-	if err != nil || stored == nil {
+	if stored == nil {
 		return updateUserProfileError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load updated profile"), nil
 	}
 	publicProfile, err := strictOpenAPIConvert[openapiv1.UserProfile]("UserProfile", stored)
@@ -129,6 +146,8 @@ func updateUserProfileError(status int, code, message string) openapiv1.UpdateUs
 		return openapiv1.UpdateUserProfile400JSONResponse{InvalidRequestJSONResponse: openapiv1.InvalidRequestJSONResponse(e)}
 	case http.StatusUnauthorized:
 		return openapiv1.UpdateUserProfile401JSONResponse{UnauthorizedJSONResponse: openapiv1.UnauthorizedJSONResponse(e)}
+	case http.StatusConflict:
+		return openapiv1.UpdateUserProfile409JSONResponse{ConflictJSONResponse: openapiv1.ConflictJSONResponse(e)}
 	default:
 		return openapiv1.UpdateUserProfile500JSONResponse{InternalErrorJSONResponse: openapiv1.InternalErrorJSONResponse(e)}
 	}

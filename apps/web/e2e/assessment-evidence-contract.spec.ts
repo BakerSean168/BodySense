@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 const currentAssessmentConfigurationId = "assess-config-617534e4b17c512a";
@@ -25,7 +26,7 @@ test("assessment output v2 persists only deterministic source-grounded observati
 
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers,
-    data: { gender: "male", birth_date: "1996-08-27" },
+    data: profileReplacement({ gender: "male", birth_date: "1996-08-27" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
@@ -197,7 +198,7 @@ test("assessment output v2 derives insufficient information without any model re
 
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers,
-    data: { gender: "female", birth_date: "1996-08-27" },
+    data: profileReplacement({ gender: "female", birth_date: "1996-08-27" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 

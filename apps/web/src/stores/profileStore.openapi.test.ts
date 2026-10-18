@@ -6,7 +6,11 @@ vi.mock("@/features/auth/services/authService", () => ({
 }));
 
 import { useAuthStore } from "./authStore";
-import { useProfileStore } from "./profileStore";
+import {
+  editableProfile,
+  ProfileConflictError,
+  useProfileStore,
+} from "./profileStore";
 
 const PROFILE_ID = "44444444-4444-4444-8444-444444444444";
 const USER_ID = "55555555-5555-4555-8555-555555555555";
@@ -25,6 +29,9 @@ function validProfile() {
     gender: "female",
     birth_date: "2000-01-02",
     age_years: 26,
+    display_name: "BakerSean",
+    preferences: { time_zone: "Asia/Shanghai", unit_preference: "metric" },
+    revision: 4,
     created_at: "2026-09-13T08:00:00Z",
     updated_at: "2026-09-13T08:00:00Z",
   } as const;
@@ -64,21 +71,63 @@ describe("profileStore OpenAPI boundary", () => {
     expect(useProfileStore.getState().error).toBeTruthy();
   });
 
-  it("sends only editable identity fields and validates the stored response", async () => {
-    authFetchMock.mockResolvedValue(jsonResponse({ profile: validProfile() }));
+  it("replaces every editable field against the revision it read", async () => {
+    authFetchMock.mockResolvedValueOnce(jsonResponse({ profile: validProfile() }));
+    await useProfileStore.getState().fetchProfile();
+    authFetchMock.mockResolvedValueOnce(
+      jsonResponse({ profile: { ...validProfile(), revision: 5 } }),
+    );
 
-    await useProfileStore.getState().updateProfile({
-      gender: "female",
-      birth_date: "2000-01-02",
-    });
+    await useProfileStore.getState().updateProfile({ gender: null });
 
-    expect(authFetchMock).toHaveBeenCalledWith(
+    expect(authFetchMock).toHaveBeenLastCalledWith(
       "/api/v1/profile",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ gender: "female", birth_date: "2000-01-02" }),
+        body: JSON.stringify({
+          expected_revision: 4,
+          display_name: "BakerSean",
+          avatar_asset_id: null,
+          gender: null,
+          birth_date: "2000-01-02",
+          preferences: {
+            locale: null,
+            time_zone: "Asia/Shanghai",
+            unit_preference: "metric",
+          },
+        }),
       }),
     );
-    expect(useProfileStore.getState().profile?.id).toBe(PROFILE_ID);
+    expect(useProfileStore.getState().profile?.revision).toBe(5);
+  });
+
+  it("reloads the newer profile instead of overwriting it on a revision conflict", async () => {
+    authFetchMock.mockResolvedValueOnce(jsonResponse({ profile: validProfile() }));
+    await useProfileStore.getState().fetchProfile();
+    authFetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: { code: "PROFILE_REVISION_CONFLICT", message: "changed" } },
+          409,
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          profile: { ...validProfile(), display_name: "Elsewhere", revision: 6 },
+        }),
+      );
+
+    await expect(
+      useProfileStore
+        .getState()
+        .saveProfile({ ...editableProfile(validProfileState()), display_name: "Mine" }),
+    ).rejects.toBeInstanceOf(ProfileConflictError);
+
+    expect(useProfileStore.getState().profile?.display_name).toBe("Elsewhere");
+    expect(useProfileStore.getState().profile?.revision).toBe(6);
   });
 });
+
+function validProfileState() {
+  return useProfileStore.getState().profile;
+}

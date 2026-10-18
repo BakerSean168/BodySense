@@ -9,6 +9,7 @@ import {
   adoptNativeDiagnosis,
   factStatementEvidenceId,
 } from "./support/diagnosis";
+import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -31,10 +32,10 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
 
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    data: {
+    data: profileReplacement({
       gender: "male",
       birth_date: "1996-08-27",
-    },
+    }),
   });
   expect(profile.ok()).toBeTruthy();
 
@@ -176,10 +177,10 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     (
       await request.put(`${apiBase}/api/v1/profile`, {
         headers,
-        data: {
+        data: profileReplacement({
           gender: "female",
           birth_date: "1994-08-27",
-        },
+        }),
       })
     ).ok(),
   ).toBeTruthy();

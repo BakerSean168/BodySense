@@ -6,12 +6,28 @@ import {
   bodyMetricsService,
   type BodyMetricsSnapshot,
 } from "../../services/bodyMetricsService";
+import {
+  effectiveUnitPreference,
+  formatMeasurement,
+  type UnitPreference,
+} from "../../model/profilePreferences";
+import { useProfileStore } from "@/stores/profileStore";
 
-function metricLabel(value?: { value: number; unit: string }) {
-  return value ? `${value.value} ${value.unit}` : "尚未记录";
+/** Display-only conversion; the recorded value and unit stay authoritative. */
+function metricLabel(
+  value: { value: number; unit: string } | undefined,
+  unit: UnitPreference,
+) {
+  if (!value) return "尚未记录";
+  const display = formatMeasurement(value.value, value.unit, unit);
+  return display.original
+    ? `${display.text}（记录 ${display.original}）`
+    : display.text;
 }
 
 export function BodyMetricsPanel() {
+  const preferences = useProfileStore((state) => state.profile?.preferences);
+  const unit = effectiveUnitPreference(preferences).unit;
   const [snapshot, setSnapshot] = useState<BodyMetricsSnapshot | null>(null);
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
@@ -136,11 +152,11 @@ export function BodyMetricsPanel() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">身高</div>
-            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.height)}</div>
+            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.height, unit)}</div>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">体重</div>
-            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.weight)}</div>
+            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.weight, unit)}</div>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">BMI</div>

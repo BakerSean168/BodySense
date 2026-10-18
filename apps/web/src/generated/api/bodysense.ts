@@ -1681,7 +1681,8 @@ export const getUpdateUserProfileUrl = () => {
 }
 
 /**
- * @summary Replace the editable stable identity fields.
+ * Optimistic concurrency on the profile revision (409 PROFILE_REVISION_CONFLICT when it moved). An exact replay of the update that produced the current revision returns the current profile. A foreign, missing or unavailable avatar asset is 400 PROFILE_AVATAR_UNAVAILABLE.
+ * @summary Replace the editable optional Profile fields and preferences.
  */
 export const updateUserProfile = async (updateUserProfileRequest: UpdateUserProfileRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserProfileResponseOutput> => {
 

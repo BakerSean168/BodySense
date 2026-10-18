@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -22,7 +23,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   const headers = { Authorization: `Bearer ${accessToken}` };
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers,
-    data: { gender: "male", birth_date: "1996-08-27" },
+    data: profileReplacement({ gender: "male", birth_date: "1996-08-27" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 

@@ -24,7 +24,6 @@ import { BodyCanvasWorkspace } from "@/features/body-canvas/components/BodyCanva
 import type { MotionId } from "@/features/body-canvas/model/bodyCanvas";
 import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
-import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
 import { useHealthWorkspaceQuery } from "@/features/workspace/hooks/useHealthWorkspaceQuery";
 import { useBodyExplorerWorkspace } from "@/features/body-explorer";
 import {
@@ -44,6 +43,14 @@ const loadAssistantChatPanel = () =>
     }),
   );
 const AssistantChatPanel = lazy(loadAssistantChatPanel);
+
+// The 身体档案 drawer (files, source removal, erasure) opens on demand, so it
+// is fetched on first open and stays out of the consultation chunk.
+const ProfileDrawer = lazy(() =>
+  retryDynamicImport(
+    () => import("@/features/profile/components/profile/ProfileDrawer"),
+  ).then((module) => ({ default: module.ProfileDrawer })),
+);
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -206,17 +213,15 @@ export function ConsultationPage() {
   const demonstrationRequest: { motion: MotionId; revision: number } | null =
     null;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // Mounted after the first open and kept, so closing still animates out.
+  const [profileDrawerMounted, setProfileDrawerMounted] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   const accountName = useAuthStore((state) => state.user?.email ?? "");
-  // The identity header shows the real account name so it is never a fabricated
-  // label; missing values stay blank rather than being invented.
+  // The identity header shows the Profile nickname, else the real account
+  // name, so it is never a fabricated label.
   const personIdentity = useMemo(
-    () => ({
-      nickname: accountName,
-      birth_date: profile?.birth_date,
-      gender: profile?.gender,
-    }),
-    [accountName, profile?.birth_date, profile?.gender],
+    () => ({ nickname: profile?.display_name || accountName }),
+    [accountName, profile?.display_name],
   );
   const handleWindowChange = useCallback(
     (window: BusinessWindowId | null) => {
@@ -385,7 +390,10 @@ export function ConsultationPage() {
         chat={chatPanel}
         latestUserMessage={latestUserMessage}
         onAskContext={handleAskSpatialContext}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenProfile={() => {
+          setProfileDrawerMounted(true);
+          setIsProfileOpen(true);
+        }}
         identity={personIdentity}
         initialWindow={initialWindow}
         onWindowChange={handleWindowChange}
@@ -407,7 +415,11 @@ export function ConsultationPage() {
           threadActions.retryThread();
         }}
       />
-      <ProfileDrawer open={isProfileOpen} onOpenChange={setIsProfileOpen} />
+      {profileDrawerMounted ? (
+        <Suspense fallback={null}>
+          <ProfileDrawer open={isProfileOpen} onOpenChange={setIsProfileOpen} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

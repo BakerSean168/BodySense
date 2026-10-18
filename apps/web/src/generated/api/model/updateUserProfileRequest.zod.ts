@@ -6,11 +6,22 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
+import { UpdateProfilePreferences } from './updateProfilePreferences.zod';
+
+export const updateUserProfileRequestExpectedRevisionMin = 0;
+
+export const updateUserProfileRequestDisplayNameMax = 40;
+
+
 
 export const UpdateUserProfileRequest = /*#__PURE__*/ zod.strictObject({
-  "gender": /*#__PURE__*/ zod.nullish(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.literal('male'),/*#__PURE__*/ zod.literal('female'),/*#__PURE__*/ zod.literal(null)])),
-  "birth_date": /*#__PURE__*/ zod.nullish(/*#__PURE__*/ zod.iso.date())
-});
+  "expected_revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(updateUserProfileRequestExpectedRevisionMin)),
+  "display_name": /*#__PURE__*/ zod.nullable(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(updateUserProfileRequestDisplayNameMax))),
+  "avatar_asset_id": /*#__PURE__*/ zod.nullable(/*#__PURE__*/ zod.uuid()),
+  "gender": /*#__PURE__*/ zod.nullable(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.literal('male'),/*#__PURE__*/ zod.literal('female'),/*#__PURE__*/ zod.literal(null)])),
+  "birth_date": /*#__PURE__*/ zod.nullable(/*#__PURE__*/ zod.iso.date()),
+  "preferences": UpdateProfilePreferences
+}).check(/*#__PURE__*/ zod.describe('Full replacement of the editable Profile fields; null clears a field. expected_revision is the profile revision that was read, or 0 when no profile exists yet.'));
 
 export type UpdateUserProfileRequest = zod.input<typeof UpdateUserProfileRequest>;
 export type UpdateUserProfileRequestOutput = zod.output<typeof UpdateUserProfileRequest>;

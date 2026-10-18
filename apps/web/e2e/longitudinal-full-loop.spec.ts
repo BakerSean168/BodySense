@@ -16,6 +16,7 @@ import {
   adoptNativeDiagnosis,
   factStatementEvidenceId,
 } from "./support/diagnosis";
+import { profileReplacement } from "./support/profile";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -52,10 +53,10 @@ async function registerAndProfile(
 
   const profileResponse = await request.put(`${apiBase}/api/v1/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    data: {
+    data: profileReplacement({
       gender: "male",
       birth_date: "1996-08-27",
-    },
+    }),
   });
   expect(profileResponse.ok()).toBeTruthy();
   return { accessToken, email };

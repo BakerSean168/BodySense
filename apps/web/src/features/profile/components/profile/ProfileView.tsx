@@ -39,7 +39,7 @@ export function ProfileView({ profile, onEdit }: ProfileViewProps) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
-          <div className="text-xs font-medium text-muted-foreground">性别</div>
+          <div className="text-xs font-medium text-muted-foreground">自报性别</div>
           <div className="mt-2 text-base font-semibold text-foreground">
             {profile.gender ? GENDER_LABELS[profile.gender] || profile.gender : "未填写"}
           </div>
