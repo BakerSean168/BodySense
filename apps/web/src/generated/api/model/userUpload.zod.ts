@@ -18,6 +18,7 @@ export const UserUpload = /*#__PURE__*/ zod.strictObject({
   "original_name": /*#__PURE__*/ zod.string(),
   "file_size": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(userUploadFileSizeMin)),
   "mime_type": /*#__PURE__*/ zod.string(),
+  "source_availability": /*#__PURE__*/ zod.enum(['available', 'source_unavailable']).check(/*#__PURE__*/ zod.describe('CD-D4 marker of the private original. source_unavailable after a source removal; derived evidence stays readable. An erased asset is not listed at all.')),
   "ocr_result": /*#__PURE__*/ zod.optional(JsonObject),
   "ocr_status": /*#__PURE__*/ zod.enum(['pending', 'processing', 'completed', 'failed']),
   "analysis_result": /*#__PURE__*/ zod.optional(JsonObject),

@@ -134,9 +134,20 @@ func TestUploadPublicProjectionDoesNotExposePersistenceOrStorageAuthority(t *tes
 		t.Fatal(err)
 	}
 	text := string(payload)
-	for _, forbidden := range []string{"user_id", "file_path", "storage_backend", "storage_key", "agent_configuration_id", "availability", "private/"} {
+	for _, forbidden := range []string{"user_id", "file_path", "storage_backend", "storage_key", "agent_configuration_id", "\"availability\"", "private/"} {
 		if strings.Contains(text, forbidden) {
 			t.Fatalf("public upload leaked %q: %s", forbidden, text)
+		}
+	}
+	if !strings.Contains(text, `"source_availability":"available"`) {
+		t.Fatalf("public upload misses its source marker: %s", text)
+	}
+	for availability, want := range map[model.UserAssetAvailability]string{
+		model.UserAssetSourceRemoved: "source_unavailable", model.UserAssetErased: "source_unavailable",
+	} {
+		upload.Availability = availability
+		if projected, err := strictUserUpload(upload); err != nil || string(projected.SourceAvailability) != want {
+			t.Fatalf("%s: source_availability=%q err=%v", availability, projected.SourceAvailability, err)
 		}
 	}
 }
