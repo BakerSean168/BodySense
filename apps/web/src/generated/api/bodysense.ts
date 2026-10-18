@@ -200,6 +200,7 @@ import type {
   RecordBodyHypothesisRequest,
   RecordBodyObservationRequest,
   RecordOutcomeRequest,
+  RecordTrainingSessionFeedbackRequest,
   RecordTrainingSetActionRequest,
   RegisterKnowledgeSourceRequest,
   ResolveSafetyRestrictionRequest,
@@ -4660,6 +4661,61 @@ const res = await (fetchFn ?? fetch)(getFinishTrainingSessionUrl(sessionId),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(finishTrainingSessionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordTrainingSessionFeedbackUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}/feedback`
+}
+
+/**
+ * Feedback is never gated and never interpreted. It changes no plan, revision, receipt, BodyState or Safety; it only surfaces as the read-only review hint of the plan revision the session executed. Body symptoms are recorded through BodyState. An exact idempotent retry returns the session.
+ * @summary Record the user's own feedback on one owned ended session, verbatim and at most once.
+ */
+export const recordTrainingSessionFeedback = async (sessionId: string,
+    recordTrainingSessionFeedbackRequest: RecordTrainingSessionFeedbackRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordTrainingSessionFeedbackUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordTrainingSessionFeedbackRequest)
   }
 )
 

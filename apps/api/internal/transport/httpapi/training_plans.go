@@ -142,8 +142,9 @@ type planGateWire struct {
 	PolicyRevision        string        `json:"policyRevision,omitempty"`
 }
 type planReviewWire struct {
-	Recommended bool   `json:"recommended"`
-	Reason      string `json:"reason,omitempty"`
+	Recommended          bool   `json:"recommended"`
+	Reason               string `json:"reason,omitempty"`
+	SessionFeedbackCount *int64 `json:"sessionFeedbackCount,omitempty"`
 }
 type planRecordWire struct {
 	PlanID                    uuid.UUID                 `json:"planId"`
@@ -233,7 +234,7 @@ func planRecord(owner uuid.UUID, v service.TrainingPlanView) (openapiv1.Training
 	wire := planRecordWire{
 		PlanID: v.Plan.ID, Title: v.Plan.Title, Goal: v.Plan.Goal, Status: v.Plan.Status, StatusRevision: v.Plan.StatusRevision,
 		CurrentAcceptedRevisionID: v.Revision.ID, RelatedConditionIDs: d.RelatedConditionIDs, RelatedBodyRefs: d.RelatedBodyRefs,
-		CurrentContent: d.Content, Review: planReviewWire{Recommended: v.Review.Recommended, Reason: v.Review.Reason},
+		CurrentContent: d.Content, Review: planReviewWire{Recommended: v.Review.Recommended, Reason: v.Review.Reason, SessionFeedbackCount: v.Review.SessionFeedbackCount},
 		ExecutionGate: planGate(v.Gate), CreatedAt: v.Plan.CreatedAt,
 	}
 	return strictOpenAPIConvert[openapiv1.TrainingPlanRecord]("TrainingPlanRecord", wire)
