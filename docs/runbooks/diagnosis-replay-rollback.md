@@ -2,11 +2,16 @@
 
 Status: Active operational contract for DGS-SAFE-090.
 
+> **DX-RETIRE-001 (#341, 2026-10-18):** the legacy per-analysis Diagnosis stack and the
+> `domain-validator -mode diagnosis-replay-audit` mode are deleted. Section 2 is kept as the
+> historical DGS-SAFE-090 record; native runs freeze their replay input on
+> `condition_analysis_runs`.
+
 ## Purpose
 
 This runbook governs Diagnosis historical replay, serving-pointer rollback, immutable-history verification, and the later production-promotion decision.
 
-The rollback contract changes **future serving only**. It must never rewrite an existing `diagnosis_analyses` or `diagnosis_candidates` row, replay input, raw output, decision trace, execution provenance, or Agent configuration provenance.
+The rollback contract changes **future serving only**. It must never rewrite an existing `condition_analysis_runs`, `diagnosis_proposals` or `diagnosis_decisions` row, replay input, raw output, decision trace, execution provenance, or Agent configuration provenance.
 
 Current staging Champion after DGS-SAFE-080:
 

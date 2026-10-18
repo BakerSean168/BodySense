@@ -43,8 +43,7 @@ the owner's native `diagnoses.current_revision` invalidates a pending proposal.
 The transaction locks the native Diagnosis head after the BodyState head, so
 concurrent adoption cannot race its snapshot. A missing aggregate is initialized
 at revision zero; it creates no ConditionEntry or DiagnosisRevision and does not
-prevent an independent plan with no Diagnosis association. Legacy
-`diagnosis_analyses` are never read as an acceptance authority.
+prevent an independent plan with no Diagnosis association.
 
 Related ConditionEntries must belong to the owner, be adopted, and refer to a
 committed revision within the locked head. Their current snapshots and typed

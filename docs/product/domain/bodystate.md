@@ -242,7 +242,7 @@ type DerivedConcernGroup = {
 | [BodyState](../../../apps/api/internal/model/body_state.go) | UserID、CurrentRevision、SafetyState(JSON)、CreatedAt/UpdatedAt；Facts/Observations/Hypotheses 为读取投影 | 当前没有 SymptomEpisode 的完整目标关联与推导契约；不能因旧 JSON 设计将 Concern 变为第二份真值 |
 | [BodyStateFact](../../../apps/api/internal/model/body_state.go) | ID、UserID、ConcernKey、Kind、BodyRegion/ID、Value、Details、Origin、ReviewState、LifecycleState、Trend、SourceKey、Provenance、ObservedAt、ValidFrom/Until、SupersedesFactID、ExcludedFromReasoning、Created/UpdatedRevision 与时间 | 旧 ReviewState/LifecycleState/Trend 不等于本轮 assertionStatus + 独立时间/episode 状态；兼容映射待 DC-025/026 |
 | [BodyStateObservation](../../../apps/api/internal/model/body_state.go) | Kind、Method、Value(JSON)、Condition、SourceKey、Provenance、ObservedAt、ReviewState、LifecycleState、SupersedesObservationID、ExcludedFromReasoning、修订和时间 | 旧 unverified/confirmed/rejected 与来源文件准入、临床可信等级不是同一维度（DC-027/028） |
-| BodyStateHypothesis（已删除） | 旧 AI 假设表 body_state_hypotheses 及 /api/v1/body-state/hypotheses 已在 PR4 移除；Agent 假设只保存在 diagnosis_analyses.decision_trace.agent_hypotheses | 用户自述假设见 body_hypotheses（BodyHypothesis） |
+| BodyStateHypothesis（已删除） | 旧 AI 假设表 body_state_hypotheses 及 /api/v1/body-state/hypotheses 已在 PR4 移除；Agent 判断只作为原生 condition_analysis_runs / diagnosis_proposals 审计保存（DX-RETIRE-001） | 用户自述假设见 body_hypotheses（BodyHypothesis） |
 | [BodyStateRevision](../../../apps/api/internal/model/body_state.go) | ID、UserID、Revision、ChangeType、Source、Changes(JSON)、CreatedAt | 有修订基线，但目标的结构化关联/授权/回放协议需独立验证（DC-030） |
 
 以上是静态实现对照，不代表代码已经满足新产品规则；见 [数据库基线迁移](../../../apps/api/migrations/000001_vnext_baseline.up.sql) 与 [实施差异](../implementation-gaps.md)。
