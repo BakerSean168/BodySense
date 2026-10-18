@@ -120,10 +120,11 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
         onSelectCondition={onSelectCondition}
       />,
     );
+    // Penpot Diagnosis / Empty shows only the window title.
     expect(
-      screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toBeDisabled();
-    expect(screen.getByText("暂无已确认病情")).toBeVisible();
+      screen.queryByRole("combobox", { name: "选择已确认病情" }),
+    ).toBeNull();
+    expect(screen.getByText("诊断")).toBeVisible();
   });
 
   it("shows the Penpot run label instead of the picker during a formal analysis", () => {

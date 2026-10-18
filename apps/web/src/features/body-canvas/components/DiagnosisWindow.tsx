@@ -301,7 +301,9 @@ function ProposalCard({ row }: { row: ProposalRow }) {
           </MarkRow>
         ) : null}
         {row.rationale && row.rationale !== row.summary ? (
-          <MarkRow kind="context">{row.rationale}</MarkRow>
+          <MarkRow kind={row.changeKind === "create" ? "support" : "context"}>
+            {row.rationale}
+          </MarkRow>
         ) : null}
         {row.gaps.map((gap) => (
           <li key={gap} className="bc-dx-row" data-mark="gap" data-gap="true">
@@ -450,7 +452,7 @@ function DecidingFooter({
       {stepper.canSubmitEarly ? (
         <button
           type="button"
-          className="bc-dx-link"
+          className="bc-dx-link bc-dx-early"
           disabled={disabled}
           onClick={() => controls.onSubmit()}
         >

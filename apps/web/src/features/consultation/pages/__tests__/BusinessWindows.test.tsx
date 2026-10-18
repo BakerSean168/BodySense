@@ -309,9 +309,11 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("综合诊断");
     expect(await screen.findByTestId("diagnosis-window")).toBeVisible();
+    // Penpot Diagnosis / Empty: title only until a condition is adopted.
     expect(
-      screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toBeDisabled();
+      screen.queryByRole("combobox", { name: "选择已确认病情" }),
+    ).toBeNull();
+    expect(await screen.findByTestId("diagnosis-empty")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "关闭综合诊断" }),
     ).toBeInTheDocument();

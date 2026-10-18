@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Clock3 } from "lucide-react";
+import { ChevronDown, Clock3, Stethoscope } from "lucide-react";
 import type { ProjectedTrainingPlans } from "../model/trainingPlans";
 
 export interface DiagnosisWindowHeaderProps {
@@ -16,6 +16,21 @@ export interface DiagnosisWindowHeaderProps {
 
 const MODE_LABELS = { analysis: "正式分析", receipt: "提交回执" } as const;
 
+/** Penpot "Window / Title Diagnosis": 🩺 诊断 / <selector>. */
+function DiagnosisTitle() {
+  return (
+    <>
+      <span className="bc-window-context-title">
+        <Stethoscope size={18} aria-hidden="true" />
+        诊断
+      </span>
+      <span className="bc-window-context-sep" aria-hidden="true">
+        /
+      </span>
+    </>
+  );
+}
+
 /** Penpot V2: condition picker belongs to the window toolbar, not the scroll body. */
 export function DiagnosisWindowHeader({
   view,
@@ -26,6 +41,7 @@ export function DiagnosisWindowHeader({
   if (mode)
     return (
       <div className="bc-window-context bc-diagnosis-context">
+        <DiagnosisTitle />
         <span
           className="bc-window-select-wrap bc-window-context-mode"
           data-testid="diagnosis-mode"
@@ -41,9 +57,17 @@ export function DiagnosisWindowHeader({
     ? selectedConditionId!
     : (view.confirmed[0]?.conditionId ?? "");
 
+  // Penpot Diagnosis / Empty: only the window title, no empty picker.
+  if (view.confirmed.length === 0)
+    return (
+      <div className="bc-window-context bc-diagnosis-context">
+        <DiagnosisTitle />
+      </div>
+    );
+
   return (
     <div className="bc-window-context bc-diagnosis-context">
-      <span className="bc-window-context-caption">当前诊断</span>
+      <DiagnosisTitle />
       <span className="bc-window-select-wrap">
         <select
           className="bc-window-context-select"
