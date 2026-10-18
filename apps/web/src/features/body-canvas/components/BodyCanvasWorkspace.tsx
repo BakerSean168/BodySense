@@ -25,7 +25,6 @@ import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
 import { ChatWindowHeader, DiagnosisWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
-import { DiagnosisWindow } from "./DiagnosisWindow";
 import {
   PersonIdentityTrigger,
   PersonWindow,
@@ -36,6 +35,10 @@ import { TrainerEntryGuard } from "./TrainerEntryGuard";
 import "../body-canvas.css";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
+// Lazy so the decision-state UI stays out of the ConsultationPage chunk budget.
+const DiagnosisWindow = lazy(() =>
+  import("./DiagnosisWindow").then((module) => ({ default: module.DiagnosisWindow })),
+);
 
 export interface BodyCanvasWorkspaceProps {
   bodyState: BodyRecords | null;
@@ -329,6 +332,13 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         );
       case "diagnosis":
         return (
+          <Suspense
+            fallback={
+              <p role="status" className="bc-window-loading">
+                正在读取当前诊断
+              </p>
+            }
+          >
           <DiagnosisWindow
             view={diagnosisView}
             selectedConditionId={selectedConditionId}
@@ -348,6 +358,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               error: diagnosisActions.error,
             }}
           />
+          </Suspense>
         );
       case "training":
         return (
