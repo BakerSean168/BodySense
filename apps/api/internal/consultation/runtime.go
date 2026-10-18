@@ -81,8 +81,7 @@ type Runtime struct {
 	interactionResumes          *service.InteractionResumeService
 	suggestionSources           service.BodyStateSuggestionSourceReader
 	contextRetrievalService     *service.ContextRetrievalService
-	diagnosisAnalysisService    *service.DiagnosisAnalysisService
-	diagnosisFreshnessService   *service.DiagnosisFreshnessService
+	diagnosisReader             runtimeDiagnosisReader
 	outcomeService              *service.OutcomeService
 	streamRuntime               *stream.Runtime
 	deployment                  *service.AgentDeploymentPolicy
@@ -138,14 +137,18 @@ func NewRuntime(
 // collaborators without expanding the stable runtime constructor used by tests.
 func (r *Runtime) AttachLongitudinalContextServices(
 	contextRetrieval *service.ContextRetrievalService,
-	diagnosis *service.DiagnosisAnalysisService,
-	freshness *service.DiagnosisFreshnessService,
+	diagnosis runtimeDiagnosisReader,
 	outcomes *service.OutcomeService,
 ) {
 	r.contextRetrievalService = contextRetrieval
-	r.diagnosisAnalysisService = diagnosis
-	r.diagnosisFreshnessService = freshness
+	r.diagnosisReader = diagnosis
 	r.outcomeService = outcomes
+}
+
+// runtimeDiagnosisReader is the native Diagnosis projection; the consultation
+// context carries only Go-committed Conditions, never an Agent proposal.
+type runtimeDiagnosisReader interface {
+	Read(ctx context.Context, owner uuid.UUID) (*service.NativeDiagnosisView, error)
 }
 
 // runtimeChatRetention is the PC-RET-001 seam: the settle trigger that moves
@@ -909,17 +912,11 @@ func (r *Runtime) buildBusinessContext(
 			bc.RelevantHistory = history
 		}
 	}
-	if r.diagnosisAnalysisService != nil {
-		if analysis, err := r.diagnosisAnalysisService.GetLatest(ctx, uid); err != nil {
+	if r.diagnosisReader != nil {
+		if diagnosis, err := r.diagnosisReader.Read(ctx, uid); err != nil {
 			log.Printf("current diagnosis context load failed for user %s: %v", uid, err)
-		} else if analysis != nil {
-			payload := r.diagnosisAnalysisService.PublicPayload(analysis)
-			if r.diagnosisFreshnessService != nil {
-				if freshness, freshErr := r.diagnosisFreshnessService.Preview(ctx, uid, analysis); freshErr == nil {
-					payload["freshness"] = freshness
-				}
-			}
-			if raw, marshalErr := json.Marshal(payload); marshalErr == nil {
+		} else if diagnosis != nil && diagnosis.CurrentRevision > 0 {
+			if raw, marshalErr := json.Marshal(diagnosis); marshalErr == nil {
 				bc.CurrentDiagnosis = raw
 			}
 		}

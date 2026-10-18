@@ -9,6 +9,14 @@ import (
 	"gorm.io/datatypes"
 )
 
+func workspaceDiagnosis(disposition model.ConditionDisposition) *NativeDiagnosisView {
+	owner := uuid.New()
+	return &NativeDiagnosisView{
+		UserID: owner, CurrentRevision: 2,
+		ConditionEntries: []NativeDiagnosisCondition{testAdoptedCondition(owner, 2, disposition)},
+	}
+}
+
 func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(t *testing.T) {
 	owner := uuid.New()
 	caps := deriveWorkspaceCapabilities(
@@ -16,12 +24,8 @@ func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(
 			UserID: owner, CurrentRevision: 2,
 			Facts: []model.BodyFact{{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1}},
 		},
-		&model.DiagnosisAnalysisRecord{
-			Status:     "completed",
-			Candidates: []model.DiagnosisCandidateRecord{{Name: "candidate"}},
-		},
-		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
-		[]model.DiagnosisCandidateAssessment{{State: "confirmed"}},
+		workspaceDiagnosis(model.ConditionAdopted),
+		nil,
 		&model.TrainingPlan{Status: "active"},
 	)
 	if !caps.RequiresSafetyReview {
@@ -35,55 +39,42 @@ func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(
 	}
 }
 
-func TestWorkspaceCapabilitiesRequireCandidateAssessmentForTreatment(t *testing.T) {
-	analysisID := uuid.New()
-	candidateID := uuid.New()
-	caps := deriveWorkspaceCapabilities(
-		screenedWorkspaceBodyState(7),
-		&model.DiagnosisAnalysisRecord{
-			ID: analysisID, Status: "completed",
-			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
-		},
-		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
-		nil,
-		nil,
-	)
-	if caps.CanGenerateTreatment {
-		t.Fatalf("treatment must remain gated until a candidate is confirmed or unsure: %#v", caps)
+func TestWorkspaceCapabilitiesRequireAnAdoptedConditionForTreatment(t *testing.T) {
+	for name, diagnosis := range map[string]*NativeDiagnosisView{
+		"no diagnosis":  nil,
+		"empty head":    {UserID: uuid.New()},
+		"only inactive": workspaceDiagnosis(model.ConditionInactive),
+	} {
+		caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), diagnosis, nil, nil)
+		if caps.CanGenerateTreatment {
+			t.Fatalf("%s: treatment must stay gated until a Condition is adopted: %#v", name, caps)
+		}
+	}
+	caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), workspaceDiagnosis(model.ConditionAdopted), nil, nil)
+	if !caps.CanGenerateTreatment || !caps.CanReviewDiagnosis || caps.RequiresDiagnosisReview {
+		t.Fatalf("an adopted Condition with complete Safety should allow generation: %#v", caps)
 	}
 }
 
-func TestWorkspaceCapabilitiesRejectPotentiallyStaleDiagnosisForTreatment(t *testing.T) {
-	candidateID := uuid.New()
-	caps := deriveWorkspaceCapabilities(
-		screenedWorkspaceBodyState(8),
-		&model.DiagnosisAnalysisRecord{
-			ID: uuid.New(), Status: "completed",
-			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
-		},
-		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessPotentiallyStale},
-		[]model.DiagnosisCandidateAssessment{{CandidateID: candidateID, State: "confirmed"}},
-		nil,
-	)
-	if caps.CanGenerateTreatment || !caps.RequiresDiagnosisReview {
-		t.Fatalf("potentially stale analysis must be reviewed before treatment generation: %#v", caps)
+func TestWorkspaceCapabilitiesFlagAnOpenRunForDiagnosisReview(t *testing.T) {
+	open := &NativeDiagnosisRunSummary{RunID: uuid.New(), State: "open"}
+	caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(8), &NativeDiagnosisView{UserID: uuid.New()}, open, nil)
+	if !caps.RequiresDiagnosisReview || !caps.CanReviewDiagnosis {
+		t.Fatalf("an open native run owes the user a Diagnosis review: %#v", caps)
+	}
+	committed := &NativeDiagnosisRunSummary{RunID: uuid.New(), State: "committed"}
+	caps = deriveWorkspaceCapabilities(screenedWorkspaceBodyState(8), workspaceDiagnosis(model.ConditionAdopted), committed, nil)
+	if caps.RequiresDiagnosisReview {
+		t.Fatalf("a settled run owes no review: %#v", caps)
+	}
+	if caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(8), nil, nil, nil); caps.CanReviewDiagnosis {
+		t.Fatalf("nothing to review without a head or run: %#v", caps)
 	}
 }
 
 func TestWorkspaceCapabilitiesRequireActiveTrainingPlanForExecution(t *testing.T) {
-	analysisID := uuid.New()
-	candidateID := uuid.New()
 	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
-		return deriveWorkspaceCapabilities(
-			screenedWorkspaceBodyState(7),
-			&model.DiagnosisAnalysisRecord{
-				ID: analysisID, Status: "completed",
-				Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
-			},
-			&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
-			[]model.DiagnosisCandidateAssessment{{CandidateID: candidateID, State: "confirmed"}},
-			plan,
-		)
+		return deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), workspaceDiagnosis(model.ConditionAdopted), nil, plan)
 	}
 	if caps := baseArgs(nil); caps.CanExecuteTreatment || caps.CanRecordOutcome {
 		t.Fatalf("no active plan must not be advertised executable: %#v", caps)
@@ -145,7 +136,7 @@ func screenedWorkspaceBodyState(revision int64) *BodyStateReadModel {
 func TestWorkspaceCapabilitiesIncompleteSafetyBlocksTraining(t *testing.T) {
 	snapshot := screenedWorkspaceBodyState(7)
 	snapshot.SafetyScreens = nil
-	caps := deriveWorkspaceCapabilities(snapshot, nil, nil, nil, &model.TrainingPlan{Status: "active"})
+	caps := deriveWorkspaceCapabilities(snapshot, workspaceDiagnosis(model.ConditionAdopted), nil, &model.TrainingPlan{Status: "active"})
 	if caps.CanExecuteTreatment || caps.CanGenerateTreatment {
 		t.Fatalf("unscreened native symptoms must block training: %+v", caps)
 	}

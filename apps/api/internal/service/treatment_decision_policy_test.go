@@ -2,17 +2,13 @@ package service
 
 import (
 	"testing"
-
-	"github.com/bodysense/api/internal/model"
 )
 
 func readyTreatmentDecisionFacts() TreatmentDecisionFacts {
 	return TreatmentDecisionFacts{
-		DiagnosisStatus:          "completed",
-		CandidateCount:           1,
-		FreshnessState:           model.DiagnosisFreshnessFresh,
-		SafetyEnvelope:           testNativeSafetyEnvelope(7),
-		CandidateAssessmentReady: true,
+		DiagnosisRevision:        3,
+		AdoptedConditionCount:    1,
+		SafetyEnvelope:           testCompleteSafetyEnvelope(7),
 		CurrentBodyStateRevision: 7,
 	}
 }
@@ -37,12 +33,14 @@ func TestTreatmentDecisionPolicyDenyOverrides(t *testing.T) {
 		mutate func(*TreatmentDecisionFacts)
 		reason string
 	}{
-		{"diagnosis", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.DiagnosisStatus = "insufficient_information" }, "diagnosis_not_ready"},
-		{"freshness", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.FreshnessState = model.DiagnosisFreshnessStale }, "diagnosis_not_fresh"},
+		{"no adopted condition", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.AdoptedConditionCount = 0 }, "adopted_condition_required"},
+		{"no diagnosis revision", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.DiagnosisRevision = 0 }, "adopted_condition_required"},
 		{"safety", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) {
 			f.SafetyEnvelope = testBlockedSafetyEnvelope(7)
 		}, "active_body_state_safety_concern"},
-		{"assessment", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.CandidateAssessmentReady = false }, "candidate_assessment_required"},
+		{"incomplete safety coverage", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) {
+			f.SafetyEnvelope = testNativeSafetyEnvelope(7)
+		}, "safety_coverage_incomplete"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -69,7 +67,7 @@ func TestTreatmentDecisionPolicyUnknownRevisionAndPhaseFailClosed(t *testing.T) 
 
 func TestTreatmentDecisionPolicyUnavailableSafetyFailsClosed(t *testing.T) {
 	facts := readyTreatmentDecisionFacts()
-	for _, envelope := range []*SafetyEnvelopeV2{nil, {}, testNativeSafetyEnvelope(8)} {
+	for _, envelope := range []*SafetyEnvelopeV2{nil, {}, testCompleteSafetyEnvelope(8)} {
 		facts.SafetyEnvelope = envelope
 		decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts)
 		if decision.Outcome != TreatmentBlock || decision.Reasons[0] != "malformed_or_unknown_safety_state" {

@@ -2,9 +2,6 @@ package service
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/bodysense/api/internal/model"
 )
 
 // TreatmentDecisionPolicyV1 keeps its historical identity: Treatment Agent
@@ -30,12 +27,14 @@ type TreatmentDecision struct {
 	Reasons        []string                 `json:"reasons"`
 }
 
+// TreatmentDecisionFacts are read from the native Diagnosis head and the
+// current BodyState Safety projection (DX-RETIRE-001): generation qualifies on
+// the user's adopted Conditions at one Diagnosis revision, never on an Agent
+// analysis or its candidates.
 type TreatmentDecisionFacts struct {
-	DiagnosisStatus          string            `json:"diagnosis_status"`
-	CandidateCount           int               `json:"candidate_count"`
-	FreshnessState           string            `json:"freshness_state,omitempty"`
+	DiagnosisRevision        int64             `json:"diagnosis_revision"`
+	AdoptedConditionCount    int               `json:"adopted_condition_count"`
 	SafetyEnvelope           *SafetyEnvelopeV2 `json:"safety_envelope"`
-	CandidateAssessmentReady bool              `json:"candidate_assessment_ready"`
 	CurrentBodyStateRevision int64             `json:"current_body_state_revision"`
 }
 
@@ -62,11 +61,7 @@ func EvaluateTreatmentDecision(
 		return decision
 	}
 	if !treatmentDiagnosisFactsReady(facts) {
-		decision.Reasons = []string{"diagnosis_not_ready"}
-		return decision
-	}
-	if treatmentFreshnessBlocks(facts.FreshnessState) {
-		decision.Reasons = []string{"diagnosis_not_fresh"}
+		decision.Reasons = []string{"adopted_condition_required"}
 		return decision
 	}
 
@@ -79,22 +74,21 @@ func EvaluateTreatmentDecision(
 		decision.Reasons = []string{"active_body_state_safety_concern"}
 		return decision
 	}
-
-	if !facts.CandidateAssessmentReady {
-		decision.Reasons = []string{"candidate_assessment_required"}
+	// Complete Safety coverage is required, not merely the absence of blockers:
+	// an unscreened BodyState is never treated as safe for plan generation.
+	if !facts.SafetyEnvelope.Coverage.Complete {
+		decision.Reasons = []string{"safety_coverage_incomplete"}
 		return decision
 	}
 	decision.Outcome = TreatmentAllowProposal
 	return decision
 }
 
+// treatmentDiagnosisFactsReady requires at least one adopted Condition at a
+// committed Diagnosis revision. Inactive Conditions, pending proposals and
+// recorded-but-unsettled decisions never qualify.
 func treatmentDiagnosisFactsReady(facts TreatmentDecisionFacts) bool {
-	return (facts.DiagnosisStatus == "completed" || facts.DiagnosisStatus == "partial") && facts.CandidateCount > 0
-}
-
-func treatmentFreshnessBlocks(state string) bool {
-	state = strings.TrimSpace(state)
-	return state != "" && state != model.DiagnosisFreshnessFresh
+	return facts.DiagnosisRevision > 0 && facts.AdoptedConditionCount > 0
 }
 
 // strictTreatmentSafetyReview deliberately treats malformed or internally

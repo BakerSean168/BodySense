@@ -36,7 +36,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	conversationID := uuid.New()
 	runID := uuid.New()
 	turnID := uuid.New()
-	analysisID := uuid.New()
 	uploadID := uuid.New()
 	email := "privacy-" + userID.String() + "@example.test"
 
@@ -76,10 +75,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	if _, err := repository.NewBodyStateRepository(db).RecordDirectFacts(ctx, userID, model.RecordBodyFactsCommand{IdempotencyKey: "privacy-seed", Facts: []model.BodyFactInput{{Kind: "symptom", Statement: "private pain", BodyRegionIDs: []string{}, Temporal: model.FactTemporal{Precision: "unknown"}, Details: []byte(`{}`)}}}); err != nil {
 		t.Fatal(err)
 	}
-
-	mustExec("INSERT INTO diagnosis_analyses(id,user_id,body_state_revision,status,summary,raw_output) VALUES (?,?,?,?,?,?)", analysisID, userID, 1, "completed", "private diagnosis", `{"private":"diagnosis reasoning"}`)
-	mustExec("INSERT INTO diagnosis_candidates(analysis_id,ordinal,name,confidence,basis,raw_payload) VALUES (?,?,?,?,?,?)", analysisID, 1, "synthetic candidate", "medium", "private basis", `{"private":true}`)
-	mustExec("INSERT INTO diagnosis_rollout_observations(source_analysis_id,stage,subject_bucket,champion_configuration_id,challenger_configuration_id,served_configuration_id,comparison) VALUES (?,?,?,?,?,?,?)", analysisID, "shadow", 7, "champion", "challenger", "champion", `{"private":"comparison"}`)
 
 	mustExec("INSERT INTO outcomes(user_id,source_type,source_key,kind,value,notes,occurred_at) VALUES (?,?,?,?,?,?,?)", userID, "synthetic", "privacy-outcome", "pain", `{"score":4}`, "private outcome", time.Now().UTC())
 
@@ -130,9 +125,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		{name: "body_facts", query: "SELECT COUNT(*) FROM body_facts WHERE user_id = ?", arg: userID},
 		{name: "statement_evidence", query: "SELECT COUNT(*) FROM statement_evidence WHERE user_id = ?", arg: userID},
 		{name: "body_fact_commits", query: "SELECT COUNT(*) FROM body_fact_commits WHERE user_id = ?", arg: userID},
-		{name: "diagnosis_analyses", query: "SELECT COUNT(*) FROM diagnosis_analyses WHERE user_id = ?", arg: userID},
-		{name: "diagnosis_candidates", query: "SELECT COUNT(*) FROM diagnosis_candidates WHERE analysis_id = ?", arg: analysisID},
-		{name: "diagnosis_rollout_observations", query: "SELECT COUNT(*) FROM diagnosis_rollout_observations WHERE source_analysis_id = ?", arg: analysisID},
 		{name: "outcomes", query: "SELECT COUNT(*) FROM outcomes WHERE user_id = ?", arg: userID},
 	}
 	for _, check := range checks {

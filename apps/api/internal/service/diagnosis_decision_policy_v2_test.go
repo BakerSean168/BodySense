@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"testing"
 )
 
@@ -68,58 +67,6 @@ func TestDiagnosisDecisionPolicyV2DenyOverrides(t *testing.T) {
 	}
 	if got := EvaluateDiagnosisDecisionV2(completeSafetyEnvelope(), 13, completedV2Payload()); got.Outcome != DiagnosisBlock {
 		t.Fatalf("revision mismatch allowed: %+v", got)
-	}
-}
-
-func TestStructuredDiagnosisPreflightBypassesIncompleteAndBlocked(t *testing.T) {
-	route := DiagnosisRouteSelection{ServedConfigurationID: diagnosisStructuredSafetyConfigID, ServedDecisionPolicyRevision: DiagnosisDecisionPolicyV2}
-	for _, test := range []struct {
-		name    string
-		mutate  func(*SafetyEnvelopeV2)
-		outcome DiagnosisDecisionOutcome
-		status  string
-	}{
-		{"incomplete", func(e *SafetyEnvelopeV2) {
-			e.Coverage.Complete = false
-			e.Coverage.IncompleteSourceRefs = []string{"body-state:fact:b"}
-		}, DiagnosisAbstain, "insufficient_information"},
-		{"blocked", func(e *SafetyEnvelopeV2) {
-			e.RequiresReview = true
-			e.ActiveBlockers = []SafetyBlockerV1{{RiskLevel: "urgent", Concept: SafetyDizziness, SourceRef: "body-state:fact:a", SourceKind: SafetyStructuredScreen, Reason: SafetyStructuredCurrentSignal}}
-		}, DiagnosisBlock, "safety_blocked"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			e := completeSafetyEnvelope()
-			test.mutate(e)
-			var payload map[string]any
-			if err := json.Unmarshal(structuredDiagnosisPreflight(e, 12, diagnosisStructuredSafetyConfigID, route), &payload); err != nil {
-				t.Fatal(err)
-			}
-			decision := payload["decision_authority"].(map[string]any)
-			if decision["outcome"] != string(test.outcome) || payload["status"] != test.status || len(payload["candidates"].([]any)) != 0 {
-				t.Fatalf("unexpected preflight payload: %+v", payload)
-			}
-			governance := payload["governance"].(map[string]any)
-			if _, legacy := payload["safety_summary"].(string); legacy {
-				t.Fatalf("v8 preflight included legacy SafetyState prose: %+v", payload)
-			}
-			if test.outcome == DiagnosisAbstain {
-				if governance["verdict"] != "accepted" || len(governance["reasons"].([]any)) != 0 ||
-					len(decision["reasons"].([]any)) != 1 || decision["reasons"].([]any)[0] != "structured_safety_capture_incomplete" ||
-					payload["execution_provenance"].(map[string]any)["reason"] != "structured_safety_coverage_incomplete" ||
-					payload["summary"] != "结构化安全信息尚未完整采集，请完成安全信号确认后重新分析。" {
-					t.Fatalf("inconsistent coverage abstain: %+v", payload)
-				}
-			} else if governance["verdict"] != "rejected" ||
-				len(decision["reasons"].([]any)) != 1 || decision["reasons"].([]any)[0] != "active_urgent_safety_restriction" ||
-				len(governance["reasons"].([]any)) != 1 || governance["reasons"].([]any)[0] != "active_urgent_safety_restriction" ||
-				payload["execution_provenance"].(map[string]any)["reason"] != "active_urgent_safety_restriction" {
-				t.Fatalf("inconsistent structured blocker: %+v", payload)
-			}
-		})
-	}
-	if blocked := structuredDiagnosisPreflight(completeSafetyEnvelope(), 12, diagnosisStructuredSafetyConfigID, route); blocked != nil {
-		t.Fatalf("complete clear coverage bypassed agent: %s", blocked)
 	}
 }
 

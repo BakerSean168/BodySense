@@ -5,6 +5,10 @@ import {
   finishTrainerSessionWithFeedback,
   recordUserSymptom,
 } from "./support/trainer";
+import {
+  adoptNativeDiagnosis,
+  factStatementEvidenceId,
+} from "./support/diagnosis";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -207,11 +211,17 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(conversationId).toBeTruthy();
 
   // One original symptom and its own Go-bound checklist provide coverage.
-  await completeStructuredSafetyIntake(
+  const symptom = (await completeStructuredSafetyIntake(
     request,
     apiBase,
     headers,
     String(conversationId),
+  )) as { id: string };
+  const requestEvidenceId = await factStatementEvidenceId(
+    request,
+    apiBase,
+    headers,
+    symptom.id,
   );
 
   const staleRevisionWrite = await request.post(
@@ -254,58 +264,49 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   ).toEqual([200, 409]);
   await Promise.all(concurrentResponses.map((response) => response.text()));
 
-  const diagnosisResponse = await request.post(
-    `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
-    { headers },
-  );
-  const diagnosisBody = await diagnosisResponse.text();
-  expect(diagnosisResponse.ok(), diagnosisBody).toBeTruthy();
-  const diagnosis = JSON.parse(diagnosisBody) as {
-    analysis_id: string;
-    candidates: Array<{ candidate_id: string }>;
-  };
-  expect(diagnosis.candidates).toHaveLength(1);
-
+  // Nothing is adopted yet: plan generation is gated on the native Diagnosis.
   const prematureGeneration = await request.post(
     `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
-      data: {
-        diagnosisAnalysisId: diagnosis.analysis_id,
-        idempotencyKey: `premature-${conversationId}`,
-      },
+      data: { idempotencyKey: `premature-${conversationId}` },
     },
   );
   expect(prematureGeneration.status()).toBe(409);
   const prematureGenerationError = (await prematureGeneration.json()) as {
     error?: { code?: string };
   };
-  expect(prematureGenerationError.error?.code).toBe(
-    "DIAGNOSIS_ASSESSMENT_REQUIRED",
+  expect(prematureGenerationError.error?.code).toBe("DIAGNOSIS_NOT_READY");
+
+  const adopted = await adoptNativeDiagnosis(
+    request,
+    apiBase,
+    headers,
+    requestEvidenceId,
   );
 
-  const assessment = await request.put(
-    `${apiBase}/api/v1/diagnosis-analyses/${diagnosis.analysis_id}/assessment`,
+  const staleGeneration = await request.post(
+    `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
       data: {
-        candidates: [
-          {
-            candidate_id: diagnosis.candidates[0].candidate_id,
-            state: "confirmed",
-          },
-        ],
+        diagnosisRevision: adopted.revision + 1,
+        idempotencyKey: `stale-${conversationId}`,
       },
     },
   );
-  expect(assessment.ok()).toBeTruthy();
+  expect(staleGeneration.status()).toBe(409);
+  expect(
+    ((await staleGeneration.json()) as { error?: { code?: string } }).error
+      ?.code,
+  ).toBe("DIAGNOSIS_STALE");
 
   const firstProposalResponse = await request.post(
     `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
       data: {
-        diagnosisAnalysisId: diagnosis.analysis_id,
+        diagnosisRevision: adopted.revision,
         idempotencyKey: `first-${conversationId}`,
       },
     },
@@ -425,40 +426,12 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     source_version: 1,
   });
 
-  const freshDiagnosisResponse = await request.post(
-    `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
-    { headers },
-  );
-  expect(freshDiagnosisResponse.ok()).toBeTruthy();
-  const freshDiagnosis = (await freshDiagnosisResponse.json()) as {
-    analysis_id: string;
-    candidates: Array<{ candidate_id: string }>;
-  };
-  expect(
-    (
-      await request.put(
-        `${apiBase}/api/v1/diagnosis-analyses/${freshDiagnosis.analysis_id}/assessment`,
-        {
-          headers,
-          data: {
-            candidates: [
-              {
-                candidate_id: freshDiagnosis.candidates[0].candidate_id,
-                state: "confirmed",
-              },
-            ],
-          },
-        },
-      )
-    ).ok(),
-  ).toBeTruthy();
-
   const proposalResponse = await request.post(
     `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
       data: {
-        diagnosisAnalysisId: freshDiagnosis.analysis_id,
+        diagnosisRevision: adopted.revision,
         idempotencyKey: `second-${conversationId}`,
       },
     },

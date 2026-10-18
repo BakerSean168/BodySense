@@ -42,12 +42,13 @@ func (s *PublicServer) GeneratePlanProposal(ctx context.Context, req openapiv1.G
 	if generator == nil {
 		return planGenerationUnavailable, nil
 	}
-	if req.Body == nil || (req.Body.DiagnosisAnalysisId != nil && uuid.UUID(*req.Body.DiagnosisAnalysisId) == uuid.Nil) {
+	if req.Body == nil || (req.Body.DiagnosisRevision != nil && *req.Body.DiagnosisRevision < 1) {
 		return planBadRequest, nil
 	}
 	input := service.TreatmentPlanGenerationInput{IdempotencyKey: string(req.Body.IdempotencyKey), UserConstraints: map[string]any{}}
-	if req.Body.DiagnosisAnalysisId != nil {
-		input.DiagnosisAnalysisID = uuid.UUID(*req.Body.DiagnosisAnalysisId)
+	if req.Body.DiagnosisRevision != nil {
+		revision := *req.Body.DiagnosisRevision
+		input.ExpectedDiagnosisRevision = &revision
 	}
 	if req.Body.UserConstraints != nil {
 		input.UserConstraints = map[string]any(*req.Body.UserConstraints)
@@ -78,11 +79,9 @@ func planGenerationError(err error) trainingPlanHTTPError {
 	case errors.Is(err, service.ErrTreatmentPlanGenerationUnavailable):
 		return planGenerationUnavailable
 	case errors.Is(err, service.ErrTreatmentDiagnosisNotReady):
-		return trainingPlanHTTPError{http.StatusConflict, "DIAGNOSIS_NOT_READY", "diagnosis analysis is not eligible for plan generation"}
-	case errors.Is(err, service.ErrTreatmentAnalysisStale):
-		return trainingPlanHTTPError{http.StatusConflict, "DIAGNOSIS_STALE", "diagnosis analysis requires review before plan generation"}
-	case errors.Is(err, service.ErrTreatmentCandidateAssessmentRequired):
-		return trainingPlanHTTPError{http.StatusConflict, "DIAGNOSIS_ASSESSMENT_REQUIRED", "assess at least one diagnosis candidate first"}
+		return trainingPlanHTTPError{http.StatusConflict, "DIAGNOSIS_NOT_READY", "adopt at least one Diagnosis condition before plan generation"}
+	case errors.Is(err, service.ErrTreatmentDiagnosisStale):
+		return trainingPlanHTTPError{http.StatusConflict, "DIAGNOSIS_STALE", "the Diagnosis changed; review the current conditions before plan generation"}
 	case errors.Is(err, service.ErrTreatmentSafetyBlocked):
 		return trainingPlanHTTPError{http.StatusConflict, "SAFETY_BLOCKED", "current safety state blocks ordinary plan generation"}
 	case errors.Is(err, service.ErrTreatmentPlanUnavailable),

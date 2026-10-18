@@ -27,15 +27,17 @@ type DiagnosisRequest struct {
 // TreatmentRecommendationRequest pins exact durable identities and returns a
 // proposal that still requires explicit user acceptance in Go.
 type TreatmentRecommendationRequest struct {
-	UserID               string          `json:"user_id,omitempty"`
-	ConfigurationID      string          `json:"configuration_id"`
-	BodyStateRevision    int64           `json:"body_state_revision"`
-	BodyState            json.RawMessage `json:"body_state"`
-	DiagnosisAnalysis    json.RawMessage `json:"diagnosis_analysis"`
-	CandidateAssessments json.RawMessage `json:"candidate_assessments,omitempty"`
-	Profile              json.RawMessage `json:"profile,omitempty"`
-	UserConstraints      json.RawMessage `json:"user_constraints,omitempty"`
-	Evidence             json.RawMessage `json:"evidence,omitempty"`
+	UserID            string          `json:"user_id,omitempty"`
+	ConfigurationID   string          `json:"configuration_id"`
+	BodyStateRevision int64           `json:"body_state_revision"`
+	BodyState         json.RawMessage `json:"body_state"`
+	// Diagnosis is the native adopted-Condition view. It travels in the
+	// ai-service's existing diagnosis_analysis field until DX-RETIRE-001
+	// slice 3 renames that request field on the Python side.
+	Diagnosis       json.RawMessage `json:"diagnosis_analysis"`
+	Profile         json.RawMessage `json:"profile,omitempty"`
+	UserConstraints json.RawMessage `json:"user_constraints,omitempty"`
+	Evidence        json.RawMessage `json:"evidence,omitempty"`
 }
 
 type AssessmentGenerationRequest struct {

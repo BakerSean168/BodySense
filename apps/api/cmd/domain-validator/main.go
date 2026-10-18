@@ -22,18 +22,14 @@ import (
 )
 
 type validator struct {
-	db        *gorm.DB
-	bodyRepo  *repository.BodyStateRepository
-	body      *service.BodyStateService
-	diagnosis *service.DiagnosisAnalysisService
-	outcomes  *service.OutcomeService
+	db       *gorm.DB
+	bodyRepo *repository.BodyStateRepository
+	body     *service.BodyStateService
+	outcomes *service.OutcomeService
 }
 
 func main() {
 	databaseURL := flag.String("database-url", os.Getenv("DATABASE_URL"), "PostgreSQL connection URL")
-	mode := flag.String("mode", "domain-semantics", "Validation mode: domain-semantics, diagnosis-replay-audit, diagnosis-history-snapshot, or diagnosis-history-verify")
-	snapshotFile := flag.String("snapshot-file", "", "History snapshot path for diagnosis-history-verify; use - for stdin")
-	replayLimit := flag.Int("replay-limit-per-configuration", 1000, "Maximum replayable historical analyses per v3-v7 configuration")
 	flag.Parse()
 
 	var db *gorm.DB
@@ -48,22 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("connect domain validator database: %v", err)
 	}
-	if *mode != "domain-semantics" {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-		switch *mode {
-		case "diagnosis-replay-audit":
-			runDiagnosisReplayAudit(ctx, db, *replayLimit)
-		case "diagnosis-history-snapshot":
-			runDiagnosisHistorySnapshot(ctx, db)
-		case "diagnosis-history-verify":
-			runDiagnosisHistoryVerify(ctx, db, *snapshotFile)
-		default:
-			log.Fatalf("unknown validation mode %q", *mode)
-		}
-		return
-	}
-
 	v := newValidator(db)
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
@@ -90,10 +70,6 @@ func main() {
 	}
 	fmt.Println("NATIVE_SAFETY_COVERAGE=PASS")
 
-	if _, err := v.createDiagnosis(ctx, userID, revision, fact.ID); err != nil {
-		log.Fatal(err)
-	}
-
 	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID); err != nil {
 		log.Fatal(err)
 	}
@@ -106,13 +82,10 @@ func newValidator(db *gorm.DB) *validator {
 	bodyService := service.NewBodyStateService(bodyRepo).WithBodyRegionIDValidator(
 		service.NewCanonicalBodyRegionIDValidator(),
 	).WithAgentContextSources(database.NewTransactionManager(db), repository.NewEquipmentAssetRepository(db))
-	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
-	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
 	unitOfWork := database.NewTransactionManager(db)
 	outcomeService := service.NewOutcomeService(repository.NewOutcomeRepository(db), bodyService, unitOfWork)
 	return &validator{
-		db: db, bodyRepo: bodyRepo, body: bodyService,
-		diagnosis: diagnosisService, outcomes: outcomeService,
+		db: db, bodyRepo: bodyRepo, body: bodyService, outcomes: outcomeService,
 	}
 }
 
@@ -226,64 +199,6 @@ func (v *validator) validateBodyRegionIdentity(ctx context.Context) error {
 		return errors.New("historical laterality rewritten")
 	}
 	return nil
-}
-
-func (v *validator) createDiagnosis(
-	ctx context.Context,
-	userID uuid.UUID,
-	bodyStateRevision int64,
-	factID uuid.UUID,
-) (*model.DiagnosisAnalysisRecord, error) {
-	raw := json.RawMessage(fmt.Sprintf(`{
-		"status":"completed",
-		"scope":"full_body",
-		"summary":"domain validator analysis",
-		"candidates":[{
-			"concern_key":"region:neck",
-			"name":"load-related neck pattern",
-			"confidence":"中",
-			"severity":"轻度",
-			"evidence_strength":"中",
-			"impact":"reduced comfort after prolonged sitting",
-			"basis":"confirmed BodyState fact",
-			"typical_symptoms":"discomfort after prolonged sitting",
-			"differential":"continue temporal review",
-			"basis_fact_ids":[%q],
-			"basis_observation_ids":[],
-			"supporting_evidence_ids":[],
-			"counterevidence_ids":[],
-			"reasoning_summary":"validation candidate",
-			"missing_information":[],
-			"safety_notes":[]
-		}],
-		"cross_concern_patterns":[],
-		"information_gaps":[],
-		"safety_summary":{},
-		"citations":[],
-		"governance":{"kind":"diagnosis","verdict":"accepted"}
-	}`, factID.String()))
-	var fixture struct {
-		Candidates []struct {
-			Name       string `json:"name"`
-			Confidence string `json:"confidence"`
-		} `json:"candidates"`
-	}
-	if err := json.Unmarshal(raw, &fixture); err != nil || len(fixture.Candidates) != 1 || fixture.Candidates[0].Name == "" || fixture.Candidates[0].Confidence == "" {
-		return nil, fmt.Errorf("invalid validator diagnosis fixture: %w", err)
-	}
-	analysis, err := v.diagnosis.PersistAIResult(ctx, userID, bodyStateRevision, raw)
-	if err != nil {
-		return nil, fmt.Errorf("persist validator diagnosis: %w", err)
-	}
-	if len(analysis.Candidates) != 1 {
-		return nil, fmt.Errorf("expected one diagnosis candidate, got %d", len(analysis.Candidates))
-	}
-	if _, err := v.diagnosis.AssessCandidates(ctx, userID, analysis.ID, map[uuid.UUID]string{
-		analysis.Candidates[0].ID: "confirmed",
-	}); err != nil {
-		return nil, fmt.Errorf("assess validator diagnosis: %w", err)
-	}
-	return analysis, nil
 }
 
 func (v *validator) validateOutcomeFeedbackAtomicity(

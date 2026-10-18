@@ -1,12 +1,9 @@
 package service
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"testing"
-
-	"github.com/google/uuid"
 )
 
 type diagnosisDecisionPolicyFixture struct {
@@ -108,24 +105,11 @@ func TestDecisionAuthorityAbstainBecomesDurableNonCandidateAnalysis(t *testing.T
 		t.Fatalf("expected abstain, got %#v", decision)
 	}
 	authorized := ApplyDiagnosisDecision(payload, decision)
-	raw, err := json.Marshal(authorized)
-	if err != nil {
-		t.Fatalf("marshal authorized Diagnosis: %v", err)
+	if authorized["status"] != "insufficient_information" {
+		t.Fatalf("abstain must not keep an ordinary status: %#v", authorized["status"])
 	}
-	repo := &fakeDiagnosisAnalysisRepository{}
-	analysis, err := NewDiagnosisAnalysisService(repo).PersistAIResult(
-		context.Background(), uuid.New(), 42, raw,
-	)
-	if err != nil {
-		t.Fatalf("persist authorized Diagnosis: %v", err)
-	}
-	if analysis.Status != "insufficient_information" || len(analysis.Candidates) != 0 {
-		t.Fatalf("abstain must persist without ordinary candidates: %#v", analysis)
-	}
-	public := NewDiagnosisAnalysisService(repo).PublicPayload(analysis)
-	decisionRaw, ok := public["decision_authority"].(json.RawMessage)
-	if !ok || !json.Valid(decisionRaw) {
-		t.Fatalf("durable read model lost decision authority: %#v", public["decision_authority"])
+	if candidates, _ := authorized["candidates"].([]any); len(candidates) != 0 {
+		t.Fatalf("abstain must drop ordinary candidates: %#v", authorized["candidates"])
 	}
 }
 

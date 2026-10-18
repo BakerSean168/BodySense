@@ -12,26 +12,20 @@ import (
 )
 
 var (
-	ErrTreatmentDiagnosisNotReady           = errors.New("diagnosis analysis is not eligible for treatment")
-	ErrTreatmentSafetyBlocked               = errors.New("active safety state blocks ordinary treatment generation")
-	ErrTreatmentAnalysisStale               = errors.New("diagnosis analysis requires review before treatment")
-	ErrTreatmentCandidateAssessmentRequired = errors.New("at least one diagnosis candidate must be assessed as confirmed or unsure")
-	ErrTreatmentConfigurationMismatch       = errors.New("treatment Agent configuration identity mismatch")
+	ErrTreatmentDiagnosisNotReady     = errors.New("adopt at least one Diagnosis condition before plan generation")
+	ErrTreatmentSafetyBlocked         = errors.New("active safety state blocks ordinary treatment generation")
+	ErrTreatmentDiagnosisStale        = errors.New("the Diagnosis changed since the presented revision")
+	ErrTreatmentConfigurationMismatch = errors.New("treatment Agent configuration identity mismatch")
 )
 
+// treatmentDiagnosisSource is the native Diagnosis projection: one consistent
+// read of the owner's committed head and Conditions.
 type treatmentDiagnosisSource interface {
-	GetByID(ctx context.Context, analysisID, userID uuid.UUID) (*model.DiagnosisAnalysisRecord, error)
-	GetLatest(ctx context.Context, userID uuid.UUID) (*model.DiagnosisAnalysisRecord, error)
-	ListAssessments(ctx context.Context, userID, analysisID uuid.UUID) ([]model.DiagnosisCandidateAssessment, error)
-	PublicPayload(analysis *model.DiagnosisAnalysisRecord) map[string]any
+	Read(ctx context.Context, owner uuid.UUID) (*NativeDiagnosisView, error)
 }
 
 type treatmentBodyStateSource interface {
 	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
-}
-
-type treatmentFreshnessSource interface {
-	GetOrEvaluate(ctx context.Context, userID uuid.UUID, analysis *model.DiagnosisAnalysisRecord) (*model.DiagnosisAnalysisFreshness, error)
 }
 
 type treatmentReasoner interface {
@@ -49,7 +43,6 @@ type treatmentDeploymentPolicy interface {
 type TreatmentService struct {
 	diagnosis  treatmentDiagnosisSource
 	bodyState  treatmentBodyStateSource
-	freshness  treatmentFreshnessSource
 	profiles   *ProfileService
 	reasoner   treatmentReasoner
 	deployment treatmentDeploymentPolicy
@@ -59,13 +52,12 @@ type TreatmentService struct {
 func NewTreatmentService(
 	diagnosis treatmentDiagnosisSource,
 	bodyState treatmentBodyStateSource,
-	freshness treatmentFreshnessSource,
 	profiles *ProfileService,
 	reasoner treatmentReasoner,
 	deployment treatmentDeploymentPolicy,
 ) *TreatmentService {
 	return &TreatmentService{
-		diagnosis: diagnosis, bodyState: bodyState, freshness: freshness,
+		diagnosis: diagnosis, bodyState: bodyState,
 		profiles: profiles, reasoner: reasoner, deployment: deployment,
 	}
 }
@@ -98,9 +90,11 @@ func treatmentConstraintsWithEquipment(view *AgentBodyContext, constraints map[s
 }
 
 type TreatmentProposalInput struct {
-	DiagnosisAnalysisID uuid.UUID
-	UserConstraints     map[string]any
-	ChangeReason        string
+	// ExpectedDiagnosisRevision, when set, must equal the current Diagnosis
+	// revision; the user generated from the Conditions they were shown.
+	ExpectedDiagnosisRevision *int64
+	UserConstraints           map[string]any
+	ChangeReason              string
 }
 
 // treatmentAgentPayload is the part of the governed Treatment Agent output Go
@@ -120,7 +114,7 @@ type treatmentAgentPayload struct {
 type treatmentGeneration struct {
 	route           TreatmentRouteSelection
 	configurationID string
-	analysis        *model.DiagnosisAnalysisRecord
+	diagnosis       *NativeDiagnosisView
 	facts           TreatmentDecisionFacts
 	decision        TreatmentDecision
 	bodyRevision    int64
@@ -146,33 +140,26 @@ func (s *TreatmentService) runGeneration(
 		return nil, errors.New("treatment deployment policy returned an invalid route")
 	}
 
-	analysis, err := s.diagnosis.GetByID(ctx, input.DiagnosisAnalysisID, userID)
+	if s.diagnosis == nil {
+		return nil, ErrTreatmentDiagnosisNotReady
+	}
+	current, err := s.diagnosis.Read(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if analysis != nil && analysis.UserID != userID {
-		return nil, fmt.Errorf("Treatment analysis owner mismatch")
+	if current == nil || current.UserID != userID {
+		return nil, fmt.Errorf("Treatment Diagnosis owner mismatch")
 	}
-	facts := TreatmentDecisionFacts{CandidateAssessmentReady: true}
-	if analysis != nil {
-		facts.DiagnosisStatus = analysis.Status
-		facts.CandidateCount = len(analysis.Candidates)
+	if input.ExpectedDiagnosisRevision != nil && *input.ExpectedDiagnosisRevision != current.CurrentRevision {
+		return nil, ErrTreatmentDiagnosisStale
+	}
+	diagnosis := adoptedTreatmentDiagnosis(current)
+	facts := TreatmentDecisionFacts{
+		DiagnosisRevision:     diagnosis.CurrentRevision,
+		AdoptedConditionCount: len(diagnosis.ConditionEntries),
 	}
 	if !treatmentDiagnosisFactsReady(facts) {
 		return nil, ErrTreatmentDiagnosisNotReady
-	}
-
-	if s.freshness != nil {
-		freshness, freshnessErr := s.freshness.GetOrEvaluate(ctx, userID, analysis)
-		if freshnessErr != nil {
-			return nil, freshnessErr
-		}
-		if freshness != nil {
-			facts.FreshnessState = freshness.State
-		}
-		if treatmentFreshnessBlocks(facts.FreshnessState) {
-			return nil, ErrTreatmentDiagnosisNotReady
-		}
 	}
 
 	bodyView, err := s.bodyState.GetAgentBodyContext(ctx, userID)
@@ -181,20 +168,7 @@ func (s *TreatmentService) runGeneration(
 	}
 	facts.SafetyEnvelope = bodyView.SafetyEnvelope
 	facts.CurrentBodyStateRevision = bodyView.CurrentRevision
-	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
-		return nil, treatmentDecisionError(decision)
-	}
-
-	assessments, err := s.diagnosis.ListAssessments(ctx, userID, analysis.ID)
-	if err != nil {
-		return nil, err
-	}
-	facts.CandidateAssessmentReady = treatmentCandidateAssessmentsReady(analysis, assessments)
-	generationDecision := EvaluateTreatmentDecision(
-		policyRevision,
-		TreatmentDecisionGeneration,
-		facts,
-	)
+	generationDecision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts)
 	if generationDecision.Outcome != TreatmentAllowProposal {
 		return nil, treatmentDecisionError(generationDecision)
 	}
@@ -205,20 +179,18 @@ func (s *TreatmentService) runGeneration(
 			profilePayload = rawJSON(profile, `{}`)
 		}
 	}
-	evidencePayload, err := treatmentAnalysisEvidence(userID, analysis)
+	evidencePayload, err := treatmentDiagnosisEvidence(userID, diagnosis)
 	if err != nil {
 		return nil, err
 	}
 	bodyStatePayload := rawJSON(bodyView, `{}`)
-	diagnosisPayload := rawJSON(s.diagnosis.PublicPayload(analysis), `{}`)
-	assessmentsPayload := rawJSON(assessments, `[]`)
+	diagnosisPayload := rawJSON(diagnosis, `{}`)
 	constraints := treatmentConstraintsWithEquipment(bodyView, input.UserConstraints)
 	constraintsPayload := rawJSON(constraints, `{}`)
 	replayInput, err := EncodeTreatmentReplayInput(
 		bodyView.CurrentRevision,
 		bodyStatePayload,
 		diagnosisPayload,
-		assessmentsPayload,
 		profilePayload,
 		constraintsPayload,
 		evidencePayload,
@@ -229,15 +201,14 @@ func (s *TreatmentService) runGeneration(
 	}
 
 	raw, err := s.reasoner.RecommendTreatment(ctx, TreatmentRecommendationRequest{
-		UserID:               userID.String(),
-		ConfigurationID:      configurationID,
-		BodyStateRevision:    bodyView.CurrentRevision,
-		BodyState:            bodyStatePayload,
-		DiagnosisAnalysis:    diagnosisPayload,
-		CandidateAssessments: assessmentsPayload,
-		Profile:              profilePayload,
-		UserConstraints:      constraintsPayload,
-		Evidence:             evidencePayload,
+		UserID:            userID.String(),
+		ConfigurationID:   configurationID,
+		BodyStateRevision: bodyView.CurrentRevision,
+		BodyState:         bodyStatePayload,
+		Diagnosis:         diagnosisPayload,
+		Profile:           profilePayload,
+		UserConstraints:   constraintsPayload,
+		Evidence:          evidencePayload,
 	})
 	if err != nil {
 		return nil, err
@@ -256,32 +227,49 @@ func (s *TreatmentService) runGeneration(
 		return nil, err
 	}
 	return &treatmentGeneration{
-		route: route, configurationID: configurationID, analysis: analysis, facts: facts,
+		route: route, configurationID: configurationID, diagnosis: diagnosis, facts: facts,
 		decision: generationDecision, bodyRevision: bodyView.CurrentRevision,
 		replayInput: replayInput, payload: payload,
 	}, nil
 }
 
-func treatmentCandidateAssessmentsReady(
-	analysis *model.DiagnosisAnalysisRecord,
-	assessments []model.DiagnosisCandidateAssessment,
-) bool {
-	if analysis == nil || len(analysis.Candidates) == 0 {
-		return false
+// adoptedTreatmentDiagnosis is the Treatment Agent's Diagnosis input: the
+// adopted Conditions of the current revision only. Inactive Conditions stay in
+// the Diagnosis window but never shape a plan.
+func adoptedTreatmentDiagnosis(view *NativeDiagnosisView) *NativeDiagnosisView {
+	adopted := &NativeDiagnosisView{
+		UserID: view.UserID, CurrentRevision: view.CurrentRevision, UpdatedAt: view.UpdatedAt,
+		ConditionEntries: make([]NativeDiagnosisCondition, 0, len(view.ConditionEntries)),
 	}
-	candidateIDs := make(map[uuid.UUID]struct{}, len(analysis.Candidates))
-	for _, candidate := range analysis.Candidates {
-		candidateIDs[candidate.ID] = struct{}{}
-	}
-	for _, assessment := range assessments {
-		if _, belongs := candidateIDs[assessment.CandidateID]; !belongs {
-			continue
-		}
-		if assessment.State == "confirmed" || assessment.State == "unsure" {
-			return true
+	for _, condition := range view.ConditionEntries {
+		if condition.Disposition == model.ConditionAdopted {
+			adopted.ConditionEntries = append(adopted.ConditionEntries, condition)
 		}
 	}
-	return false
+	return adopted
+}
+
+// treatmentDiagnosisEvidence passes only the typed evidence links of the
+// adopted Conditions, never an owner-wide evidence pool. Current BodyState and
+// Safety remain separate authoritative inputs.
+func treatmentDiagnosisEvidence(owner uuid.UUID, diagnosis *NativeDiagnosisView) (json.RawMessage, error) {
+	if diagnosis == nil || diagnosis.UserID != owner {
+		return nil, fmt.Errorf("Treatment Diagnosis owner mismatch")
+	}
+	items := make([]map[string]any, 0)
+	for _, condition := range diagnosis.ConditionEntries {
+		for _, link := range condition.EvidenceLinks {
+			items = append(items, map[string]any{
+				"evidence_id":          link.EvidenceID,
+				"evidence_type":        link.EvidenceType,
+				"evidence_version":     link.EvidenceVersion,
+				"role":                 link.Role,
+				"condition_id":         condition.ConditionID,
+				"body_state_authority": "none",
+			})
+		}
+	}
+	return json.Marshal(items)
 }
 
 func treatmentDecisionError(decision TreatmentDecision) error {
@@ -289,15 +277,8 @@ func treatmentDecisionError(decision TreatmentDecision) error {
 		return ErrTreatmentSafetyBlocked
 	}
 	switch decision.Reasons[0] {
-	case "diagnosis_not_ready":
+	case "adopted_condition_required":
 		return ErrTreatmentDiagnosisNotReady
-	case "diagnosis_not_fresh":
-		return ErrTreatmentAnalysisStale
-	case "active_body_state_safety_concern", "malformed_or_unknown_safety_state",
-		"unsupported_decision_policy_revision", "unsupported_decision_phase":
-		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
-	case "candidate_assessment_required":
-		return ErrTreatmentCandidateAssessmentRequired
 	default:
 		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
 	}
@@ -306,7 +287,7 @@ func treatmentDecisionError(decision TreatmentDecision) error {
 func buildTreatmentDecisionTrace(
 	decision TreatmentDecision,
 	facts TreatmentDecisionFacts,
-	diagnosisAnalysisID uuid.UUID,
+	diagnosisRevision int64,
 	agentConfigurationID string,
 ) datatypes.JSON {
 	trace, _ := json.Marshal(map[string]any{
@@ -315,7 +296,7 @@ func buildTreatmentDecisionTrace(
 		"phase":                  decision.Phase,
 		"outcome":                decision.Outcome,
 		"reasons":                decision.Reasons,
-		"diagnosis_analysis_id":  diagnosisAnalysisID,
+		"diagnosis_revision":     diagnosisRevision,
 		"agent_configuration_id": agentConfigurationID,
 		"facts":                  facts,
 	})

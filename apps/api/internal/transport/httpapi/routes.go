@@ -165,13 +165,6 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/diagnosis/analysis-runs/:runId/decisions", wrapper.DecideNativeDiagnosisProposal)
 	protected.POST("/diagnosis/analysis-runs/:runId/settlement", wrapper.SettleNativeDiagnosisRun)
 	protected.POST("/diagnosis/conditions/:conditionId/direct-edits", wrapper.DirectEditNativeDiagnosisCondition)
-	// Legacy per-run analysis, assessment and replay surfaces remain until their separate retirement slice.
-	protected.POST("/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
-	protected.GET("/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
-	protected.GET("/diagnosis-analyses/:analysisId", wrapper.GetDiagnosisAnalysis)
-	protected.PUT("/diagnosis-analyses/:analysisId/assessment", wrapper.AssessDiagnosisCandidates)
-	protected.POST("/diagnosis-analyses/:analysisId/replay", wrapper.ReplayDiagnosisAnalysis)
-	protected.GET("/diagnosis-analyses/:analysisId/regression-export", wrapper.ExportDiagnosisRegressionCase)
 
 	// Outcome feedback surfaces.
 	protected.POST("/outcomes", wrapper.RecordOutcome)
