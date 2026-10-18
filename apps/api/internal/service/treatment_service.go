@@ -24,6 +24,13 @@ type treatmentDiagnosisSource interface {
 	Read(ctx context.Context, owner uuid.UUID) (*NativeDiagnosisView, error)
 }
 
+// treatmentDiagnosisFreshness is the derived Condition freshness. A stale
+// adopted Condition rests on a source that no longer qualifies, so a plan
+// generated from it could never be admitted.
+type treatmentDiagnosisFreshness interface {
+	EvaluateConditions(context.Context, uuid.UUID, *NativeDiagnosisView) (map[uuid.UUID]DiagnosisFreshness, error)
+}
+
 type treatmentBodyStateSource interface {
 	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
 }
@@ -47,6 +54,14 @@ type TreatmentService struct {
 	reasoner   treatmentReasoner
 	deployment treatmentDeploymentPolicy
 	plans      treatmentPlanProposer
+	freshness  treatmentDiagnosisFreshness
+}
+
+// AttachDiagnosisFreshness makes generation refuse (DIAGNOSIS_STALE) while an
+// adopted Condition is stale. review_recommended does not block: the user may
+// defer a review prompt (diagnosis.md §3.6).
+func (s *TreatmentService) AttachDiagnosisFreshness(freshness treatmentDiagnosisFreshness) {
+	s.freshness = freshness
 }
 
 func NewTreatmentService(
@@ -161,6 +176,9 @@ func (s *TreatmentService) runGeneration(
 	if !treatmentDiagnosisFactsReady(facts) {
 		return nil, ErrTreatmentDiagnosisNotReady
 	}
+	if err := s.requireFreshDiagnosis(ctx, userID, diagnosis); err != nil {
+		return nil, err
+	}
 
 	bodyView, err := s.bodyState.GetAgentBodyContext(ctx, userID)
 	if err != nil {
@@ -231,6 +249,28 @@ func (s *TreatmentService) runGeneration(
 		decision: generationDecision, bodyRevision: bodyView.CurrentRevision,
 		replayInput: replayInput, payload: payload,
 	}, nil
+}
+
+// requireFreshDiagnosis refuses generation while any adopted Condition is
+// stale. It reads only; the Conditions stay as the user adopted them.
+func (s *TreatmentService) requireFreshDiagnosis(ctx context.Context, owner uuid.UUID, diagnosis *NativeDiagnosisView) error {
+	if s.freshness == nil {
+		return nil
+	}
+	report, err := s.freshness.EvaluateConditions(ctx, owner, diagnosis)
+	if err != nil {
+		return err
+	}
+	for _, condition := range diagnosis.ConditionEntries {
+		freshness, ok := report[condition.ConditionID]
+		if !ok {
+			return fmt.Errorf("Treatment Diagnosis freshness missing")
+		}
+		if freshness.Stale() {
+			return fmt.Errorf("%w: an adopted Condition rests on a source that changed", ErrTreatmentDiagnosisStale)
+		}
+	}
+	return nil
 }
 
 // adoptedTreatmentDiagnosis is the Treatment Agent's Diagnosis input: the

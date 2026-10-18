@@ -129,6 +129,18 @@ func TestNativeDiagnosisReadCommittedWithSources(t *testing.T) {
 		Disposition:     model.ConditionAdopted, LatestDecisionID: decisionID, LastAnalysisRunID: &runID,
 		CommittedRevision: 1, CreatedAt: now, UpdatedAt: now,
 	}
+	// A Condition without an evaluated freshness is never presented.
+	unreviewed := &nativeDiagnosisReadFake{view: &service.NativeDiagnosisView{
+		UserID: owner, CurrentRevision: 1, UpdatedAt: &now, ConditionEntries: []service.NativeDiagnosisCondition{condition},
+	}}
+	if response := getNativeDiagnosisResponse(t, nativeDiagnosisRoute(t, owner, unreviewed)); response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("condition without freshness presented: %d %s", response.Code, response.Body.String())
+	}
+	at, evidenceType := int64(4), model.DiagnosisBodyFact
+	condition.Freshness = &service.DiagnosisFreshness{
+		State: service.DiagnosisFreshnessStale, BasedOnBodyStateRevision: 1, EvaluatedBodyStateRevision: 4, EvaluatedDiagnosisRevision: 1,
+		Reasons: []service.DiagnosisFreshnessReason{{Code: "cited_evidence_withdrawn", BodyStateRevision: &at, ChangeType: "facts.withdrawn", EvidenceType: &evidenceType, EvidenceID: &factID}},
+	}
 	fake := &nativeDiagnosisReadFake{view: &service.NativeDiagnosisView{
 		UserID: owner, CurrentRevision: 1, UpdatedAt: &now, ConditionEntries: []service.NativeDiagnosisCondition{condition},
 	}}
@@ -147,6 +159,13 @@ func TestNativeDiagnosisReadCommittedWithSources(t *testing.T) {
 			EvidenceLinks []struct {
 				EvidenceVersion string `json:"evidenceVersion"`
 			} `json:"evidenceLinks"`
+			Freshness struct {
+				State   string `json:"state"`
+				Reasons []struct {
+					Code       string    `json:"code"`
+					EvidenceID uuid.UUID `json:"evidenceId"`
+				} `json:"reasons"`
+			} `json:"freshness"`
 		} `json:"conditionEntries"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
@@ -156,7 +175,10 @@ func TestNativeDiagnosisReadCommittedWithSources(t *testing.T) {
 		body.ConditionEntries[0].ConditionID != conditionID ||
 		body.ConditionEntries[0].Assessment.Level != "suspected" ||
 		len(body.ConditionEntries[0].EvidenceLinks) != 1 ||
-		body.ConditionEntries[0].EvidenceLinks[0].EvidenceVersion != "1" {
+		body.ConditionEntries[0].EvidenceLinks[0].EvidenceVersion != "1" ||
+		body.ConditionEntries[0].Freshness.State != "stale" || len(body.ConditionEntries[0].Freshness.Reasons) != 1 ||
+		body.ConditionEntries[0].Freshness.Reasons[0].Code != "cited_evidence_withdrawn" ||
+		body.ConditionEntries[0].Freshness.Reasons[0].EvidenceID != factID {
 		t.Fatalf("read committed condition/evidence %s", response.Body.String())
 	}
 	if bytes.Contains(response.Body.Bytes(), []byte(`"user_id"`)) ||

@@ -153,6 +153,8 @@ export * from './nativeDiagnosisDecisionRequest.zod';
 export * from './nativeDiagnosisDirectEditReceipt.zod';
 export * from './nativeDiagnosisDirectEditRequest.zod';
 export * from './nativeDiagnosisEvidenceLink.zod';
+export * from './nativeDiagnosisFreshness.zod';
+export * from './nativeDiagnosisFreshnessReason.zod';
 export * from './nativeDiagnosisProjection.zod';
 export * from './nativeDiagnosisRunDecision.zod';
 export * from './nativeDiagnosisRunEvent.zod';

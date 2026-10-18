@@ -1537,7 +1537,10 @@ paths:
     get:
       operationId: getNativeDiagnosis
       summary: Read the authenticated user's single committed Diagnosis aggregate.
-      description: Does not create an aggregate or treat undecided Agent proposals as adopted Conditions.
+      description: >
+        Does not create an aggregate or treat undecided Agent proposals as adopted Conditions.
+        Every Condition carries its derived freshness; the read fails closed (503) rather than
+        present a Condition whose freshness could not be evaluated.
       security:
       - bearerAuth: []
       responses:
@@ -1634,6 +1637,8 @@ paths:
         Uses one read-only repeatable-read snapshot; presented contentFingerprint
         and baseRevision are for explicit user choice, not an Agent adoption.
         A read never substitutes for settlement-time Safety and source validation.
+        An open run carries its derived freshness (stale once its base Diagnosis
+        revision or a cited source changed); it is a signal, never a settlement.
       security:
       - bearerAuth: []
       parameters:
@@ -5008,6 +5013,7 @@ components:
         proposals: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunProposal'}}
         events: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisRunEvent'}}
         settlement: {$ref: '#/components/schemas/NativeDiagnosisRunSettlement'}
+        freshness: {$ref: '#/components/schemas/NativeDiagnosisFreshness'}
     NativeDiagnosisRunScope:
       type: object
       additionalProperties: false
@@ -5215,7 +5221,7 @@ components:
     NativeDiagnosisCondition:
       type: object
       additionalProperties: false
-      required: [conditionId, medicalName, disposition, committedRevision, latestDecisionId, sourceClaimRefs, evidenceLinks, causeAnalysis, informationGaps, handlingPlan, createdAt, updatedAt]
+      required: [conditionId, medicalName, disposition, committedRevision, latestDecisionId, sourceClaimRefs, evidenceLinks, causeAnalysis, informationGaps, handlingPlan, createdAt, updatedAt, freshness]
       properties:
         conditionId: {type: string, format: uuid}
         medicalName: {type: string, minLength: 1, maxLength: 240}
@@ -5272,6 +5278,43 @@ components:
         committedRevision: {type: integer, format: int64, minimum: 1}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        freshness: {$ref: '#/components/schemas/NativeDiagnosisFreshness'}
+    NativeDiagnosisFreshness:
+      type: object
+      additionalProperties: false
+      description: >
+        Derived review signal (diagnosis.md §3.6 reviewRecommended), never a Diagnosis state.
+        Compares the BodyState revision the subject was analysed at with the immutable
+        revisions after it, and asks the commit/plan source authority whether every cited
+        source still qualifies. stale means the subject rests on a source that no longer
+        qualifies or (for an open run) on a superseded Diagnosis revision: settlement and plan
+        generation refuse it. review_recommended means relevant evidence or Safety changed
+        after the analysis; a new formal run is recommended but nothing is blocked. Reading it
+        never edits a Condition or a run.
+      required: [state, basedOnBodyStateRevision, evaluatedBodyStateRevision, evaluatedDiagnosisRevision, reasons]
+      properties:
+        state: {type: string, enum: [current, review_recommended, stale]}
+        basedOnBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        evaluatedBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        evaluatedDiagnosisRevision: {type: integer, format: int64, minimum: 0}
+        reasons: {type: array, items: {$ref: '#/components/schemas/NativeDiagnosisFreshnessReason'}}
+    NativeDiagnosisFreshnessReason:
+      type: object
+      additionalProperties: false
+      description: One auditable cause. Identifiers and revisions only; no health text.
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [cited_evidence_corrected, cited_evidence_withdrawn, cited_evidence_unavailable, source_claim_unavailable, assessment_source_unavailable, request_source_unavailable, diagnosis_revision_changed, condition_changed, safety_changed, related_fact_recorded, related_fact_corrected, related_fact_withdrawn, cited_episode_changed, related_episode_changed, change_window_exceeded]
+        bodyStateRevision: {type: integer, format: int64, minimum: 1}
+        changeType: {type: string, minLength: 1}
+        evidenceType: {type: string, enum: [body_fact, body_observation, symptom_episode, document_evidence]}
+        evidenceId: {type: string, format: uuid}
+        claimId: {type: string, minLength: 1}
+        runId: {type: string, format: uuid}
+        conditionId: {type: string, format: uuid}
+        diagnosisRevision: {type: integer, format: int64, minimum: 1}
     NativeDiagnosisSourceClaim:
       type: object
       additionalProperties: false

@@ -19,10 +19,25 @@ type diagnosisRunReadRepository interface {
 	ReadRunSnapshot(context.Context, uuid.UUID, uuid.UUID) (*repository.DiagnosisRunSnapshot, error)
 	ListRunPage(context.Context, uuid.UUID, int, *uuid.UUID) (*repository.DiagnosisRunPage, error)
 }
-type NativeDiagnosisRunReadService struct{ repo diagnosisRunReadRepository }
+type diagnosisRunFreshnessEvaluator interface {
+	EvaluateRun(context.Context, uuid.UUID, *NativeDiagnosisRunProjection) (*DiagnosisFreshness, error)
+}
+
+type NativeDiagnosisRunReadService struct {
+	repo      diagnosisRunReadRepository
+	freshness diagnosisRunFreshnessEvaluator
+}
 
 func NewNativeDiagnosisRunReadService(repo diagnosisRunReadRepository) *NativeDiagnosisRunReadService {
 	return &NativeDiagnosisRunReadService{repo: repo}
+}
+
+// WithFreshness makes Read derive an open run's freshness, so a run whose
+// base Diagnosis revision or cited sources changed is visibly stale before
+// its settlement fails with a conflict.
+func (s *NativeDiagnosisRunReadService) WithFreshness(freshness diagnosisRunFreshnessEvaluator) *NativeDiagnosisRunReadService {
+	s.freshness = freshness
+	return s
 }
 
 // NativeDiagnosisRunSummary is a terminal-event-derived status, not a mutable
@@ -56,6 +71,8 @@ type NativeDiagnosisRunProjection struct {
 	Proposals                []NativeDiagnosisRunProposal     `json:"proposals"`
 	Events                   []NativeDiagnosisRunEvent        `json:"events"`
 	Settlement               *NativeDiagnosisRunSettlement    `json:"settlement,omitempty"`
+	// Freshness is derived for open runs only; terminal runs are history.
+	Freshness *DiagnosisFreshness `json:"freshness,omitempty"`
 }
 type NativeDiagnosisRunProposal struct {
 	ProposalID             uuid.UUID                    `json:"proposalId"`
@@ -304,6 +321,16 @@ func (s *NativeDiagnosisRunReadService) Read(ctx context.Context, owner, runID u
 				}
 			}
 		}
+	}
+	if s.freshness != nil && run.State == "open" {
+		freshness, err := s.freshness.EvaluateRun(ctx, owner, run)
+		if err != nil {
+			return nil, err
+		}
+		if freshness == nil {
+			return nil, errors.New("open diagnosis run freshness missing")
+		}
+		run.Freshness = freshness
 	}
 	return run, nil
 }
