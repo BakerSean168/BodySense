@@ -6,8 +6,6 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 
-export * from './acceptTreatmentRevisionRequest.zod';
-export * from './acceptTreatmentRevisionResponse.zod';
 export * from './activityBodyFactRecord.zod';
 export * from './agentInteraction.zod';
 export * from './appendHealthDocumentReviewRequest.zod';
@@ -89,7 +87,6 @@ export * from './correctBodyObservationRequest.zod';
 export * from './createEquipmentAssetRequest.zod';
 export * from './createPlanProposalRequest.zod';
 export * from './createUploadRequest.zod';
-export * from './currentTreatmentResponse.zod';
 export * from './currentUser.zod';
 export * from './derivedConcernGroup.zod';
 export * from './derivedConcernGroupList.zod';
@@ -153,7 +150,6 @@ export * from './listNativeDiagnosisRunsParams.zod';
 export * from './listOutcomesParams.zod';
 export * from './listPlanProposalRecordsParams.zod';
 export * from './listRunEventsParams.zod';
-export * from './listTreatmentRevisionsParams.zod';
 export * from './logoutAcknowledgement.zod';
 export * from './messageDataPart.zod';
 export * from './messageImagePart.zod';
@@ -260,16 +256,7 @@ export * from './trainingReassessmentRequest.zod';
 export * from './treatment.zod';
 export * from './treatmentInterventionDraft.zod';
 export * from './treatmentPlanContent.zod';
-export * from './treatmentProposalRequest.zod';
-export * from './treatmentProposalResponse.zod';
-export * from './treatmentReplayCheck.zod';
-export * from './treatmentReplayComparison.zod';
-export * from './treatmentReplayLayer.zod';
-export * from './treatmentReplayReport.zod';
-export * from './treatmentReplayRequest.zod';
-export * from './treatmentReplaySnapshot.zod';
 export * from './treatmentRevision.zod';
-export * from './treatmentRevisionListResponse.zod';
 export * from './treatmentStatusReason.zod';
 export * from './updateBodyMetricsRequest.zod';
 export * from './updateEquipmentAssetRequest.zod';

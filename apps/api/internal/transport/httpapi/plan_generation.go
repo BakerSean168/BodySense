@@ -12,11 +12,16 @@ import (
 	"github.com/google/uuid"
 )
 
-// planGenerationApplication is the Treatment service's PlanProposal(create)
-// generation entry point. It is reached through the configured Treatment
-// service so the generation path keeps one Go gate and one Agent wiring.
+// planGenerationApplication is the Treatment Agent's PlanProposal(create)
+// generation entry point, so the generation path keeps one Go gate and one
+// Agent wiring.
 type planGenerationApplication interface {
 	GeneratePlanProposal(context.Context, uuid.UUID, service.TreatmentPlanGenerationInput) (*service.TreatmentPlanGenerationResult, error)
+}
+
+func (s *PublicServer) WithPlanGeneration(generator planGenerationApplication) *PublicServer {
+	s.planGenerator = generator
+	return s
 }
 
 var planGenerationUnavailable = trainingPlanHTTPError{http.StatusServiceUnavailable, "PLAN_GENERATION_UNAVAILABLE", "training plan generation is not configured"}
@@ -33,8 +38,8 @@ func (s *PublicServer) GeneratePlanProposal(ctx context.Context, req openapiv1.G
 	if err != nil {
 		return planUnauthorized, nil
 	}
-	generator, ok := s.treatments.(planGenerationApplication)
-	if !ok || generator == nil {
+	generator := s.planGenerator
+	if generator == nil {
 		return planGenerationUnavailable, nil
 	}
 	if req.Body == nil || (req.Body.DiagnosisAnalysisId != nil && uuid.UUID(*req.Body.DiagnosisAnalysisId) == uuid.Nil) {

@@ -51,9 +51,8 @@ type PublicServer struct {
 	diagnosisAnalyses        diagnosisAnalysisApplication
 	diagnosisFreshness       diagnosisFreshnessApplication
 	diagnosisReplay          diagnosisReplayApplication
-	treatments               treatmentApplication
-	treatmentTraining        treatmentTrainingApplication
-	treatmentReplay          treatmentReplayApplication
+	outcomes                 outcomeApplication
+	planGenerator            planGenerationApplication
 	training                 trainingApplication
 	trainingPlans            trainingPlanApplication
 	uploads                  uploadApplication
