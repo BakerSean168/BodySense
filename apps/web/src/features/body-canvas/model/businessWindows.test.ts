@@ -211,6 +211,13 @@ describe("Penpot V2 business window geometry", () => {
     }
   });
 
+  it("narrows only Person's detail scenes to the Penpot 560 width", () => {
+    expect(BUSINESS_WINDOW_LAYOUT.person.sceneWidth).toBe(560);
+    for (const id of ["chat", "diagnosis", "training", "trainer"] as const) {
+      expect(BUSINESS_WINDOW_LAYOUT[id].sceneWidth).toBeUndefined();
+    }
+  });
+
   it("docks Person and Chat left, Diagnosis, Training and Trainer right", () => {
     expect(BUSINESS_WINDOW_LAYOUT.person.dock).toBe("left");
     expect(BUSINESS_WINDOW_LAYOUT.chat.dock).toBe("left");

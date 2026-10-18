@@ -1,4 +1,9 @@
-import { Dumbbell, FileText, MessageCircle, UserRound } from "lucide-react";
+import {
+  DockChatIcon,
+  DockDiagnosisIcon,
+  DockPersonIcon,
+  DockTrainingIcon,
+} from "./DockIcons";
 import {
   getBusinessWindowMeta,
   type BusinessWindowId,
@@ -6,10 +11,10 @@ import {
 
 /** The four Penpot V2 Dock entrances. Trainer is opened from Training, not a fifth Dock item. */
 export const BODY_CANVAS_DOCK_ITEMS = [
-  { id: "person", icon: UserRound },
-  { id: "training", icon: Dumbbell },
-  { id: "diagnosis", icon: FileText },
-  { id: "chat", icon: MessageCircle },
+  { id: "person", icon: DockPersonIcon },
+  { id: "training", icon: DockTrainingIcon },
+  { id: "diagnosis", icon: DockDiagnosisIcon },
+  { id: "chat", icon: DockChatIcon },
 ] as const;
 
 export interface BodyCanvasDockProps {
@@ -48,13 +53,15 @@ export function BodyCanvasDock({
             onClick={() => onToggle(id)}
           >
             <span className="bc-dock-icon">
-              <Icon size={21} strokeWidth={1.8} aria-hidden="true" />
+              <Icon size={24} />
               {id === "diagnosis" && diagnosisCount > 0 ? (
                 <span className="bc-dock-count" aria-hidden="true">
                   {diagnosisCount > 99 ? "99+" : diagnosisCount}
                 </span>
               ) : null}
             </span>
+            {/* Desktop shows the Penpot icon-only Dock: the label stays in the
+                DOM (visually hidden), with aria-label and the title tooltip. */}
             <span className="bc-dock-label">{dockLabel}</span>
             <kbd aria-hidden="true">{shortcut}</kbd>
           </button>

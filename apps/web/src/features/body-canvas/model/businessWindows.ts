@@ -273,6 +273,12 @@ export type BusinessWindowDock = "left" | "right";
 
 export interface BusinessWindowLayout {
   desktop: BusinessWindowSize;
+  /**
+   * Narrower desktop width for the window's detail scenes, when Penpot draws
+   * them narrower than the home scene (Person: Body / Episode, Body / Region
+   * and Assets are 560 wide, the category lists 860).
+   */
+  sceneWidth?: number;
   dock: BusinessWindowDock;
   mobile: BusinessWindowSize;
   /** Upper bound applied when the stage is short. */
@@ -291,6 +297,7 @@ export const BUSINESS_WINDOW_LAYOUT: Record<
   },
   person: {
     desktop: { width: 860, height: 700 },
+    sceneWidth: 560,
     dock: "left",
     mobile: { width: 358, height: 704 },
     maxHeight: 700,

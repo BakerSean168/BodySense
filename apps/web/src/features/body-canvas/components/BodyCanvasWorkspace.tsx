@@ -261,8 +261,8 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     safetyBannerObserver.current.observe(node);
   }, []);
   // A desktop window ends above the Dock. The Penpot frame keeps 108px for a
-  // 72px Dock; the real Dock (labels + shortcut keys) can be taller, so the
-  // space it takes from the stage bottom is measured and reserved too.
+  // 72px Dock, which the desktop Dock matches; a taller Dock (narrow desktop
+  // widths, larger text) is measured and its space reserved too.
   const stageRef = useRef<HTMLElement>(null);
   const [dockReserve, setDockReserve] = useState<number | null>(null);
   useEffect(() => {

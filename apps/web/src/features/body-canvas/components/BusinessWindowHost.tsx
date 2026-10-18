@@ -82,6 +82,9 @@ export function BusinessWindowHost({
         {
           "--bc-window-width": `${layout.desktop.width}px`,
           "--bc-window-height": `${layout.desktop.height}px`,
+          ...(layout.sceneWidth
+            ? { "--bc-window-scene-width": `${layout.sceneWidth}px` }
+            : {}),
           "--bc-window-max-height": `${layout.maxHeight}px`,
           "--bc-window-left": `${offset.left}px`,
           "--bc-window-top": `${offset.top}px`,

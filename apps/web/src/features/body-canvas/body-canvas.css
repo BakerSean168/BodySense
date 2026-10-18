@@ -823,6 +823,43 @@
   outline: 2px solid var(--bc-primary);
   outline-offset: 2px;
 }
+/* Penpot desktop Dock: icon-only, 72px tall, 28px above the frame bottom (y
+   800 to 872 at 900), shortcut key below-right of each icon. The label is
+   only visually hidden; every item keeps its aria-label and title tooltip.
+   With it, windows get the full Penpot 700px (y 92 to 792). */
+@media (min-width: 761px) {
+  .bc-dock {
+    bottom: calc(28px + env(safe-area-inset-bottom));
+    height: 72px;
+    gap: 7px;
+    padding: 6px 10px;
+    border-radius: 22px;
+  }
+  .bc-dock-item {
+    min-width: 72px;
+    min-height: 58px;
+    height: 58px;
+    grid-template-rows: 24px;
+    align-content: start;
+    padding: 10px 0 0;
+  }
+  .bc-dock-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .bc-dock-item kbd {
+    position: absolute;
+    left: calc(50% + 14px);
+    bottom: 4px;
+    min-width: 18px;
+    height: 18px;
+  }
+}
 .bc-safety-banner,
 .bc-sync-banner,
 .bc-sync-indicator {
@@ -1486,7 +1523,10 @@
   position: absolute;
   left: clamp(16px, var(--bc-window-left, 40px), 48px);
   top: var(--bc-window-y);
-  width: min(var(--bc-window-width, 560px), calc(100% - 32px));
+  width: min(
+    var(--bc-window-w, var(--bc-window-width, 560px)),
+    calc(100% - 32px)
+  );
   height: min(
     var(--bc-window-height, 700px),
     var(--bc-window-max-height, 700px),
@@ -1511,6 +1551,37 @@
 .bc-business-window[data-dock="right"] {
   left: auto;
   right: clamp(16px, var(--bc-window-left, 40px), 48px);
+}
+/* Penpot draws Person's detail scenes (Body / Episode, record detail and the
+   Assets delete-scope / erasure scenes) 560 wide; the category lists are 860.
+   The window narrows from its docked side while one is open. */
+.bc-business-window {
+  transition: width 0.2s ease;
+}
+.bc-business-window:has(.bc-person-detail, .bc-statement-erasure) {
+  --bc-window-w: var(--bc-window-scene-width, var(--bc-window-width));
+}
+/* Penpot's window boards show neither the canvas intro nor, beside a
+   left-docked window, the Tools rail (it collapses instead of peeking out
+   from under the window). Both fade back when the window closes; reduced
+   motion drops the transition through the theme rule above. */
+.bc-intro,
+.bc-tool-rail {
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    translate 0.2s ease;
+}
+.bc-stage:has(.bc-business-window:not([hidden])) .bc-intro {
+  opacity: 0;
+  visibility: hidden;
+}
+.bc-stage:has(.bc-business-window[data-dock="left"]:not([hidden]))
+  .bc-tool-rail {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  translate: -24px 0;
 }
 /* Desktop twin of the mobile sheet rule: the safety banner (z 45) would sit
    on the window header at its 70px stage top. While a window is open the
