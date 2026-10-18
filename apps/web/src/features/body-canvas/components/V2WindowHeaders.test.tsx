@@ -126,6 +126,28 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
     expect(screen.getByText("暂无已确认病情")).toBeVisible();
   });
 
+  it("shows the Penpot run label instead of the picker during a formal analysis", () => {
+    const { rerender } = render(
+      <DiagnosisWindowHeader
+        view={diagnosis}
+        selectedConditionId="condition-1"
+        onSelectCondition={vi.fn()}
+        mode="analysis"
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-mode")).toHaveTextContent("正式分析");
+    expect(screen.queryByRole("combobox")).toBeNull();
+    rerender(
+      <DiagnosisWindowHeader
+        view={diagnosis}
+        selectedConditionId="condition-1"
+        onSelectCondition={vi.fn()}
+        mode="receipt"
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-mode")).toHaveTextContent("提交回执");
+  });
+
   it("renders only the selected adopted diagnosis and leaves pending proposals unconfirmed", () => {
     const { rerender } = render(
       <DiagnosisWindow view={diagnosis} selectedConditionId="condition-2" />,

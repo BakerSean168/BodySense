@@ -7,14 +7,34 @@ export interface DiagnosisWindowHeaderProps {
   view: { confirmed: readonly { conditionId: string; name: string }[] };
   selectedConditionId: string | null;
   onSelectCondition: (conditionId: string) => void;
+  /**
+   * Penpot Diagnosis boards: a formal run shows "正式分析" and its settled
+   * outcome "提交回执" in the toolbar instead of the condition picker.
+   */
+  mode?: "analysis" | "receipt" | null;
 }
+
+const MODE_LABELS = { analysis: "正式分析", receipt: "提交回执" } as const;
 
 /** Penpot V2: condition picker belongs to the window toolbar, not the scroll body. */
 export function DiagnosisWindowHeader({
   view,
   selectedConditionId,
   onSelectCondition,
+  mode = null,
 }: DiagnosisWindowHeaderProps) {
+  if (mode)
+    return (
+      <div className="bc-window-context bc-diagnosis-context">
+        <span
+          className="bc-window-select-wrap bc-window-context-mode"
+          data-testid="diagnosis-mode"
+        >
+          {MODE_LABELS[mode]}
+        </span>
+      </div>
+    );
+
   const selected = view.confirmed.some(
     (item) => item.conditionId === selectedConditionId,
   )
