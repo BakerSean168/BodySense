@@ -7118,7 +7118,7 @@
                     "name": "content_sha256",
                     "type": "character",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "varchar",

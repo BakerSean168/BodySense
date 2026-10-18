@@ -195,7 +195,8 @@ func TestUserAssetErasureSourceRetryPostgres(t *testing.T) {
 		t.Fatalf("replica ledger kept: %d", n)
 	}
 	current, _ = f.assets.GetOwnedByID(ctx, f.report.ID, f.owner)
-	if current.Availability != model.UserAssetErased || current.ErasedAt == nil || current.OriginalName != "" {
+	if current.Availability != model.UserAssetErased || current.ErasedAt == nil || current.OriginalName != "" ||
+		current.ContentSHA256 != "" || current.Kind != f.report.Kind || current.ByteSize != f.report.ByteSize || current.MimeType != f.report.MimeType {
 		t.Fatalf("tombstone=%+v", current)
 	}
 	counts := map[model.AssetErasureTargetName]int{}

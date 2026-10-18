@@ -248,8 +248,19 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	if err := db.Where("id=?", asset).Take(&stored).Error; err != nil {
 		t.Fatal(err)
 	}
-	if stored.Availability != model.UserAssetErased || stored.ErasedAt == nil || stored.OriginalName != "" {
+	if stored.Availability != model.UserAssetErased || stored.ErasedAt == nil || stored.OriginalName != "" || stored.ContentSHA256 != "" {
 		t.Fatalf("tombstone=%+v", stored)
+	}
+	// The tombstone keeps identity, kind, size and MIME type; the content hash is cleared.
+	if n := erasureRows(t, db, `SELECT count(*) FROM user_assets WHERE id=? AND content_sha256 IS NULL
+ AND kind='report' AND byte_size=1 AND mime_type='application/pdf'`, asset); n != 1 {
+		t.Fatalf("tombstone columns: %d", n)
+	}
+	if err := db.Exec(`UPDATE user_assets SET content_sha256=? WHERE id=?`, strings.Repeat("e", 64), asset).Error; err == nil {
+		t.Fatal("erased asset regained a content hash")
+	}
+	if err := db.Exec(`UPDATE user_assets SET content_sha256=NULL WHERE id=?`, unrelated).Error; err == nil {
+		t.Fatal("available asset lost its content hash")
 	}
 	receipt, _ = repo.GetByAsset(ctx, owner, asset)
 	if receipt.Request.Status != model.AssetErasureErased || len(receipt.Outstanding()) != 0 {

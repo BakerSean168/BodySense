@@ -468,7 +468,7 @@ func (r *AssetErasureRepository) Finalize(ctx context.Context, request *model.As
 			return recordAssetErasureOutcome(tx, now, request.UserID, request.ID, model.AssetErasureManifest,
 				model.AssetErasureOutcome{State: model.AssetErasureTargetBlocked, Outstanding: 1, FailureCode: model.AssetErasureCodeTargetsOutstanding})
 		}
-		if err := tx.Exec(`UPDATE user_assets SET availability = 'erased', erased_at = ?, original_name = '', updated_at = ?
+		if err := tx.Exec(`UPDATE user_assets SET availability = 'erased', erased_at = ?, original_name = '', content_sha256 = NULL, updated_at = ?
 WHERE user_id = ? AND id = ?`, now, now, request.UserID, request.AssetID).Error; err != nil {
 			return err
 		}

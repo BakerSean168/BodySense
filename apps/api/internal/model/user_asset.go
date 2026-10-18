@@ -58,7 +58,8 @@ func (s DerivedRunStatus) IsTerminal() bool {
 }
 
 // UserAsset is the single owner-scoped identity of one uploaded private file.
-// It owns storage identity, content hash and the file-removal lifecycle only;
+// It owns storage identity, content hash and the file-removal lifecycle only
+// (an erased tombstone has no content hash: the column is NULL and reads as "");
 // OCR and posture results live in derived run tables that reference
 // (user_id, id) through composite foreign keys.
 type UserAsset struct {
@@ -69,7 +70,7 @@ type UserAsset struct {
 	OriginalName    string                `gorm:"type:varchar(255);not null" json:"original_name"`
 	MimeType        string                `gorm:"type:varchar(100);not null" json:"mime_type"`
 	ByteSize        int64                 `gorm:"not null" json:"byte_size"`
-	ContentSHA256   string                `gorm:"type:char(64);not null" json:"content_sha256"`
+	ContentSHA256   string                `gorm:"type:char(64)" json:"content_sha256"`
 	StorageBackend  string                `gorm:"type:varchar(20);not null" json:"-"`
 	StorageKey      string                `gorm:"type:varchar(500);not null" json:"-"`
 	Availability    UserAssetAvailability `gorm:"type:varchar(20);not null;default:'available'" json:"availability"`
