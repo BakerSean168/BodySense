@@ -311,10 +311,10 @@ function ChatInputArea({
         }}
       />
 
-      <div className="rounded-[24px] border border-white/[0.08] bg-[#2a2a2a] p-2 shadow-[0_12px_34px_rgba(0,0,0,0.28)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-white/[0.14] focus-within:bg-[#2d2d2d] focus-within:shadow-[0_16px_38px_rgba(0,0,0,0.34)]">
+      <div className="chat-composer rounded-[24px] border border-white/[0.08] bg-[#2a2a2a] p-2 shadow-[0_12px_34px_rgba(0,0,0,0.28)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-white/[0.14] focus-within:bg-[#2d2d2d] focus-within:shadow-[0_16px_38px_rgba(0,0,0,0.34)]">
         {spatialContext ? (
           <div className="flex items-center gap-2 px-2 pb-1.5 pt-1">
-            <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[#75d5a7]/20 bg-[#75d5a7]/[0.08] px-2.5 py-1 text-[11px] text-[#a9e7c8]">
+            <div className="chat-context-chip inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[#75d5a7]/20 bg-[#75d5a7]/[0.08] px-2.5 py-1 text-[11px] text-[#a9e7c8]">
               <MapPin className="size-3 shrink-0" aria-hidden="true" />
               <span className="truncate">
                 {spatialContext.body_region_label ||
@@ -336,7 +336,7 @@ function ChatInputArea({
                   type="button"
                   onClick={onClearSpatialContext}
                   disabled={isComposerLocked}
-                  className="-mr-1 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[#a9e7c8]/65 transition-colors hover:bg-white/10 hover:text-[#a9e7c8] disabled:opacity-40"
+                  className="chat-context-chip-clear -mr-1 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[#a9e7c8]/65 transition-colors hover:bg-white/10 hover:text-[#a9e7c8] disabled:opacity-40"
                   aria-label="移除身体区域上下文"
                 >
                   <X className="size-2.5" aria-hidden="true" />
@@ -351,7 +351,7 @@ function ChatInputArea({
             {pendingImages.map((image) => (
               <div
                 key={image.uploadId}
-                className="relative size-16 overflow-hidden rounded-xl border border-white/10 bg-black/20"
+                className="chat-pending-image relative size-16 overflow-hidden rounded-xl border border-white/10 bg-black/20"
               >
                 <img
                   src={image.previewUrl}
@@ -380,7 +380,7 @@ function ChatInputArea({
           placeholder="和 BodySense 说说你的身体感受…"
           disabled={isComposerLocked}
           rows={1}
-          className="max-h-[140px] min-h-11 w-full resize-none bg-transparent px-3 py-2 text-[14px] leading-6 text-[#f2f2f2] outline-none placeholder:text-white/35 disabled:cursor-not-allowed disabled:text-white/35"
+          className="chat-composer-input max-h-[140px] min-h-11 w-full resize-none bg-transparent px-3 py-2 text-[14px] leading-6 text-[#f2f2f2] outline-none placeholder:text-white/35 disabled:cursor-not-allowed disabled:text-white/35"
         />
 
         <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
@@ -390,7 +390,7 @@ function ChatInputArea({
             disabled={
               isComposerLocked || isUploadingImage || pendingImages.length >= 3
             }
-            className="inline-flex size-8 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/45 disabled:cursor-not-allowed disabled:opacity-35"
+            className="chat-composer-tool inline-flex size-8 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/45 disabled:cursor-not-allowed disabled:opacity-35"
             title="添加图片"
             aria-label="添加图片"
           >
@@ -407,7 +407,7 @@ function ChatInputArea({
             type="button"
             onClick={handleSend}
             disabled={isComposerLocked || !canSend || isUploadingImage}
-            className="inline-flex size-8 items-center justify-center rounded-full bg-[#f2f2f2] text-[#171717] transition-[transform,background-color,opacity] duration-150 hover:bg-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
+            className="chat-composer-send inline-flex size-8 items-center justify-center rounded-full bg-[#f2f2f2] text-[#171717] transition-[transform,background-color,opacity] duration-150 hover:bg-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
             aria-label="发送"
             title="发送"
           >
@@ -682,10 +682,10 @@ function ChatContent({
     ).length === 0;
 
   return (
-    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-[#171717] text-[#ececec]">
+    <ThreadPrimitive.Root className="chat-thread flex h-full min-h-0 flex-col bg-[#171717] text-[#ececec]">
       <ThreadPrimitive.Viewport
         ref={messagesContainerRef}
-        className="custom-scrollbar min-h-0 flex-1 overflow-y-auto"
+        className="chat-thread-viewport custom-scrollbar min-h-0 flex-1 overflow-y-auto"
       >
         <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col gap-6 px-5 py-7 sm:px-6">
           <ThreadPrimitive.Empty>
@@ -696,7 +696,7 @@ function ChatContent({
                   : "hidden"
               }
             >
-              <div className="mb-5 flex size-11 items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.035] text-[#83d4aa] shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+              <div className="chat-empty-icon mb-5 flex size-11 items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.035] text-[#83d4aa] shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                 <svg
                   className="size-5"
                   fill="none"
@@ -712,10 +712,10 @@ function ChatContent({
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-medium tracking-[-0.02em] text-white/90">
+              <h2 className="chat-empty-title text-xl font-medium tracking-[-0.02em] text-white/90">
                 有什么身体变化想告诉我？
               </h2>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-white/42">
+              <p className="chat-empty-text mt-2 max-w-sm text-sm leading-6 text-white/42">
                 描述不适、体态或最近的变化。BodySense
                 会把明确的本人陈述记录到你的身体档案中。
               </p>
@@ -917,7 +917,7 @@ function CustomAssistantMessage() {
                     <img
                       src={image}
                       alt="用户上传"
-                      className="mt-2 max-h-48 rounded-xl border border-white/10 object-contain"
+                      className="chat-image mt-2 max-h-48 rounded-xl border border-white/10 object-contain"
                     />
                   );
                 },
@@ -940,9 +940,11 @@ function CustomAssistantMessage() {
                     ""
                   }
                 >
-                  <p className="font-medium text-white/78">{citation.title}</p>
+                  <p className="chat-source-title font-medium text-white/78">
+                    {citation.title}
+                  </p>
                   {citation.summary || citation.snippet ? (
-                    <p className="mt-0.5 line-clamp-2 text-white/42">
+                    <p className="chat-muted mt-0.5 line-clamp-2 text-white/42">
                       {citation.summary || citation.snippet}
                     </p>
                   ) : null}
@@ -952,11 +954,11 @@ function CustomAssistantMessage() {
           </Sources>
 
           {viewModel.knowledgeGaps.length > 0 ? (
-            <div className="rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
-              <p className="text-xs font-medium text-amber-200/75">
+            <div className="chat-gap rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
+              <p className="chat-gap-title text-xs font-medium text-amber-200/75">
                 还缺少一些专项资料
               </p>
-              <p className="mt-1 text-xs leading-5 text-amber-100/48">
+              <p className="chat-gap-text mt-1 text-xs leading-5 text-amber-100/48">
                 当前知识库暂未覆盖「
                 {viewModel.knowledgeGaps.map((gap) => gap.query).join("」「")}
                 」，相关建议会保持更谨慎。

@@ -799,7 +799,7 @@
   font-weight: 650;
 }
 .bc-chat-heading > span svg { color: var(--bc-primary); }
-.bc-chat-content { height: 100%; min-height: 0; flex: 1 1 auto; overflow: hidden; background: #171717; }
+.bc-chat-content { height: 100%; min-height: 0; flex: 1 1 auto; overflow: hidden; background: var(--bc-paper); }
 .bc-chat-content > * { height: 100%; min-height: 0; }
 .bc-inventory-dialog {
   width: min(930px, calc(100vw - 36px)) !important;
@@ -1808,8 +1808,8 @@
 .body-canvas-theme .ask-user-card {
   margin: 0;
   min-width: 0;
-  border-color: var(--bc-line);
-  background: var(--bc-subtle);
+  border-color: color-mix(in srgb, var(--bc-primary) 55%, var(--bc-line));
+  background: var(--bc-paper);
   color: var(--bc-ink);
   overflow-wrap: anywhere;
 }
@@ -2551,3 +2551,118 @@
   .bc-dx-request-actions > button { min-height: 44px; }
   .bc-dx-banner-actions .bc-dx-icon-button { width: 44px; height: 44px; }
 }
+
+/* Penpot Chat boards: a light thread on window paper (UI-001). The shared chat
+   components keep their standalone dark utilities; inside the Body Canvas the
+   semantic chat-* hooks take the active canvas theme (light or .bc-dark). */
+.body-canvas-theme .chat-thread,
+.body-canvas-theme .chat-skeleton { background: var(--bc-paper); color: var(--bc-ink); }
+.body-canvas-theme .chat-skeleton-block { background: var(--bc-subtle); }
+.body-canvas-theme .chat-msg-content,
+.body-canvas-theme .chat-msg-response { color: var(--bc-ink); }
+.body-canvas-theme [data-role="user"] > .chat-msg-content {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-primary-soft) 60%, var(--bc-subtle));
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-msg-response :is(h1, h2, h3, h4, strong) { color: var(--bc-ink); }
+.body-canvas-theme .chat-msg-response a { color: var(--bc-primary); }
+.body-canvas-theme .chat-msg-response :is(th, td) { border-color: var(--bc-line); }
+.body-canvas-theme .chat-msg-response th { background: var(--bc-subtle); color: var(--bc-ink); }
+.body-canvas-theme .chat-msg-response code { background: var(--bc-subtle); color: var(--bc-ink); }
+.body-canvas-theme .chat-empty-icon {
+  border-color: var(--bc-line);
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+  box-shadow: none;
+}
+.body-canvas-theme .chat-empty-title { color: var(--bc-ink); }
+.body-canvas-theme .chat-empty-text,
+.body-canvas-theme .chat-muted,
+.body-canvas-theme .chat-thinking,
+.body-canvas-theme .chat-tool-summary { color: var(--bc-muted); }
+.body-canvas-theme .chat-tool-label,
+.body-canvas-theme .chat-source { color: var(--bc-secondary); }
+.body-canvas-theme .chat-source:hover { background: var(--bc-subtle); color: var(--bc-ink); }
+.body-canvas-theme .chat-source-title { color: var(--bc-ink); }
+.body-canvas-theme :is(.chat-tools, .chat-sources) { border-color: var(--bc-line); background: var(--bc-subtle); }
+.body-canvas-theme .chat-sources-summary { color: var(--bc-secondary); }
+.body-canvas-theme .chat-sources-summary:hover { color: var(--bc-ink); }
+.body-canvas-theme .chat-sources-body { border-color: var(--bc-line); }
+.body-canvas-theme .chat-image { border-color: var(--bc-line); }
+.body-canvas-theme :is(.chat-gap, .chat-status-card[data-tone="warning"]) {
+  border-color: color-mix(in srgb, var(--bc-warning) 30%, var(--bc-line));
+  background: var(--bc-warning-soft);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-gap-title,
+.body-canvas-theme .chat-status-card[data-tone="warning"] .chat-status-title,
+.body-canvas-theme .chat-status-warning { color: var(--bc-warning); }
+.body-canvas-theme .chat-gap-text { color: var(--bc-secondary); }
+.body-canvas-theme .chat-status-card { border-color: var(--bc-line); background: var(--bc-subtle); color: var(--bc-secondary); }
+.body-canvas-theme .chat-status-card[data-tone="info"] .chat-status-title { color: var(--bc-primary); }
+.body-canvas-theme .chat-status-question { color: var(--bc-ink); }
+.body-canvas-theme .chat-status-answer { color: var(--bc-primary); }
+.body-canvas-theme .chat-redflag {
+  border-color: color-mix(in srgb, var(--bc-danger) 35%, var(--bc-line));
+  background: var(--bc-danger-soft);
+  color: var(--bc-ink);
+}
+.body-canvas-theme :is(.chat-redflag-icon, .chat-redflag-title) { color: var(--bc-danger); }
+.body-canvas-theme .chat-redflag-text { color: var(--bc-secondary); }
+.body-canvas-theme .chat-redflag-tag { background: var(--bc-paper); color: var(--bc-danger); }
+.body-canvas-theme .chat-redflag-ack { background: var(--bc-danger); color: var(--bc-paper); }
+.body-canvas-theme .chat-redflag-ack:hover { background: color-mix(in srgb, var(--bc-danger) 85%, var(--bc-ink)); }
+/* Composer: Penpot draws the input on paper with a primary send button. */
+.body-canvas-theme .chat-composer {
+  border-color: var(--bc-line);
+  background: var(--bc-paper);
+  box-shadow: 0 8px 24px rgba(31, 47, 37, .06);
+}
+.body-canvas-theme .chat-composer:focus-within {
+  border-color: color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line));
+  background: var(--bc-paper);
+  box-shadow: 0 10px 28px rgba(31, 47, 37, .08);
+}
+.body-canvas-theme .chat-composer-input { color: var(--bc-ink); }
+.body-canvas-theme .chat-composer-input::placeholder,
+.body-canvas-theme .chat-composer-input:disabled { color: var(--bc-muted); }
+.body-canvas-theme .chat-composer-tool { color: var(--bc-secondary); }
+.body-canvas-theme .chat-composer-tool:hover { background: var(--bc-subtle); color: var(--bc-ink); }
+.body-canvas-theme .chat-composer-send { background: var(--bc-primary); color: var(--bc-paper); }
+.body-canvas-theme .chat-composer-send:hover { background: color-mix(in srgb, var(--bc-primary) 85%, var(--bc-ink)); }
+.body-canvas-theme .chat-composer-send:disabled { background: var(--bc-line); color: var(--bc-paper); }
+.body-canvas-theme .chat-context-chip {
+  border-color: color-mix(in srgb, var(--bc-primary) 25%, var(--bc-line));
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-context-chip-clear { color: var(--bc-primary); }
+.body-canvas-theme .chat-context-chip-clear:hover { background: var(--bc-paper); }
+.body-canvas-theme .chat-pending-image { border-color: var(--bc-line); background: var(--bc-subtle); }
+/* Ask User options read as Penpot's bordered choice rows. */
+.body-canvas-theme .ask-user-card label:has(> input:is([type="radio"], [type="checkbox"])) {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  cursor: pointer;
+}
+.body-canvas-theme .ask-user-card label:has(> input:checked) {
+  border-color: var(--bc-primary);
+  background: color-mix(in srgb, var(--bc-primary-soft) 55%, var(--bc-paper));
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .body-canvas-theme .ask-user-card label:has(> input:is([type="radio"], [type="checkbox"])) { min-height: 44px; }
+}
+.body-canvas-theme .chat-status-card[data-tone="saved"] {
+  border-color: color-mix(in srgb, var(--bc-primary) 35%, var(--bc-line));
+  background: color-mix(in srgb, var(--bc-primary-soft) 55%, var(--bc-paper));
+}
+.body-canvas-theme .chat-status-card[data-tone="saved"] .chat-status-title,
+.body-canvas-theme .chat-tool-receipt[data-saved="true"] { color: var(--bc-primary); }
+.body-canvas-theme .chat-status-card[data-tone="neutral"] .chat-status-title { color: var(--bc-muted); }
+.body-canvas-theme :is(.chat-tools, .chat-tool-receipt) { color: var(--bc-secondary); }

@@ -119,7 +119,7 @@ export function StreamingAssistantTurn({
 
       {vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0 ? (
         <div
-          className="flex h-7 items-center gap-1.5 text-white/40"
+          className="chat-thinking flex h-7 items-center gap-1.5 text-white/40"
           aria-label="BodySense 正在思考"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-240ms]" />
@@ -135,9 +135,11 @@ export function StreamingAssistantTurn({
               key={citation.title}
               title={citation.summary || citation.content || ""}
             >
-              <p className="font-medium text-white/78">{citation.title}</p>
+              <p className="chat-source-title font-medium text-white/78">
+                {citation.title}
+              </p>
               {citation.summary ? (
-                <p className="mt-0.5 line-clamp-2 text-white/42">
+                <p className="chat-muted mt-0.5 line-clamp-2 text-white/42">
                   {citation.summary}
                 </p>
               ) : null}
@@ -147,11 +149,11 @@ export function StreamingAssistantTurn({
       </Sources>
 
       {vm.knowledgeGaps.length > 0 ? (
-        <div className="rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
-          <p className="text-xs font-medium text-amber-200/75">
+        <div className="chat-gap rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
+          <p className="chat-gap-title text-xs font-medium text-amber-200/75">
             还缺少一些专项资料
           </p>
-          <p className="mt-1 text-xs leading-5 text-amber-100/48">
+          <p className="chat-gap-text mt-1 text-xs leading-5 text-amber-100/48">
             当前知识库暂未覆盖「
             {vm.knowledgeGaps.map((gap) => gap.query).join("」「")}
             」，相关建议会保持更谨慎。

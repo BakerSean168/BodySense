@@ -44,9 +44,10 @@ export function ToolCallItem({ toolCall: tc }: ToolCallItemProps) {
     const receipt = readBodyFactCommit(tc.result);
     return (
       <div
-        className="flex items-center gap-2 text-xs"
+        className="chat-tool-receipt flex items-center gap-2 text-xs"
         role="status"
         data-testid="body-fact-tool-status"
+        data-saved={receipt ? "true" : "false"}
       >
         <span aria-hidden="true">{isRunning ? "…" : receipt ? "✓" : "!"}</span>
         <span>
@@ -79,9 +80,12 @@ export function ToolCallItem({ toolCall: tc }: ToolCallItemProps) {
           />
         </svg>
       )}
-      <span className="font-medium text-white/58">{label}</span>
+      <span className="chat-tool-label font-medium text-white/58">{label}</span>
       {summary && (
-        <span className="max-w-[240px] truncate text-white/32" title={summary}>
+        <span
+          className="chat-tool-summary max-w-[240px] truncate text-white/32"
+          title={summary}
+        >
           「{summary}」
         </span>
       )}
