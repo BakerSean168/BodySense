@@ -85,38 +85,64 @@ function json(body: unknown) {
 describe("trainingApi generated OpenAPI boundary", () => {
   beforeEach(() => authFetchMock.mockReset());
 
-  it("lists accepted plan records and projects their templates", async () => {
+  it("lists accepted plan records as the server returns them", async () => {
     authFetchMock.mockResolvedValue(json({ plans: [planRecord] }));
 
-    const result = await trainingApi.listPlans();
+    const result = await trainingApi.listPlanRecords();
 
     expect(authFetchMock).toHaveBeenCalledWith("/api/v1/training-plans", {
       method: "GET",
     });
-    expect(result).toEqual([
-      {
-        id: planId,
-        status: "active",
+    expect(result[0]!.planId).toBe(planId);
+    expect(result[0]!.currentContent.sessions[0]!.stages[0]!.phase).toBe("main");
+  });
+
+  it("accepts an update pinned to its base revision and the presented fingerprint", async () => {
+    const proposal = {
+      proposalId: "44444444-4444-4444-8444-444444444444",
+      kind: "update",
+      state: "pending",
+      initiatedBy: "agent",
+      planId,
+      basedOnRevisionId: revisionId,
+      draft: {
+        title: "肩胛稳定",
         goal: "restore capacity",
-        phases: [
-          {
-            week: 1,
-            focus: "Day A",
-            exercises: [
-              {
-                name: "Scapular control",
-                description: "",
-                sets: "2",
-                reps: "8–12 次",
-                notes: undefined,
-              },
-            ],
-          },
-        ],
-        created_at: "2026-10-18T08:00:00+08:00",
+        relatedConditionIds: [],
+        relatedBodyRefs: [],
+        content: planRecord.currentContent,
       },
-    ]);
-    expect("user_id" in result[0]!).toBe(false);
+      contentFingerprint: "b".repeat(64),
+      createdAt: "2026-10-18T08:00:00+08:00",
+      expiresAt: "2026-10-25T08:00:00+08:00",
+    };
+    authFetchMock.mockResolvedValue(
+      json({
+        receiptId: "55555555-5555-4555-8555-555555555555",
+        proposalId: proposal.proposalId,
+        decisionId: "66666666-6666-4666-8666-666666666666",
+        planId,
+        revisionId: "77777777-7777-4777-8777-777777777777",
+        idempotencyKey: "key-1",
+        decidedAt: "2026-10-18T09:00:00+08:00",
+        executionGate: planRecord.executionGate,
+      }),
+    );
+
+    await trainingApi.acceptProposal(proposal as never, {
+      decisionId: "66666666-6666-4666-8666-666666666666",
+      idempotencyKey: "key-1",
+    });
+
+    const [path, init] = authFetchMock.mock.calls[0]!;
+    expect(path).toBe(`/api/v1/plan-proposals/${proposal.proposalId}/accept`);
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      decisionId: "66666666-6666-4666-8666-666666666666",
+      presentedFingerprint: "b".repeat(64),
+      targetPlanId: planId,
+      expectedRevisionId: revisionId,
+      idempotencyKey: "key-1",
+    });
   });
 
   it("starts a session at the revision and Safety revision the user saw", async () => {

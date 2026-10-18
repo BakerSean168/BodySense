@@ -2227,3 +2227,65 @@
 .bc-diagnosis-context .bc-window-context-select { font-size: 14px; }
 .bc-dx-decided { flex-wrap: nowrap; }
 .bc-dx-decided-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* UI-TP-001: TrainingPlan window, matched to the Penpot "03 App" Training
+   boards (Empty, Accepted, Proposal, Proposal · Expired, Updated). Reuses the
+   Diagnosis chip/banner/footer tokens; plan content is read-only. */
+.bc-tp-scene { display: grid; gap: 16px; min-width: 0; }
+.bc-tp-banner { min-height: 44px; font-size: 13px; }
+.bc-tp-banner[data-tone="info"] { font-weight: 600; }
+.bc-tp-banner .bc-dx-icon-button { margin: -6px -2px -6px auto; color: inherit; }
+.bc-tp-pending {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 4px 6px 4px 14px;
+  border-radius: 12px;
+  background: var(--dx-soft);
+  color: var(--dx-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.bc-tp-pending-ttl { display: inline-flex; align-items: center; gap: 4px; color: var(--dx-meta); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.bc-tp-pending-text { flex: 1 1 auto; min-width: 0; color: var(--dx-ok); }
+.bc-tp-template { display: grid; gap: 14px; min-width: 0; margin-top: 4px; }
+.bc-tp-template-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.bc-tp-template-select .bc-window-context-select { min-height: 36px; font-size: 14px; font-weight: 700; }
+.bc-tp-template-title { color: var(--dx-ink); font-size: 15px; font-weight: 700; }
+.bc-tp-template-meta { flex: 0 0 auto; color: var(--dx-meta); font-size: 12px; }
+.bc-tp-stage { display: grid; gap: 4px; min-width: 0; }
+.bc-tp-exercises { display: grid; margin: 0; padding: 0; list-style: none; }
+.bc-tp-exercise {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--dx-card-line);
+}
+.bc-tp-exercise:last-child { border-bottom: 0; }
+.bc-tp-exercise-text { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.bc-tp-exercise-name { color: var(--dx-ink); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.bc-tp-exercise-dose { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.bc-tp-exercise-prescription { color: var(--dx-ok); font-weight: 600; }
+.bc-tp-exercise-rest { color: var(--dx-meta); }
+.bc-tp-changes { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.bc-tp-change { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--dx-soft); }
+.bc-tp-change-head { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--dx-ink); font-size: 14px; }
+.bc-tp-change-dose { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.bc-tp-change-before { color: var(--dx-meta); }
+.bc-tp-change-after { color: var(--dx-ok); font-weight: 600; }
+.bc-tp-changes-muted { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.bc-tp-change-muted { display: grid; gap: 2px; color: var(--dx-secondary); font-size: 14px; }
+.bc-tp-change-muted span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--dx-meta); font-size: 12px; }
+.bc-tp-empty { padding-top: 132px; }
+.bc-tp-chat { min-height: 36px; margin-top: 12px; padding: 0 14px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.bc-tp .bc-tp-footer { justify-content: space-between; }
+.bc-tp-start { min-width: 96px; }
+@media (max-width: 760px) {
+  .bc-tp-empty { padding-top: 96px; }
+  .bc-tp-pending { min-height: 52px; }
+  .bc-tp-chat { min-height: 44px; }
+  .bc-tp-template-select .bc-window-context-select { min-height: 44px; }
+}

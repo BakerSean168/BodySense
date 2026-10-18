@@ -1,51 +1,61 @@
 import {
+  acceptPlanProposal,
   finishTrainingSession,
   getTrainingPlanRecord,
+  listPlanProposalRecords,
   listTrainingPlanRecords,
   listTrainingSessions,
   recordTrainingSessionFeedback,
   recordTrainingSetAction,
+  rejectPlanProposal,
   startTrainingSession,
 } from "@/generated/api/bodysense";
 import type {
+  PlanAcceptanceReceiptOutput,
   PlanExerciseOutput,
+  PlanProposalRecordOutput,
+  PlanRejectionReceiptOutput,
   TrainingPlanRecordOutput,
   TrainingSessionRecordOutput,
   TrainingSetActionRecordOutput,
 } from "@/generated/api/model";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
-/**
- * Plan list item for the TrainingPlan window, projected from the accepted
- * `/training-plans` record (TP-002). Each session template becomes one
- * `phase`; its stage structure is bound by UI-TP-001.
- */
-export interface TrainingPlan {
-  id: string;
-  status: string;
-  goal: string;
-  duration_weeks?: number;
-  phases: TrainingPhase[];
-  created_at: string;
-}
-
-export interface TrainingPhase {
-  week: number;
-  focus: string;
-  exercises: TrainingExercise[];
-}
-
-export interface TrainingExercise {
-  name: string;
-  description: string;
-  sets: string;
-  reps: string;
-  notes?: string;
-}
-
 export type TrainingPlanRecord = TrainingPlanRecordOutput;
 export type TrainingSessionRecord = TrainingSessionRecordOutput;
 export type TrainingSetActionRecord = TrainingSetActionRecordOutput;
+export type PlanProposalRecord = PlanProposalRecordOutput;
+export type PlanAcceptanceReceipt = PlanAcceptanceReceiptOutput;
+export type PlanRejectionReceipt = PlanRejectionReceiptOutput;
+
+/**
+ * One explicit user decision on the exact presented proposal content. The
+ * caller keeps the same identity for retries of the same decision, so a
+ * repeated click or a network retry replays the original receipt.
+ */
+export interface PlanDecisionIdentity {
+  decisionId: string;
+  idempotencyKey: string;
+}
+
+function decisionRequest(
+  proposal: PlanProposalRecord,
+  identity: PlanDecisionIdentity,
+) {
+  return {
+    decisionId: identity.decisionId,
+    presentedFingerprint: proposal.contentFingerprint,
+    // An update is pinned to the plan revision it was proposed against;
+    // create proposals carry neither field.
+    ...(proposal.kind === "update" && proposal.planId && proposal.basedOnRevisionId
+      ? {
+          targetPlanId: proposal.planId,
+          expectedRevisionId: proposal.basedOnRevisionId,
+        }
+      : {}),
+    idempotencyKey: identity.idempotencyKey,
+  };
+}
 
 /** "8–12 次", "30 秒", "400 米": the prescribed target, never a guess. */
 export function formatPlanTarget(exercise: PlanExerciseOutput): string {
@@ -64,28 +74,6 @@ export function formatPlanTarget(exercise: PlanExerciseOutput): string {
   return "";
 }
 
-function toTrainingPlan(record: TrainingPlanRecordOutput): TrainingPlan {
-  return {
-    id: record.planId,
-    status: record.status,
-    goal: record.goal || record.title,
-    phases: record.currentContent.sessions.map((template, index) => ({
-      week: index + 1,
-      focus: template.title,
-      exercises: template.stages.flatMap((stage) =>
-        stage.exercises.map((exercise) => ({
-          name: exercise.nameSnapshot,
-          description: exercise.instructions ?? "",
-          sets: String(exercise.sets),
-          reps: formatPlanTarget(exercise),
-          notes: exercise.loadOrIntensity,
-        })),
-      ),
-    })),
-    created_at: record.createdAt,
-  };
-}
-
 function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
@@ -95,15 +83,59 @@ export function userTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
+export function newPlanDecisionIdentity(): PlanDecisionIdentity {
+  return {
+    decisionId: globalThis.crypto.randomUUID(),
+    idempotencyKey: newIdempotencyKey(),
+  };
+}
+
 export const trainingApi = {
-  listPlans: async (): Promise<TrainingPlan[]> =>
+  listPlanRecords: async (): Promise<TrainingPlanRecord[]> =>
     withOpenApiError(async () => {
       const response = await listTrainingPlanRecords(
         undefined,
         openApiAuthFetch,
       );
-      return response.plans.map(toTrainingPlan);
+      return response.plans;
     }),
+
+  /** Every proposal of the user, newest first (pending, decided and expired). */
+  listProposals: async (): Promise<PlanProposalRecord[]> =>
+    withOpenApiError(async () => {
+      const response = await listPlanProposalRecords(
+        undefined,
+        undefined,
+        openApiAuthFetch,
+      );
+      return response.proposals;
+    }),
+
+  acceptProposal: async (
+    proposal: PlanProposalRecord,
+    identity: PlanDecisionIdentity,
+  ): Promise<PlanAcceptanceReceipt> =>
+    withOpenApiError(() =>
+      acceptPlanProposal(
+        proposal.proposalId,
+        decisionRequest(proposal, identity),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+
+  rejectProposal: async (
+    proposal: PlanProposalRecord,
+    identity: PlanDecisionIdentity,
+  ): Promise<PlanRejectionReceipt> =>
+    withOpenApiError(() =>
+      rejectPlanProposal(
+        proposal.proposalId,
+        decisionRequest(proposal, identity),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
 
   getPlanRecord: async (planId: string): Promise<TrainingPlanRecord> =>
     withOpenApiError(() =>

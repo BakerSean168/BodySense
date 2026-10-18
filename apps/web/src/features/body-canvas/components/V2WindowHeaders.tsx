@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Clock3, Stethoscope } from "lucide-react";
-import type { ProjectedTrainingPlans } from "../model/trainingPlans";
+import { TrainingIcon } from "./TrainingIcon";
+import type { TrainingSelection } from "../model/trainingPlanSelection";
 
 export interface DiagnosisWindowHeaderProps {
   /** Only adopted ConditionEntries; proposals never appear in the picker. */
@@ -95,32 +96,43 @@ export function DiagnosisWindowHeader({
 }
 
 export interface TrainingWindowHeaderProps {
-  projected: ProjectedTrainingPlans;
+  view: TrainingSelection;
   onSelectPlan: (planId: string) => void;
 }
 
-/** Same reusable toolbar geometry as Diagnosis; one selected plan, no duplicate list. */
-export function TrainingWindowHeader({
-  projected,
-  onSelectPlan,
-}: TrainingWindowHeaderProps) {
-  const plans = projected.plans.filter((item) => item.isAccepted);
-  const plan = projected.selected?.isAccepted ? projected.selected : null;
+/**
+ * Penpot "Window / Title Training": 训练 / <plan picker>. Every plan record is
+ * a user-accepted revision, so all of the user's plans are offered; an empty
+ * list shows the title only, like Diagnosis / Empty.
+ */
+export function TrainingWindowHeader({ view, onSelectPlan }: TrainingWindowHeaderProps) {
+  const title = (separator: boolean) => (
+    <>
+      <span className="bc-window-context-title">
+        <TrainingIcon size={18} aria-hidden="true" />
+        训练
+      </span>
+      {separator ? (
+        <span className="bc-window-context-sep" aria-hidden="true">
+          /
+        </span>
+      ) : null}
+    </>
+  );
+  if (view.plans.length === 0)
+    return <div className="bc-window-context bc-training-context">{title(false)}</div>;
   return (
     <div className="bc-window-context bc-training-context">
-      <span className="bc-window-context-caption">训练计划</span>
+      {title(true)}
       <span className="bc-window-select-wrap">
         <select
           className="bc-window-context-select"
           aria-label="选择训练计划"
-          value={plan?.planId ?? ""}
-          disabled={plans.length === 0}
+          value={view.selected?.planId ?? ""}
           onChange={(event) => onSelectPlan(event.target.value)}
         >
-          {plan === null ? (
-            <option value="">暂无选中的已接受计划</option>
-          ) : null}
-          {plans.map((item) => (
+          {view.selected === null ? <option value="">选择计划</option> : null}
+          {view.plans.map((item) => (
             <option key={item.planId} value={item.planId}>
               {item.title}
             </option>
@@ -128,9 +140,6 @@ export function TrainingWindowHeader({
         </select>
         <ChevronDown size={15} aria-hidden="true" />
       </span>
-      {plan?.frequency ? (
-        <span className="bc-window-context-meta">{plan.frequency}</span>
-      ) : null}
     </div>
   );
 }

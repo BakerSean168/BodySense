@@ -169,10 +169,11 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     '.bc-business-window[data-window="training"]',
   );
   await expect(trainingWindow).toBeVisible();
+  // Penpot Training / Empty: a new account shows the title only, no picker.
+  await expect(trainingWindow.getByTestId("training-empty")).toBeVisible();
   await expect(
     trainingWindow.getByRole("combobox", { name: "选择训练计划" }),
-  ).toBeVisible();
-  await expect(trainingWindow.locator(".bc-plan-selector")).toHaveCount(0);
+  ).toHaveCount(0);
   await trainingWindow.getByRole("button", { name: "关闭训练计划" }).click();
   await expect(trainingWindow).toBeHidden();
 

@@ -20,8 +20,8 @@ import {
   type BusinessWindowId,
 } from "../model/businessWindows";
 import { useDiagnosisActions } from "@/features/consultation/hooks/useDiagnosisActions";
-import { projectTrainingPlans, readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "../model/trainingPlans";
-import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
+import { readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "../model/trainingPlanSelection";
+import { useTrainingPlanActions } from "@/features/training/hooks/useTrainingPlanActions";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
 import { ChatWindowHeader, DiagnosisWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
@@ -30,7 +30,6 @@ import {
   PersonWindow,
   type PersonProfileIdentity,
 } from "./PersonWindow";
-import { TrainingPlanWindow } from "./TrainingPlanWindow";
 import { TrainerEntryGuard } from "./TrainerEntryGuard";
 import { diagnosisHeaderMode } from "../model/diagnosisDecisionViewModel";
 import "../body-canvas.css";
@@ -39,6 +38,10 @@ const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
 // Lazy so the decision-state UI stays out of the ConsultationPage chunk budget.
 const DiagnosisWindow = lazy(() =>
   import("./DiagnosisWindow").then((module) => ({ default: module.DiagnosisWindow })),
+);
+// Lazy for the same 500 kB ConsultationPage chunk budget (UI-TP-001).
+const TrainingPlanWindow = lazy(() =>
+  import("./TrainingPlanWindow").then((module) => ({ default: module.TrainingPlanWindow })),
 );
 
 export interface BodyCanvasWorkspaceProps {
@@ -124,7 +127,19 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const selectRef = useRef<HTMLSelectElement>(null);
   const activeWindow = activeBusinessWindow(windows);
   const trainingOpen = isBusinessWindowVisible(windows, "training") || isBusinessWindowVisible(windows, "trainer");
-  const data = useTrainingWindowData(trainingOpen);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const chooseTrainingPlan = useCallback((planId: string) => {
+    setSelectedPlanId(planId);
+    setSelectedTemplateId(null);
+    writeSelectedPlanId(planId);
+  }, []);
+  const trainingActions = useTrainingPlanActions({
+    enabled: trainingOpen,
+    selectedPlanId,
+    selectedTemplateId,
+    onPlanAccepted: chooseTrainingPlan,
+  });
+  const trainingSelection = trainingActions.selection;
 
   const definition = getReferenceMotion(motion);
   const primary = selection.regions[0] ?? null;
@@ -142,10 +157,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     safetyReview,
   });
   const diagnosisView = diagnosisActions.view;
-  const projected = useMemo(
-    () => projectTrainingPlans(props.workspace, data.plans, selectedPlanId),
-    [props.workspace, data.plans, selectedPlanId],
-  );
 
   const openWindow = useCallback((window: BusinessWindowId) => {
     dispatchWindow({ type: "open", window });
@@ -164,14 +175,15 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
 
   // Reconcile a stale persisted plan id against the real plan list so the window
   // never displays another plan's identity.
+  const trainingPlans = trainingSelection.plans;
   useEffect(() => {
-    if (data.plans.length === 0) return;
+    if (trainingPlans.length === 0) return;
     setSelectedPlanId((current) => {
-      const next = resolveSelectedPlanId(data.plans, current);
+      const next = resolveSelectedPlanId(trainingPlans, current);
       if (next !== current) writeSelectedPlanId(next);
       return next;
     });
-  }, [data.plans]);
+  }, [trainingPlans]);
 
   useEffect(() => { if (reducedMotion) setPlaying(false); }, [reducedMotion]);
   useEffect(() => {
@@ -364,48 +376,65 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         );
       case "training":
         return (
-          <TrainingPlanWindow
-            projected={projected}
-            loading={data.loading}
-            error={data.error}
-            executionBlocked={safetyReview}
-            canExecute={
-              props.workspace?.capabilities.can_execute_treatment === true
+          <Suspense
+            fallback={
+              <p role="status" className="bc-window-loading">
+                正在读取训练计划
+              </p>
             }
-            onStartTraining={(planId) => {
-              // UI admission only: the Go service remains authoritative.
-              if (
-                projected.selected?.planId !== planId ||
-                !projected.selected.isAccepted ||
-                props.workspace?.capabilities.can_execute_treatment !== true ||
-                safetyReview
-              ) return;
-              setLaunchedTrainerPlanId(planId);
-              openWindow("trainer");
+          >
+          <TrainingPlanWindow
+            state={trainingActions.state}
+            canExecute={
+              props.workspace?.capabilities.can_execute_treatment === true && !safetyReview
+            }
+            controls={{
+              busy: trainingActions.busy,
+              error: trainingActions.error,
+              notice: trainingActions.notice,
+              onOpenProposal: (proposalId) => trainingActions.openProposal({ proposalId }),
+              onBackToPlan: trainingActions.backToPlan,
+              onAccept: trainingActions.accept,
+              onReject: trainingActions.reject,
+              onDismissNotice: trainingActions.dismissNotice,
+              onSelectTemplate: (templateId) => {
+                setSelectedTemplateId(templateId);
+                trainingActions.backToPlan();
+              },
+              onOpenChat: () => openWindow("chat"),
+              onStart: (planId) => {
+                // UI admission only: the Go service remains authoritative.
+                const plan = trainingSelection.selected;
+                if (
+                  plan?.planId !== planId ||
+                  plan.status !== "active" ||
+                  !plan.gatePermits ||
+                  props.workspace?.capabilities.can_execute_treatment !== true ||
+                  safetyReview
+                ) return;
+                setLaunchedTrainerPlanId(planId);
+                openWindow("trainer");
+              },
             }}
           />
+          </Suspense>
         );
       case "trainer":
         return (
           <TrainerEntryGuard
-            planId={projected.selected?.planId ?? null}
+            planId={trainingSelection.selected?.planId ?? null}
             launchedPlanId={launchedTrainerPlanId}
-            accepted={projected.selected?.isAccepted === true}
+            accepted={trainingSelection.selected?.status === "active"}
             canExecute={props.workspace?.capabilities.can_execute_treatment === true}
-            safetyBlocked={safetyReview}
-            loading={data.loading}
-            error={data.error}
+            safetyBlocked={safetyReview || trainingSelection.selected?.gatePermits === false}
+            loading={trainingActions.state.loading}
+            error={trainingActions.state.error}
             onOpenTraining={() => openWindow("training")}
           />
         );
       default:
         return null;
     }
-  };
-
-  const chooseTrainingPlan = (planId: string) => {
-    setSelectedPlanId(planId);
-    writeSelectedPlanId(planId);
   };
 
   const renderWindowHeader = (window: BusinessWindowId): ReactNode => {
@@ -430,8 +459,11 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "training":
         return (
           <TrainingWindowHeader
-            projected={projected}
-            onSelectPlan={chooseTrainingPlan}
+            view={trainingSelection}
+            onSelectPlan={(planId) => {
+              chooseTrainingPlan(planId);
+              trainingActions.backToPlan();
+            }}
           />
         );
       case "chat":
