@@ -203,6 +203,29 @@ test("Safety stopped opens Safety / Restricted and fits 390px", async ({
   await expect(page.getByTestId("training-mode")).toHaveText("安全限制");
   await expect(restricted).toContainText("麻木");
   await expect(restricted).toContainText("暂不能执行");
+  // The mobile safety banner stays above the sheet: it never covers the sheet
+  // header or the status chips (暂不能执行 / 全部训练).
+  const banner = page.getByTestId("safety-banner");
+  await expect(banner).toBeVisible();
+  const bannerBox = (await banner.boundingBox())!;
+  const sheetBox = (await page
+    .locator('.bc-business-sheet[data-window="training"]')
+    .boundingBox())!;
+  expect(bannerBox.y + bannerBox.height).toBeLessThanOrEqual(sheetBox.y);
+  const chips = restricted.locator(".bc-sr-item .bc-dx-status .bc-dx-chip");
+  await expect(chips.first()).toHaveText("暂不能执行");
+  await expect(chips.nth(1)).toHaveText("全部训练");
+  for (const chip of await chips.all()) {
+    const box = (await chip.boundingBox())!;
+    const overlaps =
+      box.x < bannerBox.x + bannerBox.width &&
+      bannerBox.x < box.x + box.width &&
+      box.y < bannerBox.y + bannerBox.height &&
+      bannerBox.y < box.y + box.height;
+    expect(overlaps, `${await chip.textContent()} under the banner`).toBe(
+      false,
+    );
+  }
   const overflow = await page.evaluate(() => {
     const body = document.querySelector(
       '[data-testid="safety-restricted"] .bc-window-body',
