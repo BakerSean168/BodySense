@@ -15,19 +15,19 @@ The UI must never use copy that implies these operations are equivalent.
 
 ## 2. Primary-store retention matrix
 
-| Data family | Examples / parent tables | Full privacy erasure | Normal domain retention |
-| --- | --- | --- | --- |
-| Authentication identity | `users`, profile, live sessions, refresh families | **Delete/revoke** | Retain while account is active |
-| Conversation history | `conversations`, messages, runs, interactions, runtime events | **Delete** | Retain until user deletes conversation/account |
-| Share state | `conversation_shares` | **Delete/revoke** | Retain only while source conversation is shareable |
-| Longitudinal BodyState | `body_states`, facts, observations, revisions, evidence, hypotheses, `safety_screens`, `safety_restrictions`, `safety_resolutions` | **Delete** | Durable source-of-truth while account exists |
-| Diagnosis | analyses, candidates, assessments, freshness, rollout observations | **Delete** | Immutable/revision-pinned while account exists |
-| Treatment | treatment aggregate, revisions, interventions, rollout observations | **Delete** | Immutable revisions while account exists |
-| Training and outcomes | plans, logs, outcomes, assessment reports | **Delete** | Retain while account exists |
-| User uploads | `user_uploads` plus the per-user object prefix | **Delete DB + physical objects** | Retain while referenced by active account |
-| AI review / job payloads | `jobs`, `job_events`, `ai_output_reviews` | **Delete** | Retain for product/runtime traceability while account exists |
-| Global knowledge corpus | source registry/publication batches/chunks | **Retain** | Managed by Knowledge lifecycle; not owned by one user |
-| Erasure audit | `privacy_erasure_requests` | **Retain only anonymized status/timestamps/report counts** | No health payload; `subject_user_id` is nulled at completion |
+| Data family              | Examples / parent tables                                                                                                           | Full privacy erasure                                       | Normal domain retention                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
+| Authentication identity  | `users`, profile, live sessions, refresh families                                                                                  | **Delete/revoke**                                          | Retain while account is active                               |
+| Conversation history     | `conversations`, messages, runs, interactions, runtime events                                                                      | **Delete**                                                 | Retain until user deletes conversation/account               |
+| Share state              | `conversation_shares`                                                                                                              | **Delete/revoke**                                          | Retain only while source conversation is shareable           |
+| Longitudinal BodyState   | `body_states`, facts, observations, revisions, evidence, hypotheses, `safety_screens`, `safety_restrictions`, `safety_resolutions` | **Delete**                                                 | Durable source-of-truth while account exists                 |
+| Diagnosis                | analyses, candidates, assessments, freshness, rollout observations                                                                 | **Delete**                                                 | Immutable/revision-pinned while account exists               |
+| Treatment                | treatment aggregate, revisions, interventions, rollout observations                                                                | **Delete**                                                 | Immutable revisions while account exists                     |
+| Training and outcomes    | plans, logs, outcomes, assessment reports                                                                                          | **Delete**                                                 | Retain while account exists                                  |
+| User uploads             | `user_uploads` plus the per-user object prefix                                                                                     | **Delete DB + physical objects**                           | Retain while referenced by active account                    |
+| AI review / job payloads | `jobs`, `job_events`, `ai_output_reviews`                                                                                          | **Delete**                                                 | Retain for product/runtime traceability while account exists |
+| Global knowledge corpus  | source registry/publication batches/chunks                                                                                         | **Retain**                                                 | Managed by Knowledge lifecycle; not owned by one user        |
+| Erasure audit            | `privacy_erasure_requests`                                                                                                         | **Retain only anonymized status/timestamps/report counts** | No health payload; `subject_user_id` is nulled at completion |
 
 Migration `000054` adds missing `users(id) ON DELETE CASCADE` ownership constraints for `conversations`, `runs`, `jobs`, and `ai_output_reviews`, and makes user-derived Diagnosis rollout rows cascade with their analysis. The normal `TreatmentRevision -> Diagnosis` lineage remains `ON DELETE RESTRICT`; the privileged erasure transaction explicitly deletes the user-owned Treatment aggregate first, then deletes the user. This preserves domain immutability during ordinary operation without blocking privacy erasure.
 
@@ -75,3 +75,32 @@ Off-host backups (BS-PROD-012) have an explicit bounded retention policy: object
 - exactly one anonymized `privacy_erasure_requests` audit row remains.
 
 Run it through `scripts/validate-privacy-erasure.sh` so the entire migration history is replayed before the erasure test.
+
+## 7. Per-asset erasure (AS-002)
+
+Per-asset erasure sits between the two semantics above. It is narrower than full privacy erasure (one owned asset, not the account) and stronger than source removal (`DELETE /api/v1/assets/{id}`, PC-D7), which only removes the private original and keeps derived evidence readable as `source_unavailable`.
+
+`POST /api/v1/assets/{id}/erasure` (idempotency key) admits one erasure per asset; `GET` reads its receipt. The asset becomes unavailable at once, but `availability = erased` and receipt `status = erased` are written only after every inventoried target verified. Until then the receipt lists the outstanding targets with a closed failure code. A SQL trigger refuses `erased` while any target is unverified, and erased is terminal.
+
+### Controlled-copy inventory `asset-erasure-inventory-v1`
+
+Targets run in this order on every pass; each one is executed and verified on its own, so one failure never hides the state of another.
+
+| Target                 | Copies                                                                                                                   | Slice 1 behaviour                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source_objects`       | primary object and every replica in `user_asset_storage_cleanups` (local / OSS)                                          | source removal under the storage lock, then an independent `Exists` check of every replica; storage outage is `failed` and retried                                     |
+| `derived_jobs`         | OCR / posture `jobs` (results hold full model output), `job_events`, `ai_output_reviews` of those jobs                   | deleted once no job is live; live work is `failed: derived_work_active` and retried                                                                                    |
+| `posture_analyses`     | `posture_analysis_runs`                                                                                                  | deleted once terminal                                                                                                                                                  |
+| `diagnosis_records`    | Diagnosis audit / projection rows citing the asset or one of its indicator reviews (FK or anywhere in their JSON)        | inventoried only: `blocked: diagnosis_review_required`; nothing in Diagnosis is changed                                                                                |
+| `document_extractions` | `document_extraction_runs` (raw text, indicators) and `document_indicator_reviews`                                       | deleted when no Diagnosis cites the asset; otherwise `blocked: diagnosis_evidence_pinned` so cited evidence is never deleted under a Diagnosis                         |
+| `assessment_reports`   | assessment reports whose frozen input or output names the asset                                                          | inventoried only: `blocked: assessment_replay_frozen` (replay input is immutable)                                                                                      |
+| `runtime_checkpoints`  | consultation runtime state of conversations the asset was attached to as an image (LangGraph checkpoints hold the image) | inventoried only: `unsupported: runtime_erasure_hook_pending` until the ai-service hook exists                                                                         |
+| `asset_manifest`       | the `user_assets` row                                                                                                    | finalized last, in one transaction that re-checks every database family under the asset row lock; tombstone keeps identity, kind, size and hash, redacts the file name |
+
+Not copies, by design: chat messages keep only the `upload_id` pointer (it resolves to the tombstone and fails closed); Redis holds no asset data (sessions and rate limits only); the knowledge index is the operator-curated global corpus and holds no user-owned rows. `TestUserAssetErasureInventoryCoversSchemaPostgres` fails when a new table references assets by column or foreign key without being inventoried.
+
+### Lifecycle
+
+`pending -> running -> outstanding -> running ... -> erased`. A pass is leased; the worker resumes expired leases and retries `failed` targets. `blocked` and `unsupported` targets are re-evaluated when the command is repeated (any key) or a later slice adds their handler; they never complete silently. A copy that reappears after its target verified reopens it (`copy_reappeared`).
+
+Later slices: the ai-service checkpoint/cache hook with verification (`runtime_checkpoints`), the Diagnosis / Training review projection and the decision on cited evidence and frozen assessment input, per-health-data (statement) erasure, and the web deletion flows.
