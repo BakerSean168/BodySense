@@ -71,11 +71,23 @@ export function TrainerEntryGuard({
 
   return (
     <div
-      className="bc-window-body bc-trainer-content"
+      // The execution panel brings its own scrolling body and pinned footer
+      // (Penpot Trainer boards); only the guard uses the plain window body.
+      className={
+        canRenderExecution
+          ? "bc-trainer-content bc-trainer-execution"
+          : "bc-window-body bc-trainer-content"
+      }
       data-testid="trainer-window"
     >
       {canRenderExecution ? (
-        <Suspense fallback={<p role="status">正在加载训练执行界面</p>}>
+        <Suspense
+          fallback={
+            <p role="status" className="bc-window-body bc-window-loading">
+              正在加载训练执行界面
+            </p>
+          }
+        >
           <TrainingExecutionPanel
             key={launch!.key}
             planId={planId}

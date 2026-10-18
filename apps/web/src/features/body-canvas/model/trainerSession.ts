@@ -47,6 +47,7 @@ export interface TrainerCurrentSet {
 }
 
 export interface TrainerLastRecord {
+  planExerciseId: string;
   name: string;
   setNumber: number | null;
   kind: "performed" | "skipped";
@@ -187,6 +188,7 @@ export function projectTrainerSession(
   const last: TrainerLastRecord | null =
     lastAction && lastExercise && lastAction.kind !== "corrected"
       ? {
+          planExerciseId: lastExercise.planExerciseId,
           name: lastExercise.nameSnapshot,
           setNumber: lastAction.setNumber ?? null,
           kind: lastAction.kind,

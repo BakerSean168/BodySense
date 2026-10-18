@@ -2318,7 +2318,11 @@
 .bc-tr-step:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
 .bc-tr-actual { min-width: 48px; color: var(--dx-ink); font-size: 32px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .bc-tr-actual-label { grid-column: 1 / -1; color: var(--dx-meta); font-size: 12px; }
-.bc-tr-rest { display: inline-flex; align-items: baseline; gap: 6px; margin: 4px 0 0; color: var(--dx-meta); font-size: 12px; }
+.bc-tr-rest { display: inline-flex; align-items: center; gap: 10px; margin: 4px 0 0; }
+.bc-tr-rest-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px;
+  background: var(--bc-paper); color: var(--dx-secondary); font-size: 12px; font-weight: 500;
+}
 .bc-tr-rest strong { color: var(--dx-ok); font-size: 26px; font-variant-numeric: tabular-nums; }
 .bc-tr-resume { display: grid; gap: 4px; padding: 16px 20px; border-radius: 16px; background: var(--dx-warn-bg); color: var(--dx-warn); font-size: 12px; }
 .bc-tr-resume strong { color: var(--dx-ink); font-size: 20px; }
@@ -2326,9 +2330,13 @@
 .bc-tr-recorded-count { margin-left: auto; color: var(--dx-secondary); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bc-tr .bc-tr-footer { justify-content: flex-start; }
 .bc-tr .bc-tr-footer .bc-dx-primary { margin-left: auto; }
-.bc-tr-pause { flex: 0 0 auto; background: var(--dx-idle-bg); }
-.bc-tr .bc-dx-early { margin-right: 0; }
+/* The panel sits directly in the window: its body scrolls, its footer stays pinned. */
+.bc-trainer-execution { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.bc-trainer-execution > .bc-tr { flex: 1 1 auto; min-height: 0; }
+.bc-tr .bc-tr-footer .bc-tr-pause { flex: 0 0 auto; width: 40px; padding: 0; background: var(--dx-idle-bg); color: var(--dx-ok); }
+.bc-tr .bc-dx-early { margin-right: 0; color: var(--dx-ok); font-weight: 600; }
+.bc-tr .bc-dx-mark[data-mark="gap"] { background: var(--dx-warn-bg); color: var(--dx-warn); }
 @media (max-width: 760px) {
-  .bc-tr-pause { width: 44px; height: 44px; }
+  .bc-tr .bc-tr-footer .bc-tr-pause { width: 44px; height: 44px; }
   .bc-tr-card-name { font-size: 24px; }
 }

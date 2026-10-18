@@ -251,14 +251,21 @@ function InProgressScene({
   const resting = view.restRemainingSeconds > 0;
   const step = current?.actualUnit === "seconds" ? 5 : 1;
   const max = current?.actualUnit === "seconds" ? 86_400 : 1000;
+  // Penpot: the receipt banner belongs to Set recorded (rest running). Once the
+  // rest is over the next set is In progress without it; a receipt with no
+  // rest stays until the next action, naming its exercise when that moved on.
+  const last = view.last;
+  const showLast = last !== null && (resting || !(last.kind === "performed" && last.restSeconds));
+  const lastElsewhere = last !== null && exercise !== null && last.planExerciseId !== exercise.planExerciseId;
 
   return (
     <div className="bc-tp-scene" data-testid={resting ? "trainer-set-recorded" : "trainer-in-progress"}>
       <StatusRow view={view} />
       <ProgressBar exercises={view.exercises} />
       <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
-      {view.last ? (
+      {showLast && view.last ? (
         <Banner tone="info" icon={<Check size={16} aria-hidden="true" />} role="status" testId="trainer-last-receipt">
+          {lastElsewhere && view.last.setNumber ? `${view.last.name} · ` : ""}
           {view.last.setNumber ? `第 ${view.last.setNumber} 组` : view.last.name}
           {view.last.kind === "skipped" ? "已跳过" : "已记录"}
           {view.last.actualReps ? ` · ${view.last.actualReps} 次` : ""}
@@ -290,8 +297,10 @@ function InProgressScene({
           </p>
           {resting ? (
             <p className="bc-tr-rest" data-testid="trainer-rest" aria-live="off">
-              <Clock3 size={14} aria-hidden="true" />
-              <span>休息中</span>
+              <span className="bc-tr-rest-chip">
+                <Clock3 size={12} aria-hidden="true" />
+                休息中
+              </span>
               <strong>{formatRestClock(view.restRemainingSeconds)}</strong>
             </p>
           ) : actual !== null ? (
