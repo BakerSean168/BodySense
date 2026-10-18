@@ -594,18 +594,6 @@ export function TrainingExecutionPanel({ planId }: TrainingExecutionPanelProps) 
                                   : "当前方案无需调整，继续记录后续变化即可。"}
                           </p>
                         </div>
-                        {reassessmentResult.proposal && (
-                          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                            <p className="text-sm font-bold text-amber-800">
-                              已生成 Treatment R
-                              {reassessmentResult.proposal.revision} proposal
-                            </p>
-                            <p className="mt-1 text-xs text-amber-700">
-                              proposal
-                              不会自动生效。请回长期健康工作台审核，并由你明确接受后才成为当前方案。
-                            </p>
-                          </div>
-                        )}
                         <Button
                           variant="outline"
                           className="w-full"

@@ -144,7 +144,6 @@ function makeWorkspace(
   return {
     generated_at: "2026-10-11T00:00:00Z",
     profile_ready: true,
-    treatment_revisions: [],
     recent_outcomes: [],
     trends: [],
     capabilities: {
@@ -153,13 +152,10 @@ function makeWorkspace(
       can_request_diagnosis: true,
       can_review_diagnosis: true,
       can_generate_treatment: true,
-      can_accept_treatment: true,
       can_execute_treatment: true,
       can_record_outcome: true,
-      can_review_treatment: true,
       requires_safety_review: false,
       requires_diagnosis_review: false,
-      requires_treatment_review: false,
     },
     actions: [],
     ...overrides,
@@ -410,7 +406,7 @@ describe("body-first business windows", () => {
     );
   });
 
-  it("renders an accepted plan with real planId and dosage, excluding unaccepted alternatives", async () => {
+  it("renders the active plan with real planId and dosage, excluding other plans", async () => {
     mockListTrainingPlans.mockResolvedValue([
       {
         id: "plan-1",
@@ -418,8 +414,26 @@ describe("body-first business windows", () => {
         goal: "肩胛稳定训练",
         duration_weeks: 6,
         current_week: 1,
-        treatment_revision_id: "rev-1",
-        phases: [],
+        phases: [
+          {
+            week: 1,
+            focus: "肩胛稳定训练",
+            exercises: [
+              {
+                name: "胸椎活动",
+                description: "",
+                sets: "2",
+                reps: "10",
+              },
+              {
+                name: "靠墙肩胛滑动",
+                description: "",
+                sets: "3",
+                reps: "10",
+              },
+            ],
+          },
+        ],
         created_at: "2026-10-11T00:00:00Z",
       },
       {
@@ -443,63 +457,6 @@ describe("body-first business windows", () => {
           phases: [],
           created_at: "2026-10-11T00:00:00Z",
         },
-        treatment_revisions: [
-          {
-            id: "rev-1",
-            treatment_id: "treatment-1",
-            revision: 1,
-            acceptance_state: "accepted",
-            lifecycle_state: "active",
-            source_body_state_revision: 2,
-            source_diagnosis_analysis_id: "analysis-1",
-            goal: "肩胛稳定训练",
-            duration_weeks: 6,
-            plan: {
-              summary: "",
-              goal: "肩胛稳定训练",
-              duration_weeks: 6,
-              interventions: [],
-              daily_habits: [],
-              expected_timeline: "",
-              warning_signs: [],
-              review_triggers: [],
-              safety_notes: [],
-            },
-            user_constraints: {},
-            evidence_ids: [],
-            governance: {},
-            change_reason: "",
-            created_at: "2026-10-11T00:00:00Z",
-            interventions: [
-              {
-                id: "int-warm",
-                treatment_id: "treatment-1",
-                treatment_revision_id: "rev-1",
-                kind: "mobility",
-                title: "胸椎活动",
-                description: "",
-                prescription: { sets: 2, reps: 10 },
-                position: 0,
-                status: "active",
-                created_at: "2026-10-11T00:00:00Z",
-                updated_at: "2026-10-11T00:00:00Z",
-              },
-              {
-                id: "int-main",
-                treatment_id: "treatment-1",
-                treatment_revision_id: "rev-1",
-                kind: "exercise",
-                title: "靠墙肩胛滑动",
-                description: "",
-                prescription: { sets: 3, reps: 10, frequency: "每周 3 次" },
-                position: 1,
-                status: "active",
-                created_at: "2026-10-11T00:00:00Z",
-                updated_at: "2026-10-11T00:00:00Z",
-              },
-            ],
-          },
-        ],
       }),
       isPending: false,
       isFetching: false,
@@ -516,8 +473,6 @@ describe("body-first business windows", () => {
     expect(screen.getByText("胸椎活动")).toBeInTheDocument();
     expect(screen.getByText("2 组 · 10 次")).toBeInTheDocument();
     expect(screen.getByText("3 组 · 10 次")).toBeInTheDocument();
-    expect(screen.getByText(/每周 3 次/)).toBeInTheDocument();
-    expect(screen.getByText("热身与活动度")).toBeInTheDocument();
     expect(screen.getByText("正式训练")).toBeInTheDocument();
 
     // The V2 header includes the accepted plan only; an unaccepted paused

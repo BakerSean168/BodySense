@@ -7,7 +7,7 @@ describe("workspace selectors", () => {
     const workspace = makeWorkspace();
     workspace.capabilities.requires_safety_review = true;
     expect(requiresWorkspaceReview(workspace.capabilities)).toBe(true);
-    expect(selectWorkspaceSummary(workspace)).toEqual({ proposedTreatmentCount: 0, hasCurrentTreatment: false, canExecuteTreatment: true, requiresReview: true });
+    expect(selectWorkspaceSummary(workspace)).toEqual({ canExecuteTreatment: true, requiresReview: true });
   });
   it("does not enable execution without a workspace", () => {
     expect(selectWorkspaceSummary(null).canExecuteTreatment).toBe(false);

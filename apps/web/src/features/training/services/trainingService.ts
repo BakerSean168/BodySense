@@ -1,4 +1,4 @@
-import type { Outcome, TreatmentRevision } from "@/features/workspace";
+import type { Outcome } from "@/features/workspace";
 import {
   checkInTrainingPlan,
   getTrainingPlan,
@@ -75,7 +75,6 @@ export interface TrainingFeedbackResult {
   treatment_status?: string;
   review_recommended?: boolean;
   paused?: boolean;
-  proposal?: TreatmentRevision;
   has_proposal?: boolean;
   requires_new_diagnosis?: boolean;
 }
@@ -84,7 +83,6 @@ export interface TrainingLogUpdateResponse {
   message: string;
   has_proposal: boolean;
   result: TrainingFeedbackResult;
-  proposal?: TreatmentRevision;
 }
 
 function toTrainingPlan(input: PublicTrainingPlan): TrainingPlan {
@@ -136,7 +134,6 @@ function toTrainingFeedbackResult(
     treatment_status: input.treatment_status,
     review_recommended: input.review_recommended,
     paused: input.paused,
-    proposal: input.proposal,
     has_proposal: input.has_proposal,
     requires_new_diagnosis: input.requires_new_diagnosis,
   };
@@ -149,7 +146,6 @@ function toTrainingLogUpdateResponse(
     message: input.message,
     has_proposal: input.has_proposal,
     result: toTrainingFeedbackResult(input.result),
-    proposal: input.proposal,
   };
 }
 

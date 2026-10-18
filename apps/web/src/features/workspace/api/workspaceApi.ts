@@ -1,19 +1,9 @@
-import {
-  acceptTreatmentRevision,
-  generateTreatmentProposal,
-  getHealthWorkspace,
-  recordOutcome,
-  rejectTreatmentRevision,
-  reviewCurrentTreatment,
-} from "@/generated/api/bodysense";
+import { getHealthWorkspace, recordOutcome } from "@/generated/api/bodysense";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type {
   HealthWorkspace,
   Outcome,
   WorkspaceDiagnosis,
-  Treatment,
-  TreatmentRevision,
-  TrainingExecutionPlan,
 } from "../types/workspace";
 
 function projectWorkspaceCitations(
@@ -79,9 +69,7 @@ export const workspaceApi = {
         diagnosis: response.diagnosis
           ? projectWorkspaceDiagnosis(response.diagnosis)
           : undefined,
-        treatment: response.treatment,
         training_plan: response.training_plan,
-        treatment_revisions: response.treatment_revisions,
         recent_outcomes: response.recent_outcomes,
         trends: response.trends,
         capabilities: response.capabilities,
@@ -89,62 +77,7 @@ export const workspaceApi = {
       };
     }),
 
-  generateTreatmentProposal: async (
-    diagnosisAnalysisId: string,
-    userConstraints: Record<string, unknown> = {},
-  ): Promise<{ proposal: TreatmentRevision }> =>
-    withOpenApiError(async () => {
-      const response = await generateTreatmentProposal(
-        {
-          diagnosis_analysis_id: diagnosisAnalysisId,
-          user_constraints: userConstraints,
-        },
-        undefined,
-        openApiAuthFetch,
-      );
-      return { proposal: response.proposal };
-    }),
-
-  acceptTreatmentRevision: async (
-    revisionId: string,
-    consultationId?: string | null,
-  ): Promise<{
-    treatment: Treatment;
-    training_plan: TrainingExecutionPlan;
-  }> =>
-    withOpenApiError(async () => {
-      const response = await acceptTreatmentRevision(
-        revisionId,
-        { consultation_id: consultationId ?? null },
-        undefined,
-        openApiAuthFetch,
-      );
-      return {
-        treatment: response.treatment,
-        training_plan: response.training_plan,
-      };
-    }),
-
-  rejectTreatmentRevision: async (revisionId: string): Promise<void> =>
-    withOpenApiError(async () => {
-      await rejectTreatmentRevision(revisionId, undefined, openApiAuthFetch);
-    }),
-
-  reviewCurrentTreatment: async (): Promise<{
-    treatment: Treatment | null;
-  }> =>
-    withOpenApiError(async () => {
-      const response = await reviewCurrentTreatment(
-        undefined,
-        openApiAuthFetch,
-      );
-      return { treatment: response.treatment };
-    }),
-
   recordOutcome: async (input: {
-    treatment_id?: string;
-    treatment_revision_id?: string;
-    intervention_id?: string;
     source_type: string;
     source_key: string;
     kind: string;

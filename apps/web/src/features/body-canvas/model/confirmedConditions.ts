@@ -22,8 +22,8 @@ import type {
  *   is treated as active, and historical analyses are out of scope;
  * - no `certainty` discriminator; user confirmation of an agent analysis is
  *   never presented as clinical documentation;
- * - no condition-scoped `handlingPlan`; plan-level handling from an accepted
- *   treatment is shown separately and labelled as plan-level.
+ * - no condition-scoped `handlingPlan`; independent TrainingPlans carry no
+ *   verified Diagnosis link yet, so handling stays `not_confirmed`.
  */
 
 export type ConditionCertainty =
@@ -117,45 +117,13 @@ function assessmentFor(
   return match?.state ?? null;
 }
 
-/**
- * Plan-level handling is only attached when an accepted treatment revision was
- * generated from *this* analysis. That link is verifiable from the API, unlike a
- * guessed condition-to-intervention mapping.
- */
-function planLevelHandling(
-  workspace: HealthWorkspace | undefined,
-  analysisId: string | null,
-): ConditionHandling | null {
-  if (!workspace || !analysisId) return null;
-  const treatment = workspace.treatment;
-  const current = treatment?.current;
-  if (!treatment || !current) return null;
-  if (current.acceptance_state !== "accepted") return null;
-  if (current.source_diagnosis_analysis_id !== analysisId) return null;
-  const summary = nonEmpty(current.plan?.summary) ?? nonEmpty(current.goal);
-  const actions = (current.interventions ?? [])
-    .map((intervention) => nonEmpty(intervention.title))
-    .flatMap((title) => (title ? [title] : []));
-  return {
-    state: "plan_level",
-    summary: summary ?? undefined,
-    actions,
-    cautionNotes: stringList([
-      ...(current.plan?.safety_notes ?? []),
-      ...(current.plan?.warning_signs ?? []),
-    ]),
-    planId: treatment.id,
-    planGoal: nonEmpty(current.goal) ?? undefined,
-  };
-}
-
 export function projectDiagnosisView(
-  workspace: HealthWorkspace | undefined,
+  // Kept for callers: no workspace field links a plan to a condition today.
+  _workspace: HealthWorkspace | undefined,
   diagnosis: WorkspaceDiagnosis | null | undefined,
 ): DiagnosisView {
   if (!diagnosis) return EMPTY_DIAGNOSIS_VIEW;
 
-  const planHandling = planLevelHandling(workspace, diagnosis.analysis_id);
   const confirmed: ConfirmedCondition[] = [];
   const pendingProposals: PendingConditionProposal[] = [];
 
@@ -182,7 +150,7 @@ export function projectDiagnosisView(
           informationGaps: stringList(candidate.missing_information),
           differential: nonEmpty(candidate.differential),
         },
-        handling: planHandling ?? { state: "not_confirmed" },
+        handling: { state: "not_confirmed" },
         safetyNotes: stringList(candidate.safety_notes),
       });
       continue;
