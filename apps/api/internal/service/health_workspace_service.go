@@ -78,8 +78,8 @@ func (s *HealthWorkspaceService) Get(
 	userID uuid.UUID,
 ) (*HealthWorkspace, error) {
 	workspace := &HealthWorkspace{
-		GeneratedAt: time.Now().UTC(),
-		Diagnosis:   map[string]any{},
+		GeneratedAt:    time.Now().UTC(),
+		Diagnosis:      map[string]any{},
 		RecentOutcomes: []model.Outcome{}, Trends: []HealthWorkspaceTrend{},
 		Actions: []HealthWorkspaceAction{},
 	}

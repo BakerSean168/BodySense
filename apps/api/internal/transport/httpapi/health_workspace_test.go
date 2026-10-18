@@ -31,11 +31,11 @@ func (f *fakeHealthWorkspaceService) Get(_ context.Context, _ uuid.UUID) (*servi
 
 func minimalWorkspace() *service.HealthWorkspace {
 	return &service.HealthWorkspace{
-		GeneratedAt:        time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
-		ProfileReady:       true,
-		RecentOutcomes:     []model.Outcome{},
-		Trends:             []service.HealthWorkspaceTrend{},
-		Actions:            []service.HealthWorkspaceAction{},
+		GeneratedAt:    time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
+		ProfileReady:   true,
+		RecentOutcomes: []model.Outcome{},
+		Trends:         []service.HealthWorkspaceTrend{},
+		Actions:        []service.HealthWorkspaceAction{},
 	}
 }
 

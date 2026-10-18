@@ -22,11 +22,11 @@ import (
 )
 
 type validator struct {
-	db          *gorm.DB
-	bodyRepo    *repository.BodyStateRepository
-	body        *service.BodyStateService
-	diagnosis   *service.DiagnosisAnalysisService
-	outcomes    *service.OutcomeService
+	db        *gorm.DB
+	bodyRepo  *repository.BodyStateRepository
+	body      *service.BodyStateService
+	diagnosis *service.DiagnosisAnalysisService
+	outcomes  *service.OutcomeService
 }
 
 func main() {
@@ -295,11 +295,11 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	}
 	sourceKey := "domain-validator:outcome:retry"
 	outcome := model.Outcome{
-		SourceType:          "domain_validator",
-		SourceKey:           sourceKey,
-		Kind:                "symptom_change",
-		ConcernKey:          "region:neck",
-		BodyRegion:          "left neck",
+		SourceType: "domain_validator",
+		SourceKey:  sourceKey,
+		Kind:       "symptom_change",
+		ConcernKey: "region:neck",
+		BodyRegion: "left neck",
 		// The user's own words become a V2 symptom fact; no legacy fact is touched.
 		Value:          datatypes.JSON(`{"description":"neck feels better after the session","trend":"improving"}`),
 		Notes:          "forced transactional retry",

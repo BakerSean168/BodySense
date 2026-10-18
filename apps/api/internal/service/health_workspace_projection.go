@@ -11,15 +11,15 @@ import (
 // HealthWorkspace is the product projection of the continuous health loop. It
 // intentionally exposes capabilities rather than one terminal linear stage.
 type HealthWorkspace struct {
-	GeneratedAt        time.Time                   `json:"generated_at"`
-	ConversationID     *uuid.UUID                  `json:"conversation_id,omitempty"`
-	ProfileReady       bool                        `json:"profile_ready"`
-	Diagnosis          map[string]any              `json:"diagnosis,omitempty"`
-	TrainingPlan       *model.TrainingPlan         `json:"training_plan,omitempty"`
-	RecentOutcomes     []model.Outcome             `json:"recent_outcomes"`
-	Trends             []HealthWorkspaceTrend      `json:"trends"`
-	Capabilities       HealthWorkspaceCapabilities `json:"capabilities"`
-	Actions            []HealthWorkspaceAction     `json:"actions"`
+	GeneratedAt    time.Time                   `json:"generated_at"`
+	ConversationID *uuid.UUID                  `json:"conversation_id,omitempty"`
+	ProfileReady   bool                        `json:"profile_ready"`
+	Diagnosis      map[string]any              `json:"diagnosis,omitempty"`
+	TrainingPlan   *model.TrainingPlan         `json:"training_plan,omitempty"`
+	RecentOutcomes []model.Outcome             `json:"recent_outcomes"`
+	Trends         []HealthWorkspaceTrend      `json:"trends"`
+	Capabilities   HealthWorkspaceCapabilities `json:"capabilities"`
+	Actions        []HealthWorkspaceAction     `json:"actions"`
 }
 
 type HealthWorkspaceCapabilities struct {
