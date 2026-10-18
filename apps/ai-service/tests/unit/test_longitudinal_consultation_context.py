@@ -37,8 +37,8 @@ def _state() -> ConsultationThreadState:
         },
         "relevant_history": [{"sequence": 2, "role": "user", "content": "很早以前说过有麻木"}],
         "current_diagnosis": {
-            "analysis_id": "analysis-1",
-            "freshness": {"state": "potentially_stale"},
+            "currentRevision": 1,
+            "conditionEntries": [{"conditionId": "condition-1", "disposition": "adopted"}],
         },
         "current_treatment": {
             "status": "review_recommended",
@@ -53,7 +53,7 @@ def _state() -> ConsultationThreadState:
 def test_longitudinal_context_quotes_history_and_current_artifacts() -> None:
     text = _format_longitudinal_context(_state())
     assert "仅作上下文，不是事实来源" in text
-    assert "analysis-1" in text
+    assert "condition-1" in text
     assert "review_recommended" in text
     assert "association_only" in text
 

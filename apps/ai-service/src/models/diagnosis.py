@@ -1,14 +1,15 @@
 """Typed internal models for the BodyState-based Diagnosis reasoning boundary.
 
-ADR 0004 changes the core input/output semantics:
-
     exact BodyState revision + bounded temporal history
         -> Diagnosis reasoning
-        -> zero-to-many candidate drafts
-        -> Go assigns durable analysis/candidate identities
+        -> zero-to-many candidate drafts (the Agent's typed output)
+        -> deterministic governance
+        -> diagnosis-agent-proposals-v1 formal proposals
+        -> Go Safety + decision policy, then ingestion into a native Diagnosis run
 
-The Python model owns reasoning structure, not durable business identity. This is
-why candidate_id / analysis_id are intentionally absent from these models.
+The Python model owns reasoning structure, not durable business identity: no
+durable ID appears here, and a candidate is never a Condition until the user
+adopts its formal proposal through Go.
 """
 
 from dataclasses import dataclass, field
@@ -52,7 +53,7 @@ class EvidenceStrength(StrEnum):
     LOW = "低"
 
 
-DiagnosisAnalysisStatus = Literal[
+DiagnosisRunStatus = Literal[
     "completed",
     "partial",
     "insufficient_information",
@@ -61,12 +62,10 @@ DiagnosisAnalysisStatus = Literal[
 
 
 class DiagnosisCandidateDraft(BaseModel):
-    """One AI-proposed possibility before Go assigns durable identity.
+    """One AI-proposed possibility, projected into one formal proposal.
 
     References use durable BodyState item IDs when the model can ground a claim to
-    specific inputs. Empty reference lists are allowed during migration, but the
-    schema now has an explicit place for traceable evidence instead of forcing all
-    provenance into one prose ``basis`` field.
+    specific inputs; Go rejects a formal proposal whose evidence it cannot resolve.
     """
 
     concern_key: str = "general"
@@ -117,7 +116,7 @@ class DiagnosisAgentOutput(BaseModel):
     no result" from becoming ambiguous state.
     """
 
-    status: DiagnosisAnalysisStatus = "completed"
+    status: DiagnosisRunStatus = "completed"
     scope: str = "full_body"
     summary: str = ""
     candidates: list[DiagnosisCandidateDraft] = Field(default_factory=list)

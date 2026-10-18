@@ -355,7 +355,7 @@ def _format_longitudinal_context(state: ConsultationThreadState) -> str:
     diagnosis = state.get("current_diagnosis", {}) or {}
     if diagnosis:
         sections.append(
-            "## 当前最近一次可能性分析（可能已标记 freshness）\n"
+            "## 当前 Diagnosis（仅用户已采纳的 Condition；AI 判断，不是临床确诊）\n"
             + json.dumps(diagnosis, ensure_ascii=False)[:5000]
         )
 

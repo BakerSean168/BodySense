@@ -2,7 +2,8 @@
 
 Diagnosis has one execution path: an exact durable BodyState revision is supplied
 as run input, the PydanticAI Agent returns typed output, and deterministic safety /
-governance wraps that output before Go persists an immutable DiagnosisAnalysis.
+governance wraps that output before Go ingests its formal proposals into a native
+Diagnosis run.
 There is deliberately no extracted-info fallback and no Treatment generation here.
 """
 
