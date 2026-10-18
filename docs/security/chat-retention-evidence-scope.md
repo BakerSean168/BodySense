@@ -4,6 +4,7 @@ Status: **production contract** (PC-RET-001, #307)
 Owner: Go chat retention (`ChatRetentionRepository.PlanPrune` / `CommitPrune`)
 Proof: `TestChatRetentionEvidenceScopeCoversEveryChatReferencePostgres`,
 `TestChatRetentionPruneKeepsOnlyCitedEvidencePostgres`,
+`TestChatRetentionErasedStatementReleasesItsChatSourcePostgres`,
 `TestChatRetentionPruneRetainsReferencedEvidencePostgres`,
 `TestChatRetentionAskUserExpiryTriggersSettlePostgres`
 
@@ -19,7 +20,7 @@ it**. Everything else goes, Ask User answers included:
 
 | Kept in place                                                                                                                                                                                                       | Because                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User message named by `statement_evidence.source_message_id`                                                                                                                                                        | It is the source of a BodyFact, Observation, Hypothesis, Safety resolution or Diagnosis request (all funnel through statement evidence)                     |
+| User message named by `statement_evidence.source_message_id` of a statement that is not erased                                                                                                                      | It is the source of a BodyFact, Observation, Hypothesis, Safety resolution or Diagnosis request (all funnel through statement evidence)                     |
 | `condition_analysis_runs.request_message_id`                                                                                                                                                                        | Diagnosis analysis request receipt                                                                                                                          |
 | `condition_direct_edits.request_message_id`                                                                                                                                                                         | Diagnosis direct-edit request receipt                                                                                                                       |
 | `safety_screens.source_message_id`                                                                                                                                                                                  | Safety intake screen                                                                                                                                        |
@@ -28,11 +29,23 @@ it**. Everything else goes, Ask User answers included:
 | Run-scoped copies (`runtime_events`, `agent_tool_calls`, interactions) of a Run that keeps a cited message or is named by `statement_evidence.source_run_id` / `safety_screens.source_run_id` / a cited interaction | The evidence names that Run's identity                                                                                                                      |
 | `runs` rows                                                                                                                                                                                                         | Never pruned; they hold no raw text and anchor ids that evidence and jobs name                                                                              |
 
+### Erased statements cite nothing (AS-002)
+
+An erased statement (`statement_evidence.availability = 'erased'`, set when its
+statement erasure finalizes as `erased` or `erased_with_retention`) keeps its
+identity and its `source_*` ids as a tombstone, but it **no longer protects chat**:
+`protectedMessages`, `citedInteractionsSQL` and `referencedRuns` read only
+unerased statement evidence (`citingStatementEvidence`). The ordinary prune then
+deletes its source message, the Ask User interaction and resume receipt of an
+erased structured answer, and its Run's copies, unless another durable record in
+the table above still cites them. Statement erasure itself goes one step
+further: its `source_message` target deletes the source message at once when no
+other durable record cites it (privacy-erasure-retention §8), so the message does
+not wait for the window to move.
+
 The AS-002 statement erasure receipt (`statement_erasure_requests`) references
 `statement_evidence` with `ON DELETE CASCADE`; it names the statement only, never a
-chat row, so it neither protects nor prunes chat. An erased statement keeps its
-`source_message_id`, so its source message stays protected like any other cited
-statement (the message is a conversation record; see privacy-erasure-retention §8).
+chat row, so it neither protects nor prunes chat.
 
 | Removed by the pass                                                                                                   |
 | --------------------------------------------------------------------------------------------------------------------- |
