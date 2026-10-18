@@ -99,7 +99,9 @@ vi.mock("@/features/profile/services/lifestyleService", () => ({
   lifestyleService: { get: () => mockGetLifestyle() },
 }));
 vi.mock("@/features/profile/components/profile/ProfileDrawer", () => ({
-  ProfileDrawer: () => <div data-testid="profile-drawer" />,
+  ProfileDrawer: ({ open }: { open: boolean }) => (
+    <div data-testid="profile-drawer" data-open={open ? "true" : "false"} />
+  ),
 }));
 vi.mock("@/features/body-explorer", () => ({
   useBodyExplorerWorkspace: () => ({
@@ -508,6 +510,19 @@ describe("body-first business windows", () => {
     expect(screen.getByLabelText("自报性别")).toHaveValue("");
     expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);
     expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+    // Files, source removal and erasure stay reachable in the 身体档案 drawer.
+    expect(screen.getByTestId("profile-drawer")).toHaveAttribute(
+      "data-open",
+      "false",
+    );
+    await userEvent.click(
+      within(popover).getByRole("button", { name: "身体档案与文件" }),
+    );
+    expect(screen.queryByRole("dialog", { name: "个人资料" })).toBeNull();
+    expect(screen.getByTestId("profile-drawer")).toHaveAttribute(
+      "data-open",
+      "true",
+    );
   });
 
   it("shows a centred equipment empty state with a single add action", async () => {

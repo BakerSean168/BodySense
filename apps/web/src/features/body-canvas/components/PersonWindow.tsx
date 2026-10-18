@@ -55,6 +55,8 @@ export interface PersonProfileIdentity {
 
 export interface PersonWindowProps {
   canEdit: boolean;
+  /** Opens the 身体档案 drawer from the Identity popover. */
+  onOpenRecords?: () => void;
   /** Popover state is owned by the header that renders the identity trigger. */
   identityInfoOpen: boolean;
   onIdentityInfoOpenChange: (open: boolean) => void;
@@ -462,6 +464,7 @@ function UploadsCategory({
 
 export function PersonWindow({
   canEdit,
+  onOpenRecords,
   identityInfoOpen: infoOpen,
   onIdentityInfoOpenChange,
 }: PersonWindowProps) {
@@ -487,7 +490,10 @@ export function PersonWindow({
       data-mobile={mobile ? "true" : "false"}
     >
       {infoOpen ? (
-        <PersonIdentityPopover onClose={() => setInfoOpen(false)} />
+        <PersonIdentityPopover
+          onClose={() => setInfoOpen(false)}
+          onOpenRecords={onOpenRecords}
+        />
       ) : null}
 
       <nav className="bc-person-tabs" aria-label="档案分类">

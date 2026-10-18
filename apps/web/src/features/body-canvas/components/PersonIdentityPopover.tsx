@@ -18,9 +18,17 @@ import {
  * the default it falls back to. Body measurements are BodyState records and are
  * deliberately not edited here, and the technical revision is never shown.
  * Profile editing is not a BodyState write, so BodyState capabilities do not
- * gate it.
+ * gate it. Body measurements, lifestyle, history, uploaded files and privacy
+ * stay in the 身体档案 drawer, reached through the quiet link beside 关闭.
  */
-export function PersonIdentityPopover({ onClose }: { onClose: () => void }) {
+export function PersonIdentityPopover({
+  onClose,
+  onOpenRecords,
+}: {
+  onClose: () => void;
+  /** Opens the 身体档案 drawer (files, source removal and erasure live there). */
+  onOpenRecords?: () => void;
+}) {
   const profile = useProfileStore((state) => state.profile);
   const saveProfile = useProfileStore((state) => state.saveProfile);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -200,6 +208,18 @@ export function PersonIdentityPopover({ onClose }: { onClose: () => void }) {
           </p>
         ) : null}
         <div className="bc-identity-actions">
+          {onOpenRecords ? (
+            <button
+              type="button"
+              className="bc-text-button bc-identity-records"
+              onClick={() => {
+                onClose();
+                onOpenRecords();
+              }}
+            >
+              身体档案与文件
+            </button>
+          ) : null}
           <button type="button" className="bc-text-button" onClick={onClose}>
             关闭
           </button>

@@ -1455,6 +1455,7 @@
 .bc-identity-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
 .bc-identity-actions .bc-button { min-height: 34px; padding: 0 16px; }
 .bc-identity-actions .bc-text-button { font-size: 13px; }
+.bc-identity-actions .bc-identity-records { margin-right: auto; }
 .bc-identity-row select { margin-left: -4px; }
 .bc-person-tabs {
   flex: 0 0 auto;

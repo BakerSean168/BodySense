@@ -407,6 +407,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             identityInfoOpen={personInfoOpen}
             onIdentityInfoOpenChange={setPersonInfoOpen}
             canEdit={props.workspace?.capabilities.can_edit_body_state === true}
+            onOpenRecords={props.onOpenProfile}
           />
         );
       case "diagnosis":
