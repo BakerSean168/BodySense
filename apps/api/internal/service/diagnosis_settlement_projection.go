@@ -212,7 +212,7 @@ func (s *DiagnosisSettlementService) planSettlement(ctx context.Context, owner u
 			stage.entry.CommittedRevision = head + 1
 			stage.entry.UpdatedAt = now
 			stage.dirty = true
-			plan.dispositions = append(plan.dispositions, &model.ConditionDispositionChange{UserID: owner, ID: uuid.New(), ConditionID: stage.entry.ID, FromDisposition: old, ToDisposition: next, Reason: envelope.DispositionReason, EvidenceRefs: d.DecidedEvidenceRefs, DecisionID: d.ID, CommittedRevision: head + 1, ChangedAt: now})
+			plan.dispositions = append(plan.dispositions, &model.ConditionDispositionChange{UserID: owner, ID: uuid.New(), ConditionID: stage.entry.ID, FromDisposition: old, ToDisposition: next, Reason: envelope.DispositionReason, EvidenceRefs: d.DecidedEvidenceRefs, DecisionID: &d.ID, CommittedRevision: head + 1, ChangedAt: now})
 			plan.patch = append(plan.patch, map[string]any{"kind": "set_disposition", "conditionId": stage.entry.ID, "proposalId": p.ID, "decisionId": d.ID, "from": old, "to": next, "reason": envelope.DispositionReason})
 		case model.DiagnosisUpdateRelation:
 			if envelope.RelationChange == nil || len(envelope.ProposedEntry) > 0 || len(envelope.ChangeSet) > 0 || envelope.NewDisposition != nil || envelope.DispositionReason != "" {

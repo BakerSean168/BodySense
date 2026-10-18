@@ -54,9 +54,11 @@ type ConditionDispositionChange struct {
 	RelatedConditionID *uuid.UUID
 	EvidenceRefs       []DiagnosisEvidenceRef `gorm:"serializer:json;type:jsonb"`
 	Details            string
-	DecisionID         uuid.UUID
-	CommittedRevision  int64
-	ChangedAt          time.Time
+	// Exactly one authority: an accepted formal-run decision or a direct edit.
+	DecisionID        *uuid.UUID
+	DirectEditID      *uuid.UUID
+	CommittedRevision int64
+	ChangedAt         time.Time
 }
 
 func (ConditionDispositionChange) TableName() string { return "condition_disposition_changes" }

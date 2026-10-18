@@ -140,16 +140,24 @@ func (r *DiagnosisSourceRepository) Evidence(ctx context.Context, owner uuid.UUI
 // AnalysisRequest proves that the formal run is grounded in its owner's user
 // message. A stored request pointer or an assistant message is not authorization.
 func (r *DiagnosisSourceRepository) AnalysisRequest(ctx context.Context, owner uuid.UUID, run model.ConditionAnalysisRun) error {
+	return r.UserRequest(ctx, owner, run.RequestEvidenceID, run.RequestMessageID, run.RequestSourceVersion)
+}
+
+// UserRequest proves a Diagnosis command is grounded in the owner's own,
+// still-available chat message at the exact version. Formal analysis and
+// direct edits share it, so neither an assistant message nor another owner's
+// statement can authorize a Diagnosis change.
+func (r *DiagnosisSourceRepository) UserRequest(ctx context.Context, owner, evidence, messageID uuid.UUID, version int64) error {
 	var source model.StatementEvidence
 	db := r.dbFor(ctx)
-	if err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where("user_id=? AND id=?", owner, run.RequestEvidenceID).Take(&source).Error; err != nil {
+	if err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where("user_id=? AND id=?", owner, evidence).Take(&source).Error; err != nil {
 		return err
 	}
-	if source.Availability != "available" || source.SourceKind != "user_message" || source.SourceVersion != run.RequestSourceVersion || source.SourceMessageID == nil || *source.SourceMessageID != run.RequestMessageID || source.SourceConversationID == nil {
-		return fmt.Errorf("formal analysis request source unavailable")
+	if source.Availability != "available" || source.SourceKind != "user_message" || source.SourceVersion != version || source.SourceMessageID == nil || *source.SourceMessageID != messageID || source.SourceConversationID == nil {
+		return fmt.Errorf("diagnosis request source unavailable")
 	}
 	var message model.Message
 	return db.Table("messages AS m").Select("m.*").Joins("JOIN conversations AS c ON c.id=m.conversation_id").
-		Where("c.user_id=? AND m.id=? AND m.conversation_id=? AND m.role='user'", owner, run.RequestMessageID, *source.SourceConversationID).
+		Where("c.user_id=? AND m.id=? AND m.conversation_id=? AND m.role='user'", owner, messageID, *source.SourceConversationID).
 		Clauses(clause.Locking{Strength: "SHARE", Table: clause.Table{Name: "m"}}).Take(&message).Error
 }
