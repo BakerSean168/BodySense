@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -23,10 +26,95 @@ const (
 	BodyStateSuggestionPurpose         = "body_state_suggestion"
 	BodyStateSuggestionBindingRevision = "body-state-suggestion-v1"
 	BodyStateSuggestionKindHypothesis  = "hypothesis"
+	BodyStateSuggestionKindObservation = "observation"
+	BodyStateSuggestionKindEpisode     = "episode"
 	BodyStateSuggestionConfirmOption   = "记录为我的猜测"
 	BodyStateSuggestionRejectOption    = "不记录"
 	maxBodyStateSuggestionExcerptRunes = 2000
 )
+
+// bodyStateSuggestionKind is the fixed Go wording of one suggestion kind:
+// the Ask User prompt and the single confirming option. The model's own
+// wording is never shown as the question.
+type bodyStateSuggestionKind struct {
+	Question      string
+	ConfirmOption string
+}
+
+var bodyStateSuggestionKinds = map[string]bodyStateSuggestionKind{
+	BodyStateSuggestionKindHypothesis:  {BodyStateSuggestionQuestionText, BodyStateSuggestionConfirmOption},
+	BodyStateSuggestionKindObservation: {"要把你说过的这句话记录为一条身体观察吗？", "记录为身体观察"},
+	BodyStateSuggestionKindEpisode:     {"要把你描述的这次症状记录为一次新的发作吗？", "记录为一次发作"},
+}
+
+// BodyStateSuggestionKindSupported reports whether Go can bind and commit kind.
+func BodyStateSuggestionKindSupported(kind string) bool {
+	_, ok := bodyStateSuggestionKinds[kind]
+	return ok
+}
+
+// BodyStateSuggestionConfirmOptionFor is the confirming option of kind.
+func BodyStateSuggestionConfirmOptionFor(kind string) string {
+	return bodyStateSuggestionKinds[kind].ConfirmOption
+}
+
+// BodyStateSuggestionPayload carries the kind-specific labels of a
+// suggestion. Every user-facing label is a verbatim substring of the cited
+// excerpt (Go checks it), so no model wording is ever committed:
+//   - hypothesis: empty;
+//   - observation: an organizational observation_kind label (never a
+//     clinical interpretation) plus an optional raw_value/raw_unit copied
+//     from the user's words;
+//   - episode: the symptom_type words, plus the fact_id of the symptom fact
+//     Go itself resolved from the same cited span (never runtime supplied).
+type BodyStateSuggestionPayload struct {
+	ObservationKind string `json:"observation_kind,omitempty"`
+	RawValue        string `json:"raw_value,omitempty"`
+	RawUnit         string `json:"raw_unit,omitempty"`
+	SymptomType     string `json:"symptom_type,omitempty"`
+	FactID          string `json:"fact_id,omitempty"`
+}
+
+var suggestionObservationKind = regexp.MustCompile(`^[a-z][a-z0-9_]{1,63}$`)
+
+// ValidateBodyStateSuggestionPayload checks payload against kind and the
+// exact excerpt it was bound to. resolved requires the Go-resolved episode
+// fact; a runtime envelope (resolved=false) must not carry one.
+func ValidateBodyStateSuggestionPayload(kind string, payload BodyStateSuggestionPayload, excerpt string, resolved bool) error {
+	reject := func(reason string) error { return fmt.Errorf("%w: %s", ErrBodyStateSuggestionRejected, reason) }
+	verbatim := func(value string, maxRunes int) bool {
+		return value != "" && value == strings.TrimSpace(value) && utf8.RuneCountInString(value) <= maxRunes && strings.Contains(excerpt, value)
+	}
+	switch kind {
+	case BodyStateSuggestionKindHypothesis:
+		if payload != (BodyStateSuggestionPayload{}) {
+			return reject("a hypothesis carries no payload")
+		}
+	case BodyStateSuggestionKindObservation:
+		if !suggestionObservationKind.MatchString(payload.ObservationKind) || payload.SymptomType != "" || payload.FactID != "" {
+			return reject("an observation needs only a bounded observation label")
+		}
+		if (payload.RawValue != "" && !verbatim(payload.RawValue, 120)) || (payload.RawUnit != "" && !verbatim(payload.RawUnit, 48)) ||
+			(payload.RawUnit != "" && payload.RawValue == "") {
+			return reject("observation raw value and unit must be the user's own words")
+		}
+	case BodyStateSuggestionKindEpisode:
+		if payload.ObservationKind != "" || payload.RawValue != "" || payload.RawUnit != "" || !verbatim(payload.SymptomType, 120) {
+			return reject("an episode needs the user's own symptom words")
+		}
+		if resolved {
+			id, err := uuid.Parse(payload.FactID)
+			if err != nil || id == uuid.Nil || id.String() != payload.FactID {
+				return reject("an episode must reference the Go-resolved symptom fact")
+			}
+		} else if payload.FactID != "" {
+			return reject("the runtime cannot name the episode fact")
+		}
+	default:
+		return reject("unsupported suggestion kind")
+	}
+	return nil
+}
 
 var (
 	// ErrBodyStateSuggestionRejected means the suggestion cannot be bound to
@@ -47,21 +135,40 @@ type BodyStateSuggestionSource struct {
 	ExcerptSHA256 string    `json:"excerpt_sha256"`
 }
 
-// ConfirmBodyHypothesisSuggestionCommand is what Go commits after the user
-// confirmed a bound hypothesis suggestion. It carries no statement text: the
-// statement is re-read from the cited message inside the commit transaction.
-type ConfirmBodyHypothesisSuggestionCommand struct {
-	Source                BodyStateSuggestionSource `json:"source"`
-	BaseBodyStateRevision int64                     `json:"base_body_state_revision"`
+// ConfirmBodyStateSuggestionCommand is what Go commits after the user
+// confirmed a bound suggestion. It carries no statement text: the statement
+// is re-read from the cited message inside the commit transaction.
+type ConfirmBodyStateSuggestionCommand struct {
+	Kind                  string                     `json:"kind"`
+	Source                BodyStateSuggestionSource  `json:"source"`
+	BaseBodyStateRevision int64                      `json:"base_body_state_revision"`
+	Payload               BodyStateSuggestionPayload `json:"payload"`
 }
 
-func (c ConfirmBodyHypothesisSuggestionCommand) Validate() error {
+func (c ConfirmBodyStateSuggestionCommand) Validate() error {
 	s := c.Source
-	if s.MessageID == uuid.Nil || s.MessageSeq < 1 || s.SpanStart < 0 || s.SpanEnd <= s.SpanStart ||
-		!validSuggestionDigest(s.ExcerptSHA256) || c.BaseBodyStateRevision < 0 {
+	if !BodyStateSuggestionKindSupported(c.Kind) || s.MessageID == uuid.Nil || s.MessageSeq < 1 || s.SpanStart < 0 ||
+		s.SpanEnd <= s.SpanStart || !validSuggestionDigest(s.ExcerptSHA256) || c.BaseBodyStateRevision < 0 {
 		return ErrBodyStateSuggestionRejected
 	}
 	return nil
+}
+
+// BodyStateSuggestionReceipt is the id-only commit receipt of a confirmed
+// suggestion. RecordID is the hypothesis, observation or episode id;
+// SourceEvidenceID is the new statement evidence (hypothesis, observation)
+// and FactID the organized symptom fact (episode).
+type BodyStateSuggestionReceipt struct {
+	Kind             string
+	UserID           uuid.UUID
+	CommitID         uuid.UUID
+	RecordID         uuid.UUID
+	SourceEvidenceID uuid.UUID
+	FactID           uuid.UUID
+	Revision         int64
+	RevisionID       uuid.UUID
+	EventID          uuid.UUID
+	CommittedAt      time.Time
 }
 
 // SuggestionSourceMessage is one live, owner-scoped, user-authored chat

@@ -45,6 +45,9 @@ message ConsultationUserInput {
   string type = 1 [(buf.validate.field).string.const = "user_message"];
   string text = 2 [(buf.validate.field).string.min_len = 1];
   repeated ConsultationImageRef images = 3;
+  // Go's persisted id of this turn's user message: the only chat message a
+  // BodyState suggestion of this turn may cite (BS-AGENT-001).
+  optional string message_id = 4 [(buf.validate.field).string.uuid = true];
 }
 
 message ConsultationRuntimeState {
@@ -207,6 +210,36 @@ message LifestyleContextUpsert {
 message InteractionRequired {
   string interaction_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{32}$"];
   google.protobuf.Struct question = 2 [(buf.validate.field).required = true];
+  // A source-cited BodyState suggestion. Only this typed field may ask Go to
+  // bind a suggestion; Go replaces the question with its own confirmation or
+  // an unverified notice. A suggestion is never a commit.
+  optional BodyStateSuggestion suggestion = 3;
+}
+
+// BodyStateSuggestion (BS-AGENT-001) proposes that the user record their own
+// words as a hypothesis, observation or episode. It cites a rune span of the
+// turn's user message at the BodyState revision the runtime saw. Payload holds
+// only string labels Go verifies against the cited words (observation_kind,
+// raw_value, raw_unit; symptom_type); the episode fact is resolved by Go.
+message BodyStateSuggestion {
+  string kind = 1 [(buf.validate.field).string = {
+    in: ["hypothesis", "observation", "episode"]
+  }];
+  string cited_message_id = 2 [(buf.validate.field).string.uuid = true];
+  BodyStateSuggestionSpan span = 3 [(buf.validate.field).required = true];
+  uint64 base_body_state_revision = 4;
+  google.protobuf.Struct payload = 5;
+}
+
+// BodyStateSuggestionSpan is the half-open rune range [start, end).
+message BodyStateSuggestionSpan {
+  option (buf.validate.message).cel = {
+    id: "body_state_suggestion_span.ordered"
+    message: "span end must be after start"
+    expression: "this.end > this.start"
+  };
+  uint32 start = 1;
+  uint32 end = 2 [(buf.validate.field).uint32.lte = 100000];
 }
 
 message PhaseChanged {

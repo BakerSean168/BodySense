@@ -30,7 +30,7 @@ type StructuredIntakeRecorder interface {
 // BodyState suggestion inside the claim transaction. A confirmation returns
 // the commit receipt; a decline returns nil and writes nothing.
 type BodyStateSuggestionRecorder interface {
-	RecordBodyStateSuggestionAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) (*model.BodyHypothesisCommit, error)
+	RecordBodyStateSuggestionAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) (*model.BodyStateSuggestionReceipt, error)
 }
 
 // InteractionResumeService coordinates one Chat transaction. Ordinary answers
@@ -159,11 +159,22 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 
 // bodyStateSuggestionReceipt is the public, id-only receipt of a committed
 // suggestion; nil (JSON null) when the user declined and nothing was written.
-func bodyStateSuggestionReceipt(commit *model.BodyHypothesisCommit) any {
+func bodyStateSuggestionReceipt(commit *model.BodyStateSuggestionReceipt) any {
 	if commit == nil {
 		return nil
 	}
-	return map[string]any{"kind": model.BodyStateSuggestionKindHypothesis, "commit_id": commit.ID.String(),
-		"hypothesis_id": commit.HypothesisID.String(), "source_evidence_id": commit.SourceEvidenceID.String(),
+	receipt := map[string]any{"kind": commit.Kind, "commit_id": commit.CommitID.String(),
 		"revision": commit.Revision, "event_id": commit.EventID.String(), "committed_at": commit.CommittedAt.UTC().Format(time.RFC3339Nano)}
+	switch commit.Kind {
+	case model.BodyStateSuggestionKindHypothesis:
+		receipt["hypothesis_id"] = commit.RecordID.String()
+		receipt["source_evidence_id"] = commit.SourceEvidenceID.String()
+	case model.BodyStateSuggestionKindObservation:
+		receipt["observation_id"] = commit.RecordID.String()
+		receipt["source_evidence_id"] = commit.SourceEvidenceID.String()
+	case model.BodyStateSuggestionKindEpisode:
+		receipt["episode_id"] = commit.RecordID.String()
+		receipt["fact_id"] = commit.FactID.String()
+	}
+	return receipt
 }

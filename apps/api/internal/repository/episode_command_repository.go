@@ -70,159 +70,193 @@ func (r *BodyStateRepository) commitEpisodeAssociation(ctx context.Context, owne
 			return fmt.Errorf("%w: expected %d current %d", ErrBodyStateRevisionConflict, c.ExpectedRevision, state.CurrentRevision)
 		}
 
-		// Lock BOTH the accepted Fact and its available original evidence.
-		// Privacy source blocking and explicit withdrawal cannot race ahead
-		// of this command inside the same transaction. No AI-supplied raw
-		// statement, source ID or symptoms are trusted.
-		var fact model.BodyFact
-		err = tx.Table("public.body_facts AS f").Select("f.*").
-			Joins("JOIN public.statement_evidence AS ev ON ev.user_id = f.user_id AND ev.id = f.source_evidence_id").
-			Where("f.user_id = ? AND f.id = ? AND f.kind = 'symptom' AND f.subject = 'self' AND f.assertion_status = 'asserted' AND ev.availability = 'available'", owner, c.FactID).
-			Clauses(clause.Locking{Strength: "SHARE"}).Take(&fact).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return model.ErrEpisodeFactUnavailable
-		}
+		output, err := persistEpisodeAssociation(ctx, tx, state, next, owner, episodeID, c.FactID, operation, c.IdempotencyKey, fingerprint,
+			episodeAssociationOptions{RevisionSource: "direct_edit", Authorization: map[string]any{"authorization": "direct_user_command"}}, time.Now().UTC())
 		if err != nil {
 			return err
 		}
-		var details model.SymptomFactDetails
-		if err := json.Unmarshal(fact.Details, &details); err != nil {
-			return fmt.Errorf("%w: malformed accepted symptom details", model.ErrInvalidEpisodeEvidence)
-		}
-		if details.Presence != "present" && details.Presence != "absent" {
-			return fmt.Errorf("%w: symptom presence must be explicit", model.ErrInvalidEpisodeEvidence)
-		}
-		normalizedType := strings.TrimSpace(details.SymptomType)
-		if normalizedType == "" || len([]rune(normalizedType)) > 120 {
-			return fmt.Errorf("%w: a nonempty user-supported symptom type is required", model.ErrInvalidEpisodeEvidence)
-		}
-		side := details.Laterality
-		if side == "" {
-			side = "unknown"
-		}
-		if !validEpisodeLaterality(side) {
-			return fmt.Errorf("%w: symptom side invalid", model.ErrInvalidEpisodeEvidence)
-		}
-		var regions []string
-		if err := json.Unmarshal(fact.BodyRegionIDs, &regions); err != nil || regions == nil {
-			return fmt.Errorf("%w: symptom Fact is missing canonical regions", model.ErrInvalidEpisodeEvidence)
-		}
+		receipt = *output
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &receipt, nil
+}
 
-		now := time.Now().UTC()
-		if operation == "create" {
-			if details.Presence != "present" {
-				// A generic negative/absent symptom is NOT a new Episode or
-				// an end-of-course assertion.
-				return model.ErrEpisodeAssociationConflict
-			}
-			episodeID = uuid.New()
-		} else {
-			var target model.SymptomEpisode
-			err = tx.Where("user_id = ? AND id = ? AND identity_status = ?", owner, episodeID, "current").Take(&target).Error
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEpisodeNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if !strings.EqualFold(target.SymptomType, normalizedType) ||
-				(target.Laterality != "unknown" && side != "unknown" && target.Laterality != side) {
-				return model.ErrEpisodeAssociationConflict
-			}
-			var targetRegions []string
-			if err := json.Unmarshal(target.BodyRegionIDs, &targetRegions); err != nil {
-				return err
-			}
-			if len(regions) > 0 && len(targetRegions) > 0 {
-				overlap := false
-				for _, region := range regions {
-					for _, other := range targetRegions {
-						if region == other {
-							overlap = true
-							break
-						}
-					}
-					if overlap {
+// episodeAssociationOptions is who authorized an Episode association and
+// how: the BodyState revision source, the authorization metadata, and the
+// user's own symptom words for a fact that keeps no structured type.
+type episodeAssociationOptions struct {
+	RevisionSource      string
+	Authorization       map[string]any
+	FallbackSymptomType string
+}
+
+// persistEpisodeAssociation creates or links one Episode for one accepted
+// symptom Fact: revision, Episode (create), primary link, id-only outbox
+// and receipt. The caller holds the BodyState lock and has checked the
+// revision and the command's idempotency.
+func persistEpisodeAssociation(ctx context.Context, tx *gorm.DB, state *model.BodyState, next int64, owner, episodeID, factID uuid.UUID, operation, key, fingerprint string,
+	opts episodeAssociationOptions, now time.Time) (*model.EpisodeCommandReceipt, error) {
+	// Lock BOTH the accepted Fact and its available original evidence.
+	// Privacy source blocking and explicit withdrawal cannot race ahead
+	// of this command inside the same transaction. No AI-supplied raw
+	// statement, source ID or symptoms are trusted.
+	var fact model.BodyFact
+	err := tx.Table("public.body_facts AS f").Select("f.*").
+		Joins("JOIN public.statement_evidence AS ev ON ev.user_id = f.user_id AND ev.id = f.source_evidence_id").
+		Where("f.user_id = ? AND f.id = ? AND f.kind = 'symptom' AND f.subject = 'self' AND f.assertion_status = 'asserted' AND ev.availability = 'available'", owner, factID).
+		Clauses(clause.Locking{Strength: "SHARE"}).Take(&fact).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, model.ErrEpisodeFactUnavailable
+	}
+	if err != nil {
+		return nil, err
+	}
+	var details model.SymptomFactDetails
+	if err := json.Unmarshal(fact.Details, &details); err != nil {
+		return nil, fmt.Errorf("%w: malformed accepted symptom details", model.ErrInvalidEpisodeEvidence)
+	}
+	if details.Presence != "present" && details.Presence != "absent" {
+		return nil, fmt.Errorf("%w: symptom presence must be explicit", model.ErrInvalidEpisodeEvidence)
+	}
+	normalizedType := strings.TrimSpace(details.SymptomType)
+	if normalizedType == "" {
+		// A chat-captured symptom keeps no structured type; a confirmed
+		// suggestion supplies the user's own symptom words instead.
+		normalizedType = strings.TrimSpace(opts.FallbackSymptomType)
+	}
+	if normalizedType == "" || len([]rune(normalizedType)) > 120 {
+		return nil, fmt.Errorf("%w: a nonempty user-supported symptom type is required", model.ErrInvalidEpisodeEvidence)
+	}
+	side := details.Laterality
+	if side == "" {
+		side = "unknown"
+	}
+	if !validEpisodeLaterality(side) {
+		return nil, fmt.Errorf("%w: symptom side invalid", model.ErrInvalidEpisodeEvidence)
+	}
+	var regions []string
+	if err := json.Unmarshal(fact.BodyRegionIDs, &regions); err != nil || regions == nil {
+		return nil, fmt.Errorf("%w: symptom Fact is missing canonical regions", model.ErrInvalidEpisodeEvidence)
+	}
+
+	if operation == "create" {
+		if details.Presence != "present" {
+			// A generic negative/absent symptom is NOT a new Episode or
+			// an end-of-course assertion.
+			return nil, model.ErrEpisodeAssociationConflict
+		}
+		episodeID = uuid.New()
+	} else {
+		var target model.SymptomEpisode
+		err = tx.Where("user_id = ? AND id = ? AND identity_status = ?", owner, episodeID, "current").Take(&target).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrEpisodeNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !strings.EqualFold(target.SymptomType, normalizedType) ||
+			(target.Laterality != "unknown" && side != "unknown" && target.Laterality != side) {
+			return nil, model.ErrEpisodeAssociationConflict
+		}
+		var targetRegions []string
+		if err := json.Unmarshal(target.BodyRegionIDs, &targetRegions); err != nil {
+			return nil, err
+		}
+		if len(regions) > 0 && len(targetRegions) > 0 {
+			overlap := false
+			for _, region := range regions {
+				for _, other := range targetRegions {
+					if region == other {
+						overlap = true
 						break
 					}
 				}
-				if !overlap {
-					return model.ErrEpisodeAssociationConflict
+				if overlap {
+					break
 				}
 			}
-			// An unsupported Episode is not an alternate container where
-			// deleted/blocked sources can quietly be re-associated.
-			var sourceCount int64
-			err = tx.Table("public.episode_fact_links AS l").
-				Joins("JOIN public.body_facts AS f ON f.user_id=l.user_id AND f.id=l.fact_id AND f.source_evidence_id=l.basis_evidence_id").
-				Joins("JOIN public.statement_evidence AS ev ON ev.user_id=f.user_id AND ev.id=f.source_evidence_id").
-				Where("l.user_id=? AND l.episode_id=? AND ev.availability='available' AND f.assertion_status='asserted'", owner, episodeID).
-				Count(&sourceCount).Error
+			if !overlap {
+				return nil, model.ErrEpisodeAssociationConflict
+			}
+		}
+		// An unsupported Episode is not an alternate container where
+		// deleted/blocked sources can quietly be re-associated.
+		var sourceCount int64
+		err = tx.Table("public.episode_fact_links AS l").
+			Joins("JOIN public.body_facts AS f ON f.user_id=l.user_id AND f.id=l.fact_id AND f.source_evidence_id=l.basis_evidence_id").
+			Joins("JOIN public.statement_evidence AS ev ON ev.user_id=f.user_id AND ev.id=f.source_evidence_id").
+			Where("l.user_id=? AND l.episode_id=? AND ev.availability='available' AND f.assertion_status='asserted'", owner, episodeID).
+			Count(&sourceCount).Error
+		if err != nil {
+			return nil, err
+		}
+		if sourceCount == 0 {
+			return nil, ErrEpisodeNotFound
+		}
+		// A later explicit current report after a source-backed ended
+		// course is a new Episode identity, never a silent reopening.
+		// Reject BEFORE creating an irreversible unique-primary link.
+		if details.EpisodeCourseReport == "explicit_current_report" {
+			page, err := listEpisodeSnapshot(tx, owner, 0, &episodeID)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			if sourceCount == 0 {
-				return ErrEpisodeNotFound
-			}
-			// A later explicit current report after a source-backed ended
-			// course is a new Episode identity, never a silent reopening.
-			// Reject BEFORE creating an irreversible unique-primary link.
-			if details.EpisodeCourseReport == "explicit_current_report" {
-				page, err := listEpisodeSnapshot(tx, owner, 0, &episodeID)
-				if err != nil {
-					return err
-				}
-				if len(page.Episodes) != 1 || page.Episodes[0].Projection.State == "ended" {
-					return model.ErrEpisodeAssociationConflict
-				}
+			if len(page.Episodes) != 1 || page.Episodes[0].Projection.State == "ended" {
+				return nil, model.ErrEpisodeAssociationConflict
 			}
 		}
-		var conflicting model.EpisodeFactLink
-		err = tx.Where("user_id = ? AND fact_id = ? AND is_primary = TRUE", owner, fact.ID).Take(&conflicting).Error
-		if err == nil {
-			return model.ErrEpisodeAssociationConflict
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
+	}
+	var conflicting model.EpisodeFactLink
+	err = tx.Where("user_id = ? AND fact_id = ? AND is_primary = TRUE", owner, fact.ID).Take(&conflicting).Error
+	if err == nil {
+		return nil, model.ErrEpisodeAssociationConflict
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
 
-		commandID, eventID := uuid.New(), uuid.New()
-		metadata := map[string]any{"commit_id": commandID, "episode_id": episodeID,
-			"fact_id": fact.ID, "source_evidence_id": fact.SourceEvidenceID,
-			"role": "observation", "authorization": "direct_user_command", "operation": operation}
-		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "episode."+operation, "direct_edit", metadata)
-		if err != nil {
-			return err
-		}
-		if operation == "create" {
-			record := model.SymptomEpisode{ID: episodeID, UserID: owner, SymptomType: normalizedType,
-				BodyRegionIDs: fact.BodyRegionIDs, Laterality: side, IdentityStatus: "current",
-				CreatedRevision: next, CreatedAt: now}
-			if err := tx.Create(&record).Error; err != nil {
-				return err
-			}
-		}
-		link := model.EpisodeFactLink{UserID: owner, EpisodeID: episodeID, FactID: fact.ID,
-			FactKind: "symptom", BasisEvidenceID: fact.SourceEvidenceID, Role: "observation",
-			AssociationMethod: "explicit", IsPrimary: true, CreatedRevision: next}
-		if err := tx.Create(&link).Error; err != nil {
-			return err
-		}
-		payload, err := json.Marshal(metadata)
-		if err != nil {
-			return err
-		}
-		event := model.BodyStateOutbox{ID: eventID, UserID: owner, Revision: next,
-			EventType: "body_state.episode_" + operation, Payload: datatypes.JSON(payload), CreatedAt: now}
-		if err := tx.Create(&event).Error; err != nil {
-			return err
-		}
-		receipt = model.EpisodeCommandReceipt{ID: commandID, UserID: owner, IdempotencyKey: c.IdempotencyKey,
-			Fingerprint: fingerprint, Operation: operation, EpisodeID: episodeID, FactID: fact.ID,
-			Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
-		return tx.Create(&receipt).Error
-	})
+	commandID, eventID := uuid.New(), uuid.New()
+	metadata := map[string]any{"commit_id": commandID, "episode_id": episodeID,
+		"fact_id": fact.ID, "source_evidence_id": fact.SourceEvidenceID,
+		"role": "observation", "operation": operation}
+	for k, v := range opts.Authorization {
+		metadata[k] = v
+	}
+	revision, err := bodyStatePersistRevision(ctx, tx, state, next, "episode."+operation, opts.RevisionSource, metadata)
 	if err != nil {
+		return nil, err
+	}
+	if operation == "create" {
+		record := model.SymptomEpisode{ID: episodeID, UserID: owner, SymptomType: normalizedType,
+			BodyRegionIDs: fact.BodyRegionIDs, Laterality: side, IdentityStatus: "current",
+			CreatedRevision: next, CreatedAt: now}
+		if err := tx.Create(&record).Error; err != nil {
+			return nil, err
+		}
+	}
+	link := model.EpisodeFactLink{UserID: owner, EpisodeID: episodeID, FactID: fact.ID,
+		FactKind: "symptom", BasisEvidenceID: fact.SourceEvidenceID, Role: "observation",
+		AssociationMethod: "explicit", IsPrimary: true, CreatedRevision: next}
+	if err := tx.Create(&link).Error; err != nil {
+		return nil, err
+	}
+	payload, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+	event := model.BodyStateOutbox{ID: eventID, UserID: owner, Revision: next,
+		EventType: "body_state.episode_" + operation, Payload: datatypes.JSON(payload), CreatedAt: now}
+	if err := tx.Create(&event).Error; err != nil {
+		return nil, err
+	}
+	receipt := model.EpisodeCommandReceipt{ID: commandID, UserID: owner, IdempotencyKey: key,
+		Fingerprint: fingerprint, Operation: operation, EpisodeID: episodeID, FactID: fact.ID,
+		Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
+	if err := tx.Create(&receipt).Error; err != nil {
 		return nil, err
 	}
 	return &receipt, nil

@@ -78,7 +78,7 @@ func (r *BodyStateRepository) amendDirectObservation(
 		query := tx.Table("public.body_observations AS o").
 			Select("o.*,e.excerpt AS statement,e.source_version AS source_version").
 			Joins("JOIN public.statement_evidence AS e ON e.id=o.source_evidence_id AND e.user_id=o.user_id").
-			Where("o.user_id=? AND o.id=? AND e.source_kind='direct_edit'", owner, target)
+			Where("o.user_id=? AND o.id=? AND e.source_kind IN ('direct_edit','user_message')", owner, target)
 		if correction {
 			query = query.Where("e.availability='available'")
 		}

@@ -1328,7 +1328,7 @@
       }
     },
     "BodyStateSuggestionBinding": {
-      "description": "Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit.",
+      "description": "Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit. Payload labels are verbatim words of the quote; an episode's fact_id is the symptom fact Go resolved from the same words.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1342,7 +1342,11 @@
           "const": "body-state-suggestion-v1"
         },
         "kind": {
-          "const": "hypothesis"
+          "enum": [
+            "hypothesis",
+            "observation",
+            "episode"
+          ]
         },
         "source": {
           "$ref": "#/$defs/BodyStateSuggestionSource"
@@ -1350,51 +1354,172 @@
         "base_body_state_revision": {
           "type": "integer",
           "minimum": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/BodyStateSuggestionPayload"
+        }
+      }
+    },
+    "BodyStateSuggestionPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "observation_kind": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "raw_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "raw_unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "symptom_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "fact_id": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
     "BodyStateSuggestionReceipt": {
-      "description": "Id-only Go commit receipt of a confirmed BodyState suggestion. Present only after the commit; a declined suggestion carries null.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "kind",
-        "commit_id",
-        "hypothesis_id",
-        "source_evidence_id",
-        "revision",
-        "event_id",
-        "committed_at"
-      ],
-      "properties": {
-        "kind": {
-          "const": "hypothesis"
+      "description": "Id-only Go commit receipt of a confirmed BodyState suggestion, by kind. Present only after the commit; a declined suggestion carries null.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "commit_id",
+            "hypothesis_id",
+            "source_evidence_id",
+            "revision",
+            "event_id",
+            "committed_at"
+          ],
+          "properties": {
+            "kind": {
+              "const": "hypothesis"
+            },
+            "commit_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hypothesis_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_evidence_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "event_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "committed_at": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
-        "commit_id": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "commit_id",
+            "observation_id",
+            "source_evidence_id",
+            "revision",
+            "event_id",
+            "committed_at"
+          ],
+          "properties": {
+            "kind": {
+              "const": "observation"
+            },
+            "commit_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observation_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_evidence_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "event_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "committed_at": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
-        "hypothesis_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "source_evidence_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "revision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "event_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "committed_at": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "commit_id",
+            "episode_id",
+            "fact_id",
+            "revision",
+            "event_id",
+            "committed_at"
+          ],
+          "properties": {
+            "kind": {
+              "const": "episode"
+            },
+            "commit_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "episode_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fact_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "event_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "committed_at": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
-      }
+      ]
     },
     "InteractionQuestion": {
       "type": "object",

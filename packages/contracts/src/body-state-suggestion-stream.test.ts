@@ -127,6 +127,73 @@ const cases: Array<[string, unknown, boolean]> = [
     answered({ body_state_receipt: { ...receipt, revision: 0 } }),
     false,
   ],
+  [
+    "observation binding with verbatim labels",
+    required({
+      ...binding,
+      kind: "observation",
+      payload: { observation_kind: "blood_pressure", raw_value: "135/88" },
+    }),
+    true,
+  ],
+  [
+    "observation binding with a clinical label",
+    required({
+      ...binding,
+      kind: "observation",
+      payload: { observation_kind: "高血压" },
+    }),
+    false,
+  ],
+  [
+    "episode binding with its Go-resolved fact",
+    required({
+      ...binding,
+      kind: "episode",
+      payload: { symptom_type: "疼", fact_id: "f" },
+    }),
+    true,
+  ],
+  [
+    "binding payload with an unknown label",
+    required({ ...binding, payload: { diagnosis: "x" } }),
+    false,
+  ],
+  [
+    "observation receipt",
+    answered({
+      body_state_receipt: {
+        kind: "observation",
+        commit_id: "c",
+        observation_id: "o",
+        source_evidence_id: "e",
+        revision: 9,
+        event_id: "ev",
+        committed_at: "Sat 2026-10-17 4:00 PM CST (UTC+08:00)",
+      },
+    }),
+    true,
+  ],
+  [
+    "episode receipt",
+    answered({
+      body_state_receipt: {
+        kind: "episode",
+        commit_id: "c",
+        episode_id: "p",
+        fact_id: "f",
+        revision: 9,
+        event_id: "ev",
+        committed_at: "Sat 2026-10-17 4:00 PM CST (UTC+08:00)",
+      },
+    }),
+    true,
+  ],
+  [
+    "receipt whose ids do not match its kind",
+    answered({ body_state_receipt: { ...receipt, kind: "episode" } }),
+    false,
+  ],
 ];
 
 describe("BodyState suggestion stream contract", () => {

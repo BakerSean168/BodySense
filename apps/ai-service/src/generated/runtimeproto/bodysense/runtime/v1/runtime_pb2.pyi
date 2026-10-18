@@ -57,14 +57,16 @@ class ConsultationImageRef(_message.Message):
     def __init__(self, upload_id: _Optional[str] = ..., mime_type: _Optional[str] = ..., data_url: _Optional[str] = ...) -> None: ...
 
 class ConsultationUserInput(_message.Message):
-    __slots__ = ("type", "text", "images")
+    __slots__ = ("type", "text", "images", "message_id")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TEXT_FIELD_NUMBER: _ClassVar[int]
     IMAGES_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     type: str
     text: str
     images: _containers.RepeatedCompositeFieldContainer[ConsultationImageRef]
-    def __init__(self, type: _Optional[str] = ..., text: _Optional[str] = ..., images: _Optional[_Iterable[_Union[ConsultationImageRef, _Mapping]]] = ...) -> None: ...
+    message_id: str
+    def __init__(self, type: _Optional[str] = ..., text: _Optional[str] = ..., images: _Optional[_Iterable[_Union[ConsultationImageRef, _Mapping]]] = ..., message_id: _Optional[str] = ...) -> None: ...
 
 class ConsultationRuntimeState(_message.Message):
     __slots__ = ("phase", "extracted_info")
@@ -297,12 +299,36 @@ class LifestyleContextUpsert(_message.Message):
     def __init__(self, context: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class InteractionRequired(_message.Message):
-    __slots__ = ("interaction_id", "question")
+    __slots__ = ("interaction_id", "question", "suggestion")
     INTERACTION_ID_FIELD_NUMBER: _ClassVar[int]
     QUESTION_FIELD_NUMBER: _ClassVar[int]
+    SUGGESTION_FIELD_NUMBER: _ClassVar[int]
     interaction_id: str
     question: _struct_pb2.Struct
-    def __init__(self, interaction_id: _Optional[str] = ..., question: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    suggestion: BodyStateSuggestion
+    def __init__(self, interaction_id: _Optional[str] = ..., question: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., suggestion: _Optional[_Union[BodyStateSuggestion, _Mapping]] = ...) -> None: ...
+
+class BodyStateSuggestion(_message.Message):
+    __slots__ = ("kind", "cited_message_id", "span", "base_body_state_revision", "payload")
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    CITED_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SPAN_FIELD_NUMBER: _ClassVar[int]
+    BASE_BODY_STATE_REVISION_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    kind: str
+    cited_message_id: str
+    span: BodyStateSuggestionSpan
+    base_body_state_revision: int
+    payload: _struct_pb2.Struct
+    def __init__(self, kind: _Optional[str] = ..., cited_message_id: _Optional[str] = ..., span: _Optional[_Union[BodyStateSuggestionSpan, _Mapping]] = ..., base_body_state_revision: _Optional[int] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+
+class BodyStateSuggestionSpan(_message.Message):
+    __slots__ = ("start", "end")
+    START_FIELD_NUMBER: _ClassVar[int]
+    END_FIELD_NUMBER: _ClassVar[int]
+    start: int
+    end: int
+    def __init__(self, start: _Optional[int] = ..., end: _Optional[int] = ...) -> None: ...
 
 class PhaseChanged(_message.Message):
     __slots__ = ("to", "reason")

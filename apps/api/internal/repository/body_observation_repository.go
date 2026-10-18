@@ -59,55 +59,71 @@ func (r *BodyStateRepository) RecordDirectObservation(ctx context.Context, owner
 		// before the first HTTP reply so an identical replay returns the
 		// exact same committed_at JSON, not a 9-vs-6-digit timestamp.
 		now := time.Now().UTC().Truncate(time.Microsecond)
-		commitID, observationID, evidenceID, eventID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
-		observedAt, err := json.Marshal(command.Observation.ObservedAt)
-		if err != nil {
-			return err
-		}
-		metadata := map[string]any{"commit_id": commitID, "observation_id": observationID, "source_evidence_id": evidenceID}
-		revision, err := bodyStatePersistRevision(ctx, tx, state, next, "observation.recorded", "direct_edit", metadata)
-		if err != nil {
-			return err
-		}
-		evidence := model.StatementEvidence{ID: evidenceID, UserID: owner,
+		evidence := model.StatementEvidence{ID: uuid.New(), UserID: owner,
 			SourceKind: "direct_edit", SourceVersion: 1, Excerpt: command.Observation.Statement,
 			Availability: "available", RecordedAt: now}
-		if err := tx.Create(&evidence).Error; err != nil {
-			return err
-		}
-		record := model.BodyObservation{ID: observationID, UserID: owner,
-			Kind: command.Observation.Kind, RawValue: command.Observation.RawValue,
-			RawUnit: command.Observation.RawUnit, Method: command.Observation.Method,
-			MeasurementContext: command.Observation.MeasurementContext,
-			ObservedAt:         datatypes.JSON(observedAt), SourceEvidenceID: evidenceID,
-			AssertionStatus: "asserted", CreatedRevision: next, RecordedAt: now}
-		if err := tx.Create(&record).Error; err != nil {
-			return err
-		}
-		payload, err := json.Marshal(metadata)
+		receipt, err := persistBodyObservationRecord(ctx, tx, state, next, owner, command.IdempotencyKey, fingerprint,
+			command.Observation, evidence, "direct_edit", nil, now)
 		if err != nil {
 			return err
 		}
-		event := model.BodyStateOutbox{ID: eventID, UserID: owner,
-			Revision: next, EventType: "body_state.observation_recorded",
-			Payload: datatypes.JSON(payload), CreatedAt: now}
-		if err := tx.Create(&event).Error; err != nil {
-			return err
-		}
-		receipt := model.BodyObservationCommit{ID: commitID, UserID: owner,
-			IdempotencyKey: command.IdempotencyKey, Fingerprint: fingerprint, Operation: "record",
-			ObservationID: observationID, SourceEvidenceID: evidenceID,
-			Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
-		if err := tx.Create(&receipt).Error; err != nil {
-			return err
-		}
-		output = receipt
+		output = *receipt
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &output, nil
+}
+
+// persistBodyObservationRecord writes one new user-reported observation and
+// its links: revision, the given original statement evidence, observation,
+// id-only outbox and receipt. The caller holds the BodyState lock and has
+// verified source, command and revision.
+func persistBodyObservationRecord(ctx context.Context, tx *gorm.DB, state *model.BodyState, next int64, owner uuid.UUID, key, fingerprint string,
+	input model.RecordBodyObservationInput, evidence model.StatementEvidence, revisionSource string, extra map[string]any, now time.Time) (*model.BodyObservationCommit, error) {
+	if evidence.Excerpt != input.Statement {
+		return nil, fmt.Errorf("%w: observation statement must be its evidence excerpt", model.ErrInvalidBodyObservation)
+	}
+	commitID, observationID, eventID := uuid.New(), uuid.New(), uuid.New()
+	observedAt, err := json.Marshal(input.ObservedAt)
+	if err != nil {
+		return nil, err
+	}
+	metadata := map[string]any{"commit_id": commitID, "observation_id": observationID, "source_evidence_id": evidence.ID}
+	for k, v := range extra {
+		metadata[k] = v
+	}
+	revision, err := bodyStatePersistRevision(ctx, tx, state, next, "observation.recorded", revisionSource, metadata)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Create(&evidence).Error; err != nil {
+		return nil, err
+	}
+	record := model.BodyObservation{ID: observationID, UserID: owner,
+		Kind: input.Kind, RawValue: input.RawValue, RawUnit: input.RawUnit, Method: input.Method,
+		MeasurementContext: input.MeasurementContext, ObservedAt: datatypes.JSON(observedAt),
+		SourceEvidenceID: evidence.ID, AssertionStatus: "asserted", CreatedRevision: next, RecordedAt: now}
+	if err := tx.Create(&record).Error; err != nil {
+		return nil, err
+	}
+	payload, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+	event := model.BodyStateOutbox{ID: eventID, UserID: owner, Revision: next, EventType: "body_state.observation_recorded",
+		Payload: datatypes.JSON(payload), CreatedAt: now}
+	if err := tx.Create(&event).Error; err != nil {
+		return nil, err
+	}
+	receipt := model.BodyObservationCommit{ID: commitID, UserID: owner, IdempotencyKey: key, Fingerprint: fingerprint,
+		Operation: "record", ObservationID: observationID, SourceEvidenceID: evidence.ID,
+		Revision: next, RevisionID: revision.ID, EventID: eventID, CommittedAt: now}
+	if err := tx.Create(&receipt).Error; err != nil {
+		return nil, err
+	}
+	return &receipt, nil
 }
 
 type bodyObservationReadRow struct {
@@ -138,7 +154,7 @@ func (r *BodyStateRepository) ListDirectObservations(ctx context.Context, owner 
 		page.CurrentRevision = state.CurrentRevision
 		query := tx.Table("public.body_observations AS o").
 			Joins("JOIN public.statement_evidence AS e ON e.user_id=o.user_id AND e.id=o.source_evidence_id").
-			Where("o.user_id=? AND o.created_revision<=? AND o.assertion_status='asserted' AND e.availability='available' AND e.source_kind='direct_edit'", owner, state.CurrentRevision)
+			Where("o.user_id=? AND o.created_revision<=? AND o.assertion_status='asserted' AND e.availability='available' AND e.source_kind IN ('direct_edit','user_message')", owner, state.CurrentRevision)
 		if beforeRevision > 0 {
 			query = query.Where("o.created_revision<?", beforeRevision)
 		}

@@ -12,7 +12,7 @@ import (
 func boundSuggestionFixture(t *testing.T) (json.RawMessage, SuggestionSourceMessage) {
 	t.Helper()
 	source := SuggestionSourceMessage{ID: uuid.New(), ConversationID: uuid.New(), RunID: uuid.New(), Seq: 2, Text: "我猜是久坐导致腰酸"}
-	raw, err := BuildBodyStateSuggestionQuestion(source, 2, 9, 4)
+	raw, err := BuildBodyStateSuggestionQuestion(source, BodyStateSuggestionKindHypothesis, 2, 9, 4, BodyStateSuggestionPayload{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,14 +92,14 @@ func TestParseBoundBodyStateSuggestionRejectsTampering(t *testing.T) {
 }
 
 func TestBodyStateSuggestionConfirmed(t *testing.T) {
-	if ok, err := BodyStateSuggestionConfirmed([]byte(`{"text":"记录为我的猜测","selected":["记录为我的猜测"]}`)); err != nil || !ok {
+	if ok, err := BodyStateSuggestionConfirmed(BodyStateSuggestionKindHypothesis, []byte(`{"text":"记录为我的猜测","selected":["记录为我的猜测"]}`)); err != nil || !ok {
 		t.Fatalf("confirm = %v %v", ok, err)
 	}
-	if ok, err := BodyStateSuggestionConfirmed([]byte(`{"text":"不记录","selected":["不记录"]}`)); err != nil || ok {
+	if ok, err := BodyStateSuggestionConfirmed(BodyStateSuggestionKindHypothesis, []byte(`{"text":"不记录","selected":["不记录"]}`)); err != nil || ok {
 		t.Fatalf("reject = %v %v", ok, err)
 	}
 	for _, bad := range []string{``, `{}`, `{"selected":[]}`, `{"selected":["记录为我的猜测","不记录"]}`, `{"selected":["好"]}`, `{"selected":["记录为我的猜测"],"is_custom":true}`} {
-		if _, err := BodyStateSuggestionConfirmed([]byte(bad)); !errors.Is(err, ErrBodyStateSuggestionRejected) {
+		if _, err := BodyStateSuggestionConfirmed(BodyStateSuggestionKindHypothesis, []byte(bad)); !errors.Is(err, ErrBodyStateSuggestionRejected) {
 			t.Errorf("%q accepted", bad)
 		}
 	}
@@ -107,11 +107,65 @@ func TestBodyStateSuggestionConfirmed(t *testing.T) {
 
 func TestBuildBodyStateSuggestionQuestionRejectsInexactSpan(t *testing.T) {
 	source := SuggestionSourceMessage{ID: uuid.New(), Seq: 1, Text: "膝盖疼"}
-	if _, err := BuildBodyStateSuggestionQuestion(source, 0, 9, 0); !errors.Is(err, ErrBodyStateSuggestionRejected) {
+	if _, err := BuildBodyStateSuggestionQuestion(source, BodyStateSuggestionKindHypothesis, 0, 9, 0, BodyStateSuggestionPayload{}); !errors.Is(err, ErrBodyStateSuggestionRejected) {
 		t.Fatalf("out-of-range span bound: %v", err)
 	}
 	source.Seq = 0
-	if _, err := BuildBodyStateSuggestionQuestion(source, 0, 3, 0); !errors.Is(err, ErrBodyStateSuggestionRejected) {
+	if _, err := BuildBodyStateSuggestionQuestion(source, BodyStateSuggestionKindHypothesis, 0, 3, 0, BodyStateSuggestionPayload{}); !errors.Is(err, ErrBodyStateSuggestionRejected) {
 		t.Fatalf("invalid source identity bound: %v", err)
+	}
+}
+
+func TestBodyStateSuggestionKindsBindVerbatimPayloads(t *testing.T) {
+	source := SuggestionSourceMessage{ID: uuid.New(), Seq: 3, Text: "今早我量了血压是135/88 mmHg。我右肩又开始疼了。"}
+	factID := uuid.NewString()
+	observation := BodyStateSuggestionPayload{ObservationKind: "blood_pressure", RawValue: "135/88", RawUnit: "mmHg"}
+	raw, err := BuildBodyStateSuggestionQuestion(source, BodyStateSuggestionKindObservation, 2, 19, 5, observation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command, matched, err := ParseBoundBodyStateSuggestion(raw)
+	if err != nil || !matched || command.Kind != BodyStateSuggestionKindObservation || command.Payload != observation {
+		t.Fatalf("observation round trip = %+v %v %v", command, matched, err)
+	}
+	var q BodyStateSuggestionQuestion
+	_ = json.Unmarshal(raw, &q)
+	if q.Quote != "我量了血压是135/88 mmHg" || q.Options[0] != "记录为身体观察" || q.Question == BodyStateSuggestionQuestionText {
+		t.Fatalf("observation question = %+v", q)
+	}
+	if ok, err := BodyStateSuggestionConfirmed(BodyStateSuggestionKindObservation, []byte(`{"selected":["记录为身体观察"]}`)); err != nil || !ok {
+		t.Fatalf("observation confirm = %v %v", ok, err)
+	}
+	if _, err := BodyStateSuggestionConfirmed(BodyStateSuggestionKindObservation, []byte(`{"selected":["记录为我的猜测"]}`)); err == nil {
+		t.Fatal("another kind's option confirmed an observation")
+	}
+	episode := BodyStateSuggestionPayload{SymptomType: "疼", FactID: factID}
+	raw, err = BuildBodyStateSuggestionQuestion(source, BodyStateSuggestionKindEpisode, 20, 28, 5, episode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if command, _, err := ParseBoundBodyStateSuggestion(raw); err != nil || command.Payload != episode {
+		t.Fatalf("episode round trip = %+v %v", command, err)
+	}
+
+	rejected := map[string]struct {
+		kind    string
+		payload BodyStateSuggestionPayload
+	}{
+		"hypothesis with payload":    {BodyStateSuggestionKindHypothesis, BodyStateSuggestionPayload{ObservationKind: "x_y"}},
+		"observation label invalid":  {BodyStateSuggestionKindObservation, BodyStateSuggestionPayload{ObservationKind: "血压"}},
+		"observation value invented": {BodyStateSuggestionKindObservation, BodyStateSuggestionPayload{ObservationKind: "blood_pressure", RawValue: "140/90"}},
+		"observation unit only":      {BodyStateSuggestionKindObservation, BodyStateSuggestionPayload{ObservationKind: "blood_pressure", RawUnit: "mmHg"}},
+		"episode type invented":      {BodyStateSuggestionKindEpisode, BodyStateSuggestionPayload{SymptomType: "肩周炎", FactID: factID}},
+		"episode without fact":       {BodyStateSuggestionKindEpisode, BodyStateSuggestionPayload{SymptomType: "疼"}},
+		"unsupported kind":           {"diagnosis", BodyStateSuggestionPayload{}},
+	}
+	for name, tc := range rejected {
+		if _, err := BuildBodyStateSuggestionQuestion(source, tc.kind, 2, 28, 5, tc.payload); !errors.Is(err, ErrBodyStateSuggestionRejected) {
+			t.Errorf("%s: bound: %v", name, err)
+		}
+	}
+	if err := ValidateBodyStateSuggestionPayload(BodyStateSuggestionKindEpisode, BodyStateSuggestionPayload{SymptomType: "疼", FactID: factID}, "我右肩又开始疼了", false); err == nil {
+		t.Error("a runtime envelope named the episode fact")
 	}
 }

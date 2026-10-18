@@ -363,6 +363,37 @@ export type BodySenseStreamEventV1 = (
     [k: string]: unknown;
   };
 };
+/**
+ * Id-only Go commit receipt of a confirmed BodyState suggestion, by kind. Present only after the commit; a declined suggestion carries null.
+ */
+export type BodyStateSuggestionReceipt =
+  | {
+      kind: "hypothesis";
+      commit_id: string;
+      hypothesis_id: string;
+      source_evidence_id: string;
+      revision: number;
+      event_id: string;
+      committed_at: string;
+    }
+  | {
+      kind: "observation";
+      commit_id: string;
+      observation_id: string;
+      source_evidence_id: string;
+      revision: number;
+      event_id: string;
+      committed_at: string;
+    }
+  | {
+      kind: "episode";
+      commit_id: string;
+      episode_id: string;
+      fact_id: string;
+      revision: number;
+      event_id: string;
+      committed_at: string;
+    };
 
 export interface StreamFailureError {
   message: string;
@@ -432,13 +463,14 @@ export interface InteractionStateBinding {
   [k: string]: unknown;
 }
 /**
- * Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit.
+ * Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit. Payload labels are verbatim words of the quote; an episode's fact_id is the symptom fact Go resolved from the same words.
  */
 export interface BodyStateSuggestionBinding {
   revision: "body-state-suggestion-v1";
-  kind: "hypothesis";
+  kind: "hypothesis" | "observation" | "episode";
   source: BodyStateSuggestionSource;
   base_body_state_revision: number;
+  payload?: BodyStateSuggestionPayload;
 }
 export interface BodyStateSuggestionSource {
   message_id: string;
@@ -447,17 +479,12 @@ export interface BodyStateSuggestionSource {
   span_end: number;
   excerpt_sha256: string;
 }
-/**
- * Id-only Go commit receipt of a confirmed BodyState suggestion. Present only after the commit; a declined suggestion carries null.
- */
-export interface BodyStateSuggestionReceipt {
-  kind: "hypothesis";
-  commit_id: string;
-  hypothesis_id: string;
-  source_evidence_id: string;
-  revision: number;
-  event_id: string;
-  committed_at: string;
+export interface BodyStateSuggestionPayload {
+  observation_kind?: string;
+  raw_value?: string;
+  raw_unit?: string;
+  symptom_type?: string;
+  fact_id?: string;
 }
 export interface Citation {
   title: string;

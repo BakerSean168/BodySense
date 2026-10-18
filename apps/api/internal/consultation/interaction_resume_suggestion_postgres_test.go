@@ -22,12 +22,22 @@ const (
 )
 
 func runtimeSuggestion(messageID uuid.UUID, start, end int, revision int64) json.RawMessage {
-	raw, _ := json.Marshal(map[string]any{
-		"purpose": model.BodyStateSuggestionPurpose, "question": "要我帮你记下这个猜测吗？", "answer_type": "single_choice",
-		"options": []string{"好", "不要"},
-		"suggestion": map[string]any{"kind": "hypothesis", "cited_message_id": messageID.String(),
-			"span": map[string]any{"start": start, "end": end}, "base_body_state_revision": revision},
-	})
+	return runtimeKindSuggestion(messageID, "hypothesis", start, end, revision, nil)
+}
+
+// runtimeKindSuggestion is the question the runtime handler hands the binder
+// after merging the typed InteractionRequired.suggestion field.
+func runtimeKindSuggestion(messageID uuid.UUID, kind string, start, end int, revision int64, payload map[string]any) json.RawMessage {
+	typed := map[string]any{"kind": kind, "cited_message_id": messageID.String(),
+		"span": map[string]any{"start": start, "end": end}, "base_body_state_revision": revision}
+	if payload != nil {
+		typed["payload"] = payload
+	}
+	encoded, _ := json.Marshal(typed)
+	raw, err := service.AttachRuntimeBodyStateSuggestion(json.RawMessage(`{"question":"要我帮你记下来吗？","answer_type":"single_choice","options":["好","不要"]}`), encoded)
+	if err != nil {
+		panic(err)
+	}
 	return raw
 }
 
@@ -143,8 +153,8 @@ func TestSuggestionAcceptCommitsExactlyOneUserHypothesisWithReceiptPostgres(t *t
 	// A direct second confirmation of the same interaction returns the same receipt.
 	source := model.AnswerFactSource{RunID: f.envelope.Run.ID, InteractionID: f.interaction.ID, MessageID: claimed.Envelope.UserMessage.ID}
 	parsed, _, _ := model.ParseBoundBodyStateSuggestion(f.interaction.Question)
-	again, err := repository.NewBodyStateRepository(f.db).ConfirmBodyHypothesisSuggestion(context.Background(), f.owner, source, parsed)
-	if err != nil || again.HypothesisID != hypothesis.ID {
+	again, err := repository.NewBodyStateRepository(f.db).ConfirmBodyStateSuggestion(context.Background(), f.owner, source, parsed)
+	if err != nil || again.RecordID != hypothesis.ID || again.Kind != model.BodyStateSuggestionKindHypothesis {
 		t.Fatalf("receipt replay changed: %+v %v", again, err)
 	}
 	resumeCount(t, f, "body_hypotheses", 1)
@@ -262,5 +272,161 @@ func TestSuggestionConfirmationRejectedAtCommitTimePostgres(t *testing.T) {
 		command.Answer = datatypes.JSON(`{"text":"记录为我的猜测"}`)
 		_, err := f.resumes.WithBodyStateSuggestions(suggestionBodyState(f)).Claim(context.Background(), command)
 		assertSuggestionClaimLeftNothing(t, f, err)
+	})
+}
+
+func boundKindSuggestionResumeFixture(t *testing.T, f resumeFixture, kind string, revision int64, payload map[string]any) model.ConfirmBodyStateSuggestionCommand {
+	t.Helper()
+	bound, ok := bindSuggestion(t, f, runtimeKindSuggestion(f.envelope.UserMessage.ID, kind, suggestionSpanStart, suggestionSpanEnd, revision, payload))
+	if !ok {
+		t.Fatalf("%s suggestion citing the owner's own message was not bound: %s", kind, bound)
+	}
+	bindIntakeQuestion(t, f, "ask-suggestion-"+kind, bound)
+	command, matched, err := model.ParseBoundBodyStateSuggestion(bound)
+	if err != nil || !matched {
+		t.Fatalf("bound %s question did not parse: %v", kind, err)
+	}
+	return command
+}
+
+func TestSuggestionObservationAcceptCommitsUserReportedObservationPostgres(t *testing.T) {
+	f := newResumeFixture(t)
+	boundKindSuggestionResumeFixture(t, f, "observation", 0, map[string]any{"observation_kind": "synthetic_note", "raw_value": "ambiguous"})
+	resumes := f.resumes.WithBodyStateSuggestions(suggestionBodyState(f))
+	claimed, err := resumes.Claim(context.Background(), suggestionCommand(f, model.BodyStateSuggestionConfirmOptionFor("observation")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resumeCount(t, f, "body_observations", 1)
+	resumeCount(t, f, "body_observation_commits", 1)
+	resumeCount(t, f, "body_state_revisions", 1)
+	page, err := repository.NewBodyStateRepository(f.db).ListDirectObservations(context.Background(), f.owner, 0)
+	if err != nil || len(page.Observations) != 1 {
+		t.Fatalf("confirmed observation is not readable: %+v %v", page, err)
+	}
+	observation := page.Observations[0]
+	if observation.Statement != suggestionStatement || observation.Kind != "synthetic_note" || observation.RawValue != "ambiguous" ||
+		observation.RawUnit != "" || observation.ObservedAt.Precision != "unknown" {
+		t.Fatalf("observation is not the user's verbatim words: %+v", observation)
+	}
+	var evidence model.StatementEvidence
+	if err := f.db.Where("user_id = ? AND id = ?", f.owner, observation.Source.ID).Take(&evidence).Error; err != nil {
+		t.Fatal(err)
+	}
+	if evidence.SourceKind != "user_message" || evidence.SourceMessageID == nil || *evidence.SourceMessageID != f.envelope.UserMessage.ID {
+		t.Fatalf("observation evidence is not bound to the cited message: %+v", evidence)
+	}
+	receipt, present := answeredReceipt(t, claimed)
+	if !present || receipt["kind"] != "observation" || receipt["observation_id"] != observation.ID.String() || receipt["source_evidence_id"] != evidence.ID.String() {
+		t.Fatalf("answered milestone lacks the observation receipt: %#v", receipt)
+	}
+	// The user can withdraw a confirmed chat observation like a direct one.
+	if _, err := repository.NewBodyStateRepository(f.db).WithdrawDirectObservation(context.Background(), f.owner, observation.ID,
+		model.AmendBodyObservationCommand{IdempotencyKey: uuid.NewString(), ExpectedRevision: 1}); err != nil {
+		t.Fatalf("confirmed chat observation cannot be withdrawn: %v", err)
+	}
+}
+
+func TestSuggestionObservationRejectWritesNothingPostgres(t *testing.T) {
+	f := newResumeFixture(t)
+	boundKindSuggestionResumeFixture(t, f, "observation", 0, map[string]any{"observation_kind": "synthetic_note"})
+	resumes := f.resumes.WithBodyStateSuggestions(suggestionBodyState(f))
+	// Another kind's confirming option is not a confirmation of this one.
+	if _, err := resumes.Claim(context.Background(), suggestionCommand(f, model.BodyStateSuggestionConfirmOption)); err == nil {
+		t.Fatal("a hypothesis option confirmed an observation")
+	}
+	if _, err := resumes.Claim(context.Background(), suggestionCommand(f, model.BodyStateSuggestionRejectOption)); err != nil {
+		t.Fatal(err)
+	}
+	resumeCount(t, f, "body_observations", 0)
+	resumeCount(t, f, "statement_evidence", 0)
+	resumeCount(t, f, "body_state_revisions", 0)
+}
+
+func recordSuggestionSymptomFact(t *testing.T, f resumeFixture) uuid.UUID {
+	t.Helper()
+	// The runtime commits a turn's facts while its Run streams, before the
+	// suggestion interrupt pauses it.
+	setRunStatus := func(status model.RunStatus) {
+		if err := f.db.Model(f.envelope.Run).Update("status", status).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	setRunStatus(model.RunStatusRunning)
+	defer setRunStatus(model.RunStatusWaitingUser)
+	commit, err := repository.NewBodyStateRepository(f.db).RecordRunFacts(context.Background(), f.owner, f.envelope.Run.ID, model.RecordBodyFactsCommand{
+		IdempotencyKey: uuid.NewString(), ExpectedRevision: 0,
+		Facts: []model.BodyFactInput{{Kind: "symptom", Statement: suggestionStatement, BodyRegionIDs: []string{},
+			Temporal: model.FactTemporal{Precision: "unknown"}, Details: []byte(`{"presence":"present"}`)}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []uuid.UUID
+	if err := json.Unmarshal(commit.FactIDs, &ids); err != nil || len(ids) != 1 {
+		t.Fatalf("fact receipt: %v %v", ids, err)
+	}
+	return ids[0]
+}
+
+func TestSuggestionEpisodeAcceptOrganizesTheCitedSymptomFactPostgres(t *testing.T) {
+	f := newResumeFixture(t)
+	factID := recordSuggestionSymptomFact(t, f)
+	command := boundKindSuggestionResumeFixture(t, f, "episode", 1, map[string]any{"symptom_type": "ambiguous"})
+	if command.Payload.FactID != factID.String() {
+		t.Fatalf("episode bound to %s, want the Go-resolved fact %s", command.Payload.FactID, factID)
+	}
+	claimed, err := f.resumes.WithBodyStateSuggestions(suggestionBodyState(f)).Claim(context.Background(), suggestionCommand(f, model.BodyStateSuggestionConfirmOptionFor("episode")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resumeCount(t, f, "symptom_episodes", 1)
+	resumeCount(t, f, "episode_fact_links", 1)
+	resumeCount(t, f, "body_state_revisions", 2)
+	var episode model.SymptomEpisode
+	if err := f.db.Where("user_id = ?", f.owner).Take(&episode).Error; err != nil {
+		t.Fatal(err)
+	}
+	if episode.SymptomType != "ambiguous" || episode.Laterality != "unknown" {
+		t.Fatalf("episode is not organized from the user's own words: %+v", episode)
+	}
+	receipt, present := answeredReceipt(t, claimed)
+	if !present || receipt["kind"] != "episode" || receipt["episode_id"] != episode.ID.String() || receipt["fact_id"] != factID.String() {
+		t.Fatalf("answered milestone lacks the episode receipt: %#v", receipt)
+	}
+	// The organized fact cannot be suggested as a new episode again.
+	if out, ok := bindSuggestion(t, f, runtimeKindSuggestion(f.envelope.UserMessage.ID, "episode", suggestionSpanStart, suggestionSpanEnd, 2, map[string]any{"symptom_type": "ambiguous"})); ok {
+		t.Fatalf("an organized fact was suggested again: %s", out)
+	}
+}
+
+func TestSuggestionEpisodeBinderAndCommitRejectUnboundFactsPostgres(t *testing.T) {
+	t.Run("no fact from the cited words", func(t *testing.T) {
+		f := newResumeFixture(t)
+		if out, ok := bindSuggestion(t, f, runtimeKindSuggestion(f.envelope.UserMessage.ID, "episode", suggestionSpanStart, suggestionSpanEnd, 0, map[string]any{"symptom_type": "ambiguous"})); ok ||
+			string(out) != model.BodyStateSuggestionUnverifiedQuestion {
+			t.Fatalf("episode without a committed fact was bound: %s", out)
+		}
+	})
+	t.Run("runtime-named fact", func(t *testing.T) {
+		f := newResumeFixture(t)
+		factID := recordSuggestionSymptomFact(t, f)
+		if _, ok := bindSuggestion(t, f, runtimeKindSuggestion(f.envelope.UserMessage.ID, "episode", suggestionSpanStart, suggestionSpanEnd, 1, map[string]any{"symptom_type": "ambiguous", "fact_id": factID.String()})); ok {
+			t.Fatal("a runtime-named fact was bound")
+		}
+	})
+	t.Run("fact withdrawn before confirmation", func(t *testing.T) {
+		f := newResumeFixture(t)
+		factID := recordSuggestionSymptomFact(t, f)
+		boundKindSuggestionResumeFixture(t, f, "episode", 1, map[string]any{"symptom_type": "ambiguous"})
+		if err := f.db.Exec("UPDATE body_facts SET assertion_status = 'withdrawn' WHERE user_id = ? AND id = ?", f.owner, factID).Error; err != nil {
+			t.Fatal(err)
+		}
+		_, err := f.resumes.WithBodyStateSuggestions(suggestionBodyState(f)).Claim(context.Background(), suggestionCommand(f, model.BodyStateSuggestionConfirmOptionFor("episode")))
+		if !errors.Is(err, model.ErrBodyStateSuggestionRejected) {
+			t.Fatalf("withdrawn fact not refused: %v", err)
+		}
+		resumeCount(t, f, "symptom_episodes", 0)
+		resumeCount(t, f, "interaction_resumes", 0)
 	})
 }
