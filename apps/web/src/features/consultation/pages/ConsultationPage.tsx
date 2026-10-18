@@ -208,15 +208,11 @@ export function ConsultationPage() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   const accountName = useAuthStore((state) => state.user?.email ?? "");
-  // The identity header shows the real account name so it is never a fabricated
-  // label; missing values stay blank rather than being invented.
+  // The identity header shows the Profile nickname, else the real account
+  // name, so it is never a fabricated label.
   const personIdentity = useMemo(
-    () => ({
-      nickname: accountName,
-      birth_date: profile?.birth_date,
-      gender: profile?.gender,
-    }),
-    [accountName, profile?.birth_date, profile?.gender],
+    () => ({ nickname: profile?.display_name || accountName }),
+    [accountName, profile?.display_name],
   );
   const handleWindowChange = useCallback(
     (window: BusinessWindowId | null) => {

@@ -485,7 +485,7 @@ describe("body-first business windows", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the Person window with five categories and a compact identity popover", async () => {
+  it("opens the Person window with five categories and the identity popover", async () => {
     renderPage();
     await openDock("个人档案");
     const person = await screen.findByTestId("person-window");
@@ -500,11 +500,14 @@ describe("body-first business windows", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "synthetic@example.test" }),
     );
-    const popover = await screen.findByRole("dialog", { name: "基础资料" });
-    expect(popover.textContent).toContain("BMI —");
-    expect(
-      screen.getByRole("button", { name: "编辑基础资料" }),
-    ).toBeInTheDocument();
+    const popover = await screen.findByRole("dialog", { name: "个人资料" });
+    // Minimal optional Profile only: no body measurements and no revision.
+    expect(popover.textContent).not.toContain("BMI");
+    expect(popover.textContent).toContain("资料缺失不会由 AI 猜测补全");
+    expect(screen.getByLabelText("昵称")).toHaveValue("");
+    expect(screen.getByLabelText("自报性别")).toHaveValue("");
+    expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   });
 
   it("shows a centred equipment empty state with a single add action", async () => {

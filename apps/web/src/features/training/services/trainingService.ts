@@ -1,3 +1,5 @@
+import { effectiveTimeZone } from "@/features/profile/model/profilePreferences";
+import { useProfileStore } from "@/stores/profileStore";
 import {
   acceptPlanProposal,
   finishTrainingSession,
@@ -99,9 +101,14 @@ export function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
 
-/** The user's IANA zone; the server fixes the training date from it. */
+/**
+ * The user's IANA zone for a new session: the Profile time-zone preference,
+ * else the device zone. The server pins the training date from it at start,
+ * so changing the preference later never moves an existing training day.
+ */
 export function userTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return effectiveTimeZone(useProfileStore.getState().profile?.preferences)
+    .zone;
 }
 
 export function newPlanDecisionIdentity(): PlanDecisionIdentity {

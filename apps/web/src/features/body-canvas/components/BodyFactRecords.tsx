@@ -7,6 +7,11 @@ import {
 } from "@/features/profile/services/bodyFactRecordsService";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
+import {
+  effectiveTimeZone,
+  formatInstantInZone,
+} from "@/features/profile/model/profilePreferences";
 import { BodyFactAmendment } from "./BodyFactAmendment";
 
 import {
@@ -19,9 +24,9 @@ import { projectBoundedBodyFactVM } from "../model/bodyFactV2Adapter";
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
 
-function recordedTime(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "记录时间未知" : date.toLocaleString();
+/** Recorded instant on the preferred display clock; the instant is unchanged. */
+function recordedTime(value: string, zone: string): string {
+  return formatInstantInZone(value, zone) ?? "记录时间未知";
 }
 
 /** One live, user-scoped ledger surface; Habits is a filtered view, not a new owner. */
@@ -33,6 +38,9 @@ export function BodyFactRecords({
   canEdit: boolean;
 }) {
   const owner = useAuthStore((state) => state.user?.id);
+  const displayZone = effectiveTimeZone(
+    useProfileStore((state) => state.profile?.preferences),
+  ).zone;
   const ownerRef = useRef(owner);
   ownerRef.current = owner;
   const queryClient = useQueryClient();
@@ -383,7 +391,7 @@ export function BodyFactRecords({
               <p className="bc-record-statement">{statementText}</p>
               <p className="bc-window-note">发生时间：{occurrence}</p>
               <time className="bc-window-note" dateTime={recordedAt}>
-                记录于 {recordedTime(recordedAt)}
+                记录于 {recordedTime(recordedAt, displayZone)}
               </time>
               {isCorrection ? (
                 <span className="bc-window-note">更正后的陈述</span>

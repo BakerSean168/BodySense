@@ -29,12 +29,7 @@ import {
   type ProfileUploadLike,
 } from "../model/profileCategories";
 import { usePersonWindowData } from "../hooks/usePersonWindowData";
-import {
-  computeBmi,
-  formatCompactDate,
-  formatGender,
-  formatMetricValue,
-} from "../model/businessWindows";
+import { PersonIdentityPopover } from "./PersonIdentityPopover";
 
 /**
  * Person/Profile business window.
@@ -43,9 +38,9 @@ import {
  * `PROFILE_TAB_CONTENT_SIMPLIFICATION`):
  * - slim header: avatar + nickname on the left, Close on the right; no caret,
  *   no header edit action, no duplicate title, no body-status card;
- * - clicking avatar/nickname opens a compact value-only info popover
- *   (Desktop 348x184, Mobile 340x184) with no repeated avatar/name and no
- *   field labels; outside click closes it;
+ * - clicking avatar/nickname opens the Identity popover (minimal optional
+ *   Profile: nickname, birth date + self-reported gender, display time zone +
+ *   units); outside click closes it;
  * - exactly five category tabs; the tab label is the only place the category
  *   name appears — no duplicate H1 and no generic explanation beneath it;
  * - Equipment empty state is a single centred sentence + add action; added
@@ -53,17 +48,13 @@ import {
  *   fixed slot count.
  */
 
-/** Stable identity, supplied by the profile store. Never invented. */
+/** Header identity: the Profile nickname, else the account name. Never invented. */
 export interface PersonProfileIdentity {
   nickname: string;
-  birth_date?: string;
-  gender?: string;
 }
 
 export interface PersonWindowProps {
-  identity: PersonProfileIdentity;
   canEdit: boolean;
-  onEditProfile: () => void;
   /** Popover state is owned by the header that renders the identity trigger. */
   identityInfoOpen: boolean;
   onIdentityInfoOpenChange: (open: boolean) => void;
@@ -111,87 +102,6 @@ export function PersonIdentityTrigger({
       </span>
       <span className="bc-person-name">{displayName}</span>
     </button>
-  );
-}
-
-function CompactIdentityPopover({
-  identity,
-  metrics,
-  onEditProfile,
-  onClose,
-}: {
-  identity: PersonProfileIdentity;
-  metrics: {
-    height?: { value: number; unit: string } | null;
-    weight?: { value: number; unit: string } | null;
-    bmi?: number | null;
-  } | null;
-  onEditProfile: () => void;
-  onClose: () => void;
-}) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const bmi = computeBmi({
-    height: metrics?.height ?? undefined,
-    weight: metrics?.weight ?? undefined,
-    bmi: metrics?.bmi ?? undefined,
-  });
-
-  // Outside click closes, matching the prototype behaviour. Escape is handled by
-  // the window-level handler so the popover never traps focus.
-  useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) return;
-      if (panelRef.current?.contains(event.target)) return;
-      if (
-        event.target instanceof HTMLElement &&
-        event.target.closest(".bc-person-identity")
-      ) {
-        return;
-      }
-      onClose();
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [onClose]);
-
-  const height = metrics?.height ?? null;
-  const weight = metrics?.weight ?? null;
-  const heightText = height
-    ? formatMetricValue(height.value, height.unit || "cm", {
-        digits: height.unit === "m" ? 2 : 0,
-      })
-    : "— cm";
-  const weightText = weight
-    ? formatMetricValue(weight.value, weight.unit || "kg", { digits: 1 })
-    : "— kg";
-
-  return (
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-label="基础资料"
-      className="bc-person-popover"
-    >
-      <p className="bc-person-popover-value">
-        {formatCompactDate(identity.birth_date)} ·{" "}
-        {formatGender(identity.gender)}
-      </p>
-      <p className="bc-person-popover-value">
-        {heightText} · {weightText} · BMI {bmi === null ? "—" : bmi.toFixed(1)}
-      </p>
-      <p className="bc-person-popover-hint">
-        {identity.birth_date || height || weight
-          ? "以上为已记录的基础资料"
-          : "还没有基础资料"}
-      </p>
-      <button
-        type="button"
-        className="bc-person-popover-action"
-        onClick={onEditProfile}
-      >
-        编辑基础资料
-      </button>
-    </div>
   );
 }
 
@@ -551,9 +461,7 @@ function UploadsCategory({
 }
 
 export function PersonWindow({
-  identity,
   canEdit,
-  onEditProfile,
   identityInfoOpen: infoOpen,
   onIdentityInfoOpenChange,
 }: PersonWindowProps) {
@@ -579,12 +487,7 @@ export function PersonWindow({
       data-mobile={mobile ? "true" : "false"}
     >
       {infoOpen ? (
-        <CompactIdentityPopover
-          identity={identity}
-          metrics={data.metrics}
-          onEditProfile={onEditProfile}
-          onClose={() => setInfoOpen(false)}
-        />
+        <PersonIdentityPopover onClose={() => setInfoOpen(false)} />
       ) : null}
 
       <nav className="bc-person-tabs" aria-label="档案分类">
