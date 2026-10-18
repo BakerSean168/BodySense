@@ -83,6 +83,9 @@ import {
   TrainingPlanRevisionRecord,
   TrainingPlanStatusReceipt,
   TrainingProgress,
+  TrainingSessionListResponse,
+  TrainingSessionRecord,
+  TrainingSetActionRecord,
   UploadListResponse,
   UserProfileResponse,
   UserUpload
@@ -138,6 +141,7 @@ import type {
   DocumentIndicatorReviewRecordOutput,
   EquipmentAssetListOutput,
   EquipmentAssetOutput,
+  FinishTrainingSessionRequest,
   GeneratePlanProposalRequest,
   HealthDocumentReviewContextOutput,
   HealthDocumentReviewListResponseOutput,
@@ -164,6 +168,7 @@ import type {
   ListOutcomesParams,
   ListPlanProposalRecordsParams,
   ListRunEventsParams,
+  ListTrainingSessionsParams,
   LogoutAcknowledgementOutput,
   NativeDiagnosisDecisionReceiptOutput,
   NativeDiagnosisDecisionRequest,
@@ -191,6 +196,7 @@ import type {
   RecordBodyHypothesisRequest,
   RecordBodyObservationRequest,
   RecordOutcomeRequest,
+  RecordTrainingSetActionRequest,
   RegisterKnowledgeSourceRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
@@ -198,6 +204,7 @@ import type {
   SafetyResolutionOutput,
   SafetyRestrictionListOutput,
   StartConsultationRunRequest,
+  StartTrainingSessionRequest,
   TrainingCheckInResponseOutput,
   TrainingFeedbackResultOutput,
   TrainingLogOutput,
@@ -212,6 +219,9 @@ import type {
   TrainingPlanStatusReceiptOutput,
   TrainingProgressOutput,
   TrainingReassessmentRequest,
+  TrainingSessionListResponseOutput,
+  TrainingSessionRecordOutput,
+  TrainingSetActionRecordOutput,
   UpdateBodyMetricsRequest,
   UpdateEquipmentAssetRequest,
   UpdateInjuryHistoryRequest,
@@ -4356,6 +4366,255 @@ const res = await (fetchFn ?? fetch)(getRejectPlanProposalUrl(proposalId),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? PlanRejectionReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListTrainingSessionsUrl = (params?: ListTrainingSessionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/training-sessions?${stringifiedParams}` : `/api/v1/training-sessions`
+}
+
+/**
+ * @summary List the authenticated user's newest Trainer sessions (at most 50) with their set receipts.
+ */
+export const listTrainingSessions = async (params?: ListTrainingSessionsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListTrainingSessionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionListResponse, status?: number} = new globalThis.Error();
+    const data : TrainingSessionListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getStartTrainingSessionUrl = () => {
+
+
+
+
+  return `/api/v1/training-sessions`
+}
+
+/**
+ * The session pins the plan's current accepted revision, the template and the user's IANA timezone; its trainingDate is the local date at start and never changes. Go re-evaluates the TrainerGate inside the command against exactly expectedSafetyRevision (the gate the user was shown); another current Safety revision is SAFETY_STALE and a non-permitting gate is TRAINER_GATE_BLOCKED, and nothing is written. One session per user may be in progress. An exact idempotent retry returns the original session.
+ * @summary Start one template of an owned active TrainingPlan as the authenticated user's explicit command.
+ */
+export const startTrainingSession = async (startTrainingSessionRequest: StartTrainingSessionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getStartTrainingSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(startTrainingSessionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}`
+}
+
+/**
+ * @summary Get one owned Trainer session with its set receipts; another owner's id is not found.
+ */
+export const getTrainingSession = async (sessionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordTrainingSetActionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}/set-actions`
+}
+
+/**
+ * Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. A set holds at most one action; a duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records a set.
+ * @summary Record one set the authenticated user explicitly marked performed or skipped.
+ */
+export const recordTrainingSetAction = async (sessionId: string,
+    recordTrainingSetActionRequest: RecordTrainingSetActionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSetActionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordTrainingSetActionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordTrainingSetActionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSetActionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSetActionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSetActionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getFinishTrainingSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}/finish`
+}
+
+/**
+ * Ending is never gated, never marks remaining sets and is final. An exact idempotent retry returns the ended session.
+ * @summary End one owned in-progress session as finished or stopped early, by the user's explicit command.
+ */
+export const finishTrainingSession = async (sessionId: string,
+    finishTrainingSessionRequest: FinishTrainingSessionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getFinishTrainingSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(finishTrainingSessionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
   return data
 }
 

@@ -55,6 +55,7 @@ type PublicServer struct {
 	planGenerator              planGenerationApplication
 	training                   trainingApplication
 	trainingPlans              trainingPlanApplication
+	trainerSessions            trainerSessionApplication
 	uploads                    uploadApplication
 	healthDocumentReviews      healthDocumentReviewApplication
 	knowledgeSources           knowledgeSourceApplication

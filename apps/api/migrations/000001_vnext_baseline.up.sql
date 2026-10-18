@@ -4725,6 +4725,94 @@ $$;
 CREATE TRIGGER training_plan_status_events_immutable BEFORE UPDATE ON public.training_plan_status_events
     FOR EACH ROW EXECUTE FUNCTION public.prevent_training_status_event_update();
 
+-- TP-003 slice 1: Trainer runtime. A session pins one accepted plan revision
+-- and template plus the user's IANA timezone snapshot; its training date is
+-- the local date at start and never changes (TP-D6). Every set action is an
+-- explicit user command with an idempotency key, the expected session revision
+-- and the exact Safety revision the Go TrainerGate admitted it at: the row is
+-- the receipt. Actions are append-only; a session changes only by advancing
+-- its revision while in progress and by being ended once.
+CREATE TABLE public.training_sessions (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    plan_id uuid NOT NULL,
+    plan_revision_id uuid NOT NULL,
+    template_id text NOT NULL CHECK (length(template_id) BETWEEN 1 AND 256),
+    time_zone text NOT NULL CHECK (length(time_zone) BETWEEN 1 AND 64 AND time_zone = btrim(time_zone) AND time_zone <> 'Local'),
+    training_date date NOT NULL,
+    state text NOT NULL CHECK (state IN ('in_progress','ended')),
+    ended_reason text CHECK (ended_reason IN ('finished','stopped_early')),
+    revision bigint NOT NULL CHECK (revision >= 0),
+    started_at timestamptz NOT NULL,
+    ended_at timestamptz,
+    start_idempotency_key text NOT NULL CHECK (length(start_idempotency_key) BETWEEN 1 AND 128 AND start_idempotency_key = btrim(start_idempotency_key)),
+    start_request_fingerprint text NOT NULL CHECK (start_request_fingerprint ~ '^[0-9a-f]{64}$'),
+    start_safety_revision bigint NOT NULL CHECK (start_safety_revision > 0),
+    start_gate_result text NOT NULL CHECK (start_gate_result IN ('allow','warn')),
+    start_gate_policy_revision text NOT NULL CHECK (length(start_gate_policy_revision) BETWEEN 1 AND 64),
+    finish_idempotency_key text CHECK (length(finish_idempotency_key) BETWEEN 1 AND 128 AND finish_idempotency_key = btrim(finish_idempotency_key)),
+    finish_request_fingerprint text CHECK (finish_request_fingerprint ~ '^[0-9a-f]{64}$'),
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, start_idempotency_key),
+    UNIQUE (user_id, finish_idempotency_key),
+    CHECK ((state = 'in_progress' AND ended_reason IS NULL AND ended_at IS NULL AND finish_idempotency_key IS NULL AND finish_request_fingerprint IS NULL)
+        OR (state = 'ended' AND ended_reason IS NOT NULL AND ended_at IS NOT NULL AND finish_idempotency_key IS NOT NULL AND finish_request_fingerprint IS NOT NULL)),
+    CHECK (ended_at IS NULL OR ended_at >= started_at),
+    FOREIGN KEY (user_id, plan_id, plan_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id) ON DELETE CASCADE
+);
+-- One user has at most one session in progress.
+CREATE UNIQUE INDEX training_sessions_one_in_progress ON public.training_sessions (user_id) WHERE state = 'in_progress';
+CREATE INDEX idx_training_sessions_user_started ON public.training_sessions (user_id, started_at DESC, id);
+CREATE FUNCTION public.prevent_training_session_rewrite() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.state <> 'in_progress' THEN
+        RAISE EXCEPTION 'ended training sessions are immutable';
+    END IF;
+    IF (NEW.id, NEW.user_id, NEW.plan_id, NEW.plan_revision_id, NEW.template_id, NEW.time_zone,
+        NEW.training_date, NEW.started_at, NEW.start_idempotency_key, NEW.start_request_fingerprint,
+        NEW.start_safety_revision, NEW.start_gate_result, NEW.start_gate_policy_revision)
+       IS DISTINCT FROM
+       (OLD.id, OLD.user_id, OLD.plan_id, OLD.plan_revision_id, OLD.template_id, OLD.time_zone,
+        OLD.training_date, OLD.started_at, OLD.start_idempotency_key, OLD.start_request_fingerprint,
+        OLD.start_safety_revision, OLD.start_gate_result, OLD.start_gate_policy_revision)
+       OR NEW.revision <> OLD.revision + 1 THEN
+        RAISE EXCEPTION 'training session start receipt is immutable and its revision only advances by one';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER training_sessions_append_only BEFORE UPDATE ON public.training_sessions
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_session_rewrite();
+
+CREATE TABLE public.training_set_actions (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    session_id uuid NOT NULL,
+    plan_exercise_id text NOT NULL CHECK (length(plan_exercise_id) BETWEEN 1 AND 256),
+    exercise_id text NOT NULL CHECK (length(exercise_id) BETWEEN 1 AND 256),
+    set_number integer NOT NULL CHECK (set_number >= 1),
+    kind text NOT NULL CHECK (kind IN ('performed','skipped')),
+    session_revision bigint NOT NULL CHECK (session_revision > 0),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    safety_revision bigint NOT NULL CHECK (safety_revision > 0),
+    gate_result text NOT NULL CHECK (gate_result IN ('allow','warn')),
+    gate_policy_revision text NOT NULL CHECK (length(gate_policy_revision) BETWEEN 1 AND 64),
+    recorded_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, session_id, session_revision),
+    UNIQUE (user_id, session_id, plan_exercise_id, set_number),
+    FOREIGN KEY (user_id, session_id) REFERENCES public.training_sessions(user_id, id) ON DELETE CASCADE
+);
+CREATE FUNCTION public.prevent_training_set_action_update() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'training set actions are immutable receipts';
+END;
+$$;
+CREATE TRIGGER training_set_actions_immutable BEFORE UPDATE ON public.training_set_actions
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_set_action_update();
+
 
 -- DX-002 atomic settlement: one immutable whole-run outcome.
 ALTER TABLE public.diagnosis_revisions ADD CONSTRAINT diagnosis_revision_settlement_identity

@@ -31953,6 +31953,2086 @@
           "event": []
         },
         {
+          "id": "6d1651ad-3869-5c8d-a5b2-bb5c0ca56ff8",
+          "name": "training-sessions",
+          "item": [
+            {
+              "id": "34077b45-9da8-5d9a-9c1a-93c31245c596",
+              "name": "List the authenticated user's newest Trainer sessions (at most 50) with their set receipts.",
+              "request": {
+                "name": "List the authenticated user's newest Trainer sessions (at most 50) with their set receipts.",
+                "description": {},
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "training-sessions"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "disabled": false,
+                      "key": "state",
+                      "value": "<string>"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{bearerToken}}"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "id": "9b34ae37-1da4-5bfa-ac70-4c70848d2da1",
+                  "name": "Owned sessions newest first",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [
+                        {
+                          "key": "state",
+                          "value": "ended"
+                        }
+                      ],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "body": {}
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"sessions\": [\n    {\n      \"sessionId\": \"f2b6395c-2595-d7b2-f8ce-c2d865886478\",\n      \"planId\": \"1f3c48ef-bc8c-3067-71b7-10af3bc6e136\",\n      \"planRevisionId\": \"fa18fb67-e63d-cd3b-6685-12d61d5f4348\",\n      \"templateId\": \"string\",\n      \"timeZone\": \"string\",\n      \"trainingDate\": \"1980-11-01\",\n      \"state\": \"ended\",\n      \"revision\": 5090,\n      \"startedAt\": \"1971-08-14T06:18:34.152Z\",\n      \"startGate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"actions\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"endedReason\": \"stopped_early\",\n      \"endedAt\": \"1977-10-26T03:05:59.314Z\"\n    },\n    {\n      \"sessionId\": \"154b0ec8-f338-684f-cf95-a37f2deeb1b2\",\n      \"planId\": \"52474b28-b288-424a-1d0e-dba11afcb69b\",\n      \"planRevisionId\": \"758ad92c-55e3-c862-aa9c-c80e202eccf6\",\n      \"templateId\": \"string\",\n      \"timeZone\": \"string\",\n      \"trainingDate\": \"1963-09-25\",\n      \"state\": \"ended\",\n      \"revision\": 9363,\n      \"startedAt\": \"1974-11-23T16:04:52.539Z\",\n      \"startGate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"actions\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"endedReason\": \"finished\",\n      \"endedAt\": \"1963-05-22T06:01:24.902Z\"\n    }\n  ]\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "52ee8e25-51a0-54f2-8827-919046b1c5af",
+                  "name": "Request body or BodyState fact is invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [
+                        {
+                          "key": "state",
+                          "value": "ended"
+                        }
+                      ],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "body": {}
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "9047561c-5d73-5726-87cd-1a0205f69c4b",
+                  "name": "Authentication is missing or invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [
+                        {
+                          "key": "state",
+                          "value": "ended"
+                        }
+                      ],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "body": {}
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "70973911-f64c-5216-80ef-8dc9ac1c1225",
+                  "name": "Unexpected server failure.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [
+                        {
+                          "key": "state",
+                          "value": "ended"
+                        }
+                      ],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "body": {}
+                  },
+                  "status": "Internal Server Error",
+                  "code": 500,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "ff68cf17-ae02-5a13-a192-ad3b75cd5784",
+                  "name": "Required application capability is temporarily unavailable.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [
+                        {
+                          "key": "state",
+                          "value": "ended"
+                        }
+                      ],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "body": {}
+                  },
+                  "status": "Service Unavailable",
+                  "code": 503,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                }
+              ],
+              "event": [],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              }
+            },
+            {
+              "id": "2c0b965b-feb2-5555-8de9-4bfc72b1ced7",
+              "name": "Start one template of an owned active TrainingPlan as the authenticated user's explicit command.",
+              "request": {
+                "name": "Start one template of an owned active TrainingPlan as the authenticated user's explicit command.",
+                "description": {
+                  "content": "The session pins the plan's current accepted revision, the template and the user's IANA timezone; its trainingDate is the local date at start and never changes. Go re-evaluates the TrainerGate inside the command against exactly expectedSafetyRevision (the gate the user was shown); another current Safety revision is SAFETY_STALE and a non-permitting gate is TRAINER_GATE_BLOCKED, and nothing is written. One session per user may be in progress. An exact idempotent retry returns the original session.",
+                  "type": "text/plain"
+                },
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "training-sessions"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{bearerToken}}"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"<string>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "id": "229bd0ad-757e-5151-a4fd-1e08d518c4ec",
+                  "name": "Started session (its start receipt)",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"sessionId\": \"be14b096-0d86-b948-20ce-e6281d7feb5b\",\n  \"planId\": \"50d897a9-e774-021c-e07f-71e1cc527f4d\",\n  \"planRevisionId\": \"4a26bae9-3654-80b4-ccdf-6fe84628bc40\",\n  \"templateId\": \"string\",\n  \"timeZone\": \"string\",\n  \"trainingDate\": \"1953-05-14\",\n  \"state\": \"in_progress\",\n  \"revision\": 8244,\n  \"startedAt\": \"1949-01-12T02:44:48.050Z\",\n  \"startGate\": {\n    \"result\": \"allow\",\n    \"safetyRevision\": 6169,\n    \"policyRevision\": \"string\"\n  },\n  \"actions\": [\n    {\n      \"actionId\": \"d61b374e-02f6-5b7a-0c38-af53551273af\",\n      \"sessionId\": \"9f7f279c-448e-81fa-953a-00044ce2cea2\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 8240,\n      \"kind\": \"performed\",\n      \"sessionRevision\": 2519,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"2002-08-24T05:36:23.764Z\"\n    },\n    {\n      \"actionId\": \"8af20450-aaa7-4eaa-823b-e3206213f026\",\n      \"sessionId\": \"fbc95120-f4c4-cb2d-e5a1-4e2e99e6b3ba\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 2889,\n      \"kind\": \"skipped\",\n      \"sessionRevision\": 8285,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"1954-09-06T05:49:43.414Z\"\n    }\n  ],\n  \"endedReason\": \"finished\",\n  \"endedAt\": \"1975-11-04T02:19:29.454Z\"\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "6a172d39-b4fc-53cc-8257-ebbc6a48a305",
+                  "name": "Request body or BodyState fact is invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "f77e681e-aacc-569e-9e23-78fa1157b029",
+                  "name": "Authentication is missing or invalid.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "e68ec865-ce9a-50c5-9886-7535e0fa3bd6",
+                  "name": "Referenced BodyState item does not exist.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "02f5714a-cad4-5361-90a8-109bef2b140a",
+                  "name": "Requested operation conflicts with the durable resource state.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Conflict",
+                  "code": 409,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "ede98bac-5c5f-5146-b6a3-04e0bbbe9e70",
+                  "name": "Unexpected server failure.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Internal Server Error",
+                  "code": 500,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                },
+                {
+                  "id": "001617d4-c390-53c6-9591-55f5ec5a20cc",
+                  "name": "Required application capability is temporarily unavailable.",
+                  "originalRequest": {
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "description": {
+                          "content": "Added as a part of security scheme: bearer",
+                          "type": "text/plain"
+                        },
+                        "key": "Authorization",
+                        "value": "Bearer <token>"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planId\": \"<uuid>\",\n  \"expectedPlanRevisionId\": \"<uuid>\",\n  \"templateId\": \"<string>\",\n  \"timeZone\": \"<string>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"{iVL{Wvtm\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Service Unavailable",
+                  "code": 503,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                  "cookie": [],
+                  "_postman_previewlanguage": "json"
+                }
+              ],
+              "event": [],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              }
+            },
+            {
+              "id": "055e8ce7-7a93-57bd-8d53-28050f4e18b0",
+              "name": "{sessionId}",
+              "item": [
+                {
+                  "id": "5f62e834-e8a4-5f27-b63c-0711623e7eb8",
+                  "name": "Get one owned Trainer session with its set receipts; another owner's id is not found.",
+                  "request": {
+                    "name": "Get one owned Trainer session with its set receipts; another owner's id is not found.",
+                    "description": {},
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions",
+                        ":sessionId"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "sessionId",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "GET",
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{bearerToken}}"
+                        }
+                      ]
+                    }
+                  },
+                  "response": [
+                    {
+                      "id": "5e809404-37d3-5ae6-9ac7-a9fcd4a3af16",
+                      "name": "Owned session",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"sessionId\": \"be14b096-0d86-b948-20ce-e6281d7feb5b\",\n  \"planId\": \"50d897a9-e774-021c-e07f-71e1cc527f4d\",\n  \"planRevisionId\": \"4a26bae9-3654-80b4-ccdf-6fe84628bc40\",\n  \"templateId\": \"string\",\n  \"timeZone\": \"string\",\n  \"trainingDate\": \"1953-05-14\",\n  \"state\": \"in_progress\",\n  \"revision\": 8244,\n  \"startedAt\": \"1949-01-12T02:44:48.050Z\",\n  \"startGate\": {\n    \"result\": \"allow\",\n    \"safetyRevision\": 6169,\n    \"policyRevision\": \"string\"\n  },\n  \"actions\": [\n    {\n      \"actionId\": \"d61b374e-02f6-5b7a-0c38-af53551273af\",\n      \"sessionId\": \"9f7f279c-448e-81fa-953a-00044ce2cea2\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 8240,\n      \"kind\": \"performed\",\n      \"sessionRevision\": 2519,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"2002-08-24T05:36:23.764Z\"\n    },\n    {\n      \"actionId\": \"8af20450-aaa7-4eaa-823b-e3206213f026\",\n      \"sessionId\": \"fbc95120-f4c4-cb2d-e5a1-4e2e99e6b3ba\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 2889,\n      \"kind\": \"skipped\",\n      \"sessionRevision\": 8285,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"1954-09-06T05:49:43.414Z\"\n    }\n  ],\n  \"endedReason\": \"finished\",\n  \"endedAt\": \"1975-11-04T02:19:29.454Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "004797ec-cadd-53f5-8314-1748d48cc9bf",
+                      "name": "Authentication is missing or invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "a64b9540-eb44-5bf9-a25e-e680bc7e12ec",
+                      "name": "Referenced BodyState item does not exist.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "4b683aed-6384-5cf7-8248-914dde58b3c3",
+                      "name": "Unexpected server failure.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Internal Server Error",
+                      "code": 500,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "dae29c08-4b45-5ed1-b4b3-241ff8acdbfd",
+                      "name": "Required application capability is temporarily unavailable.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {}
+                      },
+                      "status": "Service Unavailable",
+                      "code": 503,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ],
+                  "event": [],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  }
+                },
+                {
+                  "id": "0bc8e1f7-6e27-53e4-bf9b-8a22f1bb0785",
+                  "name": "Record one set the authenticated user explicitly marked performed or skipped.",
+                  "request": {
+                    "name": "Record one set the authenticated user explicitly marked performed or skipped.",
+                    "description": {
+                      "content": "Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. A set holds at most one action; a duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records a set.",
+                      "type": "text/plain"
+                    },
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions",
+                        ":sessionId",
+                        "set-actions"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "sessionId",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{bearerToken}}"
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "id": "0979bc55-8f7a-5fdb-aff9-71e0cc8ee0b1",
+                      "name": "Set action receipt",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"actionId\": \"8c345e36-b63d-f652-c95d-c68c9c4506d8\",\n  \"sessionId\": \"624dfe5f-b969-07bf-f2cc-5b126c910429\",\n  \"planExerciseId\": \"string\",\n  \"exerciseId\": \"string\",\n  \"setNumber\": 9744,\n  \"kind\": \"skipped\",\n  \"sessionRevision\": 1439,\n  \"gate\": {\n    \"result\": \"warn\",\n    \"safetyRevision\": 9603,\n    \"policyRevision\": \"string\"\n  },\n  \"idempotencyKey\": \"string\",\n  \"recordedAt\": \"1964-07-31T23:44:30.240Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "98687abf-e5fe-56ee-8dcd-f56203784c7c",
+                      "name": "Request body or BodyState fact is invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Bad Request",
+                      "code": 400,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "d3fae846-a235-5a7b-a99a-f8c06503a762",
+                      "name": "Authentication is missing or invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "f8edc5de-b529-5efc-83cb-a336a2cd7f1f",
+                      "name": "Referenced BodyState item does not exist.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "e507e123-a474-5bcf-af4e-4394c2b6093a",
+                      "name": "Requested operation conflicts with the durable resource state.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Conflict",
+                      "code": 409,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "a867fd5c-fdd9-5b28-80d0-9bdc799c807e",
+                      "name": "Unexpected server failure.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Internal Server Error",
+                      "code": 500,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "89096ba2-4149-5107-b533-42a09af9309a",
+                      "name": "Required application capability is temporarily unavailable.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "set-actions"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"planExerciseId\": \"<string>\",\n  \"setNumber\": \"<integer>\",\n  \"kind\": \"performed\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"expectedSafetyRevision\": \"<long>\",\n  \"idempotencyKey\": \"8\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Service Unavailable",
+                      "code": 503,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ],
+                  "event": [],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  }
+                },
+                {
+                  "id": "95511008-41de-5fdb-9b43-6a75cbe8fe25",
+                  "name": "End one owned in-progress session as finished or stopped early, by the user's explicit command.",
+                  "request": {
+                    "name": "End one owned in-progress session as finished or stopped early, by the user's explicit command.",
+                    "description": {
+                      "content": "Ending is never gated, never marks remaining sets and is final. An exact idempotent retry returns the ended session.",
+                      "type": "text/plain"
+                    },
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "training-sessions",
+                        ":sessionId",
+                        "finish"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": [
+                        {
+                          "disabled": false,
+                          "type": "any",
+                          "value": "<uuid>",
+                          "key": "sessionId",
+                          "description": "(Required) "
+                        }
+                      ]
+                    },
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "method": "POST",
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{bearerToken}}"
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"<string>\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "id": "64476603-98f1-58cc-8f34-2405a6fa186f",
+                      "name": "Ended session",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"sessionId\": \"be14b096-0d86-b948-20ce-e6281d7feb5b\",\n  \"planId\": \"50d897a9-e774-021c-e07f-71e1cc527f4d\",\n  \"planRevisionId\": \"4a26bae9-3654-80b4-ccdf-6fe84628bc40\",\n  \"templateId\": \"string\",\n  \"timeZone\": \"string\",\n  \"trainingDate\": \"1953-05-14\",\n  \"state\": \"in_progress\",\n  \"revision\": 8244,\n  \"startedAt\": \"1949-01-12T02:44:48.050Z\",\n  \"startGate\": {\n    \"result\": \"allow\",\n    \"safetyRevision\": 6169,\n    \"policyRevision\": \"string\"\n  },\n  \"actions\": [\n    {\n      \"actionId\": \"d61b374e-02f6-5b7a-0c38-af53551273af\",\n      \"sessionId\": \"9f7f279c-448e-81fa-953a-00044ce2cea2\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 8240,\n      \"kind\": \"performed\",\n      \"sessionRevision\": 2519,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"2002-08-24T05:36:23.764Z\"\n    },\n    {\n      \"actionId\": \"8af20450-aaa7-4eaa-823b-e3206213f026\",\n      \"sessionId\": \"fbc95120-f4c4-cb2d-e5a1-4e2e99e6b3ba\",\n      \"planExerciseId\": \"string\",\n      \"exerciseId\": \"string\",\n      \"setNumber\": 2889,\n      \"kind\": \"skipped\",\n      \"sessionRevision\": 8285,\n      \"gate\": {\n        \"result\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"safetyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"policyRevision\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"idempotencyKey\": \"string\",\n      \"recordedAt\": \"1954-09-06T05:49:43.414Z\"\n    }\n  ],\n  \"endedReason\": \"finished\",\n  \"endedAt\": \"1975-11-04T02:19:29.454Z\"\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "0641d11b-42c4-53ad-bc81-f24f5995087f",
+                      "name": "Request body or BodyState fact is invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Bad Request",
+                      "code": 400,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "6765c3bb-f546-5109-b6da-ccadcf26f498",
+                      "name": "Authentication is missing or invalid.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Unauthorized",
+                      "code": 401,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "8d35ea76-8f87-5fa2-a48d-0ca181af18ff",
+                      "name": "Referenced BodyState item does not exist.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "45ce72f3-8a24-5cd3-9cb1-3704062dd253",
+                      "name": "Requested operation conflicts with the durable resource state.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Conflict",
+                      "code": 409,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "61626146-3442-5103-a401-9bf6d544a1d7",
+                      "name": "Unexpected server failure.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Internal Server Error",
+                      "code": 500,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    },
+                    {
+                      "id": "f577d75e-b5fe-5b59-b073-8c3a82159016",
+                      "name": "Required application capability is temporarily unavailable.",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "training-sessions",
+                            ":sessionId",
+                            "finish"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": [
+                            {
+                              "disabled": false,
+                              "type": "any",
+                              "value": "<uuid>",
+                              "key": "sessionId",
+                              "description": "(Required) "
+                            }
+                          ]
+                        },
+                        "header": [
+                          {
+                            "description": {
+                              "content": "Added as a part of security scheme: bearer",
+                              "type": "text/plain"
+                            },
+                            "key": "Authorization",
+                            "value": "Bearer <token>"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"endedReason\": \"<string>\",\n  \"expectedSessionRevision\": \"<long>\",\n  \"idempotencyKey\": \"kJg'PY\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Service Unavailable",
+                      "code": 503,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ],
+                  "event": [],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  }
+                }
+              ],
+              "event": []
+            }
+          ],
+          "event": []
+        },
+        {
           "id": "eea99c9f-26aa-5705-ab4b-eece65e4895c",
           "name": "Remove the private source of one owned asset (source removal, not erasure).",
           "request": {
@@ -32050,7 +34130,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"availability\": \"source_removed\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2013-12-28T22:14:32.609Z\"\n}",
+              "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2003-11-18T00:48:54.933Z\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
@@ -32345,7 +34425,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"id\": \"95ad7b23-ce4c-d865-8647-6a1f3c48efe7\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 586,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"pending\",\n  \"analysis_status\": \"processing\",\n  \"created_at\": \"2017-12-16T14:22:39.883Z\",\n  \"updated_at\": \"1974-04-01T12:03:43.565Z\",\n  \"ocr_result\": {\n    \"key_0\": false,\n    \"key_1\": 6974.635429214686\n  },\n  \"analysis_result\": {\n    \"key_0\": true,\n    \"key_1\": 3815.78502478078,\n    \"key_2\": false,\n    \"key_3\": true\n  }\n}",
+                  "body": "{\n  \"id\": \"611e0a2d-1c0a-d9be-1483-1d573a8084a6\",\n  \"file_type\": \"report\",\n  \"original_name\": \"string\",\n  \"file_size\": 8721,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"completed\",\n  \"analysis_status\": \"completed\",\n  \"created_at\": \"1968-11-12T04:25:30.909Z\",\n  \"updated_at\": \"1977-07-17T10:26:36.910Z\",\n  \"ocr_result\": {\n    \"key_0\": 9933.027976658195,\n    \"key_1\": \"string\",\n    \"key_2\": \"string\"\n  },\n  \"analysis_result\": {\n    \"key_0\": 8927\n  }\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -32633,7 +34713,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"61d5f434-026b-490c-86a4-b2ae356dc983\",\n      \"file_type\": \"consultation_photo\",\n      \"original_name\": \"string\",\n      \"file_size\": 2607,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"completed\",\n      \"created_at\": \"2007-10-28T01:50:48.355Z\",\n      \"updated_at\": \"1982-05-12T15:42:53.687Z\",\n      \"ocr_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": 9778.161393478513\n      },\n      \"analysis_result\": {\n        \"key_0\": true\n      }\n    },\n    {\n      \"id\": \"752474b2-db28-1424-81d0-9dba11afcb69\",\n      \"file_type\": \"photo_front\",\n      \"original_name\": \"string\",\n      \"file_size\": 6752,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"processing\",\n      \"analysis_status\": \"pending\",\n      \"created_at\": \"1955-03-05T00:09:54.729Z\",\n      \"updated_at\": \"2017-09-17T01:48:25.300Z\",\n      \"ocr_result\": {\n        \"key_0\": 6352,\n        \"key_1\": true\n      },\n      \"analysis_result\": {\n        \"key_0\": \"string\"\n      }\n    }\n  ]\n}",
+                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"37fca288-5bea-b7f7-4192-9d7b48b2d2ca\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 5050,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"pending\",\n      \"analysis_status\": \"failed\",\n      \"created_at\": \"2024-12-17T00:55:25.067Z\",\n      \"updated_at\": \"2023-08-18T21:04:16.954Z\",\n      \"ocr_result\": {\n        \"key_0\": 3340\n      },\n      \"analysis_result\": {\n        \"key_0\": 8096.287795342505,\n        \"key_1\": \"string\"\n      }\n    },\n    {\n      \"id\": \"d3b89277-f540-8940-7dc7-9b2a78c639e5\",\n      \"file_type\": \"photo_side\",\n      \"original_name\": \"string\",\n      \"file_size\": 7210,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"processing\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"1951-10-07T06:56:49.155Z\",\n      \"updated_at\": \"1951-09-27T08:08:02.769Z\",\n      \"ocr_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": 7101.779221557081\n      },\n      \"analysis_result\": {\n        \"key_0\": 3137,\n        \"key_1\": 6979,\n        \"key_2\": 4996.063618455082\n      }\n    }\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -32812,7 +34892,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"has_analysis\": false,\n  \"views\": [\n    {\n      \"upload_id\": \"e7c789e6-9340-d236-c816-ec079f7dbf31\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": 1213,\n        \"key_1\": 8770\n      },\n      \"created_at\": \"2005-07-04T07:46:44.019Z\"\n    },\n    {\n      \"upload_id\": \"080d863b-8620-e1e6-81d7-eb5be450d897\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": false\n      },\n      \"created_at\": \"1947-05-03T06:57:55.668Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
+                  "body": "{\n  \"has_analysis\": true,\n  \"views\": [\n    {\n      \"upload_id\": \"02af8010-cd24-8187-bef3-0724babe1109\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": false,\n        \"key_1\": 8562.770271673799,\n        \"key_2\": \"string\",\n        \"key_3\": \"string\"\n      },\n      \"created_at\": \"1997-08-03T21:07:08.415Z\"\n    },\n    {\n      \"upload_id\": \"de1ed0e5-cc1a-af32-4ad8-ae8c8a1049f3\",\n      \"view\": \"string\",\n      \"file_type\": \"string\",\n      \"analysis_status\": \"string\",\n      \"analysis\": {\n        \"key_0\": 6282\n      },\n      \"created_at\": \"1988-01-02T07:25:36.873Z\"\n    }\n  ],\n  \"findings\": [],\n  \"summaries\": [\n    \"string\",\n    \"string\"\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -33016,7 +35096,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"95ad7b23-ce4c-d865-8647-6a1f3c48efe7\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 586,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"pending\",\n  \"analysis_status\": \"processing\",\n  \"created_at\": \"2017-12-16T14:22:39.883Z\",\n  \"updated_at\": \"1974-04-01T12:03:43.565Z\",\n  \"ocr_result\": {\n    \"key_0\": false,\n    \"key_1\": 6974.635429214686\n  },\n  \"analysis_result\": {\n    \"key_0\": true,\n    \"key_1\": 3815.78502478078,\n    \"key_2\": false,\n    \"key_3\": true\n  }\n}",
+                      "body": "{\n  \"id\": \"611e0a2d-1c0a-d9be-1483-1d573a8084a6\",\n  \"file_type\": \"report\",\n  \"original_name\": \"string\",\n  \"file_size\": 8721,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"completed\",\n  \"analysis_status\": \"completed\",\n  \"created_at\": \"1968-11-12T04:25:30.909Z\",\n  \"updated_at\": \"1977-07-17T10:26:36.910Z\",\n  \"ocr_result\": {\n    \"key_0\": 9933.027976658195,\n    \"key_1\": \"string\",\n    \"key_2\": \"string\"\n  },\n  \"analysis_result\": {\n    \"key_0\": 8927\n  }\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33340,7 +35420,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"availability\": \"source_removed\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2013-12-28T22:14:32.609Z\"\n}",
+                      "body": "{\n  \"availability\": \"erased\",\n  \"message\": \"string\",\n  \"source_removed_at\": \"2003-11-18T00:48:54.933Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33609,7 +35689,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"extraction_run_id\": \"6bae92a3-4580-4bcc-f46f-84628bc40422\",\n  \"upload_id\": \"b4e46bda-347e-7e07-cc2d-1b374ebc02f6\",\n  \"source_availability\": \"source_unavailable\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 2011,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 535,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                      "body": "{\n  \"extraction_run_id\": \"09833d57-a1d0-5543-cd0a-b41ab8f58d0a\",\n  \"upload_id\": \"1d6db97b-296a-9aeb-5847-cbc70667d594\",\n  \"source_availability\": \"erased\",\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 1381,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 4319,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -33962,7 +36042,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 417,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 9527,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
+                              "body": "{\n  \"review_candidates\": [\n    {\n      \"indicator_index\": 1226,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"indicator_index\": 4823,\n      \"indicator_id\": \"string\",\n      \"candidate\": {\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"name\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"evidence_admissibility\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"value\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"unit\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reference_range\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_refs\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"source_regions\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"effective_review\": {\n        \"id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"extraction_run_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"upload_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_index\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"indicator_id\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"action\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"created_at\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"idempotency_key\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"reviewed_payload\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        \"note\": {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      },\n      \"history\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ]\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -34287,7 +36367,7 @@
                             },
                             "body": {
                               "mode": "raw",
-                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 8268.70625372976,\n    \"key_1\": true\n  },\n  \"note\": \"<string>\"\n}",
+                              "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": 6313\n  },\n  \"note\": \"<string>\"\n}",
                               "options": {
                                 "raw": {
                                   "language": "json"
@@ -34348,7 +36428,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34364,7 +36444,7 @@
                                   "value": "application/json"
                                 }
                               ],
-                              "body": "{\n  \"id\": \"3d0f652a-5dcc-8c9c-506d-d6624dfe5fe3\",\n  \"extraction_run_id\": \"69a07bfd-cc65-126c-1042-0dfbf09f6e12\",\n  \"upload_id\": \"6dbfb87f-dc92-9ccf-8acc-7b1893a1bceb\",\n  \"indicator_index\": 5097,\n  \"indicator_id\": \"string\",\n  \"action\": \"reject\",\n  \"created_at\": \"1969-03-13T01:55:24.764Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": 894.2964556626976,\n    \"key_1\": false\n  },\n  \"note\": \"string\"\n}",
+                              "body": "{\n  \"id\": \"c6bb4675-255d-fe10-de61-1758ce4be997\",\n  \"extraction_run_id\": \"ac05a532-36e1-ca7a-9534-a1c75d7c165a\",\n  \"upload_id\": \"4f562ab4-a16e-77c4-89ce-b81f6078f25d\",\n  \"indicator_index\": 8466,\n  \"indicator_id\": \"string\",\n  \"action\": \"reject\",\n  \"created_at\": \"2003-06-17T23:45:16.228Z\",\n  \"idempotency_key\": \"string\",\n  \"reviewed_payload\": {\n    \"key_0\": 9700.244585983455,\n    \"key_1\": 5466.697884257883\n  },\n  \"note\": \"string\"\n}",
                               "cookie": [],
                               "_postman_previewlanguage": "json"
                             },
@@ -34420,7 +36500,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34492,7 +36572,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34564,7 +36644,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34636,7 +36716,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -34708,7 +36788,7 @@
                                 "method": "POST",
                                 "body": {
                                   "mode": "raw",
-                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": true,\n    \"key_1\": \"string\"\n  },\n  \"note\": \"<string>\"\n}",
+                                  "raw": "{\n  \"indicator_index\": \"<integer>\",\n  \"indicator_id\": \"<string>\",\n  \"action\": \"<string>\",\n  \"source_refs\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"idempotency_key\": \"<string>\",\n  \"reviewed_payload\": {\n    \"key_0\": \"string\",\n    \"key_1\": 5240,\n    \"key_2\": 6848\n  },\n  \"note\": \"<string>\"\n}",
                                   "options": {
                                     "raw": {
                                       "language": "json"
@@ -35240,7 +37320,7 @@
                     },
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2014.8417144082487\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false,\n    \"key_1\": 9191.328673623502\n  }\n}",
+                      "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 9705.109992064536,\n    \"key_1\": true\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -35283,7 +37363,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35299,7 +37379,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": 6349,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": 7205.996145494282\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": 5422\n  },\n  \"registered_at\": \"1980-03-23T10:27:34.547Z\",\n  \"created_at\": \"2016-09-11T08:58:21.663Z\",\n  \"updated_at\": \"1951-08-28T09:08:01.521Z\",\n  \"canonical_url\": \"http://NxvEMgJxAPvjDUsXyCNfWLWiVhvT.pywbiqoQrGHtC1EOTDm1S1nVJMiDqQ.vpENsbhG\"\n}",
+                      "body": "{\n  \"id\": 7005,\n  \"source_key\": \"string\",\n  \"source_type\": \"string\",\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"problem_slug\": \"string\",\n  \"problem_display_name\": \"string\",\n  \"original_file_path\": \"string\",\n  \"language\": \"string\",\n  \"ingest_status\": \"string\",\n  \"metadata\": {\n    \"key_0\": 6876,\n    \"key_1\": 4593.656742945313\n  },\n  \"license_status\": \"string\",\n  \"content_hash\": \"string\",\n  \"source_version\": \"string\",\n  \"provenance\": {\n    \"key_0\": 5824,\n    \"key_1\": 4582.684293854982\n  },\n  \"registered_at\": \"2015-12-29T21:45:15.668Z\",\n  \"created_at\": \"1964-10-18T17:09:14.413Z\",\n  \"updated_at\": \"2003-05-14T20:07:18.320Z\",\n  \"canonical_url\": \"http://mhjYuYhHsWRwJTbrSnLVWhjxlZMNz.fvnruaZa\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -35337,7 +37417,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35391,7 +37471,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35445,7 +37525,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35499,7 +37579,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35553,7 +37633,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35607,7 +37687,7 @@
                         "method": "POST",
                         "body": {
                           "mode": "raw",
-                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": \"string\",\n    \"key_1\": \"string\"\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": 5221.4339026249945\n  }\n}",
+                          "raw": "{\n  \"source_key\": \"<string>\",\n  \"source_type\": \"<string>\",\n  \"title\": \"<string>\",\n  \"author\": \"<string>\",\n  \"problem_slug\": \"<string>\",\n  \"problem_display_name\": \"<string>\",\n  \"original_file_path\": \"<string>\",\n  \"license_status\": \"<string>\",\n  \"content_hash\": \"<string>\",\n  \"provenance\": {\n    \"key_0\": 2000.5369069986045,\n    \"key_1\": 8101\n  },\n  \"language\": \"zh\",\n  \"canonical_url\": \"<uri>\",\n  \"source_version\": \"v1\",\n  \"metadata\": {\n    \"key_0\": false\n  }\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -35712,7 +37792,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 8979,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\",\n        \"key_1\": true,\n        \"key_2\": 2890.3098055161536,\n        \"key_3\": \"string\"\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": \"string\",\n        \"key_1\": 6239.020547363907,\n        \"key_2\": 9118\n      },\n      \"registered_at\": \"2007-06-17T20:44:50.770Z\",\n      \"created_at\": \"1991-09-10T09:48:44.836Z\",\n      \"updated_at\": \"1969-03-21T23:59:39.127Z\",\n      \"canonical_url\": \"https://DyIVCPAGfboFYkvEBJDEVJIPeFcp.qymO9vSjF8Kgj5tscsq25gTb6yCmYXiST9nlArP\"\n    },\n    {\n      \"id\": 1368,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": 8101\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": \"string\",\n        \"key_1\": \"string\"\n      },\n      \"registered_at\": \"1969-09-18T07:21:35.606Z\",\n      \"created_at\": \"1989-11-27T23:49:36.608Z\",\n      \"updated_at\": \"1954-09-30T10:29:41.222Z\",\n      \"canonical_url\": \"http://fGNq.smxyuxLS6WAyCEEZKEbzyG1yMpYeA4u29j9gzUFgs65sv6Xtu9t7ErQzcgf\"\n    }\n  ]\n}",
+                      "body": "{\n  \"sources\": [\n    {\n      \"id\": 4978,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\",\n        \"key_1\": \"string\"\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": 4635.941737797111\n      },\n      \"registered_at\": \"1962-03-10T17:36:56.926Z\",\n      \"created_at\": \"1998-07-19T00:43:16.917Z\",\n      \"updated_at\": \"1994-10-15T16:21:18.863Z\",\n      \"canonical_url\": \"https://VpzKmNexLQQrl.lqrhzlA3pedzQ4Q\"\n    },\n    {\n      \"id\": 15,\n      \"source_key\": \"string\",\n      \"source_type\": \"string\",\n      \"title\": \"string\",\n      \"author\": \"string\",\n      \"problem_slug\": \"string\",\n      \"problem_display_name\": \"string\",\n      \"original_file_path\": \"string\",\n      \"language\": \"string\",\n      \"ingest_status\": \"string\",\n      \"metadata\": {\n        \"key_0\": \"string\",\n        \"key_1\": \"string\"\n      },\n      \"license_status\": \"string\",\n      \"content_hash\": \"string\",\n      \"source_version\": \"string\",\n      \"provenance\": {\n        \"key_0\": false,\n        \"key_1\": false\n      },\n      \"registered_at\": \"1946-01-12T03:49:00.736Z\",\n      \"created_at\": \"1970-03-11T19:34:43.722Z\",\n      \"updated_at\": \"2018-08-25T07:47:37.954Z\",\n      \"canonical_url\": \"http://LcfeDNZbUXBYTEMZO.ligDGRkQxyso1-ZBO6crtxDG2RQUh5nNd0U.h2s2NCq3K,U4V,xofW0cKzcFfLB\"\n    }\n  ]\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36015,7 +38095,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"job\": {\n    \"id\": \"0708154c-0d7f-0c61-36a2-77e21103fb4b\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 6241,\n    \"max_attempts\": 4798,\n    \"created_at\": \"1963-05-30T02:55:24.839Z\",\n    \"updated_at\": \"1961-01-30T16:10:47.710Z\",\n    \"progress\": {\n      \"key_0\": \"string\"\n    },\n    \"result\": {\n      \"key_0\": false\n    },\n    \"error\": {\n      \"key_0\": 986\n    },\n    \"started_at\": \"1998-10-17T02:52:01.256Z\",\n    \"finished_at\": \"1964-08-28T09:33:40.540Z\"\n  },\n  \"idempotent_hit\": false\n}",
+                      "body": "{\n  \"job\": {\n    \"id\": \"b5cd6ce3-ef95-e08b-2cbf-905abb58ef59\",\n    \"job_type\": \"string\",\n    \"status\": \"string\",\n    \"attempts\": 6800,\n    \"max_attempts\": 9578,\n    \"created_at\": \"1983-12-14T17:07:38.649Z\",\n    \"updated_at\": \"1987-09-03T08:47:39.529Z\",\n    \"progress\": {\n      \"key_0\": false,\n      \"key_1\": false,\n      \"key_2\": 1330\n    },\n    \"result\": {\n      \"key_0\": \"string\"\n    },\n    \"error\": {\n      \"key_0\": 8873.69166361168\n    },\n    \"started_at\": \"1974-06-25T19:33:34.556Z\",\n    \"finished_at\": \"2018-11-02T20:04:48.662Z\"\n  },\n  \"idempotent_hit\": true\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36452,7 +38532,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"fc55f9aa-ba65-eac4-bcda-2984a8caad36\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 7442,\n  \"max_attempts\": 4288,\n  \"created_at\": \"1997-06-21T07:41:46.949Z\",\n  \"updated_at\": \"2007-12-03T18:48:56.801Z\",\n  \"progress\": {\n    \"key_0\": true\n  },\n  \"result\": {\n    \"key_0\": 724.3743911385536\n  },\n  \"error\": {\n    \"key_0\": true\n  },\n  \"started_at\": \"1968-05-14T05:30:38.386Z\",\n  \"finished_at\": \"1976-08-26T21:42:35.281Z\"\n}",
+                      "body": "{\n  \"id\": \"1e350f42-0edc-a305-d9a6-39286391696d\",\n  \"job_type\": \"string\",\n  \"status\": \"string\",\n  \"attempts\": 4320,\n  \"max_attempts\": 4845,\n  \"created_at\": \"1974-02-19T13:06:44.944Z\",\n  \"updated_at\": \"1953-08-04T21:25:33.267Z\",\n  \"progress\": {\n    \"key_0\": 9177.54266411066,\n    \"key_1\": \"string\",\n    \"key_2\": \"string\"\n  },\n  \"result\": {\n    \"key_0\": 594,\n    \"key_1\": 6713\n  },\n  \"error\": {\n    \"key_0\": 7902\n  },\n  \"started_at\": \"1997-05-20T17:15:04.678Z\",\n  \"finished_at\": \"1959-01-29T06:45:46.713Z\"\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },
@@ -36895,7 +38975,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"results\": [\n    {\n      \"id\": 5941,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 9409.994576126337,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 9821,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 1599.0210161544383,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 4517\n}",
+                  "body": "{\n  \"results\": [\n    {\n      \"id\": 2615,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 4346.9598377123475,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    },\n    {\n      \"id\": 3808,\n      \"problem_slug\": \"string\",\n      \"category\": \"string\",\n      \"unit_type\": \"string\",\n      \"title\": \"string\",\n      \"summary\": \"string\",\n      \"body_markdown\": \"string\",\n      \"similarity\": 288.7044916860759,\n      \"source_title\": \"string\",\n      \"source_author\": \"string\",\n      \"source_timestamp\": \"string\",\n      \"tags\": [\n        \"string\",\n        \"string\"\n      ],\n      \"clips\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ]\n    }\n  ],\n  \"total\": 1787\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -37254,7 +39334,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"knowledge_sources\": 4303,\n  \"knowledge_segments\": 9460,\n  \"knowledge_units\": 8573,\n  \"knowledge_clips\": 2169\n}",
+                  "body": "{\n  \"knowledge_sources\": 7904,\n  \"knowledge_segments\": 90,\n  \"knowledge_units\": 607,\n  \"knowledge_clips\": 3850\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
