@@ -1435,6 +1435,137 @@
             ]
         },
         {
+            "table": "condition_direct_edits",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "edit_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "changes",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "reason",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "request_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "request_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "request_source_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "confirmation_tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "based_on_diagnosis_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "resulting_diagnosis_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "diagnosis_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "receipt_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "confirmed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "condition_disposition_changes",
             "columns": [
                 {
@@ -1505,12 +1636,19 @@
                     "name": "decision_id",
                     "type": "uuid",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "text",
                     "name": "decision_kind",
                     "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "direct_edit_id",
+                    "type": "uuid",
                     "default": null,
                     "nullable": true
                 },

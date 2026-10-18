@@ -87,3 +87,31 @@ Disposition histories, and transaction rollback of partial patches.
 Public read/decide APIs, trusted Agent proposal ingestion, direct correction,
 legacy DiagnosisAnalysis retirement and end-to-end UI acceptance remain separate
 slices. Issue #305 stays open. No Diagnosis proposal TTL is invented here.
+
+## Direct correction and withdrawal (DX-003 slice 2)
+
+`POST /api/v1/diagnosis/conditions/{conditionId}/direct-edits` implements the
+lightweight ConditionDirectEdit of diagnosis.md §3.5 without a formal run.
+
+- `withdraw` moves one adopted entry to `inactive` with reason
+  `user_withdrawal`; `correct_metadata` replaces only `qualifiers.notes`.
+  Medical identity, AI assessment, source claims, evidence links and handling
+  never change here; they need a formal analysis and per-proposal decisions.
+- The command cites the owner's own available `user_message` statement
+  evidence (the same `UserRequest` check formal runs use) and the current
+  Diagnosis revision. A foreign or unknown condition/statement is a masked 404.
+- One transaction writes the immutable `condition_direct_edits` receipt, one
+  `DiagnosisRevision` (`direct_edit_id`, no run), the entry projection and, for
+  withdraw, a `condition_disposition_changes` row whose authority is the edit
+  (`direct_edit_id`, no decision). The head advance makes every older open run
+  stale, so its decisions cannot overwrite the edit.
+- Safety is fail-closed: an urgent restriction (409 `SAFETY_BLOCKED`) or
+  incomplete coverage (503) changes nothing. A no-op correction or a second
+  withdraw is refused, so no empty revision exists. Re-adoption still requires
+  a formal run `set_disposition`/`readopted` decision.
+- An exact idempotent retry returns the original receipt; a changed body under
+  the same key, or a key already used by a settlement revision, is a conflict.
+
+Validation: `bash scripts/plan/test-dx002-decisions-pg18.sh` now includes the
+`TestDiagnosisDirectEdit*` PG18 cases (withdraw, metadata, stale/foreign/
+replay/concurrency/Safety negatives and receipt immutability).
