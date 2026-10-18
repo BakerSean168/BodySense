@@ -2067,6 +2067,8 @@
   white-space: normal;
   text-align: center;
 }
+/* `.bc-workspace button { font: inherit }` would otherwise enlarge the label. */
+.bc-workspace .bc-diagnosis-actions > .bc-button { font-size: 12px; font-weight: 600; }
 .bc-diagnosis-actions > .bc-button:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
 .bc-diagnosis-outcome {
   display: flex;
@@ -2110,4 +2112,5 @@
   .bc-diagnosis-choice label { min-height: 44px; font-size: 13px; }
   .bc-diagnosis-actions { flex-direction: column; align-items: stretch; }
   .bc-diagnosis-actions > .bc-button { width: 100%; min-height: 44px; padding: 10px 14px; }
+  .bc-workspace .bc-diagnosis-actions > .bc-button { font-size: 13px; }
 }
