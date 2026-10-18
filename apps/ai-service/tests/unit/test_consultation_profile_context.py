@@ -18,7 +18,7 @@ def test_profile_context_contains_stable_identity_only() -> None:
         }
     )
 
-    assert "性别：male" in context
+    assert "自报性别（非生理判定）：male" in context
     assert "出生日期：1998-05-20（系统计算年龄：28岁）" in context
     assert "久坐" not in context
     assert "轮班" not in context

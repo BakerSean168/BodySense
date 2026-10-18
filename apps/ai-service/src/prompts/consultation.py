@@ -213,7 +213,7 @@ def format_profile_context(profile: dict) -> str:
     """Format stable identity context only; mutable health state belongs to BodyState."""
     lines = []
     if profile.get("gender"):
-        lines.append(f"- 性别：{profile['gender']}")
+        lines.append(f"- 自报性别（非生理判定）：{profile['gender']}")
     if profile.get("birth_date"):
         birth_line = f"- 出生日期：{profile['birth_date']}"
         if profile.get("age_years") is not None:
