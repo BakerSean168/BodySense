@@ -10,25 +10,37 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 type fakeTreatmentDiagnosis struct {
-	analysis    *model.DiagnosisAnalysisRecord
-	assessments []model.DiagnosisCandidateAssessment
+	view *NativeDiagnosisView
+	err  error
 }
 
-func (f *fakeTreatmentDiagnosis) GetByID(context.Context, uuid.UUID, uuid.UUID) (*model.DiagnosisAnalysisRecord, error) {
-	return f.analysis, nil
+func (f *fakeTreatmentDiagnosis) Read(context.Context, uuid.UUID) (*NativeDiagnosisView, error) {
+	return f.view, f.err
 }
-func (f *fakeTreatmentDiagnosis) GetLatest(context.Context, uuid.UUID) (*model.DiagnosisAnalysisRecord, error) {
-	return f.analysis, nil
+
+// testCompleteSafetyEnvelope is a pinned native envelope whose coverage is
+// complete: one screened source and no blockers.
+func testCompleteSafetyEnvelope(revision int64) *SafetyEnvelopeV2 {
+	envelope := testNativeSafetyEnvelope(revision)
+	envelope.Coverage.CoveredSourceRefs = []string{"body-state:safety-screen:test"}
+	envelope.Coverage.IncompleteSourceRefs = []string{}
+	envelope.Coverage.Complete = true
+	return envelope
 }
-func (f *fakeTreatmentDiagnosis) ListAssessments(context.Context, uuid.UUID, uuid.UUID) ([]model.DiagnosisCandidateAssessment, error) {
-	return f.assessments, nil
-}
-func (f *fakeTreatmentDiagnosis) PublicPayload(analysis *model.DiagnosisAnalysisRecord) map[string]any {
-	return map[string]any{"analysis_id": analysis.ID}
+
+func testAdoptedCondition(owner uuid.UUID, revision int64, disposition model.ConditionDisposition) NativeDiagnosisCondition {
+	run := uuid.New()
+	return NativeDiagnosisCondition{
+		ConditionID: uuid.New(), MedicalName: "neck strain", Disposition: disposition, CommittedRevision: revision,
+		SourceClaimRefs: []model.DiagnosisSourceClaimRef{}, InformationGaps: []string{},
+		EvidenceLinks: []NativeDiagnosisEvidenceLink{{
+			EvidenceType: model.DiagnosisEvidenceType("body_fact"), EvidenceID: uuid.New(), EvidenceVersion: "3",
+			Role: model.DiagnosisEvidenceRole("supports"), Rationale: "reported", AnalyzedByRunID: run,
+		}},
+	}
 }
 
 type fakeTreatmentBodyState struct {
@@ -37,11 +49,15 @@ type fakeTreatmentBodyState struct {
 	viewOwner         uuid.UUID
 	safetyUnavailable bool
 	safetyBlocked     bool
+	safetyIncomplete  bool
 }
 
 func (f *fakeTreatmentBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*AgentBodyContext, error) {
 	f.viewOwner = owner
-	envelope := testNativeSafetyEnvelope(f.snapshot.CurrentRevision)
+	envelope := testCompleteSafetyEnvelope(f.snapshot.CurrentRevision)
+	if f.safetyIncomplete {
+		envelope = testNativeSafetyEnvelope(f.snapshot.CurrentRevision)
+	}
 	if f.safetyBlocked {
 		envelope = testBlockedSafetyEnvelope(f.snapshot.CurrentRevision)
 	}
@@ -55,12 +71,6 @@ func (f *fakeTreatmentBodyState) GetAgentBodyContext(_ context.Context, owner uu
 		UserHypotheses: []AgentUserHypothesis{}, Equipment: append([]AgentEquipmentItem{}, f.equipment...),
 		Safety: AgentSafetySummary{Status: AgentSafetyNoCurrentSymptoms, ActiveBlockers: []string{}, UnscreenedFactIDs: []uuid.UUID{}},
 	}, nil
-}
-
-type fakeTreatmentFreshness struct{ state string }
-
-func (f fakeTreatmentFreshness) GetOrEvaluate(context.Context, uuid.UUID, *model.DiagnosisAnalysisRecord) (*model.DiagnosisAnalysisFreshness, error) {
-	return &model.DiagnosisAnalysisFreshness{State: f.state}, nil
 }
 
 type testTreatmentDeploymentPolicy struct {
@@ -164,36 +174,30 @@ func jsonBytesEqual(left, right json.RawMessage) bool {
 // PlanProposal writer only (TP-002 slice 3 removed the Treatment aggregate).
 type treatmentGenerationHarness struct {
 	userID     uuid.UUID
-	analysis   *model.DiagnosisAnalysisRecord
+	diagnosis  *NativeDiagnosisView
 	body       *fakeTreatmentBodyState
 	plans      *fakePlanProposer
 	captured   *TreatmentRecommendationRequest
 	deployment testTreatmentDeploymentPolicy
-	assessed   bool
+	expected   *int64
 }
 
 func newTreatmentGenerationHarness(revision int64) *treatmentGenerationHarness {
 	userID := uuid.New()
 	return &treatmentGenerationHarness{
 		userID: userID,
-		analysis: &model.DiagnosisAnalysisRecord{
-			ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: revision,
-			DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-			Candidates:    []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+		diagnosis: &NativeDiagnosisView{
+			UserID: userID, CurrentRevision: 2,
+			ConditionEntries: []NativeDiagnosisCondition{testAdoptedCondition(userID, 2, model.ConditionAdopted)},
 		},
 		body:     &fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: revision}},
 		plans:    &fakePlanProposer{},
 		captured: &TreatmentRecommendationRequest{},
-		assessed: true,
 	}
 }
 
 func (h *treatmentGenerationHarness) service(raw json.RawMessage) *TreatmentService {
-	diagnosis := &fakeTreatmentDiagnosis{analysis: h.analysis}
-	if h.assessed && len(h.analysis.Candidates) > 0 {
-		diagnosis.assessments = []model.DiagnosisCandidateAssessment{{CandidateID: h.analysis.Candidates[0].ID, State: "confirmed"}}
-	}
-	svc := NewTreatmentService(diagnosis, h.body, fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
+	svc := NewTreatmentService(&fakeTreatmentDiagnosis{view: h.diagnosis}, h.body, nil,
 		fakeTreatmentReasoner{raw: raw, capture: h.captured}, h.deployment)
 	svc.AttachPlanProposer(h.plans)
 	return svc
@@ -201,7 +205,7 @@ func (h *treatmentGenerationHarness) service(raw json.RawMessage) *TreatmentServ
 
 func (h *treatmentGenerationHarness) generate(raw json.RawMessage, constraints map[string]any) (*TreatmentPlanGenerationResult, error) {
 	return h.service(raw).GeneratePlanProposal(context.Background(), h.userID, TreatmentPlanGenerationInput{
-		DiagnosisAnalysisID: h.analysis.ID, UserConstraints: constraints, IdempotencyKey: "gen-" + uuid.NewString(),
+		ExpectedDiagnosisRevision: h.expected, UserConstraints: constraints, IdempotencyKey: "gen-" + uuid.NewString(),
 	})
 }
 
@@ -217,23 +221,30 @@ func (h *treatmentGenerationHarness) provenance(t *testing.T) map[string]any {
 	return provenance
 }
 
-func TestTreatmentGenerationSendsSelectedAnalysisEvidenceAndFreezesTheRequest(t *testing.T) {
+func TestTreatmentGenerationSendsAdoptedConditionsAndFreezesTheRequest(t *testing.T) {
 	h := newTreatmentGenerationHarness(9)
-	h.analysis.BodyStateRevision = 7
-	h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[{"evidence_type":"body_fact","evidence_id":"11111111-1111-4111-8111-111111111111","version":3,"statement_evidence_id":"22222222-2222-4222-8222-222222222222","assertion_status":"asserted"}],"citations":[{"evidence_id":"selected-analysis-only","summary":"audit citation","evidence_type":"body_fact","body_state_authority":"authoritative"}]}}`)
+	adopted := h.diagnosis.ConditionEntries[0]
+	inactive := testAdoptedCondition(h.userID, 2, model.ConditionInactive)
+	h.diagnosis.ConditionEntries = append(h.diagnosis.ConditionEntries, inactive)
 	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); err != nil {
 		t.Fatalf("GeneratePlanProposal returned error: %v", err)
 	}
 	captured := *h.captured
-	var selectedEvidence []map[string]any
-	if err := json.Unmarshal(captured.Evidence, &selectedEvidence); err != nil {
+	var sentDiagnosis NativeDiagnosisView
+	if err := json.Unmarshal(captured.Diagnosis, &sentDiagnosis); err != nil {
 		t.Fatal(err)
 	}
-	if len(selectedEvidence) != 2 || selectedEvidence[0]["statement_evidence_id"] != "22222222-2222-4222-8222-222222222222" || selectedEvidence[0]["version"] != float64(3) {
-		t.Fatalf("selected native source references lost: %s", captured.Evidence)
+	if sentDiagnosis.CurrentRevision != 2 || len(sentDiagnosis.ConditionEntries) != 1 ||
+		sentDiagnosis.ConditionEntries[0].ConditionID != adopted.ConditionID {
+		t.Fatalf("Treatment must receive only the adopted Conditions of the current revision: %s", captured.Diagnosis)
 	}
-	if selectedEvidence[1]["evidence_type"] != "external_citation" || selectedEvidence[1]["body_state_authority"] != "none" {
-		t.Fatalf("Agent citation lost audit-only classification: %s", captured.Evidence)
+	var evidence []map[string]any
+	if err := json.Unmarshal(captured.Evidence, &evidence); err != nil {
+		t.Fatal(err)
+	}
+	if len(evidence) != 1 || evidence[0]["evidence_id"] != adopted.EvidenceLinks[0].EvidenceID.String() ||
+		evidence[0]["condition_id"] != adopted.ConditionID.String() || evidence[0]["body_state_authority"] != "none" {
+		t.Fatalf("adopted Condition evidence lost or inactive evidence leaked: %s", captured.Evidence)
 	}
 	if captured.ConfigurationID != defaultTreatmentConfigurationID {
 		t.Fatalf("Treatment request lost config identity: %#v", captured)
@@ -244,8 +255,7 @@ func TestTreatmentGenerationSendsSelectedAnalysisEvidenceAndFreezesTheRequest(t 
 	}
 	if frozen.BodyStateRevision != captured.BodyStateRevision ||
 		!jsonBytesEqual(frozen.BodyState, captured.BodyState) ||
-		!jsonBytesEqual(frozen.DiagnosisAnalysis, captured.DiagnosisAnalysis) ||
-		!jsonBytesEqual(frozen.CandidateAssessments, captured.CandidateAssessments) ||
+		!jsonBytesEqual(frozen.Diagnosis, captured.Diagnosis) ||
 		!jsonBytesEqual(frozen.Profile, captured.Profile) ||
 		!jsonBytesEqual(frozen.UserConstraints, captured.UserConstraints) ||
 		!jsonBytesEqual(frozen.Evidence, captured.Evidence) {
@@ -255,26 +265,56 @@ func TestTreatmentGenerationSendsSelectedAnalysisEvidenceAndFreezesTheRequest(t 
 	if provenance["agentConfigurationId"] != defaultTreatmentConfigurationID || provenance["agentConfiguration"] == nil || provenance["executionProvenance"] == nil {
 		t.Fatalf("proposal lost Agent provenance: %#v", provenance)
 	}
+	ids, _ := provenance["sourceConditionIds"].([]any)
+	if provenance["sourceDiagnosisRevision"] != float64(2) || len(ids) != 1 || ids[0] != adopted.ConditionID.String() {
+		t.Fatalf("proposal lost its Diagnosis source: %#v", provenance)
+	}
 }
 
-func TestTreatmentRejectsForeignOrUnavailableAnalysisEvidenceBeforeAgent(t *testing.T) {
-	for _, name := range []string{"foreign owner", "missing audit", "malformed audit", "invalid authority"} {
+func TestTreatmentGenerationRequiresAnAdoptedCondition(t *testing.T) {
+	for name, mutate := range map[string]func(h *treatmentGenerationHarness){
+		"no diagnosis": func(h *treatmentGenerationHarness) { h.diagnosis = &NativeDiagnosisView{UserID: h.userID} },
+		"only inactive": func(h *treatmentGenerationHarness) {
+			h.diagnosis.ConditionEntries[0].Disposition = model.ConditionInactive
+		},
+		"empty revision": func(h *treatmentGenerationHarness) { h.diagnosis.ConditionEntries = nil },
+	} {
 		t.Run(name, func(t *testing.T) {
 			h := newTreatmentGenerationHarness(7)
-			h.analysis.DecisionTrace = nil
-			switch name {
-			case "foreign owner":
-				h.analysis.UserID = uuid.New()
-			case "malformed audit":
-				h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":`)
-			case "invalid authority":
-				h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"authoritative"}}`)
+			mutate(h)
+			if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentDiagnosisNotReady) {
+				t.Fatalf("expected adopted-Condition gate, got %v", err)
 			}
-			_, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil)
-			if err == nil || h.captured.UserID != "" || len(h.plans.inputs) != 0 {
-				t.Fatalf("invalid evidence reached Agent: err=%v request=%+v", err, *h.captured)
+			if h.captured.ConfigurationID != "" || len(h.plans.inputs) != 0 {
+				t.Fatal("the Diagnosis gate must stop before the Agent")
 			}
 		})
+	}
+}
+
+func TestTreatmentGenerationRejectsAStalePresentedRevision(t *testing.T) {
+	h := newTreatmentGenerationHarness(7)
+	presented := int64(1)
+	h.expected = &presented
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentDiagnosisStale) {
+		t.Fatalf("expected stale Diagnosis revision, got %v", err)
+	}
+	if h.captured.ConfigurationID != "" {
+		t.Fatal("a stale revision must stop before the Agent")
+	}
+	current := int64(2)
+	h.expected = &current
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); err != nil {
+		t.Fatalf("the current revision must generate: %v", err)
+	}
+}
+
+func TestTreatmentRejectsForeignDiagnosisBeforeAgent(t *testing.T) {
+	h := newTreatmentGenerationHarness(7)
+	h.diagnosis.UserID = uuid.New()
+	_, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil)
+	if err == nil || h.captured.UserID != "" || len(h.plans.inputs) != 0 {
+		t.Fatalf("foreign Diagnosis reached Agent: err=%v request=%+v", err, *h.captured)
 	}
 }
 
@@ -308,14 +348,14 @@ func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *tes
 	}
 }
 
-func TestTreatmentGenerationRequiresCandidateAssessment(t *testing.T) {
+func TestTreatmentIncompleteSafetyCoverageBlocksBeforeAgent(t *testing.T) {
 	h := newTreatmentGenerationHarness(7)
-	h.assessed = false
-	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentCandidateAssessmentRequired) {
-		t.Fatalf("expected candidate assessment gate, got %v", err)
+	h.body.safetyIncomplete = true
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentSafetyBlocked) {
+		t.Fatalf("incomplete Safety coverage must block generation: %v", err)
 	}
-	if h.captured.ConfigurationID != "" {
-		t.Fatal("the assessment gate must stop before the Agent")
+	if h.captured.ConfigurationID != "" || len(h.plans.inputs) != 0 {
+		t.Fatal("incomplete Safety must block before the Agent and persistence")
 	}
 }
 
@@ -336,7 +376,7 @@ func TestRawJSONUsesFallbackForNilContainers(t *testing.T) {
 		t.Fatalf("nil map must use object fallback, got %s", got)
 	}
 
-	var evidence []diagnosisBodyEvidenceRef
+	var evidence []NativeDiagnosisEvidenceLink
 	if got := string(rawJSON(evidence, `[]`)); got != `[]` {
 		t.Fatalf("nil slice must use array fallback, got %s", got)
 	}
@@ -441,11 +481,11 @@ func TestTreatmentGenerationRecordsDecisionTrace(t *testing.T) {
 	if trace["trace_revision"] != TreatmentDecisionTraceV1 || trace["phase"] != TreatmentDecisionGeneration || trace["outcome"] != string(TreatmentAllowProposal) {
 		t.Fatalf("unexpected generation DecisionTrace: %#v", trace)
 	}
-	if trace["diagnosis_analysis_id"] != h.analysis.ID.String() || trace["agent_configuration_id"] != defaultTreatmentConfigurationID {
+	if trace["diagnosis_revision"] != float64(2) || trace["agent_configuration_id"] != defaultTreatmentConfigurationID {
 		t.Fatalf("generation DecisionTrace lost durable identities: %#v", trace)
 	}
 	facts, ok := trace["facts"].(map[string]any)
-	if !ok || facts["current_body_state_revision"] != float64(14) || facts["candidate_assessment_ready"] != true {
+	if !ok || facts["current_body_state_revision"] != float64(14) || facts["adopted_condition_count"] != float64(1) {
 		t.Fatalf("generation DecisionTrace lost authority facts: %#v", trace)
 	}
 }

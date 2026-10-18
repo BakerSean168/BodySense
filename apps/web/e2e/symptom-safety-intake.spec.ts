@@ -36,18 +36,47 @@ function events(text: string): StreamEvent[] {
     .map((line) => parseStreamEvent(JSON.parse(line.slice(5).trim())));
 }
 
+// Starts one native formal Diagnosis run from the user's own statement.
 async function diagnose(
   request: APIRequestContext,
   headers: Record<string, string>,
-  conversationId: string,
+  requestEvidenceId: string,
 ) {
-  const response = await request.post(
-    `${api}/api/v1/consultations/${conversationId}/diagnosis`,
-    { headers, timeout: 60_000 },
-  );
+  const response = await request.post(`${api}/api/v1/diagnosis/analysis-runs`, {
+    headers,
+    data: {
+      requestEvidenceId,
+      trigger: "new_analysis",
+      expectedRevision: 0,
+      idempotencyKey: `e2e-intake-${crypto.randomUUID()}`,
+    },
+    timeout: 60_000,
+  });
   const body = await response.text();
-  expect(response.ok(), body).toBeTruthy();
-  return { body, diagnosis: JSON.parse(body) as { candidates: unknown[] } };
+  expect(response.status(), body).toBe(201);
+  return JSON.parse(body) as {
+    state: string;
+    outcome?: string;
+    proposals: unknown[];
+  };
+}
+
+async function statementEvidenceId(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  factId: string,
+) {
+  const ledger = await request.get(`${api}/api/v1/body-state/records`, {
+    headers,
+  });
+  expect(ledger.ok()).toBeTruthy();
+  const fact = (
+    (await ledger.json()) as {
+      facts: Array<{ id: string; source_evidence_id?: string }>;
+    }
+  ).facts.find((row) => row.id === factId);
+  expect(fact?.source_evidence_id).toBeTruthy();
+  return fact!.source_evidence_id!;
 }
 
 test("v3 symptom report asks the bound safety screen; answering it makes Diagnosis reachable", async ({
@@ -99,11 +128,16 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
     "safety_signals",
   ]);
 
-  // Control: the symptom is committed but not yet screened, so Diagnosis
-  // abstains because structured safety coverage is incomplete.
-  const before = await diagnose(request, headers, pending.ids.conversation_id!);
-  expect(before.diagnosis.candidates).toEqual([]);
-  expect(before.body).toContain("结构化安全信息尚未完整采集");
+  // Control: the symptom is committed but not yet screened, so the formal
+  // Diagnosis run closes without any proposal: Safety coverage is incomplete.
+  const requestEvidenceId = await statementEvidenceId(
+    request,
+    headers,
+    receipt.receipt.fact_ids[0]!,
+  );
+  const before = await diagnose(request, headers, requestEvidenceId);
+  expect(before.proposals).toEqual([]);
+  expect(before.state).toBe("closed_without_change");
 
   const card = page.getByTestId("pending-interaction-composer");
   await expect(card).toBeVisible();
@@ -145,7 +179,7 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
     statement: "我昨天肩膀不舒服。",
   });
 
-  const after = await diagnose(request, headers, pending.ids.conversation_id!);
-  expect(after.diagnosis.candidates).toHaveLength(1);
-  expect(after.body).not.toContain("结构化安全信息尚未完整采集");
+  const after = await diagnose(request, headers, requestEvidenceId);
+  expect(after.state).toBe("open");
+  expect(after.proposals.length).toBeGreaterThan(0);
 });

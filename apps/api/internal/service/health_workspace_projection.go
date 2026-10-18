@@ -14,7 +14,6 @@ type HealthWorkspace struct {
 	GeneratedAt    time.Time                   `json:"generated_at"`
 	ConversationID *uuid.UUID                  `json:"conversation_id,omitempty"`
 	ProfileReady   bool                        `json:"profile_ready"`
-	Diagnosis      map[string]any              `json:"diagnosis,omitempty"`
 	TrainingPlan   *model.TrainingPlan         `json:"training_plan,omitempty"`
 	RecentOutcomes []model.Outcome             `json:"recent_outcomes"`
 	Trends         []HealthWorkspaceTrend      `json:"trends"`

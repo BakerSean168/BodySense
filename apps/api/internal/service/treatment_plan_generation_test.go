@@ -10,7 +10,6 @@ import (
 	"github.com/bodysense/api/internal/domain/trainingplan"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 type fakePlanProposer struct {
@@ -73,20 +72,19 @@ func treatmentAgentRawWithPlan(block string) json.RawMessage {
 }
 
 type planGenerationFixture struct {
-	userID   uuid.UUID
-	analysis *model.DiagnosisAnalysisRecord
-	plans    *fakePlanProposer
-	captured *TreatmentRecommendationRequest
-	svc      *TreatmentService
+	userID    uuid.UUID
+	diagnosis *NativeDiagnosisView
+	plans     *fakePlanProposer
+	captured  *TreatmentRecommendationRequest
+	svc       *TreatmentService
 }
 
 func newPlanGenerationFixture(t *testing.T, raw json.RawMessage, body *fakeTreatmentBodyState) *planGenerationFixture {
 	t.Helper()
 	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[{"evidence_id":"selected-analysis-only","summary":"audit citation","evidence_type":"body_fact","body_state_authority":"authoritative"}]}}`),
-		Candidates:    []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	diagnosis := &NativeDiagnosisView{
+		UserID: userID, CurrentRevision: 4,
+		ConditionEntries: []NativeDiagnosisCondition{testAdoptedCondition(userID, 4, model.ConditionAdopted)},
 	}
 	if body == nil {
 		body = &fakeTreatmentBodyState{}
@@ -94,11 +92,10 @@ func newPlanGenerationFixture(t *testing.T, raw json.RawMessage, body *fakeTreat
 	if body.snapshot == nil {
 		body.snapshot = &BodyStateReadModel{UserID: userID, CurrentRevision: 9}
 	}
-	f := &planGenerationFixture{userID: userID, analysis: analysis, plans: &fakePlanProposer{}, captured: &TreatmentRecommendationRequest{}}
+	f := &planGenerationFixture{userID: userID, diagnosis: diagnosis, plans: &fakePlanProposer{}, captured: &TreatmentRecommendationRequest{}}
 	f.svc = NewTreatmentService(
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+		&fakeTreatmentDiagnosis{view: diagnosis},
 		body,
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: raw, capture: f.captured},
 		testTreatmentDeploymentPolicy{},
@@ -142,7 +139,7 @@ func TestTreatmentPlanGenerationPersistsOnlyAPendingAgentProposal(t *testing.T) 
 			t.Fatalf("provenance lacks %s: %s", key, in.Generation.Provenance)
 		}
 	}
-	if provenance["schemaRevision"] != TrainingPlanGenerationProvenanceV1 || provenance["sourceDiagnosisAnalysisId"] != f.analysis.ID.String() ||
+	if provenance["schemaRevision"] != TrainingPlanGenerationProvenanceV1 || provenance["sourceDiagnosisRevision"] != float64(4) ||
 		provenance["changeReason"] != "first plan" || provenance["agentConfigurationId"] != defaultTreatmentConfigurationID {
 		t.Fatalf("provenance: %s", in.Generation.Provenance)
 	}
@@ -167,7 +164,7 @@ func TestTreatmentPlanGenerationPersistsOnlyAPendingAgentProposal(t *testing.T) 
 func TestTreatmentPlanGenerationReplaysKeyWithoutCallingAgent(t *testing.T) {
 	f := newPlanGenerationFixture(t, treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil)
 	ctx := context.Background()
-	input := TreatmentPlanGenerationInput{DiagnosisAnalysisID: f.analysis.ID, UserConstraints: map[string]any{"minutes": 20}, IdempotencyKey: "gen-replay"}
+	input := TreatmentPlanGenerationInput{UserConstraints: map[string]any{"minutes": 20}, IdempotencyKey: "gen-replay"}
 	first, err := f.svc.GeneratePlanProposal(ctx, f.userID, input)
 	if err != nil {
 		t.Fatal(err)

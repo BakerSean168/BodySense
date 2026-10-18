@@ -24,14 +24,14 @@ type workspaceBodyStateSource interface {
 	GetBodyState(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateReadModel, error)
 }
 
+// workspaceDiagnosisSource is the native Diagnosis head: committed Conditions only.
 type workspaceDiagnosisSource interface {
-	GetLatest(ctx context.Context, userID uuid.UUID) (*model.DiagnosisAnalysisRecord, error)
-	ListAssessments(ctx context.Context, userID, analysisID uuid.UUID) ([]model.DiagnosisCandidateAssessment, error)
-	PublicPayload(analysis *model.DiagnosisAnalysisRecord) map[string]any
+	Read(ctx context.Context, owner uuid.UUID) (*NativeDiagnosisView, error)
 }
 
-type workspaceFreshnessSource interface {
-	Preview(ctx context.Context, userID uuid.UUID, analysis *model.DiagnosisAnalysisRecord) (*model.DiagnosisAnalysisFreshness, error)
+// workspaceDiagnosisRunSource lists the owner's native analysis runs, newest first.
+type workspaceDiagnosisRunSource interface {
+	List(ctx context.Context, owner uuid.UUID, limit int, before *uuid.UUID) (*NativeDiagnosisRunPage, error)
 }
 
 type workspaceOutcomeSource interface {
@@ -49,7 +49,7 @@ type HealthWorkspaceService struct {
 	consultations workspaceConsultationSource
 	bodyState     workspaceBodyStateSource
 	diagnosis     workspaceDiagnosisSource
-	freshness     workspaceFreshnessSource
+	diagnosisRuns workspaceDiagnosisRunSource
 	outcomes      workspaceOutcomeSource
 	training      workspaceTrainingSource
 }
@@ -59,13 +59,13 @@ func NewHealthWorkspaceService(
 	consultations workspaceConsultationSource,
 	bodyState workspaceBodyStateSource,
 	diagnosis workspaceDiagnosisSource,
-	freshness workspaceFreshnessSource,
+	diagnosisRuns workspaceDiagnosisRunSource,
 	outcomes workspaceOutcomeSource,
 	training workspaceTrainingSource,
 ) *HealthWorkspaceService {
 	return &HealthWorkspaceService{
 		profiles: profiles, consultations: consultations, bodyState: bodyState,
-		diagnosis: diagnosis, freshness: freshness, outcomes: outcomes, training: training,
+		diagnosis: diagnosis, diagnosisRuns: diagnosisRuns, outcomes: outcomes, training: training,
 	}
 }
 
@@ -79,7 +79,6 @@ func (s *HealthWorkspaceService) Get(
 ) (*HealthWorkspace, error) {
 	workspace := &HealthWorkspace{
 		GeneratedAt:    time.Now().UTC(),
-		Diagnosis:      map[string]any{},
 		RecentOutcomes: []model.Outcome{}, Trends: []HealthWorkspaceTrend{},
 		Actions: []HealthWorkspaceAction{},
 	}
@@ -105,24 +104,20 @@ func (s *HealthWorkspaceService) Get(
 		return nil, fmt.Errorf("load workspace body state: %w", err)
 	}
 
-	analysis, err := s.diagnosis.GetLatest(ctx, userID)
+	diagnosis, err := s.diagnosis.Read(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("load workspace diagnosis: %w", err)
 	}
-	var freshness *model.DiagnosisAnalysisFreshness
-	var assessments []model.DiagnosisCandidateAssessment
-	if analysis != nil {
-		workspace.Diagnosis = s.diagnosis.PublicPayload(analysis)
-		assessments, err = s.diagnosis.ListAssessments(ctx, userID, analysis.ID)
-		if err != nil {
-			return nil, fmt.Errorf("load workspace diagnosis assessments: %w", err)
-		}
-		workspace.Diagnosis["candidate_assessments"] = assessments
-		freshness, err = s.freshness.Preview(ctx, userID, analysis)
-		if err != nil {
-			return nil, fmt.Errorf("evaluate workspace diagnosis freshness: %w", err)
-		}
-		workspace.Diagnosis["freshness"] = freshness
+	if diagnosis == nil || diagnosis.UserID != userID {
+		return nil, fmt.Errorf("load workspace diagnosis: owner mismatch")
+	}
+	var latestRun *NativeDiagnosisRunSummary
+	runs, err := s.diagnosisRuns.List(ctx, userID, 1, nil)
+	if err != nil {
+		return nil, fmt.Errorf("load workspace diagnosis runs: %w", err)
+	}
+	if runs != nil && len(runs.Runs) > 0 {
+		latestRun = &runs.Runs[0]
 	}
 
 	if s.training != nil {
@@ -137,20 +132,21 @@ func (s *HealthWorkspaceService) Get(
 	}
 	workspace.Trends = deriveWorkspaceTrends(workspace.RecentOutcomes)
 	workspace.Capabilities = deriveWorkspaceCapabilities(
-		snapshot, analysis, freshness, assessments, workspace.TrainingPlan,
+		snapshot, diagnosis, latestRun, workspace.TrainingPlan,
 	)
 	workspace.Actions = deriveWorkspaceActions(workspace)
 	return workspace, nil
 }
 
 // deriveWorkspaceCapabilities gates the loop from durable state. Generation
-// only creates a pending PlanProposal; execution needs an active TrainingPlan
-// and complete Safety coverage.
+// only creates a pending PlanProposal and mirrors the Treatment gate: at least
+// one adopted native Condition and complete Safety coverage. Execution needs an
+// active TrainingPlan and complete Safety coverage. Diagnosis review is owed
+// while the newest native analysis run is still open for the user's decisions.
 func deriveWorkspaceCapabilities(
 	snapshot *BodyStateReadModel,
-	analysis *model.DiagnosisAnalysisRecord,
-	freshness *model.DiagnosisAnalysisFreshness,
-	assessments []model.DiagnosisCandidateAssessment,
+	diagnosis *NativeDiagnosisView,
+	latestRun *NativeDiagnosisRunSummary,
 	trainingPlan *model.TrainingPlan,
 ) HealthWorkspaceCapabilities {
 	envelope, safetyErr := ProjectSafetyEnvelopeV2(snapshot)
@@ -163,24 +159,34 @@ func deriveWorkspaceCapabilities(
 	}
 	trainingSafetyIncomplete := requiresSafety || !envelope.Coverage.Complete
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
-	diagnosisReview := freshness != nil && freshness.State != model.DiagnosisFreshnessFresh
-	analysisEligible := analysis != nil &&
-		(analysis.Status == "completed" || analysis.Status == "partial") &&
-		len(analysis.Candidates) > 0 &&
-		treatmentCandidateAssessmentsReady(analysis, assessments) &&
-		(freshness == nil || freshness.State == model.DiagnosisFreshnessFresh)
+	diagnosisReview := latestRun != nil && latestRun.State == "open"
+	hasDiagnosis := (diagnosis != nil && diagnosis.CurrentRevision > 0) || latestRun != nil
+	adoptedConditions := 0
+	if diagnosis != nil {
+		adoptedConditions = len(adoptedTreatmentDiagnosis(diagnosis).ConditionEntries)
+	}
+	diagnosisEligible := treatmentDiagnosisFactsReady(TreatmentDecisionFacts{
+		DiagnosisRevision: diagnosisRevision(diagnosis), AdoptedConditionCount: adoptedConditions,
+	})
 	activePlan := trainingPlan != nil && trainingPlan.Status == "active"
 	return HealthWorkspaceCapabilities{
 		CanContinueConsultation: true,
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !diagnosisBlocked,
-		CanReviewDiagnosis:      analysis != nil,
-		CanGenerateTreatment:    analysisEligible && !trainingSafetyIncomplete,
+		CanReviewDiagnosis:      hasDiagnosis,
+		CanGenerateTreatment:    diagnosisEligible && !trainingSafetyIncomplete,
 		CanExecuteTreatment:     activePlan && !trainingSafetyIncomplete,
 		CanRecordOutcome:        activePlan,
 		RequiresSafetyReview:    requiresSafety,
 		RequiresDiagnosisReview: diagnosisReview,
 	}
+}
+
+func diagnosisRevision(diagnosis *NativeDiagnosisView) int64 {
+	if diagnosis == nil {
+		return 0
+	}
+	return diagnosis.CurrentRevision
 }
 
 func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction {
@@ -198,13 +204,13 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 		add("review_safety", 100, true, "存在需要优先审核的安全状态。", map[string]any{"section": "safety"})
 	}
 	if caps.RequiresDiagnosisReview {
-		add("review_diagnosis", 85, true, "最近分析与当前 BodyState 可能不再完全一致。", map[string]any{"section": "diagnosis"})
+		add("review_diagnosis", 85, true, "最新一次 Diagnosis 分析有待你确认的变更。", map[string]any{"section": "diagnosis"})
 	}
 	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
 		add("open_training", 75, true, "当前训练计划可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
 	}
 	if caps.CanGenerateTreatment {
-		add("generate_treatment", 70, true, "当前分析可用于生成一个需你确认的训练计划 proposal。", map[string]any{"section": "diagnosis"})
+		add("generate_treatment", 70, true, "已采纳的 Diagnosis 条件可用于生成一个需你确认的训练计划 proposal。", map[string]any{"section": "diagnosis"})
 	}
 	if caps.CanRequestDiagnosis {
 		add("request_diagnosis", 60, true, "当前 BodyState 已有可分析信息。", map[string]any{"section": "diagnosis"})

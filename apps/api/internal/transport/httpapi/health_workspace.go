@@ -59,9 +59,6 @@ func healthWorkspaceToOpenAPI(workspace *service.HealthWorkspace) (openapiv1.Hea
 	if err := json.Unmarshal(encoded, &projected); err != nil {
 		return openapiv1.HealthWorkspace{}, err
 	}
-	if diagnosis, ok := projected["diagnosis"].(map[string]any); ok && len(diagnosis) > 0 {
-		projected["diagnosis"] = projectDiagnosisPayload(diagnosis)
-	}
 	if plan, ok := projected["training_plan"].(map[string]any); ok && len(plan) > 0 {
 		sanitizeTrainingPlanMap(plan)
 	}

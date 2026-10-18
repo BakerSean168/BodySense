@@ -9,16 +9,17 @@ import * as zod from 'zod/mini';
 import { JsonObject } from './jsonObject.zod';
 import { PlanIdempotencyKey } from './planIdempotencyKey.zod';
 
+
 export const generatePlanProposalRequestChangeReasonMax = 1000;
 
 
 
 export const GeneratePlanProposalRequest = /*#__PURE__*/ zod.strictObject({
-  "diagnosisAnalysisId": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "diagnosisRevision": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))),
   "userConstraints": /*#__PURE__*/ zod.optional(JsonObject),
   "changeReason": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.maxLength(generatePlanProposalRequestChangeReasonMax))),
   "idempotencyKey": PlanIdempotencyKey
-}).check(/*#__PURE__*/ zod.describe('The user\'s generation command. Without diagnosisAnalysisId the latest analysis is used. The owner always comes from auth.'));
+}).check(/*#__PURE__*/ zod.describe('The user\'s generation command. Generation always reads the current native Diagnosis and needs at least one adopted Condition at its current revision plus complete Safety coverage. diagnosisRevision, when sent, pins the revision the user was shown; a different current revision returns 409 DIAGNOSIS_STALE. The owner always comes from auth.'));
 
 export type GeneratePlanProposalRequest = zod.input<typeof GeneratePlanProposalRequest>;
 export type GeneratePlanProposalRequestOutput = zod.output<typeof GeneratePlanProposalRequest>;

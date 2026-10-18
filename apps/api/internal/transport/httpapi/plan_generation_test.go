@@ -73,14 +73,13 @@ const planGenerationPath = "/api/v1/plan-proposals/generations"
 
 func TestGeneratePlanProposalReturnsPendingAgentProposal(t *testing.T) {
 	owner := uuid.New()
-	analysis := uuid.New()
 	fake := &planGenerationFake{}
-	body := map[string]any{"diagnosisAnalysisId": analysis.String(), "userConstraints": map[string]any{"minutes": 20}, "changeReason": " first ", "idempotencyKey": "gen-1"}
+	body := map[string]any{"diagnosisRevision": 3, "userConstraints": map[string]any{"minutes": 20}, "changeReason": " first ", "idempotencyKey": "gen-1"}
 	rec := doPlanRequest(t, planGenerationRoute(t, owner, fake), http.MethodPost, planGenerationPath, body)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	if fake.owner != owner || fake.input.DiagnosisAnalysisID != analysis || fake.input.IdempotencyKey != "gen-1" ||
+	if fake.owner != owner || fake.input.ExpectedDiagnosisRevision == nil || *fake.input.ExpectedDiagnosisRevision != 3 || fake.input.IdempotencyKey != "gen-1" ||
 		fake.input.ChangeReason != "first" || fake.input.UserConstraints["minutes"] != float64(20) {
 		t.Fatalf("command: %+v", fake.input)
 	}
@@ -94,8 +93,8 @@ func TestGeneratePlanProposalReturnsPendingAgentProposal(t *testing.T) {
 	if rec = doPlanRequest(t, planGenerationRoute(t, owner, fake), http.MethodPost, planGenerationPath, map[string]any{"idempotencyKey": "gen-1"}); rec.Code != http.StatusOK {
 		t.Fatalf("replay status=%d", rec.Code)
 	}
-	if fake.input.DiagnosisAnalysisID != uuid.Nil {
-		t.Fatal("omitted analysis must select the latest")
+	if fake.input.ExpectedDiagnosisRevision != nil {
+		t.Fatal("an omitted revision must generate from the current Diagnosis without a pin")
 	}
 }
 
@@ -107,9 +106,10 @@ func TestGeneratePlanProposalRejectsCallerAuthorityInBody(t *testing.T) {
 		"agent draft":     {"idempotencyKey": "k", "draft": map[string]any{"title": "t"}},
 		"initiator":       {"idempotencyKey": "k", "initiatedBy": "user"},
 		"decision":        {"idempotencyKey": "k", "decisionId": uuid.NewString()},
-		"nil analysis":    {"idempotencyKey": "k", "diagnosisAnalysisId": uuid.Nil.String()},
+		"zero revision":   {"idempotencyKey": "k", "diagnosisRevision": 0},
 		"padded key":      {"idempotencyKey": " k "},
-		"bad analysis id": {"idempotencyKey": "k", "diagnosisAnalysisId": "not-a-uuid"},
+		"bad revision":    {"idempotencyKey": "k", "diagnosisRevision": "r1"},
+		"legacy analysis": {"idempotencyKey": "k", "diagnosisAnalysisId": uuid.NewString()},
 	} {
 		fake := &planGenerationFake{}
 		rec := doPlanRequest(t, planGenerationRoute(t, owner, fake), http.MethodPost, planGenerationPath, body)
@@ -133,8 +133,7 @@ func TestGeneratePlanProposalErrorMapping(t *testing.T) {
 		key  string
 	}{
 		{service.ErrTreatmentDiagnosisNotReady, 409, "DIAGNOSIS_NOT_READY"},
-		{service.ErrTreatmentAnalysisStale, 409, "DIAGNOSIS_STALE"},
-		{service.ErrTreatmentCandidateAssessmentRequired, 409, "DIAGNOSIS_ASSESSMENT_REQUIRED"},
+		{service.ErrTreatmentDiagnosisStale, 409, "DIAGNOSIS_STALE"},
 		{fmt.Errorf("%w: governance", service.ErrTreatmentSafetyBlocked), 409, "SAFETY_BLOCKED"},
 		{service.ErrTreatmentPlanUnavailable, 502, "AGENT_OUTPUT_REJECTED"},
 		{fmt.Errorf("%w: agent id", service.ErrTreatmentPlanOutputInvalid), 502, "AGENT_OUTPUT_REJECTED"},

@@ -12,6 +12,10 @@ import {
   getTrainerPlan,
   recordUserSymptom,
 } from "./support/trainer";
+import {
+  adoptNativeDiagnosis,
+  factStatementEvidenceId,
+} from "./support/diagnosis";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -112,45 +116,36 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
   );
   expect(symptom.created_revision).toBe(1);
 
+  // Diagnosis: one formal native analysis run, the user's explicit accept
+  // and the whole-run settlement adopt the Condition plan generation needs.
+  const requestEvidenceId = await factStatementEvidenceId(
+    request,
+    apiBase,
+    authHeaders,
+    symptom.id,
+  );
+  const adopted = await adoptNativeDiagnosis(
+    request,
+    apiBase,
+    authHeaders,
+    requestEvidenceId,
+  );
   const diagnosis = await expectJson<{
-    analysis_id: string;
-    body_state_revision: number;
-    candidates: Array<{ candidate_id: string; concern_key: string }>;
-    freshness: { state: string };
+    currentRevision: number;
+    conditionEntries: Array<{ conditionId: string; disposition: string }>;
   }>(
-    await request.post(
-      `${apiBase}/api/v1/consultations/${conversationId}/diagnosis`,
-      { headers: authHeaders, timeout: 60_000 },
-    ),
-    "generate DiagnosisAnalysis",
+    await request.get(`${apiBase}/api/v1/diagnosis`, { headers: authHeaders }),
+    "read the adopted native Diagnosis",
   );
-  expect(diagnosis.candidates).toHaveLength(1);
-  // Chat intake preserves the statement without guessing a canonical region.
-  expect(diagnosis.candidates[0].concern_key).toBe("general");
-  expect(diagnosis.freshness.state).toBe("fresh");
-
-  await expectJson(
-    await request.put(
-      `${apiBase}/api/v1/diagnosis-analyses/${diagnosis.analysis_id}/assessment`,
-      {
-        headers: authHeaders,
-        data: {
-          candidates: [
-            {
-              candidate_id: diagnosis.candidates[0].candidate_id,
-              state: "confirmed",
-            },
-          ],
-        },
-      },
-    ),
-    "assess Diagnosis candidate",
-  );
+  expect(diagnosis.currentRevision).toBe(adopted.revision);
+  expect(
+    diagnosis.conditionEntries.filter((row) => row.disposition === "adopted"),
+  ).not.toHaveLength(0);
 
   // Generation only proposes: the Treatment Agent's draft becomes a pending
   // agent PlanProposal(create). Nothing is accepted or executable yet.
   const generationCommand = {
-    diagnosisAnalysisId: diagnosis.analysis_id,
+    diagnosisRevision: adopted.revision,
     userConstraints: { available_minutes_per_day: 10 },
     changeReason: "initial accepted strategy",
     idempotencyKey: `plan-generation-${conversationId}`,
@@ -271,7 +266,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
     authHeaders,
     "肩膀不适有所改善",
   );
-  expect(symptomChange.revision).toBeGreaterThan(diagnosis.body_state_revision);
+  expect(symptomChange.revision).toBeGreaterThan(symptom.created_revision);
 
   const finalWorkspace = await expectJson<{
     training_plan: { id: string; status: string };

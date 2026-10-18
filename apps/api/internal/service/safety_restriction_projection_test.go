@@ -27,6 +27,8 @@ func TestNativeSafetyResolutionLeavesOverlappingRestriction(t *testing.T) {
 
 func TestTreatmentNativeSafetyRejectsInconsistentCoverage(t *testing.T) {
 	facts := readyTreatmentDecisionFacts()
+	// Complete claimed without any covered source is inconsistent.
+	facts.SafetyEnvelope = testNativeSafetyEnvelope(7)
 	facts.SafetyEnvelope.Coverage.Complete = true
 	got := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts)
 	if got.Outcome != TreatmentBlock {

@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
-import { DiagnosisWorkspaceProjection } from './diagnosisWorkspaceProjection.zod';
 import { Outcome } from './outcome.zod';
 import { TrainingPlan } from './trainingPlan.zod';
 import { WorkspaceAction } from './workspaceAction.zod';
@@ -17,7 +16,6 @@ export const HealthWorkspace = /*#__PURE__*/ zod.strictObject({
   "generated_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "conversation_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "profile_ready": /*#__PURE__*/ zod.boolean(),
-  "diagnosis": /*#__PURE__*/ zod.optional(DiagnosisWorkspaceProjection),
   "training_plan": /*#__PURE__*/ zod.optional(TrainingPlan),
   "recent_outcomes": /*#__PURE__*/ zod.array(Outcome),
   "trends": /*#__PURE__*/ zod.array(WorkspaceTrend),

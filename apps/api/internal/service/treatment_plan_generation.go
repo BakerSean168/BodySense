@@ -48,13 +48,14 @@ func (s *TreatmentService) AttachPlanProposer(plans treatmentPlanProposer) {
 	}
 }
 
-// TreatmentPlanGenerationInput is the user's generation command. A nil
-// DiagnosisAnalysisID selects the latest analysis.
+// TreatmentPlanGenerationInput is the user's generation command. It always
+// generates from the current native Diagnosis; ExpectedDiagnosisRevision, when
+// set, pins the revision the user was shown.
 type TreatmentPlanGenerationInput struct {
-	DiagnosisAnalysisID uuid.UUID
-	UserConstraints     map[string]any
-	ChangeReason        string
-	IdempotencyKey      string
+	ExpectedDiagnosisRevision *int64
+	UserConstraints           map[string]any
+	ChangeReason              string
+	IdempotencyKey            string
 }
 
 type TreatmentPlanGenerationResult struct {
@@ -119,11 +120,11 @@ func (s *TreatmentService) GeneratePlanProposal(
 		constraints = map[string]any{}
 	}
 	command := planDigest(struct {
-		Owner               uuid.UUID
-		DiagnosisAnalysisID uuid.UUID
-		UserConstraints     map[string]any
-		ChangeReason        string
-	}{userID, input.DiagnosisAnalysisID, constraints, changeReason})
+		Owner                     uuid.UUID
+		ExpectedDiagnosisRevision *int64
+		UserConstraints           map[string]any
+		ChangeReason              string
+	}{userID, input.ExpectedDiagnosisRevision, constraints, changeReason})
 
 	existing, err := s.plans.ProposalByIdempotencyKey(ctx, userID, input.IdempotencyKey)
 	if err != nil {
@@ -137,21 +138,10 @@ func (s *TreatmentService) GeneratePlanProposal(
 		return &TreatmentPlanGenerationResult{Proposal: existing, Replayed: true}, nil
 	}
 
-	analysisID := input.DiagnosisAnalysisID
-	if analysisID == uuid.Nil {
-		latest, latestErr := s.diagnosis.GetLatest(ctx, userID)
-		if latestErr != nil {
-			return nil, latestErr
-		}
-		if latest == nil {
-			return nil, ErrTreatmentDiagnosisNotReady
-		}
-		analysisID = latest.ID
-	}
 	gen, err := s.runGeneration(ctx, userID, TreatmentProposalInput{
-		DiagnosisAnalysisID: analysisID,
-		UserConstraints:     constraints,
-		ChangeReason:        changeReason,
+		ExpectedDiagnosisRevision: input.ExpectedDiagnosisRevision,
+		UserConstraints:           constraints,
+		ChangeReason:              changeReason,
 	})
 	if err != nil {
 		return nil, err
@@ -164,7 +154,8 @@ func (s *TreatmentService) GeneratePlanProposal(
 		"schemaRevision":              TrainingPlanGenerationProvenanceV1,
 		"agentProposalSchemaRevision": TrainingPlanAgentProposalSchemaV1,
 		"commandFingerprint":          command,
-		"sourceDiagnosisAnalysisId":   gen.analysis.ID,
+		"sourceDiagnosisRevision":     gen.diagnosis.CurrentRevision,
+		"sourceConditionIds":          adoptedConditionIDs(gen.diagnosis),
 		"sourceBodyStateRevision":     gen.bodyRevision,
 		"changeReason":                changeReason,
 		"summary":                     block.Summary,
@@ -174,7 +165,7 @@ func (s *TreatmentService) GeneratePlanProposal(
 		"executionProvenance":         normalizeRaw(gen.payload.ExecutionProvenance, `{}`),
 		"governance":                  normalizeRaw(gen.payload.Governance, `{}`),
 		"evidenceAcquisition":         normalizeRaw(gen.payload.EvidenceAcquisition, `{}`),
-		"generationDecisionTrace":     json.RawMessage(buildTreatmentDecisionTrace(gen.decision, gen.facts, gen.analysis.ID, gen.configurationID)),
+		"generationDecisionTrace":     json.RawMessage(buildTreatmentDecisionTrace(gen.decision, gen.facts, gen.diagnosis.CurrentRevision, gen.configurationID)),
 		"rolloutProvenance":           gen.route,
 		"replayInputDigest":           sha256Hex(gen.replayInput),
 		"agentOutputDigest":           sha256Hex(gen.payload.PlanProposal),
@@ -204,6 +195,14 @@ func (s *TreatmentService) GeneratePlanProposal(
 	// Propose then returns that row instead of the one built here.
 	inserted := len(proposal.GenerationProvenance) > 0 && &proposal.GenerationProvenance[0] == &provenance[0]
 	return &TreatmentPlanGenerationResult{Proposal: proposal, Replayed: !inserted}, nil
+}
+
+func adoptedConditionIDs(diagnosis *NativeDiagnosisView) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(diagnosis.ConditionEntries))
+	for _, condition := range diagnosis.ConditionEntries {
+		ids = append(ids, condition.ConditionID)
+	}
+	return ids
 }
 
 // decodeTreatmentPlanProposal strictly decodes the Agent block and materializes
