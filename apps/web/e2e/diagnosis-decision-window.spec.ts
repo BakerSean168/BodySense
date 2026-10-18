@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { completeStructuredSafetyIntake } from "./support/safety";
+import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -52,7 +53,7 @@ async function seedDiagnosisRun(
   };
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers,
-    data: { gender: "female", birth_date: "1994-03-12" },
+    data: profileReplacement({ gender: "female", birth_date: "1994-03-12" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 

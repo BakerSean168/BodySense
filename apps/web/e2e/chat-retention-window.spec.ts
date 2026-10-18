@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { parseStreamEvent } from "@bodysense/contracts";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 // PC-RET-001 in a real browser against the real Go retention path: the single
 // Conversation keeps a rolling raw-history window sized by the context token
@@ -36,7 +37,7 @@ async function register(page: Page, request: APIRequestContext) {
   };
   const profile = await request.put(`${api}/api/v1/profile`, {
     headers,
-    data: { gender: "female", birth_date: "1994-03-12" },
+    data: profileReplacement({ gender: "female", birth_date: "1994-03-12" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
   return headers;
