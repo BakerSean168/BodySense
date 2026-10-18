@@ -183,8 +183,8 @@ func deriveWorkspaceCapabilities(
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !diagnosisBlocked,
 		CanReviewDiagnosis:      hasDiagnosis,
-		CanGenerateTreatment:    diagnosisEligible && !staleAdopted && !trainingSafetyIncomplete,
-		CanExecuteTreatment:     activePlan && !trainingSafetyIncomplete,
+		CanGenerateTrainingPlan: diagnosisEligible && !staleAdopted && !trainingSafetyIncomplete,
+		CanStartTraining:        activePlan && !trainingSafetyIncomplete,
 		CanRecordOutcome:        activePlan,
 		RequiresSafetyReview:    requiresSafety,
 		RequiresDiagnosisReview: diagnosisReview,
@@ -215,11 +215,11 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 	if caps.RequiresDiagnosisReview {
 		add("review_diagnosis", 85, true, "Diagnosis 有待你确认的分析变更，或已采纳的条件所依据的资料已变化。", map[string]any{"section": "diagnosis"})
 	}
-	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
-		add("open_training", 75, true, "当前训练计划可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
+	if caps.CanStartTraining && workspace.TrainingPlan != nil {
+		add("open_training", 75, true, "当前训练计划可以继续执行。", map[string]any{"route": workspaceTrainingRoute(workspace.ConversationID)})
 	}
-	if caps.CanGenerateTreatment {
-		add("generate_treatment", 70, true, "已采纳的 Diagnosis 条件可用于生成一个需你确认的训练计划 proposal。", map[string]any{"section": "diagnosis"})
+	if caps.CanGenerateTrainingPlan {
+		add("generate_training_plan", 70, true, "已采纳的 Diagnosis 条件可用于生成一个需你确认的训练计划 proposal。", map[string]any{"section": "diagnosis"})
 	}
 	if caps.CanRequestDiagnosis {
 		add("request_diagnosis", 60, true, "当前 BodyState 已有可分析信息。", map[string]any{"section": "diagnosis"})
@@ -232,12 +232,12 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 	return actions
 }
 
-func workspaceTreatmentRoute(conversationID *uuid.UUID) string {
+func workspaceTrainingRoute(conversationID *uuid.UUID) string {
 	route := "/consultation"
 	if conversationID != nil {
 		route += "/" + conversationID.String()
 	}
-	return route + "?view=treatment"
+	return route + "?view=training"
 }
 
 func deriveWorkspaceTrends(

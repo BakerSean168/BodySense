@@ -237,8 +237,8 @@ func TestWorkspaceStaleAdoptedConditionOwesReviewAndBlocksGeneration(t *testing.
 		diagnosis := workspaceDiagnosis(model.ConditionAdopted)
 		diagnosis.ConditionEntries[0].Freshness = &DiagnosisFreshness{State: state}
 		caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), diagnosis, nil, nil)
-		if caps.RequiresDiagnosisReview != want || caps.CanGenerateTreatment == want {
-			t.Fatalf("%s: review=%v generate=%v", state, caps.RequiresDiagnosisReview, caps.CanGenerateTreatment)
+		if caps.RequiresDiagnosisReview != want || caps.CanGenerateTrainingPlan == want {
+			t.Fatalf("%s: review=%v generate=%v", state, caps.RequiresDiagnosisReview, caps.CanGenerateTrainingPlan)
 		}
 	}
 	// An inactive stale Condition shapes no plan and owes nothing.
@@ -246,7 +246,7 @@ func TestWorkspaceStaleAdoptedConditionOwesReviewAndBlocksGeneration(t *testing.
 	inactive := testAdoptedCondition(diagnosis.UserID, 2, model.ConditionInactive)
 	inactive.Freshness = &DiagnosisFreshness{State: DiagnosisFreshnessStale}
 	diagnosis.ConditionEntries = append(diagnosis.ConditionEntries, inactive)
-	if caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), diagnosis, nil, nil); caps.RequiresDiagnosisReview || !caps.CanGenerateTreatment {
+	if caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), diagnosis, nil, nil); caps.RequiresDiagnosisReview || !caps.CanGenerateTrainingPlan {
 		t.Fatalf("inactive stale Condition gated the loop: %+v", caps)
 	}
 }

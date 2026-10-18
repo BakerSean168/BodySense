@@ -31,7 +31,7 @@ func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(
 	if !caps.RequiresSafetyReview {
 		t.Fatal("expected safety review capability")
 	}
-	if !caps.CanRequestDiagnosis || caps.CanGenerateTreatment || caps.CanExecuteTreatment {
+	if !caps.CanRequestDiagnosis || caps.CanGenerateTrainingPlan || caps.CanStartTraining {
 		t.Fatalf("unscreened symptom must allow diagnosis collection and block training: %#v", caps)
 	}
 	if !caps.CanContinueConsultation || !caps.CanEditBodyState {
@@ -46,12 +46,12 @@ func TestWorkspaceCapabilitiesRequireAnAdoptedConditionForTreatment(t *testing.T
 		"only inactive": workspaceDiagnosis(model.ConditionInactive),
 	} {
 		caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), diagnosis, nil, nil)
-		if caps.CanGenerateTreatment {
+		if caps.CanGenerateTrainingPlan {
 			t.Fatalf("%s: treatment must stay gated until a Condition is adopted: %#v", name, caps)
 		}
 	}
 	caps := deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), workspaceDiagnosis(model.ConditionAdopted), nil, nil)
-	if !caps.CanGenerateTreatment || !caps.CanReviewDiagnosis || caps.RequiresDiagnosisReview {
+	if !caps.CanGenerateTrainingPlan || !caps.CanReviewDiagnosis || caps.RequiresDiagnosisReview {
 		t.Fatalf("an adopted Condition with complete Safety should allow generation: %#v", caps)
 	}
 }
@@ -76,13 +76,13 @@ func TestWorkspaceCapabilitiesRequireActiveTrainingPlanForExecution(t *testing.T
 	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
 		return deriveWorkspaceCapabilities(screenedWorkspaceBodyState(7), workspaceDiagnosis(model.ConditionAdopted), nil, plan)
 	}
-	if caps := baseArgs(nil); caps.CanExecuteTreatment || caps.CanRecordOutcome {
+	if caps := baseArgs(nil); caps.CanStartTraining || caps.CanRecordOutcome {
 		t.Fatalf("no active plan must not be advertised executable: %#v", caps)
 	}
-	if caps := baseArgs(&model.TrainingPlan{Status: "paused"}); caps.CanExecuteTreatment {
+	if caps := baseArgs(&model.TrainingPlan{Status: "paused"}); caps.CanStartTraining {
 		t.Fatalf("a paused plan must not be advertised executable: %#v", caps)
 	}
-	if caps := baseArgs(&model.TrainingPlan{Status: "active"}); !caps.CanExecuteTreatment || !caps.CanRecordOutcome {
+	if caps := baseArgs(&model.TrainingPlan{Status: "active"}); !caps.CanStartTraining || !caps.CanRecordOutcome {
 		t.Fatalf("an active plan with complete Safety should be executable: %#v", caps)
 	}
 }
@@ -92,7 +92,7 @@ func TestWorkspaceActionsOpenTrainingTargetsCanonicalTreatmentView(t *testing.T)
 	workspace := &HealthWorkspace{
 		ConversationID: &conversationID,
 		TrainingPlan:   &model.TrainingPlan{ID: uuid.New(), Status: "active"},
-		Capabilities:   HealthWorkspaceCapabilities{CanExecuteTreatment: true},
+		Capabilities:   HealthWorkspaceCapabilities{CanStartTraining: true},
 	}
 
 	actions := deriveWorkspaceActions(workspace)
@@ -100,7 +100,7 @@ func TestWorkspaceActionsOpenTrainingTargetsCanonicalTreatmentView(t *testing.T)
 		if action.Kind != "open_training" {
 			continue
 		}
-		want := "/consultation/" + conversationID.String() + "?view=treatment"
+		want := "/consultation/" + conversationID.String() + "?view=training"
 		if got, _ := action.Target["route"].(string); got != want {
 			t.Fatalf("open_training route=%q want=%q", got, want)
 		}
@@ -137,7 +137,7 @@ func TestWorkspaceCapabilitiesIncompleteSafetyBlocksTraining(t *testing.T) {
 	snapshot := screenedWorkspaceBodyState(7)
 	snapshot.SafetyScreens = nil
 	caps := deriveWorkspaceCapabilities(snapshot, workspaceDiagnosis(model.ConditionAdopted), nil, &model.TrainingPlan{Status: "active"})
-	if caps.CanExecuteTreatment || caps.CanGenerateTreatment {
+	if caps.CanStartTraining || caps.CanGenerateTrainingPlan {
 		t.Fatalf("unscreened native symptoms must block training: %+v", caps)
 	}
 	if !caps.CanContinueConsultation || !caps.CanRequestDiagnosis {

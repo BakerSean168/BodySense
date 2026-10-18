@@ -26,8 +26,8 @@ type HealthWorkspaceCapabilities struct {
 	CanEditBodyState        bool `json:"can_edit_body_state"`
 	CanRequestDiagnosis     bool `json:"can_request_diagnosis"`
 	CanReviewDiagnosis      bool `json:"can_review_diagnosis"`
-	CanGenerateTreatment    bool `json:"can_generate_treatment"`
-	CanExecuteTreatment     bool `json:"can_execute_treatment"`
+	CanGenerateTrainingPlan bool `json:"can_generate_training_plan"`
+	CanStartTraining        bool `json:"can_start_training"`
 	CanRecordOutcome        bool `json:"can_record_outcome"`
 	RequiresSafetyReview    bool `json:"requires_safety_review"`
 	RequiresDiagnosisReview bool `json:"requires_diagnosis_review"`

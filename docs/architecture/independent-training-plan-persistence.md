@@ -219,8 +219,8 @@ aggregate, its lifecycle and every link to it are gone:
 - **HTTP.** The `/treatments/*` routes are removed. `HealthWorkspace` drops
   `treatment`, `treatment_revisions`, `can_accept_treatment`,
   `can_review_treatment` and `requires_treatment_review`.
-  `can_generate_treatment` keeps its Diagnosis + Safety gate (generation yields
-  a pending PlanProposal); `can_execute_treatment` and `can_record_outcome`
+  `can_generate_training_plan` keeps its Diagnosis + Safety gate (generation yields
+  a pending PlanProposal); `can_start_training` and `can_record_outcome`
   follow the active TrainingPlan, and execution still needs complete Safety
   coverage.
 - **Outcomes** stay the user's longitudinal feedback in their own

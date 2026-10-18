@@ -386,7 +386,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           <TrainingPlanWindow
             state={trainingActions.state}
             canExecute={
-              props.workspace?.capabilities.can_execute_treatment === true && !safetyReview
+              props.workspace?.capabilities.can_start_training === true && !safetyReview
             }
             controls={{
               busy: trainingActions.busy,
@@ -409,7 +409,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                   plan?.planId !== planId ||
                   plan.status !== "active" ||
                   !plan.gatePermits ||
-                  props.workspace?.capabilities.can_execute_treatment !== true ||
+                  props.workspace?.capabilities.can_start_training !== true ||
                   safetyReview
                 ) return;
                 setTrainerLaunch({ planId, templateId, key: crypto.randomUUID() });
@@ -425,7 +425,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             planId={trainingSelection.selected?.planId ?? null}
             launch={trainerLaunch}
             accepted={trainingSelection.selected?.status === "active"}
-            canExecute={props.workspace?.capabilities.can_execute_treatment === true}
+            canExecute={props.workspace?.capabilities.can_start_training === true}
             safetyBlocked={safetyReview || trainingSelection.selected?.gatePermits === false}
             loading={trainingActions.state.loading}
             error={trainingActions.state.error}

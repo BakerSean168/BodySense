@@ -473,8 +473,8 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(beforeFacts.ok()).toBeTruthy();
   const revisionBeforeFeedback = (await beforeFacts.json()).current_revision;
 
-  await page.goto(`/consultation/${conversationId}?view=treatment`);
-  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
+  await page.goto(`/consultation/${conversationId}?view=training`);
+  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=training$/);
   const trainingAction = page
     .getByTestId("training-window")
     .getByRole("button", { name: "开始训练", exact: true });
@@ -509,7 +509,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   const finalWorkspace = (await finalWorkspaceResponse.json()) as {
     capabilities: {
       requires_safety_review: boolean;
-      can_execute_treatment: boolean;
+      can_start_training: boolean;
     };
   };
   const afterFacts = await request.get(`${apiBase}/api/v1/body-state/records`, {
@@ -521,5 +521,5 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   );
   // The worsening symptom is unscreened: execution pauses, the plan is kept.
   expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
-  expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
+  expect(finalWorkspace.capabilities.can_start_training).toBe(false);
 });

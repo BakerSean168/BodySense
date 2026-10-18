@@ -183,7 +183,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
 
   const pendingWorkspace = await expectJson<{
     training_plan?: { id: string };
-    capabilities: { can_execute_treatment: boolean };
+    capabilities: { can_start_training: boolean };
   }>(
     await request.get(`${apiBase}/api/v1/health-workspace`, {
       headers: authHeaders,
@@ -191,7 +191,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
     "load HealthWorkspace with a pending proposal",
   );
   expect(pendingWorkspace.training_plan).toBeUndefined();
-  expect(pendingWorkspace.capabilities.can_execute_treatment).toBe(false);
+  expect(pendingWorkspace.capabilities.can_start_training).toBe(false);
 
   // Only the user's explicit accept writes the plan.
   const acceptance = await expectJson<{
@@ -216,7 +216,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
 
   const activeWorkspace = await expectJson<{
     training_plan: { id: string; status: string };
-    capabilities: { can_execute_treatment: boolean };
+    capabilities: { can_start_training: boolean };
     actions: Array<{ kind: string; target?: { route?: string } }>;
   }>(
     await request.get(`${apiBase}/api/v1/health-workspace`, {
@@ -226,16 +226,16 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
   );
   expect(activeWorkspace.training_plan.id).toBe(acceptance.planId);
   expect(activeWorkspace.training_plan.status).toBe("active");
-  expect(activeWorkspace.capabilities.can_execute_treatment).toBe(true);
+  expect(activeWorkspace.capabilities.can_start_training).toBe(true);
   expect(activeWorkspace.actions).toContainEqual(
     expect.objectContaining({
       kind: "open_training",
-      target: { route: `/consultation/${conversationId}?view=treatment` },
+      target: { route: `/consultation/${conversationId}?view=training` },
     }),
   );
 
-  await page.goto(`/consultation/${conversationId}?view=treatment`);
-  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
+  await page.goto(`/consultation/${conversationId}?view=training`);
+  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=training$/);
   const trainingAction = page
     .getByTestId("training-window")
     .getByRole("button", { name: "开始训练", exact: true });
@@ -285,7 +285,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
   const finalWorkspace = await expectJson<{
     training_plan: { id: string; status: string };
     capabilities: {
-      can_execute_treatment: boolean;
+      can_start_training: boolean;
       requires_safety_review: boolean;
     };
   }>(
@@ -319,7 +319,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
   // The new symptom has not been screened: execution fails closed
   // until its own checklist, without changing the user's plan status.
   expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
-  expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
+  expect(finalWorkspace.capabilities.can_start_training).toBe(false);
   expect(finalWorkspace.training_plan.id).toBe(acceptance.planId);
   expect(finalWorkspace.training_plan.status).toBe("active");
   // Feedback never changed the plan; it only recommends review.

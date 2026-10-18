@@ -4,7 +4,7 @@ import type {
 } from "../types/workspace";
 
 export interface WorkspaceSummary {
-  canExecuteTreatment: boolean;
+  canStartTraining: boolean;
   requiresReview: boolean;
 }
 
@@ -13,7 +13,7 @@ export function selectWorkspaceSummary(
 ): WorkspaceSummary {
   const capabilities = workspace?.capabilities;
   return {
-    canExecuteTreatment: capabilities?.can_execute_treatment ?? false,
+    canStartTraining: capabilities?.can_start_training ?? false,
     requiresReview: requiresWorkspaceReview(capabilities),
   };
 }
