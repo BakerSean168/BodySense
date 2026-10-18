@@ -68,7 +68,7 @@ func (s *PublicServer) RequestAssetErasure(ctx context.Context, request openapiv
 	if request.Body == nil {
 		return assetErasureHTTPError{http.StatusBadRequest, "INVALID_REQUEST", "request body is required"}, nil
 	}
-	receipt, err := s.assetErasure.Request(ctx, uid, request.Id, request.Body.IdempotencyKey)
+	receipt, err := s.assetErasure.Request(applicationRequestContext(ctx), uid, request.Id, request.Body.IdempotencyKey)
 	if err != nil {
 		return assetErasureError(err), nil
 	}
@@ -89,7 +89,7 @@ func (s *PublicServer) GetAssetErasure(ctx context.Context, request openapiv1.Ge
 	if s.assetErasure == nil {
 		return assetErasureUnavailable, nil
 	}
-	receipt, err := s.assetErasure.Receipt(ctx, uid, request.Id)
+	receipt, err := s.assetErasure.Receipt(applicationRequestContext(ctx), uid, request.Id)
 	if err != nil {
 		return assetErasureError(err), nil
 	}
