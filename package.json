@@ -61,6 +61,8 @@
     "curriculum:placement": "node scripts/learning/generate-placement-status.mjs",
     "curriculum:select-track": "node scripts/learning/select-placement-track.mjs",
     "schema:snapshot": "bash scripts/schema/capture-current.sh",
+    "schema:check": "bash scripts/schema/check-snapshot.sh",
+    "release:v2:dry-run": "bash scripts/v2-release-dry-run.sh",
     "contracts:bootstrap": "bash scripts/contracts/bootstrap-tools.sh",
     "contracts:lint": "bash scripts/contracts/lint.sh",
     "contracts:generate": "bash scripts/contracts/generate.sh",
