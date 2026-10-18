@@ -14,7 +14,7 @@ vi.mock("@/features/training/components/TrainingExecutionPanel", () => ({
 
 const allowed: TrainerEntryGuardProps = {
   planId: "accepted-1",
-  launchedPlanId: "accepted-1",
+  launch: { planId: "accepted-1", templateId: "a", key: "launch-1" },
   accepted: true,
   canExecute: true,
   safetyBlocked: false,
@@ -29,7 +29,7 @@ describe("V2 Trainer entry admission", () => {
     render(
       <TrainerEntryGuard
         {...allowed}
-        launchedPlanId={null}
+        launch={null}
         onOpenTraining={goToPlans}
       />,
     );
@@ -85,7 +85,7 @@ describe("V2 Trainer entry admission", () => {
       <TrainerEntryGuard
         {...allowed}
         planId="accepted-2"
-        launchedPlanId="accepted-2"
+        launch={{ planId: "accepted-2", templateId: "a", key: "launch-2" }}
       />,
     );
     expect(

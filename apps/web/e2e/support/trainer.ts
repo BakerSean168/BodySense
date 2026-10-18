@@ -49,9 +49,11 @@ export async function getTrainerPlan(
 }
 
 /**
- * Runs one Trainer session through the Go runtime by explicit commands: start
- * at the revision and Safety revision the user saw, finish, then record the
- * user's verbatim feedback. Nothing is inferred and no Outcome is written.
+ * Ends the plan's Trainer session through the Go runtime by explicit
+ * commands, then records the user's verbatim feedback. The session the
+ * browser started from the TrainingPlan window is reused; otherwise one is
+ * started at the revision and Safety revision the user saw. Nothing is
+ * inferred and no Outcome is written.
  */
 export async function finishTrainerSessionWithFeedback(
   request: APIRequestContext,
@@ -62,20 +64,31 @@ export async function finishTrainerSessionWithFeedback(
 ): Promise<TrainerSessionRecord> {
   const plan = await getTrainerPlan(request, apiBase, headers, planId);
   expect(plan.executionGate.permitsExecution).toBe(true);
-  const started = await json<TrainerSessionRecord>(
-    await request.post(`${apiBase}/api/v1/training-sessions`, {
-      headers,
-      data: {
-        planId,
-        expectedPlanRevisionId: plan.currentAcceptedRevisionId,
-        templateId: plan.currentContent.sessions[0]!.templateId,
-        timeZone: "Asia/Shanghai",
-        expectedSafetyRevision: plan.executionGate.safetyRevision,
-        idempotencyKey: crypto.randomUUID(),
-      },
-    }),
-    "start training session",
+  const { sessions } = await json<{
+    sessions: Array<TrainerSessionRecord & { planId: string }>;
+  }>(
+    await request.get(`${apiBase}/api/v1/training-sessions`, { headers }),
+    "list training sessions",
   );
+  const live = sessions.find(
+    (session) => session.planId === planId && session.state !== "ended",
+  );
+  const started =
+    live ??
+    (await json<TrainerSessionRecord>(
+      await request.post(`${apiBase}/api/v1/training-sessions`, {
+        headers,
+        data: {
+          planId,
+          expectedPlanRevisionId: plan.currentAcceptedRevisionId,
+          templateId: plan.currentContent.sessions[0]!.templateId,
+          timeZone: "Asia/Shanghai",
+          expectedSafetyRevision: plan.executionGate.safetyRevision,
+          idempotencyKey: crypto.randomUUID(),
+        },
+      }),
+      "start training session",
+    ));
   const ended = await json<TrainerSessionRecord>(
     await request.post(
       `${apiBase}/api/v1/training-sessions/${started.sessionId}/finish`,

@@ -99,7 +99,7 @@ describe("TrainingPlan window view model", () => {
     expect(resolveSelectedPlanId(plans, "ghost")).toBe("p2");
     expect(resolveSelectedPlanId([], "p1")).toBeNull();
     expect(project({ selectedPlanId: "ghost" }).selectedPlanMissing).toBe(true);
-    expect(selectTrainingPlan(plans, null).selected).toEqual({
+    expect(selectTrainingPlan(plans, null).selected).toMatchObject({
       planId: "p2",
       title: "日常活动计划",
       status: "active",

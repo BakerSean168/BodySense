@@ -243,9 +243,23 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
   await page.reload();
   await expect(trainingAction).toBeVisible();
   await trainingAction.click();
-  await expect(
-    page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
-  ).toBeVisible();
+  // The explicit Start runs one session; each set is one explicit receipt.
+  const trainer = page.getByTestId("trainer-session-panel");
+  await expect(trainer.getByTestId("trainer-in-progress")).toBeVisible();
+  await expect(trainer.getByTestId("trainer-state")).toHaveText("进行中");
+  await trainer.getByRole("button", { name: "完成本组" }).click();
+  await expect(trainer.getByTestId("trainer-last-receipt")).toContainText(
+    "第 1 组已记录",
+  );
+  // 390px: the same Trainer in the mobile sheet with 44px touch targets.
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const name of ["完成本组", "暂停训练"]) {
+    const box = await trainer.getByRole("button", { name }).boundingBox();
+    expect(box, name).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // The Trainer runs through the Go runtime by explicit commands; the user's
   // feedback is stored verbatim and only surfaces as the plan review hint.

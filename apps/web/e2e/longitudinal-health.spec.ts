@@ -482,9 +482,14 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   await page.reload();
   await expect(trainingAction).toBeVisible();
   await trainingAction.click();
-  await expect(
-    page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
-  ).toBeVisible();
+  // The explicit Start runs one session; each set is one explicit receipt.
+  const trainer = page.getByTestId("trainer-session-panel");
+  await expect(trainer.getByTestId("trainer-in-progress")).toBeVisible();
+  await expect(trainer.getByTestId("trainer-state")).toHaveText("进行中");
+  await trainer.getByRole("button", { name: "完成本组" }).click();
+  await expect(trainer.getByTestId("trainer-last-receipt")).toContainText(
+    "第 1 组已记录",
+  );
 
   // Session feedback is verbatim and never becomes a symptom; the worsening the
   // user reports is recorded through BodyState.

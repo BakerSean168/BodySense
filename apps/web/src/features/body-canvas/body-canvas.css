@@ -2289,3 +2289,54 @@
   .bc-tp-chat { min-height: 44px; }
   .bc-tp-template-select .bc-window-context-select { min-height: 44px; }
 }
+
+/* UI-TP-001 slice 2: Trainer window, matched to the Penpot Trainer boards
+   (In progress, Set recorded, Recovery, Ended). */
+.bc-tr-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bc-tr-clock { color: var(--dx-secondary); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bc-tr-progress { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+.bc-tr-progress > span { height: 5px; border-radius: 3px; background: var(--dx-idle-bg); }
+.bc-tr-progress > span[data-progress="done"] { background: #2f6b4f; }
+.bc-tr-progress > span[data-progress="partial"] { background: color-mix(in srgb, #2f6b4f 45%, var(--dx-idle-bg)); }
+.bc-tr-card { display: grid; gap: 10px; padding: 18px 20px 22px; border-radius: 16px; background: var(--dx-soft); }
+.bc-tr-card-stage { color: var(--dx-meta); font-size: 12px; }
+.bc-tr-card-name { margin: 0; color: var(--dx-ink); font-size: 26px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.bc-tr-sets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.bc-tr-sets > li {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 8px;
+  background: var(--dx-idle-bg); color: var(--dx-idle); font-size: 12px; font-weight: 500;
+}
+.bc-tr-sets > li[data-set-state="performed"] { background: var(--dx-ok-bg); color: var(--dx-ok); font-weight: 600; }
+.bc-tr-sets > li[data-current="true"] { background: var(--bc-paper); color: var(--dx-ink); font-weight: 700; box-shadow: inset 0 0 0 1px var(--dx-card-line); }
+.bc-tr-target { margin: 6px 0 0; color: var(--dx-secondary); font-size: 13px; }
+.bc-tr-stepper { display: grid; grid-template-columns: 44px auto 44px; align-items: center; justify-content: start; gap: 18px; }
+.bc-tr-step {
+  display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--dx-card-line);
+  border-radius: 50%; background: var(--bc-paper); color: var(--dx-ink); cursor: pointer;
+}
+.bc-tr-step:disabled { opacity: .45; cursor: not-allowed; }
+.bc-tr-step:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
+.bc-tr-actual { min-width: 48px; color: var(--dx-ink); font-size: 32px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.bc-tr-actual-label { grid-column: 1 / -1; color: var(--dx-meta); font-size: 12px; }
+.bc-tr-rest { display: inline-flex; align-items: center; gap: 10px; margin: 4px 0 0; }
+.bc-tr-rest-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px;
+  background: var(--bc-paper); color: var(--dx-secondary); font-size: 12px; font-weight: 500;
+}
+.bc-tr-rest strong { color: var(--dx-ok); font-size: 26px; font-variant-numeric: tabular-nums; }
+.bc-tr-resume { display: grid; gap: 4px; padding: 16px 20px; border-radius: 16px; background: var(--dx-warn-bg); color: var(--dx-warn); font-size: 12px; }
+.bc-tr-resume strong { color: var(--dx-ink); font-size: 20px; }
+.bc-tr-recorded { align-items: center; }
+.bc-tr-recorded-count { margin-left: auto; color: var(--dx-secondary); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bc-tr .bc-tr-footer { justify-content: flex-start; }
+.bc-tr .bc-tr-footer .bc-dx-primary { margin-left: auto; }
+/* The panel sits directly in the window: its body scrolls, its footer stays pinned. */
+.bc-trainer-execution { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.bc-trainer-execution > .bc-tr { flex: 1 1 auto; min-height: 0; }
+.bc-tr .bc-tr-footer .bc-tr-pause { flex: 0 0 auto; width: 40px; padding: 0; background: var(--dx-idle-bg); color: var(--dx-ok); }
+.bc-tr .bc-dx-early { margin-right: 0; color: var(--dx-ok); font-weight: 600; }
+.bc-tr .bc-dx-mark[data-mark="gap"] { background: var(--dx-warn-bg); color: var(--dx-warn); }
+@media (max-width: 760px) {
+  .bc-tr .bc-tr-footer .bc-tr-pause { width: 44px; height: 44px; }
+  .bc-tr-card-name { font-size: 24px; }
+}
