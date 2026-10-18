@@ -166,7 +166,7 @@ func (s *DiagnosisFormalAnalysisService) Start(ctx context.Context, owner uuid.U
 	if err := json.Unmarshal(result, &parsed); err != nil || parsed == nil {
 		return nil, ErrDiagnosisAgentOutputInvalid
 	}
-	if !diagnosisApplicationConfigurationMatches(parsed, route.ServedConfigurationID) {
+	if !diagnosisAgentConfigurationMatches(parsed, route.ServedConfigurationID) {
 		return nil, ErrDiagnosisAgentOutputInvalid
 	}
 	provenance["agentInvoked"] = true

@@ -88,8 +88,6 @@ func main() {
 	leaseOwner := uuid.NewString()
 	consultationRepo := repository.NewConsultationRepository(database.DB, leaseOwner)
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
-	diagnosisAnalysisRepo := repository.NewDiagnosisAnalysisRepository(database.DB)
-	diagnosisFreshnessRepo := repository.NewDiagnosisFreshnessRepository(database.DB)
 	outcomeRepo := repository.NewOutcomeRepository(database.DB)
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	messageRepo := repository.NewMessageRepository(database.DB)
@@ -149,8 +147,6 @@ func main() {
 		bodyStateService,
 		database.NewTransactionManager(database.DB),
 	)
-	diagnosisAnalysisService := service.NewDiagnosisAnalysisService(diagnosisAnalysisRepo)
-	diagnosisFreshnessService := service.NewDiagnosisFreshnessService(diagnosisFreshnessRepo, bodyStateService)
 	nativeDiagnosisReader := service.NewNativeDiagnosisReadService(repository.NewDiagnosisRepository(database.DB))
 	nativeDiagnosisRuns := service.NewNativeDiagnosisRunReadService(repository.NewDiagnosisRepository(database.DB))
 	treatmentService := service.NewTreatmentService(
@@ -236,21 +232,6 @@ func main() {
 		),
 	)
 	consultationReplayService := service.NewConsultationReplayService(runRepo)
-	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
-	diagnosisRolloutRepo := repository.NewDiagnosisRolloutRepository(database.DB)
-	diagnosisRolloutService := service.NewDiagnosisRolloutService(diagnosisRolloutRepo)
-	diagnosisApplicationService := service.NewDiagnosisApplicationService(
-		consultationService,
-		profileService,
-		aiClient,
-		outputReviewService,
-		bodyStateService,
-		diagnosisAnalysisService,
-		diagnosisFreshnessService,
-		agentDeploymentPolicy,
-		diagnosisReplayService,
-		diagnosisRolloutService,
-	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	treatmentService.AttachPlanProposer(service.NewIndependentTrainingPlanService(database.DB))
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
@@ -371,7 +352,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithNativeDiagnosis(nativeDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithNativeDiagnosis(nativeDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

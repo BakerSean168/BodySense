@@ -163,14 +163,18 @@ E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \
 pnpm e2e
 
-diagnosis_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-3f64de162dc937ee';")"
-diagnosis_non_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id<>'diag-config-3f64de162dc937ee';")"
-diagnosis_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations;")"
-if [[ "$diagnosis_current_analyses" -lt 1 || "$diagnosis_non_current_analyses" -ne 0 || "$diagnosis_rollout_observations" -ne 0 ]]; then
-  echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}" >&2
+# Native formal Diagnosis runs record the served Agent configuration in their
+# execution provenance (DX-RETIRE-001 removed the legacy analysis tables).
+diagnosis_sql() {
+  "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "$1"
+}
+diagnosis_current_runs="$(diagnosis_sql "SELECT count(*) FROM condition_analysis_runs WHERE execution_provenance->>'configurationId'='diag-config-3f64de162dc937ee';")"
+diagnosis_non_current_runs="$(diagnosis_sql "SELECT count(*) FROM condition_analysis_runs WHERE execution_provenance->>'configurationId'<>'diag-config-3f64de162dc937ee';")"
+if [[ "$diagnosis_current_runs" -lt 1 || "$diagnosis_non_current_runs" -ne 0 ]]; then
+  echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL current=${diagnosis_current_runs} non_current=${diagnosis_non_current_runs}" >&2
   exit 1
 fi
-echo "DIAGNOSIS_BASELINE_VALIDATION=PASS current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}"
+echo "DIAGNOSIS_BASELINE_VALIDATION=PASS current=${diagnosis_current_runs} non_current=${diagnosis_non_current_runs}"
 
 # Treatment Agent generation persists only pending agent PlanProposals
 # (TP-002 slice 3 removed the Treatment revision and rollout tables).

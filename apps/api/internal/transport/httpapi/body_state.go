@@ -48,10 +48,6 @@ type PublicServer struct {
 	nativeDiagnosisSettlements nativeDiagnosisSettlementApplication
 	nativeDiagnosisDirectEdits nativeDiagnosisDirectEditApplication
 	nativeDiagnosisStarter     nativeDiagnosisStartApplication
-	diagnosisApplication       diagnosisApplication
-	diagnosisAnalyses          diagnosisAnalysisApplication
-	diagnosisFreshness         diagnosisFreshnessApplication
-	diagnosisReplay            diagnosisReplayApplication
 	outcomes                   outcomeApplication
 	planGenerator              planGenerationApplication
 	trainingPlans              trainingPlanApplication

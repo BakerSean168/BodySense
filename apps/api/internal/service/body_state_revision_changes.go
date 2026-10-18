@@ -8,7 +8,6 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
 )
 
 // V2 BodyState revisions carry identifiers only (no health text). Review and
@@ -162,73 +161,6 @@ func bodyFactConcernKey(fact model.BodyFact) string {
 		return key
 	}
 	return ""
-}
-
-// diagnosisBasis is what an analysis rests on: its concern keys and the V2
-// fact / observation ids its candidates cite.
-type diagnosisBasis struct {
-	concerns     map[string]struct{}
-	facts        map[string]struct{}
-	observations map[string]struct{}
-}
-
-func newDiagnosisBasis(analysis *model.DiagnosisAnalysisRecord) diagnosisBasis {
-	basis := diagnosisBasis{concerns: map[string]struct{}{}, facts: map[string]struct{}{}, observations: map[string]struct{}{}}
-	if analysis == nil {
-		return basis
-	}
-	for _, candidate := range analysis.Candidates {
-		if key := strings.TrimSpace(candidate.ConcernKey); key != "" && key != "general" {
-			basis.concerns[key] = struct{}{}
-		}
-		for _, id := range decodeStringList(candidate.BasisFactIDs) {
-			basis.facts[id] = struct{}{}
-		}
-		for _, id := range decodeStringList(candidate.BasisObservationIDs) {
-			basis.observations[id] = struct{}{}
-		}
-	}
-	return basis
-}
-
-func (b diagnosisBasis) citesFact(id string) bool {
-	_, ok := b.facts[id]
-	return id != "" && ok
-}
-
-func (b diagnosisBasis) citesObservation(id string) bool {
-	_, ok := b.observations[id]
-	return id != "" && ok
-}
-
-func (b diagnosisBasis) relatedConcern(concernKey string) bool {
-	return concernMatches(b.concerns, concernKey)
-}
-
-// firstRelatedFact returns the first fact id that the analysis cites or whose
-// concern it covers, with that fact's concern key.
-func (b diagnosisBasis) firstRelatedFact(ids []string, facts BodyStateFactIndex) (string, string, bool) {
-	for _, id := range ids {
-		concern := facts.concern(id)
-		if b.citesFact(id) || b.relatedConcern(concern) {
-			return id, concern, true
-		}
-	}
-	return "", "", false
-}
-
-func decodeStringList(raw datatypes.JSON) []string {
-	var values []string
-	_ = json.Unmarshal(raw, &values)
-	return values
-}
-
-func concernMatches(concerns map[string]struct{}, concernKey string) bool {
-	if concernKey == "" || concernKey == "general" || len(concerns) == 0 {
-		return false
-	}
-	_, ok := concerns[concernKey]
-	return ok
 }
 
 // GetBodyStateHead returns the aggregate head (revision + Safety state).

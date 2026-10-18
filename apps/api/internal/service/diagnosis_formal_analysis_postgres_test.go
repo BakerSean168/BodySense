@@ -76,8 +76,6 @@ func TestDiagnosisFormalAnalysisAgentOutputBecomesProposalsPostgres(t *testing.T
 	if len(run.InputEvidenceRefs) != 1 || run.InputEvidenceRefs[0].EvidenceID != f.fact.ID {
 		t.Fatalf("frozen evidence %+v", run.InputEvidenceRefs)
 	}
-	// The legacy per-inference analysis store is not written by the formal flow.
-	diagnosisDecisionCount(t, db, f.owner, "diagnosis_analyses", 0)
 	assertNoAgentAuthority(t, db, f.owner, 1)
 	// A lost response is replayed without re-running the Agent.
 	again, err := svc.Start(ctx, f.owner, cmd)
@@ -121,7 +119,6 @@ func TestDiagnosisFormalAnalysisFailsClosedPostgres(t *testing.T) {
 			if n := diagnosisRunsForKey(t, db, f.owner, cmd.IdempotencyKey); n != 0 {
 				t.Fatal("failed formal analysis left a run")
 			}
-			diagnosisDecisionCount(t, db, f.owner, "diagnosis_analyses", 0)
 		})
 	}
 	t.Run("foreign request never reaches the agent", func(t *testing.T) {
