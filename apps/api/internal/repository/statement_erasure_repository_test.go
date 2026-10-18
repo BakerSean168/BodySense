@@ -144,6 +144,12 @@ func TestBodyFactStatementErasurePinnedWithdrawTombstonePostgres(t *testing.T) {
 	if err := repo.RecordOutcome(ctx, request, model.StatementErasureRuntimeCheckpoints, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}); err != nil {
 		t.Fatal(err)
 	}
+	if terminal, err := repo.Finalize(ctx, request); err != nil || terminal {
+		t.Fatalf("finalize before the source message target: %v %v", terminal, err)
+	}
+	if got := execStatementTarget(t, repo, request, model.StatementErasureSourceMessage); got.State != model.AssetErasureTargetVerified {
+		t.Fatalf("source message: %+v", got)
+	}
 	if terminal, err := repo.Finalize(ctx, request); err != nil || !terminal {
 		t.Fatalf("finalize: %v %v", terminal, err)
 	}
@@ -183,7 +189,7 @@ func TestBodyFactStatementErasurePinnedWithdrawTombstonePostgres(t *testing.T) {
 
 // A statement nothing rests on is erased fully: every target verifies and
 // the status is erased. The SQL guards refuse an early or dishonest terminal
-// state and a retention outside decision_records.
+// state and a retention outside decision_records and source_message.
 func TestBodyFactStatementErasureCleanAndGuardsPostgres(t *testing.T) {
 	db := openBodyStateContextIntegrationDB(t)
 	ctx := context.Background()
@@ -255,7 +261,7 @@ func TestBodyFactStatementErasureCleanAndGuardsPostgres(t *testing.T) {
 	}
 	if err := db.Exec(`UPDATE statement_erasure_targets SET state='retained_by_policy', retention_reason='replay_input_frozen'
  WHERE request_id=? AND target='body_records'`, other.Request.ID).Error; err == nil {
-		t.Fatal("retention outside decision_records")
+		t.Fatal("retention outside decision_records and source_message")
 	}
 	if err := db.Exec(`UPDATE statement_erasure_targets SET state='retained_by_policy'
  WHERE request_id=? AND target='decision_records'`, other.Request.ID).Error; err == nil {

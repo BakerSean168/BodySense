@@ -122,7 +122,8 @@ func TestBodyFactStatementErasurePlanReviewPostgres(t *testing.T) {
 	}
 	wantStatementTarget(t, receipt, model.StatementErasureDecisionRecords, model.ErasureTargetRetainedByPolicy, "")
 	for _, name := range []model.StatementErasureTargetName{model.StatementErasureDiagnosisRecords, model.StatementErasureTrainingPlans,
-		model.StatementErasureBodyRecords, model.StatementErasureAssessmentReports, model.StatementErasureRuntimeCheckpoints, model.StatementErasureManifest} {
+		model.StatementErasureBodyRecords, model.StatementErasureAssessmentReports, model.StatementErasureRuntimeCheckpoints,
+		model.StatementErasureSourceMessage, model.StatementErasureManifest} {
 		wantStatementTarget(t, receipt, name, model.AssetErasureTargetVerified, "")
 	}
 	if got := independentPlanSnapshot(t, db, owner, accepted.PlanID); got != planBefore {

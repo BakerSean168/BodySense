@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LoaderCircle, Plus, RefreshCw } from "lucide-react";
+import { Check, LoaderCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   bodyFactRecordsService,
   type BodyFactRecordInput,
@@ -13,6 +13,14 @@ import {
   formatInstantInZone,
 } from "@/features/profile/model/profilePreferences";
 import { BodyFactAmendment } from "./BodyFactAmendment";
+import type { StatementErasureTarget } from "./StatementErasure";
+
+// Rarely opened; kept out of the ConsultationPage chunk budget.
+const StatementErasure = lazy(() =>
+  import("./StatementErasure").then((module) => ({
+    default: module.StatementErasure,
+  })),
+);
 
 import {
   BODY_FACT_KIND_LABELS as FACT_KINDS,
@@ -79,6 +87,8 @@ export function BodyFactRecords({
   // Do not call an older snapshot empty or use its revision for another write.
   const [savedRevision, setSavedRevision] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The erasure panel outlives the record: a withdrawn record leaves the list.
+  const [erasing, setErasing] = useState<StatementErasureTarget | null>(null);
   const pending = useRef<{
     owner: string;
     content: string;
@@ -94,6 +104,7 @@ export function BodyFactRecords({
     setSavedRevision(null);
     setSaveError(null);
     setSaving(false);
+    setErasing(null);
   }, [owner]);
 
   const page = query.data?.pages[0];
@@ -375,6 +386,32 @@ export function BodyFactRecords({
           ) : null}
         </form>
       ) : null}
+      {erasing && canEdit ? (
+        <Suspense
+          fallback={
+            <p role="status" className="bc-person-loading">
+              <LoaderCircle size={16} className="animate-spin" />
+              正在打开删除
+            </p>
+          }
+        >
+          <StatementErasure
+            key={erasing.statementId}
+            target={erasing}
+            revision={page?.current_revision}
+            onClose={() => setErasing(null)}
+            onChanged={(message, committedRevision) => {
+              if (ownerRef.current !== erasing.ownerId) return;
+              if (committedRevision !== undefined)
+                setSavedRevision((prev) =>
+                  Math.max(prev ?? 0, committedRevision),
+                );
+              setNotice(message);
+              void queryClient.invalidateQueries({ queryKey: ["workspace"] });
+            }}
+          />
+        </Suspense>
+      ) : null}
       <ul className="bc-record-list">
         {(snapshotBehindCommit ? [] : view.records).map(
           ({
@@ -395,6 +432,23 @@ export function BodyFactRecords({
               </time>
               {isCorrection ? (
                 <span className="bc-window-note">更正后的陈述</span>
+              ) : null}
+              {canEdit && record.source_evidence_id && !erasing ? (
+                <button
+                  type="button"
+                  className="bc-text-button"
+                  onClick={() => {
+                    setNotice(null);
+                    setErasing({
+                      recordId: record.id,
+                      statementId: record.source_evidence_id!,
+                      ownerId: record.user_id,
+                    });
+                  }}
+                >
+                  <Trash2 size={13} />
+                  彻底删除
+                </button>
               ) : null}
               {canEdit && page && !view.pagesDisagree ? (
                 <BodyFactAmendment

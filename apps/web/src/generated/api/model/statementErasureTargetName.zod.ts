@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod/mini';
 
-export const StatementErasureTargetName = /*#__PURE__*/ zod.enum(['diagnosis_records', 'training_plans', 'body_records', 'assessment_reports', 'decision_records', 'runtime_checkpoints', 'statement_manifest']).check(/*#__PURE__*/ zod.describe('One controlled-copy family of the statement, in execution order. statement_manifest (the statement itself) is finalized last.'));
+export const StatementErasureTargetName = /*#__PURE__*/ zod.enum(['diagnosis_records', 'training_plans', 'body_records', 'assessment_reports', 'decision_records', 'runtime_checkpoints', 'source_message', 'statement_manifest']).check(/*#__PURE__*/ zod.describe('One controlled-copy family of the statement, in execution order. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.'));
 
 export type StatementErasureTargetName = zod.input<typeof StatementErasureTargetName>;
 export type StatementErasureTargetNameOutput = zod.output<typeof StatementErasureTargetName>;
