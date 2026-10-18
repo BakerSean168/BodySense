@@ -183,4 +183,69 @@ describe("useDiagnosisActions on the V2 decision API", () => {
     await act(() => hook.result.current.recordSelection());
     expect(api.decide).not.toHaveBeenCalled();
   });
+
+  it("submit records the stepper choices then settles the whole run", async () => {
+    const decisionIds: string[] = [];
+    api.decide.mockImplementation(async (_runId, command) => {
+      const receipt = makeDecisionReceipt({
+        proposalId: command.proposalId,
+        contentFingerprint: command.presentedFingerprint,
+        decision: command.decision,
+        idempotencyKey: command.idempotencyKey,
+      });
+      decisionIds.push(receipt.decisionId);
+      return receipt;
+    });
+    api.settle.mockImplementation(async (_runId, command) =>
+      makeSettlementReceipt({
+        decisionIds,
+        idempotencyKey: command.idempotencyKey,
+      }),
+    );
+    const hook = await ready();
+    act(() => hook.result.current.select(PROPOSAL_A, "accept"));
+    await act(() =>
+      hook.result.current.submit({ proposalId: PROPOSAL_B, choice: "reject" }),
+    );
+
+    expect(api.decide).toHaveBeenCalledTimes(2);
+    expect(api.decide.mock.calls.map((call) => call[1].decision)).toEqual([
+      "accept",
+      "reject",
+    ]);
+    expect(api.settle).toHaveBeenCalledWith(
+      RUN_ID,
+      expect.objectContaining({ expectedRevision: 2, closeRemaining: false }),
+    );
+    await waitFor(() => expect(row(hook, PROPOSAL_A)?.state).toBe("committed"));
+    expect(row(hook, PROPOSAL_B)?.state).toBe("rejected");
+    expect(hook.result.current.view.run?.phase).toBe("committed");
+
+    act(() => hook.result.current.dismissOutcome());
+    expect(hook.result.current.selection).toEqual({});
+  });
+
+  it("submit with undecided proposals closes them and stops on a failed decision", async () => {
+    api.decide.mockRejectedValueOnce(new ApiRequestError("down", 503));
+    const hook = await ready();
+    act(() => hook.result.current.select(PROPOSAL_A, "accept"));
+    await act(() => hook.result.current.submit());
+    expect(api.settle).not.toHaveBeenCalled();
+    expect(hook.result.current.error).toBeTruthy();
+
+    api.decide.mockImplementation(async (_runId, command) =>
+      makeDecisionReceipt({ idempotencyKey: command.idempotencyKey }),
+    );
+    api.settle.mockImplementation(async (_runId, command) =>
+      makeSettlementReceipt({ idempotencyKey: command.idempotencyKey }),
+    );
+    await waitFor(() =>
+      expect(hook.result.current.view.run?.canDecide).toBe(true),
+    );
+    await act(() => hook.result.current.submit());
+    expect(api.settle).toHaveBeenCalledWith(
+      RUN_ID,
+      expect.objectContaining({ closeRemaining: true }),
+    );
+  });
 });

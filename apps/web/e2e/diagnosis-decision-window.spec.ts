@@ -147,30 +147,28 @@ test("Diagnosis proposal -> decide -> committed only after the settlement receip
   const seeded = await seedDiagnosisRun(page, request);
   const window = await openDiagnosis(page, seeded.conversationId);
 
+  // Penpot Confirm first: one proposal at a time, AI output, not yet written.
   const panel = window.getByTestId("diagnosis-proposals");
   await expect(panel).toHaveAttribute("data-phase", "deciding");
+  await expect(page.getByTestId("diagnosis-mode")).toHaveText("正式分析");
+  await expect(panel.getByTestId("diagnosis-step")).toContainText("尚未写入");
   const item = panel.locator(".bc-diagnosis-proposal").first();
   await expect(
     item.getByText(seeded.proposalTitle, { exact: true }),
   ).toBeVisible();
   await expect(item.getByTestId("proposal-state")).toHaveText("待你决定");
-  await expect(item.getByText(/^提案 1\/\d+ · 新病情$/)).toBeVisible();
   // A proposal is never a condition before adoption.
-  await expect(window.getByText("还没有已确认的病情")).toBeVisible();
   await expect(
     window.getByRole("heading", { name: seeded.proposalTitle }),
   ).toHaveCount(0);
 
-  await item.getByRole("radio", { name: "采纳", exact: true }).check();
-  await panel.getByRole("button", { name: "保存所选的 1 条" }).click();
-
-  // Decision receipt only: pending, still not committed.
-  await expect(item.getByTestId("proposal-state")).toHaveText(
-    "已选择采纳，尚未写入诊断",
+  const decideResponse = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .includes(`/diagnosis/analysis-runs/${seeded.runId}/decisions`) &&
+      response.request().method() === "POST",
   );
-  await expect(window.getByTestId("diagnosis-receipt")).toHaveCount(0);
-  await expect(window.getByText("还没有已确认的病情")).toBeVisible();
-
   const settleResponse = page.waitForResponse(
     (response) =>
       response
@@ -178,7 +176,9 @@ test("Diagnosis proposal -> decide -> committed only after the settlement receip
         .includes(`/diagnosis/analysis-runs/${seeded.runId}/settlement`) &&
       response.request().method() === "POST",
   );
-  await panel.getByRole("button", { name: /^写入已采纳的 1 条/ }).click();
+  const footer = window.getByTestId("diagnosis-decide");
+  await footer.getByRole("button", { name: /采纳并提交$/ }).click();
+  expect((await decideResponse).status()).toBe(200);
   const settled = await settleResponse;
   expect(settled.status()).toBe(200);
   const receipt = (await settled.json()) as {
@@ -189,14 +189,20 @@ test("Diagnosis proposal -> decide -> committed only after the settlement receip
 
   // Receipt scene: committed is shown with the server's receipt id.
   const banner = window.getByTestId("diagnosis-receipt");
-  await expect(banner).toContainText("已写入综合诊断");
-  await expect(banner).toContainText(receipt.receiptId.slice(0, 8));
-  await expect(item.getByTestId("proposal-state")).toHaveText("已写入诊断");
-  await expect(panel.getByTestId("diagnosis-decide")).toHaveCount(0);
-  // Current two/Current: the adopted condition comes from the fresh query.
+  await expect(banner).toContainText("诊断已更新");
+  await expect(banner).toContainText(
+    receipt.receiptId.slice(0, 8).toUpperCase(),
+  );
+  await expect(banner.getByTestId("proposal-state")).toHaveText("已采纳");
+  await expect(page.getByTestId("diagnosis-mode")).toHaveText("提交回执");
+  await expect(window.getByTestId("diagnosis-decide")).toHaveCount(0);
+
+  // 查看当前 → Current: the adopted condition comes from the fresh query.
+  await window.getByRole("button", { name: "查看当前" }).click();
   await expect(
     window.getByRole("heading", { name: seeded.proposalTitle }),
-  ).toBeVisible();
+  ).toBeAttached();
+  await expect(window.getByText("已采纳")).toBeVisible();
 
   const current = await request.get(`${apiBase}/api/v1/diagnosis`, {
     headers: seeded.headers,
@@ -209,6 +215,37 @@ test("Diagnosis proposal -> decide -> committed only after the settlement receip
   expect(adopted.map((entry) => entry.medicalName)).toEqual([
     seeded.proposalTitle,
   ]);
+});
+
+test("rejecting the only proposal closes the run with No changes", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(150_000);
+  const seeded = await seedDiagnosisRun(page, request);
+  const window = await openDiagnosis(page, seeded.conversationId);
+  const footer = window.getByTestId("diagnosis-decide");
+  const settleResponse = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .includes(`/diagnosis/analysis-runs/${seeded.runId}/settlement`) &&
+      response.request().method() === "POST",
+  );
+  await footer.getByRole("button", { name: "不更改" }).click();
+  const settled = await settleResponse;
+  expect(settled.status()).toBe(200);
+  expect(((await settled.json()) as { outcome: string }).outcome).toBe(
+    "closed_without_change",
+  );
+  await expect(window.getByTestId("diagnosis-no-change")).toContainText(
+    "诊断未更改",
+  );
+  await expect(window.getByTestId("diagnosis-receipt")).toHaveCount(0);
+  await window.getByRole("button", { name: "返回当前" }).click();
+  await expect(window.getByTestId("diagnosis-empty")).toContainText(
+    "还没有诊断",
+  );
 });
 
 test("urgent Safety keeps Diagnosis decisions disabled", async ({
@@ -279,22 +316,15 @@ test("Diagnosis window fits a 390px viewport with touch-sized controls", async (
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
 
-  for (const label of await item.locator(".bc-diagnosis-choice label").all()) {
-    const target = await label.boundingBox();
-    expect(target!.height).toBeGreaterThanOrEqual(44);
-    expect(target!.x + target!.width).toBeLessThanOrEqual(390);
-  }
   const actions = window.getByTestId("diagnosis-decide").getByRole("button");
   await expect(actions).toHaveCount(2);
   for (const button of await actions.all()) {
     const target = await button.boundingBox();
     expect(target!.height).toBeGreaterThanOrEqual(44);
+    expect(target!.x).toBeGreaterThanOrEqual(0);
     expect(target!.x + target!.width).toBeLessThanOrEqual(390);
   }
-
-  // Tapping a choice works at 390px and enables saving.
-  await item.getByRole("radio", { name: "采纳", exact: true }).check();
   await expect(
-    window.getByRole("button", { name: "保存所选的 1 条" }),
+    window.getByRole("button", { name: /采纳并提交$/ }),
   ).toBeEnabled();
 });

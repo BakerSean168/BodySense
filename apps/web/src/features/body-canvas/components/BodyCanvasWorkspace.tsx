@@ -32,6 +32,7 @@ import {
 } from "./PersonWindow";
 import { TrainingPlanWindow } from "./TrainingPlanWindow";
 import { TrainerEntryGuard } from "./TrainerEntryGuard";
+import { diagnosisHeaderMode } from "../model/diagnosisDecisionViewModel";
 import "../body-canvas.css";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
@@ -352,8 +353,9 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               selection: diagnosisActions.selection,
               onSelect: diagnosisActions.select,
               onReview: diagnosisActions.reviewProposal,
-              onRecordSelection: () => void diagnosisActions.recordSelection(),
-              onSettle: () => void diagnosisActions.settle(),
+              onSubmit: (final) => void diagnosisActions.submit(final),
+              onDismissOutcome: diagnosisActions.dismissOutcome,
+              onOpenChat: () => openWindow("chat"),
               busy: diagnosisActions.busy,
               error: diagnosisActions.error,
             }}
@@ -422,6 +424,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             view={diagnosisView}
             selectedConditionId={selectedConditionId}
             onSelectCondition={setSelectedConditionId}
+            mode={diagnosisHeaderMode(diagnosisView)}
           />
         );
       case "training":

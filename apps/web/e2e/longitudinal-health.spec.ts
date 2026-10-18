@@ -92,14 +92,15 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await expect(
     diagnosisWindow.getByRole("region", { name: "当前诊断内容" }),
   ).toBeVisible();
-  const diagnosisPicker = diagnosisWindow.getByRole("combobox", {
-    name: "选择已确认病情",
-  });
-  await expect(diagnosisPicker).toBeDisabled();
-  // Native <option> elements have no visible bounding box when the select is
-  // closed. Assert their content, not an impossible visible-option state.
-  await expect(diagnosisPicker.locator("option")).toHaveText("暂无已确认病情");
-  await expect(diagnosisWindow.getByText("还没有已确认的病情")).toBeVisible();
+  // Penpot Diagnosis / Empty: title only (no empty picker) and the empty,
+  // non-clinical state with a Chat entry. A pending safety reminder from the
+  // seeded consultation only adds a note; it gates analyses, not Empty.
+  await expect(
+    diagnosisWindow.getByRole("combobox", { name: "选择已确认病情" }),
+  ).toHaveCount(0);
+  await expect(diagnosisWindow.getByTestId("diagnosis-empty")).toContainText(
+    "还没有诊断",
+  );
   await expect(
     diagnosisWindow.getByRole("button", { name: "关闭综合诊断" }),
   ).toBeVisible();

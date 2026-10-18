@@ -9,12 +9,14 @@ import {
   withSettlementReceipt,
 } from "../model/diagnosisDecisionViewModel";
 import {
+  FINGERPRINT_B,
   PROPOSAL_A,
   PROPOSAL_B,
   RUN_ID,
   makeCondition,
   makeDecisionReceipt,
   makeDiagnosis,
+  makeProposal,
   makeRun,
   makeSettlementReceipt,
 } from "../model/__fixtures__/nativeDiagnosisFixtures";
@@ -24,6 +26,8 @@ import {
   type DiagnosisDecisionControls,
 } from "./DiagnosisWindow";
 
+const PROPOSAL_C = "00000000-0000-4000-8000-0000000000b3";
+
 function controls(
   overrides: Partial<DiagnosisDecisionControls> = {},
 ): DiagnosisDecisionControls {
@@ -31,106 +35,176 @@ function controls(
     selection: {},
     onSelect: vi.fn(),
     onReview: vi.fn(),
-    onRecordSelection: vi.fn(),
-    onSettle: vi.fn(),
+    onSubmit: vi.fn(),
+    onDismissOutcome: vi.fn(),
     ...overrides,
   };
 }
 
-function proposal(id: string) {
-  return document.querySelector<HTMLElement>(`[data-proposal-id="${id}"]`)!;
+function view(
+  input: Partial<Parameters<typeof projectNativeDiagnosisWindow>[0]> = {},
+) {
+  return projectNativeDiagnosisWindow({
+    diagnosis: makeDiagnosis(),
+    run: makeRun(),
+    ...input,
+  });
 }
 
-describe("DiagnosisWindow decisions", () => {
-  it("keeps AI proposals apart from adopted conditions", () => {
+const footer = () => screen.getByTestId("diagnosis-decide");
+
+describe("DiagnosisWindow (Penpot Diagnosis boards)", () => {
+  it("shows one AI proposal at a time and never as a condition", () => {
     render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
+        view={view({
           diagnosis: makeDiagnosis({ conditionEntries: [makeCondition()] }),
-          run: makeRun(),
         })}
         controls={controls()}
       />,
     );
-    expect(screen.getByRole("heading", { name: "肩峰下撞击" })).toBeVisible();
     const panel = screen.getByTestId("diagnosis-proposals");
-    expect(within(panel).getByText(/由 AI 分析生成，只是提案/)).toBeVisible();
+    expect(within(panel).getByTestId("diagnosis-step")).toHaveTextContent(
+      "1 / 2AI 建议尚未写入",
+    );
     expect(within(panel).getByText("上交叉综合征")).toBeVisible();
+    // Kind chip on the current card and on the "下一项" line.
+    expect(within(panel).getAllByText("新建")).toHaveLength(2);
+    expect(within(panel).getByText("AI 疑似")).toBeVisible();
+    expect(within(panel).getByText("下一项")).toBeVisible();
+    expect(within(panel).getByText("胸椎活动受限")).toBeVisible();
     expect(screen.queryByRole("heading", { name: "上交叉综合征" })).toBeNull();
+    // Current conditions stay behind the formal analysis until it is settled.
+    expect(screen.queryByRole("heading", { name: "肩峰下撞击" })).toBeNull();
   });
 
-  it("supports a partial selection and saves only chosen proposals", async () => {
+  it("Confirm first: choosing moves to the next proposal locally", async () => {
     const onSelect = vi.fn();
-    const onRecordSelection = vi.fn();
-    const view = projectNativeDiagnosisWindow({
-      diagnosis: makeDiagnosis(),
-      run: makeRun(),
-    });
-    const { rerender } = render(
-      <DiagnosisWindow view={view} controls={controls({ onSelect })} />,
+    const onSubmit = vi.fn();
+    render(
+      <DiagnosisWindow
+        view={view()}
+        controls={controls({ onSelect, onSubmit })}
+      />,
     );
-    expect(
-      screen.getByRole("button", { name: "保存所选的 0 条" }),
-    ).toBeDisabled();
     await userEvent.click(
-      within(proposal(PROPOSAL_A)).getByRole("radio", { name: "采纳" }),
+      within(footer()).getByRole("button", { name: "采纳" }),
     );
     expect(onSelect).toHaveBeenCalledWith(PROPOSAL_A, "accept");
+    await userEvent.click(
+      within(footer()).getByRole("button", { name: "不采纳" }),
+    );
+    expect(onSelect).toHaveBeenCalledWith(PROPOSAL_A, "reject");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 
-    rerender(
+  it("Confirm second: the last proposal accepts and commits in one step", async () => {
+    const onSelect = vi.fn();
+    const onSubmit = vi.fn();
+    render(
       <DiagnosisWindow
-        view={view}
+        view={view()}
         controls={controls({
           selection: { [PROPOSAL_A]: "accept" },
-          onRecordSelection,
+          onSelect,
+          onSubmit,
         })}
       />,
     );
-    expect(
-      within(proposal(PROPOSAL_B)).getByRole("radio", { name: "暂不决定" }),
-    ).toBeChecked();
+    expect(screen.getByTestId("diagnosis-step")).toHaveTextContent("2 / 2");
+    const decided = document.querySelector<HTMLElement>(
+      `.bc-dx-decided[data-proposal-id="${PROPOSAL_A}"]`,
+    )!;
+    expect(within(decided).getByText("已采纳")).toBeVisible();
     await userEvent.click(
-      screen.getByRole("button", { name: "保存所选的 1 条" }),
+      within(decided).getByRole("button", {
+        name: "更改对“上交叉综合征”的决定",
+      }),
     );
-    expect(onRecordSelection).toHaveBeenCalledTimes(1);
-    // Settlement waits until the chosen proposals are saved.
+    expect(onSelect).toHaveBeenCalledWith(PROPOSAL_A, null);
+
     expect(
-      screen.getByRole("button", { name: "结束本次分析，不写入诊断" }),
-    ).toBeDisabled();
+      within(footer()).getByRole("button", { name: "不采纳" }),
+    ).toBeEnabled();
+    await userEvent.click(
+      within(footer()).getByRole("button", { name: "采纳并提交" }),
+    );
+    expect(onSubmit).toHaveBeenCalledWith({
+      proposalId: PROPOSAL_B,
+      choice: "accept",
+    });
   });
 
-  it("offers to close the rest when only some proposals were accepted", async () => {
-    const onSettle = vi.fn();
+  it("First rejected: nothing adopted makes the last reject 不更改", async () => {
+    const onSubmit = vi.fn();
     render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
+        view={view()}
+        controls={controls({ selection: { [PROPOSAL_A]: "reject" }, onSubmit })}
+      />,
+    );
+    const decided = document.querySelector<HTMLElement>(
+      `.bc-dx-decided[data-proposal-id="${PROPOSAL_A}"]`,
+    )!;
+    expect(within(decided).getByText("未采纳")).toBeVisible();
+    expect(within(decided).getByText("不等于排除")).toBeVisible();
+    await userEvent.click(
+      within(footer()).getByRole("button", { name: "不更改" }),
+    );
+    expect(onSubmit).toHaveBeenCalledWith({
+      proposalId: PROPOSAL_B,
+      choice: "reject",
+    });
+  });
+
+  it("keeps partial decisions: submit early closes the remaining proposals", async () => {
+    const onSubmit = vi.fn();
+    const run = makeRun({
+      proposals: [
+        makeProposal(),
+        makeProposal({
+          proposalId: PROPOSAL_B,
+          contentFingerprint: FINGERPRINT_B,
+          content: { proposedEntry: { medicalName: "胸椎活动受限" } },
+        }),
+        makeProposal({
+          proposalId: PROPOSAL_C,
+          contentFingerprint: "c".repeat(64),
+          content: { proposedEntry: { medicalName: "肩胛运动障碍" } },
+        }),
+      ],
+    });
+    render(
+      <DiagnosisWindow
+        view={view({
+          run,
           session: withDecisionReceipt(
             EMPTY_DECISION_SESSION,
             makeDecisionReceipt(),
           ),
         })}
-        controls={controls({ onSettle })}
+        controls={controls({ onSubmit })}
       />,
     );
-    expect(
-      within(proposal(PROPOSAL_A)).getByText("已选择采纳，尚未写入诊断"),
-    ).toBeVisible();
-    expect(screen.queryByText("已写入诊断")).toBeNull();
+    // A recorded decision receipt is a choice only: decided, not changeable.
+    const decided = document.querySelector<HTMLElement>(
+      `.bc-dx-decided[data-proposal-id="${PROPOSAL_A}"]`,
+    )!;
+    expect(decided).toHaveAttribute("data-proposal-state", "pending");
+    expect(within(decided).queryByRole("button")).toBeNull();
+    expect(screen.queryByTestId("diagnosis-receipt")).toBeNull();
+    expect(screen.getByTestId("diagnosis-step")).toHaveTextContent("2 / 3");
     await userEvent.click(
-      screen.getByRole("button", { name: "写入已采纳的 1 条，其余不采纳" }),
+      within(footer()).getByRole("button", { name: "其余暂不决定，先提交" }),
     );
-    expect(onSettle).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith();
   });
 
   it("asks the user to re-review a proposal after a stale 409", async () => {
     const onReview = vi.fn();
     render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
+        view={view({
           session: withCommandError(
             EMPTY_DECISION_SESSION,
             RUN_ID,
@@ -141,60 +215,54 @@ describe("DiagnosisWindow decisions", () => {
         controls={controls({ onReview, error: "提案或依据已经变化" })}
       />,
     );
-    const item = proposal(PROPOSAL_A);
-    expect(within(item).getByText("内容已变化，需要重新核对")).toBeVisible();
-    expect(within(item).queryByRole("radio")).toBeNull();
+    expect(
+      document.querySelector(".bc-dx-banner[data-tone='warn']"),
+    ).toHaveTextContent("内容已变化，需要重新核对");
     expect(screen.getByRole("alert")).toHaveTextContent("提案或依据已经变化");
-    await userEvent.click(
-      within(item).getByRole("button", { name: "我已重新核对" }),
-    );
+    expect(
+      within(footer()).getByRole("button", { name: "采纳" }),
+    ).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "我已重新核对" }));
     expect(onReview).toHaveBeenCalledWith(PROPOSAL_A);
   });
 
-  it("shows the Receipt state only with a committed settlement receipt", () => {
+  it("shows the Receipt scene only with a committed settlement receipt", async () => {
     const decision = makeDecisionReceipt();
     const pending = withDecisionReceipt(EMPTY_DECISION_SESSION, decision);
+    const onDismissOutcome = vi.fn();
     const { rerender } = render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
-          session: pending,
-        })}
+        view={view({ session: pending })}
         controls={controls()}
       />,
     );
     expect(screen.queryByTestId("diagnosis-receipt")).toBeNull();
-    expect(
-      within(proposal(PROPOSAL_A)).getByText("提案 1/2 · 新病情"),
-    ).toBeVisible();
 
     rerender(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
+        view={view({
           session: withSettlementReceipt(
             pending,
             makeSettlementReceipt({ decisionIds: [decision.decisionId] }),
           ),
         })}
-        controls={controls()}
+        controls={controls({ onDismissOutcome })}
       />,
     );
-    expect(screen.getByTestId("diagnosis-receipt")).toHaveTextContent(
-      "已写入综合诊断",
-    );
-    expect(within(proposal(PROPOSAL_A)).getByText("已写入诊断")).toBeVisible();
+    const receipt = screen.getByTestId("diagnosis-receipt");
+    expect(receipt).toHaveTextContent("诊断已更新");
+    expect(receipt).toHaveTextContent("1 项决定已提交");
+    expect(within(receipt).getByText("已采纳")).toBeVisible();
+    expect(receipt).toHaveTextContent(/回执 [0-9A-F-]{8}/);
     expect(screen.queryByTestId("diagnosis-decide")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "查看当前" }));
+    expect(onDismissOutcome).toHaveBeenCalledTimes(1);
   });
 
   it("shows No changes after a closed-without-change receipt", () => {
     render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
+        view={view({
           session: withSettlementReceipt(
             EMPTY_DECISION_SESSION,
             makeSettlementReceipt({
@@ -207,28 +275,87 @@ describe("DiagnosisWindow decisions", () => {
         controls={controls()}
       />,
     );
-    expect(screen.getByTestId("diagnosis-no-change")).toBeVisible();
+    expect(screen.getByTestId("diagnosis-no-change")).toHaveTextContent(
+      "诊断未更改你的决定已记录",
+    );
+    expect(screen.getByRole("button", { name: "返回当前" })).toBeVisible();
     expect(screen.queryByTestId("diagnosis-receipt")).toBeNull();
   });
 
-  it("keeps decisions disabled while Safety review is required", () => {
+  it("Safety stopped keeps every decision out of reach", () => {
     render(
       <DiagnosisWindow
-        view={projectNativeDiagnosisWindow({
-          diagnosis: makeDiagnosis(),
-          run: makeRun(),
-          safetyReview: true,
-        })}
+        view={view({ safetyReview: true })}
         controls={controls({ selection: { [PROPOSAL_A]: "accept" } })}
       />,
     );
-    expect(screen.getByTestId("diagnosis-safety")).toHaveAttribute(
-      "data-reason",
-      "safety_review",
+    const safety = screen.getByTestId("diagnosis-safety");
+    expect(safety).toHaveAttribute("data-reason", "safety_review");
+    expect(safety).toHaveTextContent("分析已暂停");
+    expect(screen.queryByRole("button", { name: /采纳/ })).toBeNull();
+    expect(screen.queryByTestId("diagnosis-decide")).toBeNull();
+  });
+
+  it("a pending safety review keeps Empty/Current visible with a note", () => {
+    const { rerender } = render(
+      <DiagnosisWindow
+        view={view({ run: null, safetyReview: true })}
+        controls={controls()}
+      />,
     );
-    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByTestId("diagnosis-empty")).toHaveTextContent(
+      "还没有诊断",
+    );
+    expect(screen.getByTestId("diagnosis-safety-note")).toHaveTextContent(
+      "需要先处理安全提醒",
+    );
+    expect(screen.queryByTestId("diagnosis-safety")).toBeNull();
+
+    rerender(
+      <DiagnosisWindow
+        view={view({
+          diagnosis: makeDiagnosis({ conditionEntries: [makeCondition()] }),
+          run: null,
+          safetyReview: true,
+        })}
+        controls={controls()}
+      />,
+    );
     expect(
-      screen.getByRole("button", { name: "保存所选的 0 条" }),
-    ).toBeDisabled();
+      screen.getByRole("heading", { name: "肩峰下撞击" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("diagnosis-safety-note")).toBeVisible();
+  });
+
+  it("Current shows the adopted condition; Empty offers Chat", async () => {
+    const { rerender } = render(
+      <DiagnosisWindow
+        view={view({
+          diagnosis: makeDiagnosis({ conditionEntries: [makeCondition()] }),
+          run: null,
+        })}
+        controls={controls()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "肩峰下撞击" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("已采纳")).toBeVisible();
+    expect(screen.getByText("是否做过影像检查")).toBeVisible();
+
+    const onOpenChat = vi.fn();
+    rerender(
+      <DiagnosisWindow
+        view={view({ run: null })}
+        controls={controls({ onOpenChat })}
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-empty")).toHaveTextContent(
+      "还没有诊断",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "在对话里请求正式分析" }),
+    );
+    expect(onOpenChat).toHaveBeenCalledTimes(1);
   });
 });

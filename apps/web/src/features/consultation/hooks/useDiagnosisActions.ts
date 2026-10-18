@@ -142,79 +142,69 @@ export function useDiagnosisActions({
     setSession((current) => withProposalReviewed(current, proposalId));
   }, []);
 
-  /** Records only the proposals the user chose; others stay undecided. */
-  async function recordSelection() {
-    const target = view.run;
-    if (!target?.canDecide || busy) return;
+  /**
+   * Records the chosen proposals one by one. Returns false (and leaves the
+   * failure on screen) as soon as one command fails; nothing is shown as
+   * recorded without its matching decision receipt.
+   */
+  async function recordChoices(
+    target: NonNullable<typeof view.run>,
+    choices: Record<string, ProposalChoice>,
+  ): Promise<boolean> {
     const chosen = target.proposals.filter(
-      (row) => row.selectable && selection[row.proposalId],
+      (row) => row.selectable && choices[row.proposalId],
     );
-    if (chosen.length === 0) return;
-    setBusy(true);
-    setError(null);
-    try {
-      for (const row of chosen) {
-        const decision = selection[row.proposalId]!;
-        const expectedRevision = target.expectedRevision;
-        const ids = identity(
-          decisionAttemptContent(target.runId, row, decision, expectedRevision),
+    for (const row of chosen) {
+      const decision = choices[row.proposalId]!;
+      const expectedRevision = target.expectedRevision;
+      const ids = identity(
+        decisionAttemptContent(target.runId, row, decision, expectedRevision),
+      );
+      try {
+        const receipt = await api.decide(target.runId, {
+          proposalId: row.proposalId,
+          presentedFingerprint: row.contentFingerprint,
+          expectedRevision,
+          decision,
+          ...ids,
+        });
+        if (
+          receipt.runId !== target.runId ||
+          receipt.proposalId !== row.proposalId ||
+          receipt.contentFingerprint !== row.contentFingerprint ||
+          receipt.decision !== decision ||
+          receipt.expectedRevision !== expectedRevision ||
+          receipt.idempotencyKey !== ids.idempotencyKey
+        )
+          throw new ReceiptMismatchError();
+        setSession((current) => withDecisionReceipt(current, receipt));
+        select(row.proposalId, null);
+      } catch (commandError) {
+        setSession((current) =>
+          withCommandError(current, target.runId, commandError, row.proposalId),
         );
-        try {
-          const receipt = await api.decide(target.runId, {
-            proposalId: row.proposalId,
-            presentedFingerprint: row.contentFingerprint,
-            expectedRevision,
-            decision,
-            ...ids,
-          });
-          if (
-            receipt.runId !== target.runId ||
-            receipt.proposalId !== row.proposalId ||
-            receipt.contentFingerprint !== row.contentFingerprint ||
-            receipt.decision !== decision ||
-            receipt.expectedRevision !== expectedRevision ||
-            receipt.idempotencyKey !== ids.idempotencyKey
-          )
-            throw new ReceiptMismatchError();
-          setSession((current) => withDecisionReceipt(current, receipt));
+        if (
+          commandError instanceof ApiRequestError &&
+          commandError.status === 409
+        )
           select(row.proposalId, null);
-        } catch (commandError) {
-          setSession((current) =>
-            withCommandError(
-              current,
-              target.runId,
-              commandError,
-              row.proposalId,
-            ),
-          );
-          if (
-            commandError instanceof ApiRequestError &&
-            commandError.status === 409
-          )
-            select(row.proposalId, null);
-          setError(
-            commandMessage(commandError, "保存你的选择失败，请稍后重试。"),
-          );
-          break;
-        }
+        setError(
+          commandMessage(commandError, "保存你的选择失败，请稍后重试。"),
+        );
+        return false;
       }
-    } finally {
-      setBusy(false);
-      await refresh();
     }
+    return true;
   }
 
-  /** Whole-run settlement; committed only after a matching receipt. */
-  async function settle() {
-    const target = view.run;
-    if (!target?.canSettle || busy) return;
-    const closeRemaining = target.closesRemaining;
+  async function settleRun(
+    target: NonNullable<typeof view.run>,
+    closeRemaining: boolean,
+  ) {
     const expectedRevision = target.expectedRevision;
     const ids = identity(
       settlementAttemptContent(target.runId, expectedRevision, closeRemaining),
     );
-    setBusy(true);
-    setError(null);
     try {
       const receipt = await api.settle(target.runId, {
         expectedRevision,
@@ -238,11 +228,79 @@ export function useDiagnosisActions({
         withCommandError(current, target.runId, commandError),
       );
       setError(commandMessage(commandError, "写入诊断失败，请稍后重试。"));
+    }
+  }
+
+  /** Records only the proposals the user chose; others stay undecided. */
+  async function recordSelection() {
+    const target = view.run;
+    if (!target?.canDecide || busy) return;
+    if (
+      !target.proposals.some(
+        (row) => row.selectable && selection[row.proposalId],
+      )
+    )
+      return;
+    setBusy(true);
+    setError(null);
+    try {
+      await recordChoices(target, selection);
     } finally {
       setBusy(false);
       await refresh();
     }
   }
+
+  /** Whole-run settlement; committed only after a matching receipt. */
+  async function settle() {
+    const target = view.run;
+    if (!target?.canSettle || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await settleRun(target, target.closesRemaining);
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  }
+
+  /**
+   * Penpot "采纳并提交" / "不更改" / early submit: records every local choice
+   * (plus the final one) and then settles the run. Proposals left without a
+   * choice are closed unadopted (closeRemaining); the settlement receipt
+   * alone decides what is shown as committed.
+   */
+  async function submit(final?: {
+    proposalId: string;
+    choice: ProposalChoice;
+  }) {
+    const target = view.run;
+    if (!target?.canDecide || busy) return;
+    const choices = final
+      ? { ...selection, [final.proposalId]: final.choice }
+      : selection;
+    const selectable = target.proposals.filter((row) => row.selectable);
+    const chosen = selectable.filter((row) => choices[row.proposalId]).length;
+    setBusy(true);
+    setError(null);
+    try {
+      if (!(await recordChoices(target, choices))) return;
+      const blocked = target.proposals.some((row) => row.needsReview);
+      if (blocked) return;
+      await settleRun(target, selectable.length > chosen);
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  }
+
+  /** Receipt / No changes "查看当前": leave the outcome and show the Diagnosis. */
+  const dismissOutcome = useCallback(() => {
+    setSession(EMPTY_DECISION_SESSION);
+    setSelection({});
+    setError(null);
+  }, []);
 
   const loadError = diagnosis.error ?? latest.error ?? run.error;
   return {
@@ -252,6 +310,8 @@ export function useDiagnosisActions({
     reviewProposal,
     recordSelection,
     settle,
+    submit,
+    dismissOutcome,
     busy,
     error,
     loading: diagnosis.isPending && enabled,
