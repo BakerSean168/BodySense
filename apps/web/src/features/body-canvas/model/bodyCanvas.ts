@@ -6,7 +6,7 @@ import {
 } from "@/features/body-explorer/model/bodyRegionOntology";
 
 export type CanvasTool = "orbit" | "brush" | "box";
-export type CanvasPanel = "state" | "diagnosis" | "treatment" | "trainer" | "progress" | "equipment" | "anatomy" | "help" | "motions";
+export type CanvasPanel = "state" | "diagnosis" | "training" | "trainer" | "progress" | "equipment" | "anatomy" | "help" | "motions";
 export type MotionId = "stand" | "run" | "jump" | "sit" | "arm_raise" | "calf_raise" | "hip_hinge" | "bridge";
 
 export interface ReferenceMotion {
@@ -111,7 +111,7 @@ export function canvasShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "m
   if (key === "z") return { type: "undo" };
   const tools: Record<string, CanvasTool> = { v: "orbit", b: "brush", s: "box" };
   if (tools[key]) return { type: "tool", tool: tools[key] };
-  const panels: Record<string, CanvasPanel> = { p: "treatment", d: "diagnosis", i: "state", t: "trainer", c: "state", e: "equipment", h: "progress", x: "anatomy", "?": "help" };
+  const panels: Record<string, CanvasPanel> = { p: "training", d: "diagnosis", i: "state", t: "trainer", c: "state", e: "equipment", h: "progress", x: "anatomy", "?": "help" };
   if (panels[key]) return { type: "panel", panel: panels[key] };
   const motions: Record<string, MotionId> = { "1": "stand", "2": "run", "3": "jump", "4": "sit" };
   return motions[key] ? { type: "motion", motion: motions[key] } : null;

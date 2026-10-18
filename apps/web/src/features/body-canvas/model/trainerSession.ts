@@ -10,10 +10,12 @@ import {
 } from "./trainingPlans";
 
 /**
- * Trainer window view model on `/training-sessions` (UI-TP-001 slice 2),
- * matched to the Penpot Trainer boards In progress / Set recorded / Ended.
+ * Trainer window view model on `/training-sessions` (UI-TP-001), matched to
+ * the Penpot Trainer boards In progress / Set recorded / Recovery / Ended.
  * Everything shown is derived from the session's immutable receipts: a set
- * is done only when an effective `performed`/`skipped` receipt exists.
+ * is done only when an effective `performed`/`skipped` receipt exists, a
+ * whole-exercise skip covers only the sets still open, and a correction
+ * retracts one receipt so its target can be recorded again.
  */
 
 type Exercise =
@@ -33,6 +35,10 @@ export interface TrainerExerciseView {
   target: Exercise["target"];
   restSeconds: number | null;
   sets: SetState[];
+  /** The effective receipt behind each set, for corrections (null when pending). */
+  setActionIds: (string | null)[];
+  /** The effective whole-exercise skip receipt, if any. */
+  exerciseSkipActionId: string | null;
   /** "done" when no set is pending; "partial" when some are recorded. */
   progress: "done" | "partial" | "pending";
   performedCount: number;
@@ -41,16 +47,24 @@ export interface TrainerExerciseView {
 export interface TrainerCurrentSet {
   exerciseIndex: number;
   setNumber: number;
-  /** Prefilled actual value the stepper starts from (the prescription). */
+  /**
+   * Prefilled actual value the stepper starts from: the retracted value when
+   * the set is being recorded again, otherwise the prescription.
+   */
   defaultActual: number | null;
+  /** The set's earlier receipt was retracted; this is its re-record. */
+  correcting: boolean;
   actualUnit: "reps" | "seconds" | null;
 }
 
 export interface TrainerLastRecord {
+  actionId: string;
   planExerciseId: string;
   name: string;
+  scope: "set" | "exercise";
   setNumber: number | null;
-  kind: "performed" | "skipped";
+  /** `corrected`: the latest action retracted an earlier receipt. */
+  kind: "performed" | "skipped" | "corrected";
   actualReps: number | null;
   actualDurationSeconds: number | null;
   recordedAt: string;
@@ -70,6 +84,8 @@ export interface TrainerSessionView {
   next: TrainerExerciseView | null;
   last: TrainerLastRecord | null;
   allRecorded: boolean;
+  /** The user's verbatim feedback on the ended session, once recorded. */
+  feedback: { text: string; recordedAt: string } | null;
   /** Seconds of training so far, paused time excluded. */
   elapsedSeconds: number;
   /** Remaining rest after the last performed set, or 0. */
@@ -135,19 +151,22 @@ export function projectTrainerSession(
   for (const stage of template?.stages ?? []) {
     stage.exercises.forEach((exercise, index) => {
       byId.set(exercise.planExerciseId, exercise);
-      const wholeSkip = effective.some(
+      const wholeSkip = effective.find(
         (action) => action.planExerciseId === exercise.planExerciseId && action.scope === "exercise",
       );
-      const sets: SetState[] = Array.from({ length: exercise.sets }, (_, setIndex) => {
-        if (wholeSkip) return "skipped";
-        const receipt = effective.find(
+      const receipts = Array.from({ length: exercise.sets }, (_, setIndex) =>
+        effective.find(
           (action) =>
             action.planExerciseId === exercise.planExerciseId &&
             action.scope === "set" &&
             action.setNumber === setIndex + 1,
-        );
-        return receipt ? (receipt.kind as "performed" | "skipped") : "pending";
-      });
+        ),
+      );
+      // A whole-exercise skip covers the sets still open; recorded sets keep
+      // their own receipts.
+      const sets: SetState[] = receipts.map((receipt) =>
+        receipt ? (receipt.kind as "performed" | "skipped") : wholeSkip ? "skipped" : "pending",
+      );
       const pending = sets.filter((state) => state === "pending").length;
       exercises.push({
         planExerciseId: exercise.planExerciseId,
@@ -159,6 +178,8 @@ export function projectTrainerSession(
         target: exercise.target,
         restSeconds: exercise.restSeconds ?? null,
         sets,
+        setActionIds: receipts.map((receipt) => receipt?.actionId ?? null),
+        exerciseSkipActionId: wholeSkip?.actionId ?? null,
         progress: pending === 0 ? "done" : pending === sets.length ? "pending" : "partial",
         performedCount: sets.filter((state) => state === "performed").length,
       });
@@ -170,26 +191,53 @@ export function projectTrainerSession(
   if (currentIndex >= 0) {
     const exercise = exercises[currentIndex]!;
     const { target } = exercise;
+    const setNumber = exercise.sets.indexOf("pending") + 1;
+    const actualUnit = target.kind === "repetitions" ? "reps" : target.kind === "duration" ? "seconds" : null;
+    // The newest retracted receipt of this very set, if the user corrected it.
+    const retracted = new Set(session.actions.flatMap((action) => (action.correctsActionId ? [action.correctsActionId] : [])));
+    const previous = [...session.actions]
+      .filter(
+        (action) =>
+          retracted.has(action.actionId) &&
+          action.planExerciseId === exercise.planExerciseId &&
+          action.scope === "set" &&
+          action.setNumber === setNumber,
+      )
+      .sort((a, b) => b.sessionRevision - a.sessionRevision)[0];
+    const previousActual =
+      previous?.kind === "performed"
+        ? actualUnit === "reps"
+          ? previous.actualReps
+          : actualUnit === "seconds"
+            ? previous.actualDurationSeconds
+            : undefined
+        : undefined;
     current = {
       exerciseIndex: currentIndex,
-      setNumber: exercise.sets.indexOf("pending") + 1,
+      setNumber,
       defaultActual:
-        target.kind === "repetitions"
+        previousActual ??
+        (target.kind === "repetitions"
           ? (target.min ?? null)
           : target.kind === "duration"
             ? (target.seconds ?? null)
-            : null,
-      actualUnit: target.kind === "repetitions" ? "reps" : target.kind === "duration" ? "seconds" : null,
+            : null),
+      correcting: previous !== undefined,
+      actualUnit,
     };
   }
 
-  const lastAction = [...effective].sort((a, b) => b.sessionRevision - a.sessionRevision)[0];
+  // The newest receipt of any kind: a correction is shown as such, and an
+  // effective receipt can be corrected from its banner.
+  const lastAction = [...session.actions].sort((a, b) => b.sessionRevision - a.sessionRevision)[0];
   const lastExercise = lastAction ? byId.get(lastAction.planExerciseId) : undefined;
   const last: TrainerLastRecord | null =
-    lastAction && lastExercise && lastAction.kind !== "corrected"
+    lastAction && lastExercise
       ? {
+          actionId: lastAction.actionId,
           planExerciseId: lastExercise.planExerciseId,
           name: lastExercise.nameSnapshot,
+          scope: lastAction.scope,
           setNumber: lastAction.setNumber ?? null,
           kind: lastAction.kind,
           actualReps: lastAction.actualReps ?? null,
@@ -219,6 +267,7 @@ export function projectTrainerSession(
         : null,
     last,
     allRecorded: exercises.length > 0 && currentIndex < 0,
+    feedback: session.feedback ? { text: session.feedback.text, recordedAt: session.feedback.recordedAt } : null,
     elapsedSeconds: elapsedTrainingSeconds(session, now),
     restRemainingSeconds,
   };

@@ -76,13 +76,12 @@ export const BUSINESS_WINDOW_IDS: readonly BusinessWindowId[] =
   BUSINESS_WINDOWS.map((window) => window.id);
 
 /**
- * Legacy deep-link aliases. The previous surface exposed `?view=state|treatment`
+ * Legacy deep-link aliases. The previous surface exposed `?view=state|progress`
  * and those URLs must keep resolving to the same business object after the
  * window refactor, so old links are not silently broken.
  */
 const LEGACY_WINDOW_ALIASES: Record<string, BusinessWindowId> = {
   state: "person",
-  treatment: "training",
   progress: "person",
 };
 

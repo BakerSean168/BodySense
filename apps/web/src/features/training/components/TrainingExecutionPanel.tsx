@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Check,
   CircleHelp,
@@ -8,6 +8,7 @@ import {
   Pause,
   Play,
   Plus,
+  RotateCcw,
   ShieldAlert,
   ShieldCheck,
   X,
@@ -27,6 +28,8 @@ export interface TrainingExecutionPanelProps {
   templateId: string | null;
   /** Identity of that explicit Start click; one launch starts one session. */
   launchKey: string;
+  /** Reopen this live session (the Home training chip) instead of starting one. */
+  sessionId?: string | null;
   onOpenPlan?: () => void;
 }
 
@@ -34,9 +37,11 @@ export interface TrainingExecutionPanelProps {
  * Penpot Trainer boards (In progress, Set recorded, Recovery, Ended) on the
  * Go runtime. Every set is one explicit user action with a receipt; the
  * TrainerGate decides whether a set can be recorded, never this window.
+ * A correction retracts one receipt after the user confirms it (the
+ * original stays on record) and reopens its set to be recorded again.
  */
-export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPlan }: TrainingExecutionPanelProps) {
-  const trainer = useTrainerSession({ planId, templateId, launchKey });
+export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionId, onOpenPlan }: TrainingExecutionPanelProps) {
+  const trainer = useTrainerSession({ planId, templateId, launchKey, sessionId });
   const view = trainer.view;
   // The stepper starts from the prescription for each new set and travels
   // with that set's Complete command.
@@ -45,6 +50,18 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPl
   const [actual, setActual] = useState<{ key: string; value: number | null }>({ key: "none", value: null });
   const actualValue = actual.key === setKey ? actual.value : (current?.defaultActual ?? null);
   const changeActual = (value: number) => setActual({ key: setKey, value });
+  // A correction is two explicit steps: pick the receipt, confirm the retraction.
+  const [correction, setCorrection] = useState<string | null>(null);
+  const correctionTarget = correction ? (findReceipt(view, correction) ?? null) : null;
+  const confirmCorrection = () => {
+    if (!correction) return;
+    trainer.correct(correction);
+    setCorrection(null);
+  };
+  // 「说说感受」: the user's own words on the ended session, sent once.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+  const writingFeedback = feedbackOpen && !view?.feedback;
 
   let body: ReactNode;
   let footer: ReactNode = null;
@@ -77,9 +94,36 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPl
       </footer>
     );
   } else if (view.state === "ended") {
-    body = <EndedScene view={view} />;
-    footer = (
-      <footer className="bc-window-footer bc-dx-footer">
+    body = (
+      <EndedScene
+        view={view}
+        notices={<Notices notice={trainer.notice} error={trainer.error} gate={null} />}
+        form={writingFeedback ? <FeedbackForm text={feedbackText} onChange={setFeedbackText} disabled={trainer.busy} /> : null}
+      />
+    );
+    footer = writingFeedback ? (
+      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
+        <button type="button" className="bc-dx-tonal" disabled={trainer.busy} onClick={() => setFeedbackOpen(false)}>
+          取消
+        </button>
+        <button
+          type="button"
+          className="bc-dx-primary"
+          disabled={trainer.busy || !feedbackText.trim()}
+          aria-busy={trainer.busy || undefined}
+          onClick={() => trainer.sendFeedback(feedbackText)}
+        >
+          {trainer.busy ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+          发送
+        </button>
+      </footer>
+    ) : (
+      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
+        {view.feedback ? null : (
+          <button type="button" className="bc-dx-tonal" onClick={() => setFeedbackOpen(true)}>
+            说说感受
+          </button>
+        )}
         <button type="button" className="bc-dx-primary" onClick={onOpenPlan}>
           <Check size={16} aria-hidden="true" />
           完成
@@ -110,7 +154,25 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPl
       </footer>
     );
   } else {
-    body = <InProgressScene view={view} trainer={trainer} actual={actualValue} onActual={changeActual} />;
+    body = (
+      <InProgressScene
+        view={view}
+        trainer={trainer}
+        actual={actualValue}
+        onActual={changeActual}
+        onCorrect={setCorrection}
+        correction={
+          correctionTarget && view.canRecord ? (
+            <CorrectionConfirm
+              label={correctionTarget}
+              busy={trainer.busy}
+              onCancel={() => setCorrection(null)}
+              onConfirm={confirmCorrection}
+            />
+          ) : null
+        }
+      />
+    );
     footer = <InProgressFooter view={view} trainer={trainer} actual={actualValue} />;
   }
 
@@ -125,6 +187,74 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPl
         {body}
       </div>
       {footer}
+    </section>
+  );
+}
+
+/** "臀桥 · 第 2 组 · 12 次" for an effective receipt shown in this session. */
+function findReceipt(view: TrainerSessionView | null, actionId: string): string | undefined {
+  for (const exercise of view?.exercises ?? []) {
+    if (exercise.exerciseSkipActionId === actionId) return `${exercise.name} · 跳过此动作`;
+    const index = exercise.setActionIds.indexOf(actionId);
+    if (index >= 0) {
+      return `${exercise.name} · 第 ${index + 1} 组${exercise.sets[index] === "skipped" ? " · 跳过" : ""}`;
+    }
+  }
+  return undefined;
+}
+
+function CorrectionConfirm({
+  label,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  label: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="bc-dx-banner bc-tp-banner bc-tr-correction" data-tone="warn" role="group" aria-label="更正记录" data-testid="trainer-correction">
+      <RotateCcw size={16} aria-hidden="true" />
+      <span className="bc-dx-banner-text">
+        撤回「{label}」后重新记录？原记录会保留在训练历史中。
+      </span>
+      <span className="bc-tr-correction-actions">
+        <button type="button" className="bc-dx-link" disabled={busy} onClick={onCancel}>
+          取消
+        </button>
+        <button type="button" className="bc-dx-tonal" disabled={busy} onClick={onConfirm}>
+          撤回重记
+        </button>
+      </span>
+    </div>
+  );
+}
+
+function FeedbackForm({ text, onChange, disabled }: { text: string; onChange: (text: string) => void; disabled: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.scrollIntoView?.({ block: "nearest" });
+  }, []);
+  return (
+    <section className="bc-dx-section bc-tr-feedback" aria-label="说说感受" data-testid="trainer-feedback-form">
+      <label className="bc-dx-label" htmlFor="trainer-feedback-text">
+        这次训练感觉怎么样？
+      </label>
+      <textarea
+        ref={ref}
+        id="trainer-feedback-text"
+        className="bc-tr-feedback-input"
+        rows={4}
+        maxLength={2000}
+        value={text}
+        disabled={disabled}
+        placeholder="比如哪里吃力、哪里有不适，用你自己的话说就好。"
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <p className="bc-dx-note">会按原话保存，只用于提示你复盘计划，不会自动修改计划。</p>
     </section>
   );
 }
@@ -240,11 +370,15 @@ function InProgressScene({
   trainer,
   actual,
   onActual,
+  onCorrect,
+  correction,
 }: {
   view: TrainerSessionView;
   trainer: ReturnType<typeof useTrainerSession>;
   actual: number | null;
   onActual: (value: number) => void;
+  onCorrect: (actionId: string) => void;
+  correction: ReactNode;
 }) {
   const current = view.current;
   const exercise = current ? view.exercises[current.exerciseIndex]! : null;
@@ -257,39 +391,84 @@ function InProgressScene({
   const last = view.last;
   const showLast = last !== null && (resting || !(last.kind === "performed" && last.restSeconds));
   const lastElsewhere = last !== null && exercise !== null && last.planExerciseId !== exercise.planExerciseId;
+  const correctable = view.canRecord && !trainer.busy;
 
   return (
     <div className="bc-tp-scene" data-testid={resting ? "trainer-set-recorded" : "trainer-in-progress"}>
       <StatusRow view={view} />
       <ProgressBar exercises={view.exercises} />
       <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
-      {showLast && view.last ? (
-        <Banner tone="info" icon={<Check size={16} aria-hidden="true" />} role="status" testId="trainer-last-receipt">
-          {lastElsewhere && view.last.setNumber ? `${view.last.name} · ` : ""}
-          {view.last.setNumber ? `第 ${view.last.setNumber} 组` : view.last.name}
-          {view.last.kind === "skipped" ? "已跳过" : "已记录"}
-          {view.last.actualReps ? ` · ${view.last.actualReps} 次` : ""}
-          {view.last.actualDurationSeconds ? ` · ${view.last.actualDurationSeconds} 秒` : ""}
-        </Banner>
+      {correction}
+      {showLast && last ? (
+        last.kind === "corrected" ? (
+          <Banner tone="info" icon={<RotateCcw size={16} aria-hidden="true" />} role="status" testId="trainer-last-receipt">
+            {last.setNumber ? `${lastElsewhere ? `${last.name} · ` : ""}第 ${last.setNumber} 组` : last.name}
+            已撤回 · 请重新记录
+          </Banner>
+        ) : (
+          <div className="bc-dx-banner bc-tp-banner" data-tone="info" role="status" data-testid="trainer-last-receipt">
+            <Check size={16} aria-hidden="true" />
+            <span className="bc-dx-banner-text">
+              {lastElsewhere && last.setNumber ? `${last.name} · ` : ""}
+              {last.setNumber ? `第 ${last.setNumber} 组` : last.name}
+              {last.kind === "skipped" ? "已跳过" : "已记录"}
+              {last.actualReps ? ` · ${last.actualReps} 次` : ""}
+              {last.actualDurationSeconds ? ` · ${last.actualDurationSeconds} 秒` : ""}
+            </span>
+            {correctable ? (
+              <button type="button" className="bc-dx-link bc-tr-correct" onClick={() => onCorrect(last.actionId)}>
+                更正
+              </button>
+            ) : null}
+          </div>
+        )
       ) : null}
       {exercise && current ? (
         <section className="bc-tr-card" aria-label="当前动作" data-testid="trainer-current">
-          <span className="bc-tr-card-stage">
-            {exercise.stageLabel} · {exercise.position} / {exercise.stageSize}
-          </span>
+          <div className="bc-tr-card-head">
+            <span className="bc-tr-card-stage">
+              {exercise.stageLabel} · {exercise.position} / {exercise.stageSize}
+            </span>
+            {view.canRecord && !resting ? (
+              <button
+                type="button"
+                className="bc-dx-link bc-tr-skip-exercise"
+                aria-label={`跳过此动作：${exercise.name}`}
+                disabled={trainer.busy}
+                onClick={trainer.skipExercise}
+              >
+                跳过此动作
+              </button>
+            ) : null}
+          </div>
           <h3 className="bc-tr-card-name">{exercise.name}</h3>
           <ol className="bc-tr-sets" aria-label="组">
-            {exercise.sets.map((state, index) => (
-              <li
-                key={index}
-                data-set-state={state}
-                data-current={index + 1 === current.setNumber ? "true" : undefined}
-                aria-current={index + 1 === current.setNumber ? "step" : undefined}
-              >
-                {state !== "pending" ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
-                {setLabel(state, index)}
-              </li>
-            ))}
+            {exercise.sets.map((state, index) => {
+              const actionId = exercise.setActionIds[index];
+              const label = (
+                <>
+                  {state !== "pending" ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
+                  {setLabel(state, index)}
+                </>
+              );
+              return (
+                <li
+                  key={index}
+                  data-set-state={state}
+                  data-current={index + 1 === current.setNumber ? "true" : undefined}
+                  aria-current={index + 1 === current.setNumber ? "step" : undefined}
+                >
+                  {/* A recorded set opens its correction (confirmed in a second step). */}
+                  {actionId && correctable ? (
+                    <button type="button" className="bc-tr-set-button" aria-label={`更正第 ${index + 1} 组`} onClick={() => onCorrect(actionId)}>
+                      {label}
+                    </button>
+                  ) : (
+                    label
+                  )}
+                </li>
+              );
+            })}
           </ol>
           <p className="bc-tr-target">
             目标 {exercise.prescription.replace(/^\d+ 组 × /, "")}
@@ -441,7 +620,7 @@ function RecoveryScene({ view, children }: { view: TrainerSessionView; children:
   );
 }
 
-function EndedScene({ view }: { view: TrainerSessionView }) {
+function EndedScene({ view, notices, form }: { view: TrainerSessionView; notices: ReactNode; form: ReactNode }) {
   const minutes = Math.max(1, Math.round(view.elapsedSeconds / 60));
   return (
     <div className="bc-tp-scene" data-testid="trainer-ended">
@@ -454,7 +633,17 @@ function EndedScene({ view }: { view: TrainerSessionView }) {
           {view.endedReason === "finished" ? "按计划完成" : "提前结束"} · {minutes} 分钟
         </p>
       </div>
+      {notices}
       <RecordedList view={view} />
+      {view.feedback ? (
+        <section className="bc-dx-section bc-tr-feedback" aria-label="你的感受" data-testid="trainer-feedback">
+          <h4 className="bc-dx-label">你的感受</h4>
+          <blockquote className="bc-tr-feedback-text">{view.feedback.text}</blockquote>
+          <p className="bc-dx-note">已按原话记录。训练计划会提示你据此复盘，不会自动修改计划。</p>
+        </section>
+      ) : (
+        form
+      )}
     </div>
   );
 }

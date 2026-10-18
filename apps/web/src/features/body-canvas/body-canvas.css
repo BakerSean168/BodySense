@@ -2340,3 +2340,57 @@
   .bc-tr .bc-tr-footer .bc-tr-pause { width: 44px; height: 44px; }
   .bc-tr-card-name { font-size: 24px; }
 }
+
+/* UI-TP-001 slice 3: corrections, whole-exercise skip, session feedback. */
+.bc-tr-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; }
+.bc-tr .bc-tr-skip-exercise { min-height: 32px; margin: -6px -8px -6px 0; padding: 0 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.bc-tr .bc-tr-skip-exercise:hover { background: var(--dx-idle-bg); }
+.bc-tr-sets > li[data-set-state="skipped"] { background: var(--dx-warn-bg); color: var(--dx-warn); }
+.bc-tr-set-button {
+  position: relative; display: inline-flex; align-items: center; gap: 5px; height: 100%;
+  margin: 0 -10px; padding: 0 10px; border: 0; border-radius: inherit;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+/* 44px hit area around the 26px chip. */
+.bc-tr-set-button::after { content: ""; position: absolute; inset: -9px -2px; }
+.bc-tr-set-button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.bc-tr-set-button:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
+.bc-tr .bc-tr-correct { flex: 0 0 auto; min-height: 32px; margin-left: auto; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.bc-tr-correction { flex-wrap: wrap; row-gap: 6px; }
+.bc-tr-correction .bc-dx-banner-text { flex: 1 1 200px; }
+.bc-tr-correction-actions { display: inline-flex; gap: 6px; margin-left: auto; }
+.bc-tr-correction-actions button { min-height: 36px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+.bc-tr-feedback { display: grid; gap: 8px; }
+.bc-tr-feedback-input {
+  width: 100%; min-height: 104px; padding: 12px 14px; resize: vertical;
+  border: 1px solid var(--dx-card-line); border-radius: 12px; background: var(--bc-paper);
+  color: var(--dx-ink); font: inherit; font-size: 14px; line-height: 1.6;
+}
+.bc-tr-feedback-input:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 1px; }
+.bc-tr-feedback-text {
+  margin: 0; padding: 12px 14px; border-left: 3px solid var(--dx-ok-bg); border-radius: 0 12px 12px 0;
+  background: var(--dx-soft); color: var(--dx-ink); font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* Penpot Home / trainer-active · trainer-paused: the way back to a live session. */
+.bc-trainer-chip {
+  position: absolute; z-index: 19; left: 22px; top: calc(50% - 240px);
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px 6px 14px;
+  border: 1px solid var(--bc-line); border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-paper) 94%, transparent); color: var(--bc-primary);
+  box-shadow: 0 8px 26px rgba(36, 52, 41, .08); backdrop-filter: blur(18px); cursor: pointer;
+}
+.bc-trainer-chip:hover { background: var(--bc-paper); }
+.bc-trainer-chip:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
+.bc-trainer-chip > svg:last-child { color: var(--bc-muted); }
+.bc-trainer-chip-status {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px;
+  background: var(--bc-primary-soft); color: var(--bc-primary); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.bc-trainer-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.bc-trainer-chip[data-state="paused"] .bc-trainer-chip-status { background: var(--bc-warning-soft); color: var(--bc-warning); }
+@media (max-width: 760px) {
+  .bc-trainer-chip { left: 50%; top: 116px; transform: translateX(-50%); }
+  .bc-tr .bc-tr-skip-exercise, .bc-tr .bc-tr-correct { min-height: 44px; }
+  .bc-tr-correction-actions button { min-height: 44px; }
+}

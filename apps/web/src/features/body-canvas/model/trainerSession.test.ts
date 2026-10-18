@@ -83,6 +83,57 @@ describe("Trainer session view model", () => {
     expect(view.current).toMatchObject({ exerciseIndex: 1, setNumber: 1 });
   });
 
+  it("keeps recorded sets under a whole-exercise skip and skips only the open ones", () => {
+    const warmup = action("cat-cow", 1, "performed");
+    const set1 = action("bridge", 1, "performed", { actualReps: 12 });
+    const skip = action("bridge", undefined, "skipped");
+    const view = projectTrainerSession(
+      plan,
+      plan.currentContent,
+      session({ actions: [warmup, set1, skip] }),
+      at("12:10:00"),
+    );
+    const bridge = view.exercises.find((item) => item.planExerciseId === "bridge")!;
+    expect(bridge.sets).toEqual(["performed", "skipped", "skipped"]);
+    expect(bridge).toMatchObject({ progress: "done", performedCount: 1, exerciseSkipActionId: skip.actionId });
+    expect(bridge.setActionIds).toEqual([set1.actionId, null, null]);
+    expect(view.current).toMatchObject({ exerciseIndex: 2, setNumber: 1 });
+    expect(view.last).toMatchObject({ actionId: skip.actionId, scope: "exercise", kind: "skipped", setNumber: null });
+  });
+
+  it("reopens a corrected set prefilled with the retracted value and shows the retraction", () => {
+    const warmup = action("cat-cow", 1, "performed");
+    const first = action("bridge", 1, "performed", { actualReps: 14 });
+    const correction = action("bridge", 1, "corrected", { correctsActionId: first.actionId });
+    const view = projectTrainerSession(
+      plan,
+      plan.currentContent,
+      session({ actions: [warmup, first, correction] }),
+      at("12:10:00"),
+    );
+    expect(view.current).toMatchObject({ exerciseIndex: 1, setNumber: 1, defaultActual: 14, correcting: true });
+    expect(view.last).toMatchObject({ kind: "corrected", setNumber: 1, name: "臀桥" });
+    // A retraction never starts a rest.
+    expect(view.restRemainingSeconds).toBe(0);
+    const fresh = projectTrainerSession(plan, plan.currentContent, session(), at("12:00:10"));
+    expect(fresh.current).toMatchObject({ correcting: false, defaultActual: 10 });
+  });
+
+  it("carries the user's verbatim session feedback", () => {
+    const view = projectTrainerSession(
+      plan,
+      plan.currentContent,
+      session({
+        state: "ended",
+        endedReason: "finished",
+        feedback: { feedbackId: "f1", text: "膝盖有点酸", idempotencyKey: "fk", recordedAt: at("12:40:00").toISOString() },
+      }),
+      at("12:41:00"),
+    );
+    expect(view.feedback?.text).toBe("膝盖有点酸");
+    expect(projectTrainerSession(plan, plan.currentContent, session(), at("12:01:00")).feedback).toBeNull();
+  });
+
   it("shows the Set recorded rest countdown from the receipt time and the exercise's rest", () => {
     const actions = [action("cat-cow", 1, "performed"), action("bridge", 1, "performed", { actualReps: 12, recordedAt: "2026-10-18T12:05:00+08:00" })];
     const resting = projectTrainerSession(plan, plan.currentContent, session({ actions }), at("12:05:13"));

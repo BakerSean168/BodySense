@@ -19,6 +19,10 @@ const TrainingExecutionPanel = lazy(() =>
  * 3. The server exposes execution capability.
  * 4. There is no blocking safety hold.
  *
+ * Reopening a live session (the Home training chip) needs only gate 1: a
+ * session already exists, pausing and ending are never gated, and the
+ * Trainer itself disables every gated action while the gate blocks.
+ *
  * This is a UI admission guard, never a substitute for server authorization.
  */
 export interface TrainerLaunch {
@@ -26,6 +30,8 @@ export interface TrainerLaunch {
   templateId: string;
   /** One explicit Start click; the Trainer starts at most one session for it. */
   key: string;
+  /** Set when the user reopens a live session: nothing new is started. */
+  sessionId?: string;
 }
 
 export interface TrainerEntryGuardProps {
@@ -49,12 +55,11 @@ export function TrainerEntryGuard({
   error,
   onOpenTraining,
 }: TrainerEntryGuardProps) {
+  const reopening = !!launch?.sessionId;
   const canRenderExecution =
     planId !== null &&
     launch?.planId === planId &&
-    accepted &&
-    canExecute &&
-    !safetyBlocked &&
+    (reopening || (accepted && canExecute && !safetyBlocked)) &&
     !loading &&
     !error;
 
@@ -93,6 +98,7 @@ export function TrainerEntryGuard({
             planId={planId}
             templateId={launch!.templateId}
             launchKey={launch!.key}
+            sessionId={launch!.sessionId ?? null}
             onOpenPlan={onOpenTraining}
           />
         </Suspense>
