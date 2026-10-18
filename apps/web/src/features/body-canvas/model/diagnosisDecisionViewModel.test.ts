@@ -54,7 +54,7 @@ describe("projectNativeDiagnosisWindow", () => {
     expect(view.confirmed[0]).toMatchObject({
       conditionId: CONDITION_ID,
       certainty: "user_confirmed_agent_analysis",
-      cause: { summary: "肩胛控制不足", evidenceStrength: "较可能" },
+      cause: { summary: "肩胛控制不足", evidenceStrength: "较倾向" },
     });
     expect(view.run?.proposals.map((row) => row.state)).toEqual([
       "undecided",

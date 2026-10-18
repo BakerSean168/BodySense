@@ -147,7 +147,7 @@ export interface ProjectNativeDiagnosisInput {
 
 const LEVEL_LABELS: Record<string, string> = {
   suspected: "疑似",
-  likely: "较可能",
+  likely: "较倾向",
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -281,20 +281,18 @@ function describeProposal(
         summary: text(cause?.summary),
         levelLabel: level ? (LEVEL_LABELS[level] ?? null) : null,
       };
+    // Penpot: the kind chip (更新 / 停用 / 调整关联) carries the change; the
+    // title stays the condition's own name.
     case "update":
-      return { title: `更新：${targetName}`, summary: null, levelLabel: null };
+      return { title: targetName, summary: null, levelLabel: null };
     case "set_disposition":
       return {
-        title: `调整状态：${targetName}`,
+        title: targetName,
         summary: text(content?.dispositionReason),
         levelLabel: null,
       };
     case "update_relation":
-      return {
-        title: `调整关联：${targetName}`,
-        summary: null,
-        levelLabel: null,
-      };
+      return { title: targetName, summary: null, levelLabel: null };
   }
 }
 

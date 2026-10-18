@@ -335,11 +335,13 @@ describe("body-first business windows", () => {
     await openDock("综合诊断");
     await screen.findByTestId("diagnosis-window");
     expect(await screen.findByTestId("diagnosis-proposals")).toBeVisible();
-    expect(screen.getByText("还没有已确认的病情")).toBeInTheDocument();
-    expect(screen.getAllByText("待你决定")).toHaveLength(2);
+    // Penpot Confirm first: one proposal at a time, never a condition heading.
+    expect(screen.getAllByText("待你决定")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "上交叉综合征" })).toBeNull();
+    expect(screen.getByTestId("diagnosis-mode")).toHaveTextContent("正式分析");
     expect(
-      screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toBeDisabled();
+      screen.queryByRole("combobox", { name: "选择已确认病情" }),
+    ).toBeNull();
   });
 
   it("lists an adopted condition with cause, handling boundary and certainty", async () => {
