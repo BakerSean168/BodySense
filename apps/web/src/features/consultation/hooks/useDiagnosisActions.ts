@@ -22,7 +22,11 @@ export const nativeDiagnosisKeys = {
   latestRun: () => [...nativeDiagnosisKeys.all, "latest-run"] as const,
   run: (runId: string | null) =>
     [...nativeDiagnosisKeys.all, "run", runId] as const,
+  history: () => [...nativeDiagnosisKeys.all, "history"] as const,
 };
+
+/** Penpot Diagnosis boards: the current Diagnosis, or its decision History. */
+export type DiagnosisScene = "current" | "history";
 
 interface UseDiagnosisActionsOptions {
   enabled?: boolean;
@@ -93,6 +97,7 @@ export function useDiagnosisActions({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scene, setScene] = useState<DiagnosisScene>("current");
   const attempts = useRef(new Map<string, CommandIdentity>());
 
   const fetching = diagnosis.isFetching || latest.isFetching || run.isFetching;
@@ -295,6 +300,51 @@ export function useDiagnosisActions({
     }
   }
 
+  /**
+   * §3.6 "暂不处理" on the review prompt the user is looking at. Only a
+   * matching server receipt hides it; the Condition itself never changes.
+   */
+  async function dismissReview(conditionId: string) {
+    const condition = view.confirmed.find(
+      (item) => item.conditionId === conditionId,
+    );
+    const review = condition?.review;
+    const expectedRevision = view.currentRevision;
+    if (!review?.canDismiss || expectedRevision === null || busy) return;
+    const evaluatedBodyStateRevision = review.evaluatedBodyStateRevision;
+    const { idempotencyKey } = identity(
+      JSON.stringify(["dismiss-review", conditionId, expectedRevision, evaluatedBodyStateRevision]),
+    );
+    setBusy(true);
+    setError(null);
+    try {
+      const receipt = await api.dismissReviewPrompt(conditionId, {
+        expectedRevision,
+        evaluatedBodyStateRevision,
+        idempotencyKey,
+      });
+      if (
+        receipt.conditionId !== conditionId ||
+        receipt.diagnosisRevision !== expectedRevision ||
+        receipt.dismissedThroughBodyStateRevision !== evaluatedBodyStateRevision ||
+        receipt.idempotencyKey !== idempotencyKey
+      )
+        throw new ReceiptMismatchError();
+    } catch (commandError) {
+      setError(
+        commandError instanceof ApiRequestError && commandError.status === 409
+          ? "复核提示已经变化，已重新读取。"
+          : errorMessage(commandError, "暂时无法收起复核提示，请稍后重试。"),
+      );
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  }
+
+  const openHistory = useCallback(() => setScene("history"), []);
+  const closeHistory = useCallback(() => setScene("current"), []);
+
   /** Receipt / No changes "查看当前": leave the outcome and show the Diagnosis. */
   const dismissOutcome = useCallback(() => {
     setSession(EMPTY_DECISION_SESSION);
@@ -312,6 +362,10 @@ export function useDiagnosisActions({
     settle,
     submit,
     dismissOutcome,
+    dismissReview,
+    scene,
+    openHistory,
+    closeHistory,
     busy,
     error,
     loading: diagnosis.isPending && enabled,

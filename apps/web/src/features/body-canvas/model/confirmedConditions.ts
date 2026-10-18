@@ -7,6 +7,8 @@
  * native `GET /diagnosis` entries onto these shapes; nothing else feeds them.
  */
 
+import type { DiagnosisReviewView } from "./diagnosisReview";
+
 export type ConditionCertainty =
   | "clinically_documented"
   | "user_reported_clinical_diagnosis"
@@ -40,6 +42,10 @@ export interface ConfirmedCondition {
   cause: ConditionCause;
   handling: ConditionHandling;
   safetyNotes: string[];
+  /** The user's adoption decision; inactive entries only appear in History. */
+  disposition?: "adopted" | "inactive";
+  /** Derived review prompt (§3.6); never part of the adopted content. */
+  review?: DiagnosisReviewView;
 }
 
 export const CERTAINTY_LABELS: Record<ConditionCertainty, string> = {

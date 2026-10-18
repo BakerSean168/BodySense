@@ -11,6 +11,11 @@ import type {
   ConditionCertainty,
   ConfirmedCondition,
 } from "./confirmedConditions";
+import {
+  projectConditionReview,
+  projectRunReview,
+  type DiagnosisFreshnessState,
+} from "./diagnosisReview";
 
 /**
  * Diagnosis window view model on the V2 decision API.
@@ -125,11 +130,19 @@ export interface DiagnosisRunView {
   phase: DiagnosisRunPhase;
   /** Proposals the receipt proves were written; 0 unless committed/updated. */
   committedCount: number;
+  /** Derived freshness of an open run; stale runs cannot be decided. */
+  review: {
+    state: DiagnosisFreshnessState;
+    title: string;
+    details: string[];
+  } | null;
 }
 
 export interface NativeDiagnosisWindowView {
   currentRevision: number | null;
   confirmed: ConfirmedCondition[];
+  /** Withdrawn/deactivated entries, shown only in Diagnosis History. */
+  inactive: ConfirmedCondition[];
   run: DiagnosisRunView | null;
   safetyBlocked: boolean;
   /** Workspace-level Safety review is pending; every decision is read-only. */
@@ -217,6 +230,8 @@ export function projectAdoptedCondition(
         }
       : { state: "not_confirmed" },
     safetyNotes: [],
+    disposition: condition.disposition,
+    review: condition.freshness ? projectConditionReview(condition) : undefined,
   };
 }
 
@@ -432,6 +447,9 @@ export function projectNativeDiagnosisWindow({
   const confirmed = conditions
     .filter((condition) => condition.disposition === "adopted")
     .map(projectAdoptedCondition);
+  const inactive = conditions
+    .filter((condition) => condition.disposition === "inactive")
+    .map(projectAdoptedCondition);
   const currentRevision = diagnosis ? diagnosis.currentRevision : null;
   const ownSession =
     run && session.runId === run.runId ? session : EMPTY_DECISION_SESSION;
@@ -452,13 +470,16 @@ export function projectNativeDiagnosisWindow({
     return {
       currentRevision,
       confirmed,
+      inactive,
       run: null,
       safetyBlocked,
       safetyReview,
     };
 
   const runOpen = run.state === "open" && !ownSession.settlement;
+  const review = runOpen ? projectRunReview(run) : null;
   const runChanged =
+    review?.state === "stale" ||
     ownSession.runChanged ||
     run.basedOnDiagnosisRevision !== currentRevision ||
     run.currentDiagnosisRevision !== currentRevision;
@@ -489,6 +510,7 @@ export function projectNativeDiagnosisWindow({
   return {
     currentRevision,
     confirmed,
+    inactive,
     safetyBlocked,
     safetyReview,
     run: {
@@ -509,6 +531,7 @@ export function projectNativeDiagnosisWindow({
       committedCount: receipt
         ? proposals.filter((row) => row.state === "committed").length
         : 0,
+      review,
     },
   };
 }

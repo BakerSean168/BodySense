@@ -11,6 +11,7 @@ import {
   Stethoscope,
   X,
 } from "lucide-react";
+import { DiagnosisHistoryPanel } from "./DiagnosisHistoryPanel";
 import {
   CERTAINTY_LABELS,
   type ConfirmedCondition,
@@ -35,6 +36,12 @@ export interface DiagnosisDecisionControls {
   onDismissOutcome: () => void;
   /** Empty state: ask for a formal analysis in Chat. */
   onOpenChat?: () => void;
+  /** Review prompt / changed run: ask for a new formal analysis in Chat. */
+  onRequestAnalysis?: () => void;
+  /** §3.6 "暂不处理" on one Condition's review prompt (a UI record only). */
+  onDismissReview?: (conditionId: string) => void;
+  /** Safety stopped "查看限制": open the Safety / Restricted view. */
+  onOpenSafety?: () => void;
   busy?: boolean;
   error?: string | null;
 }
@@ -47,6 +54,8 @@ export interface DiagnosisWindowProps {
   error?: string | null;
   /** Without controls the window is read-only (proposals are still never facts). */
   controls?: DiagnosisDecisionControls;
+  /** Penpot Diagnosis / History instead of the current Diagnosis. */
+  scene?: "current" | "history";
 }
 
 type Tone = "ok" | "idle" | "warn" | "bad" | "ai" | "neutral";
@@ -178,8 +187,68 @@ function Banner({
   );
 }
 
-function ConditionCard({ condition }: { condition: ConfirmedCondition }) {
+/** Penpot Diagnosis / Current review row: "2 条新记录可能相关" + ↻. */
+function ReviewBanner({
+  condition,
+  controls,
+}: {
+  condition: ConfirmedCondition;
+  controls?: DiagnosisDecisionControls;
+}) {
+  const review = condition.review;
+  if (!review?.prompt) return null;
+  const stale = review.state === "stale";
+  const requestAnalysis = controls?.onRequestAnalysis ?? controls?.onOpenChat;
+  return (
+    <Banner
+      tone={stale ? "bad" : "warn"}
+      mark={stale ? "counter" : "gap"}
+      role="status"
+      testId="diagnosis-review"
+      action={
+        <span className="bc-dx-banner-actions">
+          {review.canDismiss && controls?.onDismissReview ? (
+            <button
+              type="button"
+              className="bc-dx-text-button"
+              disabled={controls.busy}
+              onClick={() => controls.onDismissReview?.(condition.conditionId)}
+            >
+              暂不处理
+            </button>
+          ) : null}
+          {requestAnalysis ? (
+            <button
+              type="button"
+              className="bc-dx-icon-button"
+              aria-label="在对话里请求复核分析"
+              title="在对话里请求复核分析"
+              disabled={controls?.busy}
+              onClick={requestAnalysis}
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+            </button>
+          ) : null}
+        </span>
+      }
+    >
+      <span className="bc-dx-banner-title">{review.title}</span>
+      {stale || review.details.length > 1 ? (
+        <span className="bc-dx-banner-meta">{review.details.join("；")}</span>
+      ) : null}
+    </Banner>
+  );
+}
+
+function ConditionCard({
+  condition,
+  controls,
+}: {
+  condition: ConfirmedCondition;
+  controls?: DiagnosisDecisionControls;
+}) {
   const { cause, handling } = condition;
+  const inactive = condition.disposition === "inactive";
   const basis = [cause.summary, cause.basis].filter(
     (value): value is string => !!value,
   );
@@ -192,15 +261,25 @@ function ConditionCard({ condition }: { condition: ConfirmedCondition }) {
     ...condition.safetyNotes,
   ];
   return (
-    <article className="bc-condition" data-condition-id={condition.conditionId}>
+    <article
+      className="bc-condition"
+      data-condition-id={condition.conditionId}
+      data-freshness={condition.review?.state}
+    >
       <h3 className="sr-only">{condition.name}</h3>
       <div className="bc-dx-status">
-        <Chip tone="ok">已采纳</Chip>
+        <Chip tone={inactive ? "idle" : "ok"}>{inactive ? "已停用" : "已采纳"}</Chip>
         {cause.evidenceStrength ? (
           <Chip tone="ai">AI {cause.evidenceStrength}</Chip>
         ) : null}
         <Chip tone="idle">{CERTAINTY_LABELS[condition.certainty]}</Chip>
       </div>
+      {inactive ? null : <ReviewBanner condition={condition} controls={controls} />}
+      {!inactive && condition.review?.state === "stale" ? (
+        <p className="bc-dx-note" data-testid="diagnosis-stale-note">
+          重新分析并确认前，训练计划不会基于这条病情生成；你采纳的内容不会被自动修改。
+        </p>
+      ) : null}
 
       {basis.length > 0 ||
       cause.differential ||
@@ -374,7 +453,20 @@ function DecidingScene({
         <Chip tone="ai">AI 建议</Chip>
         <Chip tone="idle">尚未写入</Chip>
       </div>
-      {run.changed ? (
+      {run.review ? (
+        <Banner
+          tone={run.review.state === "stale" ? "warn" : "info"}
+          mark="gap"
+          role={run.review.state === "stale" ? "alert" : "status"}
+          testId="diagnosis-run-review"
+        >
+          <span className="bc-dx-banner-title">{run.review.title}</span>
+          {run.review.details.length > 0 ? (
+            <span className="bc-dx-banner-meta">{run.review.details.join("；")}</span>
+          ) : null}
+        </Banner>
+      ) : null}
+      {run.changed && run.review?.state !== "stale" ? (
         <Banner tone="warn" mark="gap" role="alert">
           诊断在提案生成后已经变化，这些提案不能再直接决定。请在对话里请求重新分析。
         </Banner>
@@ -629,6 +721,7 @@ function SafetyScene({ stopped }: { stopped: boolean }) {
 }
 
 function EmptyScene({ onOpenChat }: { onOpenChat?: () => void }) {
+  // Penpot Diagnosis / Empty: the chat mark asks for a formal analysis.
   return (
     <div
       className="bc-window-empty bc-dx-outcome"
@@ -688,6 +781,7 @@ export function DiagnosisWindow({
   loading = false,
   error = null,
   controls,
+  scene = "current",
 }: DiagnosisWindowProps) {
   const { confirmed, run, safetyBlocked, safetyReview } = view;
   const selected =
@@ -730,8 +824,28 @@ export function DiagnosisWindow({
     );
   } else if (loading) {
     body = <LoadingScene />;
+  } else if (scene === "history") {
+    body = (
+      <DiagnosisHistoryPanel
+        inactive={view.inactive}
+        renderCondition={(condition) => <ConditionCard condition={condition} />}
+      />
+    );
   } else if (safetyGated) {
     body = <SafetyScene stopped={safetyBlocked} />;
+    if (controls?.onOpenSafety)
+      footer = (
+        <div className="bc-window-footer bc-dx-footer">
+          <button
+            type="button"
+            className="bc-dx-tonal bc-dx-footer-end"
+            data-testid="diagnosis-safety-open"
+            onClick={controls.onOpenSafety}
+          >
+            查看限制
+          </button>
+        </div>
+      );
   } else if (activeRun && stepper) {
     body = (
       <DecidingScene run={activeRun} stepper={stepper} controls={controls} />
@@ -750,17 +864,25 @@ export function DiagnosisWindow({
   } else if (selected) {
     body = (
       <div className="bc-condition-list">
-        <ConditionCard condition={selected} />
+        {controls?.error ? (
+          <Banner tone="bad" mark="counter" role="alert">
+            {controls.error}
+          </Banner>
+        ) : null}
+        <ConditionCard condition={selected} controls={controls} />
       </div>
     );
   } else {
-    body = <EmptyScene onOpenChat={controls?.onOpenChat} />;
+    body = (
+      <EmptyScene onOpenChat={controls?.onRequestAnalysis ?? controls?.onOpenChat} />
+    );
   }
 
   if (
     controls &&
     !error &&
     !loading &&
+    scene !== "history" &&
     !safetyGated &&
     activeRun &&
     activeRun.phase !== "deciding"
@@ -787,7 +909,7 @@ export function DiagnosisWindow({
       data-testid="diagnosis-window"
     >
       <div className="bc-window-body" role="region" aria-label="当前诊断内容">
-        {error || loading ? null : safetyNote}
+        {error || loading || scene === "history" ? null : safetyNote}
         {body}
       </div>
       {footer}

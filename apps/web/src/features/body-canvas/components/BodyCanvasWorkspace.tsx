@@ -1,6 +1,6 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, BoxSelect, Brush, ChevronDown, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Sun, Undo2, X } from "lucide-react";
+import { ArrowRight, BoxSelect, Brush, ChevronDown, Clock3, Layers3, List, LoaderCircle, MessageCircle, Moon, MousePointer2, Pause, PersonStanding, Play, RotateCcw, ShieldAlert, Sun, Undo2, X } from "lucide-react";
 import { AppUserMenu } from "@/components/layout/AppUserMenu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -24,7 +24,8 @@ import { readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "
 import { useTrainingPlanActions } from "@/features/training/hooks/useTrainingPlanActions";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
-import { ChatWindowHeader, DiagnosisWindowHeader, TrainerWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
+import { ChatWindowHeader, DiagnosisWindowHeader, TrainerWindowHeader, TrainingSafetyHeader, TrainingWindowHeader } from "./V2WindowHeaders";
+import type { DiagnosisRequestMessage } from "./DiagnosisRequestEntry";
 import {
   PersonIdentityTrigger,
   PersonWindow,
@@ -39,6 +40,9 @@ const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
 const DiagnosisWindow = lazy(() =>
   import("./DiagnosisWindow").then((module) => ({ default: module.DiagnosisWindow })),
 );
+// Penpot Safety / Restricted and Chat / Diagnosis request: lazy for the budget.
+const SafetyRestrictedView = lazy(() => import("./SafetyRestrictedView"));
+const DiagnosisRequestEntry = lazy(() => import("./DiagnosisRequestEntry"));
 // Lazy for the same 500 kB ConsultationPage chunk budget (UI-TP-001).
 const TrainingPlanWindow = lazy(() =>
   import("./TrainingPlanWindow").then((module) => ({ default: module.TrainingPlanWindow })),
@@ -55,6 +59,8 @@ export interface BodyCanvasWorkspaceProps {
   workspace?: HealthWorkspace;
   bodyExplorer: BodyExplorerWorkspaceController;
   chat: ReactNode;
+  /** The user's latest completed message: the only candidate analysis request. */
+  latestUserMessage?: DiagnosisRequestMessage | null;
   onAskContext: (context: ConsultationSpatialContext) => void;
   onOpenProfile: () => void;
   /** Real profile values for the Person window; never invented when absent. */
@@ -127,6 +133,10 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const [personInfoOpen, setPersonInfoOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => readSelectedPlanId());
   const [selectedConditionId, setSelectedConditionId] = useState<string | null>(null);
+  /** Training window body: the plan, or Penpot Safety / Restricted. */
+  const [trainingView, setTrainingView] = useState<"plan" | "safety">("plan");
+  /** Chat shows the formal-analysis request entry (explicit user intent only). */
+  const [analysisRequest, setAnalysisRequest] = useState(false);
   /** Page-local explicit Start intent. A deep link or shortcut never supplies it. */
   const [trainerLaunch, setTrainerLaunch] = useState<TrainerLaunch | null>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -171,6 +181,25 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const closeWindow = useCallback((window: BusinessWindowId) => {
     dispatchWindow({ type: "close", window });
   }, []);
+  const requestAnalysis = useCallback(() => {
+    setAnalysisRequest(true);
+    dispatchWindow({ type: "open", window: "chat" });
+    setRegionListOpen(false);
+  }, []);
+  const openSafety = useCallback(() => {
+    setTrainingView("safety");
+    dispatchWindow({ type: "open", window: "training" });
+    setRegionListOpen(false);
+  }, []);
+  const trainingVisible = isBusinessWindowVisible(windows, "training");
+  useEffect(() => {
+    if (!trainingVisible) setTrainingView("plan");
+  }, [trainingVisible]);
+  const diagnosisVisible = isBusinessWindowVisible(windows, "diagnosis");
+  const closeDiagnosisHistory = diagnosisActions.closeHistory;
+  useEffect(() => {
+    if (!diagnosisVisible) closeDiagnosisHistory();
+  }, [diagnosisVisible, closeDiagnosisHistory]);
   const toggleWindow = useCallback((window: BusinessWindowId) => {
     dispatchWindow({ type: "toggle", window });
     setRegionListOpen(false);
@@ -352,7 +381,26 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const renderWindowBody = (window: BusinessWindowId): ReactNode => {
     switch (window) {
       case "chat":
-        return <div className="bc-chat-content">{props.chat}</div>;
+        return (
+          <div className="bc-chat-content" data-request={analysisRequest || undefined}>
+            {analysisRequest ? (
+              <Suspense fallback={null}>
+                <DiagnosisRequestEntry
+                  message={props.latestUserMessage ?? null}
+                  expectedRevision={diagnosisView.currentRevision}
+                  onClose={() => setAnalysisRequest(false)}
+                  onOpenDiagnosis={() => {
+                    setAnalysisRequest(false);
+                    diagnosisActions.closeHistory();
+                    openWindow("diagnosis");
+                  }}
+                  onOpenSafety={openSafety}
+                />
+              </Suspense>
+            ) : null}
+            {props.chat}
+          </div>
+        );
       case "person":
         return (
           <PersonWindow
@@ -374,6 +422,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           >
           <DiagnosisWindow
             view={diagnosisView}
+            scene={diagnosisActions.scene}
             selectedConditionId={selectedConditionId}
             loading={(props.loading && !props.workspace) || diagnosisActions.loading}
             error={
@@ -387,7 +436,10 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               onReview: diagnosisActions.reviewProposal,
               onSubmit: (final) => void diagnosisActions.submit(final),
               onDismissOutcome: diagnosisActions.dismissOutcome,
-              onOpenChat: () => openWindow("chat"),
+              onOpenChat: requestAnalysis,
+              onRequestAnalysis: requestAnalysis,
+              onDismissReview: (conditionId) => void diagnosisActions.dismissReview(conditionId),
+              onOpenSafety: openSafety,
               busy: diagnosisActions.busy,
               error: diagnosisActions.error,
             }}
@@ -395,6 +447,21 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           </Suspense>
         );
       case "training":
+        if (trainingView === "safety")
+          return (
+            <Suspense
+              fallback={
+                <p role="status" className="bc-window-loading">
+                  正在读取安全限制
+                </p>
+              }
+            >
+              <SafetyRestrictedView
+                onBack={() => setTrainingView("plan")}
+                onAddReview={() => openWindow("chat")}
+              />
+            </Suspense>
+          );
         return (
           <Suspense
             fallback={
@@ -474,9 +541,13 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             selectedConditionId={selectedConditionId}
             onSelectCondition={setSelectedConditionId}
             mode={diagnosisHeaderMode(diagnosisView)}
+            history={diagnosisActions.scene === "history"}
+            onOpenHistory={diagnosisActions.openHistory}
+            onCloseHistory={diagnosisActions.closeHistory}
           />
         );
       case "training":
+        if (trainingView === "safety") return <TrainingSafetyHeader />;
         return (
           <TrainingWindowHeader
             view={trainingSelection}
@@ -505,8 +576,26 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     }
   };
 
-  const renderHeaderActions = (window: BusinessWindowId): ReactNode =>
-    window === "diagnosis" || window === "training" ? (
+  const renderHeaderActions = (window: BusinessWindowId): ReactNode => {
+    // Penpot Diagnosis / History has only the close button.
+    if (window === "diagnosis" && diagnosisActions.scene === "history") return null;
+    const historyAction =
+      window === "diagnosis" &&
+      !diagnosisHeaderMode(diagnosisView) &&
+      diagnosisView.confirmed.length + diagnosisView.inactive.length > 0 ? (
+        <button
+          type="button"
+          className="bc-icon-button bc-header-chat-action"
+          aria-label="查看诊断历史"
+          title="查看诊断历史"
+          onClick={diagnosisActions.openHistory}
+        >
+          <Clock3 size={19} strokeWidth={1.8} />
+        </button>
+      ) : null;
+    return window === "diagnosis" || window === "training" ? (
+      <>
+      {historyAction}
       <button
         type="button"
         className="bc-icon-button bc-header-chat-action"
@@ -518,7 +607,9 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       >
         <MessageCircle size={19} strokeWidth={1.8} />
       </button>
+      </>
     ) : null;
+  };
 
   return <main className={`${themeClass} bc-workspace`} data-testid="body-canvas-workspace">
     <header className="bc-topbar">
