@@ -13,95 +13,6 @@ import (
 	"gorm.io/datatypes"
 )
 
-type fakeTreatmentRepo struct {
-	proposal                        *model.TreatmentRevision
-	interventions                   []model.Intervention
-	current                         *model.Treatment
-	status                          model.TreatmentStatus
-	statusReasons                   datatypes.JSON
-	statusUpdates                   int
-	acceptCalled                    bool
-	acceptConflict                  bool
-	acceptExpectedBodyStateRevision int64
-	acceptDecisionTrace             datatypes.JSON
-	storedOutcome                   *model.Outcome
-	storedOutcomeCreated            bool
-	updateOutcomeRevision           int64
-	updateOutcomeCalls              int
-}
-
-func (r *fakeTreatmentRepo) CreateProposal(_ context.Context, userID uuid.UUID, revision model.TreatmentRevision, interventions []model.Intervention) (*model.Treatment, *model.TreatmentRevision, error) {
-	revision.ID = uuid.New()
-	revision.TreatmentID = uuid.New()
-	revision.Revision = 1
-	revision.AcceptanceState = model.TreatmentAcceptanceProposed
-	revision.Interventions = interventions
-	r.proposal = &revision
-	r.interventions = interventions
-	return &model.Treatment{ID: revision.TreatmentID, UserID: userID, CurrentRevision: 0}, &revision, nil
-}
-func (r *fakeTreatmentRepo) AcceptRevision(_ context.Context, userID, revisionID uuid.UUID, expectedBodyStateRevision int64, acceptanceDecisionTrace datatypes.JSON) (*model.Treatment, *model.TreatmentRevision, bool, error) {
-	r.acceptCalled = true
-	r.acceptExpectedBodyStateRevision = expectedBodyStateRevision
-	r.acceptDecisionTrace = acceptanceDecisionTrace
-	if r.acceptConflict {
-		return nil, nil, false, nil
-	}
-	if r.proposal == nil || r.proposal.ID != revisionID {
-		return nil, nil, false, errors.New("not found")
-	}
-	copy := *r.proposal
-	copy.AcceptanceState = model.TreatmentAcceptanceAccepted
-	copy.LifecycleState = model.TreatmentStatusActive
-	copy.AcceptanceDecisionTrace = acceptanceDecisionTrace
-	r.proposal.AcceptanceDecisionTrace = acceptanceDecisionTrace
-	r.current = &model.Treatment{ID: copy.TreatmentID, UserID: userID, CurrentRevision: copy.Revision, Status: model.TreatmentStatusActive, Current: &copy}
-	return r.current, &copy, true, nil
-}
-func (r *fakeTreatmentRepo) RejectRevision(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeTreatmentRepo) SetStatus(_ context.Context, userID uuid.UUID, status model.TreatmentStatus, reasons datatypes.JSON) (*model.Treatment, error) {
-	r.status = status
-	r.statusReasons = reasons
-	r.statusUpdates++
-	if r.current == nil {
-		r.current = &model.Treatment{UserID: userID}
-	}
-	r.current.Status = status
-	r.current.StatusReasons = reasons
-	return r.current, nil
-}
-func (r *fakeTreatmentRepo) GetCurrent(context.Context, uuid.UUID) (*model.Treatment, error) {
-	return r.current, nil
-}
-func (r *fakeTreatmentRepo) GetRevision(context.Context, uuid.UUID, uuid.UUID) (*model.TreatmentRevision, error) {
-	return r.proposal, nil
-}
-func (r *fakeTreatmentRepo) ListRevisions(context.Context, uuid.UUID, int) ([]model.TreatmentRevision, error) {
-	return nil, nil
-}
-func (r *fakeTreatmentRepo) GetIntervention(context.Context, uuid.UUID, uuid.UUID) (*model.Intervention, error) {
-	return nil, nil
-}
-func (r *fakeTreatmentRepo) CreateOutcome(_ context.Context, outcome *model.Outcome) (*model.Outcome, bool, error) {
-	if r.storedOutcome != nil {
-		return r.storedOutcome, r.storedOutcomeCreated, nil
-	}
-	r.storedOutcome = outcome
-	r.storedOutcomeCreated = true
-	return outcome, true, nil
-}
-func (r *fakeTreatmentRepo) UpdateOutcomeBodyStateRevision(_ context.Context, _ uuid.UUID, _ uuid.UUID, revision int64) error {
-	r.updateOutcomeCalls++
-	r.updateOutcomeRevision = revision
-	if r.storedOutcome != nil {
-		r.storedOutcome.BodyStateRevision = &revision
-	}
-	return nil
-}
-func (r *fakeTreatmentRepo) ListOutcomes(context.Context, uuid.UUID, int) ([]model.Outcome, error) {
-	return nil, nil
-}
-
 type fakeTreatmentDiagnosis struct {
 	analysis    *model.DiagnosisAnalysisRecord
 	assessments []model.DiagnosisCandidateAssessment
@@ -121,15 +32,11 @@ func (f *fakeTreatmentDiagnosis) PublicPayload(analysis *model.DiagnosisAnalysis
 }
 
 type fakeTreatmentBodyState struct {
-	snapshot           *BodyStateReadModel
-	equipment          []AgentEquipmentItem
-	viewOwner          uuid.UUID
-	safetyUnavailable  bool
-	safetyBlocked      bool
-	revisions          []model.BodyStateRevision
-	recordOutcomeCalls int
-	recordOutcomeErr   error
-	recordOutcomeRev   int64
+	snapshot          *BodyStateReadModel
+	equipment         []AgentEquipmentItem
+	viewOwner         uuid.UUID
+	safetyUnavailable bool
+	safetyBlocked     bool
 }
 
 func (f *fakeTreatmentBodyState) GetAgentBodyContext(_ context.Context, owner uuid.UUID) (*AgentBodyContext, error) {
@@ -149,45 +56,11 @@ func (f *fakeTreatmentBodyState) GetAgentBodyContext(_ context.Context, owner uu
 		Safety: AgentSafetySummary{Status: AgentSafetyNoCurrentSymptoms, ActiveBlockers: []string{}, UnscreenedFactIDs: []uuid.UUID{}},
 	}, nil
 }
-func (f *fakeTreatmentBodyState) GetBodyStateHead(context.Context, uuid.UUID) (*model.BodyStateHead, error) {
-	return &model.BodyStateHead{UserID: f.snapshot.UserID, CurrentRevision: f.snapshot.CurrentRevision}, nil
-}
-func (f *fakeTreatmentBodyState) ResolveRevisionFacts(_ context.Context, _ uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error) {
-	return testRevisionFacts(revisions), nil
-}
-func (f *fakeTreatmentBodyState) ListRevisionsAfter(context.Context, uuid.UUID, int64, int) ([]model.BodyStateRevision, error) {
-	return f.revisions, nil
-}
-func (f *fakeTreatmentBodyState) RecordOutcomeSymptom(_ context.Context, _ uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error) {
-	f.recordOutcomeCalls++
-	if f.recordOutcomeErr != nil {
-		return nil, f.recordOutcomeErr
-	}
-	if outcome.Kind != "symptom_change" && outcome.Kind != "new_discomfort" {
-		return nil, nil
-	}
-	revision := f.recordOutcomeRev
-	if revision == 0 {
-		revision = 12
-	}
-	return &model.BodyStateRevision{Revision: revision}, nil
-}
 
 type fakeTreatmentFreshness struct{ state string }
 
 func (f fakeTreatmentFreshness) GetOrEvaluate(context.Context, uuid.UUID, *model.DiagnosisAnalysisRecord) (*model.DiagnosisAnalysisFreshness, error) {
 	return &model.DiagnosisAnalysisFreshness{State: f.state}, nil
-}
-
-type testTreatmentUnitOfWork struct {
-	called *bool
-}
-
-func (u testTreatmentUnitOfWork) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
-	if u.called != nil {
-		*u.called = true
-	}
-	return fn(ctx)
 }
 
 type testTreatmentDeploymentPolicy struct {
@@ -232,27 +105,6 @@ func (p testTreatmentDeploymentPolicy) SelectTreatmentRoute(_ string) TreatmentR
 		route.ShadowDecisionPolicyRevision = knownTreatmentConfigurations[route.ShadowConfigurationID].DecisionPolicyRevision
 	}
 	return route
-}
-
-type fakeTreatmentRolloutObserver struct {
-	calls      int
-	userID     uuid.UUID
-	revisionID uuid.UUID
-	route      TreatmentRouteSelection
-	err        error
-}
-
-func (f *fakeTreatmentRolloutObserver) ObserveProposal(
-	_ context.Context,
-	userID uuid.UUID,
-	route TreatmentRouteSelection,
-	revisionID uuid.UUID,
-) error {
-	f.calls++
-	f.userID = userID
-	f.route = route
-	f.revisionID = revisionID
-	return f.err
 }
 
 type fakeTreatmentReasoner struct {
@@ -307,55 +159,72 @@ func jsonBytesEqual(left, right json.RawMessage) bool {
 		reflect.DeepEqual(leftValue, rightValue)
 }
 
-func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
+// treatmentGenerationHarness wires a TreatmentService to fakes so each gate
+// test states only what it changes. Generation persists through the
+// PlanProposal writer only (TP-002 slice 3 removed the Treatment aggregate).
+type treatmentGenerationHarness struct {
+	userID     uuid.UUID
+	analysis   *model.DiagnosisAnalysisRecord
+	body       *fakeTreatmentBodyState
+	plans      *fakePlanProposer
+	captured   *TreatmentRecommendationRequest
+	deployment testTreatmentDeploymentPolicy
+	assessed   bool
+}
+
+func newTreatmentGenerationHarness(revision int64) *treatmentGenerationHarness {
 	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[{"evidence_type":"body_fact","evidence_id":"11111111-1111-4111-8111-111111111111","version":3,"statement_evidence_id":"22222222-2222-4222-8222-222222222222","assertion_status":"asserted"}],"citations":[{"evidence_id":"selected-analysis-only","summary":"audit citation","evidence_type":"body_fact","body_state_authority":"authoritative"}]}}`),
-		Candidates:    []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{}
-	var captured TreatmentRecommendationRequest
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{
-			analysis: analysis,
-			assessments: []model.DiagnosisCandidateAssessment{{
-				CandidateID: analysis.Candidates[0].ID,
-				State:       "confirmed",
-			}},
+	return &treatmentGenerationHarness{
+		userID: userID,
+		analysis: &model.DiagnosisAnalysisRecord{
+			ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: revision,
+			DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
+			Candidates:    []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 9}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
-			"evidence_ids":["selected-analysis-only"],
-			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
-		}`), capture: &captured},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if err != nil {
-		t.Fatalf("GenerateProposal returned error: %v", err)
+		body:     &fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: revision}},
+		plans:    &fakePlanProposer{},
+		captured: &TreatmentRecommendationRequest{},
+		assessed: true,
 	}
-	if revision.AcceptanceState != model.TreatmentAcceptanceProposed {
-		t.Fatalf("AI result must remain proposed, got %s", revision.AcceptanceState)
+}
+
+func (h *treatmentGenerationHarness) service(raw json.RawMessage) *TreatmentService {
+	diagnosis := &fakeTreatmentDiagnosis{analysis: h.analysis}
+	if h.assessed && len(h.analysis.Candidates) > 0 {
+		diagnosis.assessments = []model.DiagnosisCandidateAssessment{{CandidateID: h.analysis.Candidates[0].ID, State: "confirmed"}}
 	}
-	if repo.current != nil {
-		t.Fatal("creating a proposal must not silently replace current treatment")
+	svc := NewTreatmentService(diagnosis, h.body, fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
+		fakeTreatmentReasoner{raw: raw, capture: h.captured}, h.deployment)
+	svc.AttachPlanProposer(h.plans)
+	return svc
+}
+
+func (h *treatmentGenerationHarness) generate(raw json.RawMessage, constraints map[string]any) (*TreatmentPlanGenerationResult, error) {
+	return h.service(raw).GeneratePlanProposal(context.Background(), h.userID, TreatmentPlanGenerationInput{
+		DiagnosisAnalysisID: h.analysis.ID, UserConstraints: constraints, IdempotencyKey: "gen-" + uuid.NewString(),
+	})
+}
+
+func (h *treatmentGenerationHarness) provenance(t *testing.T) map[string]any {
+	t.Helper()
+	if len(h.plans.inputs) != 1 || h.plans.inputs[0].Generation == nil {
+		t.Fatalf("expected one generated proposal, got %d", len(h.plans.inputs))
 	}
-	if revision.SourceBodyStateRevision != 9 || revision.SourceDiagnosisAnalysisID != analysis.ID {
-		t.Fatalf("proposal did not pin exact inputs: %#v", revision)
+	var provenance map[string]any
+	if err := json.Unmarshal(h.plans.inputs[0].Generation.Provenance, &provenance); err != nil {
+		t.Fatal(err)
 	}
-	if string(revision.EvidenceIDs) != `["selected-analysis-only"]` {
-		t.Fatalf("external audit reference was dropped: %s", revision.EvidenceIDs)
+	return provenance
+}
+
+func TestTreatmentGenerationSendsSelectedAnalysisEvidenceAndFreezesTheRequest(t *testing.T) {
+	h := newTreatmentGenerationHarness(9)
+	h.analysis.BodyStateRevision = 7
+	h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[{"evidence_type":"body_fact","evidence_id":"11111111-1111-4111-8111-111111111111","version":3,"statement_evidence_id":"22222222-2222-4222-8222-222222222222","assertion_status":"asserted"}],"citations":[{"evidence_id":"selected-analysis-only","summary":"audit citation","evidence_type":"body_fact","body_state_authority":"authoritative"}]}}`)
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); err != nil {
+		t.Fatalf("GeneratePlanProposal returned error: %v", err)
 	}
-	if !strings.Contains(string(captured.Evidence), "selected-analysis-only") {
-		t.Fatalf("selected analysis evidence missing: %s", captured.Evidence)
-	}
+	captured := *h.captured
 	var selectedEvidence []map[string]any
 	if err := json.Unmarshal(captured.Evidence, &selectedEvidence); err != nil {
 		t.Fatal(err)
@@ -369,10 +238,7 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	if captured.ConfigurationID != defaultTreatmentConfigurationID {
 		t.Fatalf("Treatment request lost config identity: %#v", captured)
 	}
-	if revision.AgentConfigurationID != defaultTreatmentConfigurationID || len(revision.AgentConfiguration) == 0 || len(revision.ExecutionProvenance) == 0 {
-		t.Fatalf("proposal lost Agent provenance: %#v", revision)
-	}
-	frozen, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
+	frozen, err := decodeTreatmentReplayInput(h.plans.inputs[0].Generation.ReplayInput)
 	if err != nil {
 		t.Fatalf("decode frozen Treatment replay input: %v", err)
 	}
@@ -385,480 +251,82 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 		!jsonBytesEqual(frozen.Evidence, captured.Evidence) {
 		t.Fatalf("frozen replay input differs from actual Agent request: frozen=%#v captured=%#v", frozen, captured)
 	}
-	serialized, err := json.Marshal(revision)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(serialized), "replay_input") {
-		t.Fatalf("private replay input leaked through TreatmentRevision JSON: %s", serialized)
-	}
-	if len(revision.Interventions) != 1 {
-		t.Fatalf("expected one intervention, got %#v", revision.Interventions)
+	provenance := h.provenance(t)
+	if provenance["agentConfigurationId"] != defaultTreatmentConfigurationID || provenance["agentConfiguration"] == nil || provenance["executionProvenance"] == nil {
+		t.Fatalf("proposal lost Agent provenance: %#v", provenance)
 	}
 }
 
 func TestTreatmentRejectsForeignOrUnavailableAnalysisEvidenceBeforeAgent(t *testing.T) {
-	owner := uuid.New()
 	for _, name := range []string{"foreign owner", "missing audit", "malformed audit", "invalid authority"} {
 		t.Run(name, func(t *testing.T) {
-			analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), UserID: owner, Status: "completed", BodyStateRevision: 7,
-				Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), Name: "candidate", Confidence: "中"}},
-			}
+			h := newTreatmentGenerationHarness(7)
+			h.analysis.DecisionTrace = nil
 			switch name {
 			case "foreign owner":
-				analysis.UserID = uuid.New()
+				h.analysis.UserID = uuid.New()
 			case "malformed audit":
-				analysis.DecisionTrace = datatypes.JSON(`{"evidence":`)
+				h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":`)
 			case "invalid authority":
-				analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"authoritative"}}`)
+				h.analysis.DecisionTrace = datatypes.JSON(`{"evidence":{"body_state_authority":"authoritative"}}`)
 			}
-			var captured TreatmentRecommendationRequest
-			repo := &fakeTreatmentRepo{}
-			svc := NewTreatmentService(repo, &fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-				&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: owner, CurrentRevision: 7}}, nil, nil,
-				fakeTreatmentReasoner{capture: &captured}, testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{})
-			_, err := svc.GenerateProposal(context.Background(), owner, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-			if err == nil || captured.UserID != "" || repo.current != nil {
-				t.Fatalf("invalid evidence reached Agent: err=%v request=%+v", err, captured)
+			_, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil)
+			if err == nil || h.captured.UserID != "" || len(h.plans.inputs) != 0 {
+				t.Fatalf("invalid evidence reached Agent: err=%v request=%+v", err, *h.captured)
 			}
 		})
 	}
 }
 
 func TestTreatmentGenerationMapsGovernanceRejectionToSafetyBlock(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{
-			analysis: analysis,
-			assessments: []model.DiagnosisCandidateAssessment{{
-				CandidateID: analysis.Candidates[0].ID,
-				State:       "confirmed",
-			}},
-		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{
-			UserID: userID, CurrentRevision: 9}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"governance":{
-				"verdict":"rejected",
-				"kind":"treatment",
-				"reasons":["unsafe current-user claim"],
-				"issues":[]
-			},
-			"safety_fallback":"safe fallback"
-		}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	if _, err := svc.GenerateProposal(
-		context.Background(),
-		userID,
-		TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID},
-	); !errors.Is(err, ErrTreatmentSafetyBlocked) {
+	h := newTreatmentGenerationHarness(9)
+	_, err := h.generate(json.RawMessage(`{
+		"governance":{"verdict":"rejected","kind":"treatment","reasons":["unsafe current-user claim"],"issues":[]},
+		"safety_fallback":"safe fallback"
+	}`), nil)
+	if !errors.Is(err, ErrTreatmentSafetyBlocked) {
 		t.Fatalf("governance rejection must surface as Treatment safety block: %v", err)
 	}
-	if repo.proposal != nil {
-		t.Fatal("governance-rejected output must not persist a Treatment proposal")
+	if len(h.plans.inputs) != 0 {
+		t.Fatal("governance-rejected output must not persist a PlanProposal")
 	}
 }
 
 func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{}}],
-			"expected_timeline":"4 weeks",
-			"agent_configuration":{"id":"treat-config-wrong","role":"treatment"},
-			"execution_provenance":{"status":"executed","runtime":"pydantic-ai"}
-		}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
+	h := newTreatmentGenerationHarness(7)
+	_, err := h.generate(json.RawMessage(`{
+		"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
+		"agent_configuration":{"id":"treat-config-wrong","role":"treatment"},
+		"execution_provenance":{"status":"executed","runtime":"pydantic-ai"},
+		"plan_proposal":`+treatmentPlanBlockV1+`
+	}`), nil)
 	if !errors.Is(err, ErrTreatmentConfigurationMismatch) {
 		t.Fatalf("expected configuration mismatch, got %v", err)
 	}
-	if repo.proposal != nil {
-		t.Fatal("configuration mismatch must fail before CreateProposal")
-	}
-}
-
-func TestTreatmentGenerationBlockedBySafetyState(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`), ID: uuid.New(), UserID: userID, Status: "completed", Candidates: []model.DiagnosisCandidateRecord{{Name: "x", Confidence: "中"}}}
-	svc := NewTreatmentService(
-		&fakeTreatmentRepo{}, &fakeTreatmentDiagnosis{analysis: analysis},
-		&fakeTreatmentBodyState{safetyBlocked: true, snapshot: &BodyStateReadModel{CurrentRevision: 3}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if !errors.Is(err, ErrTreatmentSafetyBlocked) {
-		t.Fatalf("expected safety block, got %v", err)
-	}
-}
-
-func TestTreatmentReviewUnrelatedChangeDoesNotRewritePlan(t *testing.T) {
-	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	revisions := []model.BodyStateRevision{testFactRecorded(4, "lifestyle:sleep")}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
-	if status != model.TreatmentStatusActive || len(reasons) != 0 {
-		t.Fatalf("unrelated change should keep active plan: status=%s reasons=%#v", status, reasons)
-	}
-}
-
-func TestTreatmentReviewRelatedChangeRecommendsReview(t *testing.T) {
-	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	revisions := []model.BodyStateRevision{testFactRecorded(5, "region:neck")}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
-	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 || reasons[0].ConcernKey != "region:neck" {
-		t.Fatalf("related change should recommend review: status=%s reasons=%#v", status, reasons)
-	}
-}
-
-func TestTreatmentReviewV2FactsRecordedUsesResolvedConcernAndOutcomeLink(t *testing.T) {
-	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`[]`)}}}
-	review := TreatmentReviewContext{OutcomeRevisions: map[int64]bool{}}
-	sleep, neck := testFactRecorded(6, "general"), testFactRecorded(7, "region:neck")
-	review.Facts = testRevisionFacts([]model.BodyStateRevision{sleep, neck})
-	if status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{sleep}, review); status != model.TreatmentStatusActive || len(reasons) != 0 {
-		t.Fatalf("unrelated V2 fact must not recommend review: %s %#v", status, reasons)
-	}
-	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{neck}, review); status != model.TreatmentStatusReviewRecommended {
-		t.Fatalf("related V2 symptom must recommend review, got %s", status)
-	}
-	review.OutcomeRevisions[6] = true
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{sleep}, review)
-	if status != model.TreatmentStatusReviewRecommended || len(reasons) != 1 || reasons[0].Code != "outcome_reported_symptom" {
-		t.Fatalf("outcome-reported symptom on this plan must recommend review: %s %#v", status, reasons)
-	}
-	if status, _ := EvaluateTreatmentReviewPolicy(analysis, []model.BodyStateRevision{neck}, TreatmentReviewContext{}); status != model.TreatmentStatusActive {
-		t.Fatalf("an unresolved fact id has no concern and must not recommend review, got %s", status)
-	}
-}
-
-func TestTreatmentReviewV2AmendmentsAndEpisodes(t *testing.T) {
-	cited := testFactID("region:neck")
-	analysis := &model.DiagnosisAnalysisRecord{Candidates: []model.DiagnosisCandidateRecord{{
-		ConcernKey: "region:neck", BasisFactIDs: datatypes.JSON(`["` + cited.String() + `"]`),
-		BasisObservationIDs: datatypes.JSON(`["obs-1"]`),
-	}}}
-	sleep := testFactID("lifestyle:sleep")
-	cases := []struct {
-		name     string
-		revision model.BodyStateRevision
-		want     model.TreatmentStatus
-	}{
-		{"cited fact withdrawn", testRevision(8, "facts.withdrawn", `{"target_fact_id":"`+cited.String()+`","fact_ids":[]}`), model.TreatmentStatusReviewRecommended},
-		{"unrelated fact corrected", testRevision(9, "facts.corrected", `{"target_fact_id":"`+sleep.String()+`","fact_ids":["`+sleep.String()+`"]}`), model.TreatmentStatusActive},
-		{"correction moves statement into neck", testRevision(10, "facts.corrected", `{"target_fact_id":"`+sleep.String()+`","fact_ids":["`+cited.String()+`"]}`), model.TreatmentStatusReviewRecommended},
-		{"cited observation corrected", testRevision(11, "observation.corrected", `{"target_observation_id":"obs-1"}`), model.TreatmentStatusReviewRecommended},
-		{"other observation withdrawn", testRevision(12, "observation.withdrawn", `{"target_observation_id":"obs-2"}`), model.TreatmentStatusActive},
-		{"neck symptom regrouped", testRevision(13, "episode.associate", `{"fact_id":"`+cited.String()+`"}`), model.TreatmentStatusReviewRecommended},
-		{"user hypothesis is not plan evidence", testRevision(14, "hypothesis.recorded", `{"related_fact_ids":["`+cited.String()+`"]}`), model.TreatmentStatusActive},
-		{"legacy fact change types are ignored", testRevision(15, "fact.added", `{"fact":{"concern_key":"region:neck","kind":"discomfort"}}`), model.TreatmentStatusActive},
-		{"safety screen pauses", testRevision(16, "safety.screened", `{"safety_screen_id":"x"}`), model.TreatmentStatusPaused},
-	}
-	for _, tc := range cases {
-		revisions := []model.BodyStateRevision{tc.revision}
-		status, _ := EvaluateTreatmentReviewPolicy(analysis, revisions, TreatmentReviewContext{Facts: testRevisionFacts(revisions)})
-		if status != tc.want {
-			t.Fatalf("%s: status=%s want %s", tc.name, status, tc.want)
-		}
+	if len(h.plans.inputs) != 0 {
+		t.Fatal("configuration mismatch must fail before a PlanProposal is written")
 	}
 }
 
 func TestTreatmentGenerationRequiresCandidateAssessment(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	svc := NewTreatmentService(
-		&fakeTreatmentRepo{},
-		&fakeTreatmentDiagnosis{analysis: analysis},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}]
-		}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if !errors.Is(err, ErrTreatmentCandidateAssessmentRequired) {
+	h := newTreatmentGenerationHarness(7)
+	h.assessed = false
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentCandidateAssessmentRequired) {
 		t.Fatalf("expected candidate assessment gate, got %v", err)
 	}
-}
-
-func TestTreatmentAcceptRevalidatesSafetyState(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{proposal: &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), AcceptanceState: model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 7, SourceDiagnosisAnalysisID: analysis.ID,
-	}}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{safetyBlocked: true, snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 8}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if !errors.Is(err, ErrTreatmentSafetyBlocked) {
-		t.Fatalf("expected safety revalidation to block acceptance, got %v", err)
-	}
-	if repo.acceptCalled {
-		t.Fatal("repository accept must not run after a safety gate failure")
+	if h.captured.ConfigurationID != "" {
+		t.Fatal("the assessment gate must stop before the Agent")
 	}
 }
 
-func TestTreatmentAcceptRejectsStaleDiagnosis(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgent(t *testing.T) {
+	h := newTreatmentGenerationHarness(20)
+	h.body.safetyUnavailable = true
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); !errors.Is(err, ErrTreatmentSafetyBlocked) {
+		t.Fatalf("malformed safety must block generation: %v", err)
 	}
-	repo := &fakeTreatmentRepo{proposal: &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), AcceptanceState: model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 7, SourceDiagnosisAnalysisID: analysis.ID,
-	}}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 8}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessStale}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if !errors.Is(err, ErrTreatmentAnalysisStale) {
-		t.Fatalf("expected stale diagnosis to block acceptance, got %v", err)
-	}
-	if repo.acceptCalled {
-		t.Fatal("repository accept must not run for a stale diagnosis")
-	}
-}
-
-func TestTreatmentAcceptRejectsRelatedBodyStateChange(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{proposal: &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), AcceptanceState: model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 7, SourceDiagnosisAnalysisID: analysis.ID,
-	}}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 8},
-			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:neck")},
-		},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if !errors.Is(err, ErrTreatmentProposalOutdated) {
-		t.Fatalf("expected related BodyState change to invalidate proposal acceptance, got %v", err)
-	}
-	if repo.acceptCalled {
-		t.Fatal("repository accept must not run for an outdated proposal")
-	}
-}
-
-func TestTreatmentAcceptAllowsUnrelatedChangeAndPinsCheckedRevision(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{proposal: &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), Revision: 1, AcceptanceState: model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 7, SourceDiagnosisAnalysisID: analysis.ID,
-	}}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 8},
-			revisions: []model.BodyStateRevision{testFactRecorded(8, "region:sleep")},
-		},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	treatment, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if err != nil {
-		t.Fatalf("unrelated change should not block acceptance: %v", err)
-	}
-	if treatment == nil || treatment.Current == nil {
-		t.Fatal("expected accepted treatment")
-	}
-	if repo.acceptExpectedBodyStateRevision != 8 {
-		t.Fatalf("accept transaction must pin checked BodyState revision 8, got %d", repo.acceptExpectedBodyStateRevision)
-	}
-}
-
-func TestTreatmentAcceptRejectsConcurrentBodyStateChange(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{
-		acceptConflict: true,
-		proposal: &model.TreatmentRevision{
-			ID: uuid.New(), TreatmentID: uuid.New(), Revision: 1, AcceptanceState: model.TreatmentAcceptanceProposed,
-			SourceBodyStateRevision: 7, SourceDiagnosisAnalysisID: analysis.ID,
-		},
-	}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 7}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if !errors.Is(err, ErrTreatmentProposalOutdated) {
-		t.Fatalf("expected transactional BodyState conflict, got %v", err)
-	}
-}
-
-func currentTreatmentForReview(userID uuid.UUID) *model.Treatment {
-	analysisID := uuid.New()
-	return &model.Treatment{
-		ID: uuid.New(), UserID: userID, Status: model.TreatmentStatusActive,
-		StatusReasons: datatypes.JSON(`[]`),
-		Current: &model.TreatmentRevision{
-			ID: uuid.New(), AcceptanceState: model.TreatmentAcceptanceAccepted,
-			SourceBodyStateRevision: 4, SourceDiagnosisAnalysisID: analysisID,
-		},
-	}
-}
-
-func TestTreatmentGetCurrentIsPure(t *testing.T) {
-	userID := uuid.New()
-	current := currentTreatmentForReview(userID)
-	repo := &fakeTreatmentRepo{current: current}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: &model.DiagnosisAnalysisRecord{
-			ID:         current.Current.SourceDiagnosisAnalysisID,
-			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
-		}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{CurrentRevision: 5},
-			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
-		},
-		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	stored, err := svc.GetCurrent(context.Background(), userID)
-	if err != nil || stored.Status != model.TreatmentStatusActive {
-		t.Fatalf("pure read returned unexpected result: stored=%#v err=%v", stored, err)
-	}
-	if repo.statusUpdates != 0 {
-		t.Fatalf("GetCurrent must not write status, updates=%d", repo.statusUpdates)
-	}
-}
-
-func TestTreatmentPreviewDerivesReviewWithoutWriting(t *testing.T) {
-	userID := uuid.New()
-	current := currentTreatmentForReview(userID)
-	repo := &fakeTreatmentRepo{current: current}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: &model.DiagnosisAnalysisRecord{
-			ID:         current.Current.SourceDiagnosisAnalysisID,
-			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
-		}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{CurrentRevision: 5},
-			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
-		},
-		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	projected, err := svc.PreviewCurrentReview(context.Background(), userID)
-	if err != nil || projected.Status != model.TreatmentStatusReviewRecommended {
-		t.Fatalf("expected derived review status: projected=%#v err=%v", projected, err)
-	}
-	if repo.statusUpdates != 0 || current.Status != model.TreatmentStatusActive {
-		t.Fatalf("preview must not mutate storage: updates=%d current=%s", repo.statusUpdates, current.Status)
-	}
-}
-
-func TestTreatmentExplicitReviewPersistsDerivedStatus(t *testing.T) {
-	userID := uuid.New()
-	current := currentTreatmentForReview(userID)
-	repo := &fakeTreatmentRepo{current: current}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: &model.DiagnosisAnalysisRecord{
-			ID:         current.Current.SourceDiagnosisAnalysisID,
-			Candidates: []model.DiagnosisCandidateRecord{{ConcernKey: "region:neck"}},
-		}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{CurrentRevision: 5},
-			revisions: []model.BodyStateRevision{testFactRecorded(5, "region:neck")},
-		},
-		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	persisted, err := svc.EvaluateCurrentReview(context.Background(), userID)
-	if err != nil || persisted.Status != model.TreatmentStatusReviewRecommended {
-		t.Fatalf("explicit review failed: persisted=%#v err=%v", persisted, err)
-	}
-	if repo.statusUpdates != 1 {
-		t.Fatalf("explicit review should persist exactly once, updates=%d", repo.statusUpdates)
+	if h.captured.ConfigurationID != "" || len(h.plans.inputs) != 0 {
+		t.Fatal("malformed safety must block before the Agent and persistence")
 	}
 }
 
@@ -933,14 +401,9 @@ func TestTreatmentAgentIdentityRejectsPolicyAndRuntimeDrift(t *testing.T) {
 	}
 }
 
-func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 12,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:shoulder", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{}
+func TestTreatmentEvidenceGapChallengerRecordsAcquisitionTrace(t *testing.T) {
+	h := newTreatmentGenerationHarness(12)
+	h.deployment = testTreatmentDeploymentPolicy{configurationID: treatmentEvidenceGapConfigurationID}
 	trace := `{
 		"trace_revision":"evidence-acquisition-trace-v2",
 		"policy_revision":"treatment-evidence-gap-v2",
@@ -949,82 +412,36 @@ func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
 		"attempts":[{"gap":{"gap_id":"dose","kind":"external_knowledge","description":"dose evidence","rationale":"changes dose","critical":false,"query":"dose evidence"},"status":"evidence_returned","stop_reason":"evidence_returned","search_performed":true,"retrieval_status":"results_returned","query":"dose evidence","requested_top_k":5,"evidence_ids":["evidence-dose"]}],
 		"unresolved_critical_gaps":[]
 	}`
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{
-			analysis: analysis,
-			assessments: []model.DiagnosisCandidateAssessment{{
-				CandidateID: analysis.Candidates[0].ID,
-				State:       "confirmed",
-			}},
-		},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 12}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"improve tolerance","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{"sets":2}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":["worsening"],"safety_notes":[],
-			"evidence_ids":["evidence-dose"],"evidence_acquisition":` + trace + `
-		}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{configurationID: treatmentEvidenceGapConfigurationID},
-	)
-
-	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if err != nil {
-		t.Fatalf("GenerateProposal returned error: %v", err)
+	block := strings.Replace(treatmentPlanBlockV1, `"evidenceIds":["selected-analysis-only"]`, `"evidenceIds":["evidence-dose"]`, 1)
+	if _, err := h.generate(json.RawMessage(`{
+		"status":"proposed","evidence_ids":["evidence-dose"],"evidence_acquisition":`+trace+`,
+		"governance":{"verdict":"accepted"},"plan_proposal":`+block+`
+	}`), nil); err != nil {
+		t.Fatalf("GeneratePlanProposal returned error: %v", err)
 	}
-	if revision.AgentConfigurationID != treatmentEvidenceGapConfigurationID {
-		t.Fatalf("unexpected Challenger identity: %q", revision.AgentConfigurationID)
+	provenance := h.provenance(t)
+	if provenance["agentConfigurationId"] != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected Challenger identity: %v", provenance["agentConfigurationId"])
 	}
-	if string(revision.EvidenceAcquisitionTrace) == "{}" || !json.Valid(revision.EvidenceAcquisitionTrace) {
-		t.Fatalf("EvidenceGap trace was not persisted: %s", revision.EvidenceAcquisitionTrace)
-	}
-	var persisted map[string]any
-	if err := json.Unmarshal(revision.EvidenceAcquisitionTrace, &persisted); err != nil {
-		t.Fatal(err)
-	}
-	if persisted["policy_revision"] != "treatment-evidence-gap-v2" {
-		t.Fatalf("unexpected persisted policy trace: %#v", persisted)
+	acquisition, ok := provenance["evidenceAcquisition"].(map[string]any)
+	if !ok || acquisition["policy_revision"] != "treatment-evidence-gap-v2" {
+		t.Fatalf("EvidenceGap trace was not recorded: %#v", provenance["evidenceAcquisition"])
 	}
 }
 
-func TestTreatmentProposalPersistsGenerationDecisionTrace(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 14,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+func TestTreatmentGenerationRecordsDecisionTrace(t *testing.T) {
+	h := newTreatmentGenerationHarness(14)
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); err != nil {
+		t.Fatalf("GeneratePlanProposal returned error: %v", err)
 	}
-	repo := &fakeTreatmentRepo{}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 14}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":2}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":["worsening"],"safety_notes":[]
-		}`)},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
-
-	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if err != nil {
-		t.Fatalf("GenerateProposal returned error: %v", err)
-	}
-	var trace map[string]any
-	if err := json.Unmarshal(revision.GenerationDecisionTrace, &trace); err != nil {
-		t.Fatalf("decode generation DecisionTrace: %v", err)
+	trace, ok := h.provenance(t)["generationDecisionTrace"].(map[string]any)
+	if !ok {
+		t.Fatal("generation DecisionTrace missing")
 	}
 	if trace["trace_revision"] != TreatmentDecisionTraceV1 || trace["phase"] != TreatmentDecisionGeneration || trace["outcome"] != string(TreatmentAllowProposal) {
 		t.Fatalf("unexpected generation DecisionTrace: %#v", trace)
 	}
-	if trace["diagnosis_analysis_id"] != analysis.ID.String() || trace["agent_configuration_id"] != defaultTreatmentConfigurationID {
+	if trace["diagnosis_analysis_id"] != h.analysis.ID.String() || trace["agent_configuration_id"] != defaultTreatmentConfigurationID {
 		t.Fatalf("generation DecisionTrace lost durable identities: %#v", trace)
 	}
 	facts, ok := trace["facts"].(map[string]any)
@@ -1033,211 +450,52 @@ func TestTreatmentProposalPersistsGenerationDecisionTrace(t *testing.T) {
 	}
 }
 
-func TestTreatmentAcceptancePersistsDecisionTraceWithCheckedRevision(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 15,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{proposal: &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), Revision: 1,
-		AcceptanceState:         model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 15, SourceDiagnosisAnalysisID: analysis.ID,
-		AgentConfigurationID: defaultTreatmentConfigurationID,
-	}}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "unsure"}}},
-		&fakeTreatmentBodyState{
-			snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 16},
-			revisions: []model.BodyStateRevision{testFactRecorded(16, "region:sleep")},
-		},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
-		testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{},
-	)
-
-	treatment, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
-	if err != nil {
-		t.Fatalf("AcceptProposal returned error: %v", err)
-	}
-	if treatment == nil || treatment.Current == nil {
-		t.Fatal("expected accepted Treatment")
-	}
-	var trace map[string]any
-	if err := json.Unmarshal(repo.acceptDecisionTrace, &trace); err != nil {
-		t.Fatalf("decode acceptance DecisionTrace: %v", err)
-	}
-	if trace["phase"] != TreatmentDecisionAcceptance || trace["outcome"] != string(TreatmentAllowAcceptance) {
-		t.Fatalf("unexpected acceptance DecisionTrace: %#v", trace)
-	}
-	facts, ok := trace["facts"].(map[string]any)
-	if !ok || facts["source_body_state_revision"] != float64(15) || facts["current_body_state_revision"] != float64(16) {
-		t.Fatalf("acceptance DecisionTrace lost checked revisions: %#v", trace)
-	}
-	if string(repo.proposal.AcceptanceDecisionTrace) == "{}" || len(repo.proposal.AcceptanceDecisionTrace) == 0 {
-		t.Fatalf("acceptance trace was not persisted by repository seam: %s", repo.proposal.AcceptanceDecisionTrace)
-	}
-}
-
-func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgentOrAcceptance(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 20,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	bodyState := &fakeTreatmentBodyState{safetyUnavailable: true, snapshot: &BodyStateReadModel{
-		UserID: userID, CurrentRevision: 20,
-	}}
-	repo := &fakeTreatmentRepo{}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		bodyState, fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{"status":"proposed"}`)}, testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{},
-	)
-	if _, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID}); !errors.Is(err, ErrTreatmentSafetyBlocked) {
-		t.Fatalf("malformed safety must block generation: %v", err)
-	}
-	if repo.proposal != nil {
-		t.Fatal("malformed safety must block before proposal persistence")
-	}
-
-	repo.proposal = &model.TreatmentRevision{
-		ID: uuid.New(), TreatmentID: uuid.New(), Revision: 1,
-		AcceptanceState:         model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision: 20, SourceDiagnosisAnalysisID: analysis.ID,
-	}
-	if _, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID); !errors.Is(err, ErrTreatmentSafetyBlocked) {
-		t.Fatalf("malformed safety must block acceptance: %v", err)
-	}
-	if repo.acceptCalled {
-		t.Fatal("malformed safety must block before repository acceptance")
-	}
-}
-
-func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServedProposal(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 30,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	repo := &fakeTreatmentRepo{}
-	observer := &fakeTreatmentRolloutObserver{err: errors.New("shadow storage unavailable")}
+func TestTreatmentGenerationRecordsRolloutRoute(t *testing.T) {
+	h := newTreatmentGenerationHarness(30)
 	const offlineShadowConfigurationID = "treat-config-offline-shadow"
-	deployment := testTreatmentDeploymentPolicy{
+	h.deployment = testTreatmentDeploymentPolicy{
 		configurationID:       defaultTreatmentConfigurationID,
 		shadowConfigurationID: offlineShadowConfigurationID,
 		stage:                 TreatmentRolloutShadow,
 		subjectBucket:         2468,
 		canaryBPS:             500,
 	}
-	svc := NewTreatmentService(
-		repo,
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 30}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"served champion","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{"sets":2}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
-		}`)},
-		testTreatmentUnitOfWork{}, deployment,
-	)
-	svc.AttachRolloutObserver(observer)
-
-	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
-	if err != nil {
-		t.Fatalf("served Treatment proposal must survive shadow observation failure: %v", err)
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), nil); err != nil {
+		t.Fatalf("served proposal must not depend on a shadow run: %v", err)
 	}
-	if revision.AgentConfigurationID != defaultTreatmentConfigurationID {
-		t.Fatalf("offline shadow observation must not replace the served Champion: %#v", revision)
+	provenance := h.provenance(t)
+	if provenance["agentConfigurationId"] != defaultTreatmentConfigurationID {
+		t.Fatalf("a shadow route must not replace the served Champion: %#v", provenance)
 	}
-	var provenance TreatmentRouteSelection
-	if err := json.Unmarshal(revision.RolloutProvenance, &provenance); err != nil {
+	raw, _ := json.Marshal(provenance["rolloutProvenance"])
+	var route TreatmentRouteSelection
+	if err := json.Unmarshal(raw, &route); err != nil {
 		t.Fatalf("decode rollout provenance: %v", err)
 	}
-	if provenance.Stage != TreatmentRolloutShadow || provenance.SubjectBucket != 2468 ||
-		provenance.ServedConfigurationID != defaultTreatmentConfigurationID ||
-		provenance.ShadowConfigurationID != offlineShadowConfigurationID {
-		t.Fatalf("unexpected durable Treatment rollout provenance: %#v", provenance)
-	}
-	if observer.calls != 1 || observer.userID != userID || observer.revisionID != revision.ID ||
-		observer.route.ShadowConfigurationID != offlineShadowConfigurationID {
-		t.Fatalf("served proposal was not paired exactly once: %#v", observer)
+	if route.Stage != TreatmentRolloutShadow || route.SubjectBucket != 2468 ||
+		route.ServedConfigurationID != defaultTreatmentConfigurationID ||
+		route.ShadowConfigurationID != offlineShadowConfigurationID {
+		t.Fatalf("unexpected Treatment rollout provenance: %#v", route)
 	}
 }
 
-func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 31,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
-	observer := &fakeTreatmentRolloutObserver{}
-	svc := NewTreatmentService(
-		&fakeTreatmentRepo{},
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		&fakeTreatmentBodyState{snapshot: &BodyStateReadModel{UserID: userID, CurrentRevision: 31}},
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"champion","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
-		}`)},
-		testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{},
-	)
-	svc.AttachRolloutObserver(observer)
-	if _, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID}); err != nil {
-		t.Fatal(err)
-	}
-	if observer.calls != 0 {
-		t.Fatalf("Champion-only stage must not execute a paired shadow, calls=%d", observer.calls)
-	}
-}
-
-func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) {
-	userID := uuid.New()
-	analysis := &model.DiagnosisAnalysisRecord{
-		DecisionTrace: datatypes.JSON(`{"evidence":{"body_state_authority":"none","body_state_refs":[],"citations":[]}}`),
-		ID:            uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
-		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
-	}
+func TestTreatmentGenerationReadsAvailableEquipmentAsUserConstraint(t *testing.T) {
+	h := newTreatmentGenerationHarness(9)
 	notes := "medium"
-	bodyState := &fakeTreatmentBodyState{
-		snapshot:  &BodyStateReadModel{UserID: userID, CurrentRevision: 9},
-		equipment: []AgentEquipmentItem{{ID: uuid.New(), DisplayName: "弹力带", Notes: &notes, AccessKind: "owned"}},
-	}
-	var captured TreatmentRecommendationRequest
-	svc := NewTreatmentService(
-		&fakeTreatmentRepo{},
-		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
-		bodyState,
-		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
-		nil,
-		fakeTreatmentReasoner{raw: json.RawMessage(`{
-			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
-			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}],
-			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
-		}`), capture: &captured},
-		testTreatmentUnitOfWork{},
-		testTreatmentDeploymentPolicy{},
-	)
+	h.body.equipment = []AgentEquipmentItem{{ID: uuid.New(), DisplayName: "弹力带", Notes: &notes, AccessKind: "owned"}}
 	callerConstraints := map[string]any{"time_per_day": "20m"}
-	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID, UserConstraints: callerConstraints})
-	if err != nil {
-		t.Fatalf("GenerateProposal returned error: %v", err)
+	if _, err := h.generate(treatmentAgentRawWithPlan(treatmentPlanBlockV1), callerConstraints); err != nil {
+		t.Fatalf("GeneratePlanProposal returned error: %v", err)
 	}
+	captured := *h.captured
 	want := json.RawMessage(`{"time_per_day":"20m","available_equipment":[{"name":"弹力带","access_kind":"owned","notes":"medium"}]}`)
-	if bodyState.viewOwner != userID || !jsonBytesEqual(captured.UserConstraints, want) || !jsonBytesEqual(json.RawMessage(revision.UserConstraints), want) {
-		t.Fatalf("equipment constraint: captured=%s stored=%s", captured.UserConstraints, revision.UserConstraints)
+	if h.body.viewOwner != h.userID || !jsonBytesEqual(captured.UserConstraints, want) {
+		t.Fatalf("equipment constraint: captured=%s", captured.UserConstraints)
 	}
 	if _, mutated := callerConstraints["available_equipment"]; mutated {
 		t.Fatal("caller constraints must not be mutated")
 	}
-	frozen, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
+	frozen, err := decodeTreatmentReplayInput(h.plans.inputs[0].Generation.ReplayInput)
 	if err != nil || !jsonBytesEqual(frozen.UserConstraints, want) {
 		t.Fatalf("replay input must freeze the equipment constraint: %v %s", err, frozen.UserConstraints)
 	}
@@ -1257,32 +515,17 @@ func TestTreatmentGenerateReadsAvailableEquipmentAsUserConstraint(t *testing.T) 
 	}
 }
 
-// testConcerns are the concerns test facts can belong to; testFactID derives
-// a stable fact id per concern so fakes resolve ids without shared state.
-var testConcerns = []string{"region:neck", "region:sleep", "region:颈肩", "lifestyle:sleep", "general"}
-
-func testFactID(concern string) uuid.UUID {
-	return uuid.NewSHA1(uuid.NameSpaceOID, []byte("test-fact:"+concern))
-}
-
-func testRevision(n int64, changeType, changes string) model.BodyStateRevision {
-	return model.BodyStateRevision{Revision: n, ChangeType: changeType, Changes: datatypes.JSON(changes)}
-}
-
-func testFactRecorded(n int64, concern string) model.BodyStateRevision {
-	return testRevision(n, "facts.recorded", `{"fact_ids":["`+testFactID(concern).String()+`"]}`)
-}
-
-func testRevisionFacts(revisions []model.BodyStateRevision) BodyStateFactIndex {
-	known := map[uuid.UUID]string{}
-	for _, concern := range testConcerns {
-		known[testFactID(concern)] = concern
+// decodeTreatmentReplayInput reads the frozen Agent request back.
+func decodeTreatmentReplayInput(raw json.RawMessage) (TreatmentReplayInput, error) {
+	var input TreatmentReplayInput
+	if len(raw) == 0 || string(raw) == "{}" || string(raw) == "null" {
+		return input, errors.New("treatment replay input is unavailable")
 	}
-	index := BodyStateFactIndex{}
-	for _, id := range bodyStateRevisionFactIDs(revisions) {
-		if concern, ok := known[id]; ok {
-			index[id.String()] = BodyStateFactRef{Kind: "symptom", ConcernKey: concern}
-		}
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return input, err
 	}
-	return index
+	if input.BodyStateRevision <= 0 || len(input.BodyState) == 0 || !json.Valid(input.BodyState) {
+		return input, errors.New("treatment replay input is unavailable")
+	}
+	return input, nil
 }

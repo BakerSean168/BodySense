@@ -75,7 +75,6 @@ func treatmentAgentRawWithPlan(block string) json.RawMessage {
 type planGenerationFixture struct {
 	userID   uuid.UUID
 	analysis *model.DiagnosisAnalysisRecord
-	repo     *fakeTreatmentRepo
 	plans    *fakePlanProposer
 	captured *TreatmentRecommendationRequest
 	svc      *TreatmentService
@@ -95,15 +94,13 @@ func newPlanGenerationFixture(t *testing.T, raw json.RawMessage, body *fakeTreat
 	if body.snapshot == nil {
 		body.snapshot = &BodyStateReadModel{UserID: userID, CurrentRevision: 9}
 	}
-	f := &planGenerationFixture{userID: userID, analysis: analysis, repo: &fakeTreatmentRepo{}, plans: &fakePlanProposer{}, captured: &TreatmentRecommendationRequest{}}
+	f := &planGenerationFixture{userID: userID, analysis: analysis, plans: &fakePlanProposer{}, captured: &TreatmentRecommendationRequest{}}
 	f.svc = NewTreatmentService(
-		f.repo,
 		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
 		body,
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
 		nil,
 		fakeTreatmentReasoner{raw: raw, capture: f.captured},
-		testTreatmentUnitOfWork{},
 		testTreatmentDeploymentPolicy{},
 	)
 	f.svc.AttachPlanProposer(f.plans)
@@ -120,9 +117,6 @@ func TestTreatmentPlanGenerationPersistsOnlyAPendingAgentProposal(t *testing.T) 
 	}
 	if result.Replayed || result.Proposal == nil || result.Proposal.State != trainingplan.ProposalPending {
 		t.Fatalf("result: %+v", result)
-	}
-	if f.repo.proposal != nil || f.repo.current != nil {
-		t.Fatal("plan generation must not write a Treatment revision")
 	}
 	if len(f.plans.inputs) != 1 {
 		t.Fatalf("Propose calls: %d", len(f.plans.inputs))
@@ -234,7 +228,7 @@ func TestTreatmentPlanGenerationRejectsMalformedAgentPlanWithNoWrite(t *testing.
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("got %v, want %v", err, tc.want)
 			}
-			if len(f.plans.inputs) != 0 || f.repo.proposal != nil {
+			if len(f.plans.inputs) != 0 {
 				t.Fatal("a malformed Agent plan must persist nothing")
 			}
 		})

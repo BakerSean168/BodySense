@@ -146,3 +146,14 @@ func TestRecordOutcomeRequiresSourceIdentity(t *testing.T) {
 		t.Fatal("an Outcome without source identity must be rejected")
 	}
 }
+
+type testTreatmentUnitOfWork struct {
+	called *bool
+}
+
+func (u testTreatmentUnitOfWork) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+	if u.called != nil {
+		*u.called = true
+	}
+	return fn(ctx)
+}

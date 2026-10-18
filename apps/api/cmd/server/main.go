@@ -89,7 +89,6 @@ func main() {
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
 	diagnosisAnalysisRepo := repository.NewDiagnosisAnalysisRepository(database.DB)
 	diagnosisFreshnessRepo := repository.NewDiagnosisFreshnessRepository(database.DB)
-	treatmentRepo := repository.NewTreatmentRepository(database.DB)
 	outcomeRepo := repository.NewOutcomeRepository(database.DB)
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	messageRepo := repository.NewMessageRepository(database.DB)
@@ -152,13 +151,11 @@ func main() {
 	diagnosisAnalysisService := service.NewDiagnosisAnalysisService(diagnosisAnalysisRepo)
 	diagnosisFreshnessService := service.NewDiagnosisFreshnessService(diagnosisFreshnessRepo, bodyStateService)
 	treatmentService := service.NewTreatmentService(
-		treatmentRepo,
 		diagnosisAnalysisService,
 		bodyStateService,
 		diagnosisFreshnessService,
 		profileService,
 		aiClient,
-		database.NewTransactionManager(database.DB),
 		agentDeploymentPolicy,
 	)
 	outcomeService := service.NewOutcomeService(outcomeRepo, bodyStateService, database.NewTransactionManager(database.DB))
@@ -247,10 +244,6 @@ func main() {
 	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, outcomeService)
-	treatmentReplayService := service.NewTreatmentReplayService(treatmentRepo, aiClient)
-	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
-	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)
-	treatmentService.AttachRolloutObserver(treatmentRolloutService)
 	treatmentService.AttachPlanProposer(service.NewIndependentTrainingPlanService(database.DB))
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
 		knowledgeSourceRegistry,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type fakeDiagnosisFreshnessStore struct {
@@ -177,4 +178,34 @@ func freshnessAnalysis(concern, factID, observationID string) *model.DiagnosisAn
 			BasisObservationIDs: observations,
 		}},
 	}
+}
+
+// testConcerns are the concerns test facts can belong to; testFactID derives
+// a stable fact id per concern so fakes resolve ids without shared state.
+var testConcerns = []string{"region:neck", "region:sleep", "region:颈肩", "lifestyle:sleep", "general"}
+
+func testFactID(concern string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte("test-fact:"+concern))
+}
+
+func testRevision(n int64, changeType, changes string) model.BodyStateRevision {
+	return model.BodyStateRevision{Revision: n, ChangeType: changeType, Changes: datatypes.JSON(changes)}
+}
+
+func testFactRecorded(n int64, concern string) model.BodyStateRevision {
+	return testRevision(n, "facts.recorded", `{"fact_ids":["`+testFactID(concern).String()+`"]}`)
+}
+
+func testRevisionFacts(revisions []model.BodyStateRevision) BodyStateFactIndex {
+	known := map[uuid.UUID]string{}
+	for _, concern := range testConcerns {
+		known[testFactID(concern)] = concern
+	}
+	index := BodyStateFactIndex{}
+	for _, id := range bodyStateRevisionFactIDs(revisions) {
+		if concern, ok := known[id]; ok {
+			index[id.String()] = BodyStateFactRef{Kind: "symptom", ConcernKey: concern}
+		}
+	}
+	return index
 }

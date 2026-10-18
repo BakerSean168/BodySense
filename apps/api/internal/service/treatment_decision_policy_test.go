@@ -13,23 +13,20 @@ func readyTreatmentDecisionFacts() TreatmentDecisionFacts {
 		FreshnessState:           model.DiagnosisFreshnessFresh,
 		SafetyEnvelope:           testNativeSafetyEnvelope(7),
 		CandidateAssessmentReady: true,
-		ProposalAcceptanceState:  model.TreatmentAcceptanceProposed,
-		SourceBodyStateRevision:  7,
 		CurrentBodyStateRevision: 7,
-		MaterialReviewStatus:     model.TreatmentStatusActive,
-		MaterialReviewReasons:    []TreatmentReviewReason{},
 	}
 }
 
-func TestTreatmentDecisionPolicyAllowsGenerationAndAcceptance(t *testing.T) {
+func TestTreatmentDecisionPolicyAllowsGeneration(t *testing.T) {
 	facts := readyTreatmentDecisionFacts()
 	generation := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts)
 	if generation.Outcome != TreatmentAllowProposal || len(generation.Reasons) != 0 {
 		t.Fatalf("unexpected generation decision: %#v", generation)
 	}
-	acceptance := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts)
-	if acceptance.Outcome != TreatmentAllowAcceptance || len(acceptance.Reasons) != 0 {
-		t.Fatalf("unexpected acceptance decision: %#v", acceptance)
+	// Acceptance left the policy with Treatment (TP-002 slice 3).
+	if acceptance := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, "acceptance", facts); acceptance.Outcome != TreatmentBlock ||
+		acceptance.Reasons[0] != "unsupported_decision_phase" {
+		t.Fatalf("acceptance must fail closed: %#v", acceptance)
 	}
 }
 
@@ -46,13 +43,6 @@ func TestTreatmentDecisionPolicyDenyOverrides(t *testing.T) {
 			f.SafetyEnvelope = testBlockedSafetyEnvelope(7)
 		}, "active_body_state_safety_concern"},
 		{"assessment", TreatmentDecisionGeneration, func(f *TreatmentDecisionFacts) { f.CandidateAssessmentReady = false }, "candidate_assessment_required"},
-		{"proposal-state", TreatmentDecisionAcceptance, func(f *TreatmentDecisionFacts) { f.ProposalAcceptanceState = model.TreatmentAcceptanceAccepted }, "proposal_not_proposed"},
-		{"revision-regressed", TreatmentDecisionAcceptance, func(f *TreatmentDecisionFacts) { f.CurrentBodyStateRevision = 6 }, "body_state_revision_regressed"},
-		{"material-change", TreatmentDecisionAcceptance, func(f *TreatmentDecisionFacts) {
-			f.CurrentBodyStateRevision = 8
-			f.MaterialReviewStatus = model.TreatmentStatusReviewRecommended
-			f.MaterialReviewReasons = []TreatmentReviewReason{{Code: "material_related_body_state_change"}}
-		}, "material_related_body_state_change"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

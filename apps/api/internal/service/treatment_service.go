@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -15,22 +13,11 @@ import (
 
 var (
 	ErrTreatmentDiagnosisNotReady           = errors.New("diagnosis analysis is not eligible for treatment")
-	ErrTreatmentSafetyBlocked               = errors.New("active safety state blocks ordinary treatment generation or acceptance")
+	ErrTreatmentSafetyBlocked               = errors.New("active safety state blocks ordinary treatment generation")
 	ErrTreatmentAnalysisStale               = errors.New("diagnosis analysis requires review before treatment")
 	ErrTreatmentCandidateAssessmentRequired = errors.New("at least one diagnosis candidate must be assessed as confirmed or unsure")
-	ErrTreatmentProposalOutdated            = errors.New("treatment proposal no longer matches the current durable health state")
 	ErrTreatmentConfigurationMismatch       = errors.New("treatment Agent configuration identity mismatch")
 )
-
-type treatmentRepository interface {
-	CreateProposal(ctx context.Context, userID uuid.UUID, revision model.TreatmentRevision, interventions []model.Intervention) (*model.Treatment, *model.TreatmentRevision, error)
-	AcceptRevision(ctx context.Context, userID, revisionID uuid.UUID, expectedBodyStateRevision int64, acceptanceDecisionTrace datatypes.JSON) (*model.Treatment, *model.TreatmentRevision, bool, error)
-	RejectRevision(ctx context.Context, userID, revisionID uuid.UUID) error
-	SetStatus(ctx context.Context, userID uuid.UUID, status model.TreatmentStatus, reasons datatypes.JSON) (*model.Treatment, error)
-	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
-	GetRevision(ctx context.Context, userID, revisionID uuid.UUID) (*model.TreatmentRevision, error)
-	ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error)
-}
 
 type treatmentDiagnosisSource interface {
 	GetByID(ctx context.Context, analysisID, userID uuid.UUID) (*model.DiagnosisAnalysisRecord, error)
@@ -41,9 +28,6 @@ type treatmentDiagnosisSource interface {
 
 type treatmentBodyStateSource interface {
 	GetAgentBodyContext(ctx context.Context, userID uuid.UUID) (*AgentBodyContext, error)
-	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
-	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
-	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
 }
 
 type treatmentFreshnessSource interface {
@@ -54,59 +38,42 @@ type treatmentReasoner interface {
 	RecommendTreatment(ctx context.Context, req TreatmentRecommendationRequest) (json.RawMessage, error)
 }
 
-type treatmentUnitOfWork interface {
-	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
-}
-
 type treatmentDeploymentPolicy interface {
 	SelectTreatmentRoute(subjectID string) TreatmentRouteSelection
 }
 
-type treatmentRolloutObserver interface {
-	ObserveProposal(
-		ctx context.Context,
-		userID uuid.UUID,
-		route TreatmentRouteSelection,
-		revisionID uuid.UUID,
-	) error
-}
-
-// TreatmentService owns application orchestration around typed AI proposals.
-// The reasoner can recommend; only this service/repository accepts a revision.
+// TreatmentService runs the gated Treatment Agent. Since TP-002 slice 3 it
+// keeps no Treatment aggregate: its only product is a pending agent
+// PlanProposal(create) (see GeneratePlanProposal); acceptance stays the user's
+// explicit TrainingPlan decision.
 type TreatmentService struct {
-	repo       treatmentRepository
 	diagnosis  treatmentDiagnosisSource
 	bodyState  treatmentBodyStateSource
 	freshness  treatmentFreshnessSource
 	profiles   *ProfileService
 	reasoner   treatmentReasoner
-	unitOfWork treatmentUnitOfWork
 	deployment treatmentDeploymentPolicy
-	rollout    treatmentRolloutObserver
 	plans      treatmentPlanProposer
 }
 
 func NewTreatmentService(
-	repo treatmentRepository,
 	diagnosis treatmentDiagnosisSource,
 	bodyState treatmentBodyStateSource,
 	freshness treatmentFreshnessSource,
 	profiles *ProfileService,
 	reasoner treatmentReasoner,
-	unitOfWork treatmentUnitOfWork,
 	deployment treatmentDeploymentPolicy,
 ) *TreatmentService {
 	return &TreatmentService{
-		repo: repo, diagnosis: diagnosis, bodyState: bodyState,
-		freshness: freshness, profiles: profiles, reasoner: reasoner,
-		unitOfWork: unitOfWork, deployment: deployment,
+		diagnosis: diagnosis, bodyState: bodyState, freshness: freshness,
+		profiles: profiles, reasoner: reasoner, deployment: deployment,
 	}
 }
 
 // treatmentConstraintsWithEquipment returns a copy of the caller constraints
 // with user_constraints.available_equipment taken from the pinned agent view's
 // usable EquipmentAssets (PC-D2), unless the caller stated equipment itself.
-// Equipment is a user-stated resource; it never edits an accepted Treatment.
+// Equipment is a user-stated resource; it never edits an accepted plan.
 func treatmentConstraintsWithEquipment(view *AgentBodyContext, constraints map[string]any) map[string]any {
 	if view == nil || len(view.Equipment) == 0 {
 		return constraints
@@ -130,117 +97,22 @@ func treatmentConstraintsWithEquipment(view *AgentBodyContext, constraints map[s
 	return merged
 }
 
-func (s *TreatmentService) AttachRolloutObserver(observer treatmentRolloutObserver) {
-	if s != nil {
-		s.rollout = observer
-	}
-}
-
 type TreatmentProposalInput struct {
 	DiagnosisAnalysisID uuid.UUID
 	UserConstraints     map[string]any
 	ChangeReason        string
 }
 
+// treatmentAgentPayload is the part of the governed Treatment Agent output Go
+// reads. The legacy Treatment fields the Agent still emits are ignored.
 type treatmentAgentPayload struct {
-	Status              string                             `json:"status"`
-	Summary             string                             `json:"summary"`
-	Goal                string                             `json:"goal"`
-	DurationWeeks       int                                `json:"duration_weeks"`
-	Interventions       []model.TreatmentInterventionDraft `json:"interventions"`
-	DailyHabits         []string                           `json:"daily_habits"`
-	ExpectedTimeline    string                             `json:"expected_timeline"`
-	WarningSigns        []string                           `json:"warning_signs"`
-	ReviewTriggers      []string                           `json:"review_triggers"`
-	SafetyNotes         []string                           `json:"safety_notes"`
-	EvidenceIDs         []string                           `json:"evidence_ids"`
-	Governance          json.RawMessage                    `json:"governance"`
-	AgentConfiguration  json.RawMessage                    `json:"agent_configuration"`
-	ExecutionProvenance json.RawMessage                    `json:"execution_provenance"`
-	EvidenceAcquisition json.RawMessage                    `json:"evidence_acquisition"`
-	PlanProposal        json.RawMessage                    `json:"plan_proposal"`
-}
-
-func (s *TreatmentService) GenerateProposalForLatest(
-	ctx context.Context,
-	userID uuid.UUID,
-	constraints map[string]any,
-	changeReason string,
-) (*model.TreatmentRevision, error) {
-	analysis, err := s.diagnosis.GetLatest(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if analysis == nil {
-		return nil, ErrTreatmentDiagnosisNotReady
-	}
-	return s.GenerateProposal(ctx, userID, TreatmentProposalInput{
-		DiagnosisAnalysisID: analysis.ID,
-		UserConstraints:     constraints,
-		ChangeReason:        changeReason,
-	})
-}
-
-func (s *TreatmentService) GenerateProposal(
-	ctx context.Context,
-	userID uuid.UUID,
-	input TreatmentProposalInput,
-) (*model.TreatmentRevision, error) {
-	gen, err := s.runGeneration(ctx, userID, input)
-	if err != nil {
-		return nil, err
-	}
-	route, configurationID, analysis, facts, generationDecision, payload :=
-		gen.route, gen.configurationID, gen.analysis, gen.facts, gen.decision, gen.payload
-	plan := model.TreatmentPlanContent{
-		Summary: payload.Summary, Goal: payload.Goal, DurationWeeks: payload.DurationWeeks,
-		Interventions: payload.Interventions, DailyHabits: payload.DailyHabits,
-		ExpectedTimeline: payload.ExpectedTimeline, WarningSigns: payload.WarningSigns,
-		ReviewTriggers: payload.ReviewTriggers, SafetyNotes: payload.SafetyNotes,
-	}
-	if err := validateTreatmentPlan(plan); err != nil {
-		return nil, err
-	}
-	interventions := make([]model.Intervention, 0, len(plan.Interventions))
-	for _, item := range plan.Interventions {
-		interventions = append(interventions, model.Intervention{
-			Kind: item.Kind, Title: item.Title, Description: item.Description,
-			Prescription: datatypes.JSON(rawJSON(item.Prescription, `{}`)),
-		})
-	}
-	generationTrace := buildTreatmentDecisionTrace(
-		generationDecision,
-		facts,
-		analysis.ID,
-		configurationID,
-	)
-	_, revision, err := s.repo.CreateProposal(ctx, userID, model.TreatmentRevision{
-		SourceBodyStateRevision:   gen.bodyRevision,
-		SourceDiagnosisAnalysisID: analysis.ID,
-		Goal:                      plan.Goal,
-		DurationWeeks:             plan.DurationWeeks,
-		Plan:                      datatypes.JSON(rawJSON(plan, `{}`)),
-		UserConstraints:           datatypes.JSON(gen.constraints),
-		EvidenceIDs:               datatypes.JSON(rawJSON(payload.EvidenceIDs, `[]`)),
-		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
-		AgentConfigurationID:      configurationID,
-		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
-		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
-		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
-		GenerationDecisionTrace:   generationTrace,
-		ReplayInput:               datatypes.JSON(gen.replayInput),
-		RolloutProvenance:         datatypes.JSON(rawJSON(route, `{}`)),
-		ChangeReason:              strings.TrimSpace(input.ChangeReason),
-	}, interventions)
-	if err != nil {
-		return nil, err
-	}
-	if s.rollout != nil && route.ShadowConfigurationID != "" {
-		if observeErr := s.rollout.ObserveProposal(ctx, userID, route, revision.ID); observeErr != nil {
-			log.Printf("failed to record Treatment %s shadow observation for revision %s: %v", route.Stage, revision.ID, observeErr)
-		}
-	}
-	return revision, nil
+	Status              string          `json:"status"`
+	EvidenceIDs         []string        `json:"evidence_ids"`
+	Governance          json.RawMessage `json:"governance"`
+	AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+	ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+	EvidenceAcquisition json.RawMessage `json:"evidence_acquisition"`
+	PlanProposal        json.RawMessage `json:"plan_proposal"`
 }
 
 // treatmentGeneration is one gated, frozen, governed Treatment Agent run,
@@ -252,7 +124,6 @@ type treatmentGeneration struct {
 	facts           TreatmentDecisionFacts
 	decision        TreatmentDecision
 	bodyRevision    int64
-	constraints     json.RawMessage
 	replayInput     json.RawMessage
 	payload         *treatmentAgentPayload
 }
@@ -282,10 +153,7 @@ func (s *TreatmentService) runGeneration(
 	if analysis != nil && analysis.UserID != userID {
 		return nil, fmt.Errorf("Treatment analysis owner mismatch")
 	}
-	facts := TreatmentDecisionFacts{
-		CandidateAssessmentReady: true,
-		MaterialReviewStatus:     model.TreatmentStatusActive,
-	}
+	facts := TreatmentDecisionFacts{CandidateAssessmentReady: true}
 	if analysis != nil {
 		facts.DiagnosisStatus = analysis.Status
 		facts.CandidateCount = len(analysis.Candidates)
@@ -390,300 +258,8 @@ func (s *TreatmentService) runGeneration(
 	return &treatmentGeneration{
 		route: route, configurationID: configurationID, analysis: analysis, facts: facts,
 		decision: generationDecision, bodyRevision: bodyView.CurrentRevision,
-		constraints: constraintsPayload, replayInput: replayInput, payload: payload,
+		replayInput: replayInput, payload: payload,
 	}, nil
-}
-
-func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionID uuid.UUID) (*model.Treatment, error) {
-	revision, err := s.repo.GetRevision(ctx, userID, revisionID)
-	if err != nil {
-		return nil, err
-	}
-	if revision == nil {
-		return nil, ErrTreatmentDiagnosisNotReady
-	}
-	if revision.AcceptanceState != model.TreatmentAcceptanceProposed {
-		return nil, fmt.Errorf("only proposed treatment revisions can be accepted")
-	}
-
-	head, err := s.bodyState.GetAgentBodyContext(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	facts := TreatmentDecisionFacts{
-		SafetyEnvelope:           head.SafetyEnvelope,
-		CandidateAssessmentReady: true,
-		ProposalAcceptanceState:  revision.AcceptanceState,
-		SourceBodyStateRevision:  revision.SourceBodyStateRevision,
-		CurrentBodyStateRevision: head.CurrentRevision,
-		MaterialReviewStatus:     model.TreatmentStatusActive,
-		MaterialReviewReasons:    []TreatmentReviewReason{},
-		DiagnosisStatus:          "completed",
-		CandidateCount:           1,
-		FreshnessState:           model.DiagnosisFreshnessFresh,
-	}
-	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
-		return nil, treatmentDecisionError(decision)
-	}
-
-	analysis, err := s.diagnosis.GetByID(ctx, revision.SourceDiagnosisAnalysisID, userID)
-	if err != nil {
-		return nil, err
-	}
-	facts.DiagnosisStatus = ""
-	facts.CandidateCount = 0
-	if analysis != nil {
-		facts.DiagnosisStatus = analysis.Status
-		facts.CandidateCount = len(analysis.Candidates)
-	}
-	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
-		return nil, treatmentDecisionError(decision)
-	}
-
-	if s.freshness != nil {
-		freshness, freshnessErr := s.freshness.GetOrEvaluate(ctx, userID, analysis)
-		if freshnessErr != nil {
-			return nil, freshnessErr
-		}
-		facts.FreshnessState = ""
-		if freshness != nil {
-			facts.FreshnessState = freshness.State
-		}
-		if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
-			return nil, treatmentDecisionError(decision)
-		}
-	}
-	assessments, err := s.diagnosis.ListAssessments(ctx, userID, analysis.ID)
-	if err != nil {
-		return nil, err
-	}
-	facts.CandidateAssessmentReady = treatmentCandidateAssessmentsReady(analysis, assessments)
-	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
-		return nil, treatmentDecisionError(decision)
-	}
-
-	if head.CurrentRevision > revision.SourceBodyStateRevision {
-		revisions, revisionErr := s.bodyState.ListRevisionsAfter(ctx, userID, revision.SourceBodyStateRevision, 500)
-		if revisionErr != nil {
-			return nil, revisionErr
-		}
-		revisionFacts, resolveErr := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
-		if resolveErr != nil {
-			return nil, resolveErr
-		}
-		review := TreatmentReviewContext{Facts: revisionFacts, OutcomeRevisions: map[int64]bool{}}
-		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions, review)
-	}
-	acceptanceDecision := EvaluateTreatmentDecision(
-		TreatmentDecisionPolicyV1,
-		TreatmentDecisionAcceptance,
-		facts,
-	)
-	if acceptanceDecision.Outcome != TreatmentAllowAcceptance {
-		return nil, treatmentDecisionError(acceptanceDecision)
-	}
-	acceptanceTrace := buildTreatmentDecisionTrace(
-		acceptanceDecision,
-		facts,
-		analysis.ID,
-		revision.AgentConfigurationID,
-	)
-
-	treatment, _, accepted, err := s.repo.AcceptRevision(
-		ctx,
-		userID,
-		revisionID,
-		head.CurrentRevision,
-		acceptanceTrace,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if !accepted {
-		return nil, ErrTreatmentProposalOutdated
-	}
-	return treatment, nil
-}
-
-func (s *TreatmentService) RejectProposal(ctx context.Context, userID, revisionID uuid.UUID) error {
-	return s.repo.RejectRevision(ctx, userID, revisionID)
-}
-
-func (s *TreatmentService) GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error) {
-	return s.repo.GetCurrent(ctx, userID)
-}
-
-// PreviewCurrentReview returns the deterministic current review projection
-// without mutating Treatment or Intervention rows. GET/read-model paths use this
-// method; only explicit review and mutation boundaries persist status changes.
-func (s *TreatmentService) PreviewCurrentReview(ctx context.Context, userID uuid.UUID) (*model.Treatment, error) {
-	current, err := s.repo.GetCurrent(ctx, userID)
-	if err != nil || current == nil || current.Current == nil {
-		return current, err
-	}
-	status, reasons, err := s.evaluateCurrentReviewState(ctx, userID, current)
-	if err != nil {
-		return nil, err
-	}
-	projected := *current
-	projected.Status = status
-	projected.StatusReasons = datatypes.JSON(rawJSON(reasons, `[]`))
-	return &projected, nil
-}
-
-func (s *TreatmentService) GetRevision(ctx context.Context, userID, revisionID uuid.UUID) (*model.TreatmentRevision, error) {
-	return s.repo.GetRevision(ctx, userID, revisionID)
-}
-
-func (s *TreatmentService) ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error) {
-	return s.repo.ListRevisions(ctx, userID, limit)
-}
-
-// EvaluateCurrentReview is the explicit write boundary for deterministic review
-// policy. It never asks the model whether a safety gate should be enforced.
-func (s *TreatmentService) EvaluateCurrentReview(ctx context.Context, userID uuid.UUID) (*model.Treatment, error) {
-	current, err := s.repo.GetCurrent(ctx, userID)
-	if err != nil || current == nil || current.Current == nil {
-		return current, err
-	}
-	status, reasons, err := s.evaluateCurrentReviewState(ctx, userID, current)
-	if err != nil {
-		return nil, err
-	}
-	reasonJSON := datatypes.JSON(rawJSON(reasons, `[]`))
-	if status == current.Status && string(normalizeRaw(json.RawMessage(current.StatusReasons), `[]`)) == string(reasonJSON) {
-		return current, nil
-	}
-	return s.repo.SetStatus(ctx, userID, status, reasonJSON)
-}
-
-func (s *TreatmentService) evaluateCurrentReviewState(
-	ctx context.Context,
-	userID uuid.UUID,
-	current *model.Treatment,
-) (model.TreatmentStatus, []TreatmentReviewReason, error) {
-	if current == nil || current.Current == nil {
-		return "", nil, nil
-	}
-	if current.Status == model.TreatmentStatusCompleted || current.Status == model.TreatmentStatusSuperseded {
-		return current.Status, decodeTreatmentReviewReasons(json.RawMessage(current.StatusReasons)), nil
-	}
-	head, err := s.bodyState.GetAgentBodyContext(ctx, userID)
-	if err != nil {
-		return "", nil, err
-	}
-	activeSafety, safetyErr := strictTreatmentSafetyReview(head.SafetyEnvelope, head.CurrentRevision)
-	if safetyErr != nil {
-		return "", nil, safetyErr
-	}
-	if activeSafety {
-		return model.TreatmentStatusPaused, []TreatmentReviewReason{{
-			Code:    "active_safety_state",
-			Message: "当前安全状态要求暂停普通干预并优先审核。",
-		}}, nil
-	}
-	revisions, err := s.bodyState.ListRevisionsAfter(ctx, userID, current.Current.SourceBodyStateRevision, 500)
-	if err != nil {
-		return "", nil, err
-	}
-	analysis, err := s.diagnosis.GetByID(ctx, current.Current.SourceDiagnosisAnalysisID, userID)
-	if err != nil {
-		return "", nil, err
-	}
-	revisionFacts, err := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
-	if err != nil {
-		return "", nil, err
-	}
-	// Outcomes are no longer linked to a Treatment, so none is attributed here.
-	reviewContext := TreatmentReviewContext{Facts: revisionFacts, OutcomeRevisions: map[int64]bool{}}
-	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, reviewContext)
-	return status, reasons, nil
-}
-
-// TreatmentReviewContext resolves V2 ledger revisions, which carry ids only.
-// Facts maps the fact ids the revisions name to their kind and concern;
-// OutcomeRevisions marks revisions committed by a user-authored Outcome
-// symptom reported against the current Treatment.
-type TreatmentReviewContext struct {
-	Facts            BodyStateFactIndex
-	OutcomeRevisions map[int64]bool
-}
-
-func decodeTreatmentReviewReasons(raw json.RawMessage) []TreatmentReviewReason {
-	var reasons []TreatmentReviewReason
-	_ = json.Unmarshal(raw, &reasons)
-	return reasons
-}
-
-type TreatmentReviewReason struct {
-	Code       string `json:"code"`
-	Revision   int64  `json:"revision,omitempty"`
-	ChangeType string `json:"change_type,omitempty"`
-	ConcernKey string `json:"concern_key,omitempty"`
-	Message    string `json:"message"`
-}
-
-// EvaluateTreatmentReviewPolicy derives the review state of the current plan
-// from V2 BodyState revisions after its source revision. A Safety change
-// pauses the plan for review; a user statement related to the plan (an
-// Outcome-reported symptom on this plan, or a recorded/corrected/withdrawn
-// fact or episode change in a concern it covers or a fact/observation it
-// cites) only recommends review. The plan content is never changed here.
-func EvaluateTreatmentReviewPolicy(
-	analysis *model.DiagnosisAnalysisRecord,
-	revisions []model.BodyStateRevision,
-	v2 TreatmentReviewContext,
-) (model.TreatmentStatus, []TreatmentReviewReason) {
-	if len(revisions) == 0 {
-		return model.TreatmentStatusActive, []TreatmentReviewReason{}
-	}
-	basis := newDiagnosisBasis(analysis)
-	reasons := make([]TreatmentReviewReason, 0)
-	status := model.TreatmentStatusActive
-	material := func(change bodyStateChange, concernKey string) {
-		status = model.TreatmentStatusReviewRecommended
-		reasons = append(reasons, TreatmentReviewReason{
-			Code: "material_related_body_state_change", Revision: change.Revision,
-			ChangeType: change.ChangeType, ConcernKey: concernKey,
-			Message: "与当前方案相关的身体状态发生变化，建议审核而不是自动改写方案。",
-		})
-	}
-	for _, revision := range revisions {
-		change := decodeBodyStateChange(revision)
-		switch change.Kind {
-		case bodyStateChangeSafety:
-			return model.TreatmentStatusPaused, []TreatmentReviewReason{{
-				Code: "safety_state_changed", Revision: change.Revision,
-				ChangeType: change.ChangeType, Message: "安全状态变化要求暂停并审核当前方案。",
-			}}
-		case bodyStateChangeFactsRecorded:
-			if v2.OutcomeRevisions[change.Revision] {
-				status = model.TreatmentStatusReviewRecommended
-				reasons = append(reasons, TreatmentReviewReason{
-					Code: "outcome_reported_symptom", Revision: change.Revision, ChangeType: change.ChangeType,
-					Message: "你在执行当前方案后报告了身体变化，建议审核而不是自动改写方案。",
-				})
-				continue
-			}
-			if _, concernKey, ok := basis.firstRelatedFact(change.FactIDs, v2.Facts); ok {
-				material(change, concernKey)
-			}
-		case bodyStateChangeFactCorrected, bodyStateChangeFactWithdrawn:
-			ids := append([]string{change.TargetID}, change.FactIDs...)
-			if _, concernKey, ok := basis.firstRelatedFact(ids, v2.Facts); ok {
-				material(change, concernKey)
-			}
-		case bodyStateChangeObservationCorrected, bodyStateChangeObservationWithdrawn:
-			if basis.citesObservation(change.TargetID) {
-				material(change, "")
-			}
-		case bodyStateChangeEpisode:
-			if _, concernKey, ok := basis.firstRelatedFact(change.FactIDs, v2.Facts); ok {
-				material(change, concernKey)
-			}
-		}
-	}
-	return status, reasons
 }
 
 func treatmentCandidateAssessmentsReady(
@@ -722,10 +298,6 @@ func treatmentDecisionError(decision TreatmentDecision) error {
 		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
 	case "candidate_assessment_required":
 		return ErrTreatmentCandidateAssessmentRequired
-	case "proposal_not_proposed":
-		return errors.New("only proposed treatment revisions can be accepted")
-	case "body_state_revision_regressed", "material_related_body_state_change":
-		return ErrTreatmentProposalOutdated
 	default:
 		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
 	}
@@ -806,24 +378,6 @@ func validateTreatmentAgentIdentity(payload *treatmentAgentPayload, expectedConf
 		execution.Status != "executed" || execution.Runtime != "pydantic-ai" ||
 		execution.LogicalModel != registration.LogicalModel {
 		return ErrTreatmentConfigurationMismatch
-	}
-	return nil
-}
-
-func validateTreatmentPlan(plan model.TreatmentPlanContent) error {
-	if strings.TrimSpace(plan.Goal) == "" {
-		return errors.New("treatment goal is required")
-	}
-	if plan.DurationWeeks <= 0 || plan.DurationWeeks > 104 {
-		return errors.New("treatment duration_weeks must be between 1 and 104")
-	}
-	if len(plan.Interventions) == 0 {
-		return errors.New("treatment requires at least one intervention")
-	}
-	for index, intervention := range plan.Interventions {
-		if strings.TrimSpace(intervention.Kind) == "" || strings.TrimSpace(intervention.Title) == "" {
-			return fmt.Errorf("intervention %d requires kind and title", index)
-		}
 	}
 	return nil
 }

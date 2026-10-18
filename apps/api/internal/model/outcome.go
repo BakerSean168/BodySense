@@ -7,26 +7,6 @@ import (
 	"gorm.io/datatypes"
 )
 
-// Intervention is one executable unit from an accepted TreatmentRevision.
-type Intervention struct {
-	ID                  uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID              uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	TreatmentID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"treatment_id"`
-	TreatmentRevisionID uuid.UUID      `gorm:"type:uuid;not null;index" json:"treatment_revision_id"`
-	Kind                string         `gorm:"type:varchar(40);not null" json:"kind"`
-	Title               string         `gorm:"type:text;not null" json:"title"`
-	Description         string         `gorm:"type:text;not null;default:''" json:"description"`
-	Prescription        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"prescription"`
-	Position            int            `gorm:"not null;default:0" json:"position"`
-	Status              string         `gorm:"type:varchar(20);not null" json:"status"`
-	StartedAt           *time.Time     `json:"started_at,omitempty"`
-	EndedAt             *time.Time     `json:"ended_at,omitempty"`
-	CreatedAt           time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt           time.Time      `gorm:"not null;default:now()" json:"updated_at"`
-}
-
-func (Intervention) TableName() string { return "interventions" }
-
 // Outcome records what the user reported after training or another
 // intervention. It is linked to no plan or revision. CausalityLevel defaults
 // to association_only so temporal sequence is not misrepresented as proof.
