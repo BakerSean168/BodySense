@@ -37,6 +37,55 @@ type PlanProposalInput struct {
 	InitiatedBy        trainingplan.Initiator
 	SourceID           string
 	IdempotencyKey     string
+	// Generation is set only by the Go Agent generation path, never from a
+	// request body. It is excluded from the user request fingerprint.
+	Generation *PlanGeneration `json:"-"`
+}
+
+// PlanGeneration is the Go-built audit of one Agent generation. The command
+// fingerprint binds the user's generation command (not the Agent output), so a
+// retried key replays the stored proposal instead of a new Agent result.
+type PlanGeneration struct {
+	CommandFingerprint      string
+	FrozenBodyStateRevision int64
+	Provenance              json.RawMessage
+	ReplayInput             json.RawMessage
+}
+
+// planProposalRequestFingerprint is what an idempotency key is bound to: the
+// whole user input, or the user's generation command for an Agent proposal.
+func planProposalRequestFingerprint(input PlanProposalInput) string {
+	if input.Generation != nil {
+		return planGenerationRequestFingerprint(input.Generation.CommandFingerprint)
+	}
+	return planDigest(input)
+}
+
+func planGenerationRequestFingerprint(command string) string {
+	return planDigest(struct {
+		Kind    string
+		Command string
+	}{"agent_generation", command})
+}
+
+func validPlanGeneration(input PlanProposalInput) bool {
+	g := input.Generation
+	if g == nil {
+		return true
+	}
+	return input.InitiatedBy == trainingplan.InitiatorAgent && input.PlanID == uuid.Nil &&
+		validPlanHexDigest(g.CommandFingerprint) && g.FrozenBodyStateRevision >= 0 &&
+		planJSONObject(g.Provenance) && planJSONObject(g.ReplayInput)
+}
+
+func validPlanHexDigest(value string) bool {
+	decoded, err := hex.DecodeString(value)
+	return err == nil && len(decoded) == sha256.Size && strings.ToLower(value) == value
+}
+
+func planJSONObject(raw json.RawMessage) bool {
+	var object map[string]json.RawMessage
+	return len(raw) > 0 && json.Unmarshal(raw, &object) == nil && object != nil
 }
 
 // PlanDecision is an explicit authenticated user's manual command. ActorUserID
@@ -95,16 +144,22 @@ func (s *IndependentTrainingPlanService) lock(ctx context.Context, owner uuid.UU
 	return err
 }
 func (s *IndependentTrainingPlanService) currentContext(ctx context.Context, owner, plan uuid.UUID, conditions []uuid.UUID) (trainingplan.CurrentContext, error) {
+	current, _, err := s.currentContextAtRevision(ctx, owner, plan, conditions)
+	return current, err
+}
+
+// currentContextAtRevision also returns the locked BodyState revision.
+func (s *IndependentTrainingPlanService) currentContextAtRevision(ctx context.Context, owner, plan uuid.UUID, conditions []uuid.UUID) (trainingplan.CurrentContext, int64, error) {
 	revision, diagnosis, err := s.repo.LockContext(ctx, owner, conditions)
 	if err != nil {
 		if errors.Is(err, ErrPlanNotFound) {
-			return trainingplan.CurrentContext{}, ErrPlanNotFound
+			return trainingplan.CurrentContext{}, 0, ErrPlanNotFound
 		}
-		return trainingplan.CurrentContext{}, fmt.Errorf("%w: %w", ErrPlanContextUnavailable, err)
+		return trainingplan.CurrentContext{}, 0, fmt.Errorf("%w: %w", ErrPlanContextUnavailable, err)
 	}
 	snapshot, err := s.body.GetBodyState(ctx, owner, 1)
 	if err != nil || snapshot == nil || snapshot.CurrentRevision != revision {
-		return trainingplan.CurrentContext{}, ErrPlanContextUnavailable
+		return trainingplan.CurrentContext{}, 0, ErrPlanContextUnavailable
 	}
 	// Include source availability and the temporal applicability of every
 	// restriction. A review point or validity boundary cannot replay old context.
@@ -131,11 +186,11 @@ func (s *IndependentTrainingPlanService) currentContext(ctx context.Context, own
 	if plan != uuid.Nil {
 		row, err := s.repo.Plan(ctx, owner, plan)
 		if err != nil {
-			return current, err
+			return current, revision, err
 		}
 		current.CurrentAcceptedPlanRevisionID = *row.CurrentAcceptedRevisionID
 	}
-	return current, nil
+	return current, revision, nil
 }
 func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid.UUID, input PlanProposalInput) (*model.PlanProposal, error) {
 	if !validPlanKey(input.IdempotencyKey) || strings.TrimSpace(input.SourceID) == "" || (input.InitiatedBy != trainingplan.InitiatorUser && input.InitiatedBy != trainingplan.InitiatorAgent) {
@@ -144,9 +199,10 @@ func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid
 	if err := validatePlanDraft(input.Draft); err != nil {
 		return nil, err
 	}
-	if (input.PlanID == uuid.Nil) != (input.ExpectedRevisionID == uuid.Nil) {
+	if (input.PlanID == uuid.Nil) != (input.ExpectedRevisionID == uuid.Nil) || !validPlanGeneration(input) {
 		return nil, ErrPlanInvalid
 	}
+	requestFingerprint := planProposalRequestFingerprint(input)
 	var proposal *model.PlanProposal
 	err := s.tx.WithinTransaction(ctx, func(ctx context.Context) error {
 		if err := s.lock(ctx, owner); err != nil {
@@ -157,17 +213,21 @@ func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid
 			return err
 		}
 		if existing != nil {
-			if existing.RequestFingerprint != planDigest(input) {
+			if existing.RequestFingerprint != requestFingerprint || (existing.GenerationProvenance != nil) != (input.Generation != nil) {
 				return ErrPlanConflict
 			}
 			proposal = existing
 			return nil
 		}
-		current, err := s.currentContext(ctx, owner, input.PlanID, input.Draft.RelatedConditionIDs)
+		current, bodyRevision, err := s.currentContextAtRevision(ctx, owner, input.PlanID, input.Draft.RelatedConditionIDs)
 		if err != nil {
 			return err
 		}
 		if current.CurrentAcceptedPlanRevisionID != input.ExpectedRevisionID {
+			return ErrPlanConflict
+		}
+		// The Agent saw a frozen BodyState; any change while it ran is stale.
+		if input.Generation != nil && input.Generation.FrozenBodyStateRevision != bodyRevision {
 			return ErrPlanConflict
 		}
 		if err := s.repo.ValidateBodyRefs(ctx, owner, input.Draft.RelatedBodyRefs); err != nil {
@@ -178,7 +238,11 @@ func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid
 			return ErrPlanInvalid
 		}
 		now := s.now()
-		proposal = &model.PlanProposal{ID: uuid.New(), UserID: owner, Kind: trainingplan.ProposalCreate, State: trainingplan.ProposalPending, InitiatedBy: input.InitiatedBy, SourceID: input.SourceID, Draft: raw, ContentFingerprint: planDigest(input.Draft), RelevantContextFingerprint: current.RelevantContextFingerprint, CreatedAt: now, ExpiresAt: now.Add(trainingplan.ProposalTTL), IdempotencyKey: input.IdempotencyKey, RequestFingerprint: planDigest(input)}
+		proposal = &model.PlanProposal{ID: uuid.New(), UserID: owner, Kind: trainingplan.ProposalCreate, State: trainingplan.ProposalPending, InitiatedBy: input.InitiatedBy, SourceID: input.SourceID, Draft: raw, ContentFingerprint: planDigest(input.Draft), RelevantContextFingerprint: current.RelevantContextFingerprint, CreatedAt: now, ExpiresAt: now.Add(trainingplan.ProposalTTL), IdempotencyKey: input.IdempotencyKey, RequestFingerprint: requestFingerprint}
+		if input.Generation != nil {
+			proposal.GenerationProvenance = input.Generation.Provenance
+			proposal.ReplayInput = input.Generation.ReplayInput
+		}
 		if input.PlanID != uuid.Nil {
 			proposal.Kind = trainingplan.ProposalUpdate
 			proposal.PlanID = &input.PlanID
@@ -191,6 +255,16 @@ func (s *IndependentTrainingPlanService) Propose(ctx context.Context, owner uuid
 	}
 	return proposal, nil
 }
+
+// ProposalByIdempotencyKey reads the owner's proposal stored under key, or nil.
+// The generation path uses it to replay a retried command before any Agent call.
+func (s *IndependentTrainingPlanService) ProposalByIdempotencyKey(ctx context.Context, owner uuid.UUID, key string) (*model.PlanProposal, error) {
+	if !validPlanKey(key) {
+		return nil, ErrPlanInvalid
+	}
+	return s.repo.ProposalByKey(ctx, owner, key)
+}
+
 func proposalSnapshot(p *model.PlanProposal) trainingplan.Proposal {
 	result := trainingplan.Proposal{ID: p.ID, UserID: p.UserID, Kind: p.Kind, State: p.State, InitiatedBy: p.InitiatedBy, SourceID: p.SourceID, ContentFingerprint: p.ContentFingerprint, RelevantContextFingerprint: p.RelevantContextFingerprint, CreatedAt: p.CreatedAt, ExpiresAt: p.ExpiresAt}
 	if p.PlanID != nil {

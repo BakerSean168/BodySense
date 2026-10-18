@@ -125,6 +125,87 @@ evaluated on every read: `permitsExecution=false` for block/unavailable, and
 missing, unscreened or unrecognized Safety is never allow. Neither projection
 modifies status, content or revisions.
 
-Still open: Treatment generation → `PlanProposal(create)` (needs the AI
-service to emit `TrainingPlanContent` sessions) and slice 3, which deletes
+## Slice 2b · Treatment generation → agent `PlanProposal(create)`
+
+`POST /api/v1/plan-proposals/generations` (`generatePlanProposal`) takes the
+authenticated user's generation command: optional `diagnosisAnalysisId`
+(latest when omitted), `userConstraints`, `changeReason` and an
+`idempotencyKey`. The owner comes only from auth; the body cannot carry an
+owner, draft, initiator or decision. It returns the pending agent proposal as
+`PlanProposalRecord`: 201 when new, 200 for an idempotent replay.
+
+`TreatmentService.GeneratePlanProposal` reuses the Treatment generation core
+(`runGeneration`): the Go decision policy and Safety gate, the frozen replay
+input, the Agent call, and the configuration identity, governance and
+evidence-trace checks. Python projects the governed output onto a strict
+`training-plan-agent-proposal-v1` block:
+
+```json
+{
+  "schemaRevision": "training-plan-agent-proposal-v1",
+  "outcome": "proposed | unavailable",
+  "reason": "…(unavailable only)",
+  "title": "…",
+  "goal": "…",
+  "summary": "…",
+  "content": {
+    "sessions": [
+      {
+        "title": "…",
+        "stages": [
+          {
+            "phase": "warmup|main|cooldown",
+            "exercises": [
+              {
+                "exerciseId": "chin_tuck",
+                "nameSnapshot": "…",
+                "sets": 2,
+                "target": {
+                  "kind": "repetitions|duration|distance",
+                  "min|max|seconds|meters": 1
+                },
+                "restSeconds": 30,
+                "side": "…",
+                "loadOrIntensity": "…",
+                "instructions": "…"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frequency": { "sessionsPerWeek": 3, "description": "…" },
+    "constraints": []
+  },
+  "evidenceIds": []
+}
+```
+
+- Go decodes it with unknown fields rejected, so an Agent-chosen template,
+  entry, plan, revision or owner ID, a schedule, or a decision fails the whole
+  output. Go assigns every `templateId`/`planExerciseId`, sets
+  `schedule.mode=frequency_only` and runs the same `validatePlanDraft` as user
+  drafts. Evidence IDs must be ones the governed output cited.
+- `unavailable` (governance rejected or no plan) and any invalid block persist
+  nothing (HTTP 502). The Go Diagnosis/Safety gates refuse before the Agent
+  runs (HTTP 409).
+- The result is one `PlanProposal(kind=create, initiatedBy=agent,
+sourceId=treatment_agent:<configurationId>)`. No Treatment revision is
+  written, and no TrainingPlan is created, changed or activated. Only the
+  user's explicit accept writes a plan.
+- `plan_proposals.replay_input` holds the exact frozen Agent input and
+  `generation_provenance` the Agent configuration, execution, governance,
+  evidence trace, Go decision trace, rollout route and the digests of the
+  replay input and Agent block. Both columns are present together, only on
+  agent proposals. A trigger keeps every proposal's candidate, fingerprints and
+  generation audit immutable; only `state`, `decision_id` and
+  `expired_reason` change.
+- The idempotency key is bound to the user's command (owner, analysis,
+  constraints, change reason), not to the Agent output. A retry with the same
+  command returns the stored proposal without calling the Agent; a different
+  command under the same key is a 409. If the BodyState revision changed while
+  the Agent ran, the proposal is stale: 409 with no write.
+
+The legacy `POST /treatments/proposals` path is unchanged and still writes
+Treatment revisions for its current web consumer. Slice 3 deletes it with
 Treatment, the legacy `/training/*` projections and their consumers.

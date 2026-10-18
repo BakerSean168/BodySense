@@ -147,6 +147,7 @@ import type {
   DocumentIndicatorReviewRecordOutput,
   EquipmentAssetListOutput,
   EquipmentAssetOutput,
+  GeneratePlanProposalRequest,
   HealthDocumentReviewContextOutput,
   HealthDocumentReviewListResponseOutput,
   HealthWorkspaceOutput,
@@ -4555,6 +4556,60 @@ const res = await (fetchFn ?? fetch)(getCreatePlanProposalUrl(),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createPlanProposalRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PlanProposalRecord, status?: number} = new globalThis.Error();
+    const data : PlanProposalRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PlanProposalRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGeneratePlanProposalUrl = () => {
+
+
+
+
+  return `/api/v1/plan-proposals/generations`
+}
+
+/**
+ * Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+ * @summary Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
+ */
+export const generatePlanProposal = async (generatePlanProposalRequest: GeneratePlanProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getGeneratePlanProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(generatePlanProposalRequest)
   }
 )
 

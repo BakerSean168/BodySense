@@ -89,6 +89,11 @@ type PlanProposal struct {
 	ExpiresAt                  time.Time
 	DecisionID                 *uuid.UUID `gorm:"type:uuid"`
 	ExpiredReason              *string
+	// GenerationProvenance and ReplayInput are set together, only for an
+	// Agent-generated proposal: the Go-frozen input the Agent saw and its
+	// configuration/execution/governance audit. Both are immutable.
+	GenerationProvenance json.RawMessage `gorm:"type:jsonb"`
+	ReplayInput          json.RawMessage `gorm:"type:jsonb"`
 }
 
 func (PlanProposal) TableName() string { return "plan_proposals" }

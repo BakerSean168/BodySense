@@ -119,6 +119,7 @@ export * from './equipmentAssetList.zod';
 export * from './equipmentAvailability.zod';
 export * from './errorDetail.zod';
 export * from './errorEnvelope.zod';
+export * from './generatePlanProposalRequest.zod';
 export * from './healthDocumentReviewContext.zod';
 export * from './healthDocumentReviewListResponse.zod';
 export * from './healthHistoryBodyFactRecord.zod';

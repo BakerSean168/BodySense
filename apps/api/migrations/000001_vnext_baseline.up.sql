@@ -4912,6 +4912,13 @@ CREATE TABLE public.plan_proposals (
     expires_at timestamptz NOT NULL,
     decision_id uuid,
     expired_reason text CHECK (expired_reason IN ('timeout','base_revision_changed','relevant_context_changed')),
+    -- Agent generation audit (TP-002 slice 2b): the frozen Go-built input the
+    -- Agent saw and its configuration/execution/governance provenance. Both are
+    -- present together, only on agent-initiated proposals, and never change.
+    generation_provenance jsonb CHECK (generation_provenance IS NULL OR jsonb_typeof(generation_provenance) = 'object'),
+    replay_input jsonb CHECK (replay_input IS NULL OR jsonb_typeof(replay_input) = 'object'),
+    CHECK ((generation_provenance IS NULL) = (replay_input IS NULL)),
+    CHECK (generation_provenance IS NULL OR initiated_by = 'agent'),
     UNIQUE (user_id, id),
     CHECK ((kind = 'create' AND plan_id IS NULL AND based_on_revision_id IS NULL)
         OR (kind = 'update' AND plan_id IS NOT NULL AND based_on_revision_id IS NOT NULL)),
@@ -4940,6 +4947,26 @@ ALTER TABLE public.training_plans ADD CONSTRAINT training_plans_current_revision
     FOREIGN KEY (user_id, id, current_accepted_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id) DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE public.training_plans ADD CONSTRAINT independent_training_plans_status
     CHECK (current_accepted_revision_id IS NULL OR status IN ('active','paused','completed'));
+-- A proposal's candidate, fingerprints and generation audit are immutable;
+-- only its decision outcome (state, decision_id, expired_reason) may change.
+CREATE FUNCTION public.prevent_plan_proposal_content_update() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF (NEW.id, NEW.user_id, NEW.kind, NEW.initiated_by, NEW.source_id, NEW.plan_id,
+        NEW.based_on_revision_id, NEW.draft, NEW.idempotency_key, NEW.request_fingerprint,
+        NEW.content_fingerprint, NEW.relevant_context_fingerprint, NEW.created_at,
+        NEW.expires_at, NEW.generation_provenance, NEW.replay_input)
+       IS DISTINCT FROM
+       (OLD.id, OLD.user_id, OLD.kind, OLD.initiated_by, OLD.source_id, OLD.plan_id,
+        OLD.based_on_revision_id, OLD.draft, OLD.idempotency_key, OLD.request_fingerprint,
+        OLD.content_fingerprint, OLD.relevant_context_fingerprint, OLD.created_at,
+        OLD.expires_at, OLD.generation_provenance, OLD.replay_input) THEN
+        RAISE EXCEPTION 'plan proposal content and generation provenance are immutable';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER plan_proposals_content_immutable BEFORE UPDATE ON public.plan_proposals
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_plan_proposal_content_update();
 ALTER TABLE public.plan_proposals ADD CONSTRAINT plan_proposals_base_owner_fk
     FOREIGN KEY (user_id, plan_id, based_on_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id);
 CREATE TABLE public.plan_decision_receipts (

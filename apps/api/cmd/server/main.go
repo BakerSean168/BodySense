@@ -253,6 +253,7 @@ func main() {
 	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
 	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
+	treatmentService.AttachPlanProposer(service.NewIndependentTrainingPlanService(database.DB))
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
 		knowledgeSourceRegistry,
 		jobRuntime,
