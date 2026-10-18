@@ -13,7 +13,13 @@ export interface DiagnosisWindowHeaderProps {
    * outcome "提交回执" in the toolbar instead of the condition picker.
    */
   mode?: "analysis" | "receipt" | null;
+  /** Penpot Diagnosis / History: the picker reads "历史". */
+  history?: boolean;
+  onOpenHistory?: () => void;
+  onCloseHistory?: () => void;
 }
+
+const HISTORY_OPTION = "__history__";
 
 const MODE_LABELS = { analysis: "正式分析", receipt: "提交回执" } as const;
 
@@ -40,8 +46,11 @@ export function DiagnosisWindowHeader({
   selectedConditionId,
   onSelectCondition,
   mode = null,
+  history = false,
+  onOpenHistory,
+  onCloseHistory,
 }: DiagnosisWindowHeaderProps) {
-  if (mode)
+  if (mode && !history)
     return (
       <div className="bc-window-context bc-diagnosis-context">
         <DiagnosisTitle />
@@ -60,6 +69,19 @@ export function DiagnosisWindowHeader({
     ? selectedConditionId!
     : (view.confirmed[0]?.conditionId ?? "");
 
+  if (history && view.confirmed.length === 0)
+    return (
+      <div className="bc-window-context bc-diagnosis-context">
+        <DiagnosisTitle />
+        <span
+          className="bc-window-select-wrap bc-window-context-mode"
+          data-testid="diagnosis-mode"
+        >
+          历史
+        </span>
+      </div>
+    );
+
   // Penpot Diagnosis / Empty: only the window title, no empty picker.
   if (view.confirmed.length === 0)
     return (
@@ -75,9 +97,16 @@ export function DiagnosisWindowHeader({
         <select
           className="bc-window-context-select"
           aria-label="选择已确认病情"
-          value={selected}
+          value={history ? HISTORY_OPTION : selected}
           disabled={view.confirmed.length === 0}
-          onChange={(event) => onSelectCondition(event.target.value)}
+          onChange={(event) => {
+            if (event.target.value === HISTORY_OPTION) {
+              onOpenHistory?.();
+              return;
+            }
+            onSelectCondition(event.target.value);
+            onCloseHistory?.();
+          }}
         >
           {view.confirmed.length === 0 ? (
             <option value="">暂无已确认病情</option>
@@ -88,6 +117,7 @@ export function DiagnosisWindowHeader({
               </option>
             ))
           )}
+          {onOpenHistory ? <option value={HISTORY_OPTION}>历史</option> : null}
         </select>
         <ChevronDown size={15} aria-hidden="true" />
       </span>
@@ -139,6 +169,27 @@ export function TrainingWindowHeader({ view, onSelectPlan }: TrainingWindowHeade
           ))}
         </select>
         <ChevronDown size={15} aria-hidden="true" />
+      </span>
+    </div>
+  );
+}
+
+/** Penpot Safety / Restricted: 训练 / 安全限制. */
+export function TrainingSafetyHeader() {
+  return (
+    <div className="bc-window-context bc-training-context">
+      <span className="bc-window-context-title">
+        <TrainingIcon size={18} aria-hidden="true" />
+        训练
+      </span>
+      <span className="bc-window-context-sep" aria-hidden="true">
+        /
+      </span>
+      <span
+        className="bc-window-select-wrap bc-window-context-mode"
+        data-testid="training-mode"
+      >
+        安全限制
       </span>
     </div>
   );

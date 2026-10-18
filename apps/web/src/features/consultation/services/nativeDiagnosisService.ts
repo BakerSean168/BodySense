@@ -1,18 +1,26 @@
 import {
+  createNativeDiagnosisAnalysisRequest,
   decideNativeDiagnosisProposal,
+  dismissNativeDiagnosisReviewPrompt,
   getNativeDiagnosis,
   getNativeDiagnosisRun,
   listNativeDiagnosisRuns,
   settleNativeDiagnosisRun,
+  startNativeDiagnosisRun,
 } from "@/generated/api/bodysense";
+import { NativeDiagnosisAnalysisRequestCreate } from "@/generated/api/model/nativeDiagnosisAnalysisRequestCreate.zod";
 import { NativeDiagnosisDecisionRequest } from "@/generated/api/model/nativeDiagnosisDecisionRequest.zod";
+import { NativeDiagnosisReviewPromptDismissRequest } from "@/generated/api/model/nativeDiagnosisReviewPromptDismissRequest.zod";
+import { NativeDiagnosisRunStartRequest } from "@/generated/api/model/nativeDiagnosisRunStartRequest.zod";
 import { NativeDiagnosisSettlementRequest } from "@/generated/api/model/nativeDiagnosisSettlementRequest.zod";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
 // Response shapes for view models; features import them from this adapter only.
+export type { NativeDiagnosisAnalysisRequestOutput as NativeDiagnosisAnalysisRequest } from "@/generated/api/model/nativeDiagnosisAnalysisRequest.zod";
 export type { NativeDiagnosisConditionOutput as NativeDiagnosisCondition } from "@/generated/api/model/nativeDiagnosisCondition.zod";
 export type { NativeDiagnosisDecisionReceiptOutput as NativeDiagnosisDecisionReceipt } from "@/generated/api/model/nativeDiagnosisDecisionReceipt.zod";
 export type { NativeDiagnosisProjectionOutput as NativeDiagnosisProjection } from "@/generated/api/model/nativeDiagnosisProjection.zod";
+export type { NativeDiagnosisReviewPromptDismissalOutput as NativeDiagnosisReviewPromptDismissal } from "@/generated/api/model/nativeDiagnosisReviewPromptDismissal.zod";
 export type { NativeDiagnosisRunProjectionOutput as NativeDiagnosisRun } from "@/generated/api/model/nativeDiagnosisRunProjection.zod";
 export type { NativeDiagnosisRunProposalOutput as NativeDiagnosisProposal } from "@/generated/api/model/nativeDiagnosisRunProposal.zod";
 export type { NativeDiagnosisSettlementReceiptOutput as NativeDiagnosisSettlementReceipt } from "@/generated/api/model/nativeDiagnosisSettlementReceipt.zod";
@@ -23,6 +31,15 @@ export type NativeDiagnosisDecisionCommand = Parameters<
 export type NativeDiagnosisSettlementCommand = Parameters<
   typeof settleNativeDiagnosisRun
 >[1];
+export type NativeDiagnosisStartCommand = Parameters<
+  typeof startNativeDiagnosisRun
+>[0];
+export type NativeDiagnosisReviewPromptDismissCommand = Parameters<
+  typeof dismissNativeDiagnosisReviewPrompt
+>[1];
+
+/** Diagnosis History reads at most this many recent formal runs. */
+export const DIAGNOSIS_HISTORY_RUNS = 10;
 
 /**
  * V2 Diagnosis decision API. The generated client validates every response
@@ -44,6 +61,25 @@ export const nativeDiagnosisService = {
     withOpenApiError(() =>
       getNativeDiagnosisRun(runId, undefined, openApiAuthFetch),
     ),
+  /** Recent settled runs with their decisions, newest first (History). */
+  history: async () => {
+    const page = await withOpenApiError(() =>
+      listNativeDiagnosisRuns(
+        { limit: DIAGNOSIS_HISTORY_RUNS },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
+    return Promise.all(
+      page.runs
+        .filter((run) => run.state !== "open")
+        .map((run) =>
+          withOpenApiError(() =>
+            getNativeDiagnosisRun(run.runId, undefined, openApiAuthFetch),
+          ),
+        ),
+    );
+  },
   decide: (runId: string, command: NativeDiagnosisDecisionCommand) =>
     withOpenApiError(() =>
       decideNativeDiagnosisProposal(
@@ -58,6 +94,37 @@ export const nativeDiagnosisService = {
       settleNativeDiagnosisRun(
         runId,
         NativeDiagnosisSettlementRequest.parse(command),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  /** Binds the user's own chat message, verbatim, as the request statement. */
+  bindRequest: (messageId: string) =>
+    withOpenApiError(() =>
+      createNativeDiagnosisAnalysisRequest(
+        NativeDiagnosisAnalysisRequestCreate.parse({ messageId }),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  /** Starts a formal run; its proposals stay proposals until settled. */
+  start: (command: NativeDiagnosisStartCommand) =>
+    withOpenApiError(() =>
+      startNativeDiagnosisRun(
+        NativeDiagnosisRunStartRequest.parse(command),
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+  /** §3.6 "暂不处理": a UI record only; the Condition never changes. */
+  dismissReviewPrompt: (
+    conditionId: string,
+    command: NativeDiagnosisReviewPromptDismissCommand,
+  ) =>
+    withOpenApiError(() =>
+      dismissNativeDiagnosisReviewPrompt(
+        conditionId,
+        NativeDiagnosisReviewPromptDismissRequest.parse(command),
         undefined,
         openApiAuthFetch,
       ),

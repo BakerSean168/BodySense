@@ -32,6 +32,7 @@ const diagnosis: NativeDiagnosisWindowView = {
     condition("condition-1", "左肩病情"),
     condition("condition-2", "右膝病情"),
   ],
+  inactive: [],
   run: null,
   safetyBlocked: false,
   safetyReview: false,

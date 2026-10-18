@@ -34,6 +34,9 @@ import {
 import { useProfileStore } from "@/stores/profileStore";
 import { useAuthStore } from "@/stores/authStore";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const loadAssistantChatPanel = () =>
   retryDynamicImport(() => import("../components/AssistantChatPanel")).then(
     (module) => ({
@@ -251,6 +254,27 @@ export function ConsultationPage() {
     pendingInteractions,
   );
   const initialTurnSeed = replayedTurnSeed;
+  // Penpot Chat / Diagnosis request: only the user's own latest completed,
+  // persisted message can become a formal analysis request (never AI text,
+  // never a structured Ask User answer).
+  const latestUserMessage = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index]!;
+      if (message.role !== "user") continue;
+      const metadata = message.metadata as Record<string, unknown> | null | undefined;
+      if (metadata?.is_interaction_answer === true) continue;
+      if (message.status !== "completed") return null;
+      const text = (message.parts as Array<{ type?: string; text?: unknown }>)
+        .flatMap((part) =>
+          part.type === "text" && typeof part.text === "string" && part.text.trim()
+            ? [part.text.trim()]
+            : [],
+        )
+        .join("\n");
+      return UUID_PATTERN.test(message.id) && text ? { id: message.id, text } : null;
+    }
+    return null;
+  }, [messages]);
   const historicalMessages = initialTurnSeed?.consumedMessageId
     ? messages.filter(
         (message) => message.id !== initialTurnSeed.consumedMessageId,
@@ -359,6 +383,7 @@ export function ConsultationPage() {
         workspace={workspace}
         bodyExplorer={bodyExplorer}
         chat={chatPanel}
+        latestUserMessage={latestUserMessage}
         onAskContext={handleAskSpatialContext}
         onOpenProfile={() => setIsProfileOpen(true)}
         identity={personIdentity}
