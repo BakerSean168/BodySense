@@ -1926,16 +1926,191 @@
   }
 }
 
-/* UI-DX-001 slice 1: Diagnosis proposal decisions (Penpot states land in slice 2). */
-.bc-diagnosis-proposals { margin-top: 16px; display: grid; gap: 10px; }
-.bc-diagnosis-proposal[data-proposal-state="changed"] { border-color: var(--bc-secondary); }
-.bc-diagnosis-choice {
+/* UI-DX-001: Diagnosis proposal decision states (Penpot PD-DX-01 scenes).
+   AI proposals use the dashed "not a fact" frame shared with plan proposals;
+   only receipt-backed outcomes use the primary (adopted) tone. */
+.bc-diagnosis-proposals { margin-top: 16px; display: grid; gap: 10px; min-width: 0; }
+.bc-diagnosis-proposals-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bc-diagnosis-proposals-head h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.bc-diagnosis-proposals-count {
+  color: var(--bc-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.bc-diagnosis-proposals > .bc-window-note { margin: 0; }
+.bc-diagnosis-proposal-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bc-diagnosis-proposal {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px dashed color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line));
+  border-radius: 13px;
+  background: var(--bc-subtle);
+  overflow-wrap: anywhere;
+}
+.bc-diagnosis-proposal[data-proposal-state="pending"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--bc-warning) 35%, var(--bc-line));
+}
+.bc-diagnosis-proposal[data-proposal-state="changed"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--bc-warning) 55%, var(--bc-line));
+  background: var(--bc-warning-soft);
+}
+.bc-diagnosis-proposal[data-proposal-state="rejected"] { background: var(--bc-paper); }
+.bc-diagnosis-proposal[data-proposal-state="rejected"] .bc-diagnosis-proposal-title strong {
+  color: var(--bc-secondary);
+}
+.bc-diagnosis-proposal[data-proposal-state="committed"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--bc-primary) 40%, var(--bc-line));
+  background: var(--bc-primary-soft);
+}
+.bc-diagnosis-proposal-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+.bc-diagnosis-proposal-position { color: var(--bc-muted); font-size: 11px; font-weight: 650; }
+.bc-diagnosis-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bc-blue-soft);
+  color: var(--bc-blue);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.bc-diagnosis-badge[data-state="pending"] { background: var(--bc-warning-soft); color: var(--bc-warning); }
+.bc-diagnosis-badge[data-state="changed"] { background: var(--bc-paper); color: var(--bc-warning); }
+.bc-diagnosis-badge[data-state="rejected"] { background: var(--bc-stage); color: var(--bc-secondary); }
+.bc-diagnosis-badge[data-state="committed"] { background: var(--bc-paper); color: var(--bc-primary); }
+.bc-diagnosis-proposal-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
   margin: 0;
+}
+.bc-diagnosis-proposal-title strong { font-size: 13px; font-weight: 700; }
+.bc-diagnosis-proposal-level { color: var(--bc-secondary); font-size: 11px; }
+.bc-diagnosis-proposal-summary { margin: 0; color: var(--bc-secondary); font-size: 12px; line-height: 1.6; }
+.bc-diagnosis-choice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  margin: 2px 0 0;
   padding: 0;
   border: 0;
-  font-size: 12px;
 }
-.bc-diagnosis-choice label { display: inline-flex; align-items: center; gap: 4px; }
+.bc-diagnosis-choice label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-paper);
+  color: var(--bc-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.bc-diagnosis-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.bc-diagnosis-choice label:hover { border-color: var(--bc-secondary); color: var(--bc-ink); }
+.bc-diagnosis-choice label:has(input:focus-visible) {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-diagnosis-choice label:has(input:checked) {
+  border-color: var(--bc-primary);
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.bc-diagnosis-choice label[data-choice="reject"]:has(input:checked) {
+  border-color: var(--bc-secondary);
+  background: var(--bc-stage);
+  color: var(--bc-ink);
+}
+.bc-diagnosis-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.bc-diagnosis-actions > .bc-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  white-space: normal;
+  text-align: center;
+}
+/* `.bc-workspace button { font: inherit }` would otherwise enlarge the label. */
+.bc-workspace .bc-diagnosis-actions > .bc-button { font-size: 12px; font-weight: 600; }
+.bc-diagnosis-actions > .bc-button:focus-visible { outline: 2px solid var(--bc-primary); outline-offset: 2px; }
+.bc-diagnosis-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--bc-primary) 35%, var(--bc-line));
+  border-radius: 12px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.bc-diagnosis-outcome[data-outcome="closed_without_change"] {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+  color: var(--bc-secondary);
+}
+.bc-diagnosis-outcome > svg,
+.bc-diagnosis-safety > svg { flex: 0 0 auto; margin-top: 2px; }
+.bc-diagnosis-outcome-title { margin: 0; color: inherit; font-size: 13px; font-weight: 700; }
+.bc-diagnosis-outcome-text { margin: 2px 0 0; color: var(--bc-secondary); font-size: 12px; line-height: 1.55; }
+.bc-diagnosis-safety {
+  border-color: color-mix(in srgb, var(--bc-danger) 35%, var(--bc-line));
+  background: var(--bc-danger-soft);
+  color: var(--bc-danger);
+}
+.bc-diagnosis-safety p { margin: 0; }
+
+/* 390px Mobile: one scroll boundary, 16px gutters, 44px touch targets. */
+[data-testid="diagnosis-window"] .bc-window-body {
+  min-width: 0;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+}
+@media (max-width: 760px) {
+  [data-testid="diagnosis-window"] .bc-window-body {
+    padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  [data-testid="diagnosis-window"] .bc-condition { padding: 12px 14px; }
+  [data-testid="diagnosis-window"] .bc-condition-row { grid-template-columns: 64px minmax(0, 1fr); }
+  .bc-diagnosis-choice label { min-height: 44px; font-size: 13px; }
+  .bc-diagnosis-actions { flex-direction: column; align-items: stretch; }
+  .bc-diagnosis-actions > .bc-button { width: 100%; min-height: 44px; padding: 10px 14px; }
+  .bc-workspace .bc-diagnosis-actions > .bc-button { font-size: 13px; }
+}

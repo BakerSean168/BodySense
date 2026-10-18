@@ -1,4 +1,10 @@
-import { AlertTriangle, LoaderCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleSlash,
+  LoaderCircle,
+  ShieldAlert,
+} from "lucide-react";
 import {
   CERTAINTY_LABELS,
   type ConfirmedCondition,
@@ -117,6 +123,13 @@ const CHOICE_LABELS: Record<ProposalChoice, string> = {
   reject: "不采纳",
 };
 
+const CHANGE_KIND_LABELS: Record<ProposalRow["changeKind"], string> = {
+  create: "新病情",
+  update: "更新病情",
+  set_disposition: "调整状态",
+  update_relation: "调整关联",
+};
+
 function ProposalItem({
   row,
   controls,
@@ -126,25 +139,47 @@ function ProposalItem({
 }) {
   const choice = controls?.selection[row.proposalId] ?? null;
   const group = `diagnosis-proposal-${row.proposalId}`;
+  const titleId = `${group}-title`;
   return (
     <li
-      className="bc-record-item bc-diagnosis-proposal"
+      className="bc-diagnosis-proposal"
       data-proposal-id={row.proposalId}
       data-proposal-state={row.state}
+      aria-labelledby={titleId}
     >
-      <p className="bc-record-statement">
+      <div className="bc-diagnosis-proposal-meta">
+        <span className="bc-diagnosis-proposal-position">
+          提案 {row.position}/{row.total} · {CHANGE_KIND_LABELS[row.changeKind]}
+        </span>
+        <span
+          className="bc-diagnosis-badge"
+          data-state={row.state}
+          data-testid="proposal-state"
+        >
+          {row.stateLabel}
+        </span>
+      </div>
+      <p className="bc-diagnosis-proposal-title" id={titleId}>
         <strong>{row.title}</strong>
-        {row.levelLabel ? ` · AI 判断${row.levelLabel}` : null}
+        {row.levelLabel ? (
+          <span className="bc-diagnosis-proposal-level">
+            AI 判断{row.levelLabel}
+          </span>
+        ) : null}
       </p>
-      {row.summary ? <p className="bc-window-note">{row.summary}</p> : null}
-      <p className="bc-window-note" data-testid="proposal-state">
-        {row.stateLabel}
-      </p>
+      {row.summary ? (
+        <p className="bc-diagnosis-proposal-summary">{row.summary}</p>
+      ) : null}
+      {row.state === "rejected" ? (
+        <p className="bc-condition-note">
+          不采纳只表示这次不写入诊断，不代表医学上已经排除。
+        </p>
+      ) : null}
       {row.needsReview && controls ? (
-        <div className="bc-record-actions">
+        <div className="bc-diagnosis-actions">
           <button
             type="button"
-            className="bc-text-button"
+            className="bc-button"
             disabled={controls.busy}
             onClick={() => controls.onReview(row.proposalId)}
           >
@@ -156,7 +191,7 @@ function ProposalItem({
         <fieldset className="bc-diagnosis-choice">
           <legend className="sr-only">对“{row.title}”的选择</legend>
           {(["accept", "reject"] as const).map((value) => (
-            <label key={value}>
+            <label key={value} data-choice={value}>
               <input
                 type="radio"
                 name={group}
@@ -164,10 +199,10 @@ function ProposalItem({
                 checked={choice === value}
                 onChange={() => controls.onSelect(row.proposalId, value)}
               />
-              {CHOICE_LABELS[value]}
+              <span>{CHOICE_LABELS[value]}</span>
             </label>
           ))}
-          <label>
+          <label data-choice="none">
             <input
               type="radio"
               name={group}
@@ -175,7 +210,7 @@ function ProposalItem({
               checked={choice === null}
               onChange={() => controls.onSelect(row.proposalId, null)}
             />
-            暂不决定
+            <span>暂不决定</span>
           </label>
         </fieldset>
       ) : null}
@@ -190,6 +225,55 @@ function settleLabel(run: DiagnosisRunView): string {
     : `写入已采纳的 ${run.acceptedCount} 条`;
 }
 
+/** Receipt / Update receipt / No changes: shown only from a receipt or server state. */
+function RunOutcome({ run }: { run: DiagnosisRunView }) {
+  if (run.phase === "committed" || run.phase === "updated") {
+    const receipt = run.committedReceiptId?.slice(0, 8) ?? "";
+    return (
+      <div
+        role="status"
+        className="bc-diagnosis-outcome"
+        data-outcome={run.phase}
+        data-testid="diagnosis-receipt"
+      >
+        <CheckCircle2 size={16} aria-hidden="true" />
+        <div>
+          <p className="bc-diagnosis-outcome-title">
+            {run.phase === "updated" ? "综合诊断已更新" : "已写入综合诊断"}
+          </p>
+          <p className="bc-diagnosis-outcome-text">
+            {run.committedCount > 0
+              ? `${run.committedCount} 条已采纳的提案已写入，`
+              : null}
+            写入回执 {receipt}。
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (run.phase === "closed_without_change") {
+    return (
+      <div
+        role="status"
+        className="bc-diagnosis-outcome"
+        data-outcome={run.phase}
+        data-testid="diagnosis-no-change"
+      >
+        <CircleSlash size={16} aria-hidden="true" />
+        <div>
+          <p className="bc-diagnosis-outcome-title">
+            本次分析已结束，没有写入诊断
+          </p>
+          <p className="bc-diagnosis-outcome-text">
+            综合诊断保持不变；未采纳的提案不会出现在病情列表里。
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
 function ProposalPanel({
   run,
   controls,
@@ -200,32 +284,36 @@ function ProposalPanel({
   const chosen = run.proposals.filter(
     (row) => row.selectable && controls?.selection[row.proposalId],
   ).length;
+  const deciding = run.phase === "deciding";
   return (
     <section
       className="bc-diagnosis-proposals"
       aria-label="待决定的分析提案"
       data-testid="diagnosis-proposals"
+      data-phase={run.phase}
     >
-      <h3 className="text-sm font-medium">分析提案</h3>
+      <div className="bc-diagnosis-proposals-head">
+        <h3>分析提案</h3>
+        {deciding ? (
+          <span className="bc-diagnosis-proposals-count">
+            待决定 {run.undecidedCount} / {run.proposals.length}
+          </span>
+        ) : null}
+      </div>
       <p className="bc-window-note">
         以下内容由 AI
         分析生成，只是提案。你决定并确认写入、收到写入回执后，才会成为诊断的一部分。
       </p>
-      {run.committedReceiptId ? (
-        <p role="status" className="bc-window-note">
-          已写入诊断（回执 {run.committedReceiptId.slice(0, 8)}）。
-        </p>
-      ) : run.state !== "open" || run.outcome === "closed_without_change" ? (
-        <p role="status" className="bc-window-note">
-          本次分析已结束，没有写入诊断。
-        </p>
-      ) : null}
-      {run.changed ? (
-        <p role="alert" className="bc-window-note">
-          诊断在提案生成后已经变化，这些提案不能再直接决定。请请求重新分析。
+      <RunOutcome run={run} />
+      {run.changed && deciding ? (
+        <p role="alert" className="bc-window-alert">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>
+            诊断在提案生成后已经变化，这些提案不能再直接决定。请请求重新分析。
+          </span>
         </p>
       ) : null}
-      <ul className="bc-record-list">
+      <ul className="bc-diagnosis-proposal-list">
         {run.proposals.map((row) => (
           <ProposalItem key={row.proposalId} row={row} controls={controls} />
         ))}
@@ -235,11 +323,11 @@ function ProposalPanel({
           {controls.error}
         </p>
       ) : null}
-      {controls && run.state === "open" && !run.committedReceiptId ? (
-        <div className="bc-record-actions">
+      {controls && run.state === "open" && deciding ? (
+        <div className="bc-diagnosis-actions" data-testid="diagnosis-decide">
           <button
             type="button"
-            className="bc-button"
+            className="bc-button bc-primary"
             disabled={!run.canDecide || chosen === 0 || controls.busy}
             onClick={controls.onRecordSelection}
           >
@@ -250,7 +338,7 @@ function ProposalPanel({
           </button>
           <button
             type="button"
-            className="bc-text-button"
+            className="bc-button"
             disabled={!run.canSettle || chosen > 0 || controls.busy}
             onClick={controls.onSettle}
           >
@@ -275,7 +363,7 @@ export function DiagnosisWindow({
   error = null,
   controls,
 }: DiagnosisWindowProps) {
-  const { confirmed, run, safetyBlocked } = view;
+  const { confirmed, run, safetyBlocked, safetyReview } = view;
   const selected =
     confirmed.find(
       (condition) => condition.conditionId === selectedConditionId,
@@ -301,12 +389,26 @@ export function DiagnosisWindow({
           </p>
         ) : (
           <>
-            {safetyBlocked ? (
-              <div role="alert" className="bc-window-alert">
-                <AlertTriangle size={16} />
-                <span>
-                  当前分析因安全原因停止，提案不会写入诊断。请先处理安全提醒，再请求重新分析。
-                </span>
+            {safetyBlocked || safetyReview ? (
+              <div
+                role="alert"
+                className="bc-window-alert bc-diagnosis-safety"
+                data-testid="diagnosis-safety"
+                data-reason={safetyBlocked ? "safety_stopped" : "safety_review"}
+              >
+                <ShieldAlert size={16} aria-hidden="true" />
+                <div>
+                  <p className="bc-diagnosis-outcome-title">
+                    {safetyBlocked
+                      ? "分析已因安全原因停止"
+                      : "需要先处理安全提醒"}
+                  </p>
+                  <p className="bc-diagnosis-outcome-text">
+                    {safetyBlocked
+                      ? "当前分析因安全原因停止，提案不会写入诊断。请先处理安全提醒，再请求重新分析。"
+                      : "安全提醒尚未处理，分析提案现在只能查看，不能决定或写入诊断。"}
+                  </p>
+                </div>
               </div>
             ) : null}
             {selected ? (

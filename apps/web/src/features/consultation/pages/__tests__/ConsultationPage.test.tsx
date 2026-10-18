@@ -127,7 +127,7 @@ describe("ConsultationPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the deep-linked business window from ?view=", () => {
+  it("opens the deep-linked business window from ?view=", async () => {
     mockUseConversationQuery.mockReturnValue({
       data: { conversationId: "conv-1" },
       isPending: false,
@@ -142,7 +142,8 @@ describe("ConsultationPage", () => {
     renderConsultationPage("/consultation/conv-1?view=diagnosis");
 
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
-    expect(screen.getByTestId("diagnosis-window")).toBeInTheDocument();
+    // The Diagnosis window body is lazy-loaded.
+    expect(await screen.findByTestId("diagnosis-window")).toBeInTheDocument();
   });
 
   it("ignores an unknown ?view= value and stays body-first", () => {
