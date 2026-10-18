@@ -52,8 +52,8 @@ func TestTrainingOwnerLockConcurrentNativePG18(t *testing.T) {
 		t.Fatalf("synthetic forward preview must remove old active index: index=%v err=%v", oldUniqueIndex, err)
 	}
 	if err := db.Raw("SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='training_plans' AND indexname='idx_training_plans_treatment_revision')").
-		Scan(&revisionIndex).Error; err != nil || !revisionIndex {
-		t.Fatalf("accepted TreatmentRevision idempotency index must remain: index=%v err=%v", revisionIndex, err)
+		Scan(&revisionIndex).Error; err != nil || revisionIndex {
+		t.Fatalf("the TreatmentRevision index must be gone with Treatment: index=%v err=%v", revisionIndex, err)
 	}
 	owner, other := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, other} {

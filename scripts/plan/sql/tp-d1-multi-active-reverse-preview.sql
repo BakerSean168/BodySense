@@ -17,13 +17,6 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'TP-D1 reverse blocked: legacy active index already exists';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND tablename = 'training_plans'
-      AND indexname = 'idx_training_plans_treatment_revision'
-  ) THEN
-    RAISE EXCEPTION 'TP-D1 reverse prerequisite: TreatmentRevision index missing';
-  END IF;
 END $$;
 CREATE UNIQUE INDEX idx_training_plans_user_active ON public.training_plans
   USING btree (user_id) WHERE ((status)::text = 'active'::text);

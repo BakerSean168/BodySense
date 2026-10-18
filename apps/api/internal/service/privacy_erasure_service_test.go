@@ -18,9 +18,6 @@ type fakePrivacyStore struct {
 	markRetryErr error
 }
 
-func (f *fakePrivacyStore) DeleteRestrictBoundAggregates(_ context.Context, _ uuid.UUID) error {
-	return nil
-}
 func (f *fakePrivacyStore) CountUserData(_ context.Context, _ uuid.UUID) ([]repository.PrivacyDataCount, error) {
 	return f.counts, nil
 }

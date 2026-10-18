@@ -53,17 +53,9 @@ SELECT count(*) FROM pg_indexes WHERE schemaname='public'
   AND tablename='training_plans' AND indexname='idx_training_plans_user_active';
 SQL
 }
-rev_index_exists() {
-  sql <<'SQL' | tr -d '[:space:]'
-SELECT count(*) FROM pg_indexes WHERE schemaname='public'
-  AND tablename='training_plans' AND indexname='idx_training_plans_treatment_revision';
-SQL
-}
 test "$(index_exists)" = 1
-test "$(rev_index_exists)" = 1
 sql < "$up" >/dev/null
 test "$(index_exists)" = 0
-test "$(rev_index_exists)" = 1
 sql <<'SQL' >/dev/null
 INSERT INTO users(id,email,password_hash) VALUES
 ('10000000-0000-4000-8000-000000000001','tpd1-preview-a@example.invalid','synthetic'),
@@ -95,7 +87,6 @@ if [[ "$reverse_status" -eq 0 ]] ||
   exit 1
 fi
 test "$(index_exists)" = 0
-test "$(rev_index_exists)" = 1
 test "$(check_three_plans)" = 3
 echo 'TP_D1_REVERSE_FAIL_CLOSED_WITH_MULTIPLE_ACTIVE=PASS'
 
@@ -109,7 +100,6 @@ SQL
 docker exec -i "$container" psql -X -q -1 -v ON_ERROR_STOP=1 \
   -U postgres -d synthetic_tpd1 < "$down" >/dev/null
 test "$(index_exists)" = 1
-test "$(rev_index_exists)" = 1
 test "$(check_three_plans)" = 2
 echo 'TP_D1_SYNTHETIC_RECONCILED_REVERSE=PASS'
 echo 'TP_D1_OFFLINE_MIGRATION_PREVIEW=PASS'

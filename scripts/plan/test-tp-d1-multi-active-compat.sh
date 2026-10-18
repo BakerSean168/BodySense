@@ -64,18 +64,6 @@ sql() {
   docker exec -i "$container" psql -X -q -t -A -v ON_ERROR_STOP=1 \
     -U postgres -d synthetic_tpd1
 }
-# The independently keyed TreatmentRevision index is never removed.
-revision_index="$(sql <<'SQL' | tr -d '[:space:]'
-SELECT count(*) FROM pg_indexes
-WHERE schemaname='public' AND tablename='training_plans'
-  AND indexname='idx_training_plans_treatment_revision';
-SQL
-)"
-if [[ "$revision_index" != "1" ]]; then
-  echo 'TP-D1: treatment revision idempotency index missing' >&2
-  exit 1
-fi
-
 legacy_index="$(sql <<'SQL' | tr -d '[:space:]'
 SELECT count(*) FROM pg_indexes
 WHERE schemaname='public' AND tablename='training_plans'

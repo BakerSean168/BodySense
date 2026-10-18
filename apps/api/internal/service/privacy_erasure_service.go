@@ -29,7 +29,6 @@ type PrivacyErasurePlan struct {
 }
 
 type privacyErasureStore interface {
-	DeleteRestrictBoundAggregates(ctx context.Context, userID uuid.UUID) error
 	CountUserData(ctx context.Context, userID uuid.UUID) ([]repository.PrivacyDataCount, error)
 	CreateOrGet(ctx context.Context, userID uuid.UUID, subjectDigest string, report datatypes.JSON) (*model.PrivacyErasureRequest, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.PrivacyErasureRequest, error)
@@ -172,12 +171,8 @@ func (s *PrivacyErasureService) ProcessRequest(ctx context.Context, id uuid.UUID
 		return fail("delete database subject", errors.New("transaction manager is not configured"))
 	}
 	if err := s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
-		// Preserve the normal TreatmentRevision -> Diagnosis RESTRICT contract.
-		// Only this privileged erasure transaction may remove the Treatment
-		// aggregate first so the subsequent user cascade can erase Diagnosis.
-		if err := s.requests.DeleteRestrictBoundAggregates(txCtx, userID); err != nil {
-			return err
-		}
+		// Every user-owned row cascades from the user; no domain FK restricts
+		// the delete since Treatment was removed (TP-002 slice 3).
 		return s.users.DeleteByID(txCtx, userID)
 	}); err != nil {
 		return fail("delete database subject", err)

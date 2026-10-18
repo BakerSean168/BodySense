@@ -37,8 +37,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	runID := uuid.New()
 	turnID := uuid.New()
 	analysisID := uuid.New()
-	treatmentID := uuid.New()
-	revisionID := uuid.New()
 	uploadID := uuid.New()
 	email := "privacy-" + userID.String() + "@example.test"
 
@@ -83,9 +81,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	mustExec("INSERT INTO diagnosis_candidates(analysis_id,ordinal,name,confidence,basis,raw_payload) VALUES (?,?,?,?,?,?)", analysisID, 1, "synthetic candidate", "medium", "private basis", `{"private":true}`)
 	mustExec("INSERT INTO diagnosis_rollout_observations(source_analysis_id,stage,subject_bucket,champion_configuration_id,challenger_configuration_id,served_configuration_id,comparison) VALUES (?,?,?,?,?,?,?)", analysisID, "shadow", 7, "champion", "challenger", "champion", `{"private":"comparison"}`)
 
-	mustExec("INSERT INTO treatments(id,user_id,current_revision,status,source_body_state_revision,source_diagnosis_analysis_id) VALUES (?,?,?,?,?,?)", treatmentID, userID, 1, "active", 1, analysisID)
-	mustExec("INSERT INTO treatment_revisions(id,treatment_id,revision,acceptance_state,lifecycle_state,source_body_state_revision,source_diagnosis_analysis_id,goal,duration_weeks,plan) VALUES (?,?,?,?,?,?,?,?,?,?)", revisionID, treatmentID, 1, "accepted", "active", 1, analysisID, "private goal", 4, `{"private":"treatment"}`)
-	mustExec("INSERT INTO outcomes(user_id,treatment_id,treatment_revision_id,source_type,source_key,kind,value,notes,occurred_at) VALUES (?,?,?,?,?,?,?,?,?)", userID, treatmentID, revisionID, "synthetic", "privacy-outcome", "pain", `{"score":4}`, "private outcome", time.Now().UTC())
+	mustExec("INSERT INTO outcomes(user_id,source_type,source_key,kind,value,notes,occurred_at) VALUES (?,?,?,?,?,?,?)", userID, "synthetic", "privacy-outcome", "pain", `{"score":4}`, "private outcome", time.Now().UTC())
 
 	mini := miniredis.RunT(t)
 	redisClient := redis.NewClient(&redis.Options{Addr: mini.Addr()})
@@ -137,8 +133,6 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		{name: "diagnosis_analyses", query: "SELECT COUNT(*) FROM diagnosis_analyses WHERE user_id = ?", arg: userID},
 		{name: "diagnosis_candidates", query: "SELECT COUNT(*) FROM diagnosis_candidates WHERE analysis_id = ?", arg: analysisID},
 		{name: "diagnosis_rollout_observations", query: "SELECT COUNT(*) FROM diagnosis_rollout_observations WHERE source_analysis_id = ?", arg: analysisID},
-		{name: "treatments", query: "SELECT COUNT(*) FROM treatments WHERE user_id = ?", arg: userID},
-		{name: "treatment_revisions", query: "SELECT COUNT(*) FROM treatment_revisions WHERE treatment_id = ?", arg: treatmentID},
 		{name: "outcomes", query: "SELECT COUNT(*) FROM outcomes WHERE user_id = ?", arg: userID},
 	}
 	for _, check := range checks {

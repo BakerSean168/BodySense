@@ -172,23 +172,27 @@ if [[ "$diagnosis_current_analyses" -lt 1 || "$diagnosis_non_current_analyses" -
 fi
 echo "DIAGNOSIS_BASELINE_VALIDATION=PASS current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}"
 
-treatment_current_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
-treatment_non_current_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id<>'treat-config-f68eec9846664596';")"
-treatment_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations;")"
-if [[ "$treatment_current_revisions" -lt 1 || "$treatment_non_current_revisions" -ne 0 || "$treatment_rollout_observations" -ne 0 ]]; then
-  echo "TREATMENT_BASELINE_VALIDATION=FAIL current=${treatment_current_revisions} non_current=${treatment_non_current_revisions} rollout_observations=${treatment_rollout_observations}" >&2
+# Treatment Agent generation persists only pending agent PlanProposals
+# (TP-002 slice 3 removed treatment_revisions and rollout observations).
+treatment_agent_sql() {
+  "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "$1"
+}
+treatment_current_proposals="$(treatment_agent_sql "SELECT count(*) FROM plan_proposals WHERE source_id='treatment_agent:treat-config-f68eec9846664596';")"
+treatment_non_current_proposals="$(treatment_agent_sql "SELECT count(*) FROM plan_proposals WHERE source_id LIKE 'treatment_agent:%' AND source_id<>'treatment_agent:treat-config-f68eec9846664596';")"
+if [[ "$treatment_current_proposals" -lt 1 || "$treatment_non_current_proposals" -ne 0 ]]; then
+  echo "TREATMENT_BASELINE_VALIDATION=FAIL current=${treatment_current_proposals} non_current=${treatment_non_current_proposals}" >&2
   exit 1
 fi
-echo "TREATMENT_BASELINE_VALIDATION=PASS current=${treatment_current_revisions} non_current=${treatment_non_current_revisions} rollout_observations=${treatment_rollout_observations}"
+echo "TREATMENT_BASELINE_VALIDATION=PASS current=${treatment_current_proposals} non_current=${treatment_non_current_proposals}"
 
-treatment_decision_traces="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE generation_decision_trace <> '{}'::jsonb AND acceptance_state='accepted' AND acceptance_decision_trace <> '{}'::jsonb;")"
+treatment_decision_traces="$(treatment_agent_sql "SELECT count(*) FROM plan_proposals WHERE source_id LIKE 'treatment_agent:%' AND generation_provenance ? 'generationDecisionTrace';")"
 if [[ "$treatment_decision_traces" -lt 1 ]]; then
-  echo "TREATMENT_DECISION_TRACE_VALIDATION=FAIL accepted_traces=${treatment_decision_traces}" >&2
+  echo "TREATMENT_DECISION_TRACE_VALIDATION=FAIL generation_traces=${treatment_decision_traces}" >&2
   exit 1
 fi
-echo "TREATMENT_DECISION_TRACE_VALIDATION=PASS accepted_traces=${treatment_decision_traces}"
+echo "TREATMENT_DECISION_TRACE_VALIDATION=PASS generation_traces=${treatment_decision_traces}"
 
-treatment_replay_inputs="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE replay_input <> '{}'::jsonb;")"
+treatment_replay_inputs="$(treatment_agent_sql "SELECT count(*) FROM plan_proposals WHERE source_id LIKE 'treatment_agent:%' AND replay_input IS NOT NULL;")"
 if [[ "$treatment_replay_inputs" -lt 1 ]]; then
   echo "TREATMENT_REPLAY_INPUT_VALIDATION=FAIL replay_inputs=${treatment_replay_inputs}" >&2
   exit 1

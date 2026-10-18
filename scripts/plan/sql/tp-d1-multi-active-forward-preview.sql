@@ -7,13 +7,6 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE schemaname = 'public' AND tablename = 'training_plans'
-      AND indexname = 'idx_training_plans_treatment_revision'
-  ) THEN
-    RAISE EXCEPTION 'TP-D1 prerequisite: TreatmentRevision idempotency index missing';
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND tablename = 'training_plans'
       AND indexname = 'idx_training_plans_user_active'
   ) THEN
     RAISE EXCEPTION 'TP-D1 prerequisite: legacy active index missing';
