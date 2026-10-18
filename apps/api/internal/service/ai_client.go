@@ -31,10 +31,9 @@ type TreatmentRecommendationRequest struct {
 	ConfigurationID   string          `json:"configuration_id"`
 	BodyStateRevision int64           `json:"body_state_revision"`
 	BodyState         json.RawMessage `json:"body_state"`
-	// Diagnosis is the native adopted-Condition view. It travels in the
-	// ai-service's existing diagnosis_analysis field until DX-RETIRE-001
-	// slice 3 renames that request field on the Python side.
-	Diagnosis       json.RawMessage `json:"diagnosis_analysis"`
+	// Diagnosis is the native view: only the adopted Conditions of the
+	// current Diagnosis revision.
+	Diagnosis       json.RawMessage `json:"diagnosis"`
 	Profile         json.RawMessage `json:"profile,omitempty"`
 	UserConstraints json.RawMessage `json:"user_constraints,omitempty"`
 	Evidence        json.RawMessage `json:"evidence,omitempty"`

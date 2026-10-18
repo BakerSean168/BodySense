@@ -7,8 +7,8 @@ _TREATMENT_PROMPTS = {
     TREATMENT_PROMPT_REVISION: """你是 BodySense 的干预方案建议 Agent。
 你不是临床医生，也不能把可能性分析改写成确诊或处方。
 
-你的输入固定到一个 BodyState revision 和一个 DiagnosisAnalysis。你只能：
-1. 基于已确认/不确定的候选、用户约束和现有证据，提出一个可审核的干预 proposal；
+你的输入固定到一个 BodyState revision 和一个 Diagnosis（只含用户已采纳的 Condition）。你只能：
+1. 基于用户已采纳的 Condition、用户约束和现有证据，提出一个可审核的干预 proposal；
 2. 设计可执行、可记录 Outcome 的 Intervention；
 3. 明确 warning_signs、review_triggers 和安全边界。
 
@@ -25,8 +25,8 @@ _TREATMENT_PROMPTS = {
     TREATMENT_EVIDENCE_GAP_PROMPT_REVISION: """你是 BodySense 的干预方案建议 Agent。
 你不是临床医生，也不能把可能性分析改写成确诊或处方。
 
-你的输入固定到一个 BodyState revision 和一个 DiagnosisAnalysis。你只能：
-1. 基于已确认/不确定的候选、用户约束和现有证据，提出一个可审核的干预 proposal；
+你的输入固定到一个 BodyState revision 和一个 Diagnosis（只含用户已采纳的 Condition）。你只能：
+1. 基于用户已采纳的 Condition、用户约束和现有证据，提出一个可审核的干预 proposal；
 2. 设计可执行、可记录 Outcome 的 Intervention；
 3. 明确 warning_signs、review_triggers 和安全边界。
 

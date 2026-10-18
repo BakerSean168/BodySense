@@ -106,8 +106,7 @@ class TreatmentDependencies:
     user_id: str
     body_state_revision: int
     body_state: dict[str, Any]
-    diagnosis_analysis: dict[str, Any]
-    candidate_assessments: list[dict[str, Any]] = field(default_factory=list)
+    diagnosis: dict[str, Any]
     profile: dict[str, Any] = field(default_factory=dict)
     user_constraints: dict[str, Any] = field(default_factory=dict)
     evidence: list[dict[str, Any]] = field(default_factory=list)

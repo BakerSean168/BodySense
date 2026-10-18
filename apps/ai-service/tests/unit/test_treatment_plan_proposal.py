@@ -165,7 +165,16 @@ async def test_e2e_stub_route_emits_plan_proposal(monkeypatch) -> None:
             "body_state_revision": 3,
             "configuration_id": get_default_treatment_configuration().configuration_id,
             "body_state": {"current_revision": 3},
-            "diagnosis_analysis": {"analysis_id": "analysis-1", "status": "completed"},
+            "diagnosis": {
+                "currentRevision": 1,
+                "conditionEntries": [
+                    {
+                        "conditionId": "condition-1",
+                        "medicalName": "久坐相关颈肩负荷模式",
+                        "disposition": "adopted",
+                    }
+                ],
+            },
         }
     )
 
