@@ -71,6 +71,7 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "diagnosis_settlements", table: "diagnosis_settlements", column: "user_id"},
 	{name: "condition_relations", table: "condition_relations", column: "user_id"},
 	{name: "condition_disposition_changes", table: "condition_disposition_changes", column: "user_id"},
+	{name: "condition_direct_edits", table: "condition_direct_edits", column: "user_id"},
 	{name: "diagnosis_decisions", table: "diagnosis_decisions", column: "user_id"},
 	{name: "diagnosis_revisions", table: "diagnosis_revisions", column: "user_id"},
 	{name: "diagnosis_analyses", table: "diagnosis_analyses", column: "user_id"},
