@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod/mini';
 
-export const TrainingSessionState = /*#__PURE__*/ zod.enum(['in_progress', 'ended']);
+export const TrainingSessionState = /*#__PURE__*/ zod.enum(['in_progress', 'paused', 'ended']);
 
 export type TrainingSessionState = zod.input<typeof TrainingSessionState>;
 export type TrainingSessionStateOutput = zod.output<typeof TrainingSessionState>;

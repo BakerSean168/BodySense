@@ -2258,8 +2258,8 @@ paths:
   /api/v1/training-sessions/{sessionId}/set-actions:
     post:
       operationId: recordTrainingSetAction
-      summary: Record one set the authenticated user explicitly marked performed or skipped.
-      description: Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. A set holds at most one action; a duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records a set.
+      summary: Record one explicit user action on a set or exercise of an in-progress session.
+      description: "Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. scope=set marks one set performed (optionally with actualReps / actualDurationSeconds) or skipped; scope=exercise with kind=skipped skips the rest of a whole exercise as one receipt, never as per-set skips. kind=corrected retracts correctsActionId, an effective receipt of exactly the same target, once; the original stays in history and the target may then be recorded again. A receipt is effective unless it is a correction or a correction points at it; a set or exercise holds at most one effective action. A paused session accepts no action (SESSION_PAUSED). A duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records an action."
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
       requestBody:
@@ -2276,7 +2276,7 @@ paths:
   /api/v1/training-sessions/{sessionId}/finish:
     post:
       operationId: finishTrainingSession
-      summary: End one owned in-progress session as finished or stopped early, by the user's explicit command.
+      summary: End one owned in-progress or paused session as finished or stopped early, by the user's explicit command.
       description: Ending is never gated, never marks remaining sets and is final. An exact idempotent retry returns the ended session.
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
@@ -2285,6 +2285,42 @@ paths:
         content: {application/json: {schema: {$ref: '#/components/schemas/FinishTrainingSessionRequest'}}}
       responses:
         '200': {description: Ended session, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}/pause:
+    post:
+      operationId: pauseTrainingSession
+      summary: Pause one owned in-progress session by the user's explicit command.
+      description: Pausing is never gated, records an immutable pause receipt at expectedSessionRevision + 1 and changes no set receipt. A paused session accepts no set action and does not hold the single in-progress slot. An exact idempotent retry returns the session.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PauseTrainingSessionRequest'}}}
+      responses:
+        '200': {description: Paused session, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}/resume:
+    post:
+      operationId: resumeTrainingSession
+      summary: Resume one owned paused session by the user's explicit command after re-checking the Safety gate.
+      description: Go re-evaluates the TrainerGate over the session's template against exactly expectedSafetyRevision, as a start does; another current Safety revision is SAFETY_STALE and a non-permitting gate is TRAINER_GATE_BLOCKED, and nothing is written. The plan must still be active (PLAN_NOT_ACTIVE) and no other session may be in progress (SESSION_IN_PROGRESS). The resume receipt records the admitting gate. An exact idempotent retry returns the session.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ResumeTrainingSessionRequest'}}}
+      responses:
+        '200': {description: Resumed session, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
         '400': {$ref: '#/components/responses/InvalidRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -4948,8 +4984,9 @@ components:
         decisionId: {type: string, format: uuid}
         idempotencyKey: {type: string, minLength: 1}
         decidedAt: {type: string, format: date-time}
-    TrainingSessionState: {type: string, enum: [in_progress, ended]}
-    TrainingSetActionKind: {type: string, enum: [performed, skipped]}
+    TrainingSessionState: {type: string, enum: [in_progress, paused, ended]}
+    TrainingSetActionKind: {type: string, enum: [performed, skipped, corrected]}
+    TrainingSetActionScope: {type: string, enum: [set, exercise]}
     TrainerGateReceipt:
       type: object
       additionalProperties: false
@@ -4973,11 +5010,31 @@ components:
     RecordTrainingSetActionRequest:
       type: object
       additionalProperties: false
-      required: [planExerciseId, setNumber, kind, expectedSessionRevision, expectedSafetyRevision, idempotencyKey]
+      required: [planExerciseId, scope, kind, expectedSessionRevision, expectedSafetyRevision, idempotencyKey]
+      description: setNumber is required for scope=set and absent for scope=exercise; scope=exercise only allows skipped or corrected. correctsActionId is required exactly for corrected. actualReps and actualDurationSeconds only describe a performed set.
       properties:
         planExerciseId: {type: string, minLength: 1, maxLength: 256}
+        scope: {$ref: '#/components/schemas/TrainingSetActionScope'}
         setNumber: {type: integer, minimum: 1}
         kind: {$ref: '#/components/schemas/TrainingSetActionKind'}
+        correctsActionId: {type: string, format: uuid}
+        actualReps: {type: integer, minimum: 1, maximum: 1000}
+        actualDurationSeconds: {type: integer, minimum: 1, maximum: 86400}
+        expectedSessionRevision: {type: integer, format: int64, minimum: 0}
+        expectedSafetyRevision: {type: integer, format: int64, minimum: 1}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    PauseTrainingSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedSessionRevision, idempotencyKey]
+      properties:
+        expectedSessionRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    ResumeTrainingSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedSessionRevision, expectedSafetyRevision, idempotencyKey]
+      properties:
         expectedSessionRevision: {type: integer, format: int64, minimum: 0}
         expectedSafetyRevision: {type: integer, format: int64, minimum: 1}
         idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
@@ -4992,15 +5049,31 @@ components:
     TrainingSetActionRecord:
       type: object
       additionalProperties: false
-      required: [actionId, sessionId, planExerciseId, exerciseId, setNumber, kind, sessionRevision, gate, idempotencyKey, recordedAt]
-      description: Immutable receipt of one user-originated set action.
+      required: [actionId, sessionId, planExerciseId, exerciseId, scope, kind, sessionRevision, gate, idempotencyKey, recordedAt]
+      description: Immutable receipt of one user-originated set or exercise action. It is effective unless it is a correction or a later correction points at it.
       properties:
         actionId: {type: string, format: uuid}
         sessionId: {type: string, format: uuid}
         planExerciseId: {type: string}
         exerciseId: {type: string}
+        scope: {$ref: '#/components/schemas/TrainingSetActionScope'}
         setNumber: {type: integer, minimum: 1}
         kind: {$ref: '#/components/schemas/TrainingSetActionKind'}
+        correctsActionId: {type: string, format: uuid}
+        actualReps: {type: integer, minimum: 1, maximum: 1000}
+        actualDurationSeconds: {type: integer, minimum: 1, maximum: 86400}
+        sessionRevision: {type: integer, format: int64, minimum: 1}
+        gate: {$ref: '#/components/schemas/TrainerGateReceipt'}
+        idempotencyKey: {type: string, minLength: 1}
+        recordedAt: {type: string, format: date-time}
+    TrainingSessionTransitionRecord:
+      type: object
+      additionalProperties: false
+      required: [transitionId, kind, sessionRevision, idempotencyKey, recordedAt]
+      description: Immutable receipt of one explicit pause or resume; only a resume carries the gate it was admitted at.
+      properties:
+        transitionId: {type: string, format: uuid}
+        kind: {type: string, enum: [pause, resume]}
         sessionRevision: {type: integer, format: int64, minimum: 1}
         gate: {$ref: '#/components/schemas/TrainerGateReceipt'}
         idempotencyKey: {type: string, minLength: 1}
@@ -5008,7 +5081,7 @@ components:
     TrainingSessionRecord:
       type: object
       additionalProperties: false
-      required: [sessionId, planId, planRevisionId, templateId, timeZone, trainingDate, state, revision, startedAt, startGate, actions]
+      required: [sessionId, planId, planRevisionId, templateId, timeZone, trainingDate, state, revision, startedAt, startGate, actions, transitions]
       properties:
         sessionId: {type: string, format: uuid}
         planId: {type: string, format: uuid}
@@ -5023,6 +5096,7 @@ components:
         endedAt: {type: string, format: date-time}
         startGate: {$ref: '#/components/schemas/TrainerGateReceipt'}
         actions: {type: array, items: {$ref: '#/components/schemas/TrainingSetActionRecord'}}
+        transitions: {type: array, items: {$ref: '#/components/schemas/TrainingSessionTransitionRecord'}}
     TrainingSessionListResponse:
       type: object
       additionalProperties: false

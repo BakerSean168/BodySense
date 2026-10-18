@@ -22,6 +22,7 @@ type trainerFake struct {
 	start     service.StartTrainerSessionCommand
 	action    service.TrainerSetActionCommand
 	finish    service.FinishTrainerSessionCommand
+	moved     service.TrainerTransitionCommand
 	err       error
 }
 
@@ -38,7 +39,7 @@ func (f *trainerFake) session(owner, id uuid.UUID, state string) service.Trainer
 		ID: id, UserID: f.rowOwner(owner), PlanID: f.start.PlanID, PlanRevisionID: uuid.New(), TemplateID: "t1", TimeZone: "Asia/Shanghai",
 		TrainingDate: date, State: state, StartedAt: time.Now().UTC(), StartIdempotencyKey: f.start.IdempotencyKey,
 		StartSafetyRevision: 1, StartGateResult: "allow", StartGatePolicyRevision: safety.GatePolicyRevision,
-	}, Actions: []model.TrainingSetAction{}}
+	}, Actions: []model.TrainingSetAction{}, Transitions: []model.TrainingSessionTransition{}}
 }
 
 func (f *trainerFake) Start(_ context.Context, owner uuid.UUID, cmd service.StartTrainerSessionCommand) (*service.TrainerSessionView, error) {
@@ -55,8 +56,44 @@ func (f *trainerFake) RecordSetAction(_ context.Context, owner uuid.UUID, cmd se
 		return nil, f.err
 	}
 	return &model.TrainingSetAction{ID: uuid.New(), UserID: f.rowOwner(owner), SessionID: cmd.SessionID, PlanExerciseID: cmd.PlanExerciseID, ExerciseID: "squat",
-		Scope: cmd.Scope, SetNumber: &cmd.SetNumber, Kind: cmd.Kind, SessionRevision: cmd.ExpectedSessionRevision + 1, IdempotencyKey: cmd.IdempotencyKey,
+		Scope: cmd.Scope, SetNumber: setNumberOf(cmd), Kind: cmd.Kind, CorrectsActionID: correctsOf(cmd), ActualReps: cmd.ActualReps, SessionRevision: cmd.ExpectedSessionRevision + 1, IdempotencyKey: cmd.IdempotencyKey,
 		SafetyRevision: cmd.ExpectedSafetyRevision, GateResult: "warn", GatePolicyRevision: safety.GatePolicyRevision, RecordedAt: time.Now().UTC()}, nil
+}
+func setNumberOf(cmd service.TrainerSetActionCommand) *int {
+	if cmd.SetNumber == 0 {
+		return nil
+	}
+	return &cmd.SetNumber
+}
+
+func correctsOf(cmd service.TrainerSetActionCommand) *uuid.UUID {
+	if cmd.CorrectsActionID == uuid.Nil {
+		return nil
+	}
+	return &cmd.CorrectsActionID
+}
+
+func (f *trainerFake) transition(owner uuid.UUID, cmd service.TrainerTransitionCommand, kind, state string) (*service.TrainerSessionView, error) {
+	f.owner, f.moved = owner, cmd
+	if f.err != nil {
+		return nil, f.err
+	}
+	v := f.session(owner, cmd.SessionID, state)
+	v.Session.Revision = cmd.ExpectedSessionRevision + 1
+	t := model.TrainingSessionTransition{ID: uuid.New(), UserID: f.rowOwner(owner), SessionID: cmd.SessionID, Kind: kind,
+		SessionRevision: v.Session.Revision, IdempotencyKey: cmd.IdempotencyKey, RecordedAt: time.Now().UTC()}
+	if kind == service.TrainerTransitionResume {
+		result, policy := "allow", safety.GatePolicyRevision
+		t.SafetyRevision, t.GateResult, t.GatePolicyRevision = &cmd.ExpectedSafetyRevision, &result, &policy
+	}
+	v.Transitions = append(v.Transitions, t)
+	return &v, nil
+}
+func (f *trainerFake) Pause(_ context.Context, owner uuid.UUID, cmd service.TrainerTransitionCommand) (*service.TrainerSessionView, error) {
+	return f.transition(owner, cmd, service.TrainerTransitionPause, service.TrainerSessionPaused)
+}
+func (f *trainerFake) Resume(_ context.Context, owner uuid.UUID, cmd service.TrainerTransitionCommand) (*service.TrainerSessionView, error) {
+	return f.transition(owner, cmd, service.TrainerTransitionResume, service.TrainerSessionInProgress)
 }
 func (f *trainerFake) Finish(_ context.Context, owner uuid.UUID, cmd service.FinishTrainerSessionCommand) (*service.TrainerSessionView, error) {
 	f.owner, f.finish = owner, cmd
@@ -133,7 +170,7 @@ func TestTrainerStartAndSetActionRoundTrip(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "user_id") || strings.Contains(rec.Body.String(), "fingerprint") {
 		t.Fatalf("leaked owner or fingerprint: %s", rec.Body.String())
 	}
-	body := map[string]any{"planExerciseId": "e1", "setNumber": 2, "kind": "skipped", "expectedSessionRevision": 1, "expectedSafetyRevision": 3, "idempotencyKey": "set-2"}
+	body := map[string]any{"planExerciseId": "e1", "scope": "set", "setNumber": 2, "kind": "skipped", "expectedSessionRevision": 1, "expectedSafetyRevision": 3, "idempotencyKey": "set-2"}
 	rec = doPlanRequest(t, r, http.MethodPost, "/api/v1/training-sessions/"+session.SessionId.String()+"/set-actions", body)
 	if rec.Code != http.StatusOK || fake.action.SessionID != uuid.UUID(session.SessionId) || fake.action.Kind != "skipped" || fake.action.ExpectedSafetyRevision != 3 {
 		t.Fatalf("set action: %d %s %+v", rec.Code, rec.Body.String(), fake.action)
@@ -165,9 +202,38 @@ func TestTrainerContractRejectsUnknownCommands(t *testing.T) {
 		}
 	}
 	for _, kind := range []string{"completed", "auto"} {
-		body := map[string]any{"planExerciseId": "e1", "setNumber": 1, "kind": kind, "expectedSessionRevision": 0, "expectedSafetyRevision": 1, "idempotencyKey": "k"}
+		body := map[string]any{"planExerciseId": "e1", "scope": "set", "setNumber": 1, "kind": kind, "expectedSessionRevision": 0, "expectedSafetyRevision": 1, "idempotencyKey": "k"}
 		if rec := doPlanRequest(t, r, http.MethodPost, "/api/v1/training-sessions/"+uuid.NewString()+"/set-actions", body); rec.Code != http.StatusBadRequest {
 			t.Fatalf("kind %s: %d", kind, rec.Code)
+		}
+	}
+	setBody := func(change map[string]any, drop string) map[string]any {
+		body := map[string]any{"planExerciseId": "e1", "scope": "set", "setNumber": 1, "kind": "performed", "expectedSessionRevision": 0, "expectedSafetyRevision": 1, "idempotencyKey": "k"}
+		for k, v := range change {
+			body[k] = v
+		}
+		delete(body, drop)
+		return body
+	}
+	for name, body := range map[string]map[string]any{
+		"no scope":         setBody(nil, "scope"),
+		"unknown scope":    setBody(map[string]any{"scope": "session"}, ""),
+		"too many reps":    setBody(map[string]any{"actualReps": 1001}, ""),
+		"zero duration":    setBody(map[string]any{"actualDurationSeconds": 0}, ""),
+		"bad correct id":   setBody(map[string]any{"kind": "corrected", "correctsActionId": "nope"}, ""),
+		"smuggled verdict": setBody(map[string]any{"gate": map[string]any{"result": "allow"}}, ""),
+	} {
+		if rec := doPlanRequest(t, r, http.MethodPost, "/api/v1/training-sessions/"+uuid.NewString()+"/set-actions", body); rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s: %d", name, rec.Code)
+		}
+	}
+	id := uuid.NewString()
+	for path, body := range map[string]map[string]any{
+		"/resume": {"expectedSessionRevision": 1, "idempotencyKey": "r"},
+		"/pause":  {"expectedSessionRevision": 1, "expectedSafetyRevision": 1, "idempotencyKey": "p"},
+	} {
+		if rec := doPlanRequest(t, r, http.MethodPost, "/api/v1/training-sessions/"+id+path, body); rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s body %v: %d", path, body, rec.Code)
 		}
 	}
 	if fake.owner != uuid.Nil {
@@ -191,6 +257,8 @@ func TestTrainerErrorsAreVisibleNeverSuccess(t *testing.T) {
 		{service.ErrTrainerSessionInProgress, http.StatusConflict, "SESSION_IN_PROGRESS"},
 		{service.ErrTrainerSessionEnded, http.StatusConflict, "SESSION_ENDED"},
 		{service.ErrTrainerSetRecorded, http.StatusConflict, "SET_ALREADY_RECORDED"},
+		{service.ErrTrainerSessionPaused, http.StatusConflict, "SESSION_PAUSED"},
+		{service.ErrTrainerSessionNotPaused, http.StatusConflict, "SESSION_NOT_PAUSED"},
 		{service.ErrTrainerInvalid, http.StatusBadRequest, "INVALID_REQUEST"},
 		{context.DeadlineExceeded, http.StatusServiceUnavailable, "TRAINER_UNAVAILABLE"},
 	}
@@ -219,5 +287,45 @@ func TestTrainerForeignProjectionIsNeverServed(t *testing.T) {
 	fake = &trainerFake{err: service.ErrTrainerNotFound}
 	if rec := doPlanRequest(t, trainerRoute(t, owner, fake), http.MethodGet, "/api/v1/training-sessions/"+uuid.NewString(), nil); rec.Code != http.StatusNotFound {
 		t.Fatalf("missing session: %d", rec.Code)
+	}
+}
+
+// Exercise skips, corrections with actuals, pause and resume pass only the
+// user's explicit command through and project their receipts.
+func TestTrainerPauseResumeAndCorrectionRoundTrip(t *testing.T) {
+	owner := uuid.New()
+	fake := &trainerFake{}
+	r := trainerRoute(t, owner, fake)
+	base := "/api/v1/training-sessions/" + uuid.NewString()
+	rec := doPlanRequest(t, r, http.MethodPost, base+"/set-actions", map[string]any{"planExerciseId": "e1", "scope": "set", "setNumber": 1, "kind": "performed",
+		"actualReps": 8, "actualDurationSeconds": 40, "expectedSessionRevision": 0, "expectedSafetyRevision": 1, "idempotencyKey": "set-1"})
+	if rec.Code != http.StatusOK || *fake.action.ActualReps != 8 || *fake.action.ActualDurationSeconds != 40 || !strings.Contains(rec.Body.String(), `"actualReps":8`) {
+		t.Fatalf("performed with actuals: %d %s", rec.Code, rec.Body.String())
+	}
+	rec = doPlanRequest(t, r, http.MethodPost, base+"/set-actions", map[string]any{"planExerciseId": "e1", "scope": "exercise", "kind": "skipped",
+		"expectedSessionRevision": 1, "expectedSafetyRevision": 1, "idempotencyKey": "skip"})
+	if rec.Code != http.StatusOK || fake.action.Scope != "exercise" || fake.action.SetNumber != 0 || strings.Contains(rec.Body.String(), "setNumber") {
+		t.Fatalf("exercise skip: %d %s %+v", rec.Code, rec.Body.String(), fake.action)
+	}
+	target := uuid.New()
+	rec = doPlanRequest(t, r, http.MethodPost, base+"/set-actions", map[string]any{"planExerciseId": "e1", "scope": "exercise", "kind": "corrected",
+		"correctsActionId": target.String(), "expectedSessionRevision": 2, "expectedSafetyRevision": 1, "idempotencyKey": "fix"})
+	if rec.Code != http.StatusOK || fake.action.CorrectsActionID != target || !strings.Contains(rec.Body.String(), target.String()) {
+		t.Fatalf("correction: %d %s", rec.Code, rec.Body.String())
+	}
+	rec = doPlanRequest(t, r, http.MethodPost, base+"/pause", map[string]any{"expectedSessionRevision": 3, "idempotencyKey": "pause"})
+	if rec.Code != http.StatusOK || fake.moved.ExpectedSafetyRevision != 0 || !strings.Contains(rec.Body.String(), `"state":"paused"`) ||
+		strings.Contains(rec.Body.String(), `"gate"`) {
+		t.Fatalf("pause: %d %s", rec.Code, rec.Body.String())
+	}
+	rec = doPlanRequest(t, r, http.MethodPost, base+"/resume", map[string]any{"expectedSessionRevision": 4, "expectedSafetyRevision": 2, "idempotencyKey": "resume"})
+	var session openapiv1.TrainingSessionRecord
+	if rec.Code != http.StatusOK || fake.moved.ExpectedSafetyRevision != 2 || json.Unmarshal(rec.Body.Bytes(), &session) != nil ||
+		session.State != "in_progress" || len(session.Transitions) != 1 || session.Transitions[0].Gate == nil || session.Transitions[0].Gate.SafetyRevision != 2 {
+		t.Fatalf("resume: %d %s", rec.Code, rec.Body.String())
+	}
+	fake.err = service.ErrTrainerSessionPaused
+	if rec = doPlanRequest(t, r, http.MethodPost, base+"/pause", map[string]any{"expectedSessionRevision": 5, "idempotencyKey": "again"}); rec.Code != http.StatusConflict {
+		t.Fatalf("pause twice: %d", rec.Code)
 	}
 }

@@ -8,7 +8,12 @@
 import * as zod from 'zod/mini';
 import { TrainerGateReceipt } from './trainerGateReceipt.zod';
 import { TrainingSetActionKind } from './trainingSetActionKind.zod';
+import { TrainingSetActionScope } from './trainingSetActionScope.zod';
 
+
+export const trainingSetActionRecordActualRepsMax = 1000;
+
+export const trainingSetActionRecordActualDurationSecondsMax = 86400;
 
 
 
@@ -19,13 +24,17 @@ export const TrainingSetActionRecord = /*#__PURE__*/ zod.strictObject({
   "sessionId": /*#__PURE__*/ zod.uuid(),
   "planExerciseId": /*#__PURE__*/ zod.string(),
   "exerciseId": /*#__PURE__*/ zod.string(),
-  "setNumber": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "scope": TrainingSetActionScope,
+  "setNumber": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))),
   "kind": TrainingSetActionKind,
+  "correctsActionId": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "actualReps": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(trainingSetActionRecordActualRepsMax))),
+  "actualDurationSeconds": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(trainingSetActionRecordActualDurationSecondsMax))),
   "sessionRevision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "gate": TrainerGateReceipt,
   "idempotencyKey": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "recordedAt": /*#__PURE__*/ zod.iso.datetime({"offset":true})
-}).check(/*#__PURE__*/ zod.describe('Immutable receipt of one user-originated set action.'));
+}).check(/*#__PURE__*/ zod.describe('Immutable receipt of one user-originated set or exercise action. It is effective unless it is a correction or a later correction points at it.'));
 
 export type TrainingSetActionRecord = zod.input<typeof TrainingSetActionRecord>;
 export type TrainingSetActionRecordOutput = zod.output<typeof TrainingSetActionRecord>;

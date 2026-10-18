@@ -186,6 +186,7 @@ import type {
   OnboardingContextResultOutput,
   OutcomeListResponseOutput,
   OutcomeMutationResponseOutput,
+  PauseTrainingSessionRequest,
   PlanAcceptanceReceiptOutput,
   PlanDecisionRequest,
   PlanProposalRecordListResponseOutput,
@@ -203,6 +204,7 @@ import type {
   RegisterKnowledgeSourceRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
+  ResumeTrainingSessionRequest,
   RuntimeEventListResponseOutput,
   SafetyResolutionOutput,
   SafetyRestrictionListOutput,
@@ -4577,8 +4579,8 @@ export const getRecordTrainingSetActionUrl = (sessionId: string,) => {
 }
 
 /**
- * Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. A set holds at most one action; a duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records a set.
- * @summary Record one set the authenticated user explicitly marked performed or skipped.
+ * Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. scope=set marks one set performed (optionally with actualReps / actualDurationSeconds) or skipped; scope=exercise with kind=skipped skips the rest of a whole exercise as one receipt, never as per-set skips. kind=corrected retracts correctsActionId, an effective receipt of exactly the same target, once; the original stays in history and the target may then be recorded again. A receipt is effective unless it is a correction or a correction points at it; a set or exercise holds at most one effective action. A paused session accepts no action (SESSION_PAUSED). A duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records an action.
+ * @summary Record one explicit user action on a set or exercise of an in-progress session.
  */
 export const recordTrainingSetAction = async (sessionId: string,
     recordTrainingSetActionRequest: RecordTrainingSetActionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSetActionRecordOutput> => {
@@ -4633,7 +4635,7 @@ export const getFinishTrainingSessionUrl = (sessionId: string,) => {
 
 /**
  * Ending is never gated, never marks remaining sets and is final. An exact idempotent retry returns the ended session.
- * @summary End one owned in-progress session as finished or stopped early, by the user's explicit command.
+ * @summary End one owned in-progress or paused session as finished or stopped early, by the user's explicit command.
  */
 export const finishTrainingSession = async (sessionId: string,
     finishTrainingSessionRequest: FinishTrainingSessionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
@@ -4658,6 +4660,116 @@ const res = await (fetchFn ?? fetch)(getFinishTrainingSessionUrl(sessionId),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(finishTrainingSessionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getPauseTrainingSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}/pause`
+}
+
+/**
+ * Pausing is never gated, records an immutable pause receipt at expectedSessionRevision + 1 and changes no set receipt. A paused session accepts no set action and does not hold the single in-progress slot. An exact idempotent retry returns the session.
+ * @summary Pause one owned in-progress session by the user's explicit command.
+ */
+export const pauseTrainingSession = async (sessionId: string,
+    pauseTrainingSessionRequest: PauseTrainingSessionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getPauseTrainingSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(pauseTrainingSessionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingSessionRecord, status?: number} = new globalThis.Error();
+    const data : TrainingSessionRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingSessionRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getResumeTrainingSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/training-sessions/${sessionId}/resume`
+}
+
+/**
+ * Go re-evaluates the TrainerGate over the session's template against exactly expectedSafetyRevision, as a start does; another current Safety revision is SAFETY_STALE and a non-permitting gate is TRAINER_GATE_BLOCKED, and nothing is written. The plan must still be active (PLAN_NOT_ACTIVE) and no other session may be in progress (SESSION_IN_PROGRESS). The resume receipt records the admitting gate. An exact idempotent retry returns the session.
+ * @summary Resume one owned paused session by the user's explicit command after re-checking the Safety gate.
+ */
+export const resumeTrainingSession = async (sessionId: string,
+    resumeTrainingSessionRequest: ResumeTrainingSessionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingSessionRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getResumeTrainingSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resumeTrainingSessionRequest)
   }
 )
 

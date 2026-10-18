@@ -8,6 +8,7 @@
 import * as zod from 'zod/mini';
 import { TrainerGateReceipt } from './trainerGateReceipt.zod';
 import { TrainingSessionState } from './trainingSessionState.zod';
+import { TrainingSessionTransitionRecord } from './trainingSessionTransitionRecord.zod';
 import { TrainingSetActionRecord } from './trainingSetActionRecord.zod';
 
 export const trainingSessionRecordRevisionMin = 0;
@@ -27,7 +28,8 @@ export const TrainingSessionRecord = /*#__PURE__*/ zod.strictObject({
   "startedAt": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "endedAt": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
   "startGate": TrainerGateReceipt,
-  "actions": /*#__PURE__*/ zod.array(TrainingSetActionRecord)
+  "actions": /*#__PURE__*/ zod.array(TrainingSetActionRecord),
+  "transitions": /*#__PURE__*/ zod.array(TrainingSessionTransitionRecord)
 });
 
 export type TrainingSessionRecord = zod.input<typeof TrainingSessionRecord>;
