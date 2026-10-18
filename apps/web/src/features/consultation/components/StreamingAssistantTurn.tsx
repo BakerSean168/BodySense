@@ -60,6 +60,7 @@ export function StreamingAssistantTurn({
     (vm.pendingInteraction !== null &&
       vm.pendingInteraction.status === "answered") ||
     (vm.isInterrupted && vm.pendingInteraction !== null) ||
+    vm.answeredSuggestions.length > 0 ||
     (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0) ||
     vm.isFailed ||
     vm.isCancelled;
@@ -68,6 +69,10 @@ export function StreamingAssistantTurn({
 
   return (
     <div className="flex flex-col gap-4">
+      {vm.answeredSuggestions.map((interaction) => (
+        <AskUserStatusCard key={interaction.id} interaction={interaction} />
+      ))}
+
       {vm.pendingInteraction &&
       !(
         pendingInteractionInComposer &&

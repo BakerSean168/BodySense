@@ -156,4 +156,56 @@ describe("StreamingAssistantTurn", () => {
     expect(screen.getByText("问诊追问")).toBeDefined();
     expect(screen.getByText("你的回答：无")).toBeDefined();
   });
+
+  it("keeps an answered BodyState suggestion visible after the Run resumes", () => {
+    renderWithState(
+      stateWith({
+        status: "streaming",
+        text: "好的，继续。",
+        pendingInteraction: null,
+        answeredSuggestions: [
+          {
+            id: "int-s",
+            run_id: "run-1",
+            conversation_id: "conv-1",
+            tool_call_id: "tc-1",
+            tool_name: "ask_user",
+            status: "answered",
+            answer: { text: "记录为我的猜测", selected: ["记录为我的猜测"] },
+            created_at: "2026-10-19T02:00:00Z",
+            question: {
+              question: "要把你说过的这句话记录为你自己的猜测吗？",
+              answer_type: "single_choice",
+              options: ["记录为我的猜测", "不记录"],
+              purpose: "body_state_suggestion",
+              quote: "我觉得是久坐导致的",
+              state_binding: {
+                revision: "body-state-suggestion-v1",
+                kind: "hypothesis",
+                source: {
+                  message_id: "msg-user-1",
+                  message_seq: 1,
+                  span_start: 0,
+                  span_end: 9,
+                  excerpt_sha256: "a".repeat(64),
+                },
+                base_body_state_revision: 0,
+              },
+            },
+            body_state_receipt: {
+              kind: "hypothesis",
+              commit_id: "commit-1",
+              hypothesis_id: "hyp-1",
+              source_evidence_id: "ev-1",
+              revision: 1,
+              event_id: "event-1",
+              committed_at: "2026-10-19T02:00:00Z",
+            },
+          },
+        ],
+      }),
+    );
+    expect(screen.getByTestId("body-state-suggestion-saved")).toBeDefined();
+    expect(screen.getByText("已保存为你的猜测")).toBeDefined();
+  });
 });

@@ -52,6 +52,7 @@ import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
 import { AskUserCard } from "./AskUserCard";
+import { BODY_STATE_SUGGESTION_DECLINE } from "./BodyStateSuggestionCard";
 import { useConsultationStore } from "@/stores/consultationStore";
 import {
   Message,
@@ -601,21 +602,39 @@ function ChatContent({
   const handleInteractionAnswer = useCallback(
     async (answer: unknown) => {
       const interaction = activeTurn.pendingInteraction;
-      if (!interaction) return;
+      if (!interaction) return false;
 
       setIsSubmitting(true);
       setInteractionError(null);
       try {
         await handleResume(interaction.id, answer);
+        return true;
       } catch (err) {
         setInteractionError(
           err instanceof Error ? err.message : "提交失败，请重试",
         );
+        return false;
       } finally {
         setIsSubmitting(false);
       }
     },
     [activeTurn.pendingInteraction, handleResume],
+  );
+
+  // "改一改再说": decline the suggestion (Go writes nothing), then hand the
+  // user's own words back to the composer so they can restate them.
+  const handleSuggestionEdit = useCallback(
+    async (quote: string) => {
+      const declined = await handleInteractionAnswer(
+        BODY_STATE_SUGGESTION_DECLINE,
+      );
+      if (!declined) return;
+      setInputText(quote);
+      requestAnimationFrame(() =>
+        textareaRef.current?.focus({ preventScroll: true }),
+      );
+    },
+    [handleInteractionAnswer],
   );
 
   const hasPendingInteraction =
@@ -742,6 +761,7 @@ function ChatContent({
                 isSubmitting={isSubmitting}
                 error={interactionError}
                 onRetry={() => setInteractionError(null)}
+                onEdit={(quote) => void handleSuggestionEdit(quote)}
               />
             </div>
           ) : (
