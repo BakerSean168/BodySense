@@ -23,6 +23,7 @@ type trainerFake struct {
 	action    service.TrainerSetActionCommand
 	finish    service.FinishTrainerSessionCommand
 	moved     service.TrainerTransitionCommand
+	feedback  service.TrainerFeedbackCommand
 	err       error
 }
 
@@ -103,6 +104,18 @@ func (f *trainerFake) Finish(_ context.Context, owner uuid.UUID, cmd service.Fin
 	v := f.session(owner, cmd.SessionID, service.TrainerSessionEnded)
 	now, reason := time.Now().UTC(), cmd.EndedReason
 	v.Session.EndedAt, v.Session.EndedReason, v.Session.Revision = &now, &reason, cmd.ExpectedSessionRevision+1
+	return &v, nil
+}
+func (f *trainerFake) RecordFeedback(_ context.Context, owner uuid.UUID, cmd service.TrainerFeedbackCommand) (*service.TrainerSessionView, error) {
+	f.owner, f.feedback = owner, cmd
+	if f.err != nil {
+		return nil, f.err
+	}
+	v := f.session(owner, cmd.SessionID, service.TrainerSessionEnded)
+	now, reason := time.Now().UTC(), service.TrainerEndedFinished
+	v.Session.EndedAt, v.Session.EndedReason, v.Session.Revision = &now, &reason, 1
+	v.Feedback = &model.TrainingSessionFeedback{ID: uuid.New(), UserID: f.rowOwner(owner), SessionID: cmd.SessionID, PlanID: v.Session.PlanID,
+		PlanRevisionID: v.Session.PlanRevisionID, Text: cmd.Text, IdempotencyKey: cmd.IdempotencyKey, RecordedAt: now}
 	return &v, nil
 }
 func (f *trainerFake) Get(_ context.Context, owner, id uuid.UUID) (*service.TrainerSessionView, error) {
@@ -327,5 +340,51 @@ func TestTrainerPauseResumeAndCorrectionRoundTrip(t *testing.T) {
 	fake.err = service.ErrTrainerSessionPaused
 	if rec = doPlanRequest(t, r, http.MethodPost, base+"/pause", map[string]any{"expectedSessionRevision": 5, "idempotencyKey": "again"}); rec.Code != http.StatusConflict {
 		t.Fatalf("pause twice: %d", rec.Code)
+	}
+}
+
+// Feedback passes the user's words through verbatim, projects them on the
+// session and maps its refusals; the contract rejects blank, oversized or
+// smuggled bodies before the runtime.
+func TestTrainerFeedbackRoundTrip(t *testing.T) {
+	owner := uuid.New()
+	fake := &trainerFake{}
+	r := trainerRoute(t, owner, fake)
+	base := "/api/v1/training-sessions/" + uuid.NewString() + "/feedback"
+	text := "  有点累，\n膝盖还好  "
+	rec := doPlanRequest(t, r, http.MethodPost, base, map[string]any{"text": text, "idempotencyKey": "fb"})
+	var session openapiv1.TrainingSessionRecord
+	if rec.Code != http.StatusOK || fake.feedback.Text != text || fake.owner != owner || json.Unmarshal(rec.Body.Bytes(), &session) != nil ||
+		session.Feedback == nil || session.Feedback.Text != text || session.Feedback.IdempotencyKey != "fb" {
+		t.Fatalf("feedback: %d %s", rec.Code, rec.Body.String())
+	}
+	for name, body := range map[string]map[string]any{
+		"blank":    {"text": " \n ", "idempotencyKey": "b"},
+		"empty":    {"text": "", "idempotencyKey": "b"},
+		"too long": {"text": strings.Repeat("a", 2001), "idempotencyKey": "b"},
+		"no key":   {"text": "ok"},
+		"smuggled": {"text": "ok", "idempotencyKey": "b", "planRevisionId": uuid.NewString()},
+		"verdict":  {"text": "ok", "idempotencyKey": "b", "recommended": true},
+		"no text":  {"idempotencyKey": "b"},
+		"bad key":  {"text": "ok", "idempotencyKey": " b"},
+		"not text": {"text": 3, "idempotencyKey": "b"},
+		"user":     {"text": "ok", "idempotencyKey": "b", "userId": uuid.NewString()},
+	} {
+		fake.feedback = service.TrainerFeedbackCommand{}
+		if rec := doPlanRequest(t, r, http.MethodPost, base, body); rec.Code != http.StatusBadRequest || fake.feedback.IdempotencyKey != "" {
+			t.Fatalf("%s accepted: %d %s", name, rec.Code, rec.Body.String())
+		}
+	}
+	for err, code := range map[error]string{service.ErrTrainerSessionNotEnded: "SESSION_NOT_ENDED", service.ErrTrainerFeedbackRecorded: "FEEDBACK_ALREADY_RECORDED",
+		service.ErrTrainerConflict: "REVISION_CONFLICT", service.ErrTrainerNotFound: "NOT_FOUND"} {
+		fake.err = err
+		if rec := doPlanRequest(t, r, http.MethodPost, base, map[string]any{"text": "ok", "idempotencyKey": "x"}); !strings.Contains(rec.Body.String(), code) || rec.Code < 400 {
+			t.Fatalf("%v: %d %s", err, rec.Code, rec.Body.String())
+		}
+	}
+	// Feedback of another owner is never served.
+	foreign := &trainerFake{sessionOf: uuid.New()}
+	if rec := doPlanRequest(t, trainerRoute(t, owner, foreign), http.MethodPost, base, map[string]any{"text": "ok", "idempotencyKey": "f"}); rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("foreign feedback served: %d", rec.Code)
 	}
 }

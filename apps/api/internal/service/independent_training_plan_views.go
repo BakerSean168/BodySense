@@ -17,16 +17,22 @@ import (
 const (
 	PlanReviewContextChanged     = "context_changed_since_acceptance"
 	PlanReviewContextUnavailable = "context_unavailable"
+	// PlanReviewSessionFeedback: the context is unchanged, but the user left
+	// feedback on a session of the current accepted revision (TP-D10).
+	PlanReviewSessionFeedback = "session_feedback_since_acceptance"
 )
 
 const planProposalListLimit = 200
 
 // PlanReview is a deduplicated, read-only hint that the authoritative context
-// the current revision was accepted against has changed. Only a new
-// PlanProposal accepted by the user can change the prescription.
+// the current revision was accepted against has changed, or that the user left
+// session feedback on it. Only a new PlanProposal accepted by the user can
+// change the prescription. SessionFeedbackCount is nil when it could not be
+// read.
 type PlanReview struct {
-	Recommended bool
-	Reason      string
+	Recommended          bool
+	Reason               string
+	SessionFeedbackCount *int64
 }
 
 // TrainingPlanView is one owned accepted plan with its current immutable
@@ -168,9 +174,27 @@ func (s *IndependentTrainingPlanService) review(ctx context.Context, owner, plan
 		return PlanReview{Recommended: true, Reason: PlanReviewContextUnavailable}
 	}
 	if current.RelevantContextFingerprint != proposal.RelevantContextFingerprint {
-		return PlanReview{Recommended: true, Reason: PlanReviewContextChanged}
+		return PlanReview{Recommended: true, Reason: PlanReviewContextChanged, SessionFeedbackCount: s.sessionFeedbackCount(ctx, owner, planID, rev.ID)}
 	}
-	return PlanReview{}
+	count := s.sessionFeedbackCount(ctx, owner, planID, rev.ID)
+	if count == nil {
+		return PlanReview{Recommended: true, Reason: PlanReviewContextUnavailable}
+	}
+	if *count > 0 {
+		return PlanReview{Recommended: true, Reason: PlanReviewSessionFeedback, SessionFeedbackCount: count}
+	}
+	return PlanReview{SessionFeedbackCount: count}
+}
+
+// sessionFeedbackCount reads how many sessions of exactly this accepted
+// revision carry user feedback. Feedback only ever surfaces here, as a
+// read-only review hint; it never touches status, content or revisions.
+func (s *IndependentTrainingPlanService) sessionFeedbackCount(ctx context.Context, owner, planID, revisionID uuid.UUID) *int64 {
+	count, err := s.sessions.PlanRevisionFeedbackCount(ctx, owner, planID, revisionID)
+	if err != nil {
+		return nil
+	}
+	return &count
 }
 
 // ListProposals lists the owner's proposals, optionally filtered by state.

@@ -112,17 +112,19 @@ type PlanAcceptance struct {
 // directly by acceptance tests. HTTP and generation adapters follow in slice 2.
 // It is independent of Treatment and requires no feature flag.
 type IndependentTrainingPlanService struct {
-	repo  *repository.IndependentTrainingPlanRepository
-	owner *repository.TrainingRepository
-	body  *BodyStateService
-	tx    *database.TransactionManager
-	now   func() time.Time
+	repo     *repository.IndependentTrainingPlanRepository
+	owner    *repository.TrainingRepository
+	sessions *repository.TrainerSessionRepository
+	body     *BodyStateService
+	tx       *database.TransactionManager
+	now      func() time.Time
 }
 
 func NewIndependentTrainingPlanService(db *gorm.DB) *IndependentTrainingPlanService {
 	return &IndependentTrainingPlanService{
 		repo: repository.NewIndependentTrainingPlanRepository(db), owner: repository.NewTrainingRepository(db),
-		body: NewBodyStateService(repository.NewBodyStateRepository(db)), tx: database.NewTransactionManager(db), now: func() time.Time { return time.Now().UTC() },
+		sessions: repository.NewTrainerSessionRepository(db),
+		body:     NewBodyStateService(repository.NewBodyStateRepository(db)), tx: database.NewTransactionManager(db), now: func() time.Time { return time.Now().UTC() },
 	}
 }
 func planDigest(value any) string {

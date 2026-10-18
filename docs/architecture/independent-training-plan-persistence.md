@@ -120,7 +120,10 @@ and never grants execution.
 context fingerprint with the current one (same conservative fingerprint as
 acceptance), so any BodyState revision, Safety boundary or native Diagnosis
 change recommends review; an unreadable context reports
-`context_unavailable`. The Safety pause is `executionGate`, the Go TrainerGate
+`context_unavailable`. With the context unchanged, user feedback on a Trainer
+session of the current accepted revision recommends review as
+`session_feedback_since_acceptance`; `review.sessionFeedbackCount` reports how
+many such sessions there are (`docs/architecture/trainer-runtime.md`). The Safety pause is `executionGate`, the Go TrainerGate
 evaluated on every read: `permitsExecution=false` for block/unavailable, and
 missing, unscreened or unrecognized Safety is never allow. Neither projection
 modifies status, content or revisions.

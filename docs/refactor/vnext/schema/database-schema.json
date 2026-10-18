@@ -7008,6 +7008,74 @@
             ]
         },
         {
+            "table": "training_session_feedback",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "session_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "text",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "training_session_transitions",
             "columns": [
                 {

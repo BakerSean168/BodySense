@@ -24,6 +24,7 @@ type trainerSessionApplication interface {
 	Pause(context.Context, uuid.UUID, service.TrainerTransitionCommand) (*service.TrainerSessionView, error)
 	Resume(context.Context, uuid.UUID, service.TrainerTransitionCommand) (*service.TrainerSessionView, error)
 	Finish(context.Context, uuid.UUID, service.FinishTrainerSessionCommand) (*service.TrainerSessionView, error)
+	RecordFeedback(context.Context, uuid.UUID, service.TrainerFeedbackCommand) (*service.TrainerSessionView, error)
 	Get(context.Context, uuid.UUID, uuid.UUID) (*service.TrainerSessionView, error)
 	List(context.Context, uuid.UUID, string) ([]service.TrainerSessionView, error)
 }
@@ -63,6 +64,9 @@ func (r trainerHTTPError) VisitResumeTrainingSessionResponse(w http.ResponseWrit
 	return r.write(w)
 }
 func (r trainerHTTPError) VisitFinishTrainingSessionResponse(w http.ResponseWriter) error {
+	return r.write(w)
+}
+func (r trainerHTTPError) VisitRecordTrainingSessionFeedbackResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }
 
@@ -120,6 +124,10 @@ func trainerCommandError(err error) trainerHTTPError {
 		return trainerHTTPError{http.StatusConflict, "SESSION_NOT_PAUSED", "training session is not paused"}
 	case errors.Is(err, service.ErrTrainerSetRecorded):
 		return trainerHTTPError{http.StatusConflict, "SET_ALREADY_RECORDED", "this set or exercise already has a recorded action"}
+	case errors.Is(err, service.ErrTrainerSessionNotEnded):
+		return trainerHTTPError{http.StatusConflict, "SESSION_NOT_ENDED", "feedback can be recorded once the session has ended"}
+	case errors.Is(err, service.ErrTrainerFeedbackRecorded):
+		return trainerHTTPError{http.StatusConflict, "FEEDBACK_ALREADY_RECORDED", "feedback for this session is already recorded"}
 	}
 	return trainerUnavailable
 }
@@ -154,6 +162,12 @@ type trainerTransitionWire struct {
 	IdempotencyKey  string                  `json:"idempotencyKey"`
 	RecordedAt      time.Time               `json:"recordedAt"`
 }
+type trainerFeedbackWire struct {
+	FeedbackID     uuid.UUID `json:"feedbackId"`
+	Text           string    `json:"text"`
+	IdempotencyKey string    `json:"idempotencyKey"`
+	RecordedAt     time.Time `json:"recordedAt"`
+}
 type trainerSessionWire struct {
 	SessionID      uuid.UUID               `json:"sessionId"`
 	PlanID         uuid.UUID               `json:"planId"`
@@ -169,6 +183,7 @@ type trainerSessionWire struct {
 	StartGate      trainerGateReceiptWire  `json:"startGate"`
 	Actions        []trainerSetActionWire  `json:"actions"`
 	Transitions    []trainerTransitionWire `json:"transitions"`
+	Feedback       *trainerFeedbackWire    `json:"feedback,omitempty"`
 }
 
 func trainerActionWire(owner uuid.UUID, a model.TrainingSetAction) (trainerSetActionWire, error) {
@@ -223,6 +238,12 @@ func trainerSessionRecord(owner uuid.UUID, v service.TrainerSessionView) (openap
 			transition.Gate = &trainerGateReceiptWire{Result: *t.GateResult, SafetyRevision: *t.SafetyRevision, PolicyRevision: *t.GatePolicyRevision}
 		}
 		wire.Transitions = append(wire.Transitions, transition)
+	}
+	if f := v.Feedback; f != nil {
+		if f.UserID != owner || f.SessionID != s.ID || f.PlanID != s.PlanID || f.PlanRevisionID != s.PlanRevisionID {
+			return openapiv1.TrainingSessionRecord{}, errors.New("feedback owner or session mismatch")
+		}
+		wire.Feedback = &trainerFeedbackWire{FeedbackID: f.ID, Text: f.Text, IdempotencyKey: f.IdempotencyKey, RecordedAt: f.RecordedAt}
 	}
 	return strictOpenAPIConvert[openapiv1.TrainingSessionRecord]("TrainingSessionRecord", wire)
 }
@@ -410,4 +431,29 @@ func (s *PublicServer) FinishTrainingSession(ctx context.Context, req openapiv1.
 		return trainerInconsistent, nil
 	}
 	return openapiv1.FinishTrainingSession200JSONResponse(record), nil
+}
+
+// RecordTrainingSessionFeedback stores the user's verbatim words about one
+// ended session. It is never gated and changes no plan, receipt or Safety.
+func (s *PublicServer) RecordTrainingSessionFeedback(ctx context.Context, req openapiv1.RecordTrainingSessionFeedbackRequestObject) (openapiv1.RecordTrainingSessionFeedbackResponseObject, error) {
+	owner, fail := s.trainerOwner(ctx)
+	if fail != nil {
+		return *fail, nil
+	}
+	if req.Body == nil {
+		return trainerBadRequest, nil
+	}
+	cmd := service.TrainerFeedbackCommand{SessionID: uuid.UUID(req.SessionId), Text: req.Body.Text, IdempotencyKey: string(req.Body.IdempotencyKey)}
+	view, err := s.trainerSessions.RecordFeedback(applicationRequestContext(ctx), owner, cmd)
+	if err != nil {
+		return trainerCommandError(err), nil
+	}
+	if view == nil || view.Session.ID != cmd.SessionID || view.Feedback == nil || view.Feedback.IdempotencyKey != cmd.IdempotencyKey {
+		return trainerInconsistent, nil
+	}
+	record, err := trainerSessionRecord(owner, *view)
+	if err != nil {
+		return trainerInconsistent, nil
+	}
+	return openapiv1.RecordTrainingSessionFeedback200JSONResponse(record), nil
 }

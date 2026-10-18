@@ -210,6 +210,45 @@ func (r *TrainerSessionRepository) End(ctx context.Context, row *model.TrainingS
 	return nil
 }
 
+// Feedback returns the sessions' feedback rows (at most one per session).
+func (r *TrainerSessionRepository) Feedback(ctx context.Context, owner uuid.UUID, sessions []uuid.UUID) ([]model.TrainingSessionFeedback, error) {
+	rows := []model.TrainingSessionFeedback{}
+	if len(sessions) == 0 {
+		return rows, nil
+	}
+	err := r.dbFor(ctx).Where("user_id=? AND session_id IN ?", owner, sessions).Order("session_id").Find(&rows).Error
+	return rows, err
+}
+
+func (r *TrainerSessionRepository) FeedbackByKey(ctx context.Context, owner uuid.UUID, key string) (*model.TrainingSessionFeedback, error) {
+	var row model.TrainingSessionFeedback
+	err := r.dbFor(ctx).Where("user_id=? AND idempotency_key=?", owner, key).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &row, err
+}
+
+// InsertFeedback stores the one feedback row of an ended session; a second
+// row for the session or a racing key is ErrTrainerSessionRace.
+func (r *TrainerSessionRepository) InsertFeedback(ctx context.Context, row *model.TrainingSessionFeedback) error {
+	err := r.dbFor(ctx).Create(row).Error
+	if uniqueViolation(err, "") {
+		return ErrTrainerSessionRace
+	}
+	return err
+}
+
+// PlanRevisionFeedbackCount counts feedback on sessions that executed exactly
+// this accepted plan revision. It is the review projection's only input from
+// feedback; it reads nothing else and writes nothing.
+func (r *TrainerSessionRepository) PlanRevisionFeedbackCount(ctx context.Context, owner, plan, revision uuid.UUID) (int64, error) {
+	var count int64
+	err := r.dbFor(ctx).Model(&model.TrainingSessionFeedback{}).
+		Where("user_id=? AND plan_id=? AND plan_revision_id=?", owner, plan, revision).Count(&count).Error
+	return count, err
+}
+
 // uniqueViolation matches SQLSTATE 23505, optionally for one constraint.
 func uniqueViolation(err error, constraint string) bool {
 	var pg *pgconn.PgError

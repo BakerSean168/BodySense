@@ -7,10 +7,15 @@
  */
 import * as zod from 'zod/mini';
 
+export const trainingPlanReviewSessionFeedbackCountMin = 0;
+
+
+
 export const TrainingPlanReview = /*#__PURE__*/ zod.strictObject({
   "recommended": /*#__PURE__*/ zod.boolean(),
-  "reason": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['context_changed_since_acceptance', 'context_unavailable']))
-}).check(/*#__PURE__*/ zod.describe('Read-only hint that the context this revision was accepted against changed (conservative). Only a newly accepted PlanProposal changes the prescription.'));
+  "reason": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['context_changed_since_acceptance', 'context_unavailable', 'session_feedback_since_acceptance'])),
+  "sessionFeedbackCount": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(trainingPlanReviewSessionFeedbackCountMin))).check(/*#__PURE__*/ zod.describe('Sessions of the current accepted revision with user feedback; omitted when it could not be read.'))
+}).check(/*#__PURE__*/ zod.describe('Read-only hint that the context this revision was accepted against changed (conservative), or that the user left session feedback on it. Only a newly accepted PlanProposal changes the prescription.'));
 
 export type TrainingPlanReview = zod.input<typeof TrainingPlanReview>;
 export type TrainingPlanReviewOutput = zod.output<typeof TrainingPlanReview>;

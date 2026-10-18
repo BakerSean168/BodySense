@@ -2291,6 +2291,24 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '503': {$ref: '#/components/responses/ServiceUnavailable'}
         '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}/feedback:
+    post:
+      operationId: recordTrainingSessionFeedback
+      summary: Record the user's own feedback on one owned ended session, verbatim and at most once.
+      description: Feedback is never gated and never interpreted. It changes no plan, revision, receipt, BodyState or Safety; it only surfaces as the read-only review hint of the plan revision the session executed. Body symptoms are recorded through BodyState. An exact idempotent retry returns the session.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RecordTrainingSessionFeedbackRequest'}}}
+      responses:
+        '200': {description: Ended session with its feedback, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/training-sessions/{sessionId}/pause:
     post:
       operationId: pauseTrainingSession
@@ -4847,10 +4865,11 @@ components:
       type: object
       additionalProperties: false
       required: [recommended]
-      description: Read-only hint that the context this revision was accepted against changed (conservative). Only a newly accepted PlanProposal changes the prescription.
+      description: Read-only hint that the context this revision was accepted against changed (conservative), or that the user left session feedback on it. Only a newly accepted PlanProposal changes the prescription.
       properties:
         recommended: {type: boolean}
-        reason: {type: string, enum: [context_changed_since_acceptance, context_unavailable]}
+        reason: {type: string, enum: [context_changed_since_acceptance, context_unavailable, session_feedback_since_acceptance]}
+        sessionFeedbackCount: {type: integer, format: int64, minimum: 0, description: Sessions of the current accepted revision with user feedback; omitted when it could not be read.}
     TrainingPlanRecord:
       type: object
       additionalProperties: false
@@ -5046,6 +5065,23 @@ components:
         endedReason: {type: string, enum: [finished, stopped_early]}
         expectedSessionRevision: {type: integer, format: int64, minimum: 0}
         idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    RecordTrainingSessionFeedbackRequest:
+      type: object
+      additionalProperties: false
+      required: [text, idempotencyKey]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 2000, pattern: '\S', description: "The user's own words, stored exactly as given."}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    TrainingSessionFeedbackRecord:
+      type: object
+      additionalProperties: false
+      required: [feedbackId, text, idempotencyKey, recordedAt]
+      description: The user's verbatim feedback on an ended session. Read-only input to the plan review hint; never a fact or a plan change.
+      properties:
+        feedbackId: {type: string, format: uuid}
+        text: {type: string, minLength: 1, maxLength: 2000}
+        idempotencyKey: {type: string, minLength: 1}
+        recordedAt: {type: string, format: date-time}
     TrainingSetActionRecord:
       type: object
       additionalProperties: false
@@ -5097,6 +5133,7 @@ components:
         startGate: {$ref: '#/components/schemas/TrainerGateReceipt'}
         actions: {type: array, items: {$ref: '#/components/schemas/TrainingSetActionRecord'}}
         transitions: {type: array, items: {$ref: '#/components/schemas/TrainingSessionTransitionRecord'}}
+        feedback: {$ref: '#/components/schemas/TrainingSessionFeedbackRecord'}
     TrainingSessionListResponse:
       type: object
       additionalProperties: false
