@@ -9,6 +9,7 @@ const uploadWire = {
   original_name: "photo.png",
   file_size: 3,
   mime_type: "image/png",
+  source_availability: "available" as const,
   ocr_status: "pending" as const,
   analysis_status: "none" as const,
   created_at: "2026-09-13T15:00:00Z",
@@ -113,6 +114,35 @@ describe("uploadStore OpenAPI boundary", () => {
 
     expect(useUploadStore.getState().uploads).toEqual([]);
     expect(useUploadStore.getState().error).toBeTruthy();
+  });
+
+  it("keeps a source-removed upload listed as source_unavailable and forgets an erased one", async () => {
+    act(() => {
+      useUploadStore.setState({
+        uploads: [{ ...uploadWire, ocr_result: null, analysis_result: null }],
+      });
+    });
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        availability: "source_removed",
+        message: "source removed",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useUploadStore.getState().deleteUpload(uploadWire.id);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain(`/api/v1/uploads/${uploadWire.id}`);
+    expect(init.method).toBe("DELETE");
+    expect(useUploadStore.getState().uploads).toEqual([
+      expect.objectContaining({
+        id: uploadWire.id,
+        source_availability: "source_unavailable",
+      }),
+    ]);
+    act(() => useUploadStore.getState().forgetUpload(uploadWire.id));
+    expect(useUploadStore.getState().uploads).toEqual([]);
   });
 
   it("uploads multipart data through the generated client", async () => {

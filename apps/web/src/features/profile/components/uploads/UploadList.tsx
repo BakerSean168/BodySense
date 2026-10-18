@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useUploadStore } from "@/stores/uploadStore";
 import type { UserUpload } from "../../types/upload.types";
 import { FILE_TYPE_LABELS, OCR_STATUS_LABELS } from "../../types/upload.types";
 import { OCRResultView } from "./OCRResultView";
+import { AssetErasure } from "./AssetErasure";
+
+const SOURCE_REMOVAL_CONFIRM =
+  "移除原件只删除原始文件。由它整理出的记录和已作出的决定会保留，并标注来源不可用。确定移除原件吗？";
 
 export function UploadList() {
-  const { uploads, deleteUpload } = useUploadStore();
+  const { uploads, deleteUpload, forgetUpload } = useUploadStore();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [erasingId, setErasingId] = useState<string | null>(null);
 
   if (uploads.length === 0) {
     return (
@@ -29,8 +34,10 @@ export function UploadList() {
     );
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定要删除此文件吗？")) return;
+  // Source removal (PC-D7): only the private original goes; derived evidence
+  // stays readable with a source-unavailable marker.
+  const handleRemoveSource = async (id: string) => {
+    if (!confirm(SOURCE_REMOVAL_CONFIRM)) return;
 
     setDeletingId(id);
     try {
@@ -48,8 +55,20 @@ export function UploadList() {
         <UploadItem
           key={upload.id}
           upload={upload}
-          onDelete={handleDelete}
+          onRemoveSource={handleRemoveSource}
+          onErase={(id) => setErasingId(id)}
           isDeleting={deletingId === upload.id}
+          erasure={
+            erasingId === upload.id ? (
+              <AssetErasure
+                assetId={upload.id}
+                onClose={(erased) => {
+                  setErasingId(null);
+                  if (erased) forgetUpload(upload.id);
+                }}
+              />
+            ) : null
+          }
         />
       ))}
     </div>
@@ -58,20 +77,28 @@ export function UploadList() {
 
 function UploadItem({
   upload,
-  onDelete,
+  onRemoveSource,
+  onErase,
   isDeleting,
+  erasure,
 }: {
   upload: UserUpload;
-  onDelete: (id: string) => void;
+  onRemoveSource: (id: string) => void;
+  onErase: (id: string) => void;
   isDeleting: boolean;
+  erasure: ReactNode;
 }) {
   const [showOCR, setShowOCR] = useState(false);
 
   const isImage = upload.mime_type.startsWith("image/");
+  const sourceRemoved = upload.source_availability === "source_unavailable";
   const isReport = upload.file_type === "report";
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div
+      className="border border-gray-200 rounded-lg overflow-hidden"
+      data-testid="upload-item"
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gray-50">
         <div className="flex items-center gap-3">
@@ -127,6 +154,11 @@ function UploadItem({
                 {formatDate(upload.created_at)}
               </span>
             </div>
+            {sourceRemoved ? (
+              <p className="mt-1 text-xs text-amber-700">
+                原件已移除 · 整理出的记录保留
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -134,52 +166,30 @@ function UploadItem({
           {/* OCR status */}
           {isReport && <OCRStatusBadge status={upload.ocr_status} />}
 
-          {/* Delete button */}
+          {!sourceRemoved ? (
+            <button
+              type="button"
+              onClick={() => onRemoveSource(upload.id)}
+              disabled={isDeleting || erasure !== null}
+              className="rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+              title="只删除原始文件，保留整理出的记录"
+            >
+              {isDeleting ? "正在移除" : "移除原件"}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => onDelete(upload.id)}
-            disabled={isDeleting}
-            className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
-            title="删除"
+            onClick={() => onErase(upload.id)}
+            disabled={isDeleting || erasure !== null}
+            className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
+            title="删除原始文件和它的所有副本"
           >
-            {isDeleting ? (
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            )}
+            彻底删除
           </button>
         </div>
       </div>
+
+      {erasure}
 
       {/* OCR Result */}
       {isReport && upload.ocr_status === "completed" && upload.ocr_result && (
@@ -205,7 +215,9 @@ function UploadItem({
             {showOCR ? "隐藏识别结果" : "查看识别结果"}
           </button>
 
-          {showOCR && <OCRResultView result={upload.ocr_result} uploadId={upload.id} />}
+          {showOCR && (
+            <OCRResultView result={upload.ocr_result} uploadId={upload.id} />
+          )}
         </div>
       )}
 

@@ -71,6 +71,8 @@ export interface UserUpload {
   original_name: string;
   file_size: number;
   mime_type: string;
+  /** CD-D4: source_unavailable once the private original was removed. */
+  source_availability: "available" | "source_unavailable";
   ocr_result: OCRResult | null;
   ocr_status: "pending" | "processing" | "completed" | "failed";
   analysis_status?: AnalysisStatus;
