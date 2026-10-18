@@ -1,8 +1,19 @@
 # UI-TP-001 · Bind TrainingPlan/Trainer windows to real safety-gated API
 
-Status: IN PROGRESS · lane B (Hark parallel lanes), worktree `bodysense-uitp001`, base `3dd993a02`, admitted at the 2026-10-18 closeout after TP-003 was accepted. Phase 3. SF cross-reference: SF-80.
+Status: IN PROGRESS · lane B (Hark parallel lanes) · slices 1–2 merged in #363 #364 (last merge `b8b7c1740`); slice 3 next, base `f2e52c79c`. Admitted at the 2026-10-18 closeout after TP-003 was accepted. Phase 3. SF cross-reference: SF-80.
 **Owner role:** React Training Owner. **Dependencies:** `TP-003`.
 **Exclusive resources:** `training-ui`.
+
+## Slice sync · 2026-10-19
+
+Synced on main `f2e52c79c`.
+
+| Slice                              | PR                                                                       | Delivered                                                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 · TrainingPlan plans + proposals | [#363](https://github.com/BakerSean168/BodySense/pull/363) (`fcdc025ed`) | plan picker over accepted revisions, read-only revision content, proposal accept/reject that updates only after the receipt, stale 409 → Expired board |
+| 2 · Trainer sessions               | [#364](https://github.com/BakerSean168/BodySense/pull/364) (`b8b7c1740`) | Trainer window: session start, per-set receipts, TrainerGate states, pause/resume, Penpot Trainer layout                                               |
+
+Remaining (slice 3): corrections, exercise skip, Ended feedback, Home trainer state, retire web Treatment naming. #315 stays open.
 
 ## Current remaining scope · 2026-10-16
 

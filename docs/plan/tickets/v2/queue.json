@@ -420,7 +420,11 @@
       "acceptedSha": null,
       "githubIssue": 314,
       "lane": "C",
-      "admissionNote": "A lane C writer (worktree bodysense-as002, branch feat/v2-as002-verified-erasure-20261018, base 3dd993a02) was running at the 2026-10-18 sync. Queue admission is not recorded because prerequisites AS-001 (profile slice) and PC-RET-001 (owner decision) are not accepted."
+      "admissionNote": "Slice 1 api (per-asset erasure command, controlled-copy inventory asset-erasure-inventory-v1, state machine, receipt; erased tombstone keeps id/kind/size/MIME and clears the content hash) merged in #362 (f2e52c79c). Queue admission is still not recorded because prerequisites AS-001 (profile slice) and PC-RET-001 (owner decision) are not accepted. Remaining: slice 2 ai runtime checkpoint hook, slice 3 Diagnosis/Training review projection and per-health-data erasure, slice 4 web+E2E.",
+      "mergedPrs": [362],
+      "mergedMainShas": {
+        "362": "f2e52c79ccadc4a868650ac43f02469ff13bc542"
+      }
     },
     {
       "id": "UI-001",
@@ -499,13 +503,19 @@
       "document": "docs/plan/tickets/v2/UI-TP-001.md",
       "threadId": null,
       "projectId": null,
-      "worktree": "/home/dev/projects/.hark-worktrees/bodysense-uitp001",
+      "worktree": "/home/dev/projects/.hark-worktrees/bodysense-uitp001c",
       "acceptedSha": null,
       "githubIssue": 315,
       "lane": "B",
-      "baseSha": "3dd993a023c50a0de82c8602a179f09e0338d547",
-      "branch": "feat/v2-uitp001-trainer-windows-20261018",
-      "executionOwner": "Hark parallel lanes (user request 2026-10-17)"
+      "baseSha": "f2e52c79ccadc4a868650ac43f02469ff13bc542",
+      "branch": null,
+      "executionOwner": "Hark parallel lanes (user request 2026-10-17)",
+      "mergedPrs": [363, 364],
+      "mergedMainShas": {
+        "363": "fcdc025ed3a284f8a3495da7767e8c12510a6f80",
+        "364": "b8b7c17407261d840c9c75ac73ffe782f10f2045"
+      },
+      "remainingScope": "Slice 3: corrections, exercise skip, Ended feedback, Home trainer state, retire web Treatment naming. Slices 1 (#363) and 2 (#364) merged; slice 1-2 worktrees removed; slice 3 worktree is cut from mainBaselineSha when the writer starts."
     },
     {
       "id": "QA-001",
@@ -579,15 +589,15 @@
       "acceptanceNote": "All A-E slices COMPLETE and merged. Full post-C Chromium 25/25 recorded in PR298; current exact-main CI including PG18 baseline/recovery/browser SUCCESS. Remaining V2 domains/design/privacy/release are outside this completed ticket."
     }
   ],
-  "mainBaselineSha": "3dd993a023c50a0de82c8602a179f09e0338d547",
+  "mainBaselineSha": "f2e52c79ccadc4a868650ac43f02469ff13bc542",
   "mainCandidateRun": "https://github.com/BakerSean168/BodySense/actions/runs/38894149824",
-  "baselineFrozenAtUtc": "Sun 2026-10-18 9:50 PM CST (UTC+08:00)",
-  "previousFrozenBaselineSha": "1abcc9f1634bb6039e00c6f9654817118ae5cf4c",
+  "baselineFrozenAtUtc": "Mon 2026-10-19 12:04 AM CST (UTC+08:00)",
+  "previousFrozenBaselineSha": "3dd993a023c50a0de82c8602a179f09e0338d547",
   "newWriterAdmissionPolicy": "PARALLEL_LANES_MAX_4;resource_collisions_only_between_same_domain_files;shared_generated_hotspots_rebase_rule",
-  "auditedAtUtc": "Sun 2026-10-18 9:50 PM CST (UTC+08:00)",
-  "postMergeMainSha": "3dd993a023c50a0de82c8602a179f09e0338d547",
+  "auditedAtUtc": "Mon 2026-10-19 12:04 AM CST (UTC+08:00)",
+  "postMergeMainSha": "f2e52c79ccadc4a868650ac43f02469ff13bc542",
   "latestObservedMainCiRun": "https://github.com/BakerSean168/BodySense/actions/runs/39131745969",
-  "latestObservedMainCiStatus": "PR359_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
+  "latestObservedMainCiStatus": "PR362_exact_head_CI_SUCCESS_merged_up_to_date;main_push_CI_not_separately_observed",
   "mergedDomainContractPr": 264,
   "domainContractMergedSha": "945d8ef41c46c73dd222cdb8cb4007681c71babb",
   "mainCandidateStatus": "SUCCESS_IMMUTABLE_CANDIDATE_STAGING_PROMOTION_SKIPPED",

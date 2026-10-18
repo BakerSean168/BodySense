@@ -300,3 +300,14 @@ Synced on main `3dd993a023c50a0de82c8602a179f09e0338d547` (#359 merge). GitHub i
 **Lanes after this sync.** A: DX-RETIRE-001 slice 3 next, with DX-003 and UI-DX-001 waiting on decisions. B: UI-TP-001 #315. C: AS-002 #314, BS-AGENT-001 slices 2–3, AS-001 profile slice, UI-001 residual. UI-TP-001 is admitted in the queue (worktree `bodysense-uitp001`, base `3dd993a02`). An AS-002 writer is also running, but its queue admission waits until AS-001 and PC-RET-001 are accepted. The queue `mainBaselineSha` moves to `3dd993a02`.
 
 **Removed on main since §0:** Treatment lifecycle and Treatment review (#348), legacy `training_logs` and `/training/*` (#360), the legacy Diagnosis analysis/candidate/freshness stack (#359). IG-01 and IG-02 in `docs/product/implementation-gaps.md` are resolved by the Trainer runtime (#352, #360).
+
+## 9. Slice sync · 2026-10-19
+
+Synced on main `f2e52c79ccadc4a868650ac43f02469ff13bc542` (#362 merge), the new queue `mainBaselineSha`.
+
+| Ticket    | Issue                                                        | Merged PRs (merge SHA)             | Queue status | Remaining                                                                                                                                   |
+| --------- | ------------------------------------------------------------ | ---------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI-TP-001 | [#315](https://github.com/BakerSean168/BodySense/issues/315) | #363 `fcdc025ed`, #364 `b8b7c1740` | in_progress  | slice 3: corrections, exercise skip, Ended feedback, Home trainer state, retire web Treatment naming                                        |
+| AS-002    | [#314](https://github.com/BakerSean168/BodySense/issues/314) | #362 `f2e52c79c`                   | queued       | slice 2 ai checkpoint hook, slice 3 review projection + per-health-data erasure, slice 4 web+E2E; admission waits for AS-001 and PC-RET-001 |
+
+TP-002 #311 and TP-003 #313 are closed. No domain gate is raised.

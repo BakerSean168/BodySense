@@ -24,6 +24,10 @@ At the user's request, Hark now implements V2 in **parallel lanes** with up to f
 
 Synced on main `3dd993a023c50a0de82c8602a179f09e0338d547`, which is the new queue `mainBaselineSha`. TP-002 (#311) and TP-003 (#313) are **done** as tickets. PC-RET-001 (#307), DX-003 (#310) and UI-DX-001 (#312) have their planned slices merged and are **blocked** on an owner or user decision. DX-RETIRE-001 (#341) and BS-AGENT-001 (#308) are queued for their next slices. UI-TP-001 (#315) is in progress in lane B. No domain gate is raised. Details: [remaining plan §8](../../active/2026-10-16-v2-remaining-plan.md#8-domain-closeout--2026-10-18).
 
+## Checkpoint · 2026-10-19 · slice sync
+
+Synced on main `f2e52c79ccadc4a868650ac43f02469ff13bc542`, the new queue `mainBaselineSha`. Merged since the 2026-10-18 closeout: UI-TP-001 slices 1–2 (#363 `fcdc025ed`, #364 `b8b7c1740`) and AS-002 slice 1 (#362 `f2e52c79c`). UI-TP-001 stays in progress for slice 3; AS-002 stays queued until AS-001 and PC-RET-001 are accepted. Issues #311 and #313 are closed. Details: [remaining plan §9](../../active/2026-10-16-v2-remaining-plan.md#9-slice-sync--2026-10-19).
+
 ## Scheduling policy
 
 Write a short execution handoff for each thread: `ticketId, threadId, projectId, absolute worktree, branch, expectedHead, provider/model, run status, changed paths, tests, output exact SHA, blockers`. Never retry an ambiguous T3 create/message blindly; first query its durable thread status. Stop a previous writer before ChatGPT Web assumes the same checkout. Existing hourly Track A/C/D tasks must not race new thread owners.
