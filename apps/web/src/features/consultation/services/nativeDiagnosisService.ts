@@ -9,6 +9,14 @@ import { NativeDiagnosisDecisionRequest } from "@/generated/api/model/nativeDiag
 import { NativeDiagnosisSettlementRequest } from "@/generated/api/model/nativeDiagnosisSettlementRequest.zod";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
+// Response shapes for view models; features import them from this adapter only.
+export type { NativeDiagnosisConditionOutput as NativeDiagnosisCondition } from "@/generated/api/model/nativeDiagnosisCondition.zod";
+export type { NativeDiagnosisDecisionReceiptOutput as NativeDiagnosisDecisionReceipt } from "@/generated/api/model/nativeDiagnosisDecisionReceipt.zod";
+export type { NativeDiagnosisProjectionOutput as NativeDiagnosisProjection } from "@/generated/api/model/nativeDiagnosisProjection.zod";
+export type { NativeDiagnosisRunProjectionOutput as NativeDiagnosisRun } from "@/generated/api/model/nativeDiagnosisRunProjection.zod";
+export type { NativeDiagnosisRunProposalOutput as NativeDiagnosisProposal } from "@/generated/api/model/nativeDiagnosisRunProposal.zod";
+export type { NativeDiagnosisSettlementReceiptOutput as NativeDiagnosisSettlementReceipt } from "@/generated/api/model/nativeDiagnosisSettlementReceipt.zod";
+
 export type NativeDiagnosisDecisionCommand = Parameters<
   typeof decideNativeDiagnosisProposal
 >[1];

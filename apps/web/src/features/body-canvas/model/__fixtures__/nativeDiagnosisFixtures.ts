@@ -1,9 +1,11 @@
-import type { NativeDiagnosisConditionOutput } from "@/generated/api/model/nativeDiagnosisCondition.zod";
-import type { NativeDiagnosisDecisionReceiptOutput } from "@/generated/api/model/nativeDiagnosisDecisionReceipt.zod";
-import type { NativeDiagnosisProjectionOutput } from "@/generated/api/model/nativeDiagnosisProjection.zod";
-import type { NativeDiagnosisRunProjectionOutput } from "@/generated/api/model/nativeDiagnosisRunProjection.zod";
-import type { NativeDiagnosisRunProposalOutput } from "@/generated/api/model/nativeDiagnosisRunProposal.zod";
-import type { NativeDiagnosisSettlementReceiptOutput } from "@/generated/api/model/nativeDiagnosisSettlementReceipt.zod";
+import type {
+  NativeDiagnosisCondition as NativeDiagnosisConditionOutput,
+  NativeDiagnosisDecisionReceipt as NativeDiagnosisDecisionReceiptOutput,
+  NativeDiagnosisProjection as NativeDiagnosisProjectionOutput,
+  NativeDiagnosisProposal as NativeDiagnosisRunProposalOutput,
+  NativeDiagnosisRun as NativeDiagnosisRunProjectionOutput,
+  NativeDiagnosisSettlementReceipt as NativeDiagnosisSettlementReceiptOutput,
+} from "@/features/consultation/services/nativeDiagnosisService";
 
 export const USER_ID = "00000000-0000-4000-8000-000000000001";
 export const RUN_ID = "00000000-0000-4000-8000-0000000000a1";
