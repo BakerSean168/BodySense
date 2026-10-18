@@ -86,6 +86,7 @@ from ..services.consultation_state_acquisition import (
 )
 from ..services.red_flag_detector import get_red_flag_detector
 from .body_fact_capture import acquire_body_fact_answer, acquire_body_fact_turn
+from .checkpoint_retention import tag_runtime_message
 from .checkpointing import get_runtime_checkpointer
 
 logger = logging.getLogger(__name__)
@@ -559,7 +560,10 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
 
     content = _user_content_with_images(current_user_message, pending_images)
     runtime_messages = list(state.get("runtime_messages", []))
-    runtime_messages.append({"role": "user", "content": content})
+    # The run_id tag lets retention drop this Run's segment once Go prunes it.
+    runtime_messages.append(
+        tag_runtime_message({"role": "user", "content": content}, state.get("run_id"))
+    )
     return {
         "runtime_messages": runtime_messages,
         "latest_user_message": current_user_message,

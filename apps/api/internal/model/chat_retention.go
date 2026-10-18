@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +19,9 @@ import (
 //     message text. Go context assembly ignores raw messages before C.
 //   - PrunedThroughSeq R: the physical-deletion boundary. Raw messages and
 //     their controlled runtime copies at or before R are gone, except rows a
-//     durable reference still holds (they are retained, never dangled).
+//     durable reference still holds (they are retained, never dangled). R
+//     moves only after the ai-service proved the LangGraph checkpoint copies
+//     of the pruned Runs are gone (CheckpointCleanupReceipt).
 //
 // Ordering, enforced in Go and by conversations_retention_cursor_order_check:
 //
@@ -39,6 +43,16 @@ var (
 	// ErrRetentionOwnerAnomaly reports rows in the owner's Conversation that
 	// belong to, or are referenced by, another owner. Retention fails closed.
 	ErrRetentionOwnerAnomaly = errors.New("retention owner anomaly")
+	// ErrRetentionBusy: a Run is active, waiting on Ask User or still
+	// streaming. Its LangGraph thread is mid-step, so no prune pass runs until
+	// it settles. Retry later.
+	ErrRetentionBusy = errors.New("conversation has an unsettled run")
+	// ErrRetentionPlanStale: the Conversation changed between planning a pass
+	// and committing it. Nothing was deleted; plan again.
+	ErrRetentionPlanStale = errors.New("retention prune plan is stale")
+	// ErrRetentionCleanupUnverified: the ai-service checkpoint cleanup receipt
+	// does not prove the planned Runs are gone. The cursor does not move.
+	ErrRetentionCleanupUnverified = errors.New("checkpoint cleanup receipt not verified")
 )
 
 // ChatRetentionCursor is the current retention state of one Conversation.
@@ -62,6 +76,60 @@ type AdvanceRetentionCursorCommand struct {
 	ThroughSeq       int
 }
 
+// ChatRetentionPrunePlan is a prune pass computed under the Conversation lock
+// but not applied. The ai-service cleans the checkpoint copies of RunIDs first;
+// the commit then re-checks that nothing changed and applies the plan.
+type ChatRetentionPrunePlan struct {
+	ConversationID   uuid.UUID
+	FromPrunedSeq    int
+	TargetSeq        int
+	LastSeq          int
+	ExpectedRevision int64
+	// RunIDs are every Run whose messages all sit at or before TargetSeq,
+	// sorted. Their LangGraph segments are what the cleanup removes.
+	RunIDs []uuid.UUID
+}
+
+// CheckpointCleanupReceipt is the ai-service answer to a checkpoint cleanup
+// (POST /runtime/threads/{conversation}/checkpoints/cleanup).
+type CheckpointCleanupReceipt struct {
+	Status             string   `json:"status"`
+	ThreadID           string   `json:"thread_id"`
+	PrunedRunIDs       []string `json:"pruned_run_ids"`
+	CheckpointID       *string  `json:"checkpoint_id"`
+	RemovedMessages    int      `json:"removed_messages"`
+	RetainedMessages   int      `json:"retained_messages"`
+	DeletedCheckpoints int      `json:"deleted_checkpoints"`
+	RemainingRunIDs    []string `json:"remaining_run_ids"`
+}
+
+// VerifyCleanup checks that a cleanup receipt covers exactly this plan: the
+// same thread, the same Runs, and none of them left in the thread.
+func (p *ChatRetentionPrunePlan) VerifyCleanup(receipt *CheckpointCleanupReceipt) error {
+	if receipt == nil || receipt.Status != "cleaned" {
+		return fmt.Errorf("%w: no cleaned receipt", ErrRetentionCleanupUnverified)
+	}
+	if receipt.ThreadID != p.ConversationID.String() {
+		return fmt.Errorf("%w: receipt names another thread", ErrRetentionCleanupUnverified)
+	}
+	want := make([]string, len(p.RunIDs))
+	for i, id := range p.RunIDs {
+		want[i] = id.String()
+	}
+	got := slices.Clone(receipt.PrunedRunIDs)
+	slices.Sort(want)
+	slices.Sort(got)
+	if !slices.Equal(want, got) {
+		return fmt.Errorf("%w: receipt covers other runs", ErrRetentionCleanupUnverified)
+	}
+	for _, remaining := range receipt.RemainingRunIDs {
+		if slices.Contains(want, remaining) {
+			return fmt.Errorf("%w: run %s still in the thread", ErrRetentionCleanupUnverified, remaining)
+		}
+	}
+	return nil
+}
+
 // ChatRetentionPruneReceipt is the durable result of one prune pass, stored as
 // the result of a completed `chat.retention.prune` job.
 type ChatRetentionPruneReceipt struct {
@@ -75,9 +143,12 @@ type ChatRetentionPruneReceipt struct {
 	PrunedRuns           int       `json:"prunedRuns"`
 	DeletedRuntimeEvents int64     `json:"deletedRuntimeEvents"`
 	DeletedToolCalls     int64     `json:"deletedToolCalls"`
-	// CheckpointCleanup is "not_run" until the ai-service cleanup receipt
-	// exists (PC-RET-001 slice 2); this pass touched no LangGraph state.
-	CheckpointCleanup string `json:"checkpointCleanup"`
+	// CheckpointCleanup is "verified" once the ai-service receipt proved the
+	// LangGraph copies of the pruned Runs are gone; R never moves without it.
+	CheckpointCleanup         string `json:"checkpointCleanup"`
+	CheckpointID              string `json:"checkpointId,omitempty"`
+	CheckpointMessagesRemoved int    `json:"checkpointMessagesRemoved"`
+	CheckpointsDeleted        int    `json:"checkpointsDeleted"`
 	// Replayed is true when the receipt came from an earlier identical pass.
 	Replayed bool `json:"replayed"`
 }

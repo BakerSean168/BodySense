@@ -172,6 +172,10 @@ func main() {
 		WithDeployment(agentDeploymentPolicy).
 		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	// PC-RET-001: prune jobs run only when something enqueues them; a pass
+	// moves no cursor until the ai-service checkpoint cleanup is verified.
+	service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
+		StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,

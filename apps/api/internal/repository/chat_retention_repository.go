@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -265,8 +267,12 @@ func (r *ChatRetentionRepository) AdvanceContextStart(ctx context.Context, owner
 		}, "context_start_seq")
 }
 
-func pruneJobKey(conversationID uuid.UUID, target int) string {
-	return fmt.Sprintf("%s:%s:%d", model.ChatRetentionPruneJobType, conversationID, target)
+// PruneJobKey is the idempotency key of a prune job: one per pruned cursor
+// position and trigger, so a new trigger (say, another settled Run) can ask
+// again while the cursor has not moved. Concurrent jobs are safe: the commit
+// compare-and-sets the cursor and later passes replay its receipt.
+func PruneJobKey(conversationID uuid.UUID, from int, trigger string) string {
+	return fmt.Sprintf("%s:%s:%d:%s", model.ChatRetentionPruneJobType, conversationID, from, trigger)
 }
 
 // protectedMessages returns live messages in (from, through] that a durable
@@ -350,16 +356,17 @@ func replayPrune(ctx context.Context, tx *gorm.DB, conversation *model.Conversat
 		FromPrunedSeq:     conversation.PrunedThroughSeq,
 		PrunedThroughSeq:  conversation.PrunedThroughSeq,
 		RetentionRevision: conversation.RetentionRevision,
-		CheckpointCleanup: "not_run",
+		CheckpointCleanup: "not_needed",
 		Replayed:          true,
 	}
 	if conversation.PrunedThroughSeq == 0 {
 		return receipt, nil
 	}
 	var job model.Job
-	err := tx.WithContext(ctx).Where("user_id = ? AND job_type = ? AND idempotency_key = ?",
-		conversation.UserID, model.ChatRetentionPruneJobType, pruneJobKey(conversation.ID, conversation.PrunedThroughSeq)).
-		First(&job).Error
+	err := tx.WithContext(ctx).
+		Where("user_id = ? AND conversation_id = ? AND job_type = ? AND status = ? AND (result->>'prunedThroughSeq')::int = ?",
+			conversation.UserID, conversation.ID, model.ChatRetentionPruneJobType, model.JobStatusCompleted, conversation.PrunedThroughSeq).
+		Order("finished_at DESC").First(&job).Error
 	if err != nil {
 		return nil, fmt.Errorf("prune receipt for pruned cursor: %w", err)
 	}
@@ -370,17 +377,104 @@ func replayPrune(ctx context.Context, tx *gorm.DB, conversation *model.Conversat
 	return receipt, nil
 }
 
-// Prune physically deletes raw messages and their controlled runtime copies
-// behind the safe boundary in one transaction, then advances R and records a
-// completed `chat.retention.prune` job as the receipt.
-//
-// The boundary is min(C - 1, last seq - 1), cut back before the first message
-// of any active/waiting Run or pending Ask User and down to a complete
-// interaction boundary. The newest message is never pruned so MAX(seq)+1 seq
-// allocation can never reuse a pruned seq. Messages a durable record still
-// references are retained in place; their Runs keep their event logs.
-func (r *ChatRetentionRepository) Prune(ctx context.Context, owner uuid.UUID) (*model.ChatRetentionPruneReceipt, error) {
-	var receipt *model.ChatRetentionPruneReceipt
+// pruneWindow is what one pass would remove, computed from live metadata.
+type pruneWindow struct {
+	from, target, lastSeq int
+	busy                  bool
+	messages              []retentionMessage
+	// runIDs are every Run whose messages all sit at or before target.
+	runIDs []uuid.UUID
+}
+
+// computePruneWindow picks the boundary min(C - 1, P, last seq - 1), cut down
+// to a complete interaction boundary. The newest message is never pruned so
+// MAX(seq)+1 seq allocation can never reuse a pruned seq.
+func computePruneWindow(conversation *model.Conversation, messages []retentionMessage) pruneWindow {
+	w := pruneWindow{from: conversation.PrunedThroughSeq, messages: messages}
+	w.target = min(conversation.ContextStartSeq-1, conversation.ProcessedThroughSeq)
+	if len(messages) == 0 {
+		w.target = w.from
+	} else {
+		w.lastSeq = messages[len(messages)-1].Seq
+		w.target = min(w.target, w.lastSeq-1)
+	}
+	for _, m := range messages {
+		if !m.settled() {
+			// Never past an unsettled message, even with forced cursors.
+			w.busy = true
+			w.target = min(w.target, m.Seq-1)
+			break
+		}
+	}
+	for w.target > w.from && !turnBoundary(messages, w.target) {
+		w.target = earliestSpanningTurnStart(messages, w.target) - 1
+	}
+	behind, ahead := map[uuid.UUID]bool{}, map[uuid.UUID]bool{}
+	for _, m := range messages {
+		if m.RunID == nil {
+			continue
+		}
+		if m.Seq <= w.target {
+			behind[*m.RunID] = true
+		} else {
+			ahead[*m.RunID] = true
+		}
+	}
+	for id := range behind {
+		if !ahead[id] {
+			w.runIDs = append(w.runIDs, id)
+		}
+	}
+	slices.SortFunc(w.runIDs, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+	return w
+}
+
+// pruneDeletion is the exact row set a pass deletes inside its window.
+type pruneDeletion struct {
+	keep []uuid.UUID // referenced messages retained in place
+	runs []uuid.UUID // Runs whose event logs and tool calls go
+}
+
+func planDeletion(ctx context.Context, tx *gorm.DB, conversation *model.Conversation, w pruneWindow) (pruneDeletion, error) {
+	protected, err := protectedMessages(ctx, tx, conversation, w.from, w.target)
+	if err != nil {
+		return pruneDeletion{}, err
+	}
+	held := map[uuid.UUID]bool{}
+	for _, m := range w.messages {
+		if m.RunID != nil && m.Seq <= w.target && protected[m.ID] {
+			held[*m.RunID] = true
+		}
+	}
+	candidates := make([]uuid.UUID, 0, len(w.runIDs))
+	for _, id := range w.runIDs {
+		if !held[id] {
+			candidates = append(candidates, id)
+		}
+	}
+	referenced, err := referencedRuns(ctx, tx, conversation.UserID, candidates)
+	if err != nil {
+		return pruneDeletion{}, err
+	}
+	var d pruneDeletion
+	for _, id := range candidates {
+		if !referenced[id] {
+			d.runs = append(d.runs, id)
+		}
+	}
+	for id := range protected {
+		d.keep = append(d.keep, id)
+	}
+	return d, nil
+}
+
+// PlanPrune computes the next prune pass without deleting anything. It returns
+// a replay receipt instead when there is nothing left to prune, and
+// ErrRetentionBusy while any Run is unsettled: its LangGraph thread is mid-step
+// or waiting on Ask User, so its checkpoint must not be rewritten.
+func (r *ChatRetentionRepository) PlanPrune(ctx context.Context, owner uuid.UUID) (*model.ChatRetentionPrunePlan, *model.ChatRetentionPruneReceipt, error) {
+	var plan *model.ChatRetentionPrunePlan
+	var replay *model.ChatRetentionPruneReceipt
 	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		conversation, err := r.lock(ctx, tx, owner)
 		if err != nil {
@@ -390,90 +484,101 @@ func (r *ChatRetentionRepository) Prune(ctx context.Context, owner uuid.UUID) (*
 		if err != nil {
 			return err
 		}
-		from := conversation.PrunedThroughSeq
-		target := conversation.ContextStartSeq - 1
-		if target > conversation.ProcessedThroughSeq {
-			target = conversation.ProcessedThroughSeq
-		}
-		if len(messages) == 0 {
-			target = from
-		} else if last := messages[len(messages)-1].Seq; target > last-1 {
-			target = last - 1
-		}
-		for _, m := range messages {
-			if !m.settled() {
-				// An active/waiting Run or pending Ask User blocks pruning past it.
-				if m.Seq-1 < target {
-					target = m.Seq - 1
-				}
-				break
-			}
-		}
-		for target > from && !turnBoundary(messages, target) {
-			target = earliestSpanningTurnStart(messages, target) - 1
-		}
-		if target <= from {
-			receipt, err = replayPrune(ctx, tx, conversation)
+		w := computePruneWindow(conversation, messages)
+		if w.target <= w.from {
+			replay, err = replayPrune(ctx, tx, conversation)
 			return err
 		}
+		if w.busy {
+			return model.ErrRetentionBusy
+		}
+		// Surface owner anomalies before anything outside Go is touched.
+		if _, err := planDeletion(ctx, tx, conversation, w); err != nil {
+			return err
+		}
+		plan = &model.ChatRetentionPrunePlan{
+			ConversationID: conversation.ID, FromPrunedSeq: w.from, TargetSeq: w.target,
+			LastSeq: w.lastSeq, ExpectedRevision: conversation.RetentionRevision, RunIDs: w.runIDs,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return plan, replay, nil
+}
 
-		protected, err := protectedMessages(ctx, tx, conversation, from, target)
+// CommitPrune applies a plan whose checkpoint cleanup receipt is in hand, in
+// one transaction: it re-checks that the Conversation is exactly as planned
+// (same revision, no new message, nothing unsettled, same Runs), verifies the
+// receipt, deletes raw messages and their controlled runtime copies, advances
+// R and records the receipt on the prune job. A concurrent pass that already
+// applied the plan is answered with its receipt.
+//
+// jobID names the claimed (running) job to complete; uuid.Nil records the
+// receipt on the pass's own job instead.
+func (r *ChatRetentionRepository) CommitPrune(
+	ctx context.Context,
+	owner uuid.UUID,
+	plan *model.ChatRetentionPrunePlan,
+	cleanup *model.CheckpointCleanupReceipt,
+	jobID uuid.UUID,
+) (*model.ChatRetentionPruneReceipt, error) {
+	var receipt *model.ChatRetentionPruneReceipt
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		conversation, err := r.lock(ctx, tx, owner)
 		if err != nil {
 			return err
 		}
-		runSet := map[uuid.UUID]bool{}
-		heldRuns := map[uuid.UUID]bool{}
-		for _, m := range messages {
-			if m.RunID == nil {
-				continue
-			}
-			if m.Seq > target || protected[m.ID] || !m.settled() {
-				heldRuns[*m.RunID] = true
-				continue
-			}
-			runSet[*m.RunID] = true
+		if conversation.ID != plan.ConversationID {
+			return model.ErrRetentionPlanStale
 		}
-		candidates := make([]uuid.UUID, 0, len(runSet))
-		for id := range runSet {
-			if !heldRuns[id] {
-				candidates = append(candidates, id)
+		if conversation.RetentionRevision != plan.ExpectedRevision {
+			if conversation.PrunedThroughSeq >= plan.TargetSeq {
+				receipt, err = replayPrune(ctx, tx, conversation)
+				return err
 			}
+			return model.ErrRetentionPlanStale
 		}
-		referenced, err := referencedRuns(ctx, tx, owner, candidates)
+		messages, err := liveMessages(ctx, tx, conversation)
 		if err != nil {
 			return err
 		}
-		runs := make([]uuid.UUID, 0, len(candidates))
-		for _, id := range candidates {
-			if !referenced[id] {
-				runs = append(runs, id)
-			}
+		w := computePruneWindow(conversation, messages)
+		if w.busy {
+			return model.ErrRetentionBusy
 		}
-		keep := make([]uuid.UUID, 0, len(protected))
-		for id := range protected {
-			keep = append(keep, id)
+		if w.lastSeq != plan.LastSeq || w.target != plan.TargetSeq || !slices.Equal(w.runIDs, plan.RunIDs) {
+			return model.ErrRetentionPlanStale
+		}
+		if err := plan.VerifyCleanup(cleanup); err != nil {
+			return err
+		}
+		d, err := planDeletion(ctx, tx, conversation, w)
+		if err != nil {
+			return err
 		}
 
 		var deletedEvents, deletedToolCalls int64
-		if len(runs) > 0 {
+		if len(d.runs) > 0 {
 			if err := tx.WithContext(ctx).Exec(
-				"DELETE FROM thread_projection_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, runs).Error; err != nil {
+				"DELETE FROM thread_projection_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs).Error; err != nil {
 				return err
 			}
-			res := tx.WithContext(ctx).Exec("DELETE FROM agent_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, runs)
+			res := tx.WithContext(ctx).Exec("DELETE FROM agent_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs)
 			if res.Error != nil {
 				return res.Error
 			}
 			deletedToolCalls = res.RowsAffected
-			res = tx.WithContext(ctx).Exec("DELETE FROM runtime_events WHERE conversation_id = ? AND run_id IN ?", conversation.ID, runs)
+			res = tx.WithContext(ctx).Exec("DELETE FROM runtime_events WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs)
 			if res.Error != nil {
 				return res.Error
 			}
 			deletedEvents = res.RowsAffected
 		}
-		del := tx.WithContext(ctx).Where("conversation_id = ? AND seq > ? AND seq <= ?", conversation.ID, from, target)
-		if len(keep) > 0 {
-			del = del.Where("id NOT IN ?", keep)
+		del := tx.WithContext(ctx).Where("conversation_id = ? AND seq > ? AND seq <= ?", conversation.ID, w.from, w.target)
+		if len(d.keep) > 0 {
+			del = del.Where("id NOT IN ?", d.keep)
 		}
 		deleted := del.Delete(&model.Message{})
 		if deleted.Error != nil {
@@ -483,7 +588,7 @@ func (r *ChatRetentionRepository) Prune(ctx context.Context, owner uuid.UUID) (*
 		next := conversation.RetentionRevision + 1
 		update := tx.WithContext(ctx).Model(&model.Conversation{}).
 			Where("id = ? AND user_id = ? AND retention_revision = ?", conversation.ID, owner, conversation.RetentionRevision).
-			Updates(map[string]any{"pruned_through_seq": target, "retention_revision": next, "updated_at": r.now()})
+			Updates(map[string]any{"pruned_through_seq": w.target, "retention_revision": next, "updated_at": r.now()})
 		if update.Error != nil {
 			return update.Error
 		}
@@ -491,39 +596,75 @@ func (r *ChatRetentionRepository) Prune(ctx context.Context, owner uuid.UUID) (*
 			return model.ErrRetentionRevisionConflict
 		}
 
-		now := r.now()
-		jobID := uuid.New()
 		receipt = &model.ChatRetentionPruneReceipt{
-			JobID: jobID, ConversationID: conversation.ID, FromPrunedSeq: from, PrunedThroughSeq: target,
-			RetentionRevision: next, DeletedMessages: deleted.RowsAffected, RetainedMessages: len(keep),
-			PrunedRuns: len(runs), DeletedRuntimeEvents: deletedEvents, DeletedToolCalls: deletedToolCalls,
-			CheckpointCleanup: "not_run",
+			ConversationID: conversation.ID, FromPrunedSeq: w.from, PrunedThroughSeq: w.target,
+			RetentionRevision: next, DeletedMessages: deleted.RowsAffected, RetainedMessages: len(d.keep),
+			PrunedRuns: len(d.runs), DeletedRuntimeEvents: deletedEvents, DeletedToolCalls: deletedToolCalls,
+			CheckpointCleanup: "verified", CheckpointMessagesRemoved: cleanup.RemovedMessages,
+			CheckpointsDeleted: cleanup.DeletedCheckpoints,
 		}
-		result, err := json.Marshal(receipt)
+		if cleanup.CheckpointID != nil {
+			receipt.CheckpointID = *cleanup.CheckpointID
+		}
+		input, err := json.Marshal(map[string]any{"fromPrunedSeq": w.from, "targetSeq": w.target, "expectedRevision": plan.ExpectedRevision})
 		if err != nil {
 			return err
 		}
-		input, err := json.Marshal(map[string]any{"fromPrunedSeq": from, "targetSeq": target, "expectedRevision": conversation.RetentionRevision})
-		if err != nil {
-			return err
-		}
-		key := pruneJobKey(conversation.ID, target)
-		convID := conversation.ID
-		job := model.Job{
-			ID: jobID, ConversationID: &convID, UserID: owner, JobType: model.ChatRetentionPruneJobType,
-			Status: model.JobStatusCompleted, Input: datatypes.JSON(input), Result: datatypes.JSON(result),
-			IdempotencyKey: &key, Attempts: 1, MaxAttempts: 1, StartedAt: &now, FinishedAt: &now,
-			Metadata: datatypes.JSON(`{}`),
-		}
-		if err := tx.WithContext(ctx).Create(&job).Error; err != nil {
-			return err
-		}
-		return tx.WithContext(ctx).Create(&model.JobEvent{
-			JobID: jobID, EventType: "job.completed", Payload: datatypes.JSON(result),
-		}).Error
+		receipt.JobID, err = r.recordPruneReceipt(ctx, tx, conversation, jobID, input, receipt)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return receipt, nil
+}
+
+// recordPruneReceipt completes the prune job in the commit transaction, so the
+// receipt exists exactly when the cursor moved. jobID names a claimed job; a
+// direct pass (uuid.Nil) records its receipt on a job of its own.
+func (r *ChatRetentionRepository) recordPruneReceipt(
+	ctx context.Context,
+	tx *gorm.DB,
+	conversation *model.Conversation,
+	jobID uuid.UUID,
+	input []byte,
+	receipt *model.ChatRetentionPruneReceipt,
+) (uuid.UUID, error) {
+	now := r.now()
+	if jobID == uuid.Nil {
+		jobID = uuid.New()
+		key := PruneJobKey(conversation.ID, receipt.FromPrunedSeq, "direct")
+		convID := conversation.ID
+		job := model.Job{
+			ID: jobID, ConversationID: &convID, UserID: conversation.UserID, JobType: model.ChatRetentionPruneJobType,
+			Status: model.JobStatusRunning, Input: datatypes.JSON(input), IdempotencyKey: &key,
+			Attempts: 1, MaxAttempts: 1, StartedAt: &now, Metadata: datatypes.JSON(`{}`),
+		}
+		if err := tx.WithContext(ctx).Create(&job).Error; err != nil {
+			return uuid.Nil, err
+		}
+	}
+	receipt.JobID = jobID
+	result, err := json.Marshal(receipt)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	done := tx.WithContext(ctx).Model(&model.Job{}).
+		Where("id = ? AND user_id = ? AND conversation_id = ? AND job_type = ? AND status = ?",
+			jobID, conversation.UserID, conversation.ID, model.ChatRetentionPruneJobType, model.JobStatusRunning).
+		Updates(map[string]any{
+			"status": model.JobStatusCompleted, "result": datatypes.JSON(result),
+			"finished_at": now, "updated_at": now,
+		})
+	if done.Error != nil {
+		return uuid.Nil, done.Error
+	}
+	if done.RowsAffected != 1 {
+		// The job is no longer this pass's to complete (cancelled or taken
+		// over after going stale): roll the whole pass back.
+		return uuid.Nil, model.ErrRetentionPlanStale
+	}
+	return jobID, tx.WithContext(ctx).Create(&model.JobEvent{
+		JobID: jobID, EventType: "job.completed", Payload: datatypes.JSON(result),
+	}).Error
 }

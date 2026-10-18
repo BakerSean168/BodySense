@@ -35,8 +35,14 @@ from ...models.consultation_runtime_event import (
     ToolCallRuntimeEvent,
     ToolResultRuntimeEvent,
 )
+from ...runtime.checkpoint_retention import (
+    CheckpointCleanupError,
+    UnsupportedCheckpointerError,
+    cleanup_thread_checkpoints,
+)
 from ...runtime.consultation_thread import (
     get_consultation_manifest,
+    get_runtime_graph,
     resume_thread_interrupt,
     stream_thread_turn,
 )
@@ -491,3 +497,42 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class CheckpointCleanupRequest(BaseModel):
+    """Go asks to drop the checkpoint copies of Runs it is about to prune."""
+
+    conversation_id: UUID
+    user_id: UUID
+    pruned_run_ids: list[UUID] = Field(max_length=10_000)
+
+
+@router.post("/threads/{thread_id}/checkpoints/cleanup")
+async def cleanup_checkpoints(thread_id: UUID, request: CheckpointCleanupRequest):
+    # The consultation thread is the Conversation (Go passes its id as the
+    # thread id), so a mismatch is a caller bug, never a different thread.
+    if thread_id != request.conversation_id:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "thread_mismatch", "message": "thread is not the conversation"},
+        )
+    try:
+        receipt = await cleanup_thread_checkpoints(
+            await get_runtime_graph(),
+            thread_id=str(thread_id),
+            pruned_run_ids=[str(run_id) for run_id in request.pruned_run_ids],
+        )
+    except UnsupportedCheckpointerError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": str(exc)})
+    except CheckpointCleanupError as exc:
+        raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)})
+    return {
+        "status": receipt.status,
+        "thread_id": receipt.thread_id,
+        "pruned_run_ids": receipt.pruned_run_ids,
+        "checkpoint_id": receipt.checkpoint_id,
+        "removed_messages": receipt.removed_messages,
+        "retained_messages": receipt.retained_messages,
+        "deleted_checkpoints": receipt.deleted_checkpoints,
+        "remaining_run_ids": receipt.remaining_run_ids,
+    }
