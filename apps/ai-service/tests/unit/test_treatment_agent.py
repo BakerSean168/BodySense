@@ -42,8 +42,16 @@ def _deps() -> TreatmentDependencies:
         user_id="user-1",
         body_state_revision=18,
         body_state={"current_revision": 18, "facts": [{"id": "fact-neck"}]},
-        diagnosis_analysis={"analysis_id": "analysis-1", "status": "completed"},
-        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        diagnosis={
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
     )
 
 
@@ -70,8 +78,7 @@ async def test_treatment_service_keeps_proposal_shape_and_governance() -> None:
         body_state_revision=18,
         configuration_id=get_default_treatment_configuration().configuration_id,
         body_state=_deps().body_state,
-        diagnosis_analysis=_deps().diagnosis_analysis,
-        candidate_assessments=_deps().candidate_assessments,
+        diagnosis=_deps().diagnosis,
         profile={},
         user_constraints={},
         evidence=[],

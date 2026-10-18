@@ -23,8 +23,9 @@ class TreatmentRecommendationRequest(BaseModel):
     body_state_revision: int = Field(gt=0)
     configuration_id: str = Field(min_length=1)
     body_state: dict[str, Any]
-    diagnosis_analysis: dict[str, Any]
-    candidate_assessments: list[dict[str, Any]] = Field(default_factory=list)
+    # Go's native Diagnosis view: only the user-adopted Conditions of the current
+    # Diagnosis revision. AI never sees an unadopted proposal as a diagnosis.
+    diagnosis: dict[str, Any]
     profile: dict[str, Any] = Field(default_factory=dict)
     user_constraints: dict[str, Any] = Field(default_factory=dict)
     evidence: list[dict[str, Any]] = Field(default_factory=list)

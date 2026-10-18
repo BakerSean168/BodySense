@@ -87,8 +87,7 @@ def create_treatment_agent(
         return (
             f"Pinned BodyState revision: R{deps.body_state_revision}\n"
             f"BodyState: {json.dumps(deps.body_state, ensure_ascii=False)}\n"
-            f"DiagnosisAnalysis: {json.dumps(deps.diagnosis_analysis, ensure_ascii=False)}\n"
-            f"Candidate assessments: {json.dumps(deps.candidate_assessments, ensure_ascii=False)}\n"
+            f"Diagnosis (adopted Conditions): {json.dumps(deps.diagnosis, ensure_ascii=False)}\n"
             f"Profile: {json.dumps(deps.profile, ensure_ascii=False)}\n"
             f"User constraints: {json.dumps(deps.user_constraints, ensure_ascii=False)}\n"
             f"Existing evidence: {json.dumps(deps.evidence, ensure_ascii=False)}\n"

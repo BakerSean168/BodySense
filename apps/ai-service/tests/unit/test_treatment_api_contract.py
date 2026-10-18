@@ -11,8 +11,16 @@ def _payload() -> dict:
         "body_state_revision": 12,
         "configuration_id": get_default_treatment_configuration().configuration_id,
         "body_state": {"current_revision": 12},
-        "diagnosis_analysis": {"analysis_id": "analysis-1", "status": "completed"},
-        "candidate_assessments": [{"candidate_id": "candidate-1", "state": "confirmed"}],
+        "diagnosis": {
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
     }
 
 

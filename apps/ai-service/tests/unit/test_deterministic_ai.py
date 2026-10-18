@@ -75,8 +75,16 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
         body_state_revision=1,
         configuration_id=get_default_treatment_configuration().configuration_id,
         body_state={"current_revision": 1},
-        diagnosis_analysis=diagnosis_result,
-        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        diagnosis={
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
         profile={},
         user_constraints={},
         evidence=[],

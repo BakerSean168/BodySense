@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_ai import ToolCallPart, capture_run_messages
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
@@ -32,17 +32,35 @@ DEFAULT_REPORT_PATH = (
 EvalSplit = Literal["development", "holdout", "regression", "challenge"]
 
 
+def adopted_condition_ids(diagnosis: dict[str, Any]) -> list[str]:
+    entries = diagnosis.get("conditionEntries") or []
+    return [
+        str(entry["conditionId"])
+        for entry in entries
+        if isinstance(entry, dict)
+        and entry.get("conditionId")
+        and entry.get("disposition") == "adopted"
+    ]
+
+
 class TreatmentEvalInputs(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     user_id: str = "eval-treatment-user"
     body_state_revision: int = Field(gt=0)
     body_state: dict[str, Any]
-    diagnosis_analysis: dict[str, Any]
-    candidate_assessments: list[dict[str, Any]] = Field(min_length=1)
+    # Go's native Diagnosis view (currentRevision + adopted conditionEntries).
+    diagnosis: dict[str, Any]
     profile: dict[str, Any] = Field(default_factory=dict)
     user_constraints: dict[str, Any] = Field(default_factory=dict)
     evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def require_adopted_condition(self) -> "TreatmentEvalInputs":
+        # Go only generates a plan when at least one adopted Condition exists.
+        if not adopted_condition_ids(self.diagnosis):
+            raise ValueError("Treatment eval Diagnosis needs an adopted Condition")
+        return self
 
 
 class TreatmentEvalMetadata(BaseModel):
@@ -50,7 +68,6 @@ class TreatmentEvalMetadata(BaseModel):
 
     split: EvalSplit
     slices: list[str] = Field(min_length=1)
-    required_assessment_states: list[str] = Field(default_factory=list)
     required_context_tokens: list[str] = Field(default_factory=list)
 
 
@@ -153,9 +170,8 @@ class PinnedContext(Evaluator[TreatmentEvalInputs, TreatmentEvalExecution, Treat
         trace = ctx.output.trace.run_messages
         if f"R{ctx.inputs.body_state_revision}" not in trace:
             return False
-        states = {str(item.get("state", "")) for item in ctx.inputs.candidate_assessments}
         if not all(
-            state in states and state in trace for state in metadata.required_assessment_states
+            condition_id in trace for condition_id in adopted_condition_ids(ctx.inputs.diagnosis)
         ):
             return False
         return all(token in trace for token in metadata.required_context_tokens)
@@ -222,8 +238,7 @@ def build_deterministic_task(configuration_id: str | None = None) -> Any:
                 body_state_revision=inputs.body_state_revision,
                 configuration_id=config.configuration_id,
                 body_state=inputs.body_state,
-                diagnosis_analysis=inputs.diagnosis_analysis,
-                candidate_assessments=inputs.candidate_assessments,
+                diagnosis=inputs.diagnosis,
                 profile=inputs.profile,
                 user_constraints=inputs.user_constraints,
                 evidence=inputs.evidence,

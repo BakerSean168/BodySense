@@ -15,8 +15,8 @@ def test_treatment_dataset_spans_required_baseline_splits() -> None:
         "challenge",
     }
     assert {case.name for case in document.cases} == {
-        "confirmed-neck-candidate",
-        "unsure-candidate-remains-reviewable",
+        "adopted-neck-condition",
+        "suspected-condition-remains-reviewable",
         "user-constraint-is-in-run-context",
         "existing-evidence-is-pinned",
     }

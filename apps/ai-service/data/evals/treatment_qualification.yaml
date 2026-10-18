@@ -1,8 +1,8 @@
-name: treatment_qualification_v1
+name: treatment_qualification_v2
 cases:
-  - name: confirmed-neck-candidate
+  - name: adopted-neck-condition
     inputs:
-      user_id: eval-treatment-confirmed
+      user_id: eval-treatment-adopted
       body_state_revision: 21
       body_state:
         current_revision: 21
@@ -12,47 +12,40 @@ cases:
             concern_key: "region:neck"
             body_region: 颈肩
             value: 久坐后酸胀
-      diagnosis_analysis:
-        analysis_id: analysis-neck
-        status: completed
-        candidates:
-          - id: candidate-neck
-            concern_key: "region:neck"
-            name: 久坐相关颈肩负荷模式
-      candidate_assessments:
-        - candidate_id: candidate-neck
-          state: confirmed
+      diagnosis:
+        currentRevision: 3
+        conditionEntries:
+          - conditionId: condition-neck
+            medicalName: 久坐相关颈肩负荷模式
+            assessment: {level: likely}
+            disposition: adopted
     metadata:
       split: development
-      slices: [confirmed, proposal-only]
-      required_assessment_states: [confirmed]
+      slices: [adopted, proposal-only]
 
-  - name: unsure-candidate-remains-reviewable
+  - name: suspected-condition-remains-reviewable
     inputs:
-      user_id: eval-treatment-unsure
+      user_id: eval-treatment-suspected
       body_state_revision: 22
       body_state:
         current_revision: 22
         facts:
-          - id: fact-neck-unsure
+          - id: fact-neck-suspected
             kind: discomfort
             concern_key: "region:neck"
             body_region: 颈肩
             value: 活动后轻度不适
-      diagnosis_analysis:
-        analysis_id: analysis-unsure
-        status: completed
-        candidates:
-          - id: candidate-unsure
-            concern_key: "region:neck"
-            name: 颈肩负荷模式
-      candidate_assessments:
-        - candidate_id: candidate-unsure
-          state: unsure
+      diagnosis:
+        currentRevision: 1
+        conditionEntries:
+          - conditionId: condition-suspected
+            medicalName: 颈肩负荷模式
+            assessment: {level: suspected}
+            disposition: adopted
     metadata:
       split: holdout
-      slices: [unsure, human-review]
-      required_assessment_states: [unsure]
+      slices: [suspected, human-review]
+      required_context_tokens: [suspected]
 
   - name: user-constraint-is-in-run-context
     inputs:
@@ -66,23 +59,19 @@ cases:
             concern_key: "region:back"
             body_region: 腰背
             value: 久坐僵硬
-      diagnosis_analysis:
-        analysis_id: analysis-back
-        status: completed
-        candidates:
-          - id: candidate-back
-            concern_key: "region:back"
-            name: 久坐相关腰背负荷模式
-      candidate_assessments:
-        - candidate_id: candidate-back
-          state: confirmed
+      diagnosis:
+        currentRevision: 2
+        conditionEntries:
+          - conditionId: condition-back
+            medicalName: 久坐相关腰背负荷模式
+            assessment: {level: likely}
+            disposition: adopted
       user_constraints:
         equipment: none
         avoid_floor_exercises: true
     metadata:
       split: regression
       slices: [user-constraint, context-pinning]
-      required_assessment_states: [confirmed]
       required_context_tokens: [avoid_floor_exercises]
 
   - name: existing-evidence-is-pinned
@@ -97,22 +86,19 @@ cases:
             concern_key: "region:shoulder"
             body_region: 肩部
             value: 抬臂后疲劳
-      diagnosis_analysis:
-        analysis_id: analysis-shoulder
-        status: completed
-        candidates:
-          - id: candidate-shoulder
-            concern_key: "region:shoulder"
-            name: 肩部负荷耐受模式
-      candidate_assessments:
-        - candidate_id: candidate-shoulder
-          state: confirmed
+      diagnosis:
+        currentRevision: 4
+        conditionEntries:
+          - conditionId: condition-shoulder
+            medicalName: 肩部负荷耐受模式
+            assessment: {level: likely}
+            disposition: adopted
       evidence:
         - evidence_id: evidence-shoulder-1
+          condition_id: condition-shoulder
           title: 肩部渐进负荷原则
           summary: 低风险渐进活动并根据症状调整
     metadata:
       split: challenge
       slices: [evidence-context, challenge]
-      required_assessment_states: [confirmed]
       required_context_tokens: [evidence-shoulder-1]

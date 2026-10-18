@@ -1,6 +1,6 @@
 # BodySense Current Longitudinal System
 
-> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. DiagnosisAnalysis candidates, Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
+> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. Diagnosis uses only the native Run/Proposal/Condition path (DX-RETIRE-001 #341 retired DiagnosisAnalysis candidates); Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
 
 > Status: authoritative current implementation
 > Updated: 2026-10-16 (PR6 native BodyState retirement)
@@ -150,8 +150,13 @@ GET  /api/v1/equipment
 POST /api/v1/equipment
 PUT  /api/v1/equipment/:id
 
-GET  /api/v1/diagnosis-analyses
-PUT  /api/v1/diagnosis-analyses/:analysisId/assessment
+GET  /api/v1/diagnosis
+GET  /api/v1/diagnosis/analysis-runs
+POST /api/v1/diagnosis/analysis-runs
+GET  /api/v1/diagnosis/analysis-runs/:runId
+POST /api/v1/diagnosis/analysis-runs/:runId/decisions
+POST /api/v1/diagnosis/analysis-runs/:runId/settlement
+POST /api/v1/diagnosis/conditions/:conditionId/direct-edits
 
 POST /api/v1/treatments/proposals
 POST /api/v1/treatments/revisions/:revisionId/accept

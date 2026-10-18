@@ -106,7 +106,7 @@ def test_internal_typed_agent_http_contracts_reject_retired_model_route_intent()
             {
                 "body_state_revision": 1,
                 "body_state": {},
-                "diagnosis_analysis": {},
+                "diagnosis": {},
                 "use_case": "llm.json",
             }
         )

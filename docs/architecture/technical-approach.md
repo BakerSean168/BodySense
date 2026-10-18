@@ -1,6 +1,6 @@
 # BodySense Current Technical Approach
 
-> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. DiagnosisAnalysis candidates, Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
+> **Implementation boundary (2026-10-16, PR6 through #297):** BodyState persistence, evidence reads and Safety use native V2 records. Diagnosis uses only the native Run/Proposal/Condition path (DX-RETIRE-001 #341 retired DiagnosisAnalysis candidates); Treatment and legacy Training remain transitional implementations; this document does not claim the complete V2 product contract. Product rules remain in [docs/product](../product/README.md).
 
 - Status: Current implementation snapshot
 - Updated: 2026-10-16 (PR6 native BodyState retirement)
@@ -80,7 +80,8 @@ Safety uses independent owner-bound restrictions and exact-target resolutions, w
 Diagnosis and training plans use separate durable history rather than writing final truth into `consultation_sessions` (TP-002 slice 3 removed the Treatment aggregate; Treatment Agent output is a pending PlanProposal):
 
 ```text
-diagnosis_analyses / diagnosis_candidates / diagnosis_candidate_assessments
+diagnoses / condition_analysis_runs / diagnosis_proposals / diagnosis_decisions
+diagnosis_settlements / diagnosis_revisions / condition_entries / condition_entry_evidence
 plan_proposals / training_plans / training_plan_revisions
 outcomes
 ```
@@ -226,7 +227,9 @@ GET      /api/v1/assessment/:id
 POST     /api/v1/assessment/:id/replay
 GET      /api/v1/assessment/:id/regression-export
 
-GET/POST /api/v1/diagnosis-analyses...
+GET      /api/v1/diagnosis
+GET/POST /api/v1/diagnosis/analysis-runs...
+POST     /api/v1/diagnosis/conditions/:conditionId/direct-edits
 GET/POST /api/v1/treatments...
 GET/POST /api/v1/outcomes...
 ```

@@ -132,8 +132,16 @@ async def test_treatment_v2_exposes_only_gap_aware_tool() -> None:
         user_id="user-1",
         body_state_revision=1,
         body_state={"current_revision": 1},
-        diagnosis_analysis={"analysis_id": "analysis-1"},
-        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        diagnosis={
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
         evidence_acquirer=TreatmentEvidenceAcquirer(searcher=None, budget=EvidenceBudget()),
     )
 
@@ -171,8 +179,16 @@ async def test_treatment_transport_keeps_final_result_tool_for_native_profile() 
         user_id="user-1",
         body_state_revision=1,
         body_state={"current_revision": 1},
-        diagnosis_analysis={"analysis_id": "analysis-1"},
-        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        diagnosis={
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
         evidence_acquirer=TreatmentEvidenceAcquirer(
             searcher=None,
             budget=EvidenceBudget(),
@@ -226,8 +242,16 @@ async def test_treatment_service_records_budget_exhaustion_trace() -> None:
         body_state_revision=12,
         configuration_id=config.configuration_id,
         body_state={"current_revision": 12},
-        diagnosis_analysis={"analysis_id": "analysis-1", "status": "completed"},
-        candidate_assessments=[{"candidate_id": "candidate-1", "state": "confirmed"}],
+        diagnosis={
+            "currentRevision": 1,
+            "conditionEntries": [
+                {
+                    "conditionId": "condition-1",
+                    "medicalName": "久坐相关颈肩负荷模式",
+                    "disposition": "adopted",
+                }
+            ],
+        },
         profile={},
         user_constraints={},
         evidence=[],

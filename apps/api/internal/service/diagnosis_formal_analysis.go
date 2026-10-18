@@ -36,7 +36,7 @@ type diagnosisProfileReader interface {
 
 // DiagnosisFormalAnalysisService freezes the Agent's input, applies Go Safety
 // and decision policy, calls the Diagnosis Agent and hands its formal output to
-// the ingestion boundary. It never writes the legacy diagnosis_analyses path.
+// the ingestion boundary.
 type DiagnosisFormalAnalysisService struct {
 	ingestion  *DiagnosisProposalIngestionService
 	body       *BodyStateService
