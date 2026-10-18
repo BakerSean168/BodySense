@@ -26,7 +26,9 @@ var (
 	ErrTrainerPlanNotActive     = errors.New("training plan is not active")
 	ErrTrainerSessionInProgress = errors.New("another training session is in progress")
 	ErrTrainerSessionEnded      = errors.New("training session already ended")
-	ErrTrainerSetRecorded       = errors.New("this set already has a recorded action")
+	ErrTrainerSessionPaused     = errors.New("training session is paused")
+	ErrTrainerSessionNotPaused  = errors.New("training session is not paused")
+	ErrTrainerSetRecorded       = errors.New("this set or exercise already has a recorded action")
 )
 
 // TrainerGateError is a Go TrainerGate decision that did not permit the
@@ -37,12 +39,20 @@ func (e *TrainerGateError) Error() string { return "trainer gate: " + string(e.D
 
 const (
 	TrainerSessionInProgress = "in_progress"
+	TrainerSessionPaused     = "paused"
 	TrainerSessionEnded      = "ended"
+	TrainerScopeSet          = "set"
+	TrainerScopeExercise     = "exercise"
 	TrainerSetPerformed      = "performed"
 	TrainerSetSkipped        = "skipped"
+	TrainerSetCorrected      = "corrected"
+	TrainerTransitionPause   = "pause"
+	TrainerTransitionResume  = "resume"
 	TrainerEndedFinished     = "finished"
 	TrainerEndedStoppedEarly = "stopped_early"
 	trainerSessionListLimit  = 50
+	trainerMaxActualReps     = 1000
+	trainerMaxActualSeconds  = 86400
 )
 
 // StartTrainerSessionCommand is the authenticated user's explicit start of
@@ -58,13 +68,30 @@ type StartTrainerSessionCommand struct {
 	IdempotencyKey         string
 }
 
-// TrainerSetActionCommand records one set the user explicitly marked as
-// performed or skipped. It is never derived from navigation or the Agent.
+// TrainerSetActionCommand records one explicit user action on a target of
+// the pinned template: a set (Scope "set", SetNumber >= 1) performed or
+// skipped, a whole exercise skipped (Scope "exercise", SetNumber 0), or a
+// correction retracting CorrectsActionID on that same target. Actual reps
+// and duration are optional and only describe a performed set. It is never
+// derived from navigation or the Agent.
 type TrainerSetActionCommand struct {
 	SessionID               uuid.UUID
 	PlanExerciseID          string
+	Scope                   string
 	SetNumber               int
 	Kind                    string
+	CorrectsActionID        uuid.UUID
+	ActualReps              *int
+	ActualDurationSeconds   *int
+	ExpectedSessionRevision int64
+	ExpectedSafetyRevision  int64
+	IdempotencyKey          string
+}
+
+// TrainerTransitionCommand pauses or resumes a session by explicit user
+// command. Only a resume carries ExpectedSafetyRevision: it re-runs the gate.
+type TrainerTransitionCommand struct {
+	SessionID               uuid.UUID
 	ExpectedSessionRevision int64
 	ExpectedSafetyRevision  int64
 	IdempotencyKey          string
@@ -81,8 +108,27 @@ type FinishTrainerSessionCommand struct {
 
 // TrainerSessionView is one owned session with its receipts in revision order.
 type TrainerSessionView struct {
-	Session model.TrainingSession
-	Actions []model.TrainingSetAction
+	Session     model.TrainingSession
+	Actions     []model.TrainingSetAction
+	Transitions []model.TrainingSessionTransition
+}
+
+// TrainerEffectiveActions drops corrections and the receipts they retracted:
+// what remains is what the user's execution record currently says (TP-D8).
+func TrainerEffectiveActions(actions []model.TrainingSetAction) []model.TrainingSetAction {
+	retracted := map[uuid.UUID]bool{}
+	for _, a := range actions {
+		if a.CorrectsActionID != nil {
+			retracted[*a.CorrectsActionID] = true
+		}
+	}
+	effective := []model.TrainingSetAction{}
+	for _, a := range actions {
+		if a.Kind != TrainerSetCorrected && !retracted[a.ID] {
+			effective = append(effective, a)
+		}
+	}
+	return effective
 }
 
 // TrainerSessionService is the Go-owned Trainer runtime. Every start and set
@@ -124,6 +170,87 @@ func TrainingDate(instant time.Time, zone *time.Location) model.DateOnly {
 
 func validTrainerText(value string) bool {
 	return value != "" && len(value) <= 256
+}
+
+func validTrainerActual(value *int, limit int) bool {
+	return value == nil || (*value >= 1 && *value <= limit)
+}
+
+func (cmd TrainerSetActionCommand) valid() bool {
+	if cmd.SessionID == uuid.Nil || !validTrainerText(cmd.PlanExerciseID) || cmd.ExpectedSessionRevision < 0 ||
+		cmd.ExpectedSafetyRevision <= 0 || !validPlanKey(cmd.IdempotencyKey) {
+		return false
+	}
+	switch cmd.Scope {
+	case TrainerScopeSet:
+		if cmd.SetNumber < 1 {
+			return false
+		}
+	case TrainerScopeExercise:
+		if cmd.SetNumber != 0 || cmd.Kind == TrainerSetPerformed {
+			return false
+		}
+	default:
+		return false
+	}
+	switch cmd.Kind {
+	case TrainerSetPerformed, TrainerSetSkipped, TrainerSetCorrected:
+	default:
+		return false
+	}
+	if (cmd.Kind == TrainerSetCorrected) != (cmd.CorrectsActionID != uuid.Nil) {
+		return false
+	}
+	if cmd.Kind != TrainerSetPerformed && (cmd.ActualReps != nil || cmd.ActualDurationSeconds != nil) {
+		return false
+	}
+	return validTrainerActual(cmd.ActualReps, trainerMaxActualReps) && validTrainerActual(cmd.ActualDurationSeconds, trainerMaxActualSeconds)
+}
+
+func trainerSetNumber(a model.TrainingSetAction) int {
+	if a.SetNumber == nil {
+		return 0
+	}
+	return *a.SetNumber
+}
+
+// checkTrainerTarget keeps at most one effective receipt per set and one
+// effective skip per exercise. A correction must retract an effective, not
+// yet corrected receipt of exactly the same target; it never targets another
+// correction. actions are the session's receipts for this plan exercise.
+func checkTrainerTarget(actions []model.TrainingSetAction, cmd TrainerSetActionCommand, sets int) error {
+	effective := TrainerEffectiveActions(actions)
+	if cmd.Kind == TrainerSetCorrected {
+		for _, a := range actions {
+			if a.ID != cmd.CorrectsActionID {
+				continue
+			}
+			if a.Kind == TrainerSetCorrected || a.Scope != cmd.Scope || trainerSetNumber(a) != cmd.SetNumber {
+				return ErrTrainerInvalid
+			}
+			for _, e := range effective {
+				if e.ID == a.ID {
+					return nil
+				}
+			}
+			return ErrTrainerConflict
+		}
+		return ErrTrainerInvalid
+	}
+	recordedSets := 0
+	for _, e := range effective {
+		switch {
+		case e.Scope == TrainerScopeExercise:
+			return ErrTrainerSetRecorded
+		case cmd.Scope == TrainerScopeSet && trainerSetNumber(e) == cmd.SetNumber:
+			return ErrTrainerSetRecorded
+		}
+		recordedSets++
+	}
+	if cmd.Scope == TrainerScopeExercise && recordedSets >= sets {
+		return ErrTrainerSetRecorded
+	}
+	return nil
 }
 
 func trainerError(err error) error {
@@ -188,12 +315,53 @@ func gateExercise(e model.PlanExercise) safety.Exercise {
 	return safety.Exercise{ExerciseID: e.ExerciseID, Custom: strings.HasPrefix(e.ExerciseID, "custom:")}
 }
 
+// templateGateAction is a session-scope gate action over every exercise of
+// the template (start and resume).
+func templateGateAction(kind safety.ActionKind, plan uuid.UUID, template *model.PlanSessionTemplate) safety.Action {
+	action := safety.Action{Kind: kind, PlanID: plan}
+	for _, stage := range template.Stages {
+		for _, exercise := range stage.Exercises {
+			action.Exercises = append(action.Exercises, gateExercise(exercise))
+		}
+	}
+	return action
+}
+
 func (s *TrainerSessionService) view(ctx context.Context, owner uuid.UUID, session model.TrainingSession) (*TrainerSessionView, error) {
-	actions, err := s.repo.Actions(ctx, owner, []uuid.UUID{session.ID})
+	views, err := s.views(ctx, owner, []model.TrainingSession{session})
 	if err != nil {
 		return nil, err
 	}
-	return &TrainerSessionView{Session: session, Actions: actions}, nil
+	return &views[0], nil
+}
+
+// views attaches each session's receipts and transitions in revision order.
+func (s *TrainerSessionService) views(ctx context.Context, owner uuid.UUID, sessions []model.TrainingSession) ([]TrainerSessionView, error) {
+	ids := make([]uuid.UUID, 0, len(sessions))
+	for _, session := range sessions {
+		ids = append(ids, session.ID)
+	}
+	actions, err := s.repo.Actions(ctx, owner, ids)
+	if err != nil {
+		return nil, err
+	}
+	transitions, err := s.repo.Transitions(ctx, owner, ids)
+	if err != nil {
+		return nil, err
+	}
+	views := make([]TrainerSessionView, 0, len(sessions))
+	index := map[uuid.UUID]int{}
+	for i, session := range sessions {
+		index[session.ID] = i
+		views = append(views, TrainerSessionView{Session: session, Actions: []model.TrainingSetAction{}, Transitions: []model.TrainingSessionTransition{}})
+	}
+	for _, a := range actions {
+		views[index[a.SessionID]].Actions = append(views[index[a.SessionID]].Actions, a)
+	}
+	for _, t := range transitions {
+		views[index[t.SessionID]].Transitions = append(views[index[t.SessionID]].Transitions, t)
+	}
+	return views, nil
 }
 
 // Start opens one session bound to the plan's current accepted revision.
@@ -237,13 +405,7 @@ func (s *TrainerSessionService) Start(ctx context.Context, owner uuid.UUID, cmd 
 		if err != nil {
 			return err
 		}
-		action := safety.Action{Kind: safety.ActionStartSession, PlanID: plan.ID}
-		for _, stage := range template.Stages {
-			for _, exercise := range stage.Exercises {
-				action.Exercises = append(action.Exercises, gateExercise(exercise))
-			}
-		}
-		decision, err := s.admit(ctx, owner, cmd.ExpectedSafetyRevision, action)
+		decision, err := s.admit(ctx, owner, cmd.ExpectedSafetyRevision, templateGateAction(safety.ActionStartSession, plan.ID, template))
 		if err != nil {
 			return err
 		}
@@ -257,7 +419,7 @@ func (s *TrainerSessionService) Start(ctx context.Context, owner uuid.UUID, cmd 
 		if err := s.repo.InsertSession(ctx, &session); err != nil {
 			return trainerError(err)
 		}
-		result = &TrainerSessionView{Session: session, Actions: []model.TrainingSetAction{}}
+		result = &TrainerSessionView{Session: session, Actions: []model.TrainingSetAction{}, Transitions: []model.TrainingSessionTransition{}}
 		return nil
 	})
 	if err != nil {
@@ -266,12 +428,11 @@ func (s *TrainerSessionService) Start(ctx context.Context, owner uuid.UUID, cmd 
 	return result, nil
 }
 
-// RecordSetAction appends one user-originated set receipt at the next
-// session revision after the TrainerGate admits that exercise.
+// RecordSetAction appends one user-originated receipt at the next session
+// revision after the TrainerGate admits that exercise. Only an in-progress
+// session accepts actions; a paused one must be resumed first.
 func (s *TrainerSessionService) RecordSetAction(ctx context.Context, owner uuid.UUID, cmd TrainerSetActionCommand) (*model.TrainingSetAction, error) {
-	if owner == uuid.Nil || cmd.SessionID == uuid.Nil || !validTrainerText(cmd.PlanExerciseID) || cmd.SetNumber < 1 ||
-		(cmd.Kind != TrainerSetPerformed && cmd.Kind != TrainerSetSkipped) || cmd.ExpectedSessionRevision < 0 ||
-		cmd.ExpectedSafetyRevision <= 0 || !validPlanKey(cmd.IdempotencyKey) {
+	if owner == uuid.Nil || !cmd.valid() {
 		return nil, ErrTrainerInvalid
 	}
 	fingerprint := planDigest(struct {
@@ -298,8 +459,8 @@ func (s *TrainerSessionService) RecordSetAction(ctx context.Context, owner uuid.
 		if err != nil {
 			return trainerError(err)
 		}
-		if session.State != TrainerSessionInProgress {
-			return ErrTrainerSessionEnded
+		if err := trainerLiveState(session, TrainerSessionInProgress); err != nil {
+			return err
 		}
 		if session.Revision != cmd.ExpectedSessionRevision {
 			return ErrTrainerConflict
@@ -319,12 +480,12 @@ func (s *TrainerSessionService) RecordSetAction(ctx context.Context, owner uuid.
 		if exercise == nil || cmd.SetNumber > exercise.Sets {
 			return ErrTrainerInvalid
 		}
-		recorded, err := s.repo.SetRecorded(ctx, owner, session.ID, cmd.PlanExerciseID, cmd.SetNumber)
+		prior, err := s.repo.ExerciseActions(ctx, owner, session.ID, cmd.PlanExerciseID)
 		if err != nil {
 			return err
 		}
-		if recorded {
-			return ErrTrainerSetRecorded
+		if err := checkTrainerTarget(prior, cmd, exercise.Sets); err != nil {
+			return err
 		}
 		action := safety.Action{Kind: safety.ActionPerformSet, PlanID: session.PlanID, Exercises: []safety.Exercise{gateExercise(*exercise)}}
 		decision, err := s.admit(ctx, owner, cmd.ExpectedSafetyRevision, action)
@@ -333,9 +494,17 @@ func (s *TrainerSessionService) RecordSetAction(ctx context.Context, owner uuid.
 		}
 		row := model.TrainingSetAction{
 			ID: uuid.New(), UserID: owner, SessionID: session.ID, PlanExerciseID: exercise.PlanExerciseID, ExerciseID: exercise.ExerciseID,
-			SetNumber: cmd.SetNumber, Kind: cmd.Kind, SessionRevision: session.Revision + 1, IdempotencyKey: cmd.IdempotencyKey,
-			RequestFingerprint: fingerprint, SafetyRevision: decision.SafetyRevision, GateResult: string(decision.Result),
-			GatePolicyRevision: decision.PolicyRevision, RecordedAt: s.now(),
+			Scope: cmd.Scope, Kind: cmd.Kind, ActualReps: cmd.ActualReps, ActualDurationSeconds: cmd.ActualDurationSeconds,
+			SessionRevision: session.Revision + 1, IdempotencyKey: cmd.IdempotencyKey, RequestFingerprint: fingerprint,
+			SafetyRevision: decision.SafetyRevision, GateResult: string(decision.Result), GatePolicyRevision: decision.PolicyRevision, RecordedAt: s.now(),
+		}
+		if cmd.Scope == TrainerScopeSet {
+			number := cmd.SetNumber
+			row.SetNumber = &number
+		}
+		if cmd.Kind == TrainerSetCorrected {
+			target := cmd.CorrectsActionID
+			row.CorrectsActionID = &target
 		}
 		if err := s.repo.AppendAction(ctx, &row); err != nil {
 			return trainerError(err)
@@ -349,8 +518,117 @@ func (s *TrainerSessionService) RecordSetAction(ctx context.Context, owner uuid.
 	return result, nil
 }
 
-// Finish ends an in-progress session once, as finished or stopped early.
-// Completion is derived from the recorded receipts; nothing is backfilled.
+// trainerLiveState requires the session to be in want; ended and the other
+// live state are distinct, visible refusals.
+func trainerLiveState(session *model.TrainingSession, want string) error {
+	switch {
+	case session.State == want:
+		return nil
+	case session.State == TrainerSessionEnded:
+		return ErrTrainerSessionEnded
+	case session.State == TrainerSessionPaused:
+		return ErrTrainerSessionPaused
+	}
+	return ErrTrainerSessionNotPaused
+}
+
+// Pause moves an in-progress session to paused. Pausing is never gated and
+// leaves every receipt as it is; it never marks a set or ends the session.
+func (s *TrainerSessionService) Pause(ctx context.Context, owner uuid.UUID, cmd TrainerTransitionCommand) (*TrainerSessionView, error) {
+	return s.transition(ctx, owner, TrainerTransitionPause, cmd)
+}
+
+// Resume moves a paused session back to in progress after re-running the
+// TrainerGate over the template against exactly ExpectedSafetyRevision, as a
+// start does. The plan must still be active; another session in progress
+// blocks it.
+func (s *TrainerSessionService) Resume(ctx context.Context, owner uuid.UUID, cmd TrainerTransitionCommand) (*TrainerSessionView, error) {
+	return s.transition(ctx, owner, TrainerTransitionResume, cmd)
+}
+
+func (s *TrainerSessionService) transition(ctx context.Context, owner uuid.UUID, kind string, cmd TrainerTransitionCommand) (*TrainerSessionView, error) {
+	resume := kind == TrainerTransitionResume
+	if owner == uuid.Nil || cmd.SessionID == uuid.Nil || cmd.ExpectedSessionRevision < 0 || cmd.ExpectedSafetyRevision < 0 ||
+		resume != (cmd.ExpectedSafetyRevision > 0) || !validPlanKey(cmd.IdempotencyKey) {
+		return nil, ErrTrainerInvalid
+	}
+	from, to := TrainerSessionInProgress, TrainerSessionPaused
+	if resume {
+		from, to = TrainerSessionPaused, TrainerSessionInProgress
+	}
+	fingerprint := planDigest(struct {
+		Operation string
+		Command   TrainerTransitionCommand
+	}{"trainer_" + kind, cmd})
+	var result *TrainerSessionView
+	err := s.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := s.lock(ctx, owner); err != nil {
+			return err
+		}
+		existing, err := s.repo.TransitionByKey(ctx, owner, cmd.IdempotencyKey)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			if existing.RequestFingerprint != fingerprint {
+				return ErrTrainerConflict
+			}
+			session, err := s.repo.Session(ctx, owner, existing.SessionID, false)
+			if err != nil {
+				return trainerError(err)
+			}
+			result, err = s.view(ctx, owner, *session)
+			return err
+		}
+		session, err := s.repo.Session(ctx, owner, cmd.SessionID, true)
+		if err != nil {
+			return trainerError(err)
+		}
+		if err := trainerLiveState(session, from); err != nil {
+			return err
+		}
+		if session.Revision != cmd.ExpectedSessionRevision {
+			return ErrTrainerConflict
+		}
+		row := model.TrainingSessionTransition{
+			ID: uuid.New(), UserID: owner, SessionID: session.ID, Kind: kind, SessionRevision: session.Revision + 1,
+			IdempotencyKey: cmd.IdempotencyKey, RequestFingerprint: fingerprint, RecordedAt: s.now(),
+		}
+		if resume {
+			plan, err := s.plans.Plan(ctx, owner, session.PlanID)
+			if err != nil {
+				return trainerError(err)
+			}
+			if plan.Status != "active" {
+				return ErrTrainerPlanNotActive
+			}
+			template, err := s.pinnedTemplate(ctx, owner, session.PlanID, session.PlanRevisionID, session.TemplateID)
+			if err != nil {
+				return err
+			}
+			decision, err := s.admit(ctx, owner, cmd.ExpectedSafetyRevision, templateGateAction(safety.ActionResumeSession, session.PlanID, template))
+			if err != nil {
+				return err
+			}
+			gate, policy := string(decision.Result), decision.PolicyRevision
+			row.SafetyRevision, row.GateResult, row.GatePolicyRevision = &decision.SafetyRevision, &gate, &policy
+		}
+		if err := s.repo.Transition(ctx, &row, from, to); err != nil {
+			return trainerError(err)
+		}
+		session.State, session.Revision = to, row.SessionRevision
+		result, err = s.view(ctx, owner, *session)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// Finish ends an in-progress or paused session once, as finished or stopped
+// early. Completion is derived from the effective receipts; nothing is
+// backfilled.
 func (s *TrainerSessionService) Finish(ctx context.Context, owner uuid.UUID, cmd FinishTrainerSessionCommand) (*TrainerSessionView, error) {
 	if owner == uuid.Nil || cmd.SessionID == uuid.Nil || (cmd.EndedReason != TrainerEndedFinished && cmd.EndedReason != TrainerEndedStoppedEarly) ||
 		cmd.ExpectedSessionRevision < 0 || !validPlanKey(cmd.IdempotencyKey) {
@@ -380,7 +658,7 @@ func (s *TrainerSessionService) Finish(ctx context.Context, owner uuid.UUID, cmd
 		if err != nil {
 			return trainerError(err)
 		}
-		if session.State != TrainerSessionInProgress {
+		if session.State == TrainerSessionEnded {
 			return ErrTrainerSessionEnded
 		}
 		if session.Revision != cmd.ExpectedSessionRevision {
@@ -421,7 +699,7 @@ func (s *TrainerSessionService) Get(ctx context.Context, owner, id uuid.UUID) (*
 
 // List returns the owner's newest sessions, optionally filtered by state.
 func (s *TrainerSessionService) List(ctx context.Context, owner uuid.UUID, state string) ([]TrainerSessionView, error) {
-	if state != "" && state != TrainerSessionInProgress && state != TrainerSessionEnded {
+	if state != "" && state != TrainerSessionInProgress && state != TrainerSessionPaused && state != TrainerSessionEnded {
 		return nil, ErrTrainerInvalid
 	}
 	views := []TrainerSessionView{}
@@ -430,26 +708,8 @@ func (s *TrainerSessionService) List(ctx context.Context, owner uuid.UUID, state
 		if err != nil {
 			return err
 		}
-		ids := make([]uuid.UUID, 0, len(sessions))
-		for _, session := range sessions {
-			ids = append(ids, session.ID)
-		}
-		actions, err := s.repo.Actions(ctx, owner, ids)
-		if err != nil {
-			return err
-		}
-		bySession := map[uuid.UUID][]model.TrainingSetAction{}
-		for _, action := range actions {
-			bySession[action.SessionID] = append(bySession[action.SessionID], action)
-		}
-		for _, session := range sessions {
-			own := bySession[session.ID]
-			if own == nil {
-				own = []model.TrainingSetAction{}
-			}
-			views = append(views, TrainerSessionView{Session: session, Actions: own})
-		}
-		return nil
+		views, err = s.views(ctx, owner, sessions)
+		return err
 	})
 	if err != nil {
 		return nil, err

@@ -209,6 +209,8 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/training-sessions", wrapper.StartTrainingSession)
 	protected.GET("/training-sessions/:sessionId", wrapper.GetTrainingSession)
 	protected.POST("/training-sessions/:sessionId/set-actions", wrapper.RecordTrainingSetAction)
+	protected.POST("/training-sessions/:sessionId/pause", wrapper.PauseTrainingSession)
+	protected.POST("/training-sessions/:sessionId/resume", wrapper.ResumeTrainingSession)
 	protected.POST("/training-sessions/:sessionId/finish", wrapper.FinishTrainingSession)
 
 	// Training execution, adherence and reassessment surfaces.

@@ -21,6 +21,8 @@ import (
 type trainerSessionApplication interface {
 	Start(context.Context, uuid.UUID, service.StartTrainerSessionCommand) (*service.TrainerSessionView, error)
 	RecordSetAction(context.Context, uuid.UUID, service.TrainerSetActionCommand) (*model.TrainingSetAction, error)
+	Pause(context.Context, uuid.UUID, service.TrainerTransitionCommand) (*service.TrainerSessionView, error)
+	Resume(context.Context, uuid.UUID, service.TrainerTransitionCommand) (*service.TrainerSessionView, error)
 	Finish(context.Context, uuid.UUID, service.FinishTrainerSessionCommand) (*service.TrainerSessionView, error)
 	Get(context.Context, uuid.UUID, uuid.UUID) (*service.TrainerSessionView, error)
 	List(context.Context, uuid.UUID, string) ([]service.TrainerSessionView, error)
@@ -52,6 +54,12 @@ func (r trainerHTTPError) VisitGetTrainingSessionResponse(w http.ResponseWriter)
 	return r.write(w)
 }
 func (r trainerHTTPError) VisitRecordTrainingSetActionResponse(w http.ResponseWriter) error {
+	return r.write(w)
+}
+func (r trainerHTTPError) VisitPauseTrainingSessionResponse(w http.ResponseWriter) error {
+	return r.write(w)
+}
+func (r trainerHTTPError) VisitResumeTrainingSessionResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }
 func (r trainerHTTPError) VisitFinishTrainingSessionResponse(w http.ResponseWriter) error {
@@ -106,8 +114,12 @@ func trainerCommandError(err error) trainerHTTPError {
 		return trainerHTTPError{http.StatusConflict, "SESSION_IN_PROGRESS", "another training session is in progress"}
 	case errors.Is(err, service.ErrTrainerSessionEnded):
 		return trainerHTTPError{http.StatusConflict, "SESSION_ENDED", "training session already ended"}
+	case errors.Is(err, service.ErrTrainerSessionPaused):
+		return trainerHTTPError{http.StatusConflict, "SESSION_PAUSED", "training session is paused; resume it first"}
+	case errors.Is(err, service.ErrTrainerSessionNotPaused):
+		return trainerHTTPError{http.StatusConflict, "SESSION_NOT_PAUSED", "training session is not paused"}
 	case errors.Is(err, service.ErrTrainerSetRecorded):
-		return trainerHTTPError{http.StatusConflict, "SET_ALREADY_RECORDED", "this set already has a recorded action"}
+		return trainerHTTPError{http.StatusConflict, "SET_ALREADY_RECORDED", "this set or exercise already has a recorded action"}
 	}
 	return trainerUnavailable
 }
@@ -119,31 +131,44 @@ type trainerGateReceiptWire struct {
 	PolicyRevision string `json:"policyRevision"`
 }
 type trainerSetActionWire struct {
-	ActionID        uuid.UUID              `json:"actionId"`
-	SessionID       uuid.UUID              `json:"sessionId"`
-	PlanExerciseID  string                 `json:"planExerciseId"`
-	ExerciseID      string                 `json:"exerciseId"`
-	SetNumber       int                    `json:"setNumber"`
-	Kind            string                 `json:"kind"`
-	SessionRevision int64                  `json:"sessionRevision"`
-	Gate            trainerGateReceiptWire `json:"gate"`
-	IdempotencyKey  string                 `json:"idempotencyKey"`
-	RecordedAt      time.Time              `json:"recordedAt"`
+	ActionID              uuid.UUID              `json:"actionId"`
+	SessionID             uuid.UUID              `json:"sessionId"`
+	PlanExerciseID        string                 `json:"planExerciseId"`
+	ExerciseID            string                 `json:"exerciseId"`
+	Scope                 string                 `json:"scope"`
+	SetNumber             *int                   `json:"setNumber,omitempty"`
+	Kind                  string                 `json:"kind"`
+	CorrectsActionID      *uuid.UUID             `json:"correctsActionId,omitempty"`
+	ActualReps            *int                   `json:"actualReps,omitempty"`
+	ActualDurationSeconds *int                   `json:"actualDurationSeconds,omitempty"`
+	SessionRevision       int64                  `json:"sessionRevision"`
+	Gate                  trainerGateReceiptWire `json:"gate"`
+	IdempotencyKey        string                 `json:"idempotencyKey"`
+	RecordedAt            time.Time              `json:"recordedAt"`
+}
+type trainerTransitionWire struct {
+	TransitionID    uuid.UUID               `json:"transitionId"`
+	Kind            string                  `json:"kind"`
+	SessionRevision int64                   `json:"sessionRevision"`
+	Gate            *trainerGateReceiptWire `json:"gate,omitempty"`
+	IdempotencyKey  string                  `json:"idempotencyKey"`
+	RecordedAt      time.Time               `json:"recordedAt"`
 }
 type trainerSessionWire struct {
-	SessionID      uuid.UUID              `json:"sessionId"`
-	PlanID         uuid.UUID              `json:"planId"`
-	PlanRevisionID uuid.UUID              `json:"planRevisionId"`
-	TemplateID     string                 `json:"templateId"`
-	TimeZone       string                 `json:"timeZone"`
-	TrainingDate   string                 `json:"trainingDate"`
-	State          string                 `json:"state"`
-	EndedReason    *string                `json:"endedReason,omitempty"`
-	Revision       int64                  `json:"revision"`
-	StartedAt      time.Time              `json:"startedAt"`
-	EndedAt        *time.Time             `json:"endedAt,omitempty"`
-	StartGate      trainerGateReceiptWire `json:"startGate"`
-	Actions        []trainerSetActionWire `json:"actions"`
+	SessionID      uuid.UUID               `json:"sessionId"`
+	PlanID         uuid.UUID               `json:"planId"`
+	PlanRevisionID uuid.UUID               `json:"planRevisionId"`
+	TemplateID     string                  `json:"templateId"`
+	TimeZone       string                  `json:"timeZone"`
+	TrainingDate   string                  `json:"trainingDate"`
+	State          string                  `json:"state"`
+	EndedReason    *string                 `json:"endedReason,omitempty"`
+	Revision       int64                   `json:"revision"`
+	StartedAt      time.Time               `json:"startedAt"`
+	EndedAt        *time.Time              `json:"endedAt,omitempty"`
+	StartGate      trainerGateReceiptWire  `json:"startGate"`
+	Actions        []trainerSetActionWire  `json:"actions"`
+	Transitions    []trainerTransitionWire `json:"transitions"`
 }
 
 func trainerActionWire(owner uuid.UUID, a model.TrainingSetAction) (trainerSetActionWire, error) {
@@ -151,8 +176,9 @@ func trainerActionWire(owner uuid.UUID, a model.TrainingSetAction) (trainerSetAc
 		return trainerSetActionWire{}, errors.New("set action owner mismatch")
 	}
 	return trainerSetActionWire{
-		ActionID: a.ID, SessionID: a.SessionID, PlanExerciseID: a.PlanExerciseID, ExerciseID: a.ExerciseID, SetNumber: a.SetNumber,
-		Kind: a.Kind, SessionRevision: a.SessionRevision, IdempotencyKey: a.IdempotencyKey, RecordedAt: a.RecordedAt,
+		ActionID: a.ID, SessionID: a.SessionID, PlanExerciseID: a.PlanExerciseID, ExerciseID: a.ExerciseID, Scope: a.Scope, SetNumber: a.SetNumber,
+		Kind: a.Kind, CorrectsActionID: a.CorrectsActionID, ActualReps: a.ActualReps, ActualDurationSeconds: a.ActualDurationSeconds,
+		SessionRevision: a.SessionRevision, IdempotencyKey: a.IdempotencyKey, RecordedAt: a.RecordedAt,
 		Gate: trainerGateReceiptWire{Result: a.GateResult, SafetyRevision: a.SafetyRevision, PolicyRevision: a.GatePolicyRevision},
 	}, nil
 }
@@ -173,7 +199,7 @@ func trainerSessionRecord(owner uuid.UUID, v service.TrainerSessionView) (openap
 	wire := trainerSessionWire{
 		SessionID: s.ID, PlanID: s.PlanID, PlanRevisionID: s.PlanRevisionID, TemplateID: s.TemplateID, TimeZone: s.TimeZone,
 		TrainingDate: s.TrainingDate.String(), State: s.State, EndedReason: s.EndedReason, Revision: s.Revision,
-		StartedAt: s.StartedAt, EndedAt: s.EndedAt, Actions: []trainerSetActionWire{},
+		StartedAt: s.StartedAt, EndedAt: s.EndedAt, Actions: []trainerSetActionWire{}, Transitions: []trainerTransitionWire{},
 		StartGate: trainerGateReceiptWire{Result: s.StartGateResult, SafetyRevision: s.StartSafetyRevision, PolicyRevision: s.StartGatePolicyRevision},
 	}
 	for _, a := range v.Actions {
@@ -185,6 +211,18 @@ func trainerSessionRecord(owner uuid.UUID, v service.TrainerSessionView) (openap
 			return openapiv1.TrainingSessionRecord{}, err
 		}
 		wire.Actions = append(wire.Actions, action)
+	}
+	for _, t := range v.Transitions {
+		if t.UserID != owner || t.SessionID != s.ID {
+			return openapiv1.TrainingSessionRecord{}, errors.New("transition owner or session mismatch")
+		}
+		transition := trainerTransitionWire{
+			TransitionID: t.ID, Kind: t.Kind, SessionRevision: t.SessionRevision, IdempotencyKey: t.IdempotencyKey, RecordedAt: t.RecordedAt,
+		}
+		if t.SafetyRevision != nil && t.GateResult != nil && t.GatePolicyRevision != nil {
+			transition.Gate = &trainerGateReceiptWire{Result: *t.GateResult, SafetyRevision: *t.SafetyRevision, PolicyRevision: *t.GatePolicyRevision}
+		}
+		wire.Transitions = append(wire.Transitions, transition)
 	}
 	return strictOpenAPIConvert[openapiv1.TrainingSessionRecord]("TrainingSessionRecord", wire)
 }
@@ -267,9 +305,16 @@ func (s *PublicServer) RecordTrainingSetAction(ctx context.Context, req openapiv
 		return trainerBadRequest, nil
 	}
 	cmd := service.TrainerSetActionCommand{
-		SessionID: uuid.UUID(req.SessionId), PlanExerciseID: req.Body.PlanExerciseId, SetNumber: req.Body.SetNumber, Kind: string(req.Body.Kind),
+		SessionID: uuid.UUID(req.SessionId), PlanExerciseID: req.Body.PlanExerciseId, Scope: string(req.Body.Scope), Kind: string(req.Body.Kind),
+		ActualReps: req.Body.ActualReps, ActualDurationSeconds: req.Body.ActualDurationSeconds,
 		ExpectedSessionRevision: req.Body.ExpectedSessionRevision, ExpectedSafetyRevision: req.Body.ExpectedSafetyRevision,
 		IdempotencyKey: string(req.Body.IdempotencyKey),
+	}
+	if req.Body.SetNumber != nil {
+		cmd.SetNumber = *req.Body.SetNumber
+	}
+	if req.Body.CorrectsActionId != nil {
+		cmd.CorrectsActionID = uuid.UUID(*req.Body.CorrectsActionId)
 	}
 	action, err := s.trainerSessions.RecordSetAction(applicationRequestContext(ctx), owner, cmd)
 	if err != nil {
@@ -283,6 +328,62 @@ func (s *PublicServer) RecordTrainingSetAction(ctx context.Context, req openapiv
 		return trainerInconsistent, nil
 	}
 	return openapiv1.RecordTrainingSetAction200JSONResponse(record), nil
+}
+
+func (s *PublicServer) PauseTrainingSession(ctx context.Context, req openapiv1.PauseTrainingSessionRequestObject) (openapiv1.PauseTrainingSessionResponseObject, error) {
+	owner, fail := s.trainerOwner(ctx)
+	if fail != nil {
+		return *fail, nil
+	}
+	if req.Body == nil {
+		return trainerBadRequest, nil
+	}
+	cmd := service.TrainerTransitionCommand{
+		SessionID: uuid.UUID(req.SessionId), ExpectedSessionRevision: req.Body.ExpectedSessionRevision, IdempotencyKey: string(req.Body.IdempotencyKey),
+	}
+	view, err := s.trainerSessions.Pause(applicationRequestContext(ctx), owner, cmd)
+	record, fail := trainerTransitionRecord(owner, cmd, view, err)
+	if fail != nil {
+		return *fail, nil
+	}
+	return openapiv1.PauseTrainingSession200JSONResponse(record), nil
+}
+
+func (s *PublicServer) ResumeTrainingSession(ctx context.Context, req openapiv1.ResumeTrainingSessionRequestObject) (openapiv1.ResumeTrainingSessionResponseObject, error) {
+	owner, fail := s.trainerOwner(ctx)
+	if fail != nil {
+		return *fail, nil
+	}
+	if req.Body == nil {
+		return trainerBadRequest, nil
+	}
+	cmd := service.TrainerTransitionCommand{
+		SessionID: uuid.UUID(req.SessionId), ExpectedSessionRevision: req.Body.ExpectedSessionRevision,
+		ExpectedSafetyRevision: req.Body.ExpectedSafetyRevision, IdempotencyKey: string(req.Body.IdempotencyKey),
+	}
+	view, err := s.trainerSessions.Resume(applicationRequestContext(ctx), owner, cmd)
+	record, fail := trainerTransitionRecord(owner, cmd, view, err)
+	if fail != nil {
+		return *fail, nil
+	}
+	return openapiv1.ResumeTrainingSession200JSONResponse(record), nil
+}
+
+// trainerTransitionRecord maps a pause/resume result; the session must be the one
+// commanded.
+func trainerTransitionRecord(owner uuid.UUID, cmd service.TrainerTransitionCommand, view *service.TrainerSessionView, err error) (openapiv1.TrainingSessionRecord, *trainerHTTPError) {
+	if err != nil {
+		fail := trainerCommandError(err)
+		return openapiv1.TrainingSessionRecord{}, &fail
+	}
+	if view == nil || view.Session.ID != cmd.SessionID {
+		return openapiv1.TrainingSessionRecord{}, &trainerInconsistent
+	}
+	record, err := trainerSessionRecord(owner, *view)
+	if err != nil {
+		return openapiv1.TrainingSessionRecord{}, &trainerInconsistent
+	}
+	return record, nil
 }
 
 func (s *PublicServer) FinishTrainingSession(ctx context.Context, req openapiv1.FinishTrainingSessionRequestObject) (openapiv1.FinishTrainingSessionResponseObject, error) {

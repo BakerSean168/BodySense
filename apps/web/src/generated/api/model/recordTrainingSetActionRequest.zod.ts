@@ -8,9 +8,14 @@
 import * as zod from 'zod/mini';
 import { PlanIdempotencyKey } from './planIdempotencyKey.zod';
 import { TrainingSetActionKind } from './trainingSetActionKind.zod';
+import { TrainingSetActionScope } from './trainingSetActionScope.zod';
 
 export const recordTrainingSetActionRequestPlanExerciseIdMax = 256;
 
+
+export const recordTrainingSetActionRequestActualRepsMax = 1000;
+
+export const recordTrainingSetActionRequestActualDurationSecondsMax = 86400;
 
 export const recordTrainingSetActionRequestExpectedSessionRevisionMin = 0;
 
@@ -19,12 +24,16 @@ export const recordTrainingSetActionRequestExpectedSessionRevisionMin = 0;
 
 export const RecordTrainingSetActionRequest = /*#__PURE__*/ zod.strictObject({
   "planExerciseId": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(recordTrainingSetActionRequestPlanExerciseIdMax)),
-  "setNumber": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
+  "scope": TrainingSetActionScope,
+  "setNumber": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))),
   "kind": TrainingSetActionKind,
+  "correctsActionId": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "actualReps": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(recordTrainingSetActionRequestActualRepsMax))),
+  "actualDurationSeconds": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)).check(/*#__PURE__*/ zod.lte(recordTrainingSetActionRequestActualDurationSecondsMax))),
   "expectedSessionRevision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(recordTrainingSetActionRequestExpectedSessionRevisionMin)),
   "expectedSafetyRevision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "idempotencyKey": PlanIdempotencyKey
-});
+}).check(/*#__PURE__*/ zod.describe('setNumber is required for scope=set and absent for scope=exercise; scope=exercise only allows skipped or corrected. correctsActionId is required exactly for corrected. actualReps and actualDurationSeconds only describe a performed set.'));
 
 export type RecordTrainingSetActionRequest = zod.input<typeof RecordTrainingSetActionRequest>;
 export type RecordTrainingSetActionRequestOutput = zod.output<typeof RecordTrainingSetActionRequest>;

@@ -7008,6 +7008,88 @@
             ]
         },
         {
+            "table": "training_session_transitions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "session_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "session_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "safety_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "gate_result",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "gate_policy_revision",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "training_sessions",
             "columns": [
                 {
@@ -7184,11 +7266,18 @@
                     "nullable": false
                 },
                 {
+                    "udt": "text",
+                    "name": "scope",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
                     "udt": "int4",
                     "name": "set_number",
                     "type": "integer",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "text",
@@ -7196,6 +7285,27 @@
                     "type": "text",
                     "default": null,
                     "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "corrects_action_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "actual_reps",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "actual_duration_seconds",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
                 },
                 {
                     "udt": "int8",

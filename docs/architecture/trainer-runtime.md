@@ -1,6 +1,6 @@
 # Trainer runtime (TP-003)
 
-Status: slice 1 of [#313](https://github.com/BakerSean168/BodySense/issues/313).
+Status: slices 1–2 of [#313](https://github.com/BakerSean168/BodySense/issues/313).
 Product rules: `docs/product/domain/training.md` §4.3–4.4 (TP-D6..D10) and
 `docs/product/domain/safety.md`. Executable reference model:
 `scripts/plan/v2-trainer-actions-model.test.mjs`.
@@ -11,24 +11,43 @@ Product rules: `docs/product/domain/training.md` §4.3–4.4 (TP-D6..D10) and
   the plan's current accepted revision and one template, the user's IANA
   timezone snapshot and `training_date`, the local date at start. The date
   never changes, including when the session crosses local midnight; two
-  sessions on one day are two rows. A user has at most one `in_progress`
-  session (partial unique index). The start receipt (idempotency key, request
-  fingerprint, Safety revision, gate result and policy revision) is immutable;
-  only `revision` advances, and the single `in_progress → ended` transition
-  records `finished` or `stopped_early` with its own idempotency key.
-- **TrainingSetAction** (`training_set_actions`) is an immutable receipt for
-  one set the user explicitly marked `performed` or `skipped`. It is keyed by
-  `(session, plan_exercise_id, set_number)` (one action per set), carries the
-  session revision it created, its idempotency key and the exact Safety
-  revision and gate result that admitted it. Composite owner FKs keep a
-  receipt on the owner's own session.
+  sessions on one day are two rows. State is `in_progress ↔ paused → ended`.
+  A user has at most one `in_progress` session (partial unique index);
+  paused sessions do not hold that slot. The start receipt (idempotency key,
+  request fingerprint, Safety revision, gate result and policy revision) is
+  immutable; only `state` and `revision` change, and the single transition to
+  `ended` (from `in_progress` or `paused`) records `finished` or
+  `stopped_early` with its own idempotency key.
+- **TrainingSessionTransition** (`training_session_transitions`) is the
+  immutable receipt of one explicit `pause` or `resume`: session revision,
+  idempotency key and, for a resume only, the Safety revision and gate result
+  that admitted it. Paused time is derivable from these receipts.
+- **TrainingSetAction** (`training_set_actions`) is an immutable receipt of
+  one explicit user action on a target of the pinned template:
+  - `scope=set`: one set `performed` (optionally `actual_reps` /
+    `actual_duration_seconds`, which may differ from the prescription) or
+    `skipped`;
+  - `scope=exercise`: the rest of a whole exercise `skipped` as one receipt,
+    never as fabricated per-set skips;
+  - `corrected`: retracts `corrects_action_id`, an effective receipt of
+    exactly the same target in the same session, at most once. The original
+    stays; the target may then be recorded again.
+
+  A receipt is **effective** unless it is a correction or a correction points
+  at it; a set, and an exercise skip, hold at most one effective receipt, and
+  a set cannot be recorded under an effective exercise skip. Every receipt
+  carries the session revision it created, its idempotency key and the exact
+  Safety revision and gate result that admitted it. Composite owner FKs keep
+  receipts on the owner's own session.
 
 ## Commands (Go only)
 
 | Route                                                            | Command                                                                | Gate                                          |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------- |
 | `POST /training-sessions`                                        | start a template of an owned `active` plan at `expectedPlanRevisionId` | `start_session` over the template's exercises |
-| `POST /training-sessions/{id}/set-actions`                       | `performed` / `skipped` at `expectedSessionRevision`                   | `perform_set` for that exercise               |
+| `POST /training-sessions/{id}/set-actions`                       | `performed` / `skipped` / `corrected` at `expectedSessionRevision`     | `perform_set` for that exercise               |
+| `POST /training-sessions/{id}/pause`                             | `in_progress → paused` at `expectedSessionRevision`                    | none: pausing is always allowed               |
+| `POST /training-sessions/{id}/resume`                            | `paused → in_progress`; plan still `active`, no other in progress      | `resume_session` over the template            |
 | `POST /training-sessions/{id}/finish`                            | `finished` / `stopped_early` at `expectedSessionRevision`              | none: stopping is always allowed              |
 | `GET /training-sessions[?state=]`, `GET /training-sessions/{id}` | read receipts                                                          | none                                          |
 
@@ -49,9 +68,16 @@ Foreign plan or session ids are the same owner-masked 404 as missing ones.
 The runtime only reads plans; it never changes plan status, content or
 revisions, and nothing is inferred from navigation, playback or Agent output.
 
-## Not in slice 1
+A paused session accepts no set action (`SESSION_PAUSED`); resuming a
+session that is not paused is `SESSION_NOT_PAUSED`. Corrections are gated
+like any set action, so a correction also needs the current Safety revision
+and a permitting gate.
 
-- pause/resume, exercise-scope skip and `corrected` actions (TP-D7);
-- actual reps/duration per set and subjective feedback → review projection;
-- deleting legacy `/training/*` and `training_logs`;
+## Not yet
+
+- subjective feedback → review projection and deleting legacy `/training/*`
+  and `training_logs` (slice 3);
+- Safety-driven hold/stop transitions (`safety_hold`, `safety_stopped`) of
+  the reference model; today a non-permitting gate refuses the command and
+  the user may stop;
 - Agent trainer tools and the web Trainer rebinding (UI-TP-001).

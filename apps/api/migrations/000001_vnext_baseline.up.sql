@@ -4725,13 +4725,14 @@ $$;
 CREATE TRIGGER training_plan_status_events_immutable BEFORE UPDATE ON public.training_plan_status_events
     FOR EACH ROW EXECUTE FUNCTION public.prevent_training_status_event_update();
 
--- TP-003 slice 1: Trainer runtime. A session pins one accepted plan revision
--- and template plus the user's IANA timezone snapshot; its training date is
--- the local date at start and never changes (TP-D6). Every set action is an
--- explicit user command with an idempotency key, the expected session revision
--- and the exact Safety revision the Go TrainerGate admitted it at: the row is
--- the receipt. Actions are append-only; a session changes only by advancing
--- its revision while in progress and by being ended once.
+-- TP-003: Trainer runtime. A session pins one accepted plan revision and
+-- template plus the user's IANA timezone snapshot; its training date is the
+-- local date at start and never changes (TP-D6). Every set action, pause and
+-- resume is an explicit user command with an idempotency key, the expected
+-- session revision and, when gated, the exact Safety revision the Go
+-- TrainerGate admitted it at: the row is the receipt. Receipts are
+-- append-only; a session changes only by advancing its revision while in
+-- progress or paused and by being ended once.
 CREATE TABLE public.training_sessions (
     id uuid PRIMARY KEY,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -4740,7 +4741,7 @@ CREATE TABLE public.training_sessions (
     template_id text NOT NULL CHECK (length(template_id) BETWEEN 1 AND 256),
     time_zone text NOT NULL CHECK (length(time_zone) BETWEEN 1 AND 64 AND time_zone = btrim(time_zone) AND time_zone <> 'Local'),
     training_date date NOT NULL,
-    state text NOT NULL CHECK (state IN ('in_progress','ended')),
+    state text NOT NULL CHECK (state IN ('in_progress','paused','ended')),
     ended_reason text CHECK (ended_reason IN ('finished','stopped_early')),
     revision bigint NOT NULL CHECK (revision >= 0),
     started_at timestamptz NOT NULL,
@@ -4755,17 +4756,17 @@ CREATE TABLE public.training_sessions (
     UNIQUE (user_id, id),
     UNIQUE (user_id, start_idempotency_key),
     UNIQUE (user_id, finish_idempotency_key),
-    CHECK ((state = 'in_progress' AND ended_reason IS NULL AND ended_at IS NULL AND finish_idempotency_key IS NULL AND finish_request_fingerprint IS NULL)
+    CHECK ((state IN ('in_progress','paused') AND ended_reason IS NULL AND ended_at IS NULL AND finish_idempotency_key IS NULL AND finish_request_fingerprint IS NULL)
         OR (state = 'ended' AND ended_reason IS NOT NULL AND ended_at IS NOT NULL AND finish_idempotency_key IS NOT NULL AND finish_request_fingerprint IS NOT NULL)),
     CHECK (ended_at IS NULL OR ended_at >= started_at),
     FOREIGN KEY (user_id, plan_id, plan_revision_id) REFERENCES public.training_plan_revisions(user_id, plan_id, id) ON DELETE CASCADE
 );
--- One user has at most one session in progress.
+-- One user has at most one session in progress; paused ones may wait.
 CREATE UNIQUE INDEX training_sessions_one_in_progress ON public.training_sessions (user_id) WHERE state = 'in_progress';
 CREATE INDEX idx_training_sessions_user_started ON public.training_sessions (user_id, started_at DESC, id);
 CREATE FUNCTION public.prevent_training_session_rewrite() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    IF OLD.state <> 'in_progress' THEN
+    IF OLD.state = 'ended' THEN
         RAISE EXCEPTION 'ended training sessions are immutable';
     END IF;
     IF (NEW.id, NEW.user_id, NEW.plan_id, NEW.plan_revision_id, NEW.template_id, NEW.time_zone,
@@ -4790,8 +4791,12 @@ CREATE TABLE public.training_set_actions (
     session_id uuid NOT NULL,
     plan_exercise_id text NOT NULL CHECK (length(plan_exercise_id) BETWEEN 1 AND 256),
     exercise_id text NOT NULL CHECK (length(exercise_id) BETWEEN 1 AND 256),
-    set_number integer NOT NULL CHECK (set_number >= 1),
-    kind text NOT NULL CHECK (kind IN ('performed','skipped')),
+    scope text NOT NULL CHECK (scope IN ('set','exercise')),
+    set_number integer CHECK (set_number >= 1),
+    kind text NOT NULL CHECK (kind IN ('performed','skipped','corrected')),
+    corrects_action_id uuid,
+    actual_reps integer CHECK (actual_reps BETWEEN 1 AND 1000),
+    actual_duration_seconds integer CHECK (actual_duration_seconds BETWEEN 1 AND 86400),
     session_revision bigint NOT NULL CHECK (session_revision > 0),
     idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
     request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
@@ -4802,16 +4807,50 @@ CREATE TABLE public.training_set_actions (
     UNIQUE (user_id, id),
     UNIQUE (user_id, idempotency_key),
     UNIQUE (user_id, session_id, session_revision),
-    UNIQUE (user_id, session_id, plan_exercise_id, set_number),
-    FOREIGN KEY (user_id, session_id) REFERENCES public.training_sessions(user_id, id) ON DELETE CASCADE
+    UNIQUE (user_id, session_id, id),
+    -- A receipt is corrected at most once, by a later receipt of the same
+    -- session; the original is never deleted or rewritten (TP-D8).
+    UNIQUE (user_id, corrects_action_id),
+    CHECK ((scope = 'set') = (set_number IS NOT NULL)),
+    CHECK ((kind = 'corrected') = (corrects_action_id IS NOT NULL)),
+    CHECK (corrects_action_id <> id),
+    CHECK (scope = 'set' OR kind <> 'performed'),
+    CHECK (kind = 'performed' OR (actual_reps IS NULL AND actual_duration_seconds IS NULL)),
+    FOREIGN KEY (user_id, session_id) REFERENCES public.training_sessions(user_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id, session_id, corrects_action_id) REFERENCES public.training_set_actions(user_id, session_id, id)
 );
-CREATE FUNCTION public.prevent_training_set_action_update() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE INDEX idx_training_set_actions_target ON public.training_set_actions (user_id, session_id, plan_exercise_id);
+CREATE FUNCTION public.prevent_training_receipt_update() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    RAISE EXCEPTION 'training set actions are immutable receipts';
+    RAISE EXCEPTION 'training receipts are immutable';
 END;
 $$;
 CREATE TRIGGER training_set_actions_immutable BEFORE UPDATE ON public.training_set_actions
-    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_set_action_update();
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_receipt_update();
+
+-- Pause and resume receipts. Pausing is never gated; resuming carries the
+-- exact Safety revision and permitting TrainerGate result it was admitted at.
+CREATE TABLE public.training_session_transitions (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    session_id uuid NOT NULL,
+    kind text NOT NULL CHECK (kind IN ('pause','resume')),
+    session_revision bigint NOT NULL CHECK (session_revision > 0),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    safety_revision bigint CHECK (safety_revision > 0),
+    gate_result text CHECK (gate_result IN ('allow','warn')),
+    gate_policy_revision text CHECK (length(gate_policy_revision) BETWEEN 1 AND 64),
+    recorded_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, session_id, session_revision),
+    CHECK ((kind = 'pause' AND safety_revision IS NULL AND gate_result IS NULL AND gate_policy_revision IS NULL)
+        OR (kind = 'resume' AND safety_revision IS NOT NULL AND gate_result IS NOT NULL AND gate_policy_revision IS NOT NULL)),
+    FOREIGN KEY (user_id, session_id) REFERENCES public.training_sessions(user_id, id) ON DELETE CASCADE
+);
+CREATE TRIGGER training_session_transitions_immutable BEFORE UPDATE ON public.training_session_transitions
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_receipt_update();
 
 
 -- DX-002 atomic settlement: one immutable whole-run outcome.

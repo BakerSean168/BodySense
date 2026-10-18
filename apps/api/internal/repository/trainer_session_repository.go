@@ -104,13 +104,57 @@ func (r *TrainerSessionRepository) ActionByKey(ctx context.Context, owner uuid.U
 	return &row, err
 }
 
-// SetRecorded reports whether the session already holds an action for set.
-func (r *TrainerSessionRepository) SetRecorded(ctx context.Context, owner, session uuid.UUID, planExerciseID string, set int) (bool, error) {
-	var n int64
-	err := r.dbFor(ctx).Model(&model.TrainingSetAction{}).
-		Where("user_id=? AND session_id=? AND plan_exercise_id=? AND set_number=?", owner, session, planExerciseID, set).
-		Count(&n).Error
-	return n > 0, err
+// ExerciseActions returns the session's receipts for one plan exercise.
+func (r *TrainerSessionRepository) ExerciseActions(ctx context.Context, owner, session uuid.UUID, planExerciseID string) ([]model.TrainingSetAction, error) {
+	rows := []model.TrainingSetAction{}
+	err := r.dbFor(ctx).Where("user_id=? AND session_id=? AND plan_exercise_id=?", owner, session, planExerciseID).
+		Order("session_revision").Find(&rows).Error
+	return rows, err
+}
+
+func (r *TrainerSessionRepository) Transitions(ctx context.Context, owner uuid.UUID, sessions []uuid.UUID) ([]model.TrainingSessionTransition, error) {
+	rows := []model.TrainingSessionTransition{}
+	if len(sessions) == 0 {
+		return rows, nil
+	}
+	err := r.dbFor(ctx).Where("user_id=? AND session_id IN ?", owner, sessions).Order("session_id, session_revision").Find(&rows).Error
+	return rows, err
+}
+
+func (r *TrainerSessionRepository) TransitionByKey(ctx context.Context, owner uuid.UUID, key string) (*model.TrainingSessionTransition, error) {
+	var row model.TrainingSessionTransition
+	err := r.dbFor(ctx).Where("user_id=? AND idempotency_key=?", owner, key).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &row, err
+}
+
+// Transition moves the session from one live state to the other at exactly
+// the receipt's revision and inserts the pause/resume receipt, or writes
+// nothing. Resuming while another session is in progress hits the per-user
+// index.
+func (r *TrainerSessionRepository) Transition(ctx context.Context, row *model.TrainingSessionTransition, from, to string) error {
+	db := r.dbFor(ctx)
+	result := db.Model(&model.TrainingSession{}).
+		Where("user_id=? AND id=? AND state=? AND revision=?", row.UserID, row.SessionID, from, row.SessionRevision-1).
+		Updates(map[string]any{"state": to, "revision": row.SessionRevision})
+	if uniqueViolation(result.Error, "training_sessions_one_in_progress") {
+		return ErrTrainerSessionInProgress
+	}
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return ErrTrainerSessionRace
+	}
+	if err := db.Create(row).Error; err != nil {
+		if uniqueViolation(err, "") {
+			return ErrTrainerSessionRace
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *TrainerSessionRepository) InsertSession(ctx context.Context, row *model.TrainingSession) error {
@@ -146,10 +190,10 @@ func (r *TrainerSessionRepository) AppendAction(ctx context.Context, action *mod
 	return nil
 }
 
-// End applies the single in_progress -> ended transition at expected+1.
+// End applies the single in_progress|paused -> ended transition at expected+1.
 func (r *TrainerSessionRepository) End(ctx context.Context, row *model.TrainingSession, expected int64) error {
 	result := r.dbFor(ctx).Model(&model.TrainingSession{}).
-		Where("user_id=? AND id=? AND state='in_progress' AND revision=?", row.UserID, row.ID, expected).
+		Where("user_id=? AND id=? AND state IN ('in_progress','paused') AND revision=?", row.UserID, row.ID, expected).
 		Updates(map[string]any{
 			"state": row.State, "ended_reason": row.EndedReason, "ended_at": row.EndedAt, "revision": row.Revision,
 			"finish_idempotency_key": row.FinishIdempotencyKey, "finish_request_fingerprint": row.FinishRequestFingerprint,

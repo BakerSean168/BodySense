@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod/mini';
 
-export const TrainingSetActionKind = /*#__PURE__*/ zod.enum(['performed', 'skipped']);
+export const TrainingSetActionKind = /*#__PURE__*/ zod.enum(['performed', 'skipped', 'corrected']);
 
 export type TrainingSetActionKind = zod.input<typeof TrainingSetActionKind>;
 export type TrainingSetActionKindOutput = zod.output<typeof TrainingSetActionKind>;

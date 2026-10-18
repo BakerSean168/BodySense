@@ -35,24 +35,49 @@ type TrainingSession struct {
 
 func (TrainingSession) TableName() string { return "training_sessions" }
 
-// TrainingSetAction is one immutable, user-originated set receipt: performed
-// or skipped, admitted by the TrainerGate at SafetyRevision. It is never
-// inferred from navigation, playback or assistant output.
+// TrainingSetAction is one immutable, user-originated receipt admitted by the
+// TrainerGate at SafetyRevision: a set performed or skipped, a whole exercise
+// skipped (Scope "exercise", no SetNumber), or a correction that retracts an
+// earlier receipt of the same target (CorrectsActionID). It is never inferred
+// from navigation, playback or assistant output.
 type TrainingSetAction struct {
+	ID                    uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID                uuid.UUID `gorm:"type:uuid"`
+	SessionID             uuid.UUID `gorm:"type:uuid"`
+	PlanExerciseID        string
+	ExerciseID            string
+	Scope                 string
+	SetNumber             *int
+	Kind                  string
+	CorrectsActionID      *uuid.UUID `gorm:"type:uuid"`
+	ActualReps            *int
+	ActualDurationSeconds *int
+	SessionRevision       int64
+	IdempotencyKey        string
+	RequestFingerprint    string
+	SafetyRevision        int64
+	GateResult            string
+	GatePolicyRevision    string
+	RecordedAt            time.Time
+}
+
+func (TrainingSetAction) TableName() string { return "training_set_actions" }
+
+// TrainingSessionTransition is the immutable receipt of one explicit pause or
+// resume. A resume carries the Safety revision and permitting gate result it
+// was admitted at; a pause is never gated and carries none.
+type TrainingSessionTransition struct {
 	ID                 uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID             uuid.UUID `gorm:"type:uuid"`
 	SessionID          uuid.UUID `gorm:"type:uuid"`
-	PlanExerciseID     string
-	ExerciseID         string
-	SetNumber          int
 	Kind               string
 	SessionRevision    int64
 	IdempotencyKey     string
 	RequestFingerprint string
-	SafetyRevision     int64
-	GateResult         string
-	GatePolicyRevision string
+	SafetyRevision     *int64
+	GateResult         *string
+	GatePolicyRevision *string
 	RecordedAt         time.Time
 }
 
-func (TrainingSetAction) TableName() string { return "training_set_actions" }
+func (TrainingSessionTransition) TableName() string { return "training_session_transitions" }
