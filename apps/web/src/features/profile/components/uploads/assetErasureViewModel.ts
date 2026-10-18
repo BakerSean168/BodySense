@@ -61,7 +61,13 @@ export function projectAssetErasure(
   let blocked = false;
   for (const target of receipt.targets) {
     if (target.state === "verified") continue;
-    if (BLOCKING.has(target.state)) blocked = true;
+    // The manifest waits on the others (targets_outstanding): that alone is
+    // not something the user has to review.
+    if (
+      BLOCKING.has(target.state) &&
+      target.failure_code !== "targets_outstanding"
+    )
+      blocked = true;
     outstanding.push({
       target: target.target,
       label: ASSET_ERASURE_TARGET_LABELS[target.target] ?? target.target,

@@ -56,16 +56,21 @@ describe("projectAssetErasure", () => {
           failure_code: "storage_unavailable",
           outstanding_count: 1,
         },
+        asset_manifest: {
+          state: "blocked",
+          failure_code: "targets_outstanding",
+          outstanding_count: 1,
+        },
       }),
     );
     expect(view.phase).toBe("outstanding");
     expect(view.title).not.toBe("已彻底删除");
-    expect(view.outstanding).toEqual([
+    expect(view.outstanding).toContainEqual(
       expect.objectContaining({
         target: "source_objects",
         reason: expect.stringMatching(/自动重试/),
       }),
-    ]);
+    );
   });
 
   it("asks for a review while an adopted condition pins the file", () => {
