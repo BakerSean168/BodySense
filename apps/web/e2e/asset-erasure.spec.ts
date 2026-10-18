@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 // AS-002 deletion flows for an uploaded file in the profile drawer: source
 // removal (the original goes, derived records stay with a source-unavailable
@@ -35,7 +36,7 @@ async function register(page: Page, request: APIRequestContext) {
   const headers = { Authorization: `Bearer ${accessToken}` };
   const profile = await request.put(`${api}/api/v1/profile`, {
     headers,
-    data: { gender: "male", birth_date: "2000-01-01" },
+    data: profileReplacement({ gender: "male", birth_date: "2000-01-01" }),
   });
   expect(profile.ok()).toBeTruthy();
   return headers;
@@ -65,7 +66,7 @@ async function upload(
 async function openFiles(page: Page) {
   await page.goto("/consultation?view=person");
   await page.locator(".bc-person-identity").click();
-  await page.getByRole("button", { name: "编辑基础资料" }).click();
+  await page.getByRole("button", { name: "身体档案与文件" }).click();
   await page.getByRole("button", { name: /^文件管理/ }).click();
 }
 
