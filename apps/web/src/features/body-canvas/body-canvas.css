@@ -1462,9 +1462,13 @@
 
 /* ==========================================================================
    Business windows / Penpot V2 Canvas compositions.
-   The desktop canvas stays mounted under one visible 780/560px window; on
-   narrow screens the same mounted task is displayed in a 358px sheet above
-   the persistent four-entry Dock. Fixed header/footer and overflow:auto
+   The desktop canvas stays mounted beside one visible window docked like the
+   Penpot 1440 x 900 boards: 40px from its side (Person/Chat left; Diagnosis,
+   Training, Trainer right), stage top 28 (screen y 92) and 108px kept above
+   the stage bottom for the Dock, so 700px tall at 900. When the real Dock
+   is taller than Penpot's 72px one, the window keeps 8px above its measured
+   top (--bc-dock-reserve) instead of running under it. On narrow screens the
+   same mounted task is displayed in a 358px sheet above the persistent Dock. Fixed header/footer and overflow:auto
    content do not depend on Penpot's limited prototype scroll API.
    ========================================================================== */
 .bc-business-layer {
@@ -1477,14 +1481,22 @@
   pointer-events: auto;
 }
 .bc-business-window {
+  /* Effective top; it moves down below the safety banner (see below). */
+  --bc-window-y: var(--bc-window-top, 28px);
   position: absolute;
   left: clamp(16px, var(--bc-window-left, 40px), 48px);
-  top: var(--bc-window-top, 28px);
+  top: var(--bc-window-y);
   width: min(var(--bc-window-width, 560px), calc(100% - 32px));
   height: min(
-    var(--bc-window-height, 680px),
-    var(--bc-window-max-height, 720px),
-    calc(100% - var(--bc-window-top, 28px) - 144px)
+    var(--bc-window-height, 700px),
+    var(--bc-window-max-height, 700px),
+    calc(
+      100% - var(--bc-window-y) -
+        max(
+          var(--bc-window-bottom, 108px),
+          calc(var(--bc-dock-reserve, 0px) + 8px)
+        )
+    )
   );
   min-height: 0;
   display: flex;
@@ -1496,11 +1508,22 @@
   color: var(--bc-ink);
   box-shadow: var(--bc-shadow);
 }
-.bc-business-window[data-window="diagnosis"],
-.bc-business-window[data-window="training"],
-.bc-business-window[data-window="trainer"] {
+.bc-business-window[data-dock="right"] {
   left: auto;
-  right: clamp(16px, 3.75vw, 48px);
+  right: clamp(16px, var(--bc-window-left, 40px), 48px);
+}
+/* Desktop twin of the mobile sheet rule: the safety banner (z 45) would sit
+   on the window header at its 70px stage top. While a window is open the
+   banner moves to the stage's top edge and the window starts below its
+   measured height; the bottom edge above the Dock stays where it was. */
+.bc-stage:has(.bc-business-window:not([hidden])) > .bc-safety-banner {
+  top: 12px;
+}
+.bc-stage:has(> .bc-safety-banner) .bc-business-window {
+  --bc-window-y: max(
+    var(--bc-window-top, 28px),
+    calc(12px + var(--bc-safety-banner-height, 46px) + 8px)
+  );
 }
 .bc-business-window[data-active="false"] {
   box-shadow: 0 12px 34px rgba(31, 47, 37, 0.08);

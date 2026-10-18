@@ -6,6 +6,8 @@ import {
   BUSINESS_WINDOW_LAYOUT,
   computeBmi,
   desktopWindowOffset,
+  DESKTOP_WINDOW_BASE_TOP,
+  DESKTOP_WINDOW_BOTTOM_RESERVE,
   EMPTY_BUSINESS_WINDOWS,
   formatCompactDate,
   formatGender,
@@ -194,25 +196,38 @@ describe("desktop window placement adapts instead of hardcoding the prototype fr
 describe("Penpot V2 business window geometry", () => {
   it("keeps desktop window sizes aligned with the actual composed Penpot scenes", () => {
     expect(BUSINESS_WINDOW_LAYOUT.person.desktop).toEqual({
-      width: 780,
-      height: 680,
-    });
-    expect(BUSINESS_WINDOW_LAYOUT.diagnosis.desktop).toEqual({
-      width: 560,
-      height: 680,
-    });
-    expect(BUSINESS_WINDOW_LAYOUT.training.desktop).toEqual({
-      width: 560,
-      height: 720,
+      width: 860,
+      height: 700,
     });
     expect(BUSINESS_WINDOW_LAYOUT.chat.desktop).toEqual({
       width: 560,
-      height: 640,
-    });
-    expect(BUSINESS_WINDOW_LAYOUT.trainer.desktop).toEqual({
-      width: 560,
       height: 700,
     });
+    for (const id of ["diagnosis", "training", "trainer"] as const) {
+      expect(BUSINESS_WINDOW_LAYOUT[id].desktop).toEqual({
+        width: 600,
+        height: 700,
+      });
+    }
+  });
+
+  it("docks Person and Chat left, Diagnosis, Training and Trainer right", () => {
+    expect(BUSINESS_WINDOW_LAYOUT.person.dock).toBe("left");
+    expect(BUSINESS_WINDOW_LAYOUT.chat.dock).toBe("left");
+    expect(BUSINESS_WINDOW_LAYOUT.diagnosis.dock).toBe("right");
+    expect(BUSINESS_WINDOW_LAYOUT.training.dock).toBe("right");
+    expect(BUSINESS_WINDOW_LAYOUT.trainer.dock).toBe("right");
+  });
+
+  it("fills the 1440 x 900 Penpot frame from y 92 to 792 under the 64px app bar", () => {
+    const stageHeight = 900 - 64;
+    expect(64 + DESKTOP_WINDOW_BASE_TOP).toBe(92);
+    for (const layout of Object.values(BUSINESS_WINDOW_LAYOUT)) {
+      expect(
+        stageHeight - DESKTOP_WINDOW_BASE_TOP - DESKTOP_WINDOW_BOTTOM_RESERVE,
+      ).toBe(layout.desktop.height);
+      expect(layout.maxHeight).toBe(layout.desktop.height);
+    }
   });
 
   it("shares the 358 x 704 mobile reference window without hiding any module", () => {

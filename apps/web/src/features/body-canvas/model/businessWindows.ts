@@ -256,17 +256,24 @@ export function topmostClosableWindow(
 }
 
 /**
- * Current Penpot V2 combined Canvas scene dimensions (1280px design viewport).
- * CSS bounds them to the real viewport and keeps the Dock outside the window.
- * Mobile uses an adaptive 358px window inside the 390px reference viewport.
+ * Penpot V2 desktop dock geometry, read from every "Desktop / <Window> / …"
+ * board (1440 x 900, no app bar): each window is docked 40px from one side of
+ * the screen at y 92 and is 700px tall, ending at y 792 above the Dock, so the
+ * body stays visible beside it. Person and Chat dock left; Diagnosis, Training
+ * and Trainer (and Training / Safety restrictions) dock right. CSS bounds the
+ * sizes to the real stage. Mobile uses a 358px sheet in the 390px viewport.
  */
 export interface BusinessWindowSize {
   width: number;
   height: number;
 }
 
+/** The side of the desktop stage a window docks to. */
+export type BusinessWindowDock = "left" | "right";
+
 export interface BusinessWindowLayout {
   desktop: BusinessWindowSize;
+  dock: BusinessWindowDock;
   mobile: BusinessWindowSize;
   /** Upper bound applied when the stage is short. */
   maxHeight: number;
@@ -277,41 +284,50 @@ export const BUSINESS_WINDOW_LAYOUT: Record<
   BusinessWindowLayout
 > = {
   chat: {
-    desktop: { width: 560, height: 640 },
+    desktop: { width: 560, height: 700 },
+    dock: "left",
     mobile: { width: 358, height: 704 },
-    maxHeight: 640,
+    maxHeight: 700,
   },
   person: {
-    desktop: { width: 780, height: 680 },
+    desktop: { width: 860, height: 700 },
+    dock: "left",
     mobile: { width: 358, height: 704 },
-    maxHeight: 680,
+    maxHeight: 700,
   },
   diagnosis: {
-    desktop: { width: 560, height: 680 },
+    desktop: { width: 600, height: 700 },
+    dock: "right",
     mobile: { width: 358, height: 704 },
-    maxHeight: 680,
+    maxHeight: 700,
   },
   training: {
-    desktop: { width: 560, height: 720 },
+    desktop: { width: 600, height: 700 },
+    dock: "right",
     mobile: { width: 358, height: 704 },
-    maxHeight: 720,
+    maxHeight: 700,
   },
   trainer: {
-    desktop: { width: 560, height: 700 },
+    desktop: { width: 600, height: 700 },
+    dock: "right",
     mobile: { width: 358, height: 704 },
     maxHeight: 700,
   },
 };
 
+/** Distance from the docked side of the stage (Penpot x 40 / 1440 - 40). */
 export const DESKTOP_WINDOW_BASE_LEFT = 40;
+/** Stage top under the 64px app bar: Penpot's screen y 92 minus 64. */
 export const DESKTOP_WINDOW_BASE_TOP = 28;
+/** Space kept below a window for the Dock: Penpot 900 - 792. */
+export const DESKTOP_WINDOW_BOTTOM_RESERVE = 108;
 export const DESKTOP_WINDOW_STACK_STEP = 26;
 const DESKTOP_WINDOW_MAX_STACK = 3;
 
 /**
- * Penpot desktop windows use a 40px left margin for Person/Chat, and a 48px
- * right margin for Diagnosis/Training/Trainer. CSS implements this alignment.
- * The offset is kept for keyboard/stage positioning and future window stacking.
+ * Offset of a desktop window from its docked side and the stage top. CSS
+ * applies `left` as the margin on whichever side the window docks to. The
+ * cascade is kept for keyboard/stage positioning and future window stacking.
  */
 export function desktopWindowOffset(visibleIndex: number): {
   left: number;
