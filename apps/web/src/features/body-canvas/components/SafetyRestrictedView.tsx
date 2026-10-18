@@ -44,7 +44,7 @@ function RestrictionBlock({ item }: { item: SafetyRestrictionView }) {
               <X size={12} strokeWidth={2.6} />
             </span>
             <span className="bc-dx-row-text">
-              <span className="bc-dx-row-statement">“{item.reason}”</span>
+              <span className="bc-dx-row-statement">{item.reason}</span>
               <span className="bc-dx-row-meta">{item.meta}</span>
             </span>
           </li>

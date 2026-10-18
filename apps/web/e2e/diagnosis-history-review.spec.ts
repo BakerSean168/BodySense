@@ -1,80 +1,12 @@
-import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Page,
-} from "@playwright/test";
-import { refreshBrowserAccessToken } from "./support/auth";
+import { expect, test, type Page } from "@playwright/test";
 import {
   adoptNativeDiagnosis,
   factStatementEvidenceId,
+  seedUserWithSymptom,
 } from "./support/diagnosis";
 import { completeStructuredSafetyIntake } from "./support/safety";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
-
-interface SeededUser {
-  conversationId: string;
-  headers: Record<string, string>;
-  symptomId: string;
-}
-
-/**
- * Real Go API + deterministic Python stub: register, open a conversation and
- * record one user-message symptom through the Go-bound safety intake. No
- * Diagnosis exists yet.
- */
-export async function seedUserWithSymptom(
-  page: Page,
-  request: APIRequestContext,
-): Promise<SeededUser> {
-  const email = `e2e-dxh-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
-  const password = "BodySenseE2E!123";
-  await page.goto("/register");
-  await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByLabel("确认密码").fill(password);
-  await page.getByRole("button", { name: "创建账号" }).click();
-  await page.waitForURL(/\/(dashboard|onboarding)/);
-  const accessToken = await refreshBrowserAccessToken(page, apiBase);
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json",
-  };
-  const profile = await request.put(`${apiBase}/api/v1/profile`, {
-    headers,
-    data: { gender: "female", birth_date: "1994-03-12" },
-  });
-  expect(profile.ok(), await profile.text()).toBeTruthy();
-  const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `e2e-dxh-open-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "我想做一次综合诊断。" }],
-      },
-    },
-    timeout: 60_000,
-  });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversation = await request.get(`${apiBase}/api/v1/conversation`, {
-    headers,
-  });
-  expect(conversation.ok()).toBeTruthy();
-  const conversationId = (
-    (await conversation.json()) as { conversation: { id: string } }
-  ).conversation.id;
-  const symptom = (await completeStructuredSafetyIntake(
-    request,
-    apiBase,
-    headers,
-    conversationId,
-  )) as { id: string };
-  return { conversationId, headers, symptomId: symptom.id };
-}
 
 async function openDiagnosis(page: Page, conversationId: string) {
   await page.goto(`/consultation/${conversationId}?view=diagnosis`);
@@ -95,7 +27,7 @@ test("Chat request starts a formal analysis; decisions land in History", async (
   request,
 }) => {
   test.setTimeout(180_000);
-  const seeded = await seedUserWithSymptom(page, request);
+  const seeded = await seedUserWithSymptom(page, request, apiBase);
   const window = await openDiagnosis(page, seeded.conversationId);
   await expect(window.getByTestId("diagnosis-empty")).toBeVisible();
 
@@ -163,7 +95,7 @@ test("review prompt can be put aside without changing the Condition", async ({
   request,
 }) => {
   test.setTimeout(180_000);
-  const seeded = await seedUserWithSymptom(page, request);
+  const seeded = await seedUserWithSymptom(page, request, apiBase);
   const evidence = await factStatementEvidenceId(
     request,
     apiBase,
@@ -224,7 +156,7 @@ test("Safety stopped opens Safety / Restricted and fits 390px", async ({
 }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 390, height: 844 });
-  const seeded = await seedUserWithSymptom(page, request);
+  const seeded = await seedUserWithSymptom(page, request, apiBase);
   const evidence = await factStatementEvidenceId(
     request,
     apiBase,

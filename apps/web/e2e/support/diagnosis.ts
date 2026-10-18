@@ -1,4 +1,6 @@
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { refreshBrowserAccessToken } from "./auth";
+import { completeStructuredSafetyIntake } from "./safety";
 
 interface NativeRunProposal {
   proposalId: string;
@@ -134,4 +136,68 @@ export async function factStatementEvidenceId(
   ).facts.find((row) => row.id === factId);
   expect(fact?.source_evidence_id).toBeTruthy();
   return fact!.source_evidence_id!;
+}
+
+export interface SeededUser {
+  conversationId: string;
+  headers: Record<string, string>;
+  symptomId: string;
+}
+
+/**
+ * Real Go API + deterministic Python stub: register, open a conversation and
+ * record one user-message symptom through the Go-bound safety intake. No
+ * Diagnosis exists yet.
+ */
+export async function seedUserWithSymptom(
+  page: Page,
+  request: APIRequestContext,
+  apiBase: string,
+): Promise<SeededUser> {
+  const email = `e2e-dxh-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
+  const password = "BodySenseE2E!123";
+  await page.goto("/register");
+  await page.getByLabel("邮箱地址").fill(email);
+  await page.getByLabel("密码", { exact: true }).fill(password);
+  await page.getByLabel("确认密码").fill(password);
+  await page.getByRole("button", { name: "创建账号" }).click();
+  await page.waitForURL(/\/(dashboard|onboarding)/);
+  const accessToken = await refreshBrowserAccessToken(page, apiBase);
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  };
+  const profile = await request.put(`${apiBase}/api/v1/profile`, {
+    headers,
+    data: { gender: "female", birth_date: "1994-03-12" },
+  });
+  expect(profile.ok(), await profile.text()).toBeTruthy();
+  const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {
+    headers,
+    data: {
+      conversationId: null,
+      clientMessageId: `e2e-dxh-open-${crypto.randomUUID()}`,
+      requestId: crypto.randomUUID(),
+      message: {
+        role: "user",
+        parts: [{ type: "text", text: "我想做一次综合诊断。" }],
+      },
+    },
+    timeout: 60_000,
+  });
+  expect(opening.ok(), await opening.text()).toBeTruthy();
+  const conversation = await request.get(`${apiBase}/api/v1/conversation`, {
+    headers,
+  });
+  expect(conversation.ok()).toBeTruthy();
+  const conversationId = (
+    (await conversation.json()) as { conversation: { id: string } }
+  ).conversation.id;
+  const symptom = (await completeStructuredSafetyIntake(
+    request,
+    apiBase,
+    headers,
+    conversationId,
+  )) as { id: string };
+  return { conversationId, headers, symptomId: symptom.id };
 }
