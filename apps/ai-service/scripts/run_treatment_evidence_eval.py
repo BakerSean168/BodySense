@@ -1,4 +1,9 @@
-"""Qualify the Treatment EvidenceGap v2 Challenger against the v1 Champion."""
+"""Check the Treatment EvidenceGap v2 configuration and its frozen v1 -> v2 promotion.
+
+The v1 Champion is archived and cannot run on the native Diagnosis input, so the
+paired promotion is verified from its frozen reports. The v2 configuration must
+still qualify on the current dataset and pass the EvidenceGap policy.
+"""
 
 
 def _main() -> int:
@@ -27,54 +32,43 @@ def _main() -> int:
     parser.add_argument("--stdout-only", action="store_true")
     args = parser.parse_args()
 
+    reports = service_root / "data" / "evals" / "reports"
     challenger = load_manifest(CONFIG_ROOT / "treatment-v2-evidence-gap.yaml")
-    challenger_run = run_treatment_qualification(configuration_id=challenger.configuration_id)
-    challenger_summary = report_summary(challenger_run)
-    champion_summary = json.loads(DEFAULT_REPORT_PATH.read_text(encoding="utf-8"))
-    comparison = compare_treatment_qualification_summaries(
-        champion_summary,
-        challenger_summary,
+    current_summary = report_summary(
+        run_treatment_qualification(configuration_id=challenger.configuration_id)
     )
-    evidence_report = run_treatment_evidence_policy_qualification()
-    evidence_summary = treatment_evidence_policy_summary(evidence_report)
+    champion_summary = json.loads(DEFAULT_REPORT_PATH.read_text(encoding="utf-8"))
+    frozen_challenger = json.loads(
+        (reports / "treatment_evidence_gap_challenger.json").read_text(encoding="utf-8")
+    )
+    comparison = compare_treatment_qualification_summaries(champion_summary, frozen_challenger)
+    evidence_summary = treatment_evidence_policy_summary(
+        run_treatment_evidence_policy_qualification()
+    )
     ready = bool(
         evidence_summary["passed"] == evidence_summary["total"]
         and evidence_summary["total"] > 0
+        and current_summary["qualification"]["qualified"]
+        and frozen_challenger["configuration_id"] == challenger.configuration_id
         and comparison["promotion_eligible"]
     )
-    result = {
-        "name": "treatment_evidence_gap_v2_readiness",
-        "champion_configuration_id": champion_summary["configuration_id"],
-        "challenger_configuration_id": challenger.configuration_id,
-        "dataset_fingerprint": comparison["dataset_fingerprint"],
-        "evidence_policy": evidence_summary,
-        "qualification": challenger_summary,
-        "comparison": comparison,
-        "ready_for_later_rollout": ready,
-    }
 
-    print("# Treatment EvidenceGap Challenger Readiness")
-    print(f"- Champion: `{champion_summary['configuration_id']}`")
+    print("# Treatment EvidenceGap Configuration Check")
+    print(f"- Champion (frozen): `{champion_summary['configuration_id']}`")
     print(f"- Challenger: `{challenger.configuration_id}`")
-    print(f"- General qualification: {challenger_summary['passed']}/{challenger_summary['total']}")
+    print(
+        f"- Current qualification: {current_summary['passed']}/{current_summary['total']}"
+        f" on `{current_summary['dataset']['fingerprint']}`"
+    )
     print(f"- EvidenceGap policy: {evidence_summary['passed']}/{evidence_summary['total']}")
-    print(f"- Deterministic regressions: {len(comparison['regressions'])}")
-    print(f"- Non-inferior: {'YES' if comparison['non_inferior'] else 'NO'}")
-    print(f"- Ready for later rollout work: {'YES' if ready else 'NO'}")
+    print(f"- Frozen promotion regressions: {len(comparison['regressions'])}")
+    print(f"- Frozen promotion non-inferior: {'YES' if comparison['non_inferior'] else 'NO'}")
+    print(f"- Ready: {'YES' if ready else 'NO'}")
 
     if not args.stdout_only:
-        reports = service_root / "data" / "evals" / "reports"
-        reports.mkdir(parents=True, exist_ok=True)
-        (reports / "treatment_evidence_gap_challenger.json").write_text(
-            json.dumps(challenger_summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        # The paired challenger/readiness reports are frozen promotion evidence.
         (reports / "treatment_evidence_policy_v2.json").write_text(
             json.dumps(evidence_summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        (reports / "treatment_evidence_gap_readiness.json").write_text(
-            json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
     return 0 if ready else 1
