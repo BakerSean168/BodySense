@@ -458,3 +458,28 @@ VALUES (?,?,'ask-expiring','{"q":"where"}','pending',now() - interval '1 minute'
 		t.Fatalf("second sweep: %v %v", again, err)
 	}
 }
+
+// Enqueueing a prune wakes the worker: the pass runs now, not at the next
+// poll (an hour away here).
+func TestChatRetentionPruneWorkerWakesOnEnqueuePostgres(t *testing.T) {
+	f := newPruneJobFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	f.svc.WithContextTokenBudget(model.MinChatContextTokenBudget)
+	f.svc.StartPruneWorker(ctx, time.Hour, 10*time.Minute)
+	time.Sleep(300 * time.Millisecond) // let the start-up pass go idle
+	for range 3 {
+		f.addSizedTurn("completed")
+	}
+	_, job, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || job == nil {
+		t.Fatalf("reconcile: job=%v %v", job, err)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for f.pruned() != 4 {
+		if time.Now().After(deadline) {
+			t.Fatalf("worker did not wake: pruned=%d", f.pruned())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}

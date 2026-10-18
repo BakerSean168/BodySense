@@ -74,10 +74,16 @@ type ChatRetentionService struct {
 	jobs    *JobRuntime
 	// budget is the context window token budget (model.ChatContextTokenBudget).
 	budget int
+	// wake lets EnqueuePrune start the worker's next pass now instead of at
+	// the next poll; the poll still recovers anything a wake-up missed.
+	wake chan struct{}
 }
 
 func NewChatRetentionService(repo *repository.ChatRetentionRepository, cleaner CheckpointCleaner, jobs *JobRuntime) *ChatRetentionService {
-	return &ChatRetentionService{repo: repo, cleaner: cleaner, jobs: jobs, budget: model.DefaultChatContextTokenBudget}
+	return &ChatRetentionService{
+		repo: repo, cleaner: cleaner, jobs: jobs, budget: model.DefaultChatContextTokenBudget,
+		wake: make(chan struct{}, 1),
+	}
 }
 
 // WithContextTokenBudget sets the context window budget; values below
@@ -186,11 +192,17 @@ func (s *ChatRetentionService) EnqueuePrune(ctx context.Context, owner uuid.UUID
 	job, _, err := s.jobs.CreateJobWithIdempotencyAttempts(ctx, owner, model.ChatRetentionPruneJobType,
 		datatypes.JSON(input), repository.PruneJobKey(conversationID, cursor.PrunedThroughSeq, trigger),
 		ChatRetentionPruneMaxAttempts, nil, &conversationID)
+	if err == nil && job != nil && job.Status == model.JobStatusPending {
+		select {
+		case s.wake <- struct{}{}:
+		default:
+		}
+	}
 	return job, err
 }
 
-// StartPruneWorker polls for pending prune jobs (and running ones whose
-// worker died) until ctx ends.
+// StartPruneWorker runs pending prune jobs (and running ones whose worker
+// died) until ctx ends: at once when a prune is enqueued, and on every poll.
 func (s *ChatRetentionService) StartPruneWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
 	go func() {
 		ticker := time.NewTicker(pollInterval)
@@ -203,6 +215,7 @@ func (s *ChatRetentionService) StartPruneWorker(ctx context.Context, pollInterva
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+			case <-s.wake:
 			}
 		}
 	}()
