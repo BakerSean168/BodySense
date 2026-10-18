@@ -1049,4 +1049,103 @@ describe("same-Run Ask User continuation", () => {
     expect(result.pendingInteraction?.id).toBe("new-interaction");
     expect(result.pendingInteraction?.status).toBe("pending");
   });
+
+  describe("BodyState suggestion receipts", () => {
+    const suggestion = {
+      question: "要把你说过的这句话记录为你自己的猜测吗？",
+      answer_type: "single_choice",
+      options: ["记录为我的猜测", "不记录"],
+      allow_custom_input: false,
+      required: true,
+      purpose: "body_state_suggestion",
+      quote: "我觉得是久坐导致的",
+      state_binding: {
+        revision: "body-state-suggestion-v1",
+        kind: "hypothesis",
+        source: {
+          message_id: "msg-user-1",
+          message_seq: 1,
+          span_start: 0,
+          span_end: 9,
+          excerpt_sha256: "a".repeat(64),
+        },
+        base_body_state_revision: 0,
+      },
+    };
+    const receipt = {
+      kind: "hypothesis",
+      commit_id: "commit-1",
+      hypothesis_id: "hyp-1",
+      source_evidence_id: "ev-1",
+      revision: 1,
+      event_id: "event-1",
+      committed_at: "2026-10-19T02:00:00Z",
+    };
+
+    function askSuggestion(): ActiveTurnState {
+      return reduceActiveTurnEvent(
+        INITIAL_ACTIVE_TURN_STATE,
+        makeEvent("state.interaction.required", {
+          interaction_id: "int-s",
+          question: suggestion,
+        }),
+      ).state;
+    }
+
+    it("keeps the receipt of an answered suggestion across run.resumed", () => {
+      const answered = reduceActiveTurnEvent(
+        askSuggestion(),
+        makeEvent("state.interaction.answered", {
+          interaction_id: "int-s",
+          answer: { text: "记录为我的猜测", selected: ["记录为我的猜测"] },
+          body_state_receipt: receipt,
+        }),
+      ).state;
+      expect(answered.pendingInteraction?.body_state_receipt).toEqual(receipt);
+
+      const resumed = reduceActiveTurnEvent(
+        answered,
+        makeEvent("run.resumed", { interaction_id: "int-s" }),
+      ).state;
+      expect(resumed.pendingInteraction).toBeNull();
+      expect(resumed.answeredSuggestions).toHaveLength(1);
+      expect(resumed.answeredSuggestions[0]).toMatchObject({
+        id: "int-s",
+        status: "answered",
+        body_state_receipt: receipt,
+      });
+
+      const nextTurn = reduceActiveTurnEvent(
+        resumed,
+        makeEvent("run.started", {}, { run_id: "run-2" }),
+      ).state;
+      expect(nextTurn.answeredSuggestions).toEqual([]);
+    });
+
+    it("records a decline with a null receipt and never twice", () => {
+      const asked = askSuggestion();
+      const decline = makeEvent("state.interaction.answered", {
+        interaction_id: "int-s",
+        answer: { text: "不记录", selected: ["不记录"] },
+        body_state_receipt: null,
+      });
+      const once = reduceActiveTurnEvent(asked, decline).state;
+      const twice = reduceActiveTurnEvent(once, decline).state;
+      expect(twice.answeredSuggestions).toHaveLength(1);
+      expect(twice.answeredSuggestions[0].body_state_receipt).toBeNull();
+    });
+
+    it("does not collect ordinary Ask User answers", () => {
+      const state = reduceActiveTurnEvent(
+        INITIAL_ACTIVE_TURN_STATE,
+        makeEvent("state.interaction.required", { interaction_id: "int-o" }),
+      ).state;
+      const answered = reduceActiveTurnEvent(
+        state,
+        makeEvent("state.interaction.answered", { interaction_id: "int-o" }),
+      ).state;
+      expect(answered.answeredSuggestions).toEqual([]);
+      expect(answered.pendingInteraction?.body_state_receipt).toBeUndefined();
+    });
+  });
 });

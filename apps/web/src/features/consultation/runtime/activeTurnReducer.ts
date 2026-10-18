@@ -60,6 +60,12 @@ export interface ActiveTurnState {
   redFlag: RedFlagEvent | null;
   /** Pending ask_user interaction. */
   pendingInteraction: PendingInteraction | null;
+  /**
+   * BodyState suggestions answered in this turn, with Go's receipt. They
+   * outlive run.resumed (which clears pendingInteraction) so the turn can
+   * show "saved" exactly when Go committed.
+   */
+  answeredSuggestions: PendingInteraction[];
   /** Extracted info keyed by body_part. */
   extractedInfoByBodyPart: Record<string, ExtractedInfo>;
   /** Final message parts generated on completion, compatible with assistant-ui. */
@@ -82,6 +88,7 @@ export const INITIAL_ACTIVE_TURN_STATE: ActiveTurnState = {
   knowledgeGapsByKey: {},
   redFlag: null,
   pendingInteraction: null,
+  answeredSuggestions: [],
   extractedInfoByBodyPart: {},
   finalParts: [],
   sequenceRunId: null,
@@ -167,6 +174,11 @@ export function reduceActiveTurnEvent(
         status: "streaming",
         pendingInteraction:
           event.type === "run.resumed" ? null : current.pendingInteraction,
+        // A new Run is a new turn; a resumed Run keeps this turn's answers.
+        answeredSuggestions:
+          event.type === "run.started"
+            ? []
+            : (current.answeredSuggestions ?? []),
         error: undefined,
       };
       break;
@@ -394,16 +406,26 @@ export function reduceActiveTurnEvent(
 
     case "state.interaction.answered": {
       const payload = event.payload;
+      const answered: PendingInteraction | null =
+        current.pendingInteraction?.id === payload.interaction_id
+          ? {
+              ...current.pendingInteraction,
+              status: "answered",
+              answer: payload.answer,
+              ...("body_state_receipt" in payload
+                ? { body_state_receipt: payload.body_state_receipt ?? null }
+                : {}),
+            }
+          : null;
+      const answeredSuggestions = current.answeredSuggestions ?? [];
       next = {
         ...current,
-        pendingInteraction:
-          current.pendingInteraction?.id === payload.interaction_id
-            ? {
-                ...current.pendingInteraction,
-                status: "answered",
-                answer: payload.answer,
-              }
-            : current.pendingInteraction,
+        pendingInteraction: answered ?? current.pendingInteraction,
+        answeredSuggestions:
+          answered?.question.purpose === "body_state_suggestion" &&
+          !answeredSuggestions.some((item) => item.id === answered.id)
+            ? [...answeredSuggestions, answered]
+            : answeredSuggestions,
       };
       effects.push({
         type: "interaction_answered",

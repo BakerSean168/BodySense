@@ -198,7 +198,21 @@ export interface PendingInteraction {
   created_at: string;
   answered_at?: string | null;
   metadata?: Record<string, unknown>;
+  /**
+   * Go's commit receipt for a confirmed BodyState suggestion, from the live
+   * answered milestone (null = declined, nothing written). History carries
+   * the same receipt in metadata.body_state_receipt.
+   */
+  body_state_receipt?: BodyStateSuggestionReceipt | null;
 }
+
+/** Id-only Go receipt of a confirmed source-cited BodyState suggestion. */
+export type BodyStateSuggestionReceipt = NonNullable<
+  Extract<
+    StreamEvent,
+    { type: "state.interaction.answered" }
+  >["payload"]["body_state_receipt"]
+>;
 
 export type InteractionHistoryItem = PendingInteraction;
 
