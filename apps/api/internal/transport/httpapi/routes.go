@@ -202,6 +202,13 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/plan-proposals/:proposalId", wrapper.GetPlanProposalRecord)
 	protected.POST("/plan-proposals/:proposalId/accept", wrapper.AcceptPlanProposal)
 	protected.POST("/plan-proposals/:proposalId/reject", wrapper.RejectPlanProposal)
+	// Trainer runtime (TP-003): sessions pin an accepted revision; every start
+	// and set action is a user command re-gated by Go at the exact Safety revision.
+	protected.GET("/training-sessions", wrapper.ListTrainingSessions)
+	protected.POST("/training-sessions", wrapper.StartTrainingSession)
+	protected.GET("/training-sessions/:sessionId", wrapper.GetTrainingSession)
+	protected.POST("/training-sessions/:sessionId/set-actions", wrapper.RecordTrainingSetAction)
+	protected.POST("/training-sessions/:sessionId/finish", wrapper.FinishTrainingSession)
 
 	// Training execution, adherence and reassessment surfaces.
 	protected.GET("/training", wrapper.ListTrainingPlans)

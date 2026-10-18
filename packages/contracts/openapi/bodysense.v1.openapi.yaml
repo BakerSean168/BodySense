@@ -2169,6 +2169,86 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions:
+    get:
+      operationId: listTrainingSessions
+      summary: List the authenticated user's newest Trainer sessions (at most 50) with their set receipts.
+      security: [{bearerAuth: []}]
+      parameters:
+      - name: state
+        in: query
+        required: false
+        schema: {$ref: '#/components/schemas/TrainingSessionState'}
+      responses:
+        '200': {description: Owned sessions newest first, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionListResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      operationId: startTrainingSession
+      summary: Start one template of an owned active TrainingPlan as the authenticated user's explicit command.
+      description: The session pins the plan's current accepted revision, the template and the user's IANA timezone; its trainingDate is the local date at start and never changes. Go re-evaluates the TrainerGate inside the command against exactly expectedSafetyRevision (the gate the user was shown); another current Safety revision is SAFETY_STALE and a non-permitting gate is TRAINER_GATE_BLOCKED, and nothing is written. One session per user may be in progress. An exact idempotent retry returns the original session.
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/StartTrainingSessionRequest'}}}
+      responses:
+        '200': {description: Started session (its start receipt), content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}:
+    get:
+      operationId: getTrainingSession
+      summary: Get one owned Trainer session with its set receipts; another owner's id is not found.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      responses:
+        '200': {description: Owned session, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}/set-actions:
+    post:
+      operationId: recordTrainingSetAction
+      summary: Record one set the authenticated user explicitly marked performed or skipped.
+      description: Appends one immutable receipt at expectedSessionRevision + 1 after Go re-evaluates the TrainerGate for that exercise against exactly expectedSafetyRevision. A set holds at most one action; a duplicate delivery with the same idempotencyKey returns the original receipt. Navigation, demo playback or assistant output never records a set.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RecordTrainingSetActionRequest'}}}
+      responses:
+        '200': {description: Set action receipt, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSetActionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training-sessions/{sessionId}/finish:
+    post:
+      operationId: finishTrainingSession
+      summary: End one owned in-progress session as finished or stopped early, by the user's explicit command.
+      description: Ending is never gated, never marks remaining sets and is final. An exact idempotent retry returns the ended session.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingSessionId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/FinishTrainingSessionRequest'}}}
+      responses:
+        '200': {description: Ended session, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingSessionRecord'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/assets/{id}:
     parameters:
     - name: id
@@ -2754,6 +2834,11 @@ components:
       schema: {type: string, format: uuid}
     PlanProposalId:
       name: proposalId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    TrainingSessionId:
+      name: sessionId
       in: path
       required: true
       schema: {type: string, format: uuid}
@@ -4821,6 +4906,87 @@ components:
         decisionId: {type: string, format: uuid}
         idempotencyKey: {type: string, minLength: 1}
         decidedAt: {type: string, format: date-time}
+    TrainingSessionState: {type: string, enum: [in_progress, ended]}
+    TrainingSetActionKind: {type: string, enum: [performed, skipped]}
+    TrainerGateReceipt:
+      type: object
+      additionalProperties: false
+      required: [result, safetyRevision, policyRevision]
+      description: The permitting Go TrainerGate decision a command was admitted at.
+      properties:
+        result: {type: string, enum: [allow, warn]}
+        safetyRevision: {type: integer, format: int64, minimum: 1}
+        policyRevision: {type: string, minLength: 1}
+    StartTrainingSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [planId, expectedPlanRevisionId, templateId, timeZone, expectedSafetyRevision, idempotencyKey]
+      properties:
+        planId: {type: string, format: uuid}
+        expectedPlanRevisionId: {type: string, format: uuid}
+        templateId: {type: string, minLength: 1, maxLength: 256}
+        timeZone: {type: string, minLength: 1, maxLength: 64, description: IANA time zone name of the user at start.}
+        expectedSafetyRevision: {type: integer, format: int64, minimum: 1}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    RecordTrainingSetActionRequest:
+      type: object
+      additionalProperties: false
+      required: [planExerciseId, setNumber, kind, expectedSessionRevision, expectedSafetyRevision, idempotencyKey]
+      properties:
+        planExerciseId: {type: string, minLength: 1, maxLength: 256}
+        setNumber: {type: integer, minimum: 1}
+        kind: {$ref: '#/components/schemas/TrainingSetActionKind'}
+        expectedSessionRevision: {type: integer, format: int64, minimum: 0}
+        expectedSafetyRevision: {type: integer, format: int64, minimum: 1}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    FinishTrainingSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [endedReason, expectedSessionRevision, idempotencyKey]
+      properties:
+        endedReason: {type: string, enum: [finished, stopped_early]}
+        expectedSessionRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {$ref: '#/components/schemas/PlanIdempotencyKey'}
+    TrainingSetActionRecord:
+      type: object
+      additionalProperties: false
+      required: [actionId, sessionId, planExerciseId, exerciseId, setNumber, kind, sessionRevision, gate, idempotencyKey, recordedAt]
+      description: Immutable receipt of one user-originated set action.
+      properties:
+        actionId: {type: string, format: uuid}
+        sessionId: {type: string, format: uuid}
+        planExerciseId: {type: string}
+        exerciseId: {type: string}
+        setNumber: {type: integer, minimum: 1}
+        kind: {$ref: '#/components/schemas/TrainingSetActionKind'}
+        sessionRevision: {type: integer, format: int64, minimum: 1}
+        gate: {$ref: '#/components/schemas/TrainerGateReceipt'}
+        idempotencyKey: {type: string, minLength: 1}
+        recordedAt: {type: string, format: date-time}
+    TrainingSessionRecord:
+      type: object
+      additionalProperties: false
+      required: [sessionId, planId, planRevisionId, templateId, timeZone, trainingDate, state, revision, startedAt, startGate, actions]
+      properties:
+        sessionId: {type: string, format: uuid}
+        planId: {type: string, format: uuid}
+        planRevisionId: {type: string, format: uuid}
+        templateId: {type: string}
+        timeZone: {type: string}
+        trainingDate: {type: string, format: date, description: The user's local date at start in timeZone; fixed for the session.}
+        state: {$ref: '#/components/schemas/TrainingSessionState'}
+        endedReason: {type: string, enum: [finished, stopped_early]}
+        revision: {type: integer, format: int64, minimum: 0}
+        startedAt: {type: string, format: date-time}
+        endedAt: {type: string, format: date-time}
+        startGate: {$ref: '#/components/schemas/TrainerGateReceipt'}
+        actions: {type: array, items: {$ref: '#/components/schemas/TrainingSetActionRecord'}}
+    TrainingSessionListResponse:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      properties:
+        sessions: {type: array, items: {$ref: '#/components/schemas/TrainingSessionRecord'}}
     ErrorEnvelope:
       type: object
       additionalProperties: false
