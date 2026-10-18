@@ -1925,3 +1925,17 @@
     font-size: 16px;
   }
 }
+
+/* UI-DX-001 slice 1: Diagnosis proposal decisions (Penpot states land in slice 2). */
+.bc-diagnosis-proposals { margin-top: 16px; display: grid; gap: 10px; }
+.bc-diagnosis-proposal[data-proposal-state="changed"] { border-color: var(--bc-secondary); }
+.bc-diagnosis-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 12px;
+}
+.bc-diagnosis-choice label { display: inline-flex; align-items: center; gap: 4px; }

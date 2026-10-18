@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Clock3 } from "lucide-react";
-import type { DiagnosisView } from "../model/confirmedConditions";
 import type { ProjectedTrainingPlans } from "../model/trainingPlans";
 
 export interface DiagnosisWindowHeaderProps {
-  view: DiagnosisView;
+  /** Only adopted ConditionEntries; proposals never appear in the picker. */
+  view: { confirmed: readonly { conditionId: string; name: string }[] };
   selectedConditionId: string | null;
   onSelectCondition: (conditionId: string) => void;
 }

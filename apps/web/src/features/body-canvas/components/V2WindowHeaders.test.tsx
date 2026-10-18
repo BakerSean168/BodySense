@@ -5,6 +5,7 @@ import {
   EMPTY_DIAGNOSIS_VIEW,
   type ConfirmedCondition,
 } from "../model/confirmedConditions";
+import type { NativeDiagnosisWindowView } from "../model/diagnosisDecisionViewModel";
 import type { ProjectedTrainingPlans } from "../model/trainingPlans";
 import {
   ChatWindowHeader,
@@ -34,13 +35,14 @@ function condition(conditionId: string, name: string): ConfirmedCondition {
   };
 }
 
-const diagnosis = {
-  ...EMPTY_DIAGNOSIS_VIEW,
+const diagnosis: NativeDiagnosisWindowView = {
+  currentRevision: 2,
   confirmed: [
     condition("condition-1", "左肩病情"),
     condition("condition-2", "右膝病情"),
   ],
-  pendingProposals: [{ conditionId: "unconfirmed", name: "尚未确认" }],
+  run: null,
+  safetyBlocked: false,
 };
 
 const plans: ProjectedTrainingPlans = {
@@ -129,7 +131,7 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
     );
     expect(screen.getByText("右膝病情")).toBeVisible();
     expect(screen.queryByText("左肩病情")).not.toBeInTheDocument();
-    expect(screen.getByText(/1 条分析提案尚未确认/)).toBeVisible();
+    expect(screen.queryByTestId("diagnosis-proposals")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "确认诊断" }),
     ).not.toBeInTheDocument();
