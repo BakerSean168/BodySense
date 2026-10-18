@@ -1321,23 +1321,6 @@ CREATE TABLE public.thread_projections (
 
 
 --
--- Name: training_logs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.training_logs (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL,
-    exercises jsonb DEFAULT '[]'::jsonb NOT NULL,
-    notes text,
-    is_checked_in boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    outcome_recorded_at timestamp with time zone
-);
-
-
---
 -- Name: training_plans; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2231,14 +2214,6 @@ ALTER TABLE ONLY public.thread_projections
 
 
 --
--- Name: training_logs training_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_pkey PRIMARY KEY (id);
-
-
---
 -- Name: training_plans training_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2986,20 +2961,6 @@ CREATE INDEX idx_thread_projection_tool_calls_run_created ON public.thread_proje
 --
 
 CREATE INDEX idx_thread_projections_user_updated ON public.thread_projections USING btree (user_id, conversation_updated_at DESC);
-
-
---
--- Name: idx_training_logs_plan_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_training_logs_plan_id ON public.training_logs USING btree (plan_id);
-
-
---
--- Name: idx_training_logs_user_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_training_logs_user_date ON public.training_logs USING btree (user_id, date);
 
 
 --
@@ -4124,22 +4085,6 @@ ALTER TABLE ONLY public.thread_projections
 
 ALTER TABLE ONLY public.thread_projections
     ADD CONSTRAINT thread_projections_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: training_logs training_logs_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_plan_id_fkey FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE;
-
-
---
--- Name: training_logs training_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

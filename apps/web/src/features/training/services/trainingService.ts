@@ -1,29 +1,30 @@
-import type { Outcome } from "@/features/workspace";
 import {
-  checkInTrainingPlan,
-  getTrainingPlan,
-  getTrainingProgress,
-  getTrainingTodayTask,
-  listTrainingPlans,
-  reassessTrainingPlan,
-  updateTrainingLog,
+  finishTrainingSession,
+  getTrainingPlanRecord,
+  listTrainingPlanRecords,
+  listTrainingSessions,
+  recordTrainingSessionFeedback,
+  recordTrainingSetAction,
+  startTrainingSession,
 } from "@/generated/api/bodysense";
 import type {
-  TrainingFeedbackResultOutput as PublicTrainingFeedbackResult,
-  TrainingLogOutput as PublicTrainingLog,
-  TrainingLogUpdateResponseOutput as PublicTrainingLogUpdateResponse,
-  TrainingPlanOutput as PublicTrainingPlan,
-  TrainingProgressOutput as PublicTrainingProgress,
+  PlanExerciseOutput,
+  TrainingPlanRecordOutput,
+  TrainingSessionRecordOutput,
+  TrainingSetActionRecordOutput,
 } from "@/generated/api/model";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
+/**
+ * Plan list item for the TrainingPlan window, projected from the accepted
+ * `/training-plans` record (TP-002). Each session template becomes one
+ * `phase`; its stage structure is bound by UI-TP-001.
+ */
 export interface TrainingPlan {
   id: string;
-  consultation_id?: string;
   status: string;
   goal: string;
-  duration_weeks: number;
-  current_week: number;
+  duration_weeks?: number;
   phases: TrainingPhase[];
   created_at: string;
 }
@@ -42,151 +43,153 @@ export interface TrainingExercise {
   notes?: string;
 }
 
-export interface TrainingLog {
-  id: string;
-  plan_id: string;
-  date: string;
-  exercises: {
-    name: string;
-    completed: boolean;
-  }[];
-  notes?: string;
-  is_checked_in: boolean;
-  outcome_recorded_at?: string;
-  created_at: string;
+export type TrainingPlanRecord = TrainingPlanRecordOutput;
+export type TrainingSessionRecord = TrainingSessionRecordOutput;
+export type TrainingSetActionRecord = TrainingSetActionRecordOutput;
+
+/** "8–12 次", "30 秒", "400 米": the prescribed target, never a guess. */
+export function formatPlanTarget(exercise: PlanExerciseOutput): string {
+  const target = exercise.target;
+  if (target.kind === "repetitions" && target.min !== undefined) {
+    return target.max !== undefined && target.max !== target.min
+      ? `${target.min}–${target.max} 次`
+      : `${target.min} 次`;
+  }
+  if (target.kind === "duration" && target.seconds !== undefined) {
+    return `${target.seconds} 秒`;
+  }
+  if (target.kind === "distance" && target.meters !== undefined) {
+    return `${target.meters} 米`;
+  }
+  return "";
 }
 
-export interface TrainingProgress {
-  consecutive_days: number;
-  total_checkins: number;
-  current_week: number;
-  total_weeks: number;
-  plan_status: string;
-}
-
-export interface TrainingFeedbackResult {
-  outcome?: Outcome;
-}
-
-export interface TrainingLogUpdateResponse {
-  message: string;
-  result: TrainingFeedbackResult;
-}
-
-function toTrainingPlan(input: PublicTrainingPlan): TrainingPlan {
+function toTrainingPlan(record: TrainingPlanRecordOutput): TrainingPlan {
   return {
-    id: input.id,
-    consultation_id: input.consultation_id,
-    status: input.status,
-    goal: input.goal,
-    duration_weeks: input.duration_weeks,
-    current_week: input.current_week,
-    phases: input.phases,
-    created_at: input.created_at,
+    id: record.planId,
+    status: record.status,
+    goal: record.goal || record.title,
+    phases: record.currentContent.sessions.map((template, index) => ({
+      week: index + 1,
+      focus: template.title,
+      exercises: template.stages.flatMap((stage) =>
+        stage.exercises.map((exercise) => ({
+          name: exercise.nameSnapshot,
+          description: exercise.instructions ?? "",
+          sets: String(exercise.sets),
+          reps: formatPlanTarget(exercise),
+          notes: exercise.loadOrIntensity,
+        })),
+      ),
+    })),
+    created_at: record.createdAt,
   };
 }
 
-function toTrainingLog(input: PublicTrainingLog): TrainingLog {
-  return {
-    id: input.id,
-    plan_id: input.plan_id,
-    date: input.date,
-    exercises: input.exercises,
-    notes: input.notes,
-    is_checked_in: input.is_checked_in,
-    outcome_recorded_at: input.outcome_recorded_at,
-    created_at: input.created_at,
-  };
+function newIdempotencyKey(): string {
+  return globalThis.crypto.randomUUID();
 }
 
-function toTrainingProgress(input: PublicTrainingProgress): TrainingProgress {
-  return {
-    consecutive_days: input.consecutive_days,
-    total_checkins: input.total_checkins,
-    current_week: input.current_week,
-    total_weeks: input.total_weeks,
-    plan_status: input.plan_status,
-  };
-}
-
-function toTrainingFeedbackResult(
-  input: PublicTrainingFeedbackResult,
-): TrainingFeedbackResult {
-  return { outcome: input.outcome };
-}
-
-function toTrainingLogUpdateResponse(
-  input: PublicTrainingLogUpdateResponse,
-): TrainingLogUpdateResponse {
-  return {
-    message: input.message,
-    result: toTrainingFeedbackResult(input.result),
-  };
+/** The user's IANA zone; the server fixes the training date from it. */
+export function userTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
 export const trainingApi = {
-  getPlan: async (id: string): Promise<TrainingPlan> =>
-    withOpenApiError(async () =>
-      toTrainingPlan(await getTrainingPlan(id, undefined, openApiAuthFetch)),
-    ),
-
   listPlans: async (): Promise<TrainingPlan[]> =>
     withOpenApiError(async () => {
-      const response = await listTrainingPlans(undefined, openApiAuthFetch);
+      const response = await listTrainingPlanRecords(
+        undefined,
+        openApiAuthFetch,
+      );
       return response.plans.map(toTrainingPlan);
     }),
 
-  getTodayTask: async (planId: string): Promise<TrainingLog> =>
-    withOpenApiError(async () =>
-      toTrainingLog(
-        await getTrainingTodayTask(planId, undefined, openApiAuthFetch),
-      ),
+  getPlanRecord: async (planId: string): Promise<TrainingPlanRecord> =>
+    withOpenApiError(() =>
+      getTrainingPlanRecord(planId, undefined, openApiAuthFetch),
     ),
 
-  checkIn: async (planId: string): Promise<void> =>
+  listSessions: async (): Promise<TrainingSessionRecord[]> =>
     withOpenApiError(async () => {
-      await checkInTrainingPlan(planId, undefined, openApiAuthFetch);
+      const response = await listTrainingSessions(
+        undefined,
+        undefined,
+        openApiAuthFetch,
+      );
+      return response.sessions;
     }),
 
-  updateLog: async (
-    planId: string,
-    notes: string,
-    exercises: TrainingLog["exercises"],
-  ): Promise<TrainingLogUpdateResponse> =>
-    withOpenApiError(async () =>
-      toTrainingLogUpdateResponse(
-        await updateTrainingLog(
-          planId,
-          { notes, exercises },
-          undefined,
-          openApiAuthFetch,
-        ),
+  startSession: async (
+    plan: TrainingPlanRecord,
+    templateId: string,
+  ): Promise<TrainingSessionRecord> =>
+    withOpenApiError(() =>
+      startTrainingSession(
+        {
+          planId: plan.planId,
+          expectedPlanRevisionId: plan.currentAcceptedRevisionId,
+          templateId,
+          timeZone: userTimeZone(),
+          expectedSafetyRevision: plan.executionGate.safetyRevision,
+          idempotencyKey: newIdempotencyKey(),
+        },
+        undefined,
+        openApiAuthFetch,
       ),
     ),
 
-  getProgress: async (planId: string): Promise<TrainingProgress> =>
-    withOpenApiError(async () =>
-      toTrainingProgress(
-        await getTrainingProgress(planId, undefined, openApiAuthFetch),
+  recordSet: async (
+    session: TrainingSessionRecord,
+    planExerciseId: string,
+    setNumber: number,
+    kind: "performed" | "skipped",
+    expectedSafetyRevision: number,
+  ): Promise<TrainingSetActionRecord> =>
+    withOpenApiError(() =>
+      recordTrainingSetAction(
+        session.sessionId,
+        {
+          planExerciseId,
+          scope: "set",
+          setNumber,
+          kind,
+          expectedSessionRevision: session.revision,
+          expectedSafetyRevision,
+          idempotencyKey: newIdempotencyKey(),
+        },
+        undefined,
+        openApiAuthFetch,
       ),
     ),
 
-  submitReassessment: async (
-    planId: string,
-    feedback: {
-      symptom_changes: string;
-      training_feeling: string;
-      difficulties: string;
-    },
-  ): Promise<TrainingFeedbackResult> =>
-    withOpenApiError(async () =>
-      toTrainingFeedbackResult(
-        await reassessTrainingPlan(
-          planId,
-          { feedback },
-          undefined,
-          openApiAuthFetch,
-        ),
+  finishSession: async (
+    session: TrainingSessionRecord,
+    endedReason: "finished" | "stopped_early",
+  ): Promise<TrainingSessionRecord> =>
+    withOpenApiError(() =>
+      finishTrainingSession(
+        session.sessionId,
+        {
+          endedReason,
+          expectedSessionRevision: session.revision,
+          idempotencyKey: newIdempotencyKey(),
+        },
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+
+  recordFeedback: async (
+    sessionId: string,
+    text: string,
+  ): Promise<TrainingSessionRecord> =>
+    withOpenApiError(() =>
+      recordTrainingSessionFeedback(
+        sessionId,
+        { text, idempotencyKey: newIdempotencyKey() },
+        undefined,
+        openApiAuthFetch,
       ),
     ),
 };

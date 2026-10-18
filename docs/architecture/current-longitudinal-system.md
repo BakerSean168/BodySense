@@ -46,7 +46,7 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 | BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                                           |
 | DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                                            |
 | Treatment and TreatmentRevision                             | Go                   | AI may propose through an exact immutable Agent configuration; Go verifies/persists provenance and alone accepts; accepted revisions are immutable |
-| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                                        |
+| Intervention, TrainingPlan, TrainingSession, Outcome        | Go                   | Training is an execution projection of an accepted revision                                                                                        |
 | Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                                             |
 | React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth               |
 
@@ -158,10 +158,12 @@ POST /api/v1/treatments/revisions/:revisionId/accept
 POST /api/v1/treatments/revisions/:revisionId/reject
 POST /api/v1/treatments/current/review
 
-GET  /api/v1/training
-GET  /api/v1/training/:id
-PUT  /api/v1/training/:id/log
-POST /api/v1/training/:id/checkin
+GET  /api/v1/training-plans
+GET  /api/v1/training-plans/:planId
+POST /api/v1/training-sessions
+POST /api/v1/training-sessions/:sessionId/set-actions
+POST /api/v1/training-sessions/:sessionId/finish
+POST /api/v1/training-sessions/:sessionId/feedback
 
 POST /api/v1/outcomes
 GET  /api/v1/health-workspace

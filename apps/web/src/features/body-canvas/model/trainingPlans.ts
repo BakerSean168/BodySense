@@ -1,6 +1,6 @@
 import type { TrainingPlan } from "@/features/training/services/trainingService";
 
-/** One exercise of the legacy /training execution projection. */
+/** One exercise of the window projection of a `/training-plans` record. */
 export interface ProjectedTrainingExercise {
   name: string;
   description: string;
@@ -19,13 +19,13 @@ import type { HealthWorkspace } from "@/features/workspace/types/workspace";
  * presented as the user's plan.
  *
  * Contract gaps recorded here (the UI must show them, not invent content):
- * - The legacy `/training` execution projection stores sets/reps as free text
- *   and may omit them. Missing dosage is rendered as "—", never guessed.
- * - That projection collapses every exercise into one `phase` without a kind,
- *   so there is no server-provided warm-up / main / cool-down structure. All
+ * - The window projection carries sets as text and the prescribed target as a
+ *   formatted string; a missing target is shown as missing, never guessed.
+ * - The projection flattens every session template into one list without
+ *   the warm-up / main / cool-down stages of the accepted revision, so all
  *   exercises are shown in one main stage and `stageStructureUnavailable`
- *   marks the gap for the UI. Binding the independent TrainingPlan revision
- *   content (sessions/stages) is UI-TP-001.
+ *   marks the gap for the UI. Binding the revision's sessions/stages is
+ *   UI-TP-001.
  */
 
 export type TrainingStagePhase = "warmup" | "main" | "self_check";

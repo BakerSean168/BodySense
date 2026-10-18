@@ -79,7 +79,6 @@ DROP TABLE IF EXISTS
     public.thread_projection_messages,
     public.thread_projection_tool_calls,
     public.thread_projections,
-    public.training_logs,
     public.training_plans,
     public.user_asset_storage_cleanups,
     public.user_assets,

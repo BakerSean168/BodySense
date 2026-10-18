@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const service = fs.readFileSync(
-  "apps/api/internal/service/training_service.go",
-  "utf8",
-);
+// TP-003 slice 3b deleted the legacy TrainingService outright.
+const legacyTrainingService = "apps/api/internal/service/training_service.go";
 const repository = fs.readFileSync(
   "apps/api/internal/repository/training_repository.go",
   "utf8",
@@ -23,7 +21,8 @@ const server = fs.readFileSync("apps/api/cmd/server/main.go", "utf8");
 test("legacy TrainingService no longer takes the TP-D1 owner lock", () => {
   // TP-002 slice 3: the legacy service creates no plan, so only the
   // independent TrainingPlan service serializes plan activation per owner.
-  assert.doesNotMatch(service, /lockIndependentTrainingOwner|WithIndependentTrainingPlans/);
+  // TP-003 slice 3b deleted the legacy service, so no second locker exists.
+  assert.equal(fs.existsSync(legacyTrainingService), false);
   assert.doesNotMatch(server, /WithIndependentTrainingPlans\(/);
 });
 
@@ -32,7 +31,9 @@ test("TP-D1 repository locks a real scoped owner row in the outer transaction", 
   assert.match(repository, /database\.HasTransaction\(ctx\)/);
   assert.match(repository, /Table\("users"\)/);
   assert.match(repository, /Where\("id = \?", userID\)/);
-  assert.match(repository, /clause\.Locking\{Strength: "UPDATE"\}/);
+  // FOR NO KEY UPDATE serializes same-owner activations without blocking
+  // the FOR KEY SHARE that foreign-key checks take on users.
+  assert.match(repository, /clause\.Locking\{Strength: "NO KEY UPDATE"\}/);
   assert.match(repository, /ErrTrainingPlanOwnerNotFound/);
   assert.match(repository, /ErrTrainingPlanOwnerLockRequiresTransaction/);
   assert.doesNotMatch(repository, /pg_advisory_lock/);

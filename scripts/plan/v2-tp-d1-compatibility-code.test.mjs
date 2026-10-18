@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const trainingService = fs.readFileSync(
-  "apps/api/internal/service/training_service.go",
-  "utf8",
-);
+// TP-003 slice 3b deleted the legacy TrainingService outright.
+const legacyTrainingService = "apps/api/internal/service/training_service.go";
 const repository = fs.readFileSync(
   "apps/api/internal/repository/training_repository.go",
   "utf8",
@@ -27,6 +25,8 @@ const harness = fs.readFileSync(
 test("legacy /training no longer creates, supersedes or activates plans from a Treatment", () => {
   // TP-002 slice 3 removed the Treatment aggregate and with it the TP-D1
   // opt-in compatibility path; plans are created only via PlanProposals.
+  // TP-003 slice 3b then deleted the legacy TrainingService itself.
+  assert.equal(fs.existsSync(legacyTrainingService), false);
   for (const legacy of [
     /SupersedePlans/,
     /AcceptTreatmentAndEnsurePlan/,
@@ -34,7 +34,6 @@ test("legacy /training no longer creates, supersedes or activates plans from a T
     /GetPlanByTreatmentRevision/,
     /independentPlans/,
   ]) {
-    assert.doesNotMatch(trainingService, legacy);
     assert.doesNotMatch(repository, legacy);
   }
   assert.doesNotMatch(main, /WithIndependentTrainingPlans/);

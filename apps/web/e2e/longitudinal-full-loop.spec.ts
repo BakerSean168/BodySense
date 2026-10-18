@@ -7,6 +7,11 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { completeStructuredSafetyIntake } from "./support/safety";
+import {
+  finishTrainerSessionWithFeedback,
+  getTrainerPlan,
+  recordUserSymptom,
+} from "./support/trainer";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -52,7 +57,7 @@ async function registerAndProfile(
   return { accessToken, email };
 }
 
-test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the longitudinal loop", async ({
+test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes the longitudinal loop", async ({
   page,
   request,
 }) => {
@@ -247,41 +252,26 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
   ).toBeVisible();
 
-  const checkIn = await request.post(
-    `${apiBase}/api/v1/training/${acceptance.planId}/checkin`,
-    { headers: authHeaders },
+  // The Trainer runs through the Go runtime by explicit commands; the user's
+  // feedback is stored verbatim and only surfaces as the plan review hint.
+  const feedbackText = "完成温和训练后，肩膀感觉更轻松。";
+  const ended = await finishTrainerSessionWithFeedback(
+    request,
+    apiBase,
+    authHeaders,
+    acceptance.planId,
+    feedbackText,
   );
-  expect(
-    checkIn.ok(),
-    `training check-in failed with ${checkIn.status()}: ${await checkIn.text()}`,
-  ).toBeTruthy();
-
-  const feedback = await expectJson<{
-    result: {
-      outcome: { id: string; body_state_revision: number };
-    };
-  }>(
-    await request.put(
-      `${apiBase}/api/v1/training/${acceptance.planId}/log`,
-      {
-        headers: authHeaders,
-        data: {
-          notes: "完成温和训练后，肩膀感觉更轻松。",
-          exercises: [{ name: "下巴微收", completed: true }],
-          symptom_changes: "肩膀不适有所改善",
-          training_feeling: "轻松",
-          difficulties: "",
-          body_region: "肩部",
-          concern_key: "general",
-          trend: "improving",
-        },
-      },
-    ),
-    "record symptom feedback Outcome",
+  expect(ended.feedback?.text).toBe(feedbackText);
+  // A body change the user reports is recorded through BodyState, never
+  // derived from the session feedback.
+  const symptomChange = await recordUserSymptom(
+    request,
+    apiBase,
+    authHeaders,
+    "肩膀不适有所改善",
   );
-  expect(feedback.result.outcome.body_state_revision).toBeGreaterThan(
-    diagnosis.body_state_revision,
-  );
+  expect(symptomChange.revision).toBeGreaterThan(diagnosis.body_state_revision);
 
   const finalWorkspace = await expectJson<{
     training_plan: { id: string; status: string };
@@ -289,19 +279,14 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       can_execute_treatment: boolean;
       requires_safety_review: boolean;
     };
-    recent_outcomes: Array<{
-      id: string;
-      body_state_revision: number | null;
-      causality_level: string;
-    }>;
   }>(
     await request.get(`${apiBase}/api/v1/health-workspace`, {
       headers: authHeaders,
     }),
     "load reviewed HealthWorkspace",
   );
-  // The user's own symptom wording became a new V2 symptom statement at the
-  // Outcome's revision; the original statement is untouched (no legacy trend).
+  // The user's own symptom wording is a new V2 symptom statement at its own
+  // revision; the original statement is untouched.
   const records = await expectJson<{
     facts: Array<{
       id: string;
@@ -319,21 +304,24 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     records.facts.find((fact) => fact.statement === "肩膀不适有所改善"),
   ).toMatchObject({
     kind: "symptom",
-    created_revision: feedback.result.outcome.body_state_revision,
+    created_revision: symptomChange.revision,
   });
   expect(records.facts.some((fact) => fact.id === symptom.id)).toBe(true);
-  // The new Outcome symptom has not been screened: execution fails closed
+  // The new symptom has not been screened: execution fails closed
   // until its own checklist, without changing the user's plan status.
   expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
   expect(finalWorkspace.training_plan.id).toBe(acceptance.planId);
   expect(finalWorkspace.training_plan.status).toBe("active");
-  expect(
-    finalWorkspace.recent_outcomes.some(
-      (outcome) =>
-        outcome.id === feedback.result.outcome.id &&
-        outcome.body_state_revision != null &&
-        outcome.causality_level === "association_only",
-    ),
-  ).toBe(true);
+  // Feedback never changed the plan; it only recommends review.
+  const reviewed = await getTrainerPlan(
+    request,
+    apiBase,
+    authHeaders,
+    acceptance.planId,
+  );
+  expect(reviewed.status).toBe("active");
+  expect(reviewed.currentAcceptedRevisionId).toBe(acceptance.revisionId);
+  expect(reviewed.review.recommended).toBe(true);
+  expect(reviewed.review.sessionFeedbackCount).toBe(1);
 });
