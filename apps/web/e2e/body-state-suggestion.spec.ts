@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 test.describe.configure({ timeout: 100_000 });
 const api = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
@@ -25,9 +26,9 @@ async function register(page: Page, request: APIRequestContext) {
   const headers = { Authorization: `Bearer ${token}` };
   const profile = await request.put(`${api}/api/v1/profile`, {
     headers,
-    data: { gender: "male", birth_date: "2000-01-01" },
+    data: profileReplacement({ gender: "male", birth_date: "2000-01-01" }),
   });
-  expect(profile.ok()).toBeTruthy();
+  expect(profile.ok(), await profile.text()).toBeTruthy();
   return headers;
 }
 
