@@ -65,3 +65,9 @@ CI keeps two database scenarios, both on PostgreSQL 18:
 - `PostgreSQL 18 vNext recovery child` — the same clean baseline plus `pg_dump` / `pg_restore`, restored-domain validation and the production off-host DR algorithm.
 
 There is no active production-v29 fixture and no pre-vNext schema-upgrade lane.
+
+## V2 reset
+
+The V2 big-bang release reuses this volume-replacement mechanism with a new production
+volume (`bodysense-postgres-v2`) and a preserved-volume swap on staging. Approval points,
+gates and the exact-SHA checklist are in [v2-release-cutover.md](./v2-release-cutover.md).

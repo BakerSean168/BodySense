@@ -83,7 +83,7 @@ docs/
 
 ### runbooks/ 运维手册
 
-Anatomy atlas 发布、Delivery Platform V3 上线、Diagnosis 生产资格与回放回滚、生产容量、PostgreSQL 异地容灾、上传存储、静态资源 CDN、vNext schema 切换。
+Anatomy atlas 发布、Delivery Platform V3 上线、Diagnosis 生产资格与回放回滚、生产容量、PostgreSQL 异地容灾、上传存储、静态资源 CDN、vNext schema 切换、[V2 发布切换（staging/production wipe、canary、rollback、exact-SHA 资格清单）](./runbooks/v2-release-cutover.md)。
 
 ### security/ 安全与数据
 
