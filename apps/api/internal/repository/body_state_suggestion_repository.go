@@ -203,6 +203,20 @@ func (r *BodyStateRepository) ConfirmBodyStateSuggestion(ctx context.Context, ow
 		default:
 			return model.ErrBodyStateSuggestionRejected
 		}
+		// The answered interaction keeps the id-only receipt, so history can
+		// show "saved" only for what Go committed in this same transaction.
+		receipt, err := json.Marshal(output.Public())
+		if err != nil {
+			return err
+		}
+		updated := tx.Exec("UPDATE public.agent_interactions SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('body_state_receipt', ?::jsonb) WHERE id = ? AND run_id = ?",
+			string(receipt), answer.InteractionID, answer.RunID)
+		if updated.Error != nil {
+			return updated.Error
+		}
+		if updated.RowsAffected != 1 {
+			return fmt.Errorf("%w: answered interaction not found for its receipt", model.ErrBodyStateSuggestionRejected)
+		}
 		return nil
 	})
 	if err != nil {

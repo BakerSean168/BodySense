@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -127,7 +126,7 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 			}
 			// The receipt rides on the durable answered milestone, so "saved" is
 			// shown only after Go committed; a decline carries no receipt.
-			answered["body_state_receipt"] = bodyStateSuggestionReceipt(receipt)
+			answered["body_state_receipt"] = receipt.Public()
 		}
 		ids := dto.StreamEventIDs{ConversationID: command.ConversationID.String(), RunID: envelope.Run.ID.String(), TurnID: envelope.Run.TurnID.String(), InteractionID: command.InteractionID.String(), ToolCallID: envelope.Interaction.ToolCallID}
 		steps := []struct {
@@ -155,26 +154,4 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 		return nil, err
 	}
 	return result, nil
-}
-
-// bodyStateSuggestionReceipt is the public, id-only receipt of a committed
-// suggestion; nil (JSON null) when the user declined and nothing was written.
-func bodyStateSuggestionReceipt(commit *model.BodyStateSuggestionReceipt) any {
-	if commit == nil {
-		return nil
-	}
-	receipt := map[string]any{"kind": commit.Kind, "commit_id": commit.CommitID.String(),
-		"revision": commit.Revision, "event_id": commit.EventID.String(), "committed_at": commit.CommittedAt.UTC().Format(time.RFC3339Nano)}
-	switch commit.Kind {
-	case model.BodyStateSuggestionKindHypothesis:
-		receipt["hypothesis_id"] = commit.RecordID.String()
-		receipt["source_evidence_id"] = commit.SourceEvidenceID.String()
-	case model.BodyStateSuggestionKindObservation:
-		receipt["observation_id"] = commit.RecordID.String()
-		receipt["source_evidence_id"] = commit.SourceEvidenceID.String()
-	case model.BodyStateSuggestionKindEpisode:
-		receipt["episode_id"] = commit.RecordID.String()
-		receipt["fact_id"] = commit.FactID.String()
-	}
-	return receipt
 }
