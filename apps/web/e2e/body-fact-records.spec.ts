@@ -139,7 +139,7 @@ test("Python extraction -> Go receipt -> PostgreSQL -> actual Person Habits surv
   expect(ledger.facts[0].statement).toBe("我每晚睡七小时。");
   expect(ledger.current_revision).toBe(receipt.revision);
   await page.goto(`/consultation/${turn.conversationId}?view=state`);
-  await page.getByRole("button", { name: "习性", exact: true }).click();
+  await page.getByLabel("档案分类").selectOption("habits");
   await expect(
     page
       .getByTestId("body-fact-records")
@@ -238,6 +238,10 @@ test("Person Records corrections and withdrawal use exact targets and durable re
   await expect(
     records.getByText("我昨天跑步三十分钟", { exact: true }),
   ).toBeVisible();
+  // Penpot Records: amendments live in the statement's detail scene.
+  await records
+    .getByRole("button", { name: "查看记录：我昨天跑步三十分钟" })
+    .click();
   await records.getByRole("button", { name: "更正", exact: true }).click();
   await records
     .getByLabel("更正后的完整陈述")
@@ -259,6 +263,10 @@ test("Person Records corrections and withdrawal use exact targets and durable re
   expect(corrected.facts[0].supersedes_fact_id).toBe(originalId);
   expect(corrected.current_revision).toBe(2);
   const currentId = corrected.facts[0].id;
+  await records
+    .getByRole("button", { name: "查看记录：我昨天只是散步十分钟，原来说错了" })
+    .click();
+  await expect(records.getByText("更正后的陈述")).toBeVisible();
   await records.getByRole("button", { name: "撤回陈述" }).click();
   await expect(records.getByText(/这不是隐私数据删除/)).toBeVisible();
   const outgoing = page.waitForRequest(

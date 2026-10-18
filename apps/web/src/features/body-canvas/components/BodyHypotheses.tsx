@@ -1,5 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import { Link2, Plus, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
+import {
+  effectiveTimeZone,
+  formatInstantInZone,
+} from "@/features/profile/model/profilePreferences";
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
 
 /** Owner changes discard drafts and prevent late receipts from entering another profile. */
@@ -40,6 +46,9 @@ function HypothesisPanel({
     cancel,
   } = useBodyHypothesisController(owner, canEdit);
   const id = useId();
+  const zone = effectiveTimeZone(
+    useProfileStore((state) => state.profile?.preferences),
+  ).zone;
   const root = useRef<HTMLElement>(null);
   const editor = useRef<HTMLFormElement>(null);
   const returnFocus = useRef<string | null>(null);
@@ -77,11 +86,6 @@ function HypothesisPanel({
       aria-label="我的猜测与相关记录"
       className="bc-hypotheses"
     >
-      <h3 className="text-sm font-medium">我的猜测</h3>
-      <p className="bc-window-note">
-        仅记录你本人提出的可能原因或疾病，不代表诊断。Agent
-        的推测不会自动成为你的记录。
-      </p>
       {notice && (
         <p role="status" tabIndex={-1} data-feedback>
           {notice}
@@ -103,27 +107,48 @@ function HypothesisPanel({
       {data && groups.data && !consistent && (
         <p role="status">记录已更新，正在等待一致的最新记录。请重新读取。</p>
       )}
-      <button
-        type="button"
-        className="bc-text-button"
-        disabled={saving || records.isFetching || groups.isFetching}
-        onClick={refresh}
-      >
-        重新读取猜测与分组
-      </button>
+      {records.isError ||
+      groups.isError ||
+      (data && groups.data && !consistent) ? (
+        <button
+          type="button"
+          className="bc-text-button"
+          disabled={saving || records.isFetching || groups.isFetching}
+          onClick={refresh}
+        >
+          <RefreshCw size={14} />
+          重新读取猜测与分组
+        </button>
+      ) : null}
       {readable && data ? (
         <>
-          {!data.hypotheses.length && <p>还没有你提出的猜测。</p>}
+          {!data.hypotheses.length && (
+            <p className="bc-window-empty-text">还没有你提出的猜测。</p>
+          )}
           {data.hypotheses.map((record) => (
-            <article key={record.id} className="bc-record-item">
+            <article key={record.id} className="bc-person-hypothesis">
               <p className="bc-record-statement">{record.statement}</p>
-              <p className="bc-window-note">
-                用户本人猜测 ·{" "}
-                {record.supersedes_hypothesis_id ? "更正后的版本" : "本人记录"}{" "}
-                · {new Date(record.recorded_at).toLocaleString()}
-              </p>
-              <p className="bc-window-note">
-                来源：本人直接编辑；原始陈述已留存。
+              <div className="bc-person-chips">
+                <span className="bc-person-chip" title="你本人提出，不代表诊断">
+                  本人猜测
+                </span>
+                {record.supersedes_hypothesis_id ? (
+                  <span className="bc-person-chip">更正后的版本</span>
+                ) : null}
+                {record.related_fact_ids.length +
+                  record.related_observation_ids.length >
+                0 ? (
+                  <span className="bc-person-chip">
+                    关联{" "}
+                    {record.related_fact_ids.length +
+                      record.related_observation_ids.length}{" "}
+                    条记录
+                  </span>
+                ) : null}
+              </div>
+              <p className="bc-person-row-meta">
+                记录{" "}
+                {formatInstantInZone(record.recorded_at, zone) ?? "时间未知"}
               </p>
               {canEdit && !draft && (
                 <div className="bc-record-actions">
@@ -163,12 +188,13 @@ function HypothesisPanel({
       ) : null}
       {canEdit && !draft && (
         <button
-          className="bc-button"
+          className="bc-button bc-person-add-text"
           type="button"
           disabled={!ready}
           id={`${id}-add`}
           onClick={(event) => begin({ mode: "record" }, event.currentTarget)}
         >
+          <Plus size={15} />
           添加我的猜测
         </button>
       )}
@@ -281,15 +307,19 @@ function HypothesisPanel({
           </div>
         </form>
       )}
-      <h3 className="text-sm font-medium">相关记录分组</h3>
-      <p className="bc-window-note">
-        只读派生视图，组织事实、观察、经历和用户猜测，不形成新的事实或诊断。
-      </p>
+      <h4 className="bc-person-section-label">相关分组</h4>
       {readable && data && groups.data ? (
         groups.data.groups.length ? (
           groups.data.groups.map((group) => (
-            <article key={group.id} className="bc-record-item">
-              <h4>{group.display_title}</h4>
+            <article
+              key={group.id}
+              className="bc-person-group"
+              title="由你的记录自动整理，不形成新的事实或诊断"
+            >
+              <h5 className="bc-person-group-title">
+                <Link2 size={13} aria-hidden="true" />
+                {group.display_title}
+              </h5>
               {group.related_hypothesis_ids.map((id) => (
                 <p key={id}>
                   用户猜测：
@@ -327,7 +357,7 @@ function HypothesisPanel({
             </article>
           ))
         ) : (
-          <p>暂无相关记录分组。</p>
+          <p className="bc-window-empty-text">暂无相关记录分组。</p>
         )
       ) : null}
     </section>

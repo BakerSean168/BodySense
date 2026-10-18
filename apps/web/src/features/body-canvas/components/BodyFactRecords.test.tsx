@@ -23,7 +23,10 @@ const fact = (kind = "symptom", statement = "我昨天肩膀不舒服") => ({
   kind,
   statement,
   body_region_ids: [],
-  temporal: { precision: "unknown" },
+  temporal: { precision: "unknown" } as {
+    precision: string;
+    original_expression?: string;
+  },
   details: {},
   subject: "self",
   source_evidence_id: factId,
@@ -106,7 +109,7 @@ describe("BodyFact Records and Habits", () => {
     mount(true);
     expect(await screen.findByText("我每晚睡七小时")).toBeVisible();
     expect(screen.queryByText("我肩膀不舒服")).not.toBeInTheDocument();
-    expect(screen.getByText("发生时间：未说明")).toBeVisible();
+    expect(screen.getByText(/发生：未说明 · 记录/)).toBeVisible();
   });
 
   it("does not call a partially scanned Habits history truly empty", async () => {
@@ -162,7 +165,7 @@ describe("BodyFact Records and Habits", () => {
     api.list.mockRejectedValueOnce(new Error("offline"));
     mount();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "身体记录暂时无法读取",
+      "记录没有读取出来",
     );
     expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "重新读取" }));
@@ -235,6 +238,13 @@ describe("BodyFact Records and Habits", () => {
     });
     mount();
     expect(await screen.findByText("我昨天肩膀不舒服")).toBeVisible();
+    // Penpot Records: amendments live in the statement's detail scene.
+    await userEvent.click(
+      screen.getByRole("button", { name: "查看记录：我昨天肩膀不舒服" }),
+    );
+    expect(screen.getByTestId("body-fact-detail")).toHaveTextContent(
+      "“我昨天肩膀不舒服”",
+    );
     await userEvent.click(screen.getByRole("button", { name: "撤回陈述" }));
     await userEvent.click(screen.getByRole("button", { name: "确认撤回" }));
     expect(await screen.findByText(/陈述已撤回，历史保留/)).toBeVisible();
@@ -305,5 +315,51 @@ describe("BodyFact Records and Habits", () => {
     expect(await screen.findByText("我前天散步")).toBeVisible();
     expect(screen.getByText("我昨天肩膀不舒服")).toBeVisible();
     expect(api.list).toHaveBeenLastCalledWith(3);
+  });
+
+  it("groups records by recorded day and keeps the occurrence verbatim", async () => {
+    api.list.mockResolvedValue(
+      page([
+        {
+          ...fact("symptom", "昨天晚上开始头痛"),
+          temporal: { precision: "unknown", original_expression: "昨天晚上" },
+          recorded_at: "2026-10-14T01:12:00Z",
+        },
+        {
+          ...fact("activity", "我前天散步"),
+          id: "33333333-3333-4333-8333-333333333333",
+          recorded_at: "2026-10-12T14:40:00Z",
+        },
+      ]),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <BodyFactRecords canEdit now={new Date("2026-10-14T08:00:00Z")} />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("已加载 2 条")).toBeVisible();
+    // Display clock defaults to the device zone in tests; both days are labelled.
+    expect(screen.getAllByRole("heading", { level: 4 }).length).toBe(2);
+    expect(screen.getByText(/发生：昨天晚上 · 记录 \d\d:\d\d/)).toBeVisible();
+    expect(screen.queryByText(/修订|revision/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the last read visible but marks it possibly stale when a refresh fails", async () => {
+    api.list.mockResolvedValueOnce(page([fact()]));
+    const { client } = mount();
+    expect(await screen.findByText("我昨天肩膀不舒服")).toBeVisible();
+    api.list.mockRejectedValueOnce(new Error("offline"));
+    await client.refetchQueries();
+    expect(await screen.findByRole("alert")).toHaveTextContent("可能不是最新");
+    expect(screen.getByText(/上次同步/)).toBeVisible();
+    expect(screen.getByText("我昨天肩膀不舒服")).toBeVisible();
+    api.list.mockResolvedValueOnce(page([fact()]));
+    await userEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    await waitFor(() =>
+      expect(screen.queryByText("可能不是最新")).not.toBeInTheDocument(),
+    );
   });
 });

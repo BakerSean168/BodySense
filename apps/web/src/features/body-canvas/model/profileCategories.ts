@@ -1,4 +1,3 @@
-
 /**
  * Person/Profile is a presentation projection over authoritative sources. It
  * owns no identity or health data of its own; each category reads from the
@@ -12,14 +11,16 @@
  * | reports  | user uploads with file type report + OCR     |
  * | habits   | lifestyle onboarding snapshot                |
  *
- * Per the current Penpot V5.5 design the top Tab already names the category, so
- * no category renders a duplicate body heading or generic explanation.
+ * Per Penpot Person boards the header category picker ("BakerSean / 身体记录")
+ * already names the category, so no category renders a duplicate body heading
+ * or generic explanation.
  */
-export type ProfileCategoryId = "records" | "equipment" | "media" | "reports" | "habits";
+export type ProfileCategoryId =
+  "records" | "equipment" | "media" | "reports" | "habits";
 
 export interface ProfileCategoryMeta {
   id: ProfileCategoryId;
-  /** Tab label; the only place the category name is displayed. */
+  /** Header picker label; the only place the category name is displayed. */
   label: string;
   /** Screen-reader region name for the category panel. */
   regionLabel: string;
@@ -27,10 +28,10 @@ export interface ProfileCategoryMeta {
 
 export const PROFILE_CATEGORIES: readonly ProfileCategoryMeta[] = [
   { id: "records", label: "身体记录", regionLabel: "身体记录" },
-  { id: "equipment", label: "装备", regionLabel: "装备清单" },
-  { id: "media", label: "影像资料", regionLabel: "影像资料" },
-  { id: "reports", label: "医学报告", regionLabel: "医学报告" },
-  { id: "habits", label: "习性", regionLabel: "生活习性" },
+  { id: "equipment", label: "器材", regionLabel: "器材清单" },
+  { id: "media", label: "媒体", regionLabel: "媒体资料" },
+  { id: "reports", label: "报告", regionLabel: "医学报告" },
+  { id: "habits", label: "生活习惯", regionLabel: "生活习惯" },
 ] as const;
 
 export const PROFILE_CATEGORY_IDS: readonly ProfileCategoryId[] =
@@ -40,9 +41,12 @@ export function isProfileCategoryId(value: string): value is ProfileCategoryId {
   return (PROFILE_CATEGORY_IDS as readonly string[]).includes(value);
 }
 
-export function getProfileCategoryMeta(id: ProfileCategoryId): ProfileCategoryMeta {
+export function getProfileCategoryMeta(
+  id: ProfileCategoryId,
+): ProfileCategoryMeta {
   return (
-    PROFILE_CATEGORIES.find((category) => category.id === id) ?? PROFILE_CATEGORIES[0]
+    PROFILE_CATEGORIES.find((category) => category.id === id) ??
+    PROFILE_CATEGORIES[0]
   );
 }
 
@@ -64,7 +68,9 @@ export function selectUploadsByCategory<T extends ProfileUploadLike>(
   category: UploadCategory,
 ): T[] {
   return (uploads ?? []).filter((upload) =>
-    category === "reports" ? upload.file_type === "report" : upload.file_type !== "report",
+    category === "reports"
+      ? upload.file_type === "report"
+      : upload.file_type !== "report",
   );
 }
 

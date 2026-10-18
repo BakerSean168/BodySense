@@ -71,7 +71,7 @@ test("lifestyle temporal change preserves the earlier assertion rather than corr
 
   await page.goto("/consultation?view=state");
   await expect(page.getByTestId("person-window")).toBeVisible();
-  await page.getByRole("button", { name: "习性", exact: true }).click();
+  await page.getByLabel("档案分类").selectOption("habits");
   const records = page.getByTestId("body-fact-records");
   await expect(
     records.getByText(previousStatement, { exact: true }),

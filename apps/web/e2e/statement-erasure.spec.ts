@@ -121,6 +121,8 @@ test("statement erasure asks for review, withdraws on confirmation and verifies 
     source_evidence_id: string;
   };
 
+  // Penpot Records: erasure lives in the statement's detail scene.
+  await records.getByRole("button", { name: `查看记录：${text}` }).click();
   await records.getByRole("button", { name: "彻底删除" }).click();
   const panel = page.getByTestId("statement-erasure");
   await expect(panel).toHaveAttribute("data-phase", "confirm");
@@ -169,7 +171,8 @@ test("statement erasure receipt shows in progress, retrying and policy-retained 
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await register(page, request);
-  const records = await saveRecord(page, "我最近两周膝盖上楼时发紧");
+  const text = "我最近两周膝盖上楼时发紧";
+  const records = await saveRecord(page, text);
   const states: Array<(statementId: string) => object> = [
     (id) =>
       syntheticReceipt(id, "running", {
@@ -215,6 +218,8 @@ test("statement erasure receipt shows in progress, retrying and policy-retained 
     },
   );
 
+  // Penpot Records: erasure lives in the statement's detail scene.
+  await records.getByRole("button", { name: `查看记录：${text}` }).click();
   await records.getByRole("button", { name: "彻底删除" }).click();
   const panel = page.getByTestId("statement-erasure");
   await panel.getByRole("button", { name: "确认彻底删除" }).click();

@@ -35,13 +35,14 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
 }, testInfo) => {
   const headers = await register(page, request);
   await page.goto("/consultation?view=state");
-  const records = page.getByTestId("body-fact-records");
-  const disclosure = page.getByTestId("body-episode-associations");
-  await disclosure.getByRole("button", { name: "查看与关联经历" }).click();
+  const person = page.getByTestId("person-window");
+  // Penpot Person / Records: Episodes open from the "相关" chips; the editor
+  // is the scene's "整理经历" action.
+  await person.getByRole("button", { name: "经历 0 段" }).click();
+  const disclosure = page.getByTestId("person-episodes");
+  await expect(disclosure.getByText(/还没有整理出经历/)).toBeVisible();
+  await disclosure.getByRole("button", { name: "整理经历" }).click();
   const editor = disclosure.getByTestId("body-episode-editor");
-  await expect(
-    editor.getByText(/当前已读取的记录中没有症状经历/),
-  ).toBeVisible();
   // Create a typed self-reported symptom from the real Person UI, not an
   // API-seeded fixture, then require a separate user-authorized Episode action.
   await editor.getByRole("button", { name: "补充可关联的本人症状" }).click();
@@ -50,7 +51,11 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   await editor.getByLabel("侧别（不确定可以不指定）").selectOption("right");
   await editor.getByRole("button", { name: "先保存症状陈述" }).click();
   await expect(editor.getByText(/本人症状陈述已保存/)).toBeVisible();
+  await person.getByRole("button", { name: "返回记录" }).click();
+  const records = page.getByTestId("body-fact-records");
   await expect(records.getByText("我右肩有些疼痛")).toBeVisible();
+  await person.getByRole("button", { name: /^经历 \d 段$/ }).click();
+  await disclosure.getByRole("button", { name: "整理经历" }).click();
   const firstLedger = await (
     await request.get(`${api}/api/v1/body-state/records`, { headers })
   ).json();
@@ -122,13 +127,16 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   expect(beforeLink.links).toHaveLength(1);
   expect(beforeLink.projection.state).toBe("unknown");
   await page.reload();
-  const reopened = page.getByTestId("body-episode-associations");
-  await reopened.getByRole("button", { name: "查看与关联经历" }).click();
-  const secondEditor = reopened.getByTestId("body-episode-editor");
+  await person.getByRole("button", { name: "经历 1 段" }).click();
+  const reopened = page.getByTestId("person-episodes");
   await expect(
-    secondEditor.getByText("右肩疼痛", { exact: true }),
+    reopened.getByText("右肩疼痛经历", { exact: true }),
   ).toBeVisible();
-  await expect(secondEditor.getByText("持续状态尚未确认")).toBeVisible();
+  await expect(reopened.getByTitle("持续状态尚未确认")).toHaveText(
+    "是否持续 · 未知",
+  );
+  await reopened.getByRole("button", { name: "整理经历" }).click();
+  const secondEditor = reopened.getByTestId("body-episode-editor");
   await secondEditor.getByLabel("操作").selectOption("link");
   await secondEditor.getByLabel("本人症状陈述").selectOption(second.factId);
   await secondEditor.getByLabel("目标经历").selectOption(episodeId);

@@ -268,6 +268,9 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
       waitUntil: "domcontentloaded",
     });
     const panel = page.getByRole("region", { name: "我的猜测与相关记录" });
+    const person = page.getByTestId("person-window");
+    // Penpot Person / Records: hypotheses open from the "相关" chips.
+    await person.getByRole("button", { name: "我的猜测 0 条" }).click();
     await expect(panel.getByText("正在读取猜测与分组…")).toBeVisible();
     await expectPersonFits(page);
     releaseGroups();
@@ -276,16 +279,23 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
     await panel.getByRole("button", { name: "重新读取猜测与分组" }).click();
     await expect(panel.getByText("还没有你提出的猜测。")).toBeVisible();
     await expect(panel.getByText("暂无相关记录分组。")).toBeVisible();
-    await page.getByRole("button", { name: "查看与关联经历" }).click();
-    await expect(
-      page.getByText("截至明确报告时仍在持续", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("有明确的结束报告", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("持续状态尚未确认", { exact: true }),
-    ).toBeVisible();
+    await person.getByRole("button", { name: "返回记录" }).click();
+    await person.getByRole("button", { name: "经历 3 段" }).click();
+    const episodes = page.getByTestId("person-episodes");
+    // Only evidence-qualified projections read as ongoing/ended.
+    await expect(episodes.getByTitle("截至明确报告时仍在持续")).toHaveText(
+      "是否持续 · 仍在持续",
+    );
+    await expect(episodes.getByTitle("有明确的结束报告")).toHaveText(
+      "是否持续 · 已结束",
+    );
+    await expect(episodes.getByTitle("持续状态尚未确认")).toHaveText(
+      "是否持续 · 未知",
+    );
+    await expectPersonFits(page);
+    await person.getByRole("button", { name: "返回记录" }).click();
+    await person.getByRole("button", { name: "我的猜测 0 条" }).click();
+    await expect(panel.getByText("还没有你提出的猜测。")).toBeVisible();
     const canvas = await page.locator(".bc-scene canvas").elementHandle();
     expect(canvas).not.toBeNull();
     await panel.getByRole("button", { name: "添加我的猜测" }).focus();

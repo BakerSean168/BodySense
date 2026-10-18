@@ -1,6 +1,24 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LoaderCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  FileText,
+  LoaderCircle,
+  Plus,
+  RefreshCw,
+  Repeat2,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   bodyFactRecordsService,
   type BodyFactRecordInput,
@@ -28,6 +46,10 @@ import {
 } from "../model/bodyFactPresentation";
 import { projectBodyFactSurface } from "../model/bodyFactViewModel";
 import { projectBoundedBodyFactVM } from "../model/bodyFactV2Adapter";
+import {
+  groupByRecordedDay,
+  recordedClock,
+} from "../model/personRecordsTimeline";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -37,13 +59,30 @@ function recordedTime(value: string, zone: string): string {
   return formatInstantInZone(value, zone) ?? "记录时间未知";
 }
 
+/** Episode chips a Records detail can link to; supplied by the Person window. */
+export interface BodyFactRelatedLink {
+  id: string;
+  label: string;
+}
+
 /** One live, user-scoped ledger surface; Habits is a filtered view, not a new owner. */
 export function BodyFactRecords({
   habitsOnly = false,
   canEdit,
+  related,
+  relatedLinks,
+  onOpenRelated,
+  now,
 }: {
   habitsOnly?: boolean;
   canEdit: boolean;
+  /** Penpot Body / Region "相关" chips, rendered under the loaded count. */
+  related?: ReactNode;
+  /** Organising links (Episodes) of one fact, for its detail view. */
+  relatedLinks?: (factId: string) => readonly BodyFactRelatedLink[];
+  onOpenRelated?: (link: BodyFactRelatedLink) => void;
+  /** Clock for "今天 / 昨天" day labels; tests pin it. */
+  now?: Date;
 }) {
   const owner = useAuthStore((state) => state.user?.id);
   const displayZone = effectiveTimeZone(
@@ -89,6 +128,8 @@ export function BodyFactRecords({
   const [saveError, setSaveError] = useState<string | null>(null);
   // The erasure panel outlives the record: a withdrawn record leaves the list.
   const [erasing, setErasing] = useState<StatementErasureTarget | null>(null);
+  // Penpot Records rows open one statement's detail inside the same window.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const pending = useRef<{
     owner: string;
     content: string;
@@ -105,6 +146,7 @@ export function BodyFactRecords({
     setSaveError(null);
     setSaving(false);
     setErasing(null);
+    setSelectedId(null);
   }, [owner]);
 
   const page = query.data?.pages[0];
@@ -211,71 +253,170 @@ export function BodyFactRecords({
 
   if (!owner) return <p className="bc-window-note">请登录后查看个人记录。</p>;
 
-  return (
-    <div
-      className="bc-person-category"
-      data-testid="body-fact-records"
-      data-vm-contract={boundedVM.contract}
-      data-vm-state={boundedVM.state}
+  const clock = now ?? new Date();
+  const rows = snapshotBehindCommit ? [] : view.records;
+  const selected = selectedId
+    ? (rows.find((row) => row.id === selectedId) ?? null)
+    : null;
+  const readFailed = query.isError && !page;
+  const stale = query.isError && Boolean(page);
+  const lastSync = query.dataUpdatedAt
+    ? recordedClock(new Date(query.dataUpdatedAt).toISOString(), displayZone)
+    : null;
+  const addDisabled = !page || view.pagesDisagree || snapshotBehindCommit;
+  const openAdd = () => {
+    setAdding(true);
+    setNotice(null);
+    setSelectedId(null);
+  };
+  const occurrenceLine = (occurrence: string, recordedAt: string) =>
+    `发生：${occurrence} · 记录 ${
+      habitsOnly
+        ? recordedTime(recordedAt, displayZone)
+        : recordedClock(recordedAt, displayZone)
+    }`;
+  const emptyState =
+    !query.isError &&
+    !query.isPending &&
+    !snapshotBehindCommit &&
+    !adding &&
+    boundedVM.state === "empty";
+
+  const addForm = adding ? (
+    <form
+      className="bc-equipment-form bc-person-record-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
     >
+      {!habitsOnly ? (
+        <label>
+          记录类别
+          <select
+            value={kind}
+            onChange={(event) => {
+              setKind(event.target.value as FactKind);
+              pending.current = null;
+            }}
+            disabled={saving}
+          >
+            {Object.entries(FACT_KINDS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <label>
+        你的描述
+        <textarea
+          value={statement}
+          onChange={(event) => setStatement(event.target.value)}
+          maxLength={2000}
+          rows={3}
+          disabled={saving}
+          required
+        />
+      </label>
+      <label>
+        发生时间<span className="bc-optional">可选，保留你的原话</span>
+        <input
+          value={when}
+          onChange={(event) => setWhen(event.target.value)}
+          maxLength={500}
+          placeholder="例如：昨天晚上；不清楚可以留空"
+          disabled={saving}
+        />
+      </label>
       <div className="bc-record-actions">
-        <span className="bc-window-note">
-          {habitsOnly ? "本人陈述的习惯与变化" : "本人陈述，不代表临床诊断"}
-        </span>
+        <button
+          type="submit"
+          className="bc-button bc-primary"
+          disabled={saving || !statement.trim()}
+        >
+          {saving ? <LoaderCircle size={16} className="animate-spin" /> : null}
+          {saving ? "正在保存" : "保存记录"}
+        </button>
         <button
           type="button"
           className="bc-button"
-          onClick={() => void query.refetch()}
-          disabled={query.isFetching}
-          aria-label="刷新身体记录"
+          disabled={saving}
+          onClick={() => {
+            setAdding(false);
+            setSaveError(null);
+          }}
         >
-          <RefreshCw
-            size={15}
-            className={query.isFetching ? "animate-spin" : ""}
-          />
+          收起
         </button>
-        {canEdit && !adding ? (
-          <button
-            type="button"
-            className="bc-button"
-            onClick={() => {
-              setAdding(true);
-              setNotice(null);
-            }}
-            disabled={!page || view.pagesDisagree || snapshotBehindCommit}
-          >
-            <Plus size={15} />
-            补充记录
-          </button>
-        ) : null}
       </div>
+      {saveError ? (
+        <p role="alert" className="bc-error">
+          {saveError}
+        </p>
+      ) : null}
+    </form>
+  ) : null;
+
+  const erasure =
+    erasing && canEdit ? (
+      <Suspense
+        fallback={
+          <p role="status" className="bc-person-loading">
+            <LoaderCircle size={16} className="animate-spin" />
+            正在打开删除
+          </p>
+        }
+      >
+        <StatementErasure
+          key={erasing.statementId}
+          target={erasing}
+          revision={page?.current_revision}
+          onClose={() => setErasing(null)}
+          onChanged={(message, committedRevision) => {
+            if (ownerRef.current !== erasing.ownerId) return;
+            if (committedRevision !== undefined)
+              setSavedRevision((prev) =>
+                Math.max(prev ?? 0, committedRevision),
+              );
+            setNotice(message);
+            void queryClient.invalidateQueries({ queryKey: ["workspace"] });
+          }}
+        />
+      </Suspense>
+    ) : null;
+
+  const feedback = (
+    <>
       {snapshotBehindCommit && !query.isError ? (
         <p role="status" className="bc-person-loading">
           <LoaderCircle size={16} className="animate-spin" />
           正在同步已保存的记录，暂不显示旧列表
         </p>
       ) : null}
-      {query.isPending ? (
-        <p role="status" className="bc-person-loading">
-          <LoaderCircle size={16} className="animate-spin" />
-          正在读取身体记录
-        </p>
-      ) : null}
-      {query.isError ? (
-        <p role="alert" className="bc-error">
-          {notice
-            ? "记录已保存，但列表刷新失败。"
-            : page
-              ? "部分记录刷新失败，仍显示上次读取的内容。"
-              : "身体记录暂时无法读取。"}
+      {stale ? (
+        <div role="alert" className="bc-person-stale">
+          <span className="bc-person-stale-chip">
+            {notice ? "记录已保存，但列表刷新失败。" : "可能不是最新"}
+          </span>
+          {lastSync ? (
+            <span className="bc-person-stale-time">上次同步 {lastSync}</span>
+          ) : null}
           <button
             type="button"
-            className="bc-text-button"
+            className="bc-icon-button"
+            aria-label="重新读取"
+            title="重新读取"
+            disabled={query.isFetching}
             onClick={() => void query.refetch()}
           >
-            重新读取
+            <RefreshCw
+              size={16}
+              className={query.isFetching ? "animate-spin" : ""}
+            />
           </button>
-        </p>
+        </div>
       ) : null}
       {view.pagesDisagree ? (
         <p role="alert" className="bc-error">
@@ -295,154 +436,78 @@ export function BodyFactRecords({
           {notice}
         </p>
       ) : null}
-      {!query.isError &&
-      !snapshotBehindCommit &&
-      (boundedVM.state === "empty" || boundedVM.state === "partial_empty") ? (
-        <p className="bc-window-empty-text">
-          {boundedVM.state === "partial_empty"
-            ? habitsOnly
-              ? "当前加载的记录中没有生活习惯，可以继续读取更早的记录。"
-              : "当前加载的记录为空，可以继续读取更早的记录。"
-            : habitsOnly
-              ? "尚未记录生活习惯。可以在对话中描述，或直接补充记录。"
-              : "还没有身体记录。可以在对话中描述，或直接补充记录。"}
-        </p>
-      ) : null}
-      {adding ? (
-        <form
-          className="bc-equipment-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          {!habitsOnly ? (
-            <label>
-              记录类别
-              <select
-                value={kind}
-                onChange={(event) => {
-                  setKind(event.target.value as FactKind);
-                  pending.current = null;
+    </>
+  );
+
+  // Penpot Records detail: one statement, its organising links and the only
+  // places it can be amended. Leaving the list never discards the ledger read.
+  if (selected && !erasing) {
+    const links = relatedLinks?.(selected.id) ?? [];
+    return (
+      <div
+        className="bc-person-category bc-person-detail"
+        data-testid="body-fact-records"
+        data-vm-contract={boundedVM.contract}
+        data-vm-state={boundedVM.state}
+      >
+        <div className="bc-person-detail-body" data-testid="body-fact-detail">
+          <h3 className="bc-person-detail-title">{selected.label}</h3>
+          {selected.isCorrection || links.length ? (
+            <div className="bc-person-chips">
+              {selected.isCorrection ? (
+                <span className="bc-person-chip">更正后的陈述</span>
+              ) : null}
+              {links.map((link) => (
+                <button
+                  key={link.id}
+                  type="button"
+                  className="bc-person-chip bc-person-chip-link"
+                  onClick={() => onOpenRelated?.(link)}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {feedback}
+          <p className="bc-person-quote">“{selected.statement}”</p>
+          <p className="bc-person-row-meta">
+            发生：{selected.occurrence} · 记录{" "}
+            <time dateTime={selected.recordedAt}>
+              {recordedTime(selected.recordedAt, displayZone)}
+            </time>
+          </p>
+          {canEdit && page && !view.pagesDisagree ? (
+            <div className="bc-person-detail-actions">
+              <BodyFactAmendment
+                record={selected.record}
+                revision={page.current_revision}
+                onRefresh={() => void query.refetch()}
+                onCommitted={(message, committedRevision) => {
+                  if (ownerRef.current !== selected.record.user_id) return;
+                  // A correction/withdrawal also invalidates the old live
+                  // ledger snapshot; never display a revoked assertion while
+                  // its authoritative revision is still being fetched.
+                  setSavedRevision((prev) =>
+                    Math.max(prev ?? 0, committedRevision),
+                  );
+                  setNotice(message);
+                  setSelectedId(null);
+                  void queryClient.invalidateQueries({
+                    queryKey: ["workspace"],
+                  });
                 }}
-                disabled={saving}
-              >
-                {Object.entries(FACT_KINDS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <label>
-            你的描述
-            <textarea
-              value={statement}
-              onChange={(event) => setStatement(event.target.value)}
-              maxLength={2000}
-              rows={3}
-              disabled={saving}
-              required
-            />
-          </label>
-          <label>
-            发生时间<span className="bc-optional">可选，保留你的原话</span>
-            <input
-              value={when}
-              onChange={(event) => setWhen(event.target.value)}
-              maxLength={500}
-              placeholder="例如：昨天晚上；不清楚可以留空"
-              disabled={saving}
-            />
-          </label>
-          <div className="bc-record-actions">
-            <button
-              type="submit"
-              className="bc-button bc-primary"
-              disabled={saving || !statement.trim()}
-            >
-              {saving ? (
-                <LoaderCircle size={16} className="animate-spin" />
-              ) : null}
-              {saving ? "正在保存" : "保存记录"}
-            </button>
-            <button
-              type="button"
-              className="bc-button"
-              disabled={saving}
-              onClick={() => {
-                setAdding(false);
-                setSaveError(null);
-              }}
-            >
-              收起
-            </button>
-          </div>
-          {saveError ? (
-            <p role="alert" className="bc-error">
-              {saveError}
-            </p>
-          ) : null}
-        </form>
-      ) : null}
-      {erasing && canEdit ? (
-        <Suspense
-          fallback={
-            <p role="status" className="bc-person-loading">
-              <LoaderCircle size={16} className="animate-spin" />
-              正在打开删除
-            </p>
-          }
-        >
-          <StatementErasure
-            key={erasing.statementId}
-            target={erasing}
-            revision={page?.current_revision}
-            onClose={() => setErasing(null)}
-            onChanged={(message, committedRevision) => {
-              if (ownerRef.current !== erasing.ownerId) return;
-              if (committedRevision !== undefined)
-                setSavedRevision((prev) =>
-                  Math.max(prev ?? 0, committedRevision),
-                );
-              setNotice(message);
-              void queryClient.invalidateQueries({ queryKey: ["workspace"] });
-            }}
-          />
-        </Suspense>
-      ) : null}
-      <ul className="bc-record-list">
-        {(snapshotBehindCommit ? [] : view.records).map(
-          ({
-            id,
-            record,
-            label,
-            statement: statementText,
-            occurrence,
-            recordedAt,
-            isCorrection,
-          }) => (
-            <li key={id} className="bc-record-item">
-              <span className="bc-status">{label}</span>
-              <p className="bc-record-statement">{statementText}</p>
-              <p className="bc-window-note">发生时间：{occurrence}</p>
-              <time className="bc-window-note" dateTime={recordedAt}>
-                记录于 {recordedTime(recordedAt, displayZone)}
-              </time>
-              {isCorrection ? (
-                <span className="bc-window-note">更正后的陈述</span>
-              ) : null}
-              {canEdit && record.source_evidence_id && !erasing ? (
+              />
+              {selected.record.source_evidence_id ? (
                 <button
                   type="button"
-                  className="bc-text-button"
+                  className="bc-text-button bc-person-danger"
                   onClick={() => {
                     setNotice(null);
                     setErasing({
-                      recordId: record.id,
-                      statementId: record.source_evidence_id!,
-                      ownerId: record.user_id,
+                      recordId: selected.record.id,
+                      statementId: selected.record.source_evidence_id!,
+                      ownerId: selected.record.user_id,
                     });
                   }}
                 >
@@ -450,34 +515,205 @@ export function BodyFactRecords({
                   彻底删除
                 </button>
               ) : null}
-              {canEdit && page && !view.pagesDisagree ? (
-                <BodyFactAmendment
-                  record={record}
-                  revision={page.current_revision}
-                  onRefresh={() => void query.refetch()}
-                  onCommitted={(message, committedRevision) => {
-                    if (ownerRef.current !== record.user_id) return;
-                    // A correction/withdrawal also invalidates the old live
-                    // ledger snapshot; never display a revoked assertion while
-                    // its authoritative revision is still being fetched.
-                    setSavedRevision((prev) =>
-                      Math.max(prev ?? 0, committedRevision),
-                    );
-                    setNotice(message);
-                    void queryClient.invalidateQueries({
-                      queryKey: ["workspace"],
-                    });
-                  }}
-                />
-              ) : null}
-            </li>
-          ),
+            </div>
+          ) : null}
+        </div>
+        <footer className="bc-person-footer">
+          <button
+            type="button"
+            className="bc-person-footer-link"
+            onClick={() => setSelectedId(null)}
+          >
+            {habitsOnly ? "返回生活习惯" : "返回记录"}
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
+  const row = ({
+    id,
+    label,
+    statement: statementText,
+    occurrence,
+    recordedAt,
+    isCorrection,
+  }: (typeof rows)[number]) => (
+    <li key={id}>
+      <button
+        type="button"
+        className="bc-person-row"
+        data-habit={habitsOnly ? "true" : undefined}
+        aria-label={`查看记录：${statementText}`}
+        onClick={() => {
+          setSelectedId(id);
+          setNotice(null);
+          setAdding(false);
+        }}
+      >
+        {habitsOnly ? null : (
+          <span className="bc-person-row-kind">{label}</span>
         )}
-      </ul>
+        <span className="bc-person-row-main">
+          <span className="bc-record-statement">{statementText}</span>
+          <span className="bc-person-row-meta">
+            {occurrenceLine(occurrence, recordedAt)}
+          </span>
+        </span>
+        {isCorrection ? (
+          <span className="bc-person-chip">更正后的陈述</span>
+        ) : null}
+        <ChevronRight
+          size={17}
+          className="bc-person-row-chevron"
+          aria-hidden="true"
+        />
+      </button>
+    </li>
+  );
+
+  return (
+    <div
+      className="bc-person-category bc-person-records"
+      data-testid="body-fact-records"
+      data-vm-contract={boundedVM.contract}
+      data-vm-state={boundedVM.state}
+    >
+      {query.isPending ? (
+        <div className="bc-person-skeleton" aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((index) => (
+            <span key={index} />
+          ))}
+        </div>
+      ) : null}
+      {query.isPending ? (
+        <p role="status" className="bc-person-loading bc-person-loading-pill">
+          正在读取记录
+        </p>
+      ) : null}
+      {readFailed ? (
+        <div role="alert" className="bc-person-state" data-tone="danger">
+          <span className="bc-person-state-icon" aria-hidden="true">
+            <X size={18} />
+          </span>
+          <strong>记录没有读取出来</strong>
+          <span>
+            {notice
+              ? "记录已保存，但列表刷新失败。"
+              : "网络或服务暂时不可用，已有记录不会丢失"}
+          </span>
+          <button
+            type="button"
+            className="bc-icon-button"
+            aria-label="重新读取"
+            title="重新读取"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      ) : null}
+      {emptyState ? (
+        <div className="bc-person-state">
+          <span className="bc-person-state-icon" aria-hidden="true">
+            {habitsOnly ? <Repeat2 size={18} /> : <FileText size={18} />}
+          </span>
+          <strong>{habitsOnly ? "还没有生活习惯" : "还没有身体记录"}</strong>
+          <span>
+            {habitsOnly
+              ? "作息、久坐、饮食这些，在对话里说过就会整理到这里"
+              : "在对话里说一句身体感受，就会出现在这里"}
+          </span>
+          {canEdit ? (
+            <button
+              type="button"
+              className="bc-person-add"
+              aria-label="补充记录"
+              title="补充记录"
+              disabled={addDisabled}
+              onClick={openAdd}
+            >
+              <Plus size={17} />
+            </button>
+          ) : null}
+          {notice ? (
+            <p role="status" className="bc-record-saved">
+              <Check size={15} />
+              {notice}
+            </p>
+          ) : null}
+          {/* Episodes and the user's own hypotheses stay reachable with no
+              statements yet (the Episode editor records its own symptom). */}
+          {related ? (
+            <div className="bc-person-state-related">{related}</div>
+          ) : null}
+        </div>
+      ) : null}
+      {!query.isPending && !readFailed && !emptyState ? (
+        <>
+          <div className="bc-person-listbar">
+            <span className="bc-person-count">
+              {habitsOnly
+                ? `已加载 ${rows.length} 项`
+                : `已加载 ${rows.length} 条`}
+              {view.hasMore ? " · 还有更早记录" : ""}
+            </span>
+            {canEdit && !adding ? (
+              <button
+                type="button"
+                className="bc-person-add"
+                aria-label="补充记录"
+                title="补充记录"
+                disabled={addDisabled}
+                onClick={openAdd}
+              >
+                <Plus size={17} />
+              </button>
+            ) : null}
+          </div>
+          {related}
+          {feedback}
+        </>
+      ) : null}
+      {!query.isError &&
+      !snapshotBehindCommit &&
+      boundedVM.state === "partial_empty" ? (
+        <p className="bc-window-empty-text">
+          {habitsOnly
+            ? "当前加载的记录中没有生活习惯，可以继续读取更早的记录。"
+            : "当前加载的记录为空，可以继续读取更早的记录。"}
+        </p>
+      ) : null}
+      {addForm}
+      {erasure}
+      {habitsOnly ? (
+        rows.length ? (
+          <ul className="bc-person-timeline" aria-label="生活习惯">
+            {rows.map(row)}
+          </ul>
+        ) : null
+      ) : (
+        groupByRecordedDay(
+          rows,
+          (item) => item.recordedAt,
+          displayZone,
+          clock,
+        ).map((group) => (
+          <section
+            key={group.key}
+            className="bc-person-day"
+            aria-label={group.label}
+          >
+            <h4 className="bc-person-day-label">{group.label}</h4>
+            <ul className="bc-person-timeline">{group.items.map(row)}</ul>
+          </section>
+        ))
+      )}
       {query.hasNextPage ? (
         <button
           type="button"
-          className="bc-button"
+          className="bc-person-more"
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}
         >
