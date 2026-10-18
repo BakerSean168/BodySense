@@ -4863,6 +4863,44 @@ CREATE TABLE public.condition_relations (
     FOREIGN KEY (user_id,committed_revision)
         REFERENCES public.diagnosis_revisions(user_id,revision) DEFERRABLE INITIALLY DEFERRED
 );
+-- DX-003 direct user edit (diagnosis.md 3.5): a confirmed user withdrawal or
+-- non-substantive metadata correction of one entry, grounded in the owner's own
+-- request message. It never touches identity, assessment, sources, evidence or
+-- handling, and produces exactly one DiagnosisRevision with its receipt.
+ALTER TABLE public.diagnosis_revisions ADD CONSTRAINT diagnosis_revision_direct_edit_identity
+    UNIQUE (user_id, id, direct_edit_id, revision);
+CREATE TABLE public.condition_direct_edits (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    condition_id uuid NOT NULL,
+    edit_kind text NOT NULL CHECK (edit_kind IN ('correct_metadata','withdraw')),
+    changes jsonb NOT NULL CHECK (jsonb_typeof(changes)='array' AND jsonb_array_length(changes) > 0),
+    reason text NOT NULL CHECK (length(btrim(reason)) BETWEEN 1 AND 500),
+    request_message_id uuid NOT NULL,
+    request_evidence_id uuid NOT NULL,
+    request_source_version bigint NOT NULL CHECK (request_source_version > 0),
+    confirmation_tool_call_id text NOT NULL CHECK (length(confirmation_tool_call_id) BETWEEN 1 AND 256 AND confirmation_tool_call_id=btrim(confirmation_tool_call_id)),
+    based_on_diagnosis_revision bigint NOT NULL CHECK (based_on_diagnosis_revision >= 0),
+    resulting_diagnosis_revision bigint NOT NULL CHECK (resulting_diagnosis_revision = based_on_diagnosis_revision + 1),
+    diagnosis_revision_id uuid NOT NULL,
+    body_state_revision bigint NOT NULL CHECK (body_state_revision >= 0),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key=btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    receipt_id uuid NOT NULL UNIQUE,
+    confirmed_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id,id),
+    UNIQUE (user_id,idempotency_key),
+    UNIQUE (user_id,id,condition_id),
+    FOREIGN KEY (user_id,condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id,request_evidence_id,request_message_id,request_source_version)
+        REFERENCES public.statement_evidence(user_id,id,source_message_id,source_version) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (user_id,diagnosis_revision_id,id,resulting_diagnosis_revision)
+        REFERENCES public.diagnosis_revisions(user_id,id,direct_edit_id,revision) DEFERRABLE INITIALLY DEFERRED
+);
+ALTER TABLE public.diagnosis_revisions ADD CONSTRAINT diagnosis_revision_direct_edit_fk
+    FOREIGN KEY (user_id, direct_edit_id) REFERENCES public.condition_direct_edits(user_id, id) DEFERRABLE INITIALLY DEFERRED;
+CREATE TRIGGER condition_direct_edit_immutable BEFORE UPDATE ON public.condition_direct_edits
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
 CREATE TABLE public.condition_disposition_changes (
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     id uuid NOT NULL,
@@ -4873,14 +4911,19 @@ CREATE TABLE public.condition_disposition_changes (
     related_condition_id uuid,
     evidence_refs jsonb NOT NULL CHECK (jsonb_typeof(evidence_refs)='array'),
     details text NOT NULL,
-    decision_id uuid NOT NULL,
+    decision_id uuid,
     decision_kind text GENERATED ALWAYS AS ('accept'::text) STORED,
+    direct_edit_id uuid,
     committed_revision bigint NOT NULL CHECK (committed_revision > 0),
     changed_at timestamptz NOT NULL,
     PRIMARY KEY (user_id,id),
     UNIQUE (user_id,decision_id),
+    UNIQUE (user_id,direct_edit_id),
     CHECK (from_disposition <> to_disposition),
     CHECK ((to_disposition='adopted' AND reason='readopted') OR (to_disposition='inactive' AND reason <> 'readopted')),
+    CHECK ((decision_id IS NULL) <> (direct_edit_id IS NULL)),
+    CHECK (direct_edit_id IS NULL OR (to_disposition='inactive' AND reason='user_withdrawal')),
+    FOREIGN KEY (user_id,direct_edit_id,condition_id) REFERENCES public.condition_direct_edits(user_id,id,condition_id),
     FOREIGN KEY (user_id,condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
     FOREIGN KEY (user_id,related_condition_id) REFERENCES public.condition_entries(user_id,id),
     FOREIGN KEY (user_id,decision_id,decision_kind) REFERENCES public.diagnosis_decisions(user_id,id,decision) DEFERRABLE INITIALLY DEFERRED,

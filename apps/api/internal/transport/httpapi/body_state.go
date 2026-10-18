@@ -46,6 +46,7 @@ type PublicServer struct {
 	nativeDiagnosis            nativeDiagnosisReadApplication
 	nativeDiagnosisDecisions   nativeDiagnosisDecisionApplication
 	nativeDiagnosisSettlements nativeDiagnosisSettlementApplication
+	nativeDiagnosisDirectEdits nativeDiagnosisDirectEditApplication
 	nativeDiagnosisStarter     nativeDiagnosisStartApplication
 	diagnosisApplication       diagnosisApplication
 	diagnosisAnalyses          diagnosisAnalysisApplication

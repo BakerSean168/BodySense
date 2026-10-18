@@ -170,7 +170,8 @@ func nativeDiagnosisCommandError(err error) diagnosisHTTPErrorResponse {
 	switch {
 	case errors.Is(err, model.ErrDiagnosisNotFound), errors.Is(err, gorm.ErrRecordNotFound):
 		return diagnosisHTTPErrorResponse{status: 404, code: "NOT_FOUND", message: "diagnosis run or proposal not found"}
-	case errors.Is(err, service.ErrDiagnosisDecisionInvalid), errors.Is(err, service.ErrDiagnosisSettlementInvalid):
+	case errors.Is(err, service.ErrDiagnosisDecisionInvalid), errors.Is(err, service.ErrDiagnosisSettlementInvalid),
+		errors.Is(err, service.ErrDiagnosisDirectEditInvalid):
 		return diagnosisHTTPErrorResponse{status: 400, code: "INVALID_REQUEST", message: "invalid explicit diagnosis command"}
 	case errors.Is(err, service.ErrDiagnosisDecisionConflict), errors.Is(err, service.ErrDiagnosisAnalysisClosed),
 		errors.Is(err, service.ErrDiagnosisChoicesIncomplete), errors.Is(err, service.ErrDiagnosisRecheckRequired),

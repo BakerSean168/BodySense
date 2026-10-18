@@ -164,6 +164,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Explicit selection is not adoption; only the separately confirmed settlement mutates the Diagnosis head.
 	protected.POST("/diagnosis/analysis-runs/:runId/decisions", wrapper.DecideNativeDiagnosisProposal)
 	protected.POST("/diagnosis/analysis-runs/:runId/settlement", wrapper.SettleNativeDiagnosisRun)
+	protected.POST("/diagnosis/conditions/:conditionId/direct-edits", wrapper.DirectEditNativeDiagnosisCondition)
 	// Legacy per-run analysis, assessment and replay surfaces remain until their separate retirement slice.
 	protected.POST("/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
 	protected.GET("/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
