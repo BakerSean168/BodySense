@@ -3,6 +3,7 @@ import { useBusinessWindowFocus } from "../hooks/useBusinessWindowFocus";
 import { X } from "lucide-react";
 import {
   BUSINESS_WINDOW_LAYOUT,
+  DESKTOP_WINDOW_BOTTOM_RESERVE,
   desktopWindowOffset,
   getBusinessWindowMeta,
   type BusinessWindowId,
@@ -15,7 +16,9 @@ import {
  * floating window. Diagnosis and Training supply a compact business selector
  * in the header with a separate chat affordance; Person supplies its identity
  * popover trigger, and Chat supplies the local clock. All windows share Close,
- * the same scrollable content boundary, and viewport-clamped positioning.
+ * the same scrollable content boundary, and viewport-clamped positioning:
+ * on desktop each docks to its Penpot side (`data-dock`) so the body stays
+ * visible beside it.
  */
 
 export interface BusinessWindowHostProps {
@@ -65,6 +68,7 @@ export function BusinessWindowHost({
       ref={hostRef}
       className={mobile ? "bc-business-sheet" : "bc-business-window"}
       data-window={windowId}
+      data-dock={mobile ? undefined : layout.dock}
       data-active={isActive ? "true" : "false"}
       data-minimized={minimized ? "true" : "false"}
       data-hidden={mobile ? (minimized ? "true" : "false") : undefined}
@@ -81,6 +85,7 @@ export function BusinessWindowHost({
           "--bc-window-max-height": `${layout.maxHeight}px`,
           "--bc-window-left": `${offset.left}px`,
           "--bc-window-top": `${offset.top}px`,
+          "--bc-window-bottom": `${DESKTOP_WINDOW_BOTTOM_RESERVE}px`,
         } as React.CSSProperties
       }
     >
