@@ -9,6 +9,7 @@ const targets = [
   "assessment_reports",
   "decision_records",
   "runtime_checkpoints",
+  "source_message",
   "statement_manifest",
 ] as const;
 
@@ -26,7 +27,7 @@ function receipt(
     request_id: "00000000-0000-4000-8000-000000000001",
     statement_id: "00000000-0000-4000-8000-000000000002",
     status,
-    inventory_revision: "statement-erasure-inventory-v1",
+    inventory_revision: "statement-erasure-inventory-v2",
     requested_at: "2026-10-19T00:00:00Z",
     targets: targets.map((target) => ({
       target,
@@ -99,6 +100,42 @@ describe("projectStatementErasure", () => {
     expect(view.title).not.toBe("已彻底删除");
     expect(view.retained).toHaveLength(1);
     expect(view.outstanding).toHaveLength(0);
+  });
+
+  it("names a source chat message another record still cites", () => {
+    const view = projectStatementErasure(
+      receipt("erased_with_retention", {
+        source_message: {
+          state: "retained_by_policy",
+          retention_reason: "chat_record_cited",
+          outstanding_count: 1,
+        },
+      }),
+      record,
+    );
+    expect(view.phase).toBe("retained");
+    expect(view.retained).toEqual([
+      expect.objectContaining({
+        target: "source_message",
+        label: "陈述所在的聊天消息",
+        reason: expect.stringMatching(/仍被其他记录引用/),
+      }),
+    ]);
+  });
+
+  it("retries a source message whose conversation is still running", () => {
+    const view = projectStatementErasure(
+      receipt("outstanding", {
+        source_message: {
+          state: "failed",
+          failure_code: "source_message_busy",
+          outstanding_count: 1,
+        },
+      }),
+      record,
+    );
+    expect(view.phase).toBe("outstanding");
+    expect(view.outstanding[0].reason).toMatch(/自动重试/);
   });
 
   it("shows in progress and done", () => {

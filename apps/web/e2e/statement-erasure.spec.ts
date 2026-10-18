@@ -63,6 +63,7 @@ const targetNames = [
   "assessment_reports",
   "decision_records",
   "runtime_checkpoints",
+  "source_message",
   "statement_manifest",
 ];
 
@@ -87,7 +88,7 @@ function syntheticReceipt(
     request_id: crypto.randomUUID(),
     statement_id: statementId,
     status,
-    inventory_revision: "statement-erasure-inventory-v1",
+    inventory_revision: "statement-erasure-inventory-v2",
     requested_at: "2026-10-19T00:00:00Z",
     ...(status.startsWith("erased")
       ? { erased_at: "2026-10-19T00:01:00Z" }
@@ -231,7 +232,7 @@ test("statement erasure receipt shows in progress, retrying and policy-retained 
 
   await panel.getByRole("button", { name: "再次检查" }).click();
   await expect(panel).toHaveAttribute("data-phase", "retained");
-  await expect(panel.getByText("已删除，部分决策输入按政策保留")).toBeVisible();
+  await expect(panel.getByText("已删除，部分内容按政策保留")).toBeVisible();
   await expect(
     panel.getByText("按政策保留 · 冻结的诊断与计划决策输入"),
   ).toBeVisible();

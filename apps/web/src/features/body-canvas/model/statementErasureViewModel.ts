@@ -2,7 +2,8 @@ import type { StatementErasureReceipt } from "@/features/profile/services/statem
 
 /**
  * Receipt phases the user sees. `retained` is a finished erasure that keeps
- * frozen decision inputs by policy; it is never shown as a full erasure.
+ * something by policy (frozen decision inputs, a chat message another record
+ * cites); it is never shown as a full erasure.
  */
 export type StatementErasurePhase =
   "in_progress" | "outstanding" | "review" | "erased" | "retained";
@@ -39,6 +40,7 @@ export const STATEMENT_ERASURE_TARGET_LABELS: Record<string, string> = {
   assessment_reports: "评估报告副本",
   decision_records: "冻结的诊断与计划决策输入",
   runtime_checkpoints: "对话运行缓存",
+  source_message: "陈述所在的聊天消息",
   statement_manifest: "陈述原文",
 };
 
@@ -52,6 +54,7 @@ const FAILURE_REASONS: Record<string, string> = {
   runtime_thread_busy: "对话正在进行，空闲后会自动重试",
   runtime_unavailable: "对话运行服务暂不可用，稍后会自动重试",
   runtime_erasure_unverified: "对话缓存尚未验证清除，稍后会自动重试",
+  source_message_busy: "这条消息所在的对话还在进行，空闲后会自动重试",
   targets_outstanding: "等待其他项目完成后再删除",
   copy_reappeared: "发现新的副本，正在重新清除",
   execution_error: "处理时出错，稍后会自动重试",
@@ -60,6 +63,8 @@ const FAILURE_REASONS: Record<string, string> = {
 const RETENTION_REASONS: Record<string, string> = {
   replay_input_frozen:
     "为保证已作出的诊断和计划可按原样复核，冻结的决策输入不会被改写；注销账户时一并删除",
+  chat_record_cited:
+    "这条聊天消息仍被其他记录引用，作为对话记录保留；随聊天记录到期清理或注销账户时删除",
 };
 
 const REVIEW_LABELS: Record<string, string> = {
@@ -128,9 +133,9 @@ export function projectStatementErasure(
       return {
         ...base,
         phase: "retained",
-        title: "已删除，部分决策输入按政策保留",
+        title: "已删除，部分内容按政策保留",
         summary:
-          "陈述原文和其他副本已删除并验证；以下冻结的决策输入按政策保留，并非全部删除。",
+          "陈述原文和其他副本已删除并验证；以下内容按政策保留，并非全部删除。",
       };
     case "pending":
     case "running":
