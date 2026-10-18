@@ -7026,7 +7026,7 @@ components:
         outstanding_count: {type: integer, minimum: 0, description: Copies still present (or live work blocking erasure) at the last check.}
         failure_code:
           type: string
-          enum: [storage_unavailable, object_delete_failed, object_still_present, derived_work_active, diagnosis_evidence_pinned, diagnosis_review_required, assessment_replay_frozen, runtime_erasure_hook_pending, targets_outstanding, copy_reappeared, execution_error]
+          enum: [storage_unavailable, object_delete_failed, object_still_present, derived_work_active, diagnosis_evidence_pinned, diagnosis_review_required, assessment_replay_frozen, runtime_thread_busy, runtime_unavailable, runtime_erasure_unverified, targets_outstanding, copy_reappeared, execution_error]
         verified_at: {type: string, format: date-time}
     AssetErasureReceipt:
       type: object

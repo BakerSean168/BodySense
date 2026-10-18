@@ -20,6 +20,7 @@ type assetErasureStore interface {
 	Release(ctx context.Context, request *model.AssetErasureRequest) error
 	RecordOutcome(ctx context.Context, request *model.AssetErasureRequest, target model.AssetErasureTargetName, outcome model.AssetErasureOutcome) error
 	ExecuteDatabaseTarget(ctx context.Context, request *model.AssetErasureRequest, target model.AssetErasureTargetName) (model.AssetErasureOutcome, error)
+	RuntimeScope(ctx context.Context, userID, assetID uuid.UUID) (model.AssetRuntimeScope, error)
 	Finalize(ctx context.Context, request *model.AssetErasureRequest) (bool, error)
 	ListRecoverable(ctx context.Context, retryAfter time.Duration, limit int) ([]uuid.UUID, error)
 }
@@ -30,6 +31,15 @@ type assetSourceEraser interface {
 	EraseSourceCopies(ctx context.Context, userID, assetID uuid.UUID) (model.AssetErasureOutcome, error)
 }
 
+// AssetRuntimeEraser erases one asset from the owner's consultation runtime
+// state (LangGraph checkpoints) and returns a receipt read back from storage.
+type AssetRuntimeEraser interface {
+	EraseAssetRuntimeCopies(ctx context.Context, userID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error)
+}
+
+// assetRuntimeErasureTimeout bounds one runtime erasure call inside a pass.
+const assetRuntimeErasureTimeout = 2 * time.Minute
+
 // AssetErasureService runs the AS-002 per-asset erasure: unlike source
 // removal it goes after every inventoried controlled copy, verifies each
 // target on its own and reports the asset erased only after all verified.
@@ -38,6 +48,7 @@ type assetSourceEraser interface {
 type AssetErasureService struct {
 	store      assetErasureStore
 	sources    assetSourceEraser
+	runtime    AssetRuntimeEraser
 	workerID   string
 	lease      time.Duration
 	retryAfter time.Duration
@@ -52,6 +63,13 @@ func NewAssetErasureService(store assetErasureStore, sources assetSourceEraser) 
 		lease:      5 * time.Minute,
 		retryAfter: time.Minute,
 	}
+}
+
+// WithRuntimeEraser wires the ai-service runtime erasure. Without it the
+// runtime target of an owner who has conversations stays outstanding.
+func (s *AssetErasureService) WithRuntimeEraser(runtime AssetRuntimeEraser) *AssetErasureService {
+	s.runtime = runtime
+	return s
 }
 
 // Request admits the erasure command (or repeats it) and runs one pass now.
@@ -90,9 +108,12 @@ func (s *AssetErasureService) Process(ctx context.Context, requestID uuid.UUID) 
 		}
 		var outcome model.AssetErasureOutcome
 		var err error
-		if target == model.AssetErasureSourceObjects {
+		switch target {
+		case model.AssetErasureSourceObjects:
 			outcome, err = s.sources.EraseSourceCopies(ctx, request.UserID, request.AssetID)
-		} else {
+		case model.AssetErasureRuntimeCheckpoints:
+			outcome, err = s.eraseRuntimeCopies(ctx, request)
+		default:
 			outcome, err = s.store.ExecuteDatabaseTarget(ctx, request, target)
 		}
 		if err != nil {
@@ -113,6 +134,34 @@ func (s *AssetErasureService) Process(ctx context.Context, requestID uuid.UUID) 
 		}
 	}
 	return passErr
+}
+
+// eraseRuntimeCopies is the runtime_checkpoints target: the ai-service
+// erases the asset from every conversation of the owner and the target
+// verifies only on a receipt that covers all of them.
+func (s *AssetErasureService) eraseRuntimeCopies(ctx context.Context, request *model.AssetErasureRequest) (model.AssetErasureOutcome, error) {
+	scope, err := s.store.RuntimeScope(ctx, request.UserID, request.AssetID)
+	if err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if len(scope.ThreadIDs) == 0 {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}, nil
+	}
+	if len(scope.ContentSHA256) != 64 {
+		return model.AssetErasureOutcome{}, errors.New("asset content hash is missing")
+	}
+	unavailable := model.AssetErasureOutcome{State: model.AssetErasureTargetFailed, Outstanding: len(scope.ThreadIDs), FailureCode: model.AssetErasureCodeRuntimeUnavailable}
+	if s.runtime == nil {
+		return unavailable, nil
+	}
+	callCtx, cancel := context.WithTimeout(ctx, assetRuntimeErasureTimeout)
+	defer cancel()
+	receipt, err := s.runtime.EraseAssetRuntimeCopies(callCtx, request.UserID, request.AssetID, scope)
+	if err != nil {
+		log.Printf("asset erasure %s runtime copies: %v", request.ID, err)
+		return unavailable, nil
+	}
+	return scope.Outcome(request.AssetID, receipt), nil
 }
 
 // Recover retries recoverable requests once.

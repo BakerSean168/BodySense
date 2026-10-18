@@ -40,7 +40,9 @@ const (
 	// AssetErasureDiagnosisRecords is Diagnosis audit/projection rows naming the asset or its reviews.
 	AssetErasureDiagnosisRecords AssetErasureTargetName = "diagnosis_records"
 	// AssetErasureRuntimeCheckpoints is consultation runtime state (LangGraph
-	// checkpoints) of conversations the asset was attached to as an image.
+	// checkpoints, writes and blobs) of the owner's conversations: the inline
+	// image of a turn that attached the asset and any derived copy naming it.
+	// The ai-service erases and verifies it (POST /runtime/assets/{id}/erasure).
 	AssetErasureRuntimeCheckpoints AssetErasureTargetName = "runtime_checkpoints"
 	// AssetErasureManifest is the asset row itself, tombstoned last.
 	AssetErasureManifest AssetErasureTargetName = "asset_manifest"
@@ -85,7 +87,14 @@ const (
 	AssetErasureCodeDiagnosisPinned    = "diagnosis_evidence_pinned"
 	AssetErasureCodeDiagnosisReview    = "diagnosis_review_required"
 	AssetErasureCodeAssessmentFrozen   = "assessment_replay_frozen"
-	AssetErasureCodeRuntimeHookPending = "runtime_erasure_hook_pending"
+	// AssetErasureCodeRuntimeThreadBusy: a conversation is mid-turn or waiting
+	// on an Ask User answer; its runtime state is left untouched and retried.
+	AssetErasureCodeRuntimeThreadBusy = "runtime_thread_busy"
+	// AssetErasureCodeRuntimeUnavailable: no runtime receipt was obtained.
+	AssetErasureCodeRuntimeUnavailable = "runtime_unavailable"
+	// AssetErasureCodeRuntimeUnverified: the runtime receipt did not prove
+	// every conversation clean (conflict, survivor, or a receipt mismatch).
+	AssetErasureCodeRuntimeUnverified  = "runtime_erasure_unverified"
 	AssetErasureCodeTargetsOutstanding = "targets_outstanding"
 	AssetErasureCodeCopyReappeared     = "copy_reappeared"
 	AssetErasureCodeExecutionError     = "execution_error"
@@ -153,4 +162,73 @@ type AssetErasureOutcome struct {
 	Erased      int
 	Outstanding int
 	FailureCode string
+}
+
+// AssetRuntimeScope is what the runtime target asks the ai-service to erase:
+// every consultation thread (= Conversation) of the owner, the subset a
+// message attached the asset to, and the content hash that recognises the
+// asset's inline image copies.
+type AssetRuntimeScope struct {
+	ThreadIDs         []uuid.UUID
+	AttachedThreadIDs []uuid.UUID
+	ContentSHA256     string
+}
+
+// AssetRuntimeErasureReceipt is the ai-service answer, read back from
+// checkpoint storage.
+type AssetRuntimeErasureReceipt struct {
+	Status  string                      `json:"status"`
+	AssetID string                      `json:"asset_id"`
+	Threads []AssetRuntimeThreadReceipt `json:"threads"`
+}
+
+// AssetRuntimeThreadReceipt is one thread's result: absent (never held the
+// asset), erased (rewritten, compacted and verified) or outstanding.
+type AssetRuntimeThreadReceipt struct {
+	ThreadID           string  `json:"thread_id"`
+	Status             string  `json:"status"`
+	CheckpointID       *string `json:"checkpoint_id"`
+	RedactedRefs       int     `json:"redacted_refs"`
+	DeletedCheckpoints int     `json:"deleted_checkpoints"`
+	FailureCode        *string `json:"failure_code"`
+}
+
+// Outcome turns a runtime receipt into the target outcome. It verifies only
+// a receipt for this asset that reports every requested thread absent or
+// erased; anything else stays outstanding and is retried.
+func (s AssetRuntimeScope) Outcome(assetID uuid.UUID, receipt *AssetRuntimeErasureReceipt) AssetErasureOutcome {
+	unverified := AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: max(len(s.ThreadIDs), 1), FailureCode: AssetErasureCodeRuntimeUnverified}
+	if receipt == nil || receipt.AssetID != assetID.String() {
+		return unverified
+	}
+	byThread := make(map[string]AssetRuntimeThreadReceipt, len(receipt.Threads))
+	for _, thread := range receipt.Threads {
+		byThread[thread.ThreadID] = thread
+	}
+	erased, outstanding, busy := 0, 0, 0
+	for _, id := range s.ThreadIDs {
+		thread, ok := byThread[id.String()]
+		switch {
+		case !ok:
+			outstanding++
+		case thread.Status == "absent":
+		case thread.Status == "erased":
+			erased += thread.RedactedRefs + thread.DeletedCheckpoints
+		default:
+			outstanding++
+			if thread.FailureCode != nil && *thread.FailureCode == "thread_busy" {
+				busy++
+			}
+		}
+	}
+	switch {
+	case outstanding == 0 && receipt.Status == "erased":
+		return AssetErasureOutcome{State: AssetErasureTargetVerified, Erased: erased}
+	case outstanding == 0:
+		return unverified
+	case busy == outstanding:
+		return AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: outstanding, FailureCode: AssetErasureCodeRuntimeThreadBusy}
+	default:
+		return AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: outstanding, FailureCode: AssetErasureCodeRuntimeUnverified}
+	}
 }
