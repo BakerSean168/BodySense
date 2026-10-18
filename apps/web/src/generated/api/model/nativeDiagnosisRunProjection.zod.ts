@@ -7,6 +7,7 @@
  */
 import * as zod from 'zod/mini';
 import { NativeDiagnosisDecisionEvidence } from './nativeDiagnosisDecisionEvidence.zod';
+import { NativeDiagnosisFreshness } from './nativeDiagnosisFreshness.zod';
 import { NativeDiagnosisRunEvent } from './nativeDiagnosisRunEvent.zod';
 import { NativeDiagnosisRunHypothesis } from './nativeDiagnosisRunHypothesis.zod';
 import { NativeDiagnosisRunProposal } from './nativeDiagnosisRunProposal.zod';
@@ -41,7 +42,8 @@ export const NativeDiagnosisRunProjection = /*#__PURE__*/ zod.strictObject({
   "agentHypotheses": /*#__PURE__*/ zod.array(NativeDiagnosisRunHypothesis),
   "proposals": /*#__PURE__*/ zod.array(NativeDiagnosisRunProposal),
   "events": /*#__PURE__*/ zod.array(NativeDiagnosisRunEvent),
-  "settlement": /*#__PURE__*/ zod.optional(NativeDiagnosisRunSettlement)
+  "settlement": /*#__PURE__*/ zod.optional(NativeDiagnosisRunSettlement),
+  "freshness": /*#__PURE__*/ zod.optional(NativeDiagnosisFreshness)
 });
 
 export type NativeDiagnosisRunProjection = zod.input<typeof NativeDiagnosisRunProjection>;

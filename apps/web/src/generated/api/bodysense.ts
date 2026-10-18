@@ -2919,7 +2919,7 @@ export const getGetNativeDiagnosisUrl = () => {
 }
 
 /**
- * Does not create an aggregate or treat undecided Agent proposals as adopted Conditions.
+ * Does not create an aggregate or treat undecided Agent proposals as adopted Conditions. Every Condition carries its derived freshness; the read fails closed (503) rather than present a Condition whose freshness could not be evaluated.
  * @summary Read the authenticated user's single committed Diagnosis aggregate.
  */
 export const getNativeDiagnosis = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisProjectionOutput> => {
@@ -3060,7 +3060,7 @@ export const getGetNativeDiagnosisRunUrl = (runId: string,) => {
 }
 
 /**
- * Uses one read-only repeatable-read snapshot; presented contentFingerprint and baseRevision are for explicit user choice, not an Agent adoption. A read never substitutes for settlement-time Safety and source validation.
+ * Uses one read-only repeatable-read snapshot; presented contentFingerprint and baseRevision are for explicit user choice, not an Agent adoption. A read never substitutes for settlement-time Safety and source validation. An open run carries its derived freshness (stale once its base Diagnosis revision or a cited source changed); it is a signal, never a settlement.
  * @summary Read immutable formal run, exact proposed content and user decision state.
  */
 export const getNativeDiagnosisRun = async (runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisRunProjectionOutput> => {

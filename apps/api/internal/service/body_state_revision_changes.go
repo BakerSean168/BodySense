@@ -35,6 +35,8 @@ type bodyStateChange struct {
 	FactIDs []string
 	// TargetID is the corrected/withdrawn fact or observation.
 	TargetID string
+	// EpisodeIDs are the episodes an episode command touched.
+	EpisodeIDs []string
 }
 
 // BodyStateFactRef is the policy-relevant projection of one V2 fact.
@@ -56,6 +58,9 @@ type bodyStateRevisionMetadata struct {
 	TargetObservationID string   `json:"target_observation_id"`
 	FactID              string   `json:"fact_id"`
 	BasisFactID         string   `json:"basis_fact_id"`
+	EpisodeID           string   `json:"episode_id"`
+	FromEpisodeID       string   `json:"from_episode_id"`
+	ToEpisodeID         string   `json:"to_episode_id"`
 }
 
 // decodeBodyStateChange classifies one revision. Legacy change types
@@ -86,6 +91,11 @@ func decodeBodyStateChange(revision model.BodyStateRevision) bodyStateChange {
 		for _, id := range []string{metadata.FactID, metadata.BasisFactID} {
 			if id != "" {
 				change.FactIDs = append(change.FactIDs, id)
+			}
+		}
+		for _, id := range []string{metadata.EpisodeID, metadata.FromEpisodeID, metadata.ToEpisodeID} {
+			if id != "" {
+				change.EpisodeIDs = append(change.EpisodeIDs, id)
 			}
 		}
 	}

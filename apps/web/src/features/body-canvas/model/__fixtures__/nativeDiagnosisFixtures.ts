@@ -55,6 +55,13 @@ export function makeCondition(
     committedRevision: 2,
     createdAt: AT,
     updatedAt: AT,
+    freshness: {
+      state: "current",
+      basedOnBodyStateRevision: 1,
+      evaluatedBodyStateRevision: 1,
+      evaluatedDiagnosisRevision: 2,
+      reasons: [],
+    },
     ...overrides,
   };
 }

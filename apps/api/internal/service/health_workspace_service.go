@@ -142,7 +142,11 @@ func (s *HealthWorkspaceService) Get(
 // only creates a pending PlanProposal and mirrors the Treatment gate: at least
 // one adopted native Condition and complete Safety coverage. Execution needs an
 // active TrainingPlan and complete Safety coverage. Diagnosis review is owed
-// while the newest native analysis run is still open for the user's decisions.
+// while the newest native analysis run is still open for the user's decisions
+// or an adopted Condition is stale (its derived freshness, when the reviewed
+// reader supplied one); a stale adopted Condition also blocks generation,
+// mirroring the Treatment DIAGNOSIS_STALE gate. review_recommended is a
+// dismissible prompt on the Condition itself and owes nothing here.
 func deriveWorkspaceCapabilities(
 	snapshot *BodyStateReadModel,
 	diagnosis *NativeDiagnosisView,
@@ -159,12 +163,17 @@ func deriveWorkspaceCapabilities(
 	}
 	trainingSafetyIncomplete := requiresSafety || !envelope.Coverage.Complete
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
-	diagnosisReview := latestRun != nil && latestRun.State == "open"
 	hasDiagnosis := (diagnosis != nil && diagnosis.CurrentRevision > 0) || latestRun != nil
 	adoptedConditions := 0
+	staleAdopted := false
 	if diagnosis != nil {
-		adoptedConditions = len(adoptedTreatmentDiagnosis(diagnosis).ConditionEntries)
+		adopted := adoptedTreatmentDiagnosis(diagnosis).ConditionEntries
+		adoptedConditions = len(adopted)
+		for _, condition := range adopted {
+			staleAdopted = staleAdopted || condition.Freshness.Stale()
+		}
 	}
+	diagnosisReview := (latestRun != nil && latestRun.State == "open") || staleAdopted
 	diagnosisEligible := treatmentDiagnosisFactsReady(TreatmentDecisionFacts{
 		DiagnosisRevision: diagnosisRevision(diagnosis), AdoptedConditionCount: adoptedConditions,
 	})
@@ -174,7 +183,7 @@ func deriveWorkspaceCapabilities(
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !diagnosisBlocked,
 		CanReviewDiagnosis:      hasDiagnosis,
-		CanGenerateTreatment:    diagnosisEligible && !trainingSafetyIncomplete,
+		CanGenerateTreatment:    diagnosisEligible && !staleAdopted && !trainingSafetyIncomplete,
 		CanExecuteTreatment:     activePlan && !trainingSafetyIncomplete,
 		CanRecordOutcome:        activePlan,
 		RequiresSafetyReview:    requiresSafety,
@@ -204,7 +213,7 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 		add("review_safety", 100, true, "存在需要优先审核的安全状态。", map[string]any{"section": "safety"})
 	}
 	if caps.RequiresDiagnosisReview {
-		add("review_diagnosis", 85, true, "最新一次 Diagnosis 分析有待你确认的变更。", map[string]any{"section": "diagnosis"})
+		add("review_diagnosis", 85, true, "Diagnosis 有待你确认的分析变更，或已采纳的条件所依据的资料已变化。", map[string]any{"section": "diagnosis"})
 	}
 	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
 		add("open_training", 75, true, "当前训练计划可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})

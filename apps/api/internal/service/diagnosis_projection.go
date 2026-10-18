@@ -46,6 +46,9 @@ type NativeDiagnosisCondition struct {
 	CommittedRevision int64                           `json:"committedRevision"`
 	CreatedAt         time.Time                       `json:"createdAt"`
 	UpdatedAt         time.Time                       `json:"updatedAt"`
+	// Freshness is set only by ReviewedNativeDiagnosisReader. It is derived
+	// on every read and never persisted or sent to an Agent.
+	Freshness *DiagnosisFreshness `json:"freshness,omitempty"`
 }
 type NativeDiagnosisEvidenceLink struct {
 	EvidenceType    model.DiagnosisEvidenceType `json:"evidenceType"`
@@ -121,6 +124,45 @@ func (s *NativeDiagnosisReadService) Read(ctx context.Context, owner uuid.UUID) 
 			})
 		}
 		view.ConditionEntries = append(view.ConditionEntries, entry)
+	}
+	return view, nil
+}
+
+type diagnosisConditionFreshnessEvaluator interface {
+	EvaluateConditions(context.Context, uuid.UUID, *NativeDiagnosisView) (map[uuid.UUID]DiagnosisFreshness, error)
+}
+
+// ReviewedNativeDiagnosisReader is the user-facing Diagnosis read: the
+// committed projection plus each Condition's derived freshness. It fails
+// closed: a Condition is never presented without an evaluated freshness. The
+// Agent-facing readers keep using NativeDiagnosisReadService directly.
+type ReviewedNativeDiagnosisReader struct {
+	reader    *NativeDiagnosisReadService
+	freshness diagnosisConditionFreshnessEvaluator
+}
+
+func NewReviewedNativeDiagnosisReader(reader *NativeDiagnosisReadService, freshness diagnosisConditionFreshnessEvaluator) *ReviewedNativeDiagnosisReader {
+	return &ReviewedNativeDiagnosisReader{reader: reader, freshness: freshness}
+}
+
+func (r *ReviewedNativeDiagnosisReader) Read(ctx context.Context, owner uuid.UUID) (*NativeDiagnosisView, error) {
+	if r == nil || r.reader == nil || r.freshness == nil {
+		return nil, errors.New("reviewed diagnosis read is not configured")
+	}
+	view, err := r.reader.Read(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+	report, err := r.freshness.EvaluateConditions(ctx, owner, view)
+	if err != nil {
+		return nil, err
+	}
+	for i := range view.ConditionEntries {
+		freshness, ok := report[view.ConditionEntries[i].ConditionID]
+		if !ok {
+			return nil, errors.New("diagnosis condition freshness missing")
+		}
+		view.ConditionEntries[i].Freshness = &freshness
 	}
 	return view, nil
 }

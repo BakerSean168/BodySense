@@ -34,7 +34,8 @@ func (s *PublicServer) GetNativeDiagnosis(ctx context.Context, _ openapiv1.GetNa
 	}
 	for _, condition := range view.ConditionEntries {
 		if condition.ConditionID == uuid.Nil || condition.CommittedRevision <= 0 || condition.CommittedRevision > view.CurrentRevision ||
-			condition.LatestDecisionID == uuid.Nil || condition.MedicalName == "" {
+			condition.LatestDecisionID == uuid.Nil || condition.MedicalName == "" ||
+			condition.Freshness == nil || condition.Freshness.EvaluatedDiagnosisRevision != view.CurrentRevision {
 			return diagnosisHTTPErrorResponse{status: http.StatusServiceUnavailable, code: "DIAGNOSIS_UNAVAILABLE", message: "diagnosis projection inconsistent"}, nil
 		}
 	}

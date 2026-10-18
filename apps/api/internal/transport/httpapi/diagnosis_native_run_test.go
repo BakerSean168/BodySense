@@ -91,6 +91,14 @@ func TestNativeDiagnosisRunHTTPProjectionExactProposalAndOwner(t *testing.T) {
 			CounterEvidenceRefs: []model.DiagnosisEvidenceRef{}, CreatedAt: now, State: "pending",
 		}},
 	}}
+	changedCondition, changedAt := uuid.New(), int64(1)
+	fake.read.Freshness = &service.DiagnosisFreshness{
+		State: service.DiagnosisFreshnessStale, BasedOnBodyStateRevision: 2, EvaluatedBodyStateRevision: 2, EvaluatedDiagnosisRevision: 1,
+		Reasons: []service.DiagnosisFreshnessReason{
+			{Code: "diagnosis_revision_changed", DiagnosisRevision: &changedAt},
+			{Code: "condition_changed", ConditionID: &changedCondition, DiagnosisRevision: &changedAt},
+		},
+	}
 	router := nativeRunRoute(t, owner, fake)
 	r := nativeRunGET(t, router, "/api/v1/diagnosis/analysis-runs/"+run.String())
 	if r.Code != 200 {
@@ -108,6 +116,11 @@ func TestNativeDiagnosisRunHTTPProjectionExactProposalAndOwner(t *testing.T) {
 	if result["runId"] != run.String() || result["state"] != "open" || got["proposalId"] != proposal.String() ||
 		got["contentFingerprint"] != fingerprint || got["baseRevision"] != float64(0) || got["state"] != "pending" {
 		t.Fatalf("missing authentic explicit-choice fields: %#v", result)
+	}
+	freshness, _ := result["freshness"].(map[string]any)
+	reasons, _ := freshness["reasons"].([]any)
+	if freshness["state"] != "stale" || len(reasons) != 2 || reasons[1].(map[string]any)["conditionId"] != changedCondition.String() {
+		t.Fatalf("open run freshness not projected: %#v", result["freshness"])
 	}
 	for _, secret := range [][]byte{[]byte("executionProvenance"), []byte("replayInput"), []byte("idempotencyKey"),
 		[]byte(`"user_id"`), []byte(`"ownerId"`)} {
