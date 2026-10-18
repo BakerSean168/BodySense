@@ -1754,6 +1754,48 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/conditions/{conditionId}/direct-edits:
+    post:
+      operationId: directEditNativeDiagnosisCondition
+      summary: Apply the authenticated user's confirmed withdrawal or display-note correction of one committed Condition.
+      description: >
+        Lightweight direct edit (no formal analysis): withdraw sets the entry's disposition to
+        inactive with reason user_withdrawal; correct_metadata replaces only qualifiers.notes.
+        Medical identity, AI assessment, sources, evidence and handling can only change through a
+        formal analysis run. The edit must cite the user's own available request statement and the
+        current Diagnosis revision; it produces exactly one DiagnosisRevision and receipt, makes any
+        older open run stale, and is refused without change under urgent or unavailable Safety.
+        Retrying an idempotencyKey returns the original receipt.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: conditionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisDirectEditRequest'}
+      responses:
+        '200':
+          description: Committed direct edit receipt (or idempotent replay of it).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisDirectEditReceipt'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/diagnosis-analyses:
     get:
       operationId: listDiagnosisAnalyses
@@ -5185,6 +5227,57 @@ components:
         toolCallId: {type: string, minLength: 1}
         receiptId: {type: string, format: uuid}
         settledAt: {type: string, format: date-time}
+    NativeDiagnosisDirectEditRequest:
+      type: object
+      additionalProperties: false
+      required: [editKind, requestEvidenceId, expectedRevision, reason, toolCallId, idempotencyKey]
+      properties:
+        editKind: {type: string, enum: [withdraw, correct_metadata]}
+        requestEvidenceId:
+          type: string
+          format: uuid
+          description: The user's own available versioned request statement (statement evidence).
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        reason: {type: string, minLength: 1, maxLength: 500, pattern: '^\S(?:[\s\S]*\S)?$'}
+        metadata:
+          type: object
+          additionalProperties: false
+          required: [notes]
+          description: Required for correct_metadata and forbidden for withdraw. An empty note clears it.
+          properties:
+            notes: {type: string, maxLength: 1000, pattern: '^(?:\S(?:[\s\S]*\S)?)?$'}
+        toolCallId: {type: string, minLength: 1, maxLength: 256, pattern: '^\S(?:.*\S)?$'}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    NativeDiagnosisDirectEditReceipt:
+      type: object
+      additionalProperties: false
+      required: [editId, conditionId, editKind, changes, reason, requestEvidenceId, requestMessageId, expectedRevision, revision, diagnosisRevisionId, bodyStateRevision, toolCallId, idempotencyKey, receiptId, confirmedAt]
+      properties:
+        editId: {type: string, format: uuid}
+        conditionId: {type: string, format: uuid}
+        editKind: {type: string, enum: [withdraw, correct_metadata]}
+        changes:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, before, after]
+            properties:
+              field: {type: string, enum: [disposition, qualifiers.notes]}
+              before: {type: string}
+              after: {type: string}
+        reason: {type: string, minLength: 1}
+        requestEvidenceId: {type: string, format: uuid}
+        requestMessageId: {type: string, format: uuid}
+        expectedRevision: {type: integer, format: int64, minimum: 0}
+        revision: {type: integer, format: int64, minimum: 1}
+        diagnosisRevisionId: {type: string, format: uuid}
+        bodyStateRevision: {type: integer, format: int64, minimum: 0}
+        toolCallId: {type: string, minLength: 1}
+        idempotencyKey: {type: string, minLength: 1}
+        receiptId: {type: string, format: uuid}
+        confirmedAt: {type: string, format: date-time}
     NativeDiagnosisProjection:
       type: object
       additionalProperties: false
