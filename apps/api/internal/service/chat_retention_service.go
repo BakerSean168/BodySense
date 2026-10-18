@@ -74,10 +74,16 @@ type ChatRetentionService struct {
 	jobs    *JobRuntime
 	// budget is the context window token budget (model.ChatContextTokenBudget).
 	budget int
+	// wake lets EnqueuePrune start the worker's next pass now instead of at
+	// the next poll; the poll still recovers anything a wake-up missed.
+	wake chan struct{}
 }
 
 func NewChatRetentionService(repo *repository.ChatRetentionRepository, cleaner CheckpointCleaner, jobs *JobRuntime) *ChatRetentionService {
-	return &ChatRetentionService{repo: repo, cleaner: cleaner, jobs: jobs, budget: model.DefaultChatContextTokenBudget}
+	return &ChatRetentionService{
+		repo: repo, cleaner: cleaner, jobs: jobs, budget: model.DefaultChatContextTokenBudget,
+		wake: make(chan struct{}, 1),
+	}
 }
 
 // WithContextTokenBudget sets the context window budget; values below
@@ -126,6 +132,22 @@ func (s *ChatRetentionService) OnRunSettled(ctx context.Context, owner uuid.UUID
 	}
 }
 
+// OnConversationSettled is OnRunSettled for callers that only know the
+// Conversation, such as the Ask User expiry worker: an expired or cancelled
+// interaction was what kept its Run unsettled, so the window may move now.
+func (s *ChatRetentionService) OnConversationSettled(ctx context.Context, conversationID uuid.UUID) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	owner, err := s.repo.OwnerOf(ctx, conversationID)
+	if err != nil {
+		if !errors.Is(err, model.ErrRetentionNotFound) {
+			log.Printf("chat retention owner of conversation %s: %v", conversationID, err)
+		}
+		return
+	}
+	s.OnRunSettled(ctx, owner)
+}
+
 // ContextWindow is the raw-history window the AI runtime may read.
 func (s *ChatRetentionService) ContextWindow(ctx context.Context, owner, conversationID uuid.UUID) (*model.ChatContextWindow, error) {
 	return s.repo.ContextWindow(ctx, owner, conversationID)
@@ -170,11 +192,17 @@ func (s *ChatRetentionService) EnqueuePrune(ctx context.Context, owner uuid.UUID
 	job, _, err := s.jobs.CreateJobWithIdempotencyAttempts(ctx, owner, model.ChatRetentionPruneJobType,
 		datatypes.JSON(input), repository.PruneJobKey(conversationID, cursor.PrunedThroughSeq, trigger),
 		ChatRetentionPruneMaxAttempts, nil, &conversationID)
+	if err == nil && job != nil && job.Status == model.JobStatusPending {
+		select {
+		case s.wake <- struct{}{}:
+		default:
+		}
+	}
 	return job, err
 }
 
-// StartPruneWorker polls for pending prune jobs (and running ones whose
-// worker died) until ctx ends.
+// StartPruneWorker runs pending prune jobs (and running ones whose worker
+// died) until ctx ends: at once when a prune is enqueued, and on every poll.
 func (s *ChatRetentionService) StartPruneWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
 	go func() {
 		ticker := time.NewTicker(pollInterval)
@@ -187,6 +215,7 @@ func (s *ChatRetentionService) StartPruneWorker(ctx context.Context, pollInterva
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+			case <-s.wake:
 			}
 		}
 	}()

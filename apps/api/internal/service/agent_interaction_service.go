@@ -33,6 +33,14 @@ type AgentInteractionService struct {
 	conversationRepo conversationOwnershipChecker
 	transactions     interactionTransactionManager
 	lifecycleEvents  interactionLifecycleEventStore
+	settle           interactionSettleTrigger
+}
+
+// interactionSettleTrigger is the chat retention settle trigger (PC-RET-001).
+// An Ask User that closes without an answer (expired or cancelled) is what a
+// pending interaction was holding back, so closing it lets retention move.
+type interactionSettleTrigger interface {
+	OnConversationSettled(ctx context.Context, conversationID uuid.UUID)
 }
 
 type agentInteractionRepo interface {
@@ -84,6 +92,20 @@ func NewAgentInteractionService(
 func (s *AgentInteractionService) WithLifecycleEvents(events interactionLifecycleEventStore) *AgentInteractionService {
 	s.lifecycleEvents = events
 	return s
+}
+
+// WithRetentionSettle wires the chat retention settle trigger. It fires after
+// an expiry or cancellation committed, never inside its transaction.
+func (s *AgentInteractionService) WithRetentionSettle(trigger interactionSettleTrigger) *AgentInteractionService {
+	s.settle = trigger
+	return s
+}
+
+// settled tells retention that an interaction stopped waiting for the user.
+func (s *AgentInteractionService) settled(ctx context.Context, interaction model.AgentInteraction) {
+	if s.settle != nil {
+		s.settle.OnConversationSettled(ctx, interaction.ConversationID)
+	}
 }
 
 // CreatePendingInteraction creates a pending interaction from an ask_user event.
@@ -240,8 +262,10 @@ func (s *AgentInteractionService) ResumeInteraction(
 	}
 	// Soft-expire if the TTL elapsed but the sweeper has not yet run.
 	if interaction.ExpiresAt != nil && !interaction.ExpiresAt.After(time.Now().UTC()) {
-		if _, expErr := s.repo.ExpirePending(ctx, interactionID); expErr != nil {
+		if won, expErr := s.repo.ExpirePending(ctx, interactionID); expErr != nil {
 			log.Printf("failed to expire interaction %s: %v", interactionID, expErr)
+		} else if won {
+			s.settled(ctx, *interaction)
 		}
 		return ErrInteractionExpired
 	}
@@ -372,6 +396,7 @@ func (s *AgentInteractionService) CancelInteraction(ctx context.Context, interac
 	if !updated {
 		return ErrInteractionClosed
 	}
+	s.settled(ctx, *interaction)
 	return nil
 }
 
@@ -423,6 +448,9 @@ func (s *AgentInteractionService) ExpireExpiredInteractions(
 			updated, expErr = s.expireInteractionWithEvent(ctx, item)
 		} else {
 			updated, expErr = s.repo.ExpirePending(ctx, item.ID)
+			if expErr == nil && updated {
+				s.settled(ctx, item)
+			}
 		}
 		if expErr != nil {
 			log.Printf("expire interaction %s: %v", item.ID, expErr)
@@ -504,6 +532,9 @@ func (s *AgentInteractionService) expireInteractionWithEvent(ctx context.Context
 	})
 	if err != nil {
 		return false, fmt.Errorf("expire interaction with lifecycle events: %w", err)
+	}
+	if updated {
+		s.settled(ctx, interaction)
 	}
 	return updated, nil
 }

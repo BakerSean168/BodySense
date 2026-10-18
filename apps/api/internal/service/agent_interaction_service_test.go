@@ -477,3 +477,99 @@ func TestExpireInteractionWithEventsFailsWaitingRunAndPersistsBothMilestones(t *
 		t.Fatalf("unexpected expiry events: %+v", events.events)
 	}
 }
+
+type recordingSettle struct{ conversations []uuid.UUID }
+
+func (r *recordingSettle) OnConversationSettled(_ context.Context, conversationID uuid.UUID) {
+	r.conversations = append(r.conversations, conversationID)
+}
+
+// PC-RET-001: an Ask User that closes without an answer settles its Run, so
+// every expiry and cancellation path fires the retention settle trigger once,
+// after the transition committed.
+func TestAgentInteractionServiceClosingWithoutAnswerFiresRetentionSettle(t *testing.T) {
+	pastDue := func(repo *fakeInteractionRepo, id uuid.UUID) {
+		past := time.Now().UTC().Add(-time.Minute)
+		repo.byID[id].ExpiresAt = &past
+	}
+	type setup struct {
+		repo   *fakeInteractionRepo
+		settle *recordingSettle
+		svc    *AgentInteractionService
+		item   *model.AgentInteraction
+	}
+	newSetup := func(t *testing.T, events bool, tx fakeInteractionTransactionManager) setup {
+		repo, settle := newFakeInteractionRepo(), &recordingSettle{}
+		svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), tx).WithRetentionSettle(settle)
+		if events {
+			svc.WithLifecycleEvents(&fakeInteractionLifecycleEvents{})
+		}
+		item, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-settle", datatypes.JSON(`{}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return setup{repo, settle, svc, item}
+	}
+	wantOnce := func(t *testing.T, s setup) {
+		t.Helper()
+		if len(s.settle.conversations) != 1 || s.settle.conversations[0] != s.item.ConversationID {
+			t.Fatalf("settle calls=%v, want once for %s", s.settle.conversations, s.item.ConversationID)
+		}
+	}
+	ctx := context.Background()
+
+	t.Run("expiry sweep with lifecycle events", func(t *testing.T) {
+		s := newSetup(t, true, fakeInteractionTransactionManager{})
+		pastDue(s.repo, s.item.ID)
+		if _, err := s.svc.ExpireExpiredInteractions(ctx, 10); err != nil {
+			t.Fatal(err)
+		}
+		wantOnce(t, s)
+		if _, err := s.svc.ExpireExpiredInteractions(ctx, 10); err != nil {
+			t.Fatal(err)
+		}
+		wantOnce(t, s)
+	})
+	t.Run("repository-only expiry sweep", func(t *testing.T) {
+		s := newSetup(t, false, fakeInteractionTransactionManager{})
+		pastDue(s.repo, s.item.ID)
+		if _, err := s.svc.ExpireExpiredInteractions(ctx, 10); err != nil {
+			t.Fatal(err)
+		}
+		wantOnce(t, s)
+	})
+	t.Run("late answer soft-expires", func(t *testing.T) {
+		for _, events := range []bool{false, true} {
+			s := newSetup(t, events, fakeInteractionTransactionManager{})
+			pastDue(s.repo, s.item.ID)
+			resume := s.svc.ResumeInteraction
+			if events {
+				resume = s.svc.ResumeInteractionWithEvent
+			}
+			if err := resume(ctx, s.item.ID, datatypes.JSON(`{"text":"late"}`)); !errors.Is(err, ErrInteractionExpired) {
+				t.Fatalf("events=%v: %v", events, err)
+			}
+			wantOnce(t, s)
+		}
+	})
+	t.Run("cancel", func(t *testing.T) {
+		s := newSetup(t, true, fakeInteractionTransactionManager{})
+		if err := s.svc.CancelInteraction(ctx, s.item.ID); err != nil {
+			t.Fatal(err)
+		}
+		wantOnce(t, s)
+	})
+	t.Run("rolled back expiry does not settle", func(t *testing.T) {
+		s := newSetup(t, true, fakeInteractionTransactionManager{})
+		pastDue(s.repo, s.item.ID)
+		failing := NewAgentInteractionService(s.repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(),
+			fakeInteractionTransactionManager{err: errors.New("synthetic rollback")}).
+			WithLifecycleEvents(&fakeInteractionLifecycleEvents{}).WithRetentionSettle(s.settle)
+		if _, err := failing.ExpireExpiredInteractions(ctx, 10); err != nil {
+			t.Fatal(err)
+		}
+		if len(s.settle.conversations) != 0 {
+			t.Fatalf("settled after a rolled back expiry: %v", s.settle.conversations)
+		}
+	})
+}
