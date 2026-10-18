@@ -12,8 +12,8 @@ export const WorkspaceCapabilities = /*#__PURE__*/ zod.strictObject({
   "can_edit_body_state": /*#__PURE__*/ zod.boolean(),
   "can_request_diagnosis": /*#__PURE__*/ zod.boolean(),
   "can_review_diagnosis": /*#__PURE__*/ zod.boolean(),
-  "can_generate_treatment": /*#__PURE__*/ zod.boolean(),
-  "can_execute_treatment": /*#__PURE__*/ zod.boolean(),
+  "can_generate_training_plan": /*#__PURE__*/ zod.boolean(),
+  "can_start_training": /*#__PURE__*/ zod.boolean(),
   "can_record_outcome": /*#__PURE__*/ zod.boolean(),
   "requires_safety_review": /*#__PURE__*/ zod.boolean(),
   "requires_diagnosis_review": /*#__PURE__*/ zod.boolean()

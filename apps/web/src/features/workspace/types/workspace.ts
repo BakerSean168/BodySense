@@ -48,8 +48,8 @@ export interface WorkspaceCapabilities {
   can_edit_body_state: boolean;
   can_request_diagnosis: boolean;
   can_review_diagnosis: boolean;
-  can_generate_treatment: boolean;
-  can_execute_treatment: boolean;
+  can_generate_training_plan: boolean;
+  can_start_training: boolean;
   can_record_outcome: boolean;
   requires_safety_review: boolean;
   requires_diagnosis_review: boolean;

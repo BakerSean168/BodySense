@@ -176,8 +176,8 @@ function makeWorkspace(
       can_edit_body_state: true,
       can_request_diagnosis: true,
       can_review_diagnosis: true,
-      can_generate_treatment: true,
-      can_execute_treatment: true,
+      can_generate_training_plan: true,
+      can_start_training: true,
       can_record_outcome: true,
       requires_safety_review: false,
       requires_diagnosis_review: false,
@@ -611,8 +611,8 @@ describe("body-first business windows", () => {
   });
 
   it("resolves legacy ?view= aliases to the same business object", async () => {
-    // `state` and `treatment` were the pre-window panel names; existing links
-    // must not silently fall back to the bare body stage.
+    // `state` was a pre-window panel name; existing links must not silently
+    // fall back to the bare body stage.
     renderPage("/consultation/conv-1?view=state");
     expect(await screen.findByTestId("person-window")).toBeInTheDocument();
     expect(screen.queryByTestId("training-window")).not.toBeInTheDocument();

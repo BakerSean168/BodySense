@@ -92,4 +92,14 @@ describe("V2 Trainer entry admission", () => {
       await screen.findByTestId("training-execution-panel"),
     ).toHaveTextContent("accepted-2");
   });
+
+  it("reopens a live session from Home while the gate blocks, but never another plan's", async () => {
+    const reopen = { planId: "accepted-1", templateId: "a", key: "launch-2", sessionId: "session-1" };
+    const { rerender } = render(
+      <TrainerEntryGuard {...allowed} launch={reopen} safetyBlocked canExecute={false} accepted={false} />,
+    );
+    expect(await screen.findByTestId("training-execution-panel")).toBeVisible();
+    rerender(<TrainerEntryGuard {...allowed} launch={reopen} planId="different-plan" />);
+    expect(screen.getByTestId("trainer-entry-guard")).toBeVisible();
+  });
 });

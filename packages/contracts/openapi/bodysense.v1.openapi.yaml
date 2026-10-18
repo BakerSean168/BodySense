@@ -5539,8 +5539,8 @@ components:
       - can_edit_body_state
       - can_request_diagnosis
       - can_review_diagnosis
-      - can_generate_treatment
-      - can_execute_treatment
+      - can_generate_training_plan
+      - can_start_training
       - can_record_outcome
       - requires_safety_review
       - requires_diagnosis_review
@@ -5553,9 +5553,9 @@ components:
           type: boolean
         can_review_diagnosis:
           type: boolean
-        can_generate_treatment:
+        can_generate_training_plan:
           type: boolean
-        can_execute_treatment:
+        can_start_training:
           type: boolean
         can_record_outcome:
           type: boolean

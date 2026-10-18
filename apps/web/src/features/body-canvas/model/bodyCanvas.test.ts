@@ -93,7 +93,7 @@ describe("Body Canvas keyboard contract", () => {
     });
     expect(canvasShortcut(event("p"))).toEqual({
       type: "panel",
-      panel: "treatment",
+      panel: "training",
     });
     expect(canvasShortcut(event("i"))).toEqual({
       type: "panel",

@@ -77,6 +77,24 @@ export function formatPlanTarget(exercise: PlanExerciseOutput): string {
   return "";
 }
 
+/**
+ * One `POST /training-sessions/{id}/set-actions` command. `setNumber` is for
+ * `scope: "set"` only; `scope: "exercise"` is a skip of the rest of the
+ * exercise (or the correction of one). Go validates every combination.
+ */
+export interface TrainingActionCommand {
+  session: TrainingSessionRecord;
+  planExerciseId: string;
+  scope: "set" | "exercise";
+  setNumber?: number;
+  kind: "performed" | "skipped" | "corrected";
+  correctsActionId?: string;
+  actualReps?: number;
+  actualDurationSeconds?: number;
+  expectedSafetyRevision: number;
+  idempotencyKey: string;
+}
+
 export function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
@@ -191,27 +209,25 @@ export const trainingApi = {
     ),
 
   /**
-   * One explicit set action. The caller keeps `idempotencyKey` for retries
-   * of the same action so a repeated tap replays the original receipt.
+   * One explicit set or exercise action. The caller keeps `idempotencyKey`
+   * for retries of the same action so a repeated tap replays the original
+   * receipt. `corrected` retracts `correctsActionId`, an effective receipt
+   * of exactly the same target; the target can then be recorded again.
    */
-  recordSet: async (command: {
-    session: TrainingSessionRecord;
-    planExerciseId: string;
-    setNumber: number;
-    kind: "performed" | "skipped";
-    actualReps?: number;
-    actualDurationSeconds?: number;
-    expectedSafetyRevision: number;
-    idempotencyKey: string;
-  }): Promise<TrainingSetActionRecord> =>
+  recordAction: async (
+    command: TrainingActionCommand,
+  ): Promise<TrainingSetActionRecord> =>
     withOpenApiError(() =>
       recordTrainingSetAction(
         command.session.sessionId,
         {
           planExerciseId: command.planExerciseId,
-          scope: "set",
-          setNumber: command.setNumber,
+          scope: command.scope,
+          ...(command.scope === "set" ? { setNumber: command.setNumber } : {}),
           kind: command.kind,
+          ...(command.kind === "corrected"
+            ? { correctsActionId: command.correctsActionId }
+            : {}),
           ...(command.kind === "performed" && command.actualReps !== undefined
             ? { actualReps: command.actualReps }
             : {}),
@@ -279,14 +295,16 @@ export const trainingApi = {
       ),
     ),
 
+  /** The user's own words about an ended session, stored verbatim, once. */
   recordFeedback: async (
     sessionId: string,
     text: string,
+    idempotencyKey: string = newIdempotencyKey(),
   ): Promise<TrainingSessionRecord> =>
     withOpenApiError(() =>
       recordTrainingSessionFeedback(
         sessionId,
-        { text, idempotencyKey: newIdempotencyKey() },
+        { text, idempotencyKey },
         undefined,
         openApiAuthFetch,
       ),

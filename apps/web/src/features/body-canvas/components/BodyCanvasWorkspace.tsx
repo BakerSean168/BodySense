@@ -43,6 +43,12 @@ const DiagnosisWindow = lazy(() =>
 const TrainingPlanWindow = lazy(() =>
   import("./TrainingPlanWindow").then((module) => ({ default: module.TrainingPlanWindow })),
 );
+// Penpot Home / trainer-active|paused; lazy for the same chunk budget.
+const TrainerStatusChip = lazy(() =>
+  import("@/features/training/components/TrainerStatusChip").then((module) => ({
+    default: module.TrainerStatusChip,
+  })),
+);
 
 export interface BodyCanvasWorkspaceProps {
   bodyState: BodyRecords | null;
@@ -169,6 +175,20 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     dispatchWindow({ type: "toggle", window });
     setRegionListOpen(false);
   }, []);
+  /** Home chip: reopen the live session itself; nothing new is started. */
+  const reopenTrainer = useCallback(
+    (session: { sessionId: string; planId: string; templateId: string }) => {
+      chooseTrainingPlan(session.planId);
+      setTrainerLaunch({
+        planId: session.planId,
+        templateId: session.templateId,
+        sessionId: session.sessionId,
+        key: crypto.randomUUID(),
+      });
+      openWindow("trainer");
+    },
+    [chooseTrainingPlan, openWindow],
+  );
   const closeAllWindows = useCallback(() => {
     dispatchWindow({ type: "closeAll" });
   }, []);
@@ -386,7 +406,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           <TrainingPlanWindow
             state={trainingActions.state}
             canExecute={
-              props.workspace?.capabilities.can_execute_treatment === true && !safetyReview
+              props.workspace?.capabilities.can_start_training === true && !safetyReview
             }
             controls={{
               busy: trainingActions.busy,
@@ -409,7 +429,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                   plan?.planId !== planId ||
                   plan.status !== "active" ||
                   !plan.gatePermits ||
-                  props.workspace?.capabilities.can_execute_treatment !== true ||
+                  props.workspace?.capabilities.can_start_training !== true ||
                   safetyReview
                 ) return;
                 setTrainerLaunch({ planId, templateId, key: crypto.randomUUID() });
@@ -425,7 +445,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             planId={trainingSelection.selected?.planId ?? null}
             launch={trainerLaunch}
             accepted={trainingSelection.selected?.status === "active"}
-            canExecute={props.workspace?.capabilities.can_execute_treatment === true}
+            canExecute={props.workspace?.capabilities.can_start_training === true}
             safetyBlocked={safetyReview || trainingSelection.selected?.gatePermits === false}
             loading={trainingActions.state.loading}
             error={trainingActions.state.error}
@@ -523,6 +543,12 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       {props.error && <div role="alert" className="bc-sync-banner">身体信息暂时无法同步。{props.onRetry && <button onClick={props.onRetry}>重试</button>}现有对话与参考模型仍可使用。</div>}
       {props.loading && <span className="bc-sync-indicator" role="status"><LoaderCircle size={14} className="animate-spin" />正在同步身体记录</span>}
 
+      {props.workspace && !activeWindow ? (
+        <Suspense fallback={null}>
+          <TrainerStatusChip onOpen={reopenTrainer} />
+        </Suspense>
+      ) : null}
+
       <div className="bc-tool-rail" role="toolbar" aria-label="身体画布工具">
         {TOOLS.map(([value, label, key, Icon]) => <button key={value} className="bc-icon-button" aria-label={label} title={`${label} · ${key}`} aria-pressed={tool === value} onClick={() => { setTool(value); setRegionListOpen(false); if (value !== "orbit") setPlaying(false); }}><Icon size={20} strokeWidth={1.7} /><span className="bc-tool-caption">{label}</span></button>)}
         <span className="bc-tool-divider" />
@@ -607,7 +633,7 @@ const CANVAS_PANEL_TO_WINDOW: Partial<Record<CanvasPanel, BusinessWindowId>> = {
   state: "person",
   equipment: "person",
   diagnosis: "diagnosis",
-  treatment: "training",
+  training: "training",
   progress: "person",
   trainer: "trainer",
 };

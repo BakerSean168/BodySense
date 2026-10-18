@@ -10,13 +10,9 @@ import {
 } from "../services/trainingService";
 import { trainingPlanKeys } from "./useTrainingPlanActions";
 
-export const trainerKeys = {
-  all: ["training", "trainer"] as const,
-  plan: (planId: string) => [...trainerKeys.all, "plan", planId] as const,
-  sessions: () => [...trainerKeys.all, "sessions"] as const,
-  revision: (planId: string, revisionId: string | null) =>
-    [...trainerKeys.all, "revision", planId, revisionId] as const,
-};
+import { trainerKeys } from "./trainerKeys";
+
+export { trainerKeys };
 
 export type TrainerNotice = "safety_changed" | "blocked" | "changed" | null;
 
@@ -31,6 +27,8 @@ function commandNotice(error: unknown): { notice: TrainerNotice; message: string
         return { notice: null, message: "另一个训练正在进行，先结束它再开始这一个。" };
       case "PLAN_NOT_ACTIVE":
         return { notice: null, message: "这份计划已不是启用状态，不能开始训练。" };
+      case "FEEDBACK_ALREADY_RECORDED":
+        return { notice: null, message: "这次训练的感受已经记录过了。" };
       default:
         return { notice: "changed", message: null };
     }
@@ -46,6 +44,8 @@ export interface UseTrainerSessionOptions {
    * launch starts at most one session; a remount replays the same key.
    */
   launchKey: string;
+  /** Reopen this live session (Home chip) instead of starting one. */
+  sessionId?: string | null;
 }
 
 /**
@@ -55,7 +55,7 @@ export interface UseTrainerSessionOptions {
  * revision of the gate the user is looking at; a refusal writes nothing,
  * so the window refetches and shows why instead of a stale success.
  */
-export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerSessionOptions) {
+export function useTrainerSession({ planId, templateId, launchKey, sessionId: launchSessionId = null }: UseTrainerSessionOptions) {
   const client = useQueryClient();
   const plan = useQuery({
     queryKey: trainerKeys.plan(planId),
@@ -70,7 +70,7 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
     staleTime: 0,
   });
   /** The session this window shows; kept after it ends (lists drop nothing, but order may change). */
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(launchSessionId);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<TrainerNotice>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,10 +78,11 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
   const inFlight = useRef(false);
   const started = useRef(false);
 
-  const live = useMemo(
-    () => sessions.data?.find((item) => item.planId === planId && item.state !== "ended") ?? null,
-    [sessions.data, planId],
-  );
+  // This plan's live session: the one holding the in-progress slot first.
+  const live = useMemo(() => {
+    const open = sessions.data?.filter((item) => item.planId === planId && item.state !== "ended") ?? [];
+    return open.find((item) => item.state === "in_progress") ?? open[0] ?? null;
+  }, [sessions.data, planId]);
   const session: TrainingSessionRecord | null =
     (sessionId ? sessions.data?.find((item) => item.sessionId === sessionId) : null) ?? live;
 
@@ -138,7 +139,13 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
 
   // One explicit Start → at most one session for this launch.
   useEffect(() => {
-    if (started.current || !plan.data || !sessions.data || !templateId) return;
+    if (started.current || !plan.data || !sessions.data) return;
+    if (launchSessionId) {
+      // Reopening a session never starts another one.
+      started.current = true;
+      return;
+    }
+    if (!templateId) return;
     started.current = true;
     if (live) {
       setSessionId(live.sessionId);
@@ -146,7 +153,7 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
     }
     const record = plan.data;
     void run(`start:${launchKey}`, (key) => trainingApi.startSession(record, templateId, key));
-  }, [plan.data, sessions.data, live, templateId, launchKey, run]);
+  }, [plan.data, sessions.data, live, templateId, launchKey, launchSessionId, run]);
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -160,25 +167,63 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
     [plan.data, pinned, session, now],
   );
 
+  /** One gated action at the Safety revision of the gate the user sees. */
+  const record = (
+    key: string,
+    command: Omit<Parameters<typeof trainingApi.recordAction>[0], "session" | "expectedSafetyRevision" | "idempotencyKey">,
+  ) => {
+    if (!session || !plan.data || !view?.canRecord) return;
+    const safetyRevision = plan.data.executionGate.safetyRevision;
+    void run(`${session.sessionId}:${key}`, async (idempotencyKey) => {
+      await trainingApi.recordAction({ ...command, session, expectedSafetyRevision: safetyRevision, idempotencyKey });
+    });
+  };
+
   const recordSet = (kind: "performed" | "skipped", actual: number | null) => {
-    if (!view?.current || !session || !plan.data || !view.canRecord) return;
+    if (!view?.current) return;
     const exercise = view.exercises[view.current.exerciseIndex]!;
     const { setNumber, actualUnit } = view.current;
-    const safetyRevision = plan.data.executionGate.safetyRevision;
-    void run(`set:${session.sessionId}:${exercise.planExerciseId}:${setNumber}:${kind}:${actual}`, async (key) => {
-      await trainingApi.recordSet({
-        session,
-        planExerciseId: exercise.planExerciseId,
-        setNumber,
-        kind,
-        ...(kind === "performed" && actual !== null && actualUnit === "reps" ? { actualReps: actual } : {}),
-        ...(kind === "performed" && actual !== null && actualUnit === "seconds"
-          ? { actualDurationSeconds: actual }
-          : {}),
-        expectedSafetyRevision: safetyRevision,
-        idempotencyKey: key,
-      });
+    record(`set:${exercise.planExerciseId}:${setNumber}:${kind}:${actual}`, {
+      planExerciseId: exercise.planExerciseId,
+      scope: "set",
+      setNumber,
+      kind,
+      ...(kind === "performed" && actual !== null && actualUnit === "reps" ? { actualReps: actual } : {}),
+      ...(kind === "performed" && actual !== null && actualUnit === "seconds" ? { actualDurationSeconds: actual } : {}),
     });
+  };
+
+  /** Skips what is left of the current exercise as one receipt. */
+  const skipExercise = () => {
+    if (!view?.current) return;
+    const exercise = view.exercises[view.current.exerciseIndex]!;
+    record(`exercise:${exercise.planExerciseId}:skipped`, {
+      planExerciseId: exercise.planExerciseId,
+      scope: "exercise",
+      kind: "skipped",
+    });
+  };
+
+  /**
+   * Retracts one effective receipt (the original stays on record); its set
+   * or exercise is then open again to be recorded with the right value.
+   */
+  const correct = (actionId: string) => {
+    const target = session?.actions.find((action) => action.actionId === actionId);
+    if (!target || target.kind === "corrected") return;
+    record(`correct:${actionId}`, {
+      planExerciseId: target.planExerciseId,
+      scope: target.scope,
+      ...(target.scope === "set" ? { setNumber: target.setNumber } : {}),
+      kind: "corrected",
+      correctsActionId: actionId,
+    });
+  };
+
+  /** The user's own words on the ended session; never gated. */
+  const sendFeedback = (text: string) => {
+    if (!session || session.state !== "ended" || session.feedback || !text.trim()) return;
+    void run(`feedback:${session.sessionId}:${text}`, (key) => trainingApi.recordFeedback(session.sessionId, text, key));
   };
 
   const pause = () => {
@@ -205,6 +250,9 @@ export function useTrainerSession({ planId, templateId, launchKey }: UseTrainerS
     error,
     complete: (actual: number | null) => recordSet("performed", actual),
     skip: () => recordSet("skipped", null),
+    skipExercise,
+    correct,
+    sendFeedback,
     finish: () => {
       if (!session || session.state === "ended") return;
       const reason = view?.allRecorded ? "finished" : "stopped_early";
