@@ -1,4 +1,4 @@
-"""AS-002 slice 2: erasing one asset from consultation runtime checkpoints."""
+"""AS-002: erasing one asset or statement from consultation runtime checkpoints."""
 
 from __future__ import annotations
 
@@ -17,14 +17,14 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from src.runtime import asset_erasure, checkpoint_retention
-from src.runtime.asset_erasure import (
+from src.runtime import checkpoint_retention, erasure
+from src.runtime.checkpoint_retention import UnsupportedCheckpointerError
+from src.runtime.erasure import (
     ERASED_IMAGE_TEXT,
     ERASED_TEXT,
-    AssetFingerprint,
-    erase_asset_runtime_copies,
+    ErasureFingerprint,
+    erase_runtime_copies,
 )
-from src.runtime.checkpoint_retention import UnsupportedCheckpointerError
 
 
 class TurnState(TypedDict, total=False):
@@ -32,6 +32,7 @@ class TurnState(TypedDict, total=False):
     current_user_message: str
     pending_user_images: list[dict[str, Any]]
     posture_analysis: dict[str, Any] | None
+    body_state: dict[str, Any]
     runtime_messages: list[dict[str, Any]]
 
 
@@ -103,10 +104,10 @@ async def _history(graph: Any, thread_id: str) -> list[Any]:
 
 
 async def _erase(graph: Any, image: Image, threads: list[str], attached: list[str]) -> Any:
-    return await erase_asset_runtime_copies(
+    return await erase_runtime_copies(
         graph,
-        asset_id=image.asset_id,
-        content_sha256=image.sha256,
+        subject_id=image.asset_id,
+        fingerprint=ErasureFingerprint(ids=(image.asset_id,), content_sha256=image.sha256),
         thread_ids=threads,
         attached_thread_ids=attached,
     )
@@ -114,7 +115,7 @@ async def _erase(graph: Any, image: Image, threads: list[str], attached: list[st
 
 def test_fingerprint_matches_only_the_asset_bytes():
     image, other = Image(), Image()
-    fingerprint = AssetFingerprint(asset_id=image.asset_id, content_sha256=image.sha256)
+    fingerprint = ErasureFingerprint(ids=(image.asset_id,), content_sha256=image.sha256)
     assert fingerprint.matches_data_url(image.data_url)
     assert not fingerprint.matches_data_url(other.data_url)
     assert not fingerprint.matches_data_url("data:image/png;base64,***")
@@ -151,8 +152,8 @@ def test_erasure_removes_the_image_and_derived_copies_and_all_history():
         assert state["runtime_messages"][3]["content"] == ERASED_TEXT
         assert state.get("posture_analysis") is None
         for needle in (image.asset_id, image.payload, "posture-summary-sentinel"):
-            assert not await asset_erasure._storage_mentions(saver, thread, needle)
-        assert await asset_erasure._storage_mentions(saver, thread, kept.payload)
+            assert not await erasure._storage_mentions(saver, thread, needle)
+        assert await erasure._storage_mentions(saver, thread, kept.payload)
 
         # A repeat is idempotent and the thread keeps working.
         again = await _erase(graph, image, [thread], [thread])
@@ -184,7 +185,7 @@ def test_unattached_threads_are_left_alone_unless_they_name_the_asset():
         assert statuses == {untouched: "absent", posture_only: "erased", never_used: "absent"}
         assert receipt.status == "erased"
         assert len(await _history(graph, untouched)) == before
-        assert not await asset_erasure._storage_mentions(saver, posture_only, image.asset_id)
+        assert not await erasure._storage_mentions(saver, posture_only, image.asset_id)
 
     asyncio.run(run())
 
@@ -213,7 +214,7 @@ def test_a_waiting_thread_is_outstanding_and_untouched_while_others_erase():
         await graph.ainvoke(Command(resume="yes"), config=_config(waiting))
         retry = await _erase(graph, image, [waiting, idle], [waiting, idle])
         assert retry.status == "erased"
-        assert not await asset_erasure._storage_mentions(saver, waiting, image.payload)
+        assert not await erasure._storage_mentions(saver, waiting, image.payload)
 
     asyncio.run(run())
 
@@ -231,7 +232,7 @@ def test_a_turn_racing_the_erasure_wins_and_the_next_attempt_finishes():
             await _turn(graph, thread, "racing")
             return await original(saver_arg, thread_id, keep_id)
 
-        with patch.object(asset_erasure, "_compact", racing_compact):
+        with patch.object(erasure, "_compact", racing_compact):
             receipt = await _erase(graph, image, [thread], [thread])
         assert receipt.status == "outstanding"
         assert receipt.threads[0].failure_code == "checkpoint_conflict"
@@ -240,7 +241,7 @@ def test_a_turn_racing_the_erasure_wins_and_the_next_attempt_finishes():
         assert retry.status == "erased"
         contents = (await graph.aget_state(_config(thread))).values["runtime_messages"]
         assert contents[-1]["content"] == "reply to racing"
-        assert not await asset_erasure._storage_mentions(saver, thread, image.payload)
+        assert not await erasure._storage_mentions(saver, thread, image.payload)
 
     asyncio.run(run())
 
@@ -273,7 +274,7 @@ def test_erasure_route_validates_and_reports_per_thread(client: TestClient):
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "erased"
-    assert payload["asset_id"] == image.asset_id
+    assert payload["subject_id"] == image.asset_id
     assert payload["threads"][0]["thread_id"] == thread
     assert payload["threads"][0]["status"] == "erased"
     assert payload["threads"][0]["redacted_refs"] == 1
@@ -281,10 +282,71 @@ def test_erasure_route_validates_and_reports_per_thread(client: TestClient):
     async def unsupported(*_args: Any, **_kwargs: Any) -> Any:
         raise UnsupportedCheckpointerError("no saver")
 
-    with patch("src.api.routes.runtime.erase_asset_runtime_copies", unsupported):
+    with patch("src.api.routes.runtime.erase_runtime_copies", unsupported):
         response = client.post(f"/runtime/assets/{image.asset_id}/erasure", json=body)
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "unsupported_checkpointer"
+
+
+def _body_state(statement: str, fact: str, other_fact: str) -> dict[str, Any]:
+    return {
+        "schema": "agent-body-context-v1",
+        "facts": [
+            {"id": fact, "source_evidence_id": statement, "statement": "statement-sentinel 左膝痛"},
+            {"id": other_fact, "source_evidence_id": str(uuid4()), "statement": "kept-fact"},
+        ],
+    }
+
+
+def test_statement_erasure_drops_derived_records_by_id():
+    async def run():
+        saver = InMemorySaver()
+        graph = _graph(saver)
+        thread = str(uuid4())
+        statement, fact, other = str(uuid4()), str(uuid4()), str(uuid4())
+        await _turn(graph, thread, "my knee hurts", body_state=_body_state(statement, fact, other))
+        await _turn(graph, thread, "later")
+        fingerprint = ErasureFingerprint(ids=(statement, fact))
+        assert not fingerprint.matches_data_url(Image().data_url)
+
+        receipt = await erase_runtime_copies(
+            graph,
+            subject_id=statement,
+            fingerprint=fingerprint,
+            thread_ids=[thread],
+            attached_thread_ids=[thread],
+        )
+
+        assert receipt.status == "erased" and receipt.subject_id == statement
+        assert receipt.threads[0].redacted_refs == 1
+        state = (await graph.aget_state(_config(thread))).values
+        assert [f["id"] for f in state["body_state"]["facts"]] == [other]
+        for needle in (statement, fact, "statement-sentinel"):
+            assert not await erasure._storage_mentions(saver, thread, needle)
+        # The user's own chat turn is a conversation record, not a copy.
+        assert state["runtime_messages"][0]["content"][0]["text"] == "my knee hurts"
+
+    asyncio.run(run())
+
+
+def test_statement_erasure_route(client: TestClient):
+    thread, statement, fact, other = (str(uuid4()) for _ in range(4))
+    graph = _graph(InMemorySaver())
+    asyncio.run(_turn(graph, thread, "hi", body_state=_body_state(statement, fact, other)))
+
+    async def fixed_graph() -> Any:
+        return graph
+
+    body = {"user_id": str(uuid4()), "record_ids": [fact], "thread_ids": [thread]}
+    with patch("src.api.routes.runtime.get_runtime_graph", fixed_graph):
+        response = client.post(f"/runtime/statements/{statement}/erasure", json=body)
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["subject_id"] == statement and payload["status"] == "erased"
+        assert payload["threads"][0]["status"] == "erased"
+        bad = {**body, "attached_thread_ids": [str(uuid4())]}
+        response = client.post(f"/runtime/statements/{statement}/erasure", json=bad)
+        assert response.status_code == 422
 
 
 PG_URL = os.getenv("BODYSENSE_TEST_CHECKPOINT_PG_URL")
@@ -319,7 +381,7 @@ def test_postgres_erasure_leaves_no_copy_anywhere():
             assert receipt.status == "erased"
             assert receipt.threads[0].redacted_refs == 3
             assert len(await _history(graph, thread)) == 1
-            mentions = asset_erasure._storage_mentions
+            mentions = erasure._storage_mentions
             for needle in (image.asset_id, image.payload, "posture-summary-sentinel"):
                 assert not await mentions(saver, thread, needle)
             assert await mentions(saver, thread, kept.payload)

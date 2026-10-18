@@ -35,7 +35,6 @@ from ...models.consultation_runtime_event import (
     ToolCallRuntimeEvent,
     ToolResultRuntimeEvent,
 )
-from ...runtime.asset_erasure import erase_asset_runtime_copies
 from ...runtime.checkpoint_retention import (
     CheckpointCleanupError,
     UnsupportedCheckpointerError,
@@ -47,6 +46,7 @@ from ...runtime.consultation_thread import (
     resume_thread_interrupt,
     stream_thread_turn,
 )
+from ...runtime.erasure import ErasureFingerprint, RuntimeErasureReceipt, erase_runtime_copies
 from ..runtime_proto_adapter import (
     RuntimeCommandError,
     parse_resume_interrupt_command,
@@ -555,39 +555,54 @@ async def cleanup_checkpoints(thread_id: UUID, request: CheckpointCleanupRequest
     }
 
 
-class AssetRuntimeErasureRequest(BaseModel):
-    """Go asks to erase one asset from the user's consultation threads (AS-002)."""
-
+class RuntimeErasureScope(BaseModel):
     user_id: UUID
-    # The asset's content hash: inline image copies are matched by the
-    # SHA-256 of their decoded bytes, derived copies by the asset id.
-    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    # Every consultation thread (= Conversation) of the user, and the subset a
-    # message attached the asset to.
+    # Every consultation thread (= Conversation) of the user, and the subset
+    # the source entered through (an attaching message, a stated message).
     thread_ids: list[UUID] = Field(max_length=1_000)
     attached_thread_ids: list[UUID] = Field(default_factory=list, max_length=1_000)
 
 
-@router.post("/assets/{asset_id}/erasure")
-async def erase_asset_runtime(asset_id: UUID, request: AssetRuntimeErasureRequest):
-    if not set(request.attached_thread_ids) <= set(request.thread_ids):
+class AssetRuntimeErasureRequest(RuntimeErasureScope):
+    """Go asks to erase one asset from the user's consultation threads (AS-002)."""
+
+    # The asset's content hash: inline image copies are matched by the
+    # SHA-256 of their decoded bytes, derived copies by the asset id.
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class StatementRuntimeErasureRequest(RuntimeErasureScope):
+    """Go asks to erase one user statement and the BodyState records derived
+    from it (their ids) from the user's consultation threads (AS-002)."""
+
+    record_ids: list[UUID] = Field(default_factory=list, max_length=2_000)
+
+
+def _validate_scope(scope: RuntimeErasureScope) -> None:
+    if not set(scope.attached_thread_ids) <= set(scope.thread_ids):
         raise HTTPException(
             status_code=422,
             detail={"code": "thread_mismatch", "message": "attached threads must be listed"},
         )
+
+
+async def _erase_runtime(
+    subject_id: UUID, fingerprint: ErasureFingerprint, scope: RuntimeErasureScope
+) -> dict[str, Any]:
+    _validate_scope(scope)
     try:
-        receipt = await erase_asset_runtime_copies(
+        receipt: RuntimeErasureReceipt = await erase_runtime_copies(
             await get_runtime_graph(),
-            asset_id=str(asset_id),
-            content_sha256=request.content_sha256,
-            thread_ids=[str(thread_id) for thread_id in request.thread_ids],
-            attached_thread_ids=[str(thread_id) for thread_id in request.attached_thread_ids],
+            subject_id=str(subject_id),
+            fingerprint=fingerprint,
+            thread_ids=[str(thread_id) for thread_id in scope.thread_ids],
+            attached_thread_ids=[str(thread_id) for thread_id in scope.attached_thread_ids],
         )
     except UnsupportedCheckpointerError as exc:
         raise HTTPException(status_code=503, detail={"code": exc.code, "message": str(exc)})
     return {
         "status": receipt.status,
-        "asset_id": receipt.asset_id,
+        "subject_id": receipt.subject_id,
         "threads": [
             {
                 "thread_id": item.thread_id,
@@ -600,3 +615,15 @@ async def erase_asset_runtime(asset_id: UUID, request: AssetRuntimeErasureReques
             for item in receipt.threads
         ],
     }
+
+
+@router.post("/assets/{asset_id}/erasure")
+async def erase_asset_runtime(asset_id: UUID, request: AssetRuntimeErasureRequest):
+    fingerprint = ErasureFingerprint(ids=(str(asset_id),), content_sha256=request.content_sha256)
+    return await _erase_runtime(asset_id, fingerprint, request)
+
+
+@router.post("/statements/{statement_id}/erasure")
+async def erase_statement_runtime(statement_id: UUID, request: StatementRuntimeErasureRequest):
+    ids = (str(statement_id), *dict.fromkeys(str(record_id) for record_id in request.record_ids))
+    return await _erase_runtime(statement_id, ErasureFingerprint(ids=ids), request)

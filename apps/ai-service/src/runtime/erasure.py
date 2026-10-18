@@ -1,24 +1,26 @@
-"""Erasure of one asset's copies from consultation runtime state (AS-002 slice 2).
+"""Erasure of one source's copies from consultation runtime state (AS-002).
 
-Go owns asset erasure. Its ``runtime_checkpoints`` target asks this module to
-remove every copy of one asset that LangGraph keeps for the user's
-consultation threads, and it marks the target verified only on the receipt
-returned here. A thread can hold an asset in three ways:
+Go owns erasure. Its ``runtime_checkpoints`` targets ask this module to remove
+every copy of one erased source that LangGraph keeps for the user's
+consultation threads, and they verify only on the receipt returned here. The
+source is an uploaded asset (slice 2) or a user statement with the BodyState
+records derived from it (slice 3). A thread can hold it in three ways:
 
-* the inline image of a turn that attached it (a ``data:image/...`` URL in
-  ``runtime_messages`` or in ``pending_user_images``), recognised by the
+* the inline image of a turn that attached an asset (a ``data:image/...`` URL
+  in ``runtime_messages`` or in ``pending_user_images``), recognised by the
   SHA-256 of its decoded bytes, which is the asset's ``content_sha256``;
-* derived data that names it (the posture summary Go prefetches into
-  ``posture_analysis``, a ``get_posture_analysis`` tool result, an evidence
-  ref), recognised by the asset id;
+* any record naming one of the source's ids: the posture summary Go
+  prefetches into ``posture_analysis``, a ``get_posture_analysis`` tool
+  result, an evidence ref, a BodyState fact in the ``body_state`` context;
 * any older checkpoint, pending write or blob that still carries either.
 
-For each thread that holds a copy (or that Go says the asset was attached
-to), the latest checkpoint is rewritten without the copies, every older
+For each thread that holds a copy (or that Go says the source came from),
+the latest checkpoint is rewritten without the copies, every older
 checkpoint, write and superseded blob is deleted, and the result is verified
 from storage: the latest checkpoint carries no copy, it is the only one, and
-no stored byte of the thread names the asset. Assistant replies the model
-wrote about an image are conversation records (chat retention), not copies.
+no stored byte of the thread names the source. Assistant replies the model
+wrote about a source, and the user's own chat turns, are conversation records
+(chat retention), not copies.
 
 Like checkpoint retention, erasure fails closed: a thread that is mid-step or
 waiting on an Ask User interrupt is left untouched and reported outstanding,
@@ -63,15 +65,16 @@ THREAD_OUTSTANDING = "outstanding"
 
 
 @dataclass
-class AssetFingerprint:
-    """Recognises one asset: its id anywhere, its bytes inside a data URL."""
+class ErasureFingerprint:
+    """Recognises one erased source: any of its ids anywhere, and (for an
+    asset) its bytes inside a data URL."""
 
-    asset_id: str
-    content_sha256: str
+    ids: tuple[str, ...]
+    content_sha256: str | None = None
     _decoded: dict[str, bool] = field(default_factory=dict, repr=False)
 
     def matches_data_url(self, value: str) -> bool:
-        if not value.startswith("data:"):
+        if not self.content_sha256 or not value.startswith("data:"):
             return False
         known = self._decoded.get(value)
         if known is not None:
@@ -87,17 +90,20 @@ class AssetFingerprint:
         self._decoded[value] = match
         return match
 
+    def is_id(self, value: str) -> bool:
+        return value in self.ids
+
     def names(self, value: str) -> bool:
-        return self.asset_id in value or self.matches_data_url(value)
+        return any(item in value for item in self.ids) or self.matches_data_url(value)
 
 
 _DROP = object()
 
 
 class _Redactor:
-    """Rebuilds a channel value without the asset; counts what it removed."""
+    """Rebuilds a channel value without the source; counts what it removed."""
 
-    def __init__(self, fingerprint: AssetFingerprint) -> None:
+    def __init__(self, fingerprint: ErasureFingerprint) -> None:
         self.fingerprint = fingerprint
         self.removed = 0
 
@@ -132,13 +138,13 @@ class _Redactor:
         if isinstance(url, str) and self.fingerprint.matches_data_url(url):
             self.removed += 1
             return {"type": "text", "text": ERASED_IMAGE_TEXT}
-        # A record that points at the asset by id or carries its bytes
-        # (an image ref, a posture view, an evidence entry) goes as a whole:
-        # keeping its siblings would keep the derived content.
+        # A record that points at the source by id or carries its bytes (an
+        # image ref, a posture view, an evidence entry, a BodyState fact) goes
+        # as a whole: keeping its siblings would keep the derived content.
         for key, item in value.items():
-            if (isinstance(key, str) and self.fingerprint.asset_id in key) or (
+            if (isinstance(key, str) and self.fingerprint.names(key)) or (
                 isinstance(item, str)
-                and (item == self.fingerprint.asset_id or self.fingerprint.matches_data_url(item))
+                and (self.fingerprint.is_id(item) or self.fingerprint.matches_data_url(item))
             ):
                 self.removed += 1
                 return _DROP
@@ -163,8 +169,8 @@ class ThreadErasureResult:
 
 
 @dataclass(frozen=True)
-class AssetRuntimeErasureReceipt:
-    asset_id: str
+class RuntimeErasureReceipt:
+    subject_id: str
     threads: list[ThreadErasureResult]
 
     @property
@@ -210,6 +216,13 @@ def _bytes_in(value: Any, needle: bytes) -> bool:
         return any(_bytes_in(item, needle) for item in value)
     if isinstance(value, dict):
         return any(_bytes_in(item, needle) for item in value.values())
+    return False
+
+
+async def _storage_mentions_any(saver: Any, thread_id: str, needles: tuple[str, ...]) -> bool:
+    for needle in needles:
+        if await _storage_mentions(saver, thread_id, needle):
+            return True
     return False
 
 
@@ -260,37 +273,37 @@ async def _purge_superseded_blobs(saver: Any, thread_id: str, keep_id: str) -> N
     raise UnsupportedCheckpointerError(f"cannot purge {type(saver).__name__}")
 
 
-def _count_refs(values: dict[str, Any], fingerprint: AssetFingerprint) -> int:
+def _count_refs(values: dict[str, Any], fingerprint: ErasureFingerprint) -> int:
     probe = _Redactor(fingerprint)
     for name, value in values.items():
         probe.channel(name, value)
     return probe.removed
 
 
-async def erase_asset_from_thread(
-    graph: Any, *, thread_id: str, fingerprint: AssetFingerprint, attached: bool
+async def erase_from_thread(
+    graph: Any, *, thread_id: str, fingerprint: ErasureFingerprint, attached: bool
 ) -> ThreadErasureResult:
-    """Remove one asset from one consultation thread and verify from storage.
+    """Remove one erased source from one consultation thread and verify from storage.
 
     Idempotent: a repeat finds nothing to redact, one checkpoint left and no
     stored mention, and reports the thread erased again.
     """
     saver = graph.checkpointer
     config = _root_config(thread_id)
-    mentioned = await _storage_mentions(saver, thread_id, fingerprint.asset_id)
+    mentioned = await _storage_mentions_any(saver, thread_id, fingerprint.ids)
     current = await saver.aget_tuple(config)
     if current is None and not mentioned:
         return ThreadErasureResult(thread_id=thread_id, status=THREAD_ABSENT)
     if not attached and not mentioned:
-        # Images only enter a thread through an attachment Go recorded, so a
-        # thread that was never attached and never names the asset holds none.
+        # Images and statements only enter a thread through a turn Go
+        # recorded, so a thread that never names the source holds none.
         return ThreadErasureResult(thread_id=thread_id, status=THREAD_ABSENT)
 
     snapshot = await graph.aget_state(config)
     if snapshot.next or snapshot.interrupts:
         raise ThreadBusyError("thread is running or waiting on an interrupt")
     if current is None:
-        raise CheckpointCleanupError("asset copy outside the root checkpoint namespace")
+        raise CheckpointCleanupError("copy outside the root checkpoint namespace")
     if current.pending_writes:
         raise ThreadBusyError("thread has pending writes")
 
@@ -329,12 +342,12 @@ async def erase_asset_from_thread(
     if final.pending_writes:
         raise CheckpointConflictError("thread received writes while erasing")
     if _count_refs(final.checkpoint["channel_values"], fingerprint):
-        raise CheckpointCleanupError("asset copy survived the rewrite")
+        raise CheckpointCleanupError("copy survived the rewrite")
     history = [item async for item in saver.alist(config, limit=2)]
     if len(history) != 1:
         raise CheckpointConflictError("thread history was not compacted")
-    if await _storage_mentions(saver, thread_id, fingerprint.asset_id):
-        raise CheckpointCleanupError("stored checkpoint data still names the asset")
+    if await _storage_mentions_any(saver, thread_id, fingerprint.ids):
+        raise CheckpointCleanupError("stored checkpoint data still names the source")
 
     return ThreadErasureResult(
         thread_id=thread_id,
@@ -345,22 +358,21 @@ async def erase_asset_from_thread(
     )
 
 
-async def erase_asset_runtime_copies(
+async def erase_runtime_copies(
     graph: Any,
     *,
-    asset_id: str,
-    content_sha256: str,
+    subject_id: str,
+    fingerprint: ErasureFingerprint,
     thread_ids: list[str],
     attached_thread_ids: list[str],
-) -> AssetRuntimeErasureReceipt:
-    """Erase one asset from every listed thread; one thread's refusal never
+) -> RuntimeErasureReceipt:
+    """Erase one source from every listed thread; one thread's refusal never
     hides another's result. An unsupported checkpointer fails the whole call."""
-    fingerprint = AssetFingerprint(asset_id=asset_id, content_sha256=content_sha256)
     attached = set(attached_thread_ids)
     results: list[ThreadErasureResult] = []
     for thread_id in dict.fromkeys(thread_ids):
         try:
-            result = await erase_asset_from_thread(
+            result = await erase_from_thread(
                 graph, thread_id=thread_id, fingerprint=fingerprint, attached=thread_id in attached
             )
         except UnsupportedCheckpointerError:
@@ -370,4 +382,4 @@ async def erase_asset_runtime_copies(
                 thread_id=thread_id, status=THREAD_OUTSTANDING, failure_code=exc.code
             )
         results.append(result)
-    return AssetRuntimeErasureReceipt(asset_id=asset_id, threads=results)
+    return RuntimeErasureReceipt(subject_id=subject_id, threads=results)
