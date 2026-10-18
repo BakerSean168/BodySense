@@ -1,5 +1,9 @@
 import { useId, useState } from "react";
 import type { AskUserField, AskUserQuestion } from "../types/consultation";
+import {
+  BodyStateSuggestionCard,
+  isBodyStateSuggestion,
+} from "./BodyStateSuggestionCard";
 
 interface AskUserCardProps {
   question: AskUserQuestion;
@@ -8,6 +12,8 @@ interface AskUserCardProps {
   error?: string | null;
   onRetry?: () => void;
   title?: string;
+  /** BodyState suggestion only: decline, then rewrite the words in the composer. */
+  onEdit?: (quote: string) => void;
 }
 
 /**
@@ -22,6 +28,7 @@ export function AskUserCard({
   error,
   onRetry,
   title = "问诊追问",
+  onEdit,
 }: AskUserCardProps) {
   const questionId = useId();
   const [textAnswer, setTextAnswer] = useState("");
@@ -31,6 +38,19 @@ export function AskUserCard({
   const [customMultiEnabled, setCustomMultiEnabled] = useState(false);
   const [customAnswer, setCustomAnswer] = useState("");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+
+  if (isBodyStateSuggestion(question)) {
+    return (
+      <BodyStateSuggestionCard
+        question={question}
+        onSubmit={onSubmit}
+        onEdit={onEdit}
+        isSubmitting={isSubmitting}
+        error={error}
+        onRetry={onRetry}
+      />
+    );
+  }
 
   const allowCustomInput = question.allow_custom_input === true;
   const multiFields = question.fields ?? [];

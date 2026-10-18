@@ -1,4 +1,8 @@
 import type { PendingInteraction } from "../types/consultation";
+import {
+  BodyStateSuggestionStatus,
+  isBodyStateSuggestion,
+} from "./BodyStateSuggestionCard";
 
 interface AskUserStatusCardProps {
   interaction: PendingInteraction;
@@ -40,6 +44,9 @@ function formatAnswer(answer: unknown): string | null {
 }
 
 export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
+  if (isBodyStateSuggestion(interaction.question)) {
+    return <BodyStateSuggestionStatus interaction={interaction} />;
+  }
   const answerText = formatAnswer(interaction.answer);
   const isAnswered = interaction.status === "answered";
   const isExpired = interaction.status === "expired";

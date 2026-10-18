@@ -171,6 +171,28 @@ type BodyStateSuggestionReceipt struct {
 	CommittedAt      time.Time
 }
 
+// Public is the id-only public receipt (stream milestone and interaction
+// history); nil when the user declined and nothing was written.
+func (r *BodyStateSuggestionReceipt) Public() map[string]any {
+	if r == nil {
+		return nil
+	}
+	receipt := map[string]any{"kind": r.Kind, "commit_id": r.CommitID.String(),
+		"revision": r.Revision, "event_id": r.EventID.String(), "committed_at": r.CommittedAt.UTC().Format(time.RFC3339Nano)}
+	switch r.Kind {
+	case BodyStateSuggestionKindHypothesis:
+		receipt["hypothesis_id"] = r.RecordID.String()
+		receipt["source_evidence_id"] = r.SourceEvidenceID.String()
+	case BodyStateSuggestionKindObservation:
+		receipt["observation_id"] = r.RecordID.String()
+		receipt["source_evidence_id"] = r.SourceEvidenceID.String()
+	case BodyStateSuggestionKindEpisode:
+		receipt["episode_id"] = r.RecordID.String()
+		receipt["fact_id"] = r.FactID.String()
+	}
+	return receipt
+}
+
 // SuggestionSourceMessage is one live, owner-scoped, user-authored chat
 // message a suggestion may cite, together with the Run of its turn.
 type SuggestionSourceMessage struct {

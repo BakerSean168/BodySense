@@ -12,7 +12,7 @@ import * as zod from 'zod/mini';
 
 export const BodyHypothesisSource = /*#__PURE__*/ zod.strictObject({
   "actor": /*#__PURE__*/ zod.enum(['user']),
-  "kind": /*#__PURE__*/ zod.enum(['direct_edit']),
+  "kind": /*#__PURE__*/ zod.enum(['direct_edit', 'user_message']).check(/*#__PURE__*/ zod.describe('How the user stated the guess: a direct edit, or their own chat message they confirmed as a source-cited BodyState suggestion.')),
   "id": /*#__PURE__*/ zod.uuid(),
   "version": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1))
 });

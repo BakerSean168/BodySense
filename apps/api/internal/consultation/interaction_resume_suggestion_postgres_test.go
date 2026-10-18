@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -137,6 +138,18 @@ func TestSuggestionAcceptCommitsExactlyOneUserHypothesisWithReceiptPostgres(t *t
 	if !present || receipt == nil || receipt["hypothesis_id"] != hypothesis.ID.String() || receipt["kind"] != "hypothesis" || receipt["revision"] != float64(1) {
 		t.Fatalf("answered milestone lacks the commit receipt: %#v", receipt)
 	}
+	// The answered interaction keeps the same receipt for chat history.
+	var stored model.AgentInteraction
+	if err := f.db.First(&stored, "id = ?", f.interaction.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(stored.Metadata, &metadata); err != nil {
+		t.Fatal(err)
+	}
+	if history, _ := metadata["body_state_receipt"].(map[string]any); history["commit_id"] != receipt["commit_id"] || metadata["runtime_interrupt_id"] == nil {
+		t.Fatalf("interaction history lacks the receipt: %#v", metadata)
+	}
 
 	// Replay (same request, then same answer from another device) returns the
 	// original result and writes nothing more.
@@ -173,6 +186,10 @@ func TestSuggestionRejectWritesNothingPostgres(t *testing.T) {
 	resumeCount(t, f, "statement_evidence", 0)
 	resumeCount(t, f, "body_state_revisions", 0)
 	resumeCount(t, f, "interaction_resumes", 1)
+	var stored model.AgentInteraction
+	if err := f.db.First(&stored, "id = ?", f.interaction.ID).Error; err != nil || strings.Contains(string(stored.Metadata), "body_state_receipt") {
+		t.Fatalf("a decline left a receipt: %s %v", stored.Metadata, err)
+	}
 }
 
 func TestSuggestionBinderRejectsUnboundSourcesPostgres(t *testing.T) {

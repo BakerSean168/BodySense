@@ -3903,7 +3903,10 @@ components:
           enum: [user]
         kind:
           type: string
-          enum: [direct_edit]
+          enum: [direct_edit, user_message]
+          description: >-
+            How the user stated the guess: a direct edit, or their own chat message they
+            confirmed as a source-cited BodyState suggestion.
         id:
           type: string
           format: uuid

@@ -24,6 +24,7 @@ export interface ActiveTurnViewModel {
   knowledgeGaps: Array<{ query: string; message: string }>;
   redFlag: RedFlagEvent | null;
   pendingInteraction: PendingInteraction | null;
+  answeredSuggestions: PendingInteraction[];
   isRunning: boolean;
   isInterrupted: boolean;
   isFailed: boolean;
@@ -47,6 +48,7 @@ export function selectActiveTurnViewModel(
     knowledgeGaps: selectKnowledgeGaps(state),
     redFlag: state.redFlag,
     pendingInteraction: state.pendingInteraction,
+    answeredSuggestions: selectLiveAnsweredSuggestions(state),
     isRunning: state.status === "streaming",
     isInterrupted: state.status === "interrupted",
     isFailed: state.status === "failed",
@@ -103,7 +105,24 @@ export function selectIsComposerLocked(state: ActiveTurnState): boolean {
 
 /** Whether the active turn has any visible content to render. */
 export function selectHasVisibleContent(state: ActiveTurnState): boolean {
-  return selectHasRenderableContent(state) || state.pendingInteraction !== null;
+  return (
+    selectHasRenderableContent(state) ||
+    state.pendingInteraction !== null ||
+    selectLiveAnsweredSuggestions(state).length > 0
+  );
+}
+
+/**
+ * Answered BodyState suggestions of the live turn. Once the turn completes
+ * they ride on its assistant message instead (see buildCompletedSnapshot).
+ */
+export function selectLiveAnsweredSuggestions(
+  state: ActiveTurnState,
+): PendingInteraction[] {
+  if (state.status !== "streaming" && state.status !== "interrupted") return [];
+  return (state.answeredSuggestions ?? []).filter(
+    (item) => item.id !== state.pendingInteraction?.id,
+  );
 }
 
 /** Whether the active turn has content that should actually render in the message timeline. */

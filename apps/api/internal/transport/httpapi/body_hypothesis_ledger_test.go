@@ -287,6 +287,16 @@ func TestBodyHypothesisHTTPReadsOwnerScopedAndContractChecked(t *testing.T) {
 		!strings.Contains(r.Body.String(), `"actor":"user"`) || !strings.Contains(r.Body.String(), "maybe posture") {
 		t.Fatalf("list: %d %s", r.Code, r.Body.String())
 	}
+	// A guess the user confirmed from their own chat message keeps that source.
+	fake.list.Hypotheses[0].Source.Kind = "user_message"
+	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusOK || !strings.Contains(r.Body.String(), `"kind":"user_message"`) {
+		t.Fatalf("chat-confirmed hypothesis: %d %s", r.Code, r.Body.String())
+	}
+	fake.list.Hypotheses[0].Source.Kind = "agent_inference"
+	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusInternalServerError {
+		t.Fatalf("unknown source kind exposed: %d", r.Code)
+	}
+	fake.list.Hypotheses[0].Source.Kind = "direct_edit"
 	fake.list.Hypotheses[0].LineageID = uuid.Nil
 	if r := performJSONAt(router, http.MethodGet, hypothesisPath, ""); r.Code != http.StatusInternalServerError {
 		t.Fatalf("record without lineage exposed: %d", r.Code)
