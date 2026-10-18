@@ -1,9 +1,7 @@
 export { TrainingExecutionPanel } from "./components/TrainingExecutionPanel";
 export { trainingApi } from "./services/trainingService";
 export type {
-  TrainingPlan,
-  TrainingPhase,
-  TrainingExercise,
+  PlanProposalRecord,
   TrainingPlanRecord,
   TrainingSessionRecord,
 } from "./services/trainingService";

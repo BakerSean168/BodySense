@@ -77,8 +77,15 @@ vi.mock("../../hooks/useConsultationThreadQuery", () => ({
 vi.mock("@/features/workspace/hooks/useHealthWorkspaceQuery", () => ({
   useHealthWorkspaceQuery: () => mockUseHealthWorkspaceQuery(),
 }));
+const mockListPlanProposals = vi.fn();
 vi.mock("@/features/training/services/trainingService", () => ({
-  trainingApi: { listPlans: () => mockListTrainingPlans() },
+  trainingApi: {
+    listPlanRecords: () => mockListTrainingPlans(),
+    listProposals: () => mockListPlanProposals(),
+    acceptProposal: vi.fn(),
+    rejectProposal: vi.fn(),
+  },
+  newPlanDecisionIdentity: () => ({ decisionId: "d", idempotencyKey: "k" }),
 }));
 vi.mock("@/features/training/components/TrainingExecutionPanel", () => ({
   TrainingExecutionPanel: ({ planId }: { planId: string }) => (
@@ -108,6 +115,7 @@ vi.mock("../../components/AssistantChatPanel", () => ({
   AssistantChatPanel: () => <div data-testid="assistant-chat-panel">chat</div>,
 }));
 
+import { makePlan } from "@/features/body-canvas/model/__fixtures__/trainingPlanFixtures";
 import {
   RUN_ID,
   makeCondition,
@@ -272,6 +280,8 @@ beforeEach(() => {
     isError: false,
   });
   mockListTrainingPlans.mockResolvedValue([]);
+  mockListPlanProposals.mockReset();
+  mockListPlanProposals.mockResolvedValue([]);
   mockGetBodyMetrics.mockResolvedValue({ current_revision: 1 });
   mockGetLifestyle.mockResolvedValue({
     current_revision: 1,
@@ -376,91 +386,29 @@ describe("body-first business windows", () => {
     );
   });
 
-  it("renders the active plan with real planId and dosage, excluding other plans", async () => {
+  it("renders the user's V2 plan records with real stages and every plan in the picker", async () => {
     mockListTrainingPlans.mockResolvedValue([
-      {
-        id: "plan-1",
-        status: "active",
-        goal: "肩胛稳定训练",
-        duration_weeks: 6,
-        current_week: 1,
-        phases: [
-          {
-            week: 1,
-            focus: "肩胛稳定训练",
-            exercises: [
-              {
-                name: "胸椎活动",
-                description: "",
-                sets: "2",
-                reps: "10",
-              },
-              {
-                name: "靠墙肩胛滑动",
-                description: "",
-                sets: "3",
-                reps: "10",
-              },
-            ],
-          },
-        ],
-        created_at: "2026-10-11T00:00:00Z",
-      },
-      {
-        id: "plan-2",
-        status: "paused",
-        goal: "臀腿力量训练",
-        duration_weeks: 4,
-        current_week: 1,
-        phases: [],
-        created_at: "2026-10-11T00:00:00Z",
-      },
+      makePlan({ planId: "plan-1", title: "肩胛稳定训练", status: "paused" }),
+      makePlan({ planId: "plan-2", title: "臀腿力量训练" }),
     ]);
-    mockUseHealthWorkspaceQuery.mockReturnValue({
-      data: makeWorkspace({
-        training_plan: {
-          id: "plan-1",
-          status: "active",
-          goal: "肩胛稳定训练",
-          duration_weeks: 6,
-          current_week: 1,
-          phases: [],
-          created_at: "2026-10-11T00:00:00Z",
-        },
-      }),
-      isPending: false,
-      isFetching: false,
-      isError: false,
-    });
     renderPage();
     await openDock("训练计划");
     const trainingWindow = await screen.findByTestId("training-window");
 
-    // The selected plan is a real planId from the list, not a static example.
-    await waitFor(() =>
-      expect(screen.getByText("靠墙肩胛滑动")).toBeInTheDocument(),
-    );
-    expect(screen.getByText("胸椎活动")).toBeInTheDocument();
-    expect(screen.getByText("2 组 · 10 次")).toBeInTheDocument();
-    expect(screen.getByText("3 组 · 10 次")).toBeInTheDocument();
-    expect(screen.getByText("正式训练")).toBeInTheDocument();
-
-    // The V2 header includes the accepted plan only; an unaccepted paused
-    // plan cannot silently be selected as the current executable plan.
-    expect(trainingWindow.querySelector(".bc-plan-selector")).toBeNull();
+    // The active plan wins over the first one; content is the real revision.
+    await waitFor(() => expect(within(trainingWindow).getByText("弹力带侧走")).toBeInTheDocument());
+    expect(within(trainingWindow).getByText("热身")).toBeInTheDocument();
+    expect(within(trainingWindow).getByText("主训练")).toBeInTheDocument();
+    expect(within(trainingWindow).getAllByText("3 组 × 12 次").length).toBeGreaterThan(0);
     const selector = screen.getByRole("combobox", { name: "选择训练计划" });
-    expect(selector).toHaveValue("plan-1");
-    expect(
-      screen.getByRole("option", { name: "肩胛稳定训练" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "臀腿力量训练" }),
-    ).not.toBeInTheDocument();
+    expect(selector).toHaveValue("plan-2");
+    expect(screen.getByRole("option", { name: "肩胛稳定训练" })).toBeInTheDocument();
+    await userEvent.selectOptions(selector, "plan-1");
     await waitFor(() =>
-      expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe(
-        "plan-1",
-      ),
+      expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe("plan-1"),
     );
+    expect(within(trainingWindow).getByTestId("training-gate")).toHaveTextContent("计划已暂停");
+    expect(within(trainingWindow).getByRole("button", { name: "开始训练" })).toBeDisabled();
   });
 
   it("preserves one V2 Training window when Dock closes and reopens it", async () => {
