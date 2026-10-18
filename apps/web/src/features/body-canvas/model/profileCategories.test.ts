@@ -18,10 +18,10 @@ describe("profile categories", () => {
     ]);
     expect(PROFILE_CATEGORIES.map((category) => category.label)).toEqual([
       "身体记录",
-      "装备",
-      "影像资料",
-      "医学报告",
-      "习性",
+      "器材",
+      "媒体",
+      "报告",
+      "生活习惯",
     ]);
   });
 
@@ -39,7 +39,9 @@ describe("profile categories", () => {
       analysis_status: "none",
       created_at: "2026-10-11T00:00:00Z",
     }));
-    expect(selectUploadsByCategory(uploads, "reports").map((u) => u.id)).toEqual(["b"]);
+    expect(
+      selectUploadsByCategory(uploads, "reports").map((u) => u.id),
+    ).toEqual(["b"]);
     expect(selectUploadsByCategory(uploads, "media").map((u) => u.id)).toEqual([
       "a",
       "c",

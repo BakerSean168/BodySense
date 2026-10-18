@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Backpack,
   Check,
+  ChevronDown,
   FileText,
   Images,
   LoaderCircle,
@@ -16,7 +17,7 @@ import {
   type EquipmentAsset,
 } from "@/features/profile/services/equipmentService";
 import { BodyFactRecords } from "./BodyFactRecords";
-import { BodyStateWorkbench } from "@/features/workspace/components/BodyStateWorkbench";
+import { PersonRecordsView } from "./PersonRecordsView";
 import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
 import {
@@ -34,14 +35,14 @@ import { PersonIdentityPopover } from "./PersonIdentityPopover";
 /**
  * Person/Profile business window.
  *
- * Layout contract (Penpot V5.5, `PROFILE_UNIFIED_CENTERING` /
- * `PROFILE_TAB_CONTENT_SIMPLIFICATION`):
- * - slim header: avatar + nickname on the left, Close on the right; no caret,
- *   no header edit action, no duplicate title, no body-status card;
+ * Layout contract (Penpot Desktop / Mobile Person boards):
+ * - header: avatar + nickname, a static "/", then the category picker
+ *   ("BakerSean / 身体记录"); Close on the right; no duplicate title, no
+ *   body-status card and no tab strip;
  * - clicking avatar/nickname opens the Identity popover (minimal optional
  *   Profile: nickname, birth date + self-reported gender, display time zone +
  *   units); outside click closes it;
- * - exactly five category tabs; the tab label is the only place the category
+ * - exactly five categories; the picker label is the only place the category
  *   name appears — no duplicate H1 and no generic explanation beneath it;
  * - Equipment empty state is a single centred sentence + add action; added
  *   equipment grows naturally (Desktop 4 columns, Mobile 2 columns) with no
@@ -68,6 +69,9 @@ export interface PersonWindowProps {
   selectedRegionId?: BodyRegionId | null;
   onSelectRegion?: (regionId: BodyRegionId | null) => void;
   onAskRegion?: (regionId: BodyRegionId) => void;
+  /** The header picker owns the category; uncontrolled use keeps local state. */
+  category?: ProfileCategoryId;
+  onCategoryChange?: (category: ProfileCategoryId) => void;
 }
 
 /** Avatar glyph is derived from the nickname only; never invented. */
@@ -104,6 +108,55 @@ export function PersonIdentityTrigger({
       </span>
       <span className="bc-person-name">{displayName}</span>
     </button>
+  );
+}
+
+/**
+ * Penpot Person header: "BakerSean / 身体记录 ▾". The category picker replaces
+ * the old tab strip; it is a native select so keyboard and screen readers get
+ * the platform listbox.
+ */
+export function PersonWindowHeader({
+  identity,
+  open,
+  onToggle,
+  category,
+  onCategoryChange,
+}: {
+  identity: PersonProfileIdentity;
+  open: boolean;
+  onToggle: () => void;
+  category: ProfileCategoryId;
+  onCategoryChange: (category: ProfileCategoryId) => void;
+}) {
+  return (
+    <div className="bc-window-context bc-person-context">
+      <PersonIdentityTrigger
+        identity={identity}
+        open={open}
+        onToggle={onToggle}
+      />
+      <span className="bc-window-context-sep" aria-hidden="true">
+        /
+      </span>
+      <span className="bc-window-select-wrap">
+        <select
+          className="bc-window-context-select"
+          aria-label="档案分类"
+          value={category}
+          onChange={(event) =>
+            onCategoryChange(event.target.value as ProfileCategoryId)
+          }
+        >
+          {PROFILE_CATEGORIES.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={15} aria-hidden="true" />
+      </span>
+    </div>
   );
 }
 
@@ -467,9 +520,17 @@ export function PersonWindow({
   onOpenRecords,
   identityInfoOpen: infoOpen,
   onIdentityInfoOpenChange,
+  category: controlledCategory,
+  onCategoryChange,
 }: PersonWindowProps) {
   const mobile = useMediaQuery("(max-width: 760px)");
-  const [category, setCategory] = useState<ProfileCategoryId>("records");
+  const [localCategory, setLocalCategory] =
+    useState<ProfileCategoryId>("records");
+  const category = controlledCategory ?? localCategory;
+  const setCategory = (next: ProfileCategoryId) => {
+    setLocalCategory(next);
+    onCategoryChange?.(next);
+  };
   const setInfoOpen = onIdentityInfoOpenChange;
   // The window owns its own reads: nothing loads until the window is open, and
   // a failure is surfaced instead of substituted with placeholder values.
@@ -496,19 +557,6 @@ export function PersonWindow({
         />
       ) : null}
 
-      <nav className="bc-person-tabs" aria-label="档案分类">
-        {PROFILE_CATEGORIES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            aria-pressed={category === item.id}
-            onClick={() => setCategory(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
       <div
         className="bc-person-body"
         tabIndex={0}
@@ -517,7 +565,7 @@ export function PersonWindow({
         data-category={category}
       >
         {category === "records" ? (
-          <BodyStateWorkbench canEdit={canEdit} />
+          <PersonRecordsView canEdit={canEdit} />
         ) : category === "habits" ? (
           <BodyFactRecords habitsOnly canEdit={canEdit} />
         ) : data.error ? (

@@ -6,7 +6,14 @@ import { BodyEpisodeAssociationForm } from "./BodyEpisodeAssociationForm";
 import { useBodyEpisodeController } from "../hooks/useBodyEpisodeController";
 
 /** Functional record-to-Episode bridge. No independent business data store. */
-function BodyEpisodeEditor({ canEdit }: { canEdit: boolean }) {
+export function BodyEpisodeEditor({
+  canEdit,
+  showList = false,
+}: {
+  canEdit: boolean;
+  /** The Person Episodes scene lists Episodes itself; the legacy disclosure does not. */
+  showList?: boolean;
+}) {
   const {
     owner,
     factsQuery,
@@ -51,10 +58,8 @@ function BodyEpisodeEditor({ canEdit }: { canEdit: boolean }) {
       data-testid="body-episode-editor"
       className="bc-record-editor bc-episode-editor"
     >
-      <div className="bc-record-actions">
-        <span className="bc-window-note">
-          症状经历仅组织已记录的本人陈述；持续或结束状态必须有明确证据。
-        </span>
+      <div className="bc-record-actions bc-episode-editor-bar">
+        <span className="bc-window-note">只整理你已记录的陈述</span>
         <button
           className="bc-button"
           type="button"
@@ -98,12 +103,14 @@ function BodyEpisodeEditor({ canEdit }: { canEdit: boolean }) {
       ) : null}
       {readReady ? (
         <>
-          <BodyEpisodeList
-            episodes={view.episodes}
-            hasNextPage={Boolean(episodesQuery.hasNextPage)}
-            isFetchingNextPage={episodesQuery.isFetchingNextPage}
-            onLoadMore={() => void episodesQuery.fetchNextPage()}
-          />
+          {showList ? (
+            <BodyEpisodeList
+              episodes={view.episodes}
+              hasNextPage={Boolean(episodesQuery.hasNextPage)}
+              isFetchingNextPage={episodesQuery.isFetchingNextPage}
+              onLoadMore={() => void episodesQuery.fetchNextPage()}
+            />
+          ) : null}
           {canEdit && !addingSymptom ? (
             <button
               type="button"
@@ -218,7 +225,7 @@ export function BodyEpisodeAssociations({ canEdit }: { canEdit: boolean }) {
       </div>
       {loadedOnce ? (
         <div hidden={!expanded}>
-          <BodyEpisodeEditor canEdit={canEdit} />
+          <BodyEpisodeEditor canEdit={canEdit} showList />
         </div>
       ) : null}
     </section>

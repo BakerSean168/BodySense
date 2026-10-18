@@ -188,7 +188,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     '.bc-business-window[data-window="person"]',
   );
   await expect(personWindow).toBeVisible();
-  await personWindow.getByRole("button", { name: "装备", exact: true }).click();
+  await page.getByLabel("档案分类").selectOption("equipment");
   await expect(
     personWindow.getByText("添加个人器材，帮助 AI 更好规划训练项目"),
   ).toBeVisible();

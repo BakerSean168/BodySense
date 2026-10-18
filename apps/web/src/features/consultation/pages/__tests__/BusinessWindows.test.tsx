@@ -398,19 +398,33 @@ describe("body-first business windows", () => {
     const trainingWindow = await screen.findByTestId("training-window");
 
     // The active plan wins over the first one; content is the real revision.
-    await waitFor(() => expect(within(trainingWindow).getByText("弹力带侧走")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        within(trainingWindow).getByText("弹力带侧走"),
+      ).toBeInTheDocument(),
+    );
     expect(within(trainingWindow).getByText("热身")).toBeInTheDocument();
     expect(within(trainingWindow).getByText("主训练")).toBeInTheDocument();
-    expect(within(trainingWindow).getAllByText("3 组 × 12 次").length).toBeGreaterThan(0);
+    expect(
+      within(trainingWindow).getAllByText("3 组 × 12 次").length,
+    ).toBeGreaterThan(0);
     const selector = screen.getByRole("combobox", { name: "选择训练计划" });
     expect(selector).toHaveValue("plan-2");
-    expect(screen.getByRole("option", { name: "肩胛稳定训练" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "肩胛稳定训练" }),
+    ).toBeInTheDocument();
     await userEvent.selectOptions(selector, "plan-1");
     await waitFor(() =>
-      expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe("plan-1"),
+      expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe(
+        "plan-1",
+      ),
     );
-    expect(within(trainingWindow).getByTestId("training-gate")).toHaveTextContent("计划已暂停");
-    expect(within(trainingWindow).getByRole("button", { name: "开始训练" })).toBeDisabled();
+    expect(
+      within(trainingWindow).getByTestId("training-gate"),
+    ).toHaveTextContent("计划已暂停");
+    expect(
+      within(trainingWindow).getByRole("button", { name: "开始训练" }),
+    ).toBeDisabled();
   });
 
   it("preserves one V2 Training window when Dock closes and reopens it", async () => {
@@ -491,10 +505,15 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     const person = await screen.findByTestId("person-window");
-    for (const label of ["身体记录", "装备", "影像资料", "医学报告", "习性"]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
-    }
-    // The tab label is the only place the category name appears.
+    // Penpot Person header: "nickname / <category picker>" replaces the tabs.
+    const picker = screen.getByRole("combobox", { name: "档案分类" });
+    expect(
+      within(picker)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["身体记录", "器材", "媒体", "报告", "生活习惯"]);
+    expect(picker).toHaveValue("records");
+    // The picker label is the only place the category name appears.
     expect(screen.queryAllByRole("heading", { name: "身体记录" })).toHaveLength(
       0,
     );
@@ -527,7 +546,10 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.click(screen.getByRole("button", { name: "装备" }));
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "equipment",
+    );
     expect(
       await screen.findByText("添加个人器材，帮助 AI 更好规划训练项目"),
     ).toBeInTheDocument();
@@ -562,7 +584,10 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.click(screen.getByRole("button", { name: "装备" }));
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "equipment",
+    );
     expect(await screen.findByText("弹力带")).toBeInTheDocument();
     expect(screen.getByText("中等阻力")).toBeInTheDocument();
     expect(screen.getByText("当前可用")).toBeInTheDocument();
@@ -580,11 +605,14 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.click(screen.getByRole("button", { name: "习性" }));
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "habits",
+    );
     await waitFor(() =>
       expect(screen.getByText("每晚 7 小时")).toBeInTheDocument(),
     );
-    expect(screen.getByText("发生时间：未说明")).toBeVisible();
+    expect(screen.getByText(/发生：未说明 · 记录/)).toBeVisible();
     expect(mockListBodyFacts).toHaveBeenCalled();
   });
 
