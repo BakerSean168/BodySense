@@ -15,9 +15,7 @@ type HealthWorkspace struct {
 	ConversationID     *uuid.UUID                  `json:"conversation_id,omitempty"`
 	ProfileReady       bool                        `json:"profile_ready"`
 	Diagnosis          map[string]any              `json:"diagnosis,omitempty"`
-	Treatment          *model.Treatment            `json:"treatment,omitempty"`
 	TrainingPlan       *model.TrainingPlan         `json:"training_plan,omitempty"`
-	TreatmentRevisions []model.TreatmentRevision   `json:"treatment_revisions"`
 	RecentOutcomes     []model.Outcome             `json:"recent_outcomes"`
 	Trends             []HealthWorkspaceTrend      `json:"trends"`
 	Capabilities       HealthWorkspaceCapabilities `json:"capabilities"`
@@ -30,13 +28,10 @@ type HealthWorkspaceCapabilities struct {
 	CanRequestDiagnosis     bool `json:"can_request_diagnosis"`
 	CanReviewDiagnosis      bool `json:"can_review_diagnosis"`
 	CanGenerateTreatment    bool `json:"can_generate_treatment"`
-	CanAcceptTreatment      bool `json:"can_accept_treatment"`
 	CanExecuteTreatment     bool `json:"can_execute_treatment"`
 	CanRecordOutcome        bool `json:"can_record_outcome"`
-	CanReviewTreatment      bool `json:"can_review_treatment"`
 	RequiresSafetyReview    bool `json:"requires_safety_review"`
 	RequiresDiagnosisReview bool `json:"requires_diagnosis_review"`
-	RequiresTreatmentReview bool `json:"requires_treatment_review"`
 }
 
 type HealthWorkspaceAction struct {

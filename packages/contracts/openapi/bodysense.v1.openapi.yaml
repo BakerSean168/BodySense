@@ -5653,62 +5653,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Intervention'
-    TreatmentStatusReason:
-      type: object
-      additionalProperties: false
-      required: []
-      properties:
-        code:
-          type: string
-        revision:
-          type: integer
-        change_type:
-          type: string
-        concern_key:
-          type: string
-        message:
-          type: string
-    Treatment:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - current_revision
-      - status
-      - status_reasons
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        current_revision:
-          type: integer
-        status:
-          type: string
-          enum:
-          - active
-          - review_recommended
-          - paused
-          - superseded
-          - completed
-        source_body_state_revision:
-          type: integer
-        source_diagnosis_analysis_id:
-          type: string
-          format: uuid
-        status_reasons:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentStatusReason'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        current:
-          $ref: '#/components/schemas/TreatmentRevision'
     TrainingExerciseLogInput:
       type: object
       additionalProperties: false
@@ -5988,13 +5932,10 @@ components:
       - can_request_diagnosis
       - can_review_diagnosis
       - can_generate_treatment
-      - can_accept_treatment
       - can_execute_treatment
       - can_record_outcome
-      - can_review_treatment
       - requires_safety_review
       - requires_diagnosis_review
-      - requires_treatment_review
       properties:
         can_continue_consultation:
           type: boolean
@@ -6006,19 +5947,13 @@ components:
           type: boolean
         can_generate_treatment:
           type: boolean
-        can_accept_treatment:
-          type: boolean
         can_execute_treatment:
           type: boolean
         can_record_outcome:
           type: boolean
-        can_review_treatment:
-          type: boolean
         requires_safety_review:
           type: boolean
         requires_diagnosis_review:
-          type: boolean
-        requires_treatment_review:
           type: boolean
     WorkspaceAction:
       type: object
@@ -6045,7 +5980,6 @@ components:
       required:
       - generated_at
       - profile_ready
-      - treatment_revisions
       - recent_outcomes
       - trends
       - capabilities
@@ -6061,14 +5995,8 @@ components:
           type: boolean
         diagnosis:
           $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
-        treatment:
-          $ref: '#/components/schemas/Treatment'
         training_plan:
           $ref: '#/components/schemas/TrainingPlan'
-        treatment_revisions:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentRevision'
         recent_outcomes:
           type: array
           items:

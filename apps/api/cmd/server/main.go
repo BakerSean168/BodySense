@@ -273,7 +273,6 @@ func main() {
 		bodyStateService,
 		diagnosisAnalysisService,
 		diagnosisFreshnessService,
-		treatmentService,
 		outcomeService,
 		trainingService,
 	)

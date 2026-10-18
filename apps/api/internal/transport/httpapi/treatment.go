@@ -16,13 +16,6 @@ func strictTreatmentRevision(value *model.TreatmentRevision) (openapiv1.Treatmen
 	return strictOpenAPIConvert[openapiv1.TreatmentRevision]("TreatmentRevision", projected)
 }
 
-func sanitizeTreatmentMap(projected map[string]any) {
-	delete(projected, "user_id")
-	if current, ok := projected["current"].(map[string]any); ok {
-		sanitizeTreatmentRevisionMap(current)
-	}
-}
-
 func publicTreatmentRevisionMap(value *model.TreatmentRevision) (map[string]any, error) {
 	projected, err := marshalPublicMap(value)
 	if err != nil {

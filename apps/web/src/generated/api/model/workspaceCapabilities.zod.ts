@@ -13,13 +13,10 @@ export const WorkspaceCapabilities = /*#__PURE__*/ zod.strictObject({
   "can_request_diagnosis": /*#__PURE__*/ zod.boolean(),
   "can_review_diagnosis": /*#__PURE__*/ zod.boolean(),
   "can_generate_treatment": /*#__PURE__*/ zod.boolean(),
-  "can_accept_treatment": /*#__PURE__*/ zod.boolean(),
   "can_execute_treatment": /*#__PURE__*/ zod.boolean(),
   "can_record_outcome": /*#__PURE__*/ zod.boolean(),
-  "can_review_treatment": /*#__PURE__*/ zod.boolean(),
   "requires_safety_review": /*#__PURE__*/ zod.boolean(),
-  "requires_diagnosis_review": /*#__PURE__*/ zod.boolean(),
-  "requires_treatment_review": /*#__PURE__*/ zod.boolean()
+  "requires_diagnosis_review": /*#__PURE__*/ zod.boolean()
 });
 
 export type WorkspaceCapabilities = zod.input<typeof WorkspaceCapabilities>;

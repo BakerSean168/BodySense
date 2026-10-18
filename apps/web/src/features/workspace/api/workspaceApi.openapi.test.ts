@@ -10,7 +10,6 @@ import { workspaceApi } from "./workspaceApi";
 const validWorkspaceResponse = {
   generated_at: "2026-09-13T08:00:00Z",
   profile_ready: true,
-  treatment_revisions: [],
   recent_outcomes: [],
   trends: [],
   capabilities: {
@@ -19,13 +18,10 @@ const validWorkspaceResponse = {
     can_request_diagnosis: false,
     can_review_diagnosis: false,
     can_generate_treatment: false,
-    can_accept_treatment: false,
     can_execute_treatment: false,
     can_record_outcome: false,
-    can_review_treatment: false,
     requires_safety_review: false,
     requires_diagnosis_review: false,
-    requires_treatment_review: false,
   },
   actions: [],
 };
