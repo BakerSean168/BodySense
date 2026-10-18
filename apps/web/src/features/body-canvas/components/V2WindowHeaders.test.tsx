@@ -43,6 +43,7 @@ const diagnosis: NativeDiagnosisWindowView = {
   ],
   run: null,
   safetyBlocked: false,
+  safetyReview: false,
 };
 
 const plans: ProjectedTrainingPlans = {

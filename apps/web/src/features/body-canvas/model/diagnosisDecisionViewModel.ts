@@ -73,7 +73,27 @@ export interface ProposalRow {
   /** The user must acknowledge a changed proposal before choosing again. */
   needsReview: boolean;
   contentFingerprint: string;
+  /** 1-based place in the run, for the Penpot "proposal n / total" marker. */
+  position: number;
+  total: number;
 }
+
+/**
+ * Which Penpot Diagnosis scene the run is in. Every terminal phase except
+ * `safety_stopped` comes from a receipt or the server run state, never from
+ * a click alone.
+ * - `deciding`: Confirm first / Confirm second / First rejected
+ * - `committed`: Receipt (only new conditions adopted)
+ * - `updated`: Update receipt (an existing condition changed)
+ * - `closed_without_change`: No changes
+ * - `safety_stopped`: Safety stopped (zero Diagnosis writes)
+ */
+export type DiagnosisRunPhase =
+  | "deciding"
+  | "committed"
+  | "updated"
+  | "closed_without_change"
+  | "safety_stopped";
 
 export interface DiagnosisRunView {
   runId: string;
@@ -91,6 +111,9 @@ export interface DiagnosisRunView {
   closesRemaining: boolean;
   /** Receipt id proving adoption; null means nothing may be shown as committed. */
   committedReceiptId: string | null;
+  phase: DiagnosisRunPhase;
+  /** Proposals the receipt proves were written; 0 unless committed/updated. */
+  committedCount: number;
 }
 
 export interface NativeDiagnosisWindowView {
@@ -98,6 +121,8 @@ export interface NativeDiagnosisWindowView {
   confirmed: ConfirmedCondition[];
   run: DiagnosisRunView | null;
   safetyBlocked: boolean;
+  /** Workspace-level Safety review is pending; every decision is read-only. */
+  safetyReview: boolean;
 }
 
 export interface ProjectNativeDiagnosisInput {
@@ -247,6 +272,8 @@ function proposalRow(
     runOpen: boolean;
     canDecide: boolean;
     receipt: { receiptId: string; decisionIds: string[] | null } | null;
+    position: number;
+    total: number;
   },
 ): ProposalRow {
   const { session } = input;
@@ -301,7 +328,31 @@ function proposalRow(
     selectable: state === "undecided" && input.canDecide,
     needsReview: flagged,
     contentFingerprint: proposal.contentFingerprint,
+    position: input.position,
+    total: input.total,
   };
+}
+
+function runPhase(
+  run: NativeDiagnosisRunProjectionOutput,
+  session: DiagnosisDecisionSession,
+  safetyBlocked: boolean,
+  proposals: readonly ProposalRow[],
+  receipt: { receiptId: string } | null,
+): DiagnosisRunPhase {
+  if (safetyBlocked) return "safety_stopped";
+  if (receipt)
+    return proposals.some(
+      (row) => row.state === "committed" && row.changeKind !== "create",
+    )
+      ? "updated"
+      : "committed";
+  const settledWithoutChange =
+    session.settlement?.runId === run.runId &&
+    session.settlement.outcome === "closed_without_change";
+  if (settledWithoutChange || run.state !== "open")
+    return "closed_without_change";
+  return "deciding";
 }
 
 export function projectNativeDiagnosisWindow({
@@ -332,7 +383,13 @@ export function projectNativeDiagnosisWindow({
     currentRevision !== null &&
     (run.state === "open" || ownSession.runId === run.runId);
   if (!run || !visible || currentRevision === null)
-    return { currentRevision, confirmed, run: null, safetyBlocked };
+    return {
+      currentRevision,
+      confirmed,
+      run: null,
+      safetyBlocked,
+      safetyReview,
+    };
 
   const runOpen = run.state === "open" && !ownSession.settlement;
   const runChanged =
@@ -342,7 +399,8 @@ export function projectNativeDiagnosisWindow({
   const canDecide =
     runOpen && !runChanged && !safetyBlocked && !safetyReview && !busy;
   const receipt = committedReceipt(run, ownSession);
-  const proposals = run.proposals.map((proposal) =>
+  const total = run.proposals.length;
+  const proposals = run.proposals.map((proposal, index) =>
     proposalRow(proposal, {
       conditions,
       session: ownSession,
@@ -351,6 +409,8 @@ export function projectNativeDiagnosisWindow({
       runOpen,
       canDecide,
       receipt,
+      position: index + 1,
+      total,
     }),
   );
   const undecidedCount = proposals.filter(
@@ -364,6 +424,7 @@ export function projectNativeDiagnosisWindow({
     currentRevision,
     confirmed,
     safetyBlocked,
+    safetyReview,
     run: {
       runId: run.runId,
       state: run.state,
@@ -377,6 +438,10 @@ export function projectNativeDiagnosisWindow({
       acceptedCount,
       closesRemaining: undecidedCount > 0,
       committedReceiptId: receipt?.receiptId ?? null,
+      phase: runPhase(run, ownSession, safetyBlocked, proposals, receipt),
+      committedCount: receipt
+        ? proposals.filter((row) => row.state === "committed").length
+        : 0,
     },
   };
 }

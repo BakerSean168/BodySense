@@ -6,6 +6,7 @@ import {
   projectNativeDiagnosisWindow,
   withCommandError,
   withDecisionReceipt,
+  withSettlementReceipt,
 } from "../model/diagnosisDecisionViewModel";
 import {
   PROPOSAL_A,
@@ -15,6 +16,7 @@ import {
   makeDecisionReceipt,
   makeDiagnosis,
   makeRun,
+  makeSettlementReceipt,
 } from "../model/__fixtures__/nativeDiagnosisFixtures";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -147,5 +149,86 @@ describe("DiagnosisWindow decisions", () => {
       within(item).getByRole("button", { name: "我已重新核对" }),
     );
     expect(onReview).toHaveBeenCalledWith(PROPOSAL_A);
+  });
+
+  it("shows the Receipt state only with a committed settlement receipt", () => {
+    const decision = makeDecisionReceipt();
+    const pending = withDecisionReceipt(EMPTY_DECISION_SESSION, decision);
+    const { rerender } = render(
+      <DiagnosisWindow
+        view={projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          session: pending,
+        })}
+        controls={controls()}
+      />,
+    );
+    expect(screen.queryByTestId("diagnosis-receipt")).toBeNull();
+    expect(
+      within(proposal(PROPOSAL_A)).getByText("提案 1/2 · 新病情"),
+    ).toBeVisible();
+
+    rerender(
+      <DiagnosisWindow
+        view={projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          session: withSettlementReceipt(
+            pending,
+            makeSettlementReceipt({ decisionIds: [decision.decisionId] }),
+          ),
+        })}
+        controls={controls()}
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-receipt")).toHaveTextContent(
+      "已写入综合诊断",
+    );
+    expect(within(proposal(PROPOSAL_A)).getByText("已写入诊断")).toBeVisible();
+    expect(screen.queryByTestId("diagnosis-decide")).toBeNull();
+  });
+
+  it("shows No changes after a closed-without-change receipt", () => {
+    render(
+      <DiagnosisWindow
+        view={projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          session: withSettlementReceipt(
+            EMPTY_DECISION_SESSION,
+            makeSettlementReceipt({
+              outcome: "closed_without_change",
+              revision: 2,
+              diagnosisRevisionId: undefined,
+            }),
+          ),
+        })}
+        controls={controls()}
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-no-change")).toBeVisible();
+    expect(screen.queryByTestId("diagnosis-receipt")).toBeNull();
+  });
+
+  it("keeps decisions disabled while Safety review is required", () => {
+    render(
+      <DiagnosisWindow
+        view={projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          safetyReview: true,
+        })}
+        controls={controls({ selection: { [PROPOSAL_A]: "accept" } })}
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-safety")).toHaveAttribute(
+      "data-reason",
+      "safety_review",
+    );
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "保存所选的 0 条" }),
+    ).toBeDisabled();
   });
 });
