@@ -93,7 +93,8 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     diagnosisWindow.getByRole("region", { name: "当前诊断内容" }),
   ).toBeVisible();
   // Penpot Diagnosis / Empty: title only (no empty picker) and the empty,
-  // non-clinical state with a Chat entry.
+  // non-clinical state with a Chat entry. A pending safety reminder from the
+  // seeded consultation only adds a note; it gates analyses, not Empty.
   await expect(
     diagnosisWindow.getByRole("combobox", { name: "选择已确认病情" }),
   ).toHaveCount(0);

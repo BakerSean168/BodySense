@@ -704,6 +704,24 @@ export function DiagnosisWindow({
       ? projectDiagnosisStepper(activeRun, controls?.selection ?? {})
       : null;
 
+  // A pending workspace safety review only gates an open formal analysis
+  // (Penpot Diagnosis / Safety stopped). It never hides the user's own
+  // Current/Empty Diagnosis or a settled receipt: those keep their board and
+  // carry a short safety note instead.
+  const safetyGated =
+    safetyBlocked || (safetyReview && activeRun?.phase === "deciding");
+  const safetyNote =
+    safetyReview && !safetyGated ? (
+      <Banner
+        tone="bad"
+        mark="counter"
+        role="alert"
+        testId="diagnosis-safety-note"
+      >
+        需要先处理安全提醒，之后才能请求正式分析
+      </Banner>
+    ) : null;
+
   let body: ReactNode;
   let footer: ReactNode = null;
   if (error) {
@@ -714,7 +732,7 @@ export function DiagnosisWindow({
     );
   } else if (loading) {
     body = <LoadingScene />;
-  } else if (safetyBlocked || safetyReview) {
+  } else if (safetyGated) {
     body = <SafetyScene stopped={safetyBlocked} />;
   } else if (activeRun && stepper) {
     body = (
@@ -745,8 +763,7 @@ export function DiagnosisWindow({
     controls &&
     !error &&
     !loading &&
-    !safetyBlocked &&
-    !safetyReview &&
+    !safetyGated &&
     activeRun &&
     activeRun.phase !== "deciding"
   ) {
@@ -772,6 +789,7 @@ export function DiagnosisWindow({
       data-testid="diagnosis-window"
     >
       <div className="bc-window-body" role="region" aria-label="当前诊断内容">
+        {error || loading ? null : safetyNote}
         {body}
       </div>
       {footer}

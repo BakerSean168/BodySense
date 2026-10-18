@@ -296,6 +296,37 @@ describe("DiagnosisWindow (Penpot Diagnosis boards)", () => {
     expect(screen.queryByTestId("diagnosis-decide")).toBeNull();
   });
 
+  it("a pending safety review keeps Empty/Current visible with a note", () => {
+    const { rerender } = render(
+      <DiagnosisWindow
+        view={view({ run: null, safetyReview: true })}
+        controls={controls()}
+      />,
+    );
+    expect(screen.getByTestId("diagnosis-empty")).toHaveTextContent(
+      "还没有诊断",
+    );
+    expect(screen.getByTestId("diagnosis-safety-note")).toHaveTextContent(
+      "需要先处理安全提醒",
+    );
+    expect(screen.queryByTestId("diagnosis-safety")).toBeNull();
+
+    rerender(
+      <DiagnosisWindow
+        view={view({
+          diagnosis: makeDiagnosis({ conditionEntries: [makeCondition()] }),
+          run: null,
+          safetyReview: true,
+        })}
+        controls={controls()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "肩峰下撞击" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("diagnosis-safety-note")).toBeVisible();
+  });
+
   it("Current shows the adopted condition; Empty offers Chat", async () => {
     const { rerender } = render(
       <DiagnosisWindow
