@@ -88,10 +88,23 @@ func seedPlanDiagnosis(t *testing.T, db *gorm.DB, owner uuid.UUID) (uuid.UUID, u
 }
 func correctPlanDiagnosis(t *testing.T, db *gorm.DB, owner, condition uuid.UUID) {
 	t.Helper()
-	directEdit := uuid.New()
-	rev := model.DiagnosisRevision{UserID: owner, ID: uuid.New(), PreviousRevision: 1, Revision: 2, DirectEditID: &directEdit, Patch: datatypes.JSON(`[{"op":"update","medicalName":"Corrected synthetic condition"}]`), DecisionIDs: []uuid.UUID{}, BodyStateRevision: 1, EvidenceRefs: []model.DiagnosisEvidenceRef{}, ReplayInput: datatypes.JSON(`{}`), ExecutionProvenance: datatypes.JSON(`{}`), IdempotencyKey: uuid.NewString(), RequestFingerprint: strings.Repeat("e", 64), ReceiptID: uuid.New(), CommittedAt: time.Now().UTC()}
+	var request model.ConditionAnalysisRun
+	if err := db.Where("user_id=?", owner).Take(&request).Error; err != nil {
+		t.Fatal(err)
+	}
+	// Synthetic receipt for the revision fixture; real edits go through DiagnosisDirectEditService.
+	edit := model.ConditionDirectEdit{UserID: owner, ID: uuid.New(), ConditionID: condition, EditKind: model.ConditionCorrectMetadata,
+		Changes: []model.ConditionDirectEditChange{{Field: "qualifiers.notes", Before: "", After: "synthetic"}}, Reason: "synthetic correction",
+		RequestMessageID: request.RequestMessageID, RequestEvidenceID: request.RequestEvidenceID, RequestSourceVersion: request.RequestSourceVersion,
+		ConfirmationToolCallID: "synthetic-user-confirm", BasedOnDiagnosisRevision: 1, ResultingDiagnosisRevision: 2, DiagnosisRevisionID: uuid.New(),
+		BodyStateRevision: 1, IdempotencyKey: uuid.NewString(), RequestFingerprint: strings.Repeat("f", 64), ReceiptID: uuid.New(), ConfirmedAt: time.Now().UTC()}
+	directEdit := edit.ID
+	rev := model.DiagnosisRevision{UserID: owner, ID: edit.DiagnosisRevisionID, PreviousRevision: 1, Revision: 2, DirectEditID: &directEdit, Patch: datatypes.JSON(`[{"op":"update","medicalName":"Corrected synthetic condition"}]`), DecisionIDs: []uuid.UUID{}, BodyStateRevision: 1, EvidenceRefs: []model.DiagnosisEvidenceRef{}, ReplayInput: datatypes.JSON(`{}`), ExecutionProvenance: datatypes.JSON(`{}`), IdempotencyKey: uuid.NewString(), RequestFingerprint: strings.Repeat("e", 64), ReceiptID: uuid.New(), CommittedAt: time.Now().UTC()}
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&rev).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&edit).Error; err != nil {
 			return err
 		}
 		if err := tx.Exec("UPDATE condition_entries SET medical_name='Corrected synthetic condition',committed_revision=2 WHERE user_id=? AND id=?", owner, condition).Error; err != nil {
