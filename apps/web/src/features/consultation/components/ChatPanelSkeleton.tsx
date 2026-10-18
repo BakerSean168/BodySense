@@ -1,7 +1,7 @@
 function SkeletonBlock({ className }: { className: string }) {
   return (
     <div
-      className={`animate-pulse rounded-2xl bg-white/[0.065] ${className}`}
+      className={`chat-skeleton-block animate-pulse rounded-2xl bg-white/[0.065] ${className}`}
     />
   );
 }
@@ -9,7 +9,7 @@ function SkeletonBlock({ className }: { className: string }) {
 export function ChatPanelSkeleton() {
   return (
     <div
-      className="flex h-full flex-col bg-[#171717] px-5 py-6"
+      className="chat-skeleton flex h-full flex-col bg-[#171717] px-5 py-6"
       data-testid="chat-panel-skeleton"
     >
       <div className="mx-auto w-full max-w-[760px] flex-1 space-y-6">

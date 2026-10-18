@@ -13,12 +13,12 @@ export function Sources({ count, children, className, ...props }: SourcesProps) 
   return (
     <details
       className={cn(
-        "group/sources rounded-xl border border-white/[0.07] bg-white/[0.025]",
+        "chat-sources group/sources rounded-xl border border-white/[0.07] bg-white/[0.025]",
         className,
       )}
       {...props}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs text-white/55 outline-none transition-colors hover:text-white/80 focus-visible:ring-2 focus-visible:ring-[#75d5a7]/45">
+      <summary className="chat-sources-summary flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs text-white/55 outline-none transition-colors hover:text-white/80 focus-visible:ring-2 focus-visible:ring-[#75d5a7]/45">
         <BookOpenText className="size-3.5" aria-hidden="true" />
         <span>参考知识 {count}</span>
         <ChevronDown
@@ -26,7 +26,7 @@ export function Sources({ count, children, className, ...props }: SourcesProps) 
           aria-hidden="true"
         />
       </summary>
-      <div className="border-t border-white/[0.06] px-3 py-2.5">
+      <div className="chat-sources-body border-t border-white/[0.06] px-3 py-2.5">
         {children}
       </div>
     </details>
@@ -53,7 +53,7 @@ export function Source({
   return (
     <div
       className={cn(
-        "rounded-lg px-2.5 py-2 text-xs leading-5 text-white/65 transition-colors hover:bg-white/[0.04] hover:text-white/80",
+        "chat-source rounded-lg px-2.5 py-2 text-xs leading-5 text-white/65 transition-colors hover:bg-white/[0.04] hover:text-white/80",
         className,
       )}
       {...props}

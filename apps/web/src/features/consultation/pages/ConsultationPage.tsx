@@ -287,11 +287,11 @@ export function ConsultationPage() {
     : messages;
 
   const chatPanel = (
-    <div className="h-full min-h-0 bg-[#171717]">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#171717]">
+    <div className="chat-thread h-full min-h-0 bg-[#171717]">
+      <div className="chat-thread flex h-full min-h-0 flex-col overflow-hidden bg-[#171717]">
         {hasThreadError || hasThreadSwitchError ? (
           <div className="flex h-full items-center justify-center p-6">
-            <Card className="max-w-md border border-white/[0.08] bg-white/[0.035] p-8 text-center text-[#ececec] shadow-none">
+            <Card className="chat-status-card max-w-md border border-white/[0.08] bg-white/[0.035] p-8 text-center text-[#ececec] shadow-none">
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-destructive/20 bg-destructive/10 text-destructive">
                 <svg
                   className="size-7"
@@ -308,10 +308,10 @@ export function ConsultationPage() {
                   />
                 </svg>
               </div>
-              <p className="mb-2 text-lg font-semibold text-white/90">
+              <p className="chat-status-question mb-2 text-lg font-semibold text-white/90">
                 暂时无法加载对话
               </p>
-              <p className="mb-6 text-sm text-white/45">
+              <p className="chat-muted mb-6 text-sm text-white/45">
                 BodySense 的对话内容暂时无法同步，请稍后重试。
               </p>
               <Button onClick={threadActions.retryThread} className="w-full">

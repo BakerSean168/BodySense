@@ -259,26 +259,27 @@ export function BodyStateSuggestionStatus({
     <div className="flex justify-start">
       <div
         data-testid={`body-state-suggestion-${state}`}
-        className={`w-full max-w-[620px] rounded-xl border px-4 py-3 ${
+        data-tone={state === "saved" ? "saved" : "neutral"}
+        className={`chat-status-card w-full max-w-[620px] rounded-xl border px-4 py-3 ${
           state === "saved"
             ? "border-[#75d5a7]/25 bg-[#75d5a7]/[0.05]"
             : "border-white/10 bg-white/[0.03]"
         }`}
       >
         <p
-          className={`text-[11px] font-semibold tracking-wide ${
+          className={`chat-status-title text-[11px] font-semibold tracking-wide ${
             state === "saved" ? "text-[#9edbbd]" : "text-white/50"
           }`}
         >
           {title}
         </p>
         {interaction.question.quote ? (
-          <p className="mt-1 text-sm leading-relaxed text-white/80">
+          <p className="chat-status-question mt-1 text-sm leading-relaxed text-white/80">
             “{interaction.question.quote}”
           </p>
         ) : null}
         {state === "declined" ? (
-          <p className="mt-2 text-xs text-white/45">
+          <p className="chat-muted mt-2 text-xs text-white/45">
             这句话没有写入你的身体记录。
           </p>
         ) : null}

@@ -67,37 +67,38 @@ export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
   return (
     <div className="flex justify-start">
       <div
-        className={`w-full max-w-[620px] rounded-xl border px-4 py-3 ${
+        data-tone={isExpired ? "warning" : "info"}
+        className={`chat-status-card w-full max-w-[620px] rounded-xl border px-4 py-3 ${
           isExpired
             ? "border-amber-300/12 bg-amber-300/[0.045] text-amber-100/80"
             : "border-sky-300/10 bg-sky-300/[0.04] text-white/80"
         }`}
       >
         <p
-          className={`text-[11px] font-semibold tracking-wide ${
+          className={`chat-status-title text-[11px] font-semibold tracking-wide ${
             isExpired ? "text-amber-200/65" : "text-sky-200/65"
           }`}
         >
           {title}
         </p>
-        <p className="mt-1 text-sm font-medium leading-relaxed text-white/85">
+        <p className="chat-status-question mt-1 text-sm font-medium leading-relaxed text-white/85">
           {interaction.question.question}
         </p>
         {interaction.question.context ? (
-          <p className="mt-2 text-xs leading-relaxed text-white/42">
+          <p className="chat-muted mt-2 text-xs leading-relaxed text-white/42">
             {interaction.question.context}
           </p>
         ) : null}
         {isExpired ? (
-          <p className="mt-3 text-xs font-medium text-amber-200/65">
+          <p className="chat-status-warning mt-3 text-xs font-medium text-amber-200/65">
             该追问已过期，请在对话中重新说明相关信息以继续。
           </p>
         ) : isAnswered && answerText ? (
-          <p className="mt-3 text-xs font-medium text-[#9edbbd]">
+          <p className="chat-status-answer mt-3 text-xs font-medium text-[#9edbbd]">
             你的回答：{answerText}
           </p>
         ) : (
-          <p className="mt-3 text-xs text-white/48">
+          <p className="chat-muted mt-3 text-xs text-white/48">
             请直接在追问卡片中完成回答。
           </p>
         )}
