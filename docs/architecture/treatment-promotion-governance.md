@@ -96,6 +96,12 @@ served/shadow configuration identities, canary basis points and promotion record
 
 ## Durable observations
 
+> **Removed in TP-002 slice 3.** Treatment revisions, rollout observations, the
+> replay/rollout services and `cmd/treatment-rollout-status` no longer exist.
+> Generation stores the selected route in the agent PlanProposal's
+> `generation_provenance.rolloutProvenance`; no shadow run is executed or
+> observed. The rest of this section is historical.
+
 Migration `000042_create_treatment_rollout_observations` adds anonymous
 `treatment_rollout_observations` and `treatment_revisions.rollout_provenance`.
 Each paired observation records:
