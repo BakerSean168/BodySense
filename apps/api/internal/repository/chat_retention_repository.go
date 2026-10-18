@@ -43,6 +43,14 @@ type retentionMessage struct {
 	RunUserID          *uuid.UUID
 	RunConversationID  *uuid.UUID
 	PendingInteraction bool
+	// ContentBytes and PartsBytes are octet lengths only; the token estimate
+	// is derived from them (model.EstimateChatTokens), never from the text.
+	ContentBytes int
+	PartsBytes   int
+}
+
+func (m retentionMessage) tokens() int {
+	return model.EstimateChatTokens(m.ContentBytes, m.PartsBytes)
 }
 
 // settled reports whether semantic processing of the message is finished:
@@ -116,6 +124,8 @@ func liveMessages(ctx context.Context, tx *gorm.DB, conversation *model.Conversa
 	var rows []retentionMessage
 	err := tx.WithContext(ctx).Raw(`
 SELECT m.id, m.seq, m.turn_id, m.run_id, m.status,
+       octet_length(COALESCE(m.content_text, '')) AS content_bytes,
+       octet_length(m.parts::text) AS parts_bytes,
        r.status AS run_status, r.user_id AS run_user_id, r.conversation_id AS run_conversation_id,
        EXISTS (SELECT 1 FROM agent_interactions ai
                WHERE ai.run_id = m.run_id AND ai.status = 'pending') AS pending_interaction
@@ -252,7 +262,8 @@ func (r *ChatRetentionRepository) AdvanceProcessed(ctx context.Context, owner uu
 }
 
 // AdvanceContextStart moves C forward. Only processed messages may leave the
-// AI context (C <= P + 1) and C must start a complete interaction.
+// AI context (C <= P + 1) and C must start a complete interaction that splits
+// neither a turn nor a Run.
 func (r *ChatRetentionRepository) AdvanceContextStart(ctx context.Context, owner uuid.UUID, cmd model.AdvanceRetentionCursorCommand) (*model.ChatRetentionCursor, error) {
 	return r.advance(ctx, owner, cmd,
 		func(c *model.Conversation) int { return c.ContextStartSeq },
@@ -260,7 +271,7 @@ func (r *ChatRetentionRepository) AdvanceContextStart(ctx context.Context, owner
 			if cmd.ThroughSeq > c.ProcessedThroughSeq+1 {
 				return fmt.Errorf("%w: context would skip unprocessed messages", model.ErrRetentionCursorInvalid)
 			}
-			if !turnBoundary(messages, cmd.ThroughSeq-1) {
+			if !interactionBoundary(messages, cmd.ThroughSeq-1) {
 				return fmt.Errorf("%w: seq %d splits an interaction", model.ErrRetentionCursorInvalid, cmd.ThroughSeq)
 			}
 			return nil

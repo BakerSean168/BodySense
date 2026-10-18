@@ -563,3 +563,88 @@ func TestChatRetentionOwnerIsolationPostgres(t *testing.T) {
 	a.exec("DELETE FROM messages WHERE run_id = ?", foreign)
 	a.exec("DELETE FROM runs WHERE id = ?", foreign)
 }
+
+// bigText makes each message of a turn ~500 estimated tokens, so a turn is
+// 1012 tokens and two turns overflow the minimum 1024-token budget.
+var bigText = strings.Repeat("x", 1500)
+
+func TestChatRetentionWindowReconcileByTokenBudgetPostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	f := newRetentionFixture(t, db)
+	ctx := context.Background()
+	budget := model.MinChatContextTokenBudget
+	f.addTurn("completed", bigText)
+	f.addTurn("completed", bigText)
+
+	cursor, moved, err := f.repo.ReconcileWindow(ctx, f.owner, budget)
+	if err != nil || !moved {
+		t.Fatalf("reconcile: moved=%v %v", moved, err)
+	}
+	if cursor.ProcessedThroughSeq != 4 || cursor.ContextStartSeq != 3 || cursor.PrunedThroughSeq != 0 {
+		t.Fatalf("cursor %+v, want P=4 C=3 R=0", cursor)
+	}
+	// Reconciling an unchanged transcript writes nothing.
+	again, moved, err := f.repo.ReconcileWindow(ctx, f.owner, budget)
+	if err != nil || moved || again.RetentionRevision != cursor.RetentionRevision {
+		t.Fatalf("second reconcile moved=%v rev %d -> %d: %v", moved, cursor.RetentionRevision, again.RetentionRevision, err)
+	}
+
+	// An unanswered Ask User adds an unsettled Run: P stops in front of it
+	// and C may only reach it, never pass it.
+	waiting := f.addTurn("waiting_user", bigText)
+	f.exec(`INSERT INTO agent_interactions(run_id,conversation_id,tool_call_id,question,status) VALUES (?,?,'ask-1','{"q":"where"}','pending')`,
+		*waiting.run, f.conversation)
+	cursor, _, err = f.repo.ReconcileWindow(ctx, f.owner, budget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cursor.ProcessedThroughSeq != 4 || cursor.ContextStartSeq != 5 {
+		t.Fatalf("cursor %+v, want P=4 C=5", cursor)
+	}
+	window, err := f.repo.ContextWindow(ctx, f.owner, f.conversation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if window.ContextStartSeq != 5 || len(window.RunIDs) != 1 || window.RunIDs[0] != *waiting.run {
+		t.Fatalf("window %+v, want only the waiting run", window)
+	}
+	// The pass refuses while the Ask User waits; nothing of it is deleted.
+	if _, err := f.prune(ctx, f.owner); !errors.Is(err, model.ErrRetentionBusy) {
+		t.Fatalf("prune beside an unanswered Ask User: %v", err)
+	}
+	if !f.messageExists(waiting.user) || !f.messageExists(waiting.reply) {
+		t.Fatal("unanswered Ask User messages were deleted")
+	}
+
+	// A foreign owner cannot read the window.
+	other := newRetentionFixture(t, db)
+	if _, err := f.repo.ContextWindow(ctx, other.owner, f.conversation); !errors.Is(err, model.ErrRetentionNotFound) {
+		t.Fatalf("foreign window read: %v", err)
+	}
+	if _, _, err := f.repo.ReconcileWindow(ctx, f.owner, budget-1); !errors.Is(err, model.ErrRetentionCursorInvalid) {
+		t.Fatalf("budget below minimum: %v", err)
+	}
+}
+
+func TestChatRetentionContextCursorCannotSplitARunPostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	f := newRetentionFixture(t, db)
+	ctx := context.Background()
+	first := f.addTurn("completed", "first")
+	// A second turn of the same Run (as an Ask User answer appended to it).
+	second := f.addTurn("", "second")
+	f.exec("UPDATE messages SET run_id = ? WHERE id IN (?, ?)", *first.run, second.user, second.reply)
+	f.addTurn("completed", "third")
+	c := f.cursor()
+	if _, err := f.repo.AdvanceProcessed(ctx, f.owner, model.AdvanceRetentionCursorCommand{ExpectedRevision: c.RetentionRevision, ThroughSeq: 6}); err != nil {
+		t.Fatal(err)
+	}
+	c = f.cursor()
+	_, err := f.repo.AdvanceContextStart(ctx, f.owner, model.AdvanceRetentionCursorCommand{ExpectedRevision: c.RetentionRevision, ThroughSeq: 3})
+	if !errors.Is(err, model.ErrRetentionCursorInvalid) {
+		t.Fatalf("context cursor split a run: %v", err)
+	}
+	if _, err := f.repo.AdvanceContextStart(ctx, f.owner, model.AdvanceRetentionCursorCommand{ExpectedRevision: c.RetentionRevision, ThroughSeq: 5}); err != nil {
+		t.Fatal(err)
+	}
+}

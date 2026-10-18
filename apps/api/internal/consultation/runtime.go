@@ -88,6 +88,7 @@ type Runtime struct {
 	deployment                  *service.AgentDeploymentPolicy
 	rolloutService              *service.ConsultationRolloutService
 	knowledgeObservationService runtimeKnowledgeObservationService
+	chatRetention               runtimeChatRetention
 
 	cancelMu   sync.Mutex
 	runCancels map[uuid.UUID]context.CancelFunc
@@ -145,6 +146,17 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	r.diagnosisAnalysisService = diagnosis
 	r.diagnosisFreshnessService = freshness
 	r.outcomeService = outcomes
+}
+
+// runtimeChatRetention is the PC-RET-001 seam: the settle trigger that moves
+// the processed and context cursors, and the context window read.
+type runtimeChatRetention interface {
+	OnRunSettled(ctx context.Context, owner uuid.UUID)
+}
+
+// AttachChatRetention wires the chat retention settle trigger.
+func (r *Runtime) AttachChatRetention(retention runtimeChatRetention) {
+	r.chatRetention = retention
 }
 
 // AttachRolloutService attaches the anonymous rollout observer (North-Star).
@@ -1720,6 +1732,12 @@ func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uui
 	}
 	if err := r.conversationService.UpdateActiveRunID(ctx, conversationID, userID, nil, ""); err != nil {
 		log.Printf("failed to clear active_run_id for conversation %s: %v", conversationID, err)
+	}
+	// Every path that ends a Run (completed, failed, cancelled, parked on Ask
+	// User) clears it here after its messages reached their final status, so
+	// this is the retention settle trigger (PC-RET-001).
+	if r.chatRetention != nil {
+		r.chatRetention.OnRunSettled(ctx, userID)
 	}
 }
 

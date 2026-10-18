@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -54,6 +56,65 @@ var (
 	// does not prove the planned Runs are gone. The cursor does not move.
 	ErrRetentionCleanupUnverified = errors.New("checkpoint cleanup receipt not verified")
 )
+
+// Context window policy (PC-RET-001 slice 3, PC-D9). C advances by a token
+// budget, not a turn count: the raw messages from C onward are kept at or
+// below ChatContextTokenBudget estimated tokens, cut only at a complete
+// interaction boundary, never past an unsettled Run and never past P + 1. An
+// unanswered Ask User keeps its Run unsettled, so that thread always stays in
+// context (and unpruned) until it is answered, cancelled or expires.
+const (
+	// ChatContextTokenBudgetEnv overrides the default budget.
+	ChatContextTokenBudgetEnv = "CHAT_CONTEXT_TOKEN_BUDGET"
+	// DefaultChatContextTokenBudget is the raw-history share of the model
+	// context. The consultation route has no tokenizer and its physical model
+	// is swappable behind the gateway, so the default is sized for the
+	// smallest window the route is expected to see (32K): 16K of raw history
+	// plus the system prompt, BodyState/longitudinal context, tool schemas
+	// and the 2048-token reply still leave headroom. It also covers the old
+	// MAX_CONTEXT_TURNS=10 window for ordinary turns.
+	DefaultChatContextTokenBudget = 16000
+	// MinChatContextTokenBudget rejects budgets too small to hold one turn.
+	MinChatContextTokenBudget = 1024
+	// ChatContextTokenOverheadPerMessage covers role and framing tokens.
+	ChatContextTokenOverheadPerMessage = 4
+	// ChatContextBytesPerToken is the estimator divisor: one token per three
+	// UTF-8 bytes of the larger of content_text and the parts JSON. A CJK
+	// character (3 bytes) counts as one token and ASCII as one per three
+	// characters, both above what BPE tokenizers of the routed models emit,
+	// so the estimate errs on the side of a smaller context.
+	ChatContextBytesPerToken = 3
+)
+
+// ChatContextTokenBudget returns the configured budget, falling back to the
+// default when the variable is unset or not an integer >= the minimum.
+func ChatContextTokenBudget(lookup func(string) string) int {
+	raw := strings.TrimSpace(lookup(ChatContextTokenBudgetEnv))
+	if raw == "" {
+		return DefaultChatContextTokenBudget
+	}
+	budget, err := strconv.Atoi(raw)
+	if err != nil || budget < MinChatContextTokenBudget {
+		return DefaultChatContextTokenBudget
+	}
+	return budget
+}
+
+// EstimateChatTokens is the Go form of the estimator the retention query
+// applies in SQL (see liveMessages); both must stay identical.
+func EstimateChatTokens(contentBytes, partsBytes int) int {
+	size := max(contentBytes, partsBytes, 0)
+	return ChatContextTokenOverheadPerMessage + (size+ChatContextBytesPerToken-1)/ChatContextBytesPerToken
+}
+
+// ChatContextWindow is what the AI runtime may read as raw history: every
+// message from ContextStartSeq on, named by the Runs that own them (in seq
+// order). LangGraph keeps runtime_messages by Run, not by Go seq, so the
+// ai-service drops every checkpoint segment before the first of these Runs.
+type ChatContextWindow struct {
+	ContextStartSeq int
+	RunIDs          []uuid.UUID
+}
 
 // ChatRetentionCursor is the current retention state of one Conversation.
 type ChatRetentionCursor struct {
