@@ -238,7 +238,7 @@ Chat 仅发起操作和保存交互状态；Go 验证工具回答是否确实属
 
 ## 6. 旧代码差异与迁移门禁（As-Is，非完成声明）
 
-- Go `UserProfile` 仅有 Gender/BirthDate/派生 AgeYears；目标可选显示字段/偏好、授权及历史时间快照尚需补全。旧 `UserUpload` 同时存 OCR/姿态分析状态，尚未证明具有 UserAsset 单一身份与来源删除传播链。
+- Go `UserProfile`（AS-001 #306）已具备 displayName、avatarAssetId（仅本人可用照片资产，来源移除/擦除后不再投影）、自报 gender、birthDate（年龄读时派生）与 preferences{locale,timeZone,unitPreference}，`PUT /api/v1/profile` 为带 expected_revision 的整体替换（null 即清空，精确重放幂等，409 冲突）；Agent/重放输入仅含自报身份上下文。Web 头像选择器未做（Penpot 头像为品牌图标）。旧 `UserUpload` 同时存 OCR/姿态分析状态，尚未证明具有 UserAsset 单一身份与来源删除传播链。
 - Go `Conversation` 存在多会话标题、置顶、软删除及分享形态；`MessageRepository.ListByConversationID` 可读取整段原始历史。目标单会话、三个保留游标、历史清理及旧会话迁移**尚未实现**。
 - Python Consultation Thread 对发往模型的历史做长度截取；LangGraph PostgreSQL Checkpointer 仍持久保存运行消息及恢复信息。**模型上下文截取不等于 Message/Checkpoint 真正清理**。
 - 前端已有 `interrupted` 锁 Composer 与 Ask User 卡片机制，但尚须验证「Ask User 直接替换底部输入区」、跨设备串行及待答恢复的目标行为。
