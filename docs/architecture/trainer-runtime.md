@@ -1,6 +1,6 @@
 # Trainer runtime (TP-003)
 
-Status: slices 1–3a of [#313](https://github.com/BakerSean168/BodySense/issues/313).
+Status: slices 1–3 of [#313](https://github.com/BakerSean168/BodySense/issues/313).
 Product rules: `docs/product/domain/training.md` §4.3–4.4 (TP-D6..D10) and
 `docs/product/domain/safety.md`. Executable reference model:
 `scripts/plan/v2-trainer-actions-model.test.mjs`.
@@ -96,9 +96,22 @@ change or unreadable context keeps precedence. Accepting a new revision
 resets the hint (feedback stays on the sessions of the old revision). Only a
 user-accepted PlanProposal changes the prescription.
 
+## Legacy retirement (slice 3b)
+
+The legacy daily-task surface is gone: the `training_logs` table and the
+`/api/v1/training`, `/training/{id}`, `/today`, `/checkin`, `/log`,
+`/progress` and `/reassess` routes, their contract schemas, Go service,
+handler and repository code. Its check-in boolean and server-clock dates are
+replaced by session receipts in the user's IANA zone; its feedback no longer
+writes an Outcome or a BodyState symptom (body changes go through BodyState).
+HealthWorkspace reads the single active plan from `TrainingRepository`
+directly. The web TrainingPlan window lists `/training-plans` records and the
+Trainer panel is minimally rebound to `/training-sessions` (start, per-set
+performed/skipped, finish or stop early, feedback); the full Trainer design is
+UI-TP-001.
+
 ## Not yet
 
-- deleting legacy `/training/*` and `training_logs` (slice 3b);
 - Safety-driven hold/stop transitions (`safety_hold`, `safety_stopped`) of
   the reference model; today a non-permitting gate refuses the command and
   the user may stop;

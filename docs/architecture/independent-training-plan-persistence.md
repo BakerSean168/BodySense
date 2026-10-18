@@ -228,7 +228,8 @@ aggregate, its lifecycle and every link to it are gone:
   `OutcomeService`/`OutcomeRepository`. `Outcome` loses `treatment_id`,
   `treatment_revision_id` and `intervention_id`; a user-authored symptom still
   commits a BodyState fact in the same transaction.
-- **Legacy `/training/*`** stays until TP-003 but no longer creates,
+- **Legacy `/training/*`** (deleted with `training_logs` in TP-003, see
+  `docs/architecture/trainer-runtime.md`) no longer created,
   supersedes or follows a plan from a Treatment:
   `AcceptTreatmentAndEnsurePlan`, `EnsurePlanForTreatment`,
   `EnsureCurrentPlan`, the reassess-driven Treatment regeneration,
