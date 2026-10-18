@@ -41,8 +41,9 @@ func assetErasureIntegrationRouter(t *testing.T, db *gorm.DB, actingUser uuid.UU
 }
 
 // The public erasure route reports the asset erased only with a fully
-// verified receipt, masks foreign assets, and leaves source removal
-// reporting the erased lifecycle afterwards.
+// verified receipt, masks foreign assets, drops the erased asset from the
+// owner's upload list, and leaves source removal reporting the erased
+// lifecycle afterwards.
 func TestUserAssetErasureHTTPPostgres(t *testing.T) {
 	dsn := os.Getenv("BODYSENSE_INTEGRATION_DATABASE_URL")
 	if dsn == "" {
@@ -88,11 +89,22 @@ func TestUserAssetErasureHTTPPostgres(t *testing.T) {
 		return rec
 	}
 	path := "/api/v1/assets/" + asset.ID.String() + "/erasure"
+	listed := func(router *gin.Engine) string {
+		t.Helper()
+		rec := do(router, http.MethodGet, "/api/v1/uploads", "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("list uploads: %d %s", rec.Code, rec.Body)
+		}
+		return rec.Body.String()
+	}
 	strangerRouter := assetErasureIntegrationRouter(t, db, stranger, registry)
 	if rec := do(strangerRouter, http.MethodPost, path, `{"idempotency_key":"steal"}`); rec.Code != http.StatusNotFound {
 		t.Fatalf("foreign erasure: %d %s", rec.Code, rec.Body)
 	}
 	ownerRouter := assetErasureIntegrationRouter(t, db, owner, registry)
+	if body := listed(ownerRouter); !strings.Contains(body, asset.ID.String()) || !strings.Contains(body, `"source_availability":"available"`) {
+		t.Fatalf("upload list before erasure: %s", body)
+	}
 	if rec := do(ownerRouter, http.MethodGet, path, ""); rec.Code != http.StatusNotFound {
 		t.Fatalf("receipt before request: %d %s", rec.Code, rec.Body)
 	}
@@ -109,6 +121,10 @@ func TestUserAssetErasureHTTPPostgres(t *testing.T) {
 	}
 	if exists, err := store.Exists(context.Background(), asset.StorageKey); err != nil || exists {
 		t.Fatalf("object exists=%v err=%v", exists, err)
+	}
+	// The erased asset is gone from its owner's upload list.
+	if body := listed(ownerRouter); strings.Contains(body, asset.ID.String()) {
+		t.Fatalf("erased asset still listed: %s", body)
 	}
 	if rec := do(strangerRouter, http.MethodGet, path, ""); rec.Code != http.StatusNotFound {
 		t.Fatalf("foreign receipt read: %d %s", rec.Code, rec.Body)

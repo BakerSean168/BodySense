@@ -7175,7 +7175,7 @@ components:
     UserUpload:
       type: object
       additionalProperties: false
-      required: [id, file_type, original_name, file_size, mime_type, ocr_status, analysis_status, created_at, updated_at]
+      required: [id, file_type, original_name, file_size, mime_type, source_availability, ocr_status, analysis_status, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         file_type:
@@ -7184,6 +7184,10 @@ components:
         original_name: {type: string}
         file_size: {type: integer, format: int64, minimum: 0}
         mime_type: {type: string}
+        source_availability:
+          type: string
+          enum: [available, source_unavailable]
+          description: CD-D4 marker of the private original. source_unavailable after a source removal; derived evidence stays readable. An erased asset is not listed at all.
         ocr_result:
           $ref: '#/components/schemas/JsonObject'
         ocr_status: {type: string, enum: [pending, processing, completed, failed]}

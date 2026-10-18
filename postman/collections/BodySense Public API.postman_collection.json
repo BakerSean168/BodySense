@@ -34897,7 +34897,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"id\": \"fb5d7153-d5d2-c339-eec6-0b08d3422759\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 8879,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"pending\",\n  \"analysis_status\": \"failed\",\n  \"created_at\": \"1975-01-30T23:19:20.771Z\",\n  \"updated_at\": \"1958-05-27T14:45:01.879Z\",\n  \"ocr_result\": {\n    \"key_0\": false,\n    \"key_1\": false\n  },\n  \"analysis_result\": {\n    \"key_0\": 4897\n  }\n}",
+                  "body": "{\n  \"id\": \"fb5d7153-d5d2-c339-eec6-0b08d3422759\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 8879,\n  \"mime_type\": \"string\",\n  \"source_availability\": \"available\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"completed\",\n  \"created_at\": \"1958-05-27T14:45:01.879Z\",\n  \"updated_at\": \"2013-03-18T03:29:17.070Z\",\n  \"ocr_result\": {\n    \"key_0\": 7790.4073521494865,\n    \"key_1\": 1478\n  },\n  \"analysis_result\": {\n    \"key_0\": \"string\"\n  }\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -35185,7 +35185,7 @@
                       "value": "application/json"
                     }
                   ],
-                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"df719557-ab3f-87d9-3609-f0f2946b0d71\",\n      \"file_type\": \"photo_side\",\n      \"original_name\": \"string\",\n      \"file_size\": 2052,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"pending\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"2015-06-10T22:57:19.839Z\",\n      \"updated_at\": \"1993-06-01T23:25:06.571Z\",\n      \"ocr_result\": {\n        \"key_0\": \"string\",\n        \"key_1\": 6424.77358924225\n      },\n      \"analysis_result\": {\n        \"key_0\": true,\n        \"key_1\": false\n      }\n    },\n    {\n      \"id\": \"8864786a-3c48-fe7b-8c83-67971b7b10af\",\n      \"file_type\": \"photo_back\",\n      \"original_name\": \"string\",\n      \"file_size\": 2150,\n      \"mime_type\": \"string\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"1967-10-09T08:51:43.915Z\",\n      \"updated_at\": \"1990-08-05T01:05:55.494Z\",\n      \"ocr_result\": {\n        \"key_0\": true,\n        \"key_1\": false\n      },\n      \"analysis_result\": {\n        \"key_0\": 4970.0775858946145,\n        \"key_1\": \"string\"\n      }\n    }\n  ]\n}",
+                  "body": "{\n  \"uploads\": [\n    {\n      \"id\": \"195570aa-f987-9b36-90f0-2946b0d71463\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 8767,\n      \"mime_type\": \"string\",\n      \"source_availability\": \"source_unavailable\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"pending\",\n      \"created_at\": \"2000-01-28T09:28:15.905Z\",\n      \"updated_at\": \"1998-05-29T16:48:09.639Z\",\n      \"ocr_result\": {\n        \"key_0\": 8619\n      },\n      \"analysis_result\": {\n        \"key_0\": 7532\n      }\n    },\n    {\n      \"id\": \"65886478-1f3c-8efe-bc8c-3067971b7b10\",\n      \"file_type\": \"report\",\n      \"original_name\": \"string\",\n      \"file_size\": 9283,\n      \"mime_type\": \"string\",\n      \"source_availability\": \"source_unavailable\",\n      \"ocr_status\": \"completed\",\n      \"analysis_status\": \"processing\",\n      \"created_at\": \"1967-10-09T08:51:43.915Z\",\n      \"updated_at\": \"1990-08-05T01:05:55.494Z\",\n      \"ocr_result\": {\n        \"key_0\": true,\n        \"key_1\": false\n      },\n      \"analysis_result\": {\n        \"key_0\": 4970.0775858946145,\n        \"key_1\": \"string\"\n      }\n    }\n  ]\n}",
                   "cookie": [],
                   "_postman_previewlanguage": "json"
                 },
@@ -35568,7 +35568,7 @@
                           "value": "application/json"
                         }
                       ],
-                      "body": "{\n  \"id\": \"fb5d7153-d5d2-c339-eec6-0b08d3422759\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 8879,\n  \"mime_type\": \"string\",\n  \"ocr_status\": \"pending\",\n  \"analysis_status\": \"failed\",\n  \"created_at\": \"1975-01-30T23:19:20.771Z\",\n  \"updated_at\": \"1958-05-27T14:45:01.879Z\",\n  \"ocr_result\": {\n    \"key_0\": false,\n    \"key_1\": false\n  },\n  \"analysis_result\": {\n    \"key_0\": 4897\n  }\n}",
+                      "body": "{\n  \"id\": \"fb5d7153-d5d2-c339-eec6-0b08d3422759\",\n  \"file_type\": \"photo_back\",\n  \"original_name\": \"string\",\n  \"file_size\": 8879,\n  \"mime_type\": \"string\",\n  \"source_availability\": \"available\",\n  \"ocr_status\": \"failed\",\n  \"analysis_status\": \"completed\",\n  \"created_at\": \"1958-05-27T14:45:01.879Z\",\n  \"updated_at\": \"2013-03-18T03:29:17.070Z\",\n  \"ocr_result\": {\n    \"key_0\": 7790.4073521494865,\n    \"key_1\": 1478\n  },\n  \"analysis_result\": {\n    \"key_0\": \"string\"\n  }\n}",
                       "cookie": [],
                       "_postman_previewlanguage": "json"
                     },

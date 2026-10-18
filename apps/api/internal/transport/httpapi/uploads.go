@@ -149,6 +149,11 @@ func (s *PublicServer) ListUploads(
 	}
 	projected := make([]openapiv1.UserUpload, 0, len(items))
 	for i := range items {
+		// An erased asset is gone for its owner: only its content-free
+		// tombstone (and its erasure receipt) remains, so it is not listed.
+		if items[i].Availability == model.UserAssetErased {
+			continue
+		}
 		item, convertErr := strictUserUpload(&items[i])
 		if convertErr != nil {
 			return nil, convertErr
@@ -476,7 +481,21 @@ func strictUserUpload(upload *model.UserUploadView) (openapiv1.UserUpload, error
 	delete(projected, "agent_configuration_id")
 	delete(projected, "storage_backend")
 	delete(projected, "storage_key")
+	// The owner sees only whether the private source is still there (CD-D4),
+	// never the lifecycle state behind it.
+	projected["source_availability"] = uploadSourceAvailability(upload.Availability)
 	return strictOpenAPIConvert[openapiv1.UserUpload]("UserUpload", projected)
+}
+
+// uploadSourceAvailability is the public CD-D4 marker of an asset: a source
+// removal or an erasure leaves the source unavailable.
+func uploadSourceAvailability(availability model.UserAssetAvailability) string {
+	switch availability {
+	case model.UserAssetSourceRemoved, model.UserAssetErased:
+		return "source_unavailable"
+	default:
+		return "available"
+	}
 }
 
 func strictReviewRecord(record *service.DocumentIndicatorReviewRecord) (openapiv1.DocumentIndicatorReviewRecord, error) {

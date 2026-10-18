@@ -25,6 +25,7 @@ function toUserUpload(upload: UploadWire): UserUpload {
     original_name: upload.original_name,
     file_size: upload.file_size,
     mime_type: upload.mime_type,
+    source_availability: upload.source_availability,
     ocr_result: parseOCRResult(upload.ocr_result),
     ocr_status: upload.ocr_status,
     analysis_status: upload.analysis_status,
@@ -41,7 +42,10 @@ interface UploadState {
 
   fetchUploads: () => Promise<void>;
   uploadFile: (file: File, fileType: FileType) => Promise<UserUpload>;
+  /** Source removal: the original goes, the upload stays listed as source_unavailable. */
   deleteUpload: (id: string) => Promise<void>;
+  /** Drops an erased upload from the list (the server no longer lists it). */
+  forgetUpload: (id: string) => void;
   clearError: () => void;
 }
 
@@ -120,7 +124,11 @@ export const useUploadStore = create<UploadState>()((set) => ({
         deleteUpload(id, undefined, openApiAuthFetch),
       );
       set((state) => ({
-        uploads: state.uploads.filter((upload) => upload.id !== id),
+        uploads: state.uploads.map((upload) =>
+          upload.id === id
+            ? { ...upload, source_availability: "source_unavailable" as const }
+            : upload,
+        ),
         isLoading: false,
       }));
     } catch (error) {
@@ -132,6 +140,11 @@ export const useUploadStore = create<UploadState>()((set) => ({
       throw error;
     }
   },
+
+  forgetUpload: (id: string) =>
+    set((state) => ({
+      uploads: state.uploads.filter((upload) => upload.id !== id),
+    })),
 
   clearError: () => set({ error: null }),
 }));
