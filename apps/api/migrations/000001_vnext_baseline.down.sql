@@ -1,6 +1,7 @@
 -- BodySense V2 baseline rollback (drops the whole application schema).
 -- Extensions are intentionally retained because they may predate this application schema.
 DROP TABLE IF EXISTS
+    public.training_session_feedback,
     public.training_session_transitions,
     public.training_set_actions,
     public.training_sessions,
@@ -88,6 +89,7 @@ DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
 
 DROP FUNCTION IF EXISTS public.reject_diagnosis_audit_update();
 DROP FUNCTION IF EXISTS public.reject_episode_evidence_before_creation();
+DROP FUNCTION IF EXISTS public.require_ended_training_session_feedback();
 DROP FUNCTION IF EXISTS public.prevent_training_receipt_update();
 DROP FUNCTION IF EXISTS public.prevent_training_session_rewrite();
 DROP FUNCTION IF EXISTS public.prevent_training_status_event_update();

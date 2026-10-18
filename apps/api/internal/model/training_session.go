@@ -81,3 +81,21 @@ type TrainingSessionTransition struct {
 }
 
 func (TrainingSessionTransition) TableName() string { return "training_session_transitions" }
+
+// TrainingSessionFeedback is the user's own words about one ended session,
+// stored verbatim at most once (TP-D10). It pins the session's plan revision
+// for the review projection and is never interpreted into a BodyState fact,
+// a Safety change or a plan change.
+type TrainingSessionFeedback struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID             uuid.UUID `gorm:"type:uuid"`
+	SessionID          uuid.UUID `gorm:"type:uuid"`
+	PlanID             uuid.UUID `gorm:"type:uuid"`
+	PlanRevisionID     uuid.UUID `gorm:"type:uuid"`
+	Text               string
+	IdempotencyKey     string
+	RequestFingerprint string
+	RecordedAt         time.Time
+}
+
+func (TrainingSessionFeedback) TableName() string { return "training_session_feedback" }

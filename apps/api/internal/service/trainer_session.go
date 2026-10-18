@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/domain/safety"
@@ -29,6 +30,8 @@ var (
 	ErrTrainerSessionPaused     = errors.New("training session is paused")
 	ErrTrainerSessionNotPaused  = errors.New("training session is not paused")
 	ErrTrainerSetRecorded       = errors.New("this set or exercise already has a recorded action")
+	ErrTrainerSessionNotEnded   = errors.New("training session has not ended")
+	ErrTrainerFeedbackRecorded  = errors.New("feedback for this training session is already recorded")
 )
 
 // TrainerGateError is a Go TrainerGate decision that did not permit the
@@ -53,6 +56,7 @@ const (
 	trainerSessionListLimit  = 50
 	trainerMaxActualReps     = 1000
 	trainerMaxActualSeconds  = 86400
+	trainerMaxFeedbackRunes  = 2000
 )
 
 // StartTrainerSessionCommand is the authenticated user's explicit start of
@@ -106,11 +110,22 @@ type FinishTrainerSessionCommand struct {
 	IdempotencyKey          string
 }
 
-// TrainerSessionView is one owned session with its receipts in revision order.
+// TrainerFeedbackCommand records the user's own words about one ended
+// session (TP-D10). Text is stored exactly as given; it is never gated,
+// never interpreted and never changes the plan, BodyState or Safety.
+type TrainerFeedbackCommand struct {
+	SessionID      uuid.UUID
+	Text           string
+	IdempotencyKey string
+}
+
+// TrainerSessionView is one owned session with its receipts in revision order
+// and its feedback, if the user gave any.
 type TrainerSessionView struct {
 	Session     model.TrainingSession
 	Actions     []model.TrainingSetAction
 	Transitions []model.TrainingSessionTransition
+	Feedback    *model.TrainingSessionFeedback
 }
 
 // TrainerEffectiveActions drops corrections and the receipts they retracted:
@@ -268,6 +283,13 @@ func trainerError(err error) error {
 	return err
 }
 
+// validTrainerFeedback accepts verbatim UTF-8 text of 1..2000 characters that
+// is not only whitespace. It is not trimmed or rewritten.
+func validTrainerFeedback(text string) bool {
+	return utf8.ValidString(text) && strings.TrimSpace(text) != "" && !strings.ContainsRune(text, 0) &&
+		utf8.RuneCountInString(text) <= trainerMaxFeedbackRunes
+}
+
 func (s *TrainerSessionService) lock(ctx context.Context, owner uuid.UUID) error {
 	return trainerError(s.owner.LockOwnerForPlanActivation(ctx, owner))
 }
@@ -349,6 +371,10 @@ func (s *TrainerSessionService) views(ctx context.Context, owner uuid.UUID, sess
 	if err != nil {
 		return nil, err
 	}
+	feedback, err := s.repo.Feedback(ctx, owner, ids)
+	if err != nil {
+		return nil, err
+	}
 	views := make([]TrainerSessionView, 0, len(sessions))
 	index := map[uuid.UUID]int{}
 	for i, session := range sessions {
@@ -360,6 +386,9 @@ func (s *TrainerSessionService) views(ctx context.Context, owner uuid.UUID, sess
 	}
 	for _, t := range transitions {
 		views[index[t.SessionID]].Transitions = append(views[index[t.SessionID]].Transitions, t)
+	}
+	for i := range feedback {
+		views[index[feedback[i].SessionID]].Feedback = &feedback[i]
 	}
 	return views, nil
 }
@@ -669,6 +698,68 @@ func (s *TrainerSessionService) Finish(ctx context.Context, owner uuid.UUID, cmd
 		session.State, session.EndedReason, session.EndedAt, session.Revision = TrainerSessionEnded, &reason, &now, session.Revision+1
 		session.FinishIdempotencyKey, session.FinishRequestFingerprint = &key, &digest
 		if err := s.repo.End(ctx, session, cmd.ExpectedSessionRevision); err != nil {
+			return trainerError(err)
+		}
+		result, err = s.view(ctx, owner, *session)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// RecordFeedback stores the user's verbatim feedback on one ended session,
+// once. It is never gated (the user can always say how a session went) and
+// only feeds the plan review projection: no plan, revision, receipt, BodyState
+// or Safety row is written. Body symptoms are recorded through BodyState.
+func (s *TrainerSessionService) RecordFeedback(ctx context.Context, owner uuid.UUID, cmd TrainerFeedbackCommand) (*TrainerSessionView, error) {
+	if owner == uuid.Nil || cmd.SessionID == uuid.Nil || !validTrainerFeedback(cmd.Text) || !validPlanKey(cmd.IdempotencyKey) {
+		return nil, ErrTrainerInvalid
+	}
+	fingerprint := planDigest(struct {
+		Operation string
+		Command   TrainerFeedbackCommand
+	}{"trainer_feedback", cmd})
+	var result *TrainerSessionView
+	err := s.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := s.lock(ctx, owner); err != nil {
+			return err
+		}
+		existing, err := s.repo.FeedbackByKey(ctx, owner, cmd.IdempotencyKey)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			if existing.RequestFingerprint != fingerprint {
+				return ErrTrainerConflict
+			}
+			session, err := s.repo.Session(ctx, owner, existing.SessionID, false)
+			if err != nil {
+				return trainerError(err)
+			}
+			result, err = s.view(ctx, owner, *session)
+			return err
+		}
+		session, err := s.repo.Session(ctx, owner, cmd.SessionID, true)
+		if err != nil {
+			return trainerError(err)
+		}
+		if session.State != TrainerSessionEnded {
+			return ErrTrainerSessionNotEnded
+		}
+		prior, err := s.repo.Feedback(ctx, owner, []uuid.UUID{session.ID})
+		if err != nil {
+			return err
+		}
+		if len(prior) > 0 {
+			return ErrTrainerFeedbackRecorded
+		}
+		row := model.TrainingSessionFeedback{
+			ID: uuid.New(), UserID: owner, SessionID: session.ID, PlanID: session.PlanID, PlanRevisionID: session.PlanRevisionID,
+			Text: cmd.Text, IdempotencyKey: cmd.IdempotencyKey, RequestFingerprint: fingerprint, RecordedAt: s.now(),
+		}
+		if err := s.repo.InsertFeedback(ctx, &row); err != nil {
 			return trainerError(err)
 		}
 		result, err = s.view(ctx, owner, *session)

@@ -4852,6 +4852,44 @@ CREATE TABLE public.training_session_transitions (
 CREATE TRIGGER training_session_transitions_immutable BEFORE UPDATE ON public.training_session_transitions
     FOR EACH ROW EXECUTE FUNCTION public.prevent_training_receipt_update();
 
+-- TP-D10 session feedback: the user's own words about one ended session,
+-- stored verbatim at most once. It pins the session's plan and revision so the
+-- plan review projection can read it; it never changes a plan, a revision, a
+-- receipt, BodyState or Safety, and is never interpreted into a fact.
+ALTER TABLE public.training_sessions ADD CONSTRAINT training_sessions_feedback_identity
+    UNIQUE (user_id, id, plan_id, plan_revision_id);
+CREATE TABLE public.training_session_feedback (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    session_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    plan_revision_id uuid NOT NULL,
+    text text NOT NULL CHECK (char_length(text) BETWEEN 1 AND 2000 AND btrim(text) <> ''),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key = btrim(idempotency_key)),
+    request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
+    recorded_at timestamptz NOT NULL,
+    UNIQUE (user_id, id),
+    UNIQUE (user_id, idempotency_key),
+    UNIQUE (user_id, session_id),
+    FOREIGN KEY (user_id, session_id, plan_id, plan_revision_id)
+        REFERENCES public.training_sessions(user_id, id, plan_id, plan_revision_id) ON DELETE CASCADE
+);
+CREATE INDEX idx_training_session_feedback_plan_revision ON public.training_session_feedback (user_id, plan_id, plan_revision_id);
+-- Feedback is accepted only once the session has ended.
+CREATE FUNCTION public.require_ended_training_session_feedback() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.training_sessions s
+                   WHERE s.user_id = NEW.user_id AND s.id = NEW.session_id AND s.state = 'ended') THEN
+        RAISE EXCEPTION 'training session feedback requires an ended session';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER training_session_feedback_requires_ended BEFORE INSERT ON public.training_session_feedback
+    FOR EACH ROW EXECUTE FUNCTION public.require_ended_training_session_feedback();
+CREATE TRIGGER training_session_feedback_immutable BEFORE UPDATE ON public.training_session_feedback
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_training_receipt_update();
+
 
 -- DX-002 atomic settlement: one immutable whole-run outcome.
 ALTER TABLE public.diagnosis_revisions ADD CONSTRAINT diagnosis_revision_settlement_identity
