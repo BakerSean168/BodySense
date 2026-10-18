@@ -72,10 +72,63 @@ type ChatRetentionService struct {
 	repo    *repository.ChatRetentionRepository
 	cleaner CheckpointCleaner
 	jobs    *JobRuntime
+	// budget is the context window token budget (model.ChatContextTokenBudget).
+	budget int
 }
 
 func NewChatRetentionService(repo *repository.ChatRetentionRepository, cleaner CheckpointCleaner, jobs *JobRuntime) *ChatRetentionService {
-	return &ChatRetentionService{repo: repo, cleaner: cleaner, jobs: jobs}
+	return &ChatRetentionService{repo: repo, cleaner: cleaner, jobs: jobs, budget: model.DefaultChatContextTokenBudget}
+}
+
+// WithContextTokenBudget sets the context window budget; values below
+// model.MinChatContextTokenBudget keep the default.
+func (s *ChatRetentionService) WithContextTokenBudget(budget int) *ChatRetentionService {
+	if budget >= model.MinChatContextTokenBudget {
+		s.budget = budget
+	}
+	return s
+}
+
+// ContextTokenBudget is the budget this service applies.
+func (s *ChatRetentionService) ContextTokenBudget() int {
+	return s.budget
+}
+
+// ReconcileWindow advances P over every settled interaction, moves C so the
+// retained raw messages fit the token budget, and enqueues a prune job when
+// the prunable boundary min(C - 1, P) is past R. The job key carries P and C,
+// so repeating the call for an unchanged window enqueues nothing new.
+func (s *ChatRetentionService) ReconcileWindow(ctx context.Context, owner uuid.UUID) (*model.ChatRetentionCursor, *model.Job, error) {
+	cursor, _, err := s.repo.ReconcileWindow(ctx, owner, s.budget)
+	if err != nil {
+		return nil, nil, err
+	}
+	if min(cursor.ContextStartSeq-1, cursor.ProcessedThroughSeq) <= cursor.PrunedThroughSeq {
+		return cursor, nil, nil
+	}
+	job, err := s.EnqueuePrune(ctx, owner, fmt.Sprintf("window:%d:%d", cursor.ProcessedThroughSeq, cursor.ContextStartSeq))
+	if err != nil {
+		return cursor, nil, err
+	}
+	return cursor, job, nil
+}
+
+// OnRunSettled is the settle trigger: the consultation runtime calls it once
+// a Run and its messages reached their final state (completed, failed,
+// cancelled, or parked on Ask User). It never fails the caller; a missed
+// trigger is caught up by the next settlement because reconciliation always
+// looks at the whole live transcript.
+func (s *ChatRetentionService) OnRunSettled(ctx context.Context, owner uuid.UUID) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if _, _, err := s.ReconcileWindow(ctx, owner); err != nil && !errors.Is(err, model.ErrRetentionNotFound) {
+		log.Printf("chat retention window reconcile for user %s: %v", owner, err)
+	}
+}
+
+// ContextWindow is the raw-history window the AI runtime may read.
+func (s *ChatRetentionService) ContextWindow(ctx context.Context, owner, conversationID uuid.UUID) (*model.ChatContextWindow, error) {
+	return s.repo.ContextWindow(ctx, owner, conversationID)
 }
 
 // Prune runs one pass now and records its receipt on a job of its own.

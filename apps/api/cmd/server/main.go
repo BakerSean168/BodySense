@@ -16,6 +16,7 @@ import (
 	"github.com/bodysense/api/internal/database"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/middleware"
+	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/observability"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
@@ -174,8 +175,11 @@ func main() {
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	// PC-RET-001: prune jobs run only when something enqueues them; a pass
 	// moves no cursor until the ai-service checkpoint cleanup is verified.
-	service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
-		StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
+	// Slice 3: Run settlement reconciles P and the token-budget C, and
+	// enqueues a prune job once C - 1 and P are both past R.
+	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
+		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv))
+	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
@@ -209,6 +213,7 @@ func main() {
 		bodyStateService,
 	)
 	consultationRuntime.AttachBodyFactService(bodyFactService)
+	consultationRuntime.AttachChatRetention(chatRetentionService)
 	consultationRuntime.AttachInteractionResumeService(service.NewInteractionResumeService(consultationRepo, database.NewTransactionManager(database.DB), runtimeEventService).WithStructuredIntake(bodyStateService).WithBodyStateSuggestions(bodyStateService))
 	consultationRuntime.AttachBodyStateSuggestionSources(bodyStateRepo)
 	consultationRuntime.AttachLongitudinalContextServices(
@@ -221,7 +226,7 @@ func main() {
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
 	)
-	startRunLeaseReconciler(runService, conversationService, runtimeEventService)
+	startRunLeaseReconciler(runService, conversationService, runtimeEventService, chatRetentionService)
 	knowledgePublicationRepo := repository.NewKnowledgePublicationRepository(database.DB)
 	knowledgeObservationRepo := repository.NewKnowledgePublicationObservationRepository(database.DB)
 	consultationRuntime.AttachKnowledgeObservationService(
@@ -397,6 +402,7 @@ func startRunLeaseReconciler(
 	runService *service.RunService,
 	conversationService *service.ConversationService,
 	runtimeEventService *service.RuntimeEventService,
+	chatRetention *service.ChatRetentionService,
 ) {
 	reconcile := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -415,6 +421,8 @@ func startRunLeaseReconciler(
 			if err := runtimeEventService.RecordMessageExecutionLost(ctx, run, failedMessage); err != nil {
 				log.Printf("record execution-lost message event for run %s: %v", run.ID, err)
 			}
+			// A lost Run is settled too; let retention catch up past it.
+			chatRetention.OnRunSettled(ctx, run.UserID)
 		}
 	}
 

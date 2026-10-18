@@ -306,3 +306,99 @@ func TestChatRetentionStalePruneJobIsRecoveredPostgres(t *testing.T) {
 		t.Fatalf("job=%s attempts=%d pruned=%d", got.Status, got.Attempts, f.pruned())
 	}
 }
+
+// addSizedTurn appends a user+assistant interaction whose two messages are
+// each ~500 estimated tokens (1012 a turn), so two turns overflow the minimum
+// 1024-token context budget.
+func (f *pruneJobFixture) addSizedTurn(status string) uuid.UUID {
+	f.t.Helper()
+	run, turn := uuid.New(), uuid.New()
+	f.exec(`INSERT INTO runs(id,conversation_id,turn_id,request_id,user_id,status,model) VALUES (?,?,?,?,?,?,'synthetic')`,
+		run, f.conversation, turn, "req-"+run.String(), f.owner, status)
+	for _, role := range []string{"user", "assistant"} {
+		f.seq++
+		f.exec(`INSERT INTO messages(conversation_id,turn_id,run_id,role,status,seq,content_text) VALUES (?,?,?,?,'completed',?,repeat('x', 1500))`,
+			f.conversation, turn, run, role, f.seq)
+	}
+	return run
+}
+
+func (f *pruneJobFixture) pruneJobs() int64 {
+	var n int64
+	f.db.Raw("SELECT COUNT(*) FROM jobs WHERE user_id = ? AND job_type = ?", f.owner, model.ChatRetentionPruneJobType).Scan(&n)
+	return n
+}
+
+func TestChatRetentionSettleEnqueuesOnePrunePerWindowPostgres(t *testing.T) {
+	f := newPruneJobFixture(t)
+	ctx := context.Background()
+	f.svc.WithContextTokenBudget(model.MinChatContextTokenBudget)
+	for range 3 {
+		f.addSizedTurn("completed")
+	}
+
+	cursor, job, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || job == nil {
+		t.Fatalf("reconcile: job=%v %v", job, err)
+	}
+	if cursor.ProcessedThroughSeq != 6 || cursor.ContextStartSeq != 5 {
+		t.Fatalf("cursor %+v, want P=6 C=5", cursor)
+	}
+	// Settling again with the same window is the same job.
+	f.svc.OnRunSettled(ctx, f.owner)
+	_, again, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || again == nil || again.ID != job.ID || f.pruneJobs() != 1 {
+		t.Fatalf("repeat enqueue: job=%v jobs=%d %v", again, f.pruneJobs(), err)
+	}
+	if got := f.runJob(job.ID); got.Status != model.JobStatusCompleted || f.pruned() != 4 || f.messages() != 2 {
+		t.Fatalf("job=%s pruned=%d messages=%d", got.Status, f.pruned(), f.messages())
+	}
+	// C - 1 is no longer past R: nothing more to enqueue.
+	if _, next, err := f.svc.ReconcileWindow(ctx, f.owner); err != nil || next != nil || f.pruneJobs() != 1 {
+		t.Fatalf("after prune: job=%v jobs=%d %v", next, f.pruneJobs(), err)
+	}
+}
+
+func TestChatRetentionUnansweredAskUserIsNeverPrunedPostgres(t *testing.T) {
+	f := newPruneJobFixture(t)
+	ctx := context.Background()
+	f.svc.WithContextTokenBudget(model.MinChatContextTokenBudget)
+	f.addSizedTurn("completed")
+	waiting := f.addSizedTurn("waiting_user")
+	f.exec(`INSERT INTO agent_interactions(run_id,conversation_id,tool_call_id,question,status) VALUES (?,?,'ask-1','{"q":"where"}','pending')`,
+		waiting, f.conversation)
+
+	cursor, job, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || job == nil {
+		t.Fatalf("reconcile: job=%v %v", job, err)
+	}
+	if cursor.ProcessedThroughSeq != 2 || cursor.ContextStartSeq != 3 {
+		t.Fatalf("cursor %+v, want P=2 C=3", cursor)
+	}
+	got := f.runJob(job.ID)
+	var result map[string]any
+	_ = json.Unmarshal(got.Result, &result)
+	if result["outcome"] != "deferred" || f.pruned() != 0 || f.messages() != 4 || f.ai.calls() != 0 {
+		t.Fatalf("pass beside an unanswered Ask User: result=%v pruned=%d messages=%d", result, f.pruned(), f.messages())
+	}
+
+	// Answering settles the Run; the settle trigger processes it, keeps it
+	// in context (it fits the budget) and prunes only the turn before it.
+	f.exec("UPDATE runs SET status = 'completed' WHERE id = ?", waiting)
+	f.exec("UPDATE agent_interactions SET status = 'answered' WHERE run_id = ?", waiting)
+	cursor, next, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || next == nil || next.ID == job.ID {
+		t.Fatalf("settle: job=%v %v", next, err)
+	}
+	if cursor.ProcessedThroughSeq != 4 || cursor.ContextStartSeq != 3 {
+		t.Fatalf("cursor %+v, want P=4 C=3", cursor)
+	}
+	if got := f.runJob(next.ID); got.Status != model.JobStatusCompleted || f.pruned() != 2 || f.messages() != 2 {
+		t.Fatalf("job=%s pruned=%d messages=%d", got.Status, f.pruned(), f.messages())
+	}
+	var kept int64
+	f.db.Raw("SELECT COUNT(*) FROM messages WHERE run_id = ?", waiting).Scan(&kept)
+	if kept != 2 {
+		t.Fatalf("answered Ask User run lost %d messages", 2-kept)
+	}
+}

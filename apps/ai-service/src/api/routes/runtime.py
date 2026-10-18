@@ -142,6 +142,13 @@ class SpatialContext(BaseModel):
     reference_motion: ReferenceMotionContext | None = None
 
 
+class ContextWindow(BaseModel):
+    """Go's chat retention context cursor (PC-RET-001)."""
+
+    context_start_seq: int = Field(ge=1)
+    run_ids: list[str] = Field(default_factory=list, max_length=4096)
+
+
 class BusinessContext(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     # Go-owned BodyState is durable health truth. Runtime state is limited to
@@ -155,6 +162,8 @@ class BusinessContext(BaseModel):
     spatial_context: SpatialContext | None = None
     # Prefetched completed posture analysis from Go (user_uploads.analysis_result).
     posture_analysis: dict[str, Any] | None = None
+    # Absent when Go could not read it; the runtime then uses its fallback.
+    context_window: ContextWindow | None = None
 
 
 class StartTurnRequest(BaseModel):
@@ -174,6 +183,11 @@ class ResumeInterruptRequest(BaseModel):
     interrupt_id: str
     answer: dict[str, Any]
     business_context: BusinessContext = Field(default_factory=BusinessContext)
+
+
+def _context_window(business_context: BusinessContext) -> dict[str, Any] | None:
+    window = business_context.context_window
+    return window.model_dump() if window is not None else None
 
 
 @router.post("/threads/{thread_id}/turns")
@@ -344,6 +358,7 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                     else None
                 ),
                 configuration_id=request.configuration_id,
+                context_window=_context_window(request.business_context),
             ):
                 yield serialize_runtime_event(event)
         except Exception:
@@ -479,6 +494,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
                     if request.business_context.spatial_context
                     else None
                 ),
+                context_window=_context_window(request.business_context),
             ):
                 yield serialize_runtime_event(event)
         except Exception:

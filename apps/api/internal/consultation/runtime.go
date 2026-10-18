@@ -88,6 +88,7 @@ type Runtime struct {
 	deployment                  *service.AgentDeploymentPolicy
 	rolloutService              *service.ConsultationRolloutService
 	knowledgeObservationService runtimeKnowledgeObservationService
+	chatRetention               runtimeChatRetention
 
 	cancelMu   sync.Mutex
 	runCancels map[uuid.UUID]context.CancelFunc
@@ -145,6 +146,18 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	r.diagnosisAnalysisService = diagnosis
 	r.diagnosisFreshnessService = freshness
 	r.outcomeService = outcomes
+}
+
+// runtimeChatRetention is the PC-RET-001 seam: the settle trigger that moves
+// the processed and context cursors, and the context window read.
+type runtimeChatRetention interface {
+	OnRunSettled(ctx context.Context, owner uuid.UUID)
+	ContextWindow(ctx context.Context, owner, conversationID uuid.UUID) (*model.ChatContextWindow, error)
+}
+
+// AttachChatRetention wires the chat retention settle trigger.
+func (r *Runtime) AttachChatRetention(retention runtimeChatRetention) {
+	r.chatRetention = retention
 }
 
 // AttachRolloutService attaches the anonymous rollout observer (North-Star).
@@ -886,6 +899,7 @@ func (r *Runtime) buildBusinessContext(
 		}
 		bc.BodyState = consultationBodyStatePayload(bodyContext, r.bodyFacts != nil)
 	}
+	bc.ContextWindow = r.consultationContextWindow(ctx, uid, conversationID)
 	if r.contextRetrievalService != nil {
 		if history, err := r.contextRetrievalService.Retrieve(
 			ctx, uid, conversationID, queryText, bodyContext,
@@ -929,6 +943,25 @@ func (r *Runtime) buildBusinessContext(
 		bc.PostureAnalysis = raw
 	}
 	return bc
+}
+
+// consultationContextWindow reads Go's retention context cursor for the turn.
+// A read failure sends no window, and the runtime falls back to its own
+// bounded history rather than to the whole thread.
+func (r *Runtime) consultationContextWindow(ctx context.Context, uid, conversationID uuid.UUID) *service.ConsultationContextWindow {
+	if r.chatRetention == nil {
+		return nil
+	}
+	window, err := r.chatRetention.ContextWindow(ctx, uid, conversationID)
+	if err != nil {
+		log.Printf("chat context window read failed for conversation %s: %v", conversationID, err)
+		return nil
+	}
+	out := &service.ConsultationContextWindow{ContextStartSeq: window.ContextStartSeq, RunIDs: make([]string, len(window.RunIDs))}
+	for i, id := range window.RunIDs {
+		out.RunIDs[i] = id.String()
+	}
+	return out
 }
 
 // consultationBodyStatePayload encodes the agent view for the turn. Capture is
@@ -1720,6 +1753,12 @@ func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uui
 	}
 	if err := r.conversationService.UpdateActiveRunID(ctx, conversationID, userID, nil, ""); err != nil {
 		log.Printf("failed to clear active_run_id for conversation %s: %v", conversationID, err)
+	}
+	// Every path that ends a Run (completed, failed, cancelled, parked on Ask
+	// User) clears it here after its messages reached their final status, so
+	// this is the retention settle trigger (PC-RET-001).
+	if r.chatRetention != nil {
+		r.chatRetention.OnRunSettled(ctx, userID)
 	}
 }
 
