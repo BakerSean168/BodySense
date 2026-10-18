@@ -202,6 +202,7 @@ export type BodySenseStreamEventV1 = (
       payload: {
         interaction_id: string;
         answer: unknown;
+        body_state_receipt?: BodyStateSuggestionReceipt | null;
         [k: string]: unknown;
       };
       [k: string]: unknown;
@@ -409,7 +410,8 @@ export interface InteractionQuestion {
     | [InteractionQuestionField, InteractionQuestionField]
     | [InteractionQuestionField, InteractionQuestionField, InteractionQuestionField];
   purpose?: string;
-  state_binding?: InteractionStateBinding;
+  state_binding?: InteractionStateBinding | BodyStateSuggestionBinding;
+  quote?: string;
   [k: string]: unknown;
 }
 export interface InteractionQuestionField {
@@ -428,6 +430,34 @@ export interface InteractionStateBinding {
     [k: string]: string;
   };
   [k: string]: unknown;
+}
+/**
+ * Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit.
+ */
+export interface BodyStateSuggestionBinding {
+  revision: "body-state-suggestion-v1";
+  kind: "hypothesis";
+  source: BodyStateSuggestionSource;
+  base_body_state_revision: number;
+}
+export interface BodyStateSuggestionSource {
+  message_id: string;
+  message_seq: number;
+  span_start: number;
+  span_end: number;
+  excerpt_sha256: string;
+}
+/**
+ * Id-only Go commit receipt of a confirmed BodyState suggestion. Present only after the commit; a declined suggestion carries null.
+ */
+export interface BodyStateSuggestionReceipt {
+  kind: "hypothesis";
+  commit_id: string;
+  hypothesis_id: string;
+  source_evidence_id: string;
+  revision: number;
+  event_id: string;
+  committed_at: string;
 }
 export interface Citation {
   title: string;

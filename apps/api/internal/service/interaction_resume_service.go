@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -25,6 +26,13 @@ type StructuredIntakeRecorder interface {
 	RecordStructuredIntakeAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) error
 }
 
+// BodyStateSuggestionRecorder commits the user's decision on a Go-bound
+// BodyState suggestion inside the claim transaction. A confirmation returns
+// the commit receipt; a decline returns nil and writes nothing.
+type BodyStateSuggestionRecorder interface {
+	RecordBodyStateSuggestionAnswer(ctx context.Context, userID uuid.UUID, source model.AnswerFactSource, interaction *model.AgentInteraction) (*model.BodyHypothesisCommit, error)
+}
+
 // InteractionResumeService coordinates one Chat transaction. Ordinary answers
 // commit no domain facts here; facts follow from source-bound extraction. The
 // one exception is the Go-bound structured symptom intake, whose safety screen
@@ -35,6 +43,14 @@ type InteractionResumeService struct {
 	transactions interactionTransactionManager
 	events       interactionLifecycleEventStore
 	intake       StructuredIntakeRecorder
+	suggestions  BodyStateSuggestionRecorder
+}
+
+// WithBodyStateSuggestions wires the recorder for bound BodyState
+// suggestions. Without it, a bound suggestion answer is refused.
+func (s *InteractionResumeService) WithBodyStateSuggestions(recorder BodyStateSuggestionRecorder) *InteractionResumeService {
+	s.suggestions = recorder
+	return s
 }
 
 // WithStructuredIntake wires the BodyFact recorder for bound symptom intake.
@@ -100,6 +116,19 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 		} else if IsBoundSymptomIntake(envelope.Interaction.ToolCallID, json.RawMessage(envelope.Interaction.Question)) {
 			return model.ErrInteractionResumeUnavailable
 		}
+		answered := map[string]any{"interaction_id": command.InteractionID.String(), "answer": json.RawMessage(envelope.Interaction.Answer)}
+		if IsBoundBodyStateSuggestion(json.RawMessage(envelope.Interaction.Question)) {
+			if s.suggestions == nil {
+				return model.ErrInteractionResumeUnavailable
+			}
+			receipt, err := s.suggestions.RecordBodyStateSuggestionAnswer(txCtx, command.UserID, source, envelope.Interaction)
+			if err != nil {
+				return fmt.Errorf("record body state suggestion: %w", err)
+			}
+			// The receipt rides on the durable answered milestone, so "saved" is
+			// shown only after Go committed; a decline carries no receipt.
+			answered["body_state_receipt"] = bodyStateSuggestionReceipt(receipt)
+		}
 		ids := dto.StreamEventIDs{ConversationID: command.ConversationID.String(), RunID: envelope.Run.ID.String(), TurnID: envelope.Run.TurnID.String(), InteractionID: command.InteractionID.String(), ToolCallID: envelope.Interaction.ToolCallID}
 		steps := []struct {
 			channel   string
@@ -107,7 +136,7 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 			messageID string
 			payload   any
 		}{
-			{"state", "state.interaction.answered", "", map[string]any{"interaction_id": command.InteractionID.String(), "answer": json.RawMessage(envelope.Interaction.Answer)}},
+			{"state", "state.interaction.answered", "", answered},
 			{"run", "run.resumed", "", map[string]any{"status": "running", "interaction_id": command.InteractionID.String()}},
 			{"message", "message.created", envelope.AssistantMessage.ID.String(), map[string]any{"role": "assistant", "status": "streaming"}},
 		}
@@ -126,4 +155,15 @@ func (s *InteractionResumeService) Claim(ctx context.Context, command model.Clai
 		return nil, err
 	}
 	return result, nil
+}
+
+// bodyStateSuggestionReceipt is the public, id-only receipt of a committed
+// suggestion; nil (JSON null) when the user declined and nothing was written.
+func bodyStateSuggestionReceipt(commit *model.BodyHypothesisCommit) any {
+	if commit == nil {
+		return nil
+	}
+	return map[string]any{"kind": model.BodyStateSuggestionKindHypothesis, "commit_id": commit.ID.String(),
+		"hypothesis_id": commit.HypothesisID.String(), "source_evidence_id": commit.SourceEvidenceID.String(),
+		"revision": commit.Revision, "event_id": commit.EventID.String(), "committed_at": commit.CommittedAt.UTC().Format(time.RFC3339Nano)}
 }
