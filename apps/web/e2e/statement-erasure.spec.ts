@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { profileReplacement } from "./support/profile";
 
 // AS-002 statement erasure in the Person Records window at 390px: the real
 // Go/PostgreSQL flow (review -> withdraw -> verified erasure) and the receipt
@@ -26,9 +27,9 @@ async function register(page: Page, request: APIRequestContext) {
   const headers = { Authorization: `Bearer ${accessToken}` };
   const profile = await request.put(`${api}/api/v1/profile`, {
     headers,
-    data: { gender: "male", birth_date: "2000-01-01" },
+    data: profileReplacement({ gender: "male", birth_date: "2000-01-01" }),
   });
-  expect(profile.ok()).toBeTruthy();
+  expect(profile.ok(), await profile.text()).toBeTruthy();
   return headers;
 }
 
