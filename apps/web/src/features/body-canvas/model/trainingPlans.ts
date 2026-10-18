@@ -1,12 +1,7 @@
 import type { TrainingPlan } from "@/features/training/services/trainingService";
 
-/**
- * The execution projection keeps the intervention identity on the wire, but the
- * app-level `TrainingExercise` view model drops it. Accept the structural shape
- * so a projected exercise can still be traced back to a real intervention.
- */
+/** One exercise of the legacy /training execution projection. */
 export interface ProjectedTrainingExercise {
-  intervention_id?: string;
   name: string;
   description: string;
   sets: string;
@@ -124,7 +119,7 @@ export function formatDosage(exercise: PlanExercise): string {
 /** Execution projection: no kind, but a real ordered exercise list. */
 function exerciseFromProjection(exercise: ProjectedTrainingExercise): PlanExercise {
   return {
-    exerciseId: exercise.intervention_id ?? exercise.name,
+    exerciseId: exercise.name,
     name: exercise.name,
     description: text(exercise.description),
     sets: text(exercise.sets),

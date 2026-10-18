@@ -112,20 +112,8 @@ export function TrainingExecutionPanel({ planId }: TrainingExecutionPanelProps) 
       }),
     );
     try {
-      const res = await trainingApi.updateLog(id, notes, exercises);
-      if (res.result.paused) {
-        toast.warning(
-          "日志已保存；当前 Treatment 已因安全或状态变化暂停，请回健康工作台审核。",
-        );
-      } else if (res.result.requires_new_diagnosis) {
-        toast.info(
-          "日志已保存；当前 Diagnosis 已过期，需要基于最新 BodyState 重新分析。",
-        );
-      } else if (res.result.review_recommended) {
-        toast.info("日志已保存；新的 Outcome 已触发 Treatment 复评建议。");
-      } else {
-        toast.success("日志已保存，并记录为长期 Outcome。");
-      }
+      await trainingApi.updateLog(id, notes, exercises);
+      toast.success("日志已保存，并记录为长期 Outcome。");
     } catch {
       toast.error("日志保存失败，请稍后重试");
     }
@@ -585,13 +573,7 @@ export function TrainingExecutionPanel({ planId }: TrainingExecutionPanelProps) 
                             Outcome 已进入长期健康记录
                           </h4>
                           <p className="text-sm text-primary-700 leading-relaxed">
-                            {reassessmentResult.paused
-                              ? "当前 Treatment 已暂停，需要先处理安全或状态变化。"
-                              : reassessmentResult.requires_new_diagnosis
-                                ? "当前 Diagnosis 已因新的 BodyState 变化过期，请先重新生成可能性分析。"
-                                : reassessmentResult.review_recommended
-                                  ? "新的身体状态变化触发了 Treatment 复评建议。"
-                                  : "当前方案无需调整，继续记录后续变化即可。"}
+                            复评只记录你的反馈，不会自动修改训练计划；计划变更需要你确认新的计划建议。
                           </p>
                         </div>
                         <Button

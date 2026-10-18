@@ -26,10 +26,7 @@ type validator struct {
 	bodyRepo    *repository.BodyStateRepository
 	body        *service.BodyStateService
 	diagnosis   *service.DiagnosisAnalysisService
-	treatment   *service.TreatmentService
 	outcomes    *service.OutcomeService
-	training    *service.TrainingService
-	treatmentDB *repository.TreatmentRepository
 }
 
 func main() {
@@ -93,21 +90,11 @@ func main() {
 	}
 	fmt.Println("NATIVE_SAFETY_COVERAGE=PASS")
 
-	analysis, err := v.createDiagnosis(ctx, userID, revision, fact.ID)
-	if err != nil {
+	if _, err := v.createDiagnosis(ctx, userID, revision, fact.ID); err != nil {
 		log.Fatal(err)
 	}
-	proposal, err := v.createTreatmentProposal(ctx, userID, revision, analysis)
-	if err != nil {
-		log.Fatal(err)
-	}
-	trainingPlan, err := v.validateTreatmentActivationAtomicity(ctx, userID, proposal)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("TREATMENT_ACTIVATION_ATOMICITY=PASS")
 
-	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID, trainingPlan); err != nil {
+	if err := v.validateOutcomeFeedbackAtomicity(ctx, userID); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("OUTCOME_FEEDBACK_ATOMICITY=PASS")
@@ -121,35 +108,11 @@ func newValidator(db *gorm.DB) *validator {
 	).WithAgentContextSources(database.NewTransactionManager(db), repository.NewEquipmentAssetRepository(db))
 	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
 	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
-	freshnessRepo := repository.NewDiagnosisFreshnessRepository(db)
-	freshnessService := service.NewDiagnosisFreshnessService(freshnessRepo, bodyService)
-	treatmentRepo := repository.NewTreatmentRepository(db)
 	unitOfWork := database.NewTransactionManager(db)
-	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
-	if err != nil {
-		panic(fmt.Sprintf("configure Agent deployment policy: %v", err))
-	}
-	treatmentService := service.NewTreatmentService(
-		treatmentRepo,
-		diagnosisService,
-		bodyService,
-		freshnessService,
-		nil,
-		nil,
-		unitOfWork,
-		agentDeploymentPolicy,
-	)
 	outcomeService := service.NewOutcomeService(repository.NewOutcomeRepository(db), bodyService, unitOfWork)
-	trainingService := service.NewTrainingService(
-		repository.NewTrainingRepository(db),
-		treatmentService,
-		outcomeService,
-		unitOfWork,
-	)
 	return &validator{
 		db: db, bodyRepo: bodyRepo, body: bodyService,
-		diagnosis: diagnosisService, treatment: treatmentService, outcomes: outcomeService,
-		training: trainingService, treatmentDB: treatmentRepo,
+		diagnosis: diagnosisService, outcomes: outcomeService,
 	}
 }
 
@@ -323,102 +286,9 @@ func (v *validator) createDiagnosis(
 	return analysis, nil
 }
 
-func (v *validator) createTreatmentProposal(
-	ctx context.Context,
-	userID uuid.UUID,
-	bodyStateRevision int64,
-	analysis *model.DiagnosisAnalysisRecord,
-) (*model.TreatmentRevision, error) {
-	plan := model.TreatmentPlanContent{
-		Summary:       "transactional training projection",
-		Goal:          "reduce sitting-related neck load",
-		DurationWeeks: 4,
-		Interventions: []model.TreatmentInterventionDraft{{
-			Kind: "exercise", Title: "gentle chin tuck", Description: "controlled range",
-			Prescription: map[string]any{"sets": 2, "reps": 8},
-		}},
-		DailyHabits:      []string{"take short movement breaks"},
-		ExpectedTimeline: "2-4 weeks",
-		WarningSigns:     []string{"progressive weakness or numbness"},
-		ReviewTriggers:   []string{"symptoms worsen"},
-	}
-	planJSON, _ := json.Marshal(plan)
-	_, proposal, err := v.treatmentDB.CreateProposal(ctx, userID, model.TreatmentRevision{
-		SourceBodyStateRevision:   bodyStateRevision,
-		SourceDiagnosisAnalysisID: analysis.ID,
-		Goal:                      plan.Goal,
-		DurationWeeks:             plan.DurationWeeks,
-		Plan:                      datatypes.JSON(planJSON),
-		UserConstraints:           datatypes.JSON(`{}`),
-		EvidenceIDs:               datatypes.JSON(`[]`),
-		Governance:                datatypes.JSON(`{"kind":"treatment","verdict":"accepted"}`),
-		ChangeReason:              "domain validator",
-	}, []model.Intervention{{
-		Kind: "exercise", Title: "gentle chin tuck", Description: "controlled range",
-		Prescription: datatypes.JSON(`{"sets":2,"reps":8}`),
-	}})
-	if err != nil {
-		return nil, fmt.Errorf("create treatment proposal: %w", err)
-	}
-	return proposal, nil
-}
-
-func (v *validator) validateTreatmentActivationAtomicity(
-	ctx context.Context,
-	userID uuid.UUID,
-	proposal *model.TreatmentRevision,
-) (*model.TrainingPlan, error) {
-	probeRollback := errors.New("validator acceptance probe rollback")
-	probeErr := database.NewTransactionManager(v.db).WithinTransaction(ctx, func(txCtx context.Context) error {
-		if _, err := v.treatment.AcceptProposal(txCtx, userID, proposal.ID); err != nil {
-			return fmt.Errorf("acceptance preflight: %w", err)
-		}
-		return probeRollback
-	})
-	if !errors.Is(probeErr, probeRollback) {
-		return nil, fmt.Errorf("treatment acceptance preflight failed: %w", probeErr)
-	}
-	if err := v.installTrainingFailureTrigger(ctx, proposal.ID); err != nil {
-		return nil, err
-	}
-	_, _, err := v.training.AcceptTreatmentAndEnsurePlan(ctx, userID, proposal.ID, nil)
-	if err == nil || !errors.Is(err, service.ErrTrainingProjectionFailed) {
-		return nil, fmt.Errorf("forced TrainingPlan failure did not fail activation atomically: %v", err)
-	}
-	stored, err := v.treatmentDB.GetRevision(ctx, userID, proposal.ID)
-	if err != nil {
-		return nil, fmt.Errorf("reload proposal after rollback: %w", err)
-	}
-	if stored == nil || stored.AcceptanceState != model.TreatmentAcceptanceProposed {
-		return nil, fmt.Errorf("Treatment acceptance escaped failed projection transaction: %#v", stored)
-	}
-	var planCount int64
-	if err := v.db.WithContext(ctx).Model(&model.TrainingPlan{}).
-		Where("treatment_revision_id = ?", proposal.ID).
-		Count(&planCount).Error; err != nil {
-		return nil, fmt.Errorf("count rolled-back training plans: %w", err)
-	}
-	if planCount != 0 {
-		return nil, fmt.Errorf("failed activation left %d TrainingPlan rows", planCount)
-	}
-	if err := v.removeFailureTrigger(ctx, "domain_validator_fail_training", "training_plans"); err != nil {
-		return nil, err
-	}
-
-	_, plan, err := v.training.AcceptTreatmentAndEnsurePlan(ctx, userID, proposal.ID, nil)
-	if err != nil {
-		return nil, fmt.Errorf("retry treatment activation: %w", err)
-	}
-	if plan == nil || plan.TreatmentRevisionID == nil || *plan.TreatmentRevisionID != proposal.ID {
-		return nil, fmt.Errorf("retry did not create pinned TrainingPlan: %#v", plan)
-	}
-	return plan, nil
-}
-
 func (v *validator) validateOutcomeFeedbackAtomicity(
 	ctx context.Context,
 	userID uuid.UUID,
-	plan *model.TrainingPlan,
 ) error {
 	if err := v.installOutcomeFailureTrigger(ctx); err != nil {
 		return err
@@ -482,22 +352,6 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		return fmt.Errorf("outcome symptom must stay unscreened (fail-closed), found %d covering screens", screens)
 	}
 	return nil
-}
-
-func (v *validator) installTrainingFailureTrigger(ctx context.Context, revisionID uuid.UUID) error {
-	return v.db.WithContext(ctx).Exec(fmt.Sprintf(`
-CREATE OR REPLACE FUNCTION domain_validator_fail_training() RETURNS trigger AS $$
-BEGIN
-    IF NEW.treatment_revision_id = '%s'::uuid THEN
-        RAISE EXCEPTION 'forced training projection failure';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS domain_validator_fail_training ON training_plans;
-CREATE TRIGGER domain_validator_fail_training
-    BEFORE INSERT ON training_plans
-    FOR EACH ROW EXECUTE FUNCTION domain_validator_fail_training();`, revisionID)).Error
 }
 
 func (v *validator) installOutcomeFailureTrigger(ctx context.Context) error {

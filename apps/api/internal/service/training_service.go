@@ -14,13 +14,9 @@ import (
 )
 
 type trainingRepository interface {
-	CreatePlan(ctx context.Context, plan *model.TrainingPlan) error
 	GetPlanByID(ctx context.Context, id, userID uuid.UUID) (*model.TrainingPlan, error)
 	ListPlansByUserID(ctx context.Context, userID uuid.UUID) ([]model.TrainingPlan, error)
 	GetActivePlanByUserID(ctx context.Context, userID uuid.UUID) (*model.TrainingPlan, error)
-	GetPlanByTreatmentRevision(ctx context.Context, userID, treatmentRevisionID uuid.UUID) (*model.TrainingPlan, error)
-	LockOwnerForPlanActivation(ctx context.Context, userID uuid.UUID) error
-	SupersedePlansExcept(ctx context.Context, userID, treatmentRevisionID uuid.UUID) error
 	GetOrCreateLog(ctx context.Context, plan *model.TrainingPlan, date time.Time) (*model.TrainingLog, error)
 	SaveLog(ctx context.Context, log *model.TrainingLog) error
 	CheckInAndGet(ctx context.Context, plan *model.TrainingPlan, date time.Time) (*model.TrainingLog, error)
@@ -29,252 +25,22 @@ type trainingRepository interface {
 	GetConsecutiveCheckInDays(ctx context.Context, planID uuid.UUID) (int, error)
 }
 
-type trainingTreatmentService interface {
-	AcceptProposal(ctx context.Context, userID, revisionID uuid.UUID) (*model.Treatment, error)
-	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
-	GenerateProposal(ctx context.Context, userID uuid.UUID, input TreatmentProposalInput) (*model.TreatmentRevision, error)
-}
-
 type trainingOutcomeRecorder interface {
 	RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.Outcome, bool, error)
 }
 
-var ErrTrainingProjectionFailed = errors.New("failed to create executable training projection")
-
-// ErrIndependentTrainingOwnerLockRequired prevents an independent-plan
-// projection from bypassing its outer, owner-serialized DB transaction.
-var ErrIndependentTrainingOwnerLockRequired = errors.New("independent training projection requires an owner transaction lock")
-
-type independentTrainingOwnerLockKey struct{}
-
-// lockIndependentTrainingOwner obtains a DB lock in the current transaction
-// and records an unforgeable (package-private) witness in this context.
-// The witness is never created before the repository confirms the lock.
-func (s *TrainingService) lockIndependentTrainingOwner(ctx context.Context, userID uuid.UUID) (context.Context, error) {
-	if !s.independentPlans {
-		return ctx, nil
-	}
-	if s.trainingRepo == nil || userID == uuid.Nil {
-		return nil, ErrIndependentTrainingOwnerLockRequired
-	}
-	if err := s.trainingRepo.LockOwnerForPlanActivation(ctx, userID); err != nil {
-		return nil, err
-	}
-	return context.WithValue(ctx, independentTrainingOwnerLockKey{}, userID), nil
-}
-
-// TrainingService adapts accepted Treatment interventions into the daily-task
-// execution UI. TreatmentRevision is the source of truth; the training tables
-// are a transactional execution projection plus activity log.
+// TrainingService serves the legacy daily-task execution surface (/training)
+// over TrainingPlan rows. It never creates, changes or supersedes a plan:
+// plans are written only by an accepted PlanProposal. Check-ins and feedback
+// are recorded as Outcomes. TP-003 replaces this surface with Trainer
+// sessions.
 type TrainingService struct {
-	trainingRepo     trainingRepository
-	treatment        trainingTreatmentService
-	outcomes         trainingOutcomeRecorder
-	unitOfWork       treatmentUnitOfWork
-	independentPlans bool
+	trainingRepo trainingRepository
+	outcomes     trainingOutcomeRecorder
 }
 
-// TrainingServiceOption configures a TrainingService without changing the
-// legacy single-active Treatment projection for existing callers.
-type TrainingServiceOption func(*TrainingService)
-
-// WithIndependentTrainingPlans opts in to preserving unrelated active plans.
-//
-// WARNING: This must not be used by production or a V2 route until the
-// coordinated multi-active database migration, explicit plan selection,
-// Treatment revision history reconciliation and rollback gates have passed.
-// The existing constructors intentionally do not enable this option.
-func WithIndependentTrainingPlans() TrainingServiceOption {
-	return func(s *TrainingService) { s.independentPlans = true }
-}
-
-func NewTrainingService(
-	trainingRepo trainingRepository,
-	treatment trainingTreatmentService,
-	outcomes trainingOutcomeRecorder,
-	unitOfWork treatmentUnitOfWork,
-	options ...TrainingServiceOption,
-) *TrainingService {
-	service := &TrainingService{
-		trainingRepo: trainingRepo, treatment: treatment, outcomes: outcomes, unitOfWork: unitOfWork,
-	}
-	for _, option := range options {
-		if option != nil {
-			option(service)
-		}
-	}
-	return service
-}
-
-// AcceptTreatmentAndEnsurePlan is the legacy Treatment activation boundary. Treatment
-// acceptance and its executable TrainingPlan projection commit or roll back as
-// one synchronous database transaction.
-func (s *TrainingService) AcceptTreatmentAndEnsurePlan(
-	ctx context.Context,
-	userID, revisionID uuid.UUID,
-	consultationID *uuid.UUID,
-) (*model.Treatment, *model.TrainingPlan, error) {
-	if s.unitOfWork == nil {
-		return nil, nil, errors.New("training unit of work is not configured")
-	}
-	var treatment *model.Treatment
-	var plan *model.TrainingPlan
-	err := s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
-		// The legacy route is untouched. V2 opt-in serializes this owner
-		// *before* proposal acceptance and revision-projection lookup.
-		lockedCtx, lockErr := s.lockIndependentTrainingOwner(txCtx, userID)
-		if lockErr != nil {
-			return lockErr
-		}
-		var acceptErr error
-		treatment, acceptErr = s.treatment.AcceptProposal(lockedCtx, userID, revisionID)
-		if acceptErr != nil {
-			return acceptErr
-		}
-		var projectionErr error
-		plan, projectionErr = s.EnsurePlanForTreatment(lockedCtx, userID, consultationID, treatment)
-		if projectionErr != nil {
-			return fmt.Errorf("%w: %v", ErrTrainingProjectionFailed, projectionErr)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	return treatment, plan, nil
-}
-
-// EnsurePlanForTreatment idempotently projects one accepted TreatmentRevision
-// into the execution-oriented TrainingPlan used by daily task/check-in UI.
-func (s *TrainingService) EnsurePlanForTreatment(
-	ctx context.Context,
-	userID uuid.UUID,
-	consultationID *uuid.UUID,
-	treatment *model.Treatment,
-) (*model.TrainingPlan, error) {
-	// A direct V2 projection call is unsafe: it could race against another
-	// device after the single-active legacy index is retired. Accepting
-	// Treatment or recovering its projection must hold this owner's lock
-	// in a coordinated transaction; a different owner's witness is invalid.
-	if s.independentPlans {
-		lockedOwner, ok := ctx.Value(independentTrainingOwnerLockKey{}).(uuid.UUID)
-		if !ok || lockedOwner != userID || userID == uuid.Nil {
-			return nil, ErrIndependentTrainingOwnerLockRequired
-		}
-	}
-	if treatment == nil || treatment.UserID != userID || treatment.Current == nil {
-		return nil, errors.New("accepted current treatment is required")
-	}
-	revision := treatment.Current
-	if revision.AcceptanceState != model.TreatmentAcceptanceAccepted {
-		return nil, errors.New("only accepted treatment revisions can be executed")
-	}
-	if existing, err := s.trainingRepo.GetPlanByTreatmentRevision(ctx, userID, revision.ID); err != nil {
-		return nil, err
-	} else if existing != nil {
-		// Preserve the existing legacy recovery behavior by default. Future
-		// independent plans must NOT change another plan's status, even on
-		// response-loss retries of the same accepted Treatment revision.
-		if !s.independentPlans {
-			if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-				return nil, err
-			}
-		}
-		return existing, nil
-	}
-
-	var content model.TreatmentPlanContent
-	if err := json.Unmarshal(revision.Plan, &content); err != nil {
-		return nil, fmt.Errorf("decode accepted treatment plan: %w", err)
-	}
-	exercises := make([]map[string]any, 0)
-	for _, intervention := range revision.Interventions {
-		if intervention.Kind != "exercise" && intervention.Kind != "mobility" && intervention.Kind != "self_test" {
-			continue
-		}
-		var prescription map[string]any
-		_ = json.Unmarshal(intervention.Prescription, &prescription)
-		exercises = append(exercises, map[string]any{
-			"intervention_id": intervention.ID,
-			"name":            intervention.Title,
-			"description":     intervention.Description,
-			"sets":            stringValue(prescription["sets"]),
-			"reps":            firstNonEmpty(stringValue(prescription["reps"]), stringValue(prescription["duration"])),
-			"notes":           stringValue(prescription["notes"]),
-		})
-	}
-	phase := map[string]any{
-		"week":                         1,
-		"focus":                        firstNonEmpty(content.Summary, content.Goal, revision.Goal),
-		"exercises":                    exercises,
-		"source_treatment_revision_id": revision.ID,
-	}
-	phases, _ := json.Marshal([]map[string]any{phase})
-	plan := &model.TrainingPlan{
-		ID: uuid.New(), UserID: userID, ConsultationID: consultationID,
-		TreatmentID: &treatment.ID, TreatmentRevisionID: &revision.ID,
-		Status: "active", Goal: revision.Goal, DurationWeeks: revision.DurationWeeks,
-		CurrentWeek: 1, Phases: phases,
-	}
-	// Only the explicit V2 compatibility mode may preserve other active
-	// plan projections. The current database's single-active index is still
-	// authoritative until a separately reviewed schema migration.
-	if !s.independentPlans {
-		if err := s.trainingRepo.SupersedePlansExcept(ctx, userID, revision.ID); err != nil {
-			return nil, err
-		}
-	}
-	if err := s.trainingRepo.CreatePlan(ctx, plan); err != nil {
-		return nil, err
-	}
-	return plan, nil
-}
-
-func (s *TrainingService) GetPlanByTreatmentRevision(
-	ctx context.Context,
-	userID, treatmentRevisionID uuid.UUID,
-) (*model.TrainingPlan, error) {
-	return s.trainingRepo.GetPlanByTreatmentRevision(ctx, userID, treatmentRevisionID)
-}
-
-// EnsureCurrentPlan is the explicit recovery path for the accepted-treatment
-// execution projection. It is safe to call after a response loss or partial
-// projection failure because EnsurePlanForTreatment is idempotent.
-func (s *TrainingService) EnsureCurrentPlan(
-	ctx context.Context,
-	userID uuid.UUID,
-	consultationID *uuid.UUID,
-) (*model.TrainingPlan, error) {
-	if s.treatment == nil {
-		return nil, errors.New("treatment service is not configured")
-	}
-	if s.independentPlans {
-		if s.unitOfWork == nil {
-			return nil, ErrIndependentTrainingOwnerLockRequired
-		}
-		var plan *model.TrainingPlan
-		err := s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
-			lockedCtx, lockErr := s.lockIndependentTrainingOwner(txCtx, userID)
-			if lockErr != nil {
-				return lockErr
-			}
-			current, currentErr := s.treatment.GetCurrent(lockedCtx, userID)
-			if currentErr != nil {
-				return currentErr
-			}
-			plan, currentErr = s.EnsurePlanForTreatment(lockedCtx, userID, consultationID, current)
-			return currentErr
-		})
-		if err != nil {
-			return nil, err
-		}
-		return plan, nil
-	}
-	current, err := s.treatment.GetCurrent(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return s.EnsurePlanForTreatment(ctx, userID, consultationID, current)
+func NewTrainingService(trainingRepo trainingRepository, outcomes trainingOutcomeRecorder) *TrainingService {
+	return &TrainingService{trainingRepo: trainingRepo, outcomes: outcomes}
 }
 
 func (s *TrainingService) GetPlan(ctx context.Context, id, userID uuid.UUID) (*model.TrainingPlan, error) {
@@ -310,16 +76,9 @@ func (s *TrainingService) GetTodayTask(ctx context.Context, planID, userID uuid.
 		if len(phases) > 0 {
 			tasks := make([]TrainingExerciseLogInput, 0, len(phases[0].Exercises))
 			for _, exercise := range phases[0].Exercises {
-				var interventionID *uuid.UUID
-				if rawID := strings.TrimSpace(stringValue(exercise["intervention_id"])); rawID != "" {
-					if parsed, parseErr := uuid.Parse(rawID); parseErr == nil {
-						interventionID = &parsed
-					}
-				}
 				tasks = append(tasks, TrainingExerciseLogInput{
-					InterventionID: interventionID,
-					Name:           stringValue(exercise["name"]),
-					Completed:      false,
+					Name:      stringValue(exercise["name"]),
+					Completed: false,
 				})
 			}
 			log.Exercises = rawJSON(tasks, `[]`)
@@ -343,7 +102,7 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 	if err != nil {
 		return err
 	}
-	if s.outcomes == nil || plan.TreatmentRevisionID == nil {
+	if s.outcomes == nil {
 		return nil
 	}
 	_, _, err = s.outcomes.RecordOutcome(ctx, userID, model.Outcome{
@@ -361,9 +120,8 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 }
 
 type TrainingExerciseLogInput struct {
-	InterventionID *uuid.UUID `json:"intervention_id,omitempty"`
-	Name           string     `json:"name"`
-	Completed      bool       `json:"completed"`
+	Name      string `json:"name"`
+	Completed bool   `json:"completed"`
 }
 
 type TrainingFeedbackInput struct {
@@ -404,8 +162,8 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	if err := s.trainingRepo.SaveLog(ctx, log); err != nil {
 		return nil, err
 	}
-	if s.outcomes == nil || s.treatment == nil || plan.TreatmentRevisionID == nil {
-		return map[string]any{"review_recommended": false}, nil
+	if s.outcomes == nil {
+		return map[string]any{}, nil
 	}
 
 	kind := "training_feedback"
@@ -433,16 +191,8 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	if err != nil {
 		return nil, err
 	}
-	current, err := s.treatment.GetCurrent(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"outcome":            outcome,
-		"treatment_status":   valueOrEmpty(current, func(t *model.Treatment) string { return string(t.Status) }),
-		"review_recommended": current != nil && current.Status == model.TreatmentStatusReviewRecommended,
-		"paused":             current != nil && current.Status == model.TreatmentStatusPaused,
-	}, nil
+	// Feedback is an Outcome only; it never changes or proposes a plan here.
+	return map[string]any{"outcome": outcome}, nil
 }
 
 func (s *TrainingService) GetLogsByPlanID(ctx context.Context, planID uuid.UUID) ([]model.TrainingLog, error) {
@@ -468,60 +218,18 @@ func (s *TrainingService) GetProgress(ctx context.Context, planID, userID uuid.U
 	return map[string]any{
 		"consecutive_days": consecutive, "total_checkins": totalCheckIns,
 		"current_week": plan.CurrentWeek, "total_weeks": plan.DurationWeeks,
-		"treatment_revision_id": plan.TreatmentRevisionID, "plan_status": plan.Status,
+		"plan_status": plan.Status,
 	}, nil
 }
 
+// Reassess records reassessment feedback as an Outcome. Review-driven plan
+// changes arrive as PlanProposal(update) only (not in this slice).
 func (s *TrainingService) Reassess(
 	ctx context.Context,
 	planID, userID uuid.UUID,
 	feedback TrainingFeedbackInput,
 ) (map[string]any, error) {
-	result, err := s.UpdateLogWithFeedback(ctx, planID, userID, feedback)
-	if err != nil {
-		return nil, err
-	}
-	if s.treatment == nil {
-		return result, nil
-	}
-	current, err := s.treatment.GetCurrent(ctx, userID)
-	if err != nil || current == nil || current.Current == nil {
-		return result, err
-	}
-	if current.Status != model.TreatmentStatusReviewRecommended {
-		return result, nil
-	}
-	proposal, err := s.treatment.GenerateProposal(ctx, userID, TreatmentProposalInput{
-		DiagnosisAnalysisID: current.Current.SourceDiagnosisAnalysisID,
-		UserConstraints: map[string]any{
-			"training_feedback": map[string]any{
-				"symptom_changes":  feedback.SymptomChanges,
-				"training_feeling": feedback.TrainingFeeling,
-				"difficulties":     feedback.Difficulties,
-			},
-		},
-		ChangeReason: "training outcome review",
-	})
-	if err != nil {
-		// The Outcome is already durable at this point. A stale Diagnosis or a
-		// safety block means the next action is to re-analyze/review, not to turn
-		// successful feedback persistence into a failed request.
-		switch {
-		case errors.Is(err, ErrTreatmentAnalysisStale):
-			result["requires_new_diagnosis"] = true
-			result["has_proposal"] = false
-			return result, nil
-		case errors.Is(err, ErrTreatmentSafetyBlocked):
-			result["paused"] = true
-			result["has_proposal"] = false
-			return result, nil
-		default:
-			return nil, err
-		}
-	}
-	result["proposal"] = proposal
-	result["has_proposal"] = true
-	return result, nil
+	return s.UpdateLogWithFeedback(ctx, planID, userID, feedback)
 }
 
 func localDate(value time.Time) time.Time {
@@ -543,11 +251,4 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func valueOrEmpty[T any](value *T, getter func(*T) string) string {
-	if value == nil {
-		return ""
-	}
-	return getter(value)
 }

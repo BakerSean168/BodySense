@@ -82,7 +82,6 @@ describe("training plan projection uses real plan identity", () => {
   it("projects the execution exercises without inventing stages", () => {
     const projectedExercises = [
       {
-        intervention_id: "int-9",
         name: "靠墙肩胛滑动",
         description: "缓慢控制",
         sets: "3",
@@ -102,7 +101,7 @@ describe("training plan projection uses real plan identity", () => {
     ];
     const selected = projectTrainingPlans(makeWorkspace(), plans, null).selected!;
     expect(selected.stages.map((stage) => stage.phase)).toEqual(["main"]);
-    expect(selected.stages[0].exercises[0].exerciseId).toBe("int-9");
+    expect(selected.stages[0].exercises[0].exerciseId).toBe("靠墙肩胛滑动");
     expect(formatDosage(selected.stages[0].exercises[0])).toBe("3 组 · 10 次");
     expect(selected.frequency).toBeNull();
     expect(selected.stageStructureUnavailable).toBe(true);

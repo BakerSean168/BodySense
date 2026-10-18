@@ -861,7 +861,7 @@ paths:
     put:
       operationId: updateEquipmentAsset
       summary: Edit an equipment asset, mark it unavailable, or retire it.
-      description: Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+      description: Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted TrainingPlan revision or training log.
       security:
       - bearerAuth: []
       parameters:
@@ -2013,7 +2013,7 @@ paths:
   /api/v1/training/{id}/reassess:
     post:
       operationId: reassessTrainingPlan
-      summary: Reassess training feedback and optionally propose a new Treatment revision.
+      summary: Record reassessment feedback as an Outcome; never changes or proposes a plan.
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
       requestBody:
@@ -2110,7 +2110,7 @@ paths:
     post:
       operationId: generatePlanProposal
       summary: Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
-      description: Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+      description: Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -5429,57 +5429,6 @@ components:
         comparison: {$ref: '#/components/schemas/DiagnosisReplayComparison'}
         output:
           $ref: '#/components/schemas/JsonObject'
-    TreatmentInterventionDraft:
-      type: object
-      additionalProperties: false
-      required:
-      - kind
-      - title
-      - description
-      - prescription
-      properties:
-        kind:
-          type: string
-        title:
-          type: string
-        description:
-          type: string
-        prescription:
-          $ref: '#/components/schemas/JsonObject'
-    TreatmentPlanContent:
-      type: object
-      additionalProperties: false
-      required:
-      - summary
-      - goal
-      - duration_weeks
-      - interventions
-      - daily_habits
-      - expected_timeline
-      - warning_signs
-      - review_triggers
-      - safety_notes
-      properties:
-        summary:
-          type: string
-        goal:
-          type: string
-        duration_weeks:
-          type: integer
-        interventions:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentInterventionDraft'
-        daily_habits:
-          $ref: '#/components/schemas/StringArray'
-        expected_timeline:
-          type: string
-        warning_signs:
-          $ref: '#/components/schemas/StringArray'
-        review_triggers:
-          $ref: '#/components/schemas/StringArray'
-        safety_notes:
-          $ref: '#/components/schemas/StringArray'
     RecordOutcomeRequest:
       type: object
       additionalProperties: false
@@ -5511,154 +5460,11 @@ components:
         outcomes:
           type: array
           items: {$ref: '#/components/schemas/Outcome'}
-    Intervention:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - treatment_id
-      - treatment_revision_id
-      - kind
-      - title
-      - description
-      - prescription
-      - position
-      - status
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
-          type: string
-          format: uuid
-        kind:
-          type: string
-        title:
-          type: string
-        description:
-          type: string
-        prescription:
-          $ref: '#/components/schemas/JsonObject'
-        position:
-          type: integer
-        status:
-          type: string
-        started_at:
-          type: string
-          format: date-time
-        ended_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    TreatmentRevision:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - treatment_id
-      - revision
-      - acceptance_state
-      - lifecycle_state
-      - source_body_state_revision
-      - source_diagnosis_analysis_id
-      - goal
-      - duration_weeks
-      - plan
-      - user_constraints
-      - evidence_ids
-      - governance
-      - agent_configuration_id
-      - agent_configuration
-      - execution_provenance
-      - evidence_acquisition_trace
-      - generation_decision_trace
-      - acceptance_decision_trace
-      - rollout_provenance
-      - change_reason
-      - created_at
-      - interventions
-      properties:
-        id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        revision:
-          type: integer
-        acceptance_state:
-          type: string
-          enum:
-          - proposed
-          - accepted
-          - rejected
-        lifecycle_state:
-          type: string
-          enum:
-          - active
-          - review_recommended
-          - paused
-          - superseded
-          - completed
-        source_body_state_revision:
-          type: integer
-        source_diagnosis_analysis_id:
-          type: string
-          format: uuid
-        goal:
-          type: string
-        duration_weeks:
-          type: integer
-        plan:
-          $ref: '#/components/schemas/TreatmentPlanContent'
-        user_constraints:
-          $ref: '#/components/schemas/JsonObject'
-        evidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        governance:
-          $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id:
-          type: string
-        agent_configuration:
-          $ref: '#/components/schemas/JsonObject'
-        execution_provenance:
-          $ref: '#/components/schemas/JsonObject'
-        evidence_acquisition_trace:
-          $ref: '#/components/schemas/JsonObject'
-        generation_decision_trace:
-          $ref: '#/components/schemas/JsonObject'
-        acceptance_decision_trace:
-          $ref: '#/components/schemas/JsonObject'
-        rollout_provenance:
-          $ref: '#/components/schemas/JsonObject'
-        change_reason:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        accepted_at:
-          type: string
-          format: date-time
-        interventions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Intervention'
     TrainingExerciseLogInput:
       type: object
       additionalProperties: false
       required: [name, completed]
       properties:
-        intervention_id: {type: string, format: uuid}
         name: {type: string}
         completed: {type: boolean}
     TrainingLog:
@@ -5668,8 +5474,6 @@ components:
       properties:
         id: {type: string, format: uuid}
         plan_id: {type: string, format: uuid}
-        treatment_revision_id: {type: string, format: uuid}
-        intervention_id: {type: string, format: uuid}
         date: {type: string, format: date-time}
         exercises:
           type: array
@@ -5716,21 +5520,13 @@ components:
       additionalProperties: false
       properties:
         outcome: {$ref: '#/components/schemas/Outcome'}
-        treatment_status: {type: string}
-        review_recommended: {type: boolean}
-        paused: {type: boolean}
-        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
-        has_proposal: {type: boolean}
-        requires_new_diagnosis: {type: boolean}
     TrainingLogUpdateResponse:
       type: object
       additionalProperties: false
-      required: [message, has_proposal, result]
+      required: [message, result]
       properties:
         message: {type: string}
-        has_proposal: {type: boolean}
         result: {$ref: '#/components/schemas/TrainingFeedbackResult'}
-        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
     TrainingProgress:
       type: object
       additionalProperties: false
@@ -5740,10 +5536,6 @@ components:
         total_checkins: {type: integer, minimum: 0}
         current_week: {type: integer, minimum: 1}
         total_weeks: {type: integer, minimum: 1}
-        treatment_revision_id:
-          anyOf:
-          - {type: string, format: uuid}
-          - {type: 'null'}
         plan_status: {type: string}
     TrainingReassessmentRequest:
       type: object
@@ -5756,9 +5548,6 @@ components:
       additionalProperties: false
       required: [name, description, sets, reps]
       properties:
-        intervention_id:
-          type: string
-          format: uuid
         name:
           type: string
           minLength: 1
@@ -5784,9 +5573,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrainingExercise'
-        source_treatment_revision_id:
-          type: string
-          format: uuid
     TrainingPlan:
       type: object
       additionalProperties: false
@@ -5803,12 +5589,6 @@ components:
           type: string
           format: uuid
         consultation_id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
           type: string
           format: uuid
         status:

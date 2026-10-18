@@ -261,18 +261,21 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   };
   expect(diagnosis.candidates).toHaveLength(1);
 
-  const prematureTreatment = await request.post(
-    `${apiBase}/api/v1/treatments/proposals`,
+  const prematureGeneration = await request.post(
+    `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
-      data: { diagnosis_analysis_id: diagnosis.analysis_id },
+      data: {
+        diagnosisAnalysisId: diagnosis.analysis_id,
+        idempotencyKey: `premature-${conversationId}`,
+      },
     },
   );
-  expect(prematureTreatment.status()).toBe(409);
-  const prematureTreatmentError = (await prematureTreatment.json()) as {
+  expect(prematureGeneration.status()).toBe(409);
+  const prematureGenerationError = (await prematureGeneration.json()) as {
     error?: { code?: string };
   };
-  expect(prematureTreatmentError.error?.code).toBe(
+  expect(prematureGenerationError.error?.code).toBe(
     "DIAGNOSIS_ASSESSMENT_REQUIRED",
   );
 
@@ -293,20 +296,24 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(assessment.ok()).toBeTruthy();
 
   const firstProposalResponse = await request.post(
-    `${apiBase}/api/v1/treatments/proposals`,
+    `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
-      data: { diagnosis_analysis_id: diagnosis.analysis_id },
+      data: {
+        diagnosisAnalysisId: diagnosis.analysis_id,
+        idempotencyKey: `first-${conversationId}`,
+      },
     },
   );
   const firstProposalBody = await firstProposalResponse.text();
   expect(
     firstProposalResponse.ok(),
-    `first Treatment proposal failed with ${firstProposalResponse.status()}: ${firstProposalBody}`,
+    `first plan proposal failed with ${firstProposalResponse.status()}: ${firstProposalBody}`,
   ).toBeTruthy();
-  const firstProposal = (
-    JSON.parse(firstProposalBody) as { proposal: { id: string } }
-  ).proposal;
+  const firstProposal = JSON.parse(firstProposalBody) as {
+    proposalId: string;
+    contentFingerprint: string;
+  };
 
   // Only a user-answered, Go-bound positive screen creates Safety authority.
   await completeStructuredSafetyIntake(
@@ -318,15 +325,23 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     "我今天肩膀不舒服。",
   );
 
+  // The Safety change after generation expires the proposal on accept.
   const blockedAccept = await request.post(
-    `${apiBase}/api/v1/treatments/revisions/${firstProposal.id}/accept`,
-    { headers, data: { consultation_id: conversationId } },
+    `${apiBase}/api/v1/plan-proposals/${firstProposal.proposalId}/accept`,
+    {
+      headers,
+      data: {
+        decisionId: crypto.randomUUID(),
+        presentedFingerprint: firstProposal.contentFingerprint,
+        idempotencyKey: `accept-${firstProposal.proposalId}`,
+      },
+    },
   );
   expect(blockedAccept.status()).toBe(409);
   const blockedAcceptError = (await blockedAccept.json()) as {
     error?: { code?: string };
   };
-  expect(blockedAcceptError.error?.code).toBe("TREATMENT_SAFETY_BLOCKED");
+  expect(blockedAcceptError.error?.code).toBe("CONTEXT_CHANGED");
 
   const restrictionResponse = await request.get(
     `${apiBase}/api/v1/body-state/safety/restrictions`,
@@ -434,26 +449,35 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   ).toBeTruthy();
 
   const proposalResponse = await request.post(
-    `${apiBase}/api/v1/treatments/proposals`,
+    `${apiBase}/api/v1/plan-proposals/generations`,
     {
       headers,
-      data: { diagnosis_analysis_id: freshDiagnosis.analysis_id },
+      data: {
+        diagnosisAnalysisId: freshDiagnosis.analysis_id,
+        idempotencyKey: `second-${conversationId}`,
+      },
     },
   );
-  expect(proposalResponse.ok()).toBeTruthy();
-  const proposal = (
-    (await proposalResponse.json()) as { proposal: { id: string } }
-  ).proposal;
+  expect(proposalResponse.ok(), await proposalResponse.text()).toBeTruthy();
+  const proposal = (await proposalResponse.json()) as {
+    proposalId: string;
+    contentFingerprint: string;
+  };
 
   const acceptResponse = await request.post(
-    `${apiBase}/api/v1/treatments/revisions/${proposal.id}/accept`,
-    { headers, data: { consultation_id: conversationId } },
+    `${apiBase}/api/v1/plan-proposals/${proposal.proposalId}/accept`,
+    {
+      headers,
+      data: {
+        decisionId: crypto.randomUUID(),
+        presentedFingerprint: proposal.contentFingerprint,
+        idempotencyKey: `accept-${proposal.proposalId}`,
+      },
+    },
   );
-  expect(acceptResponse.ok()).toBeTruthy();
-  const accepted = (await acceptResponse.json()) as {
-    training_plan: { id: string };
-  };
-  expect(accepted.training_plan.id).toBeTruthy();
+  expect(acceptResponse.ok(), await acceptResponse.text()).toBeTruthy();
+  const accepted = (await acceptResponse.json()) as { planId: string };
+  expect(accepted.planId).toBeTruthy();
 
   const workspaceResponse = await request.get(
     `${apiBase}/api/v1/health-workspace`,
@@ -463,7 +487,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   const workspace = (await workspaceResponse.json()) as {
     training_plan?: { id: string };
   };
-  expect(workspace.training_plan?.id).toBe(accepted.training_plan.id);
+  expect(workspace.training_plan?.id).toBe(accepted.planId);
   const beforeFacts = await request.get(
     `${apiBase}/api/v1/body-state/records`,
     { headers },
@@ -485,7 +509,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   ).toBeVisible();
 
   const feedback = await request.put(
-    `${apiBase}/api/v1/training/${accepted.training_plan.id}/log`,
+    `${apiBase}/api/v1/training/${accepted.planId}/log`,
     {
       headers,
       data: {
@@ -508,7 +532,10 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   );
   const finalWorkspace = (await finalWorkspaceResponse.json()) as {
     recent_outcomes: unknown[];
-    capabilities: { requires_treatment_review: boolean };
+    capabilities: {
+      requires_safety_review: boolean;
+      can_execute_treatment: boolean;
+    };
   };
   const afterFacts = await request.get(`${apiBase}/api/v1/body-state/records`, {
     headers,
@@ -518,5 +545,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     revisionBeforeFeedback,
   );
   expect(finalWorkspace.recent_outcomes.length).toBeGreaterThan(0);
-  expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
+  // The worsening symptom is unscreened: execution pauses, the plan is kept.
+  expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
+  expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
 });

@@ -218,31 +218,6 @@ func (r *TrainingRepository) GetConsecutiveCheckInDays(ctx context.Context, plan
 	return count, nil
 }
 
-// GetPlanByTreatmentRevision returns the execution projection for one accepted
-// TreatmentRevision. The treatment revision remains the source of truth.
-func (r *TrainingRepository) GetPlanByTreatmentRevision(
-	ctx context.Context,
-	userID, treatmentRevisionID uuid.UUID,
-) (*model.TrainingPlan, error) {
-	var plan model.TrainingPlan
-	err := database.FromContext(ctx, r.db).
-		Where("user_id = ? AND treatment_revision_id = ?", userID, treatmentRevisionID).
-		First(&plan).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	}
-	return &plan, err
-}
-
-func (r *TrainingRepository) SupersedePlansExcept(
-	ctx context.Context,
-	userID, treatmentRevisionID uuid.UUID,
-) error {
-	return database.FromContext(ctx, r.db).Model(&model.TrainingPlan{}).
-		Where("current_accepted_revision_id IS NULL AND user_id = ? AND (treatment_revision_id IS NULL OR treatment_revision_id <> ?) AND status = ?", userID, treatmentRevisionID, "active").
-		Update("status", "superseded").Error
-}
-
 func (r *TrainingRepository) CheckInAndGet(
 	ctx context.Context,
 	plan *model.TrainingPlan,
@@ -258,7 +233,6 @@ func (r *TrainingRepository) CheckInAndGet(
 			stored = model.TrainingLog{
 				ID: uuid.New(), UserID: plan.UserID, PlanID: plan.ID, Date: date,
 				Exercises: []byte("[]"), IsCheckedIn: true,
-				TreatmentRevisionID: plan.TreatmentRevisionID,
 			}
 			return tx.WithContext(ctx).Create(&stored).Error
 		}
@@ -266,9 +240,6 @@ func (r *TrainingRepository) CheckInAndGet(
 			return err
 		}
 		stored.IsCheckedIn = true
-		if stored.TreatmentRevisionID == nil {
-			stored.TreatmentRevisionID = plan.TreatmentRevisionID
-		}
 		return tx.WithContext(ctx).Save(&stored).Error
 	})
 	if err != nil {
@@ -294,7 +265,7 @@ func (r *TrainingRepository) GetOrCreateLog(
 	}
 	log = model.TrainingLog{
 		ID: uuid.New(), UserID: plan.UserID, PlanID: plan.ID, Date: date,
-		Exercises: []byte("[]"), TreatmentRevisionID: plan.TreatmentRevisionID,
+		Exercises: []byte("[]"),
 	}
 	if err := database.FromContext(ctx, r.db).Create(&log).Error; err != nil {
 		return nil, err

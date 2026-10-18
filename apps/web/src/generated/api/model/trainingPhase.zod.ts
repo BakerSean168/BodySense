@@ -14,8 +14,7 @@ import { TrainingExercise } from './trainingExercise.zod';
 export const TrainingPhase = /*#__PURE__*/ zod.strictObject({
   "week": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "focus": /*#__PURE__*/ zod.string(),
-  "exercises": /*#__PURE__*/ zod.array(TrainingExercise),
-  "source_treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid())
+  "exercises": /*#__PURE__*/ zod.array(TrainingExercise)
 });
 
 export type TrainingPhase = zod.input<typeof TrainingPhase>;

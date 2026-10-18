@@ -13,10 +13,7 @@ func TestTrainingLogPublicProjectionRemovesPersistenceUserIdentity(t *testing.T)
 	now := time.Now().UTC()
 	logEntry := &model.TrainingLog{
 		ID: uuid.New(), UserID: uuid.New(), PlanID: uuid.New(), Date: now,
-		Exercises: json.RawMessage(`[{
-			"intervention_id":"11111111-1111-4111-8111-111111111111",
-			"name":"Scapular control","completed":true
-		}]`),
+		Exercises:   json.RawMessage(`[{"name":"Scapular control","completed":true}]`),
 		IsCheckedIn: true, CreatedAt: now,
 	}
 	projected, err := strictTrainingLog(logEntry)
@@ -39,20 +36,21 @@ func TestTrainingLogPublicProjectionRemovesPersistenceUserIdentity(t *testing.T)
 	}
 }
 
-func TestTrainingFeedbackResultUsesPublicNestedProjections(t *testing.T) {
-	result := map[string]any{
-		"has_proposal":           false,
-		"review_recommended":     true,
-		"requires_new_diagnosis": false,
+func TestTrainingFeedbackResultCarriesOnlyTheOutcome(t *testing.T) {
+	now := time.Now().UTC()
+	outcome := &model.Outcome{
+		ID: uuid.New(), UserID: uuid.New(), SourceType: "training_feedback", SourceKey: "k",
+		Kind: "symptom_change", ConcernKey: "general", Value: []byte(`{}`), Provenance: []byte(`{}`),
+		CausalityLevel: "association_only", OccurredAt: now, CreatedAt: now,
 	}
-	projected, err := strictTrainingFeedbackResult(result)
+	projected, err := strictTrainingFeedbackResult(map[string]any{"outcome": outcome})
 	if err != nil {
 		t.Fatalf("strict feedback result: %v", err)
 	}
-	if projected.HasProposal == nil || *projected.HasProposal {
-		t.Fatalf("unexpected has_proposal: %+v", projected.HasProposal)
+	if projected.Outcome == nil || projected.Outcome.Id != outcome.ID {
+		t.Fatalf("feedback result lost its Outcome: %+v", projected)
 	}
-	if projected.ReviewRecommended == nil || !*projected.ReviewRecommended {
-		t.Fatalf("unexpected review_recommended: %+v", projected.ReviewRecommended)
+	if _, err := strictTrainingFeedbackResult(map[string]any{"has_proposal": false}); err == nil {
+		t.Fatal("the retired Treatment proposal fields must be rejected by the contract")
 	}
 }

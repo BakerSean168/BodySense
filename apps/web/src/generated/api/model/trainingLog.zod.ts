@@ -11,8 +11,6 @@ import { TrainingExerciseLogInput } from './trainingExerciseLogInput.zod';
 export const TrainingLog = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "plan_id": /*#__PURE__*/ zod.uuid(),
-  "treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
-  "intervention_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "date": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "exercises": /*#__PURE__*/ zod.array(TrainingExerciseLogInput),
   "notes": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),

@@ -43,8 +43,7 @@ describe("trainingApi generated OpenAPI boundary", () => {
       new Response(
         JSON.stringify({
           message: "training log updated",
-          has_proposal: false,
-          result: { has_proposal: false },
+          result: {},
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -64,17 +63,13 @@ describe("trainingApi generated OpenAPI boundary", () => {
         }),
       }),
     );
-    expect(result.has_proposal).toBe(false);
+    expect(result.result.outcome).toBeUndefined();
   });
 
   it("submits reassessment feedback through the generated request contract", async () => {
     authFetchMock.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          review_recommended: true,
-          has_proposal: false,
-          requires_new_diagnosis: false,
-        }),
+        JSON.stringify({}),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -98,6 +93,6 @@ describe("trainingApi generated OpenAPI boundary", () => {
         }),
       }),
     );
-    expect(result.review_recommended).toBe(true);
+    expect(result.outcome).toBeUndefined();
   });
 });

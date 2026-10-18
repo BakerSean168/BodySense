@@ -1829,7 +1829,7 @@ export const getUpdateEquipmentAssetUrl = (id: string,) => {
 }
 
 /**
- * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+ * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted TrainingPlan revision or training log.
  * @summary Edit an equipment asset, mark it unavailable, or retire it.
  */
 export const updateEquipmentAsset = async (id: string,
@@ -3839,7 +3839,7 @@ export const getReassessTrainingPlanUrl = (id: string,) => {
 }
 
 /**
- * @summary Reassess training feedback and optionally propose a new Treatment revision.
+ * @summary Record reassessment feedback as an Outcome; never changes or proposes a plan.
  */
 export const reassessTrainingPlan = async (id: string,
     trainingReassessmentRequest: TrainingReassessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingFeedbackResultOutput> => {
@@ -4168,7 +4168,7 @@ export const getGeneratePlanProposalUrl = () => {
 }
 
 /**
- * Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+ * Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
  * @summary Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
  */
 export const generatePlanProposal = async (generatePlanProposalRequest: GeneratePlanProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordOutput> => {

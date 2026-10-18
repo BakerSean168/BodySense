@@ -246,12 +246,7 @@ func main() {
 		diagnosisRolloutService,
 	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
-	trainingService := service.NewTrainingService(
-		trainingRepo,
-		treatmentService,
-		outcomeService,
-		database.NewTransactionManager(database.DB),
-	)
+	trainingService := service.NewTrainingService(trainingRepo, outcomeService)
 	treatmentReplayService := service.NewTreatmentReplayService(treatmentRepo, aiClient)
 	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
 	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)

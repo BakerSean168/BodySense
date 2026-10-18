@@ -11,8 +11,6 @@ import { TrainingPhase } from './trainingPhase.zod';
 export const TrainingPlan = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "consultation_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
-  "treatment_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
-  "treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "status": /*#__PURE__*/ zod.string(),
   "goal": /*#__PURE__*/ zod.string(),
   "duration_weeks": /*#__PURE__*/ zod.int(),

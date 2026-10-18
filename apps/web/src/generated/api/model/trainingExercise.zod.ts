@@ -11,7 +11,6 @@ import * as zod from 'zod/mini';
 
 
 export const TrainingExercise = /*#__PURE__*/ zod.strictObject({
-  "intervention_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "name": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "description": /*#__PURE__*/ zod.string(),
   "sets": /*#__PURE__*/ zod.string(),
