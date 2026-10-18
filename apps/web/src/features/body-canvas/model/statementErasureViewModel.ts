@@ -97,7 +97,13 @@ export function projectStatementErasure(
         retained: true,
       });
     } else if (target.state !== "verified") {
-      if (BLOCKING.has(target.state)) blocked = true;
+      // The manifest waits on the others (targets_outstanding): that alone
+      // is not something the user has to review.
+      if (
+        BLOCKING.has(target.state) &&
+        target.failure_code !== "targets_outstanding"
+      )
+        blocked = true;
       outstanding.push({
         target: target.target,
         label,

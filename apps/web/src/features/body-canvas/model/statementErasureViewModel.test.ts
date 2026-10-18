@@ -78,6 +78,10 @@ describe("projectStatementErasure", () => {
           state: "failed",
           failure_code: "runtime_thread_busy",
         },
+        statement_manifest: {
+          state: "blocked",
+          failure_code: "targets_outstanding",
+        },
       }),
       record,
     );
