@@ -1,6 +1,6 @@
 # Trainer runtime (TP-003)
 
-Status: slices 1–2 of [#313](https://github.com/BakerSean168/BodySense/issues/313).
+Status: slices 1–3a of [#313](https://github.com/BakerSean168/BodySense/issues/313).
 Product rules: `docs/product/domain/training.md` §4.3–4.4 (TP-D6..D10) and
 `docs/product/domain/safety.md`. Executable reference model:
 `scripts/plan/v2-trainer-actions-model.test.mjs`.
@@ -49,6 +49,7 @@ Product rules: `docs/product/domain/training.md` §4.3–4.4 (TP-D6..D10) and
 | `POST /training-sessions/{id}/pause`                             | `in_progress → paused` at `expectedSessionRevision`                    | none: pausing is always allowed               |
 | `POST /training-sessions/{id}/resume`                            | `paused → in_progress`; plan still `active`, no other in progress      | `resume_session` over the template            |
 | `POST /training-sessions/{id}/finish`                            | `finished` / `stopped_early` at `expectedSessionRevision`              | none: stopping is always allowed              |
+| `POST /training-sessions/{id}/feedback`                          | the user's verbatim words on an `ended` session, once                  | none: feedback is always allowed              |
 | `GET /training-sessions[?state=]`, `GET /training-sessions/{id}` | read receipts                                                          | none                                          |
 
 Each command runs in one transaction under the owner lock, then:
@@ -73,10 +74,31 @@ session that is not paused is `SESSION_NOT_PAUSED`. Corrections are gated
 like any set action, so a correction also needs the current Safety revision
 and a permitting gate.
 
+## Session feedback (TP-D10)
+
+`training_session_feedback` holds the user's own words about one ended
+session, verbatim (1–2000 characters, not only whitespace, never trimmed or
+rewritten), at most one row per session, with an idempotency key and request
+fingerprint. It pins the session's plan and revision through a composite FK;
+a DB trigger refuses rows for sessions that have not ended and rows are
+immutable. `SESSION_NOT_ENDED` and `FEEDBACK_ALREADY_RECORDED` are visible
+409s. Feedback is never gated: the user can always say how a session went.
+
+Feedback is **never interpreted**. It writes no plan, revision, status,
+receipt, BodyState or Safety row and is not turned into a symptom or a
+clinical fact; a body change the user reports is recorded through BodyState
+(chat intake or `/body-state` commands). Its only effect is the read-only
+plan review projection: `TrainingPlanRecord.review.sessionFeedbackCount`
+counts sessions of the **current accepted revision** with feedback, and when
+the context is otherwise unchanged `review` is
+`recommended=true, reason=session_feedback_since_acceptance`. A context
+change or unreadable context keeps precedence. Accepting a new revision
+resets the hint (feedback stays on the sessions of the old revision). Only a
+user-accepted PlanProposal changes the prescription.
+
 ## Not yet
 
-- subjective feedback → review projection and deleting legacy `/training/*`
-  and `training_logs` (slice 3);
+- deleting legacy `/training/*` and `training_logs` (slice 3b);
 - Safety-driven hold/stop transitions (`safety_hold`, `safety_stopped`) of
   the reference model; today a non-permitting gate refuses the command and
   the user may stop;
