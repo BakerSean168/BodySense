@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -12,8 +13,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// PC-RET-001 slice 1 against the real baseline: three retention cursors and
-// the controlled prune pass. Every test owns fresh synthetic users.
+// PC-RET-001 against the real baseline: three retention cursors and the
+// controlled prune pass (plan, checkpoint cleanup receipt, commit). Every test
+// owns fresh synthetic users.
 
 type retentionFixture struct {
 	t            *testing.T
@@ -119,6 +121,28 @@ func (f *retentionFixture) advance(processed, contextStart int) {
 	if _, err := f.repo.AdvanceContextStart(ctx, f.owner, model.AdvanceRetentionCursorCommand{ExpectedRevision: f.cursor().RetentionRevision, ThroughSeq: contextStart}); err != nil {
 		f.t.Fatalf("advance context %d: %v", contextStart, err)
 	}
+}
+
+// cleanedReceipt is what a successful ai-service cleanup returns for plan.
+func cleanedReceipt(plan *model.ChatRetentionPrunePlan) *model.CheckpointCleanupReceipt {
+	ids := make([]string, len(plan.RunIDs))
+	for i, id := range plan.RunIDs {
+		ids[i] = id.String()
+	}
+	checkpoint := "checkpoint-" + plan.ConversationID.String()
+	return &model.CheckpointCleanupReceipt{
+		Status: "cleaned", ThreadID: plan.ConversationID.String(), PrunedRunIDs: ids,
+		CheckpointID: &checkpoint, RemovedMessages: 2 * len(ids), DeletedCheckpoints: 3,
+	}
+}
+
+// prune runs one pass with a cleanup that always succeeds.
+func (f *retentionFixture) prune(ctx context.Context, owner uuid.UUID) (*model.ChatRetentionPruneReceipt, error) {
+	plan, replay, err := f.repo.PlanPrune(ctx, owner)
+	if err != nil || replay != nil {
+		return replay, err
+	}
+	return f.repo.CommitPrune(ctx, owner, plan, cleanedReceipt(plan), uuid.Nil)
 }
 
 func TestChatRetentionCursorsAreOrderedAndMonotonicPostgres(t *testing.T) {
@@ -264,14 +288,15 @@ user_message_id,assistant_message_id,claimed_at) VALUES (?,?,?,?,'resume-1',?,?,
 		interaction, f.owner, f.conversation, *ask.run, strings.Repeat("b", 64), strings.Repeat("c", 64), ask.user, ask.reply)
 
 	f.advance(10, 11)
-	receipt, err := f.repo.Prune(ctx, f.owner)
+	receipt, err := f.prune(ctx, f.owner)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// min(C-1, last-1) = 9 splits the tail interaction, so the pass stops at 8.
 	if receipt.Replayed || receipt.FromPrunedSeq != 0 || receipt.PrunedThroughSeq != 8 || receipt.DeletedMessages != 4 ||
 		receipt.RetainedMessages != 4 || receipt.PrunedRuns != 1 || receipt.DeletedRuntimeEvents != 2 ||
-		receipt.DeletedToolCalls != 1 || receipt.CheckpointCleanup != "not_run" || receipt.JobID == uuid.Nil {
+		receipt.DeletedToolCalls != 1 || receipt.CheckpointCleanup != "verified" || receipt.JobID == uuid.Nil ||
+		receipt.CheckpointsDeleted != 3 || receipt.CheckpointID == "" {
 		t.Fatalf("receipt=%#v", receipt)
 	}
 	for _, kept := range []uuid.UUID{fact.user, dx.user, ask.user, ask.reply, tail.user, tail.reply} {
@@ -306,7 +331,7 @@ user_message_id,assistant_message_id,claimed_at) VALUES (?,?,?,?,'resume-1',?,?,
 	if f.count("SELECT COALESCE(MAX(seq),0) FROM messages WHERE conversation_id = ?", f.conversation) <= int64(c.PrunedThroughSeq) {
 		t.Fatal("next seq could reuse a pruned position")
 	}
-	again, err := f.repo.Prune(ctx, f.owner)
+	again, err := f.prune(ctx, f.owner)
 	if err != nil || !again.Replayed || again.JobID != receipt.JobID || again.PrunedThroughSeq != 8 {
 		t.Fatalf("replay=%#v %v", again, err)
 	}
@@ -318,7 +343,7 @@ user_message_id,assistant_message_id,claimed_at) VALUES (?,?,?,?,'resume-1',?,?,
 	}
 }
 
-func TestChatRetentionActiveRunBlocksPruningPastItPostgres(t *testing.T) {
+func TestChatRetentionUnsettledRunBlocksThePassPostgres(t *testing.T) {
 	for _, status := range []string{"running", "waiting_user"} {
 		t.Run(status, func(t *testing.T) {
 			db := openSingletonTestDB(t)
@@ -334,20 +359,104 @@ func TestChatRetentionActiveRunBlocksPruningPastItPostgres(t *testing.T) {
 			if _, err := f.repo.AdvanceProcessed(ctx, f.owner, model.AdvanceRetentionCursorCommand{ThroughSeq: 4}); !errors.Is(err, model.ErrRetentionCursorInvalid) {
 				t.Fatalf("processed passed an active Run: %v", err)
 			}
-			// Even cursors forced past the Run by a raw writer cannot prune it.
+			// Even with cursors forced past it by a raw writer, an unsettled
+			// Run's LangGraph thread is mid-step or interrupted: the whole
+			// pass waits, so its checkpoint (and a pending Ask User resume)
+			// is never rewritten under it.
 			f.exec("UPDATE conversations SET processed_through_seq = 6, context_start_seq = 7 WHERE id = ?", f.conversation)
-			receipt, err := f.repo.Prune(ctx, f.owner)
-			if err != nil || receipt.PrunedThroughSeq != 2 || receipt.DeletedMessages != 2 {
+			if _, err := f.prune(ctx, f.owner); !errors.Is(err, model.ErrRetentionBusy) {
+				t.Fatalf("pass ran beside an unsettled Run: %v", err)
+			}
+			if !f.messageExists(done.user) || !f.messageExists(active.user) || !f.messageExists(note.user) ||
+				f.runEvents(done.run) != 2 || f.cursor().PrunedThroughSeq != 0 {
+				t.Fatal("busy pass deleted data or moved R")
+			}
+			// Once the Run settles the pass proceeds.
+			f.exec("UPDATE runs SET status = 'completed' WHERE id = ?", *active.run)
+			f.exec("UPDATE agent_interactions SET status = 'answered' WHERE run_id = ?", *active.run)
+			receipt, err := f.prune(ctx, f.owner)
+			if err != nil || receipt.PrunedThroughSeq != 4 || receipt.DeletedMessages != 4 {
 				t.Fatalf("receipt=%#v %v", receipt, err)
 			}
-			if f.messageExists(done.user) || !f.messageExists(active.user) || !f.messageExists(active.reply) ||
-				!f.messageExists(note.user) || f.runEvents(active.run) != 2 || f.runEvents(done.run) != 0 {
-				t.Fatal("active Run material pruned or settled material kept")
-			}
-			if again, err := f.repo.Prune(ctx, f.owner); err != nil || !again.Replayed || again.PrunedThroughSeq != 2 {
-				t.Fatalf("second pass moved past active Run: %#v %v", again, err)
+			if f.messageExists(done.user) || f.messageExists(active.reply) || !f.messageExists(note.user) || !f.messageExists(note.reply) {
+				t.Fatal("settled material kept or tail pruned")
 			}
 		})
+	}
+}
+
+func TestChatRetentionCommitRequiresAVerifiedCleanupPostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	f := newRetentionFixture(t, db)
+	ctx := context.Background()
+	first := f.addTurn("completed", "first")
+	second := f.addTurn("completed", "second")
+	f.addTurn("completed", "tail")
+	f.advance(6, 5)
+	plan, replay, err := f.repo.PlanPrune(ctx, f.owner)
+	if err != nil || replay != nil || plan.TargetSeq != 4 || len(plan.RunIDs) != 2 {
+		t.Fatalf("plan=%#v replay=%#v %v", plan, replay, err)
+	}
+	if !slices.Contains(plan.RunIDs, *first.run) || !slices.Contains(plan.RunIDs, *second.run) {
+		t.Fatal("plan does not name the Runs behind the boundary")
+	}
+	wrongThread := cleanedReceipt(plan)
+	wrongThread.ThreadID = uuid.NewString()
+	missingRun := cleanedReceipt(plan)
+	missingRun.PrunedRunIDs = missingRun.PrunedRunIDs[:1]
+	survivor := cleanedReceipt(plan)
+	survivor.RemainingRunIDs = []string{first.run.String()}
+	notCleaned := cleanedReceipt(plan)
+	notCleaned.Status = "thread_busy"
+	for name, receipt := range map[string]*model.CheckpointCleanupReceipt{
+		"none": nil, "wrong thread": wrongThread, "missing run": missingRun, "survivor": survivor, "not cleaned": notCleaned,
+	} {
+		if _, err := f.repo.CommitPrune(ctx, f.owner, plan, receipt, uuid.Nil); !errors.Is(err, model.ErrRetentionCleanupUnverified) {
+			t.Fatalf("%s: unverified cleanup accepted: %v", name, err)
+		}
+	}
+	if f.cursor().PrunedThroughSeq != 0 || !f.messageExists(first.user) ||
+		f.count("SELECT COUNT(*) FROM jobs WHERE user_id = ?", f.owner) != 0 {
+		t.Fatal("an unverified cleanup moved R or deleted data")
+	}
+	receipt, err := f.repo.CommitPrune(ctx, f.owner, plan, cleanedReceipt(plan), uuid.Nil)
+	if err != nil || receipt.PrunedThroughSeq != 4 || receipt.CheckpointCleanup != "verified" {
+		t.Fatalf("receipt=%#v %v", receipt, err)
+	}
+}
+
+func TestChatRetentionNewMessageBetweenPlanAndCommitIsNeverLostPostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	f := newRetentionFixture(t, db)
+	ctx := context.Background()
+	f.addTurn("completed", "old")
+	kept := f.addTurn("completed", "kept")
+	f.advance(4, 3)
+	plan, _, err := f.repo.PlanPrune(ctx, f.owner)
+	if err != nil || plan == nil || plan.TargetSeq != 2 {
+		t.Fatalf("plan=%#v %v", plan, err)
+	}
+	// A turn lands while the ai-service is cleaning: its Run is still active.
+	arriving := f.addTurn("running", "arriving")
+	if _, err := f.repo.CommitPrune(ctx, f.owner, plan, cleanedReceipt(plan), uuid.Nil); !errors.Is(err, model.ErrRetentionBusy) {
+		t.Fatalf("commit raced an active turn: %v", err)
+	}
+	// It settles before the retry: the stale plan is still refused.
+	f.exec("UPDATE runs SET status = 'completed' WHERE id = ?", *arriving.run)
+	if _, err := f.repo.CommitPrune(ctx, f.owner, plan, cleanedReceipt(plan), uuid.Nil); !errors.Is(err, model.ErrRetentionPlanStale) {
+		t.Fatalf("stale plan committed: %v", err)
+	}
+	if f.cursor().PrunedThroughSeq != 0 || f.count("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", f.conversation) != 6 {
+		t.Fatal("stale commit deleted data")
+	}
+	receipt, err := f.prune(ctx, f.owner)
+	if err != nil || receipt.PrunedThroughSeq != 2 {
+		t.Fatalf("receipt=%#v %v", receipt, err)
+	}
+	for _, id := range []uuid.UUID{kept.user, kept.reply, arriving.user, arriving.reply} {
+		if !f.messageExists(id) {
+			t.Fatalf("message %s lost", id)
+		}
 	}
 }
 
@@ -368,7 +477,7 @@ func TestChatRetentionConcurrentPruneRunsOncePostgres(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			<-start
-			receipts[i], errs[i] = f.repo.Prune(context.Background(), f.owner)
+			receipts[i], errs[i] = f.prune(context.Background(), f.owner)
 		}(i)
 	}
 	close(start)
@@ -412,20 +521,20 @@ func TestChatRetentionOwnerIsolationPostgres(t *testing.T) {
 	if _, err := a.repo.Get(ctx, stranger); !errors.Is(err, model.ErrRetentionNotFound) {
 		t.Fatal(err)
 	}
-	if _, err := a.repo.Prune(ctx, stranger); !errors.Is(err, model.ErrRetentionNotFound) {
+	if _, err := a.prune(ctx, stranger); !errors.Is(err, model.ErrRetentionNotFound) {
 		t.Fatal(err)
 	}
 	if _, err := a.repo.AdvanceProcessed(ctx, stranger, model.AdvanceRetentionCursorCommand{ThroughSeq: 2}); !errors.Is(err, model.ErrRetentionNotFound) {
 		t.Fatal(err)
 	}
-	if _, err := a.repo.Prune(ctx, uuid.Nil); !errors.Is(err, model.ErrRetentionNotFound) {
+	if _, err := a.prune(ctx, uuid.Nil); !errors.Is(err, model.ErrRetentionNotFound) {
 		t.Fatal(err)
 	}
 
 	// Another owner's evidence pointing at A's message is an anomaly: A's pass
 	// fails closed and deletes nothing.
 	a.addEvidence(b.owner, turnA)
-	if _, err := a.repo.Prune(ctx, a.owner); !errors.Is(err, model.ErrRetentionOwnerAnomaly) {
+	if _, err := a.prune(ctx, a.owner); !errors.Is(err, model.ErrRetentionOwnerAnomaly) {
 		t.Fatalf("cross-owner reference not rejected: %v", err)
 	}
 	if a.count("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", a.conversation) != 4 || a.cursor().PrunedThroughSeq != 0 {
@@ -433,7 +542,7 @@ func TestChatRetentionOwnerIsolationPostgres(t *testing.T) {
 	}
 
 	// B's pass touches only B's Conversation.
-	receipt, err := b.repo.Prune(ctx, b.owner)
+	receipt, err := b.prune(ctx, b.owner)
 	if err != nil || receipt.ConversationID != b.conversation || receipt.DeletedMessages != 2 {
 		t.Fatalf("receipt=%#v %v", receipt, err)
 	}
