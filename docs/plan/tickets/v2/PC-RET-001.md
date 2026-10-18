@@ -1,8 +1,20 @@
 # PC-RET-001 · Implement three-cursor retention and controlled pruning
 
-Status: IN PROGRESS · lane C (Hark parallel lanes, 2026-10-17), worktree `bodysense-pcret001`, base `1abcc9f16`. Phase 2. SF cross-reference: SF-70.
+Status: BLOCKED (owner decision, 2026-10-18) · lane C · all four scope items merged in #343 #354 #355 (last merge `1f2db35c0`); residual acceptance below awaits the owner. Phase 2. SF cross-reference: SF-70.
 **Owner role:** Chat Retention Owner. **Dependencies:** `PC-001`.
 **Exclusive resources:** `conversation-schema`, `privacy-erasure`.
+
+## Domain closeout · 2026-10-18
+
+Synced on main `3dd993a02`. All four #307 scope checkboxes are ticked; the issue stays open.
+
+| Slice                      | PR                                                                       | Delivered                                                                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · cursors + prune core   | [#343](https://github.com/BakerSean168/BodySense/pull/343) (`bf2fea6e9`) | seq cursors P/C/R + `retention_revision` + DB order CHECK; monotonic CAS advances; referenced messages never pruned; Go `relevant_history` reads from C                                   |
+| 2 · verified cleanup + job | [#354](https://github.com/BakerSean168/BodySense/pull/354) (`100f14686`) | ai-service `POST /runtime/threads/{thread}/checkpoints/cleanup`; two-phase PlanPrune → cleanup → CommitPrune; `chat.retention.prune` job worker with retry; unsettled Run blocks the pass |
+| 3 · window + trigger       | [#355](https://github.com/BakerSean168/BodySense/pull/355) (`1f2db35c0`) | P advances on Run settle; C advances by token budget (`CHAT_CONTEXT_TOKEN_BUDGET`, default 16000); Go sends `context_window`; Python assembles context from it                            |
+
+**Residual (from #355, not a #307 checkbox):** Ask User expiry does not call the settle trigger; cross-domain evidence/deletion-scope proof; `interaction_resumes` cascade review; legacy share retirement (PC3-19); browser E2E. The owner decides whether #307 closes or these become a follow-up. AS-002 depends on this ticket.
 
 ## Current remaining scope · 2026-10-16
 
