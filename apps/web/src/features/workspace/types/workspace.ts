@@ -1,10 +1,3 @@
-import type {
-  Citation,
-  DiagnosisCandidate,
-  DiagnosisCandidateAssessmentState,
-  DiagnosisFreshness,
-} from "@/features/consultation/types/consultation";
-
 export interface TrainingExecutionPlan {
   id: string;
   consultation_id?: string | null;
@@ -70,29 +63,10 @@ export interface WorkspaceAction {
   target?: Record<string, unknown>;
 }
 
-/** Only diagnosis fields consumed by the workspace feature belong in its app read model. */
-export interface WorkspaceDiagnosis {
-  analysis_id: string;
-  body_state_revision: number;
-  status:
-    "completed" | "partial" | "insufficient_information" | "safety_blocked";
-  scope: string;
-  summary: string;
-  candidates: DiagnosisCandidate[];
-  citations: Citation[];
-  freshness: DiagnosisFreshness;
-  candidate_assessments: Array<{
-    candidate_id: string;
-    state: DiagnosisCandidateAssessmentState;
-  }>;
-  created_at: string;
-}
-
 export interface HealthWorkspace {
   generated_at: string;
   conversation_id?: string | null;
   profile_ready: boolean;
-  diagnosis?: WorkspaceDiagnosis;
   training_plan?: TrainingExecutionPlan | null;
   recent_outcomes: Outcome[];
   trends: WorkspaceTrend[];

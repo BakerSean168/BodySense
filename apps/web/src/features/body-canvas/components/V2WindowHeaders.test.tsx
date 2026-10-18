@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  EMPTY_DIAGNOSIS_VIEW,
-  type ConfirmedCondition,
-} from "../model/confirmedConditions";
+import type { ConfirmedCondition } from "../model/confirmedConditions";
 import type { NativeDiagnosisWindowView } from "../model/diagnosisDecisionViewModel";
 import type { ProjectedTrainingPlans } from "../model/trainingPlans";
 import {
@@ -115,7 +112,7 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
     expect(onSelectCondition).toHaveBeenCalledWith("condition-2");
     rerender(
       <DiagnosisWindowHeader
-        view={{ ...EMPTY_DIAGNOSIS_VIEW, confirmed: [] }}
+        view={{ ...diagnosis, confirmed: [] }}
         selectedConditionId={null}
         onSelectCondition={onSelectCondition}
       />,

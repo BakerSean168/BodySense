@@ -1,12 +1,9 @@
 import {
-  parseCitation,
   parseExtractedInfo,
   parseStreamEvent,
 } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import {
-  analyzeDiagnosis as analyzeDiagnosisOpenApi,
-  assessDiagnosisCandidates as assessDiagnosisCandidatesOpenApi,
   cancelConsultationRun as cancelConsultationRunOpenApi,
   getConsultation as getConsultationOpenApi,
   getConsultationInteractionMetrics as getConsultationInteractionMetricsOpenApi,
@@ -14,7 +11,6 @@ import {
   getResumeConsultationInteractionUrl,
   getStartConsultationRunUrl,
   getConversation as getConversationOpenApi,
-  listDiagnosisAnalyses as listDiagnosisAnalysesOpenApi,
   listRunEvents as listRunEventsOpenApi,
 } from "@/generated/api/bodysense";
 import {
@@ -25,15 +21,12 @@ import type {
   ConsultationSessionResponseOutput as PublicConsultationSession,
   ConsultationThreadResponseOutput as PublicConsultationThread,
   ConversationMessageOutput as PublicConversationMessage,
-  DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
 } from "@/generated/api/model";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type {
   Message,
   ConsultationSession,
   ConsultationThread,
-  DiagnosisAnalysis,
-  DiagnosisCandidateAssessmentState,
   StreamEvent,
   ProjectedToolCall,
 } from "../types/consultation";
@@ -88,7 +81,6 @@ function toConsultationSession(
     extracted_info: input.extracted_info.map((item) =>
       parseExtractedInfo(item),
     ),
-    diagnosis: null,
     pending_interactions: input.pending_interactions.map(
       projectPendingInteraction,
     ),
@@ -127,7 +119,6 @@ function toConsultationThread(
     extracted_info: input.extracted_info.map((item) =>
       parseExtractedInfo(item),
     ),
-    diagnosis: null,
     pending_interactions: input.pending_interactions.map(
       projectPendingInteraction,
     ),
@@ -160,26 +151,6 @@ function toConsultationThread(
     ),
     messages: input.messages.map(toConversationMessage),
     tool_calls: input.tool_calls.map(toProjectedToolCall),
-  };
-}
-
-function toDiagnosisAnalysis(
-  input: PublicDiagnosisAnalysis,
-): DiagnosisAnalysis {
-  return {
-    analysis_id: input.analysis_id,
-    body_state_revision: input.body_state_revision,
-    status: input.status,
-    scope: input.scope,
-    summary: input.summary,
-    candidates: input.candidates,
-    citations: input.citations.map((citation) => parseCitation(citation)),
-    freshness: input.freshness,
-    candidate_assessments: input.candidate_assessments?.map((item) => ({
-      candidate_id: item.candidate_id,
-      state: item.state,
-    })),
-    created_at: input.created_at,
   };
 }
 
@@ -253,41 +224,6 @@ export const consultationApi = {
       getConsultationOpenApi(id, undefined, openApiAuthFetch),
     );
     return toConsultationSession(result);
-  },
-
-  /** Trigger BodyState-backed diagnosis analysis through the generated boundary. */
-  async analyzeDiagnosis(id: string): Promise<DiagnosisAnalysis> {
-    const result = await withOpenApiError(() =>
-      analyzeDiagnosisOpenApi(id, undefined, openApiAuthFetch),
-    );
-    return toDiagnosisAnalysis(result);
-  },
-
-  /** Persist the user's interpretation of Diagnosis candidates without deleting any candidate. */
-  async assessDiagnosisCandidates(
-    analysisId: string,
-    candidates: Array<{
-      candidate_id: string;
-      state: DiagnosisCandidateAssessmentState;
-    }>,
-  ): Promise<void> {
-    await withOpenApiError(() =>
-      assessDiagnosisCandidatesOpenApi(
-        analysisId,
-        { candidates },
-        undefined,
-        openApiAuthFetch,
-      ),
-    );
-  },
-
-  async listDiagnosisHistory(
-    limit = 20,
-  ): Promise<{ analyses: DiagnosisAnalysis[] }> {
-    const result = await withOpenApiError(() =>
-      listDiagnosisAnalysesOpenApi({ limit }, undefined, openApiAuthFetch),
-    );
-    return { analyses: result.analyses.map(toDiagnosisAnalysis) };
   },
 
   /**

@@ -18,11 +18,3 @@ export function consultationThreadQueryOptions(conversationId: string) {
     staleTime: 30_000,
   });
 }
-
-export function diagnosisHistoryQueryOptions(limit = 20) {
-  return queryOptions({
-    queryKey: consultationKeys.diagnosisHistory(limit),
-    queryFn: () => consultationApi.listDiagnosisHistory(limit),
-    staleTime: 30_000,
-  });
-}

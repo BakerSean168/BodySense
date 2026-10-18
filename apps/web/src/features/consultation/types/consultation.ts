@@ -132,7 +132,6 @@ export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
   extracted_info: ExtractedInfo[];
-  diagnosis: DiagnosisAnalysis | null;
   pending_interactions?: PendingInteraction[];
   interaction_history?: InteractionHistoryItem[];
   created_at: string;
@@ -167,62 +166,6 @@ export interface ConsultationSpatialContext {
   body_region_label?: string;
   anatomy_id?: string;
   anatomy_name?: string;
-}
-
-export type DiagnosisCandidateAssessmentState =
-  "confirmed" | "unsure" | "not_applicable";
-
-export interface DiagnosisCandidate {
-  candidate_id?: string;
-  concern_key?: string;
-  name: string;
-  confidence: "高" | "中" | "低";
-  severity?: "轻度" | "中度" | "重度";
-  evidence_strength?: "高" | "中" | "低";
-  impact?: string;
-  basis: string;
-  typical_symptoms?: string;
-  differential?: string;
-  reasoning_summary?: string;
-  basis_fact_ids?: string[];
-  basis_observation_ids?: string[];
-  supporting_evidence_ids?: string[];
-  counterevidence_ids?: string[];
-  missing_information?: string[];
-  safety_notes?: string[];
-}
-
-export interface DiagnosisFreshness {
-  analysis_id: string;
-  state: "fresh" | "potentially_stale" | "stale";
-  evaluated_against_revision: number;
-  reasons: Array<{
-    code: string;
-    revision?: number;
-    change_type?: string;
-    item_id?: string;
-    concern_key?: string;
-    message: string;
-  }>;
-  checked_at: string;
-}
-
-export interface DiagnosisAnalysis {
-  analysis_id?: string;
-  body_state_revision?: number;
-  status?:
-    "completed" | "partial" | "insufficient_information" | "safety_blocked";
-  scope?: string;
-  summary?: string;
-  candidates: DiagnosisCandidate[];
-  citations?: Citation[];
-  freshness?: DiagnosisFreshness;
-  candidate_assessments?: Array<{
-    candidate_id: string;
-    state: DiagnosisCandidateAssessmentState;
-    notes?: string;
-  }>;
-  created_at?: string;
 }
 
 export type Citation = StreamCitation;

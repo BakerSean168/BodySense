@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeWorkspace } from "@/features/body-canvas/model/__fixtures__/diagnosisFixtures";
+import { makeWorkspace } from "@/features/body-canvas/model/__fixtures__/workspaceFixtures";
 import { requiresWorkspaceReview, selectWorkspaceSummary } from "./workspaceSelectors";
 
 describe("workspace selectors", () => {
