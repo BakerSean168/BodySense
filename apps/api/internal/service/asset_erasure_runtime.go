@@ -27,7 +27,7 @@ func uuidStrings(ids []uuid.UUID) []string {
 // EraseAssetRuntimeCopies asks the ai-service to erase one asset from the
 // owner's consultation threads (POST /runtime/assets/{asset}/erasure) and
 // returns its per-thread receipt read back from checkpoint storage.
-func (c *AIClient) EraseAssetRuntimeCopies(ctx context.Context, userID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+func (c *AIClient) EraseAssetRuntimeCopies(ctx context.Context, userID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error) {
 	raw, err := c.callJSON(ctx, "/runtime/assets/"+assetID.String()+"/erasure", assetRuntimeErasureRequest{
 		UserID:            userID.String(),
 		ContentSHA256:     scope.ContentSHA256,
@@ -37,7 +37,7 @@ func (c *AIClient) EraseAssetRuntimeCopies(ctx context.Context, userID, assetID 
 	if err != nil {
 		return nil, err
 	}
-	var receipt model.AssetRuntimeErasureReceipt
+	var receipt model.RuntimeErasureReceipt
 	if err := json.Unmarshal(raw, &receipt); err != nil {
 		return nil, fmt.Errorf("decode asset runtime erasure receipt: %w", err)
 	}

@@ -33,6 +33,9 @@ type DocumentExtractionRun struct {
 	MechanismProvenance datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"mechanism_provenance"`
 	CreatedAt           time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt           time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	// ErasedAt marks a tombstone kept only because a withdrawn Diagnosis
+	// condition still links to one of its reviews (AS-002); content is gone.
+	ErasedAt *time.Time `json:"-"`
 }
 
 func (DocumentExtractionRun) TableName() string { return "document_extraction_runs" }

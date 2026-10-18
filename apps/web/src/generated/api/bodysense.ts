@@ -71,6 +71,7 @@ import {
   RuntimeEventListResponse,
   SafetyResolution,
   SafetyRestrictionList,
+  StatementErasureReceipt,
   TrainingPlanRecord,
   TrainingPlanRecordListResponse,
   TrainingPlanRevisionRecord,
@@ -192,6 +193,7 @@ import type {
   RecordTrainingSetActionRequest,
   RegisterKnowledgeSourceRequest,
   RequestAssetErasureRequest,
+  RequestStatementErasureRequest,
   ResolveSafetyRestrictionRequest,
   ResumeConsultationInteractionRequest,
   ResumeTrainingSessionRequest,
@@ -200,6 +202,7 @@ import type {
   SafetyRestrictionListOutput,
   StartConsultationRunRequest,
   StartTrainingSessionRequest,
+  StatementErasureReceiptOutput,
   TrainingPlanRecordListResponseOutput,
   TrainingPlanRecordOutput,
   TrainingPlanRevisionRecordOutput,
@@ -4491,6 +4494,101 @@ export const getAssetErasure = async (id: string, options?: RequestInit, fetchFn
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? AssetErasureReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRequestStatementErasureUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/statements/${id}/erasure`
+}
+
+/**
+ * AS-002 per-statement erasure. Goes after the statement and every controlled copy: the facts, observations and hypotheses derived from it (their text is cleared once they are withdrawn), assessment reports naming them and consultation runtime state, each target verified on its own. Still-asserted derived records, adopted Diagnosis conditions citing the statement and active plans resting on them block with a review signal; nothing here changes a Diagnosis or a plan. Frozen replay inputs (Diagnosis runs, revisions and proposals, plan proposals and accepted revisions) are never rewritten: decision_records ends retained_by_policy and the request ends erased_with_retention, never erased. One erasure exists per statement; repeating the command (with any key) retries it, including after the review. An idempotency key already used for another statement is a 409. Foreign or missing statements return owner-masked 404.
+ * @summary Erase one owned health statement and every record derived from it, with a verified receipt.
+ */
+export const requestStatementErasure = async (id: string,
+    requestStatementErasureRequest: RequestStatementErasureRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<StatementErasureReceiptOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRequestStatementErasureUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestStatementErasureRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: StatementErasureReceipt, status?: number} = new globalThis.Error();
+    const data : StatementErasureReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? StatementErasureReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetStatementErasureUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/body-state/statements/${id}/erasure`
+}
+
+/**
+ * Returns the current receipt, including outstanding and retained targets and the review signal. 404 when the statement is foreign, missing or has no erasure.
+ * @summary Read the erasure receipt of one owned statement.
+ */
+export const getStatementErasure = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<StatementErasureReceiptOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetStatementErasureUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: StatementErasureReceipt, status?: number} = new globalThis.Error();
+    const data : StatementErasureReceipt = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? StatementErasureReceipt.parse(parsedBody) : parsedBody
   return data
 }
 

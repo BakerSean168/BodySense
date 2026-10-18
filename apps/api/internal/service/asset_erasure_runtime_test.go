@@ -20,7 +20,7 @@ func TestAIClientEraseAssetRuntimeCopies(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Error(err)
 		}
-		_, _ = w.Write([]byte(`{"status":"erased","asset_id":"` + asset.String() + `","threads":[{"thread_id":"` +
+		_, _ = w.Write([]byte(`{"status":"erased","subject_id":"` + asset.String() + `","threads":[{"thread_id":"` +
 			thread.String() + `","status":"erased","checkpoint_id":"c1","redacted_refs":2,"deleted_checkpoints":4,"failure_code":null}]}`))
 	}))
 	defer srv.Close()

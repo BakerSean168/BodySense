@@ -37,6 +37,9 @@ type DocumentIndicatorReview struct {
 	ReviewerUserID   uuid.UUID      `gorm:"type:uuid;not null" json:"reviewer_user_id"`
 	Note             string         `gorm:"type:text;not null;default:''" json:"note"`
 	CreatedAt        time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	// ErasedAt marks a tombstone a withdrawn Diagnosis condition still links
+	// to (AS-002); its content is gone and readers never list it.
+	ErasedAt *time.Time `json:"-"`
 }
 
 // TableName specifies the table name for GORM.

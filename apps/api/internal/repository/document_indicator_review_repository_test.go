@@ -57,7 +57,7 @@ func TestDocumentIndicatorReviewRepositoryListByExtractionRun(t *testing.T) {
 	defer cleanup()
 	runID := uuid.New()
 	cols := []string{"id", "user_id", "asset_id", "extraction_run_id", "indicator_index", "action", "idempotency_key", "reviewed_payload", "machine_candidate", "source_refs", "page_ref", "reviewer_user_id", "note", "created_at"}
-	mock.ExpectQuery(`SELECT \* FROM "document_indicator_reviews" WHERE extraction_run_id = \$[0-9]+ ORDER BY created_at ASC`).
+	mock.ExpectQuery(`SELECT \* FROM "document_indicator_reviews" WHERE extraction_run_id = \$[0-9]+ AND erased_at IS NULL ORDER BY created_at ASC`).
 		WillReturnRows(sqlmock.NewRows(cols).
 			AddRow(uuid.New(), uuid.New(), uuid.New(), runID, 0, "confirm", "k", datatypes.JSON(`{}`), datatypes.JSON(`{}`), datatypes.JSON(`[]`), datatypes.JSON(`{}`), uuid.New(), "", time.Now()))
 	rows, err := repo.ListByExtractionRun(context.Background(), runID)

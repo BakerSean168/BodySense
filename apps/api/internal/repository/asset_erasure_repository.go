@@ -14,15 +14,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// assetErasureDiagnosisTables are the Diagnosis audit and projection tables an
-// asset or one of its indicator reviews can be cited from (FK or JSON ref).
-var assetErasureDiagnosisTables = []string{
-	"condition_analysis_runs", "condition_analysis_events", "diagnosis_proposals",
-	"diagnosis_decisions", "diagnosis_settlements", "diagnosis_revisions",
-	"condition_entries", "condition_entry_evidence", "condition_relations",
-	"condition_disposition_changes", "condition_direct_edits",
-}
-
 var (
 	activeAssetJobStatuses = []string{
 		string(model.JobStatusPending), string(model.JobStatusRunning), string(model.JobStatusWaitingUser),
@@ -139,6 +130,13 @@ func (r *AssetErasureRepository) Receipt(ctx context.Context, userID, requestID 
 			receipt.Targets = append(receipt.Targets, row)
 		}
 	}
+	conditions, err := assetPinningConditions(r.conn(ctx), userID, request.AssetID)
+	if err != nil {
+		return nil, err
+	}
+	if receipt.Reviews, err = dependentReviews(r.conn(ctx), userID, conditions, erasureBodyRefs{}); err != nil {
+		return nil, err
+	}
 	return receipt, nil
 }
 
@@ -215,11 +213,11 @@ func (r *AssetErasureRepository) ExecuteDatabaseTarget(ctx context.Context, requ
 		case model.AssetErasurePostureAnalyses:
 			outcome, err = eraseAssetPostureRuns(tx, request.UserID, request.AssetID)
 		case model.AssetErasureDiagnosisRecords:
-			outcome, err = inventoryOnly(tx, countAssetDiagnosisRefs, request, model.AssetErasureTargetBlocked, model.AssetErasureCodeDiagnosisReview)
+			outcome, err = inventoryOnly(tx, countAssetPinningConditions, request, model.AssetErasureTargetBlocked, model.AssetErasureCodeDiagnosisReview)
 		case model.AssetErasureDocumentExtractions:
 			outcome, err = eraseAssetDocumentExtractions(tx, request.UserID, request.AssetID)
 		case model.AssetErasureAssessmentReports:
-			outcome, err = inventoryOnly(tx, countAssetAssessmentRefs, request, model.AssetErasureTargetBlocked, model.AssetErasureCodeAssessmentFrozen)
+			outcome, err = eraseAssetAssessmentReports(tx, request.UserID, request.AssetID)
 		default:
 			err = fmt.Errorf("target %s is not a database target", target)
 		}
@@ -317,13 +315,24 @@ func eraseAssetPostureRuns(tx *gorm.DB, userID, assetID uuid.UUID) (model.AssetE
 	return verifyCount(tx, int(deleted.RowsAffected), `SELECT count(*) FROM posture_analysis_runs WHERE user_id = ? AND asset_id = ?`, userID, assetID)
 }
 
-// eraseAssetDocumentExtractions deletes extraction runs and indicator reviews
-// only when no Diagnosis cites the asset: cited evidence waits for review.
-func eraseAssetDocumentExtractions(tx *gorm.DB, userID, assetID uuid.UUID) (model.AssetErasureOutcome, error) {
+// lockAssetForPin takes the asset row lock and reports whether an adopted
+// condition still pins the asset's clinical content. A Diagnosis settlement
+// that would add a citation qualifies the asset under a share lock, so the
+// answer holds for this transaction.
+func lockAssetForPin(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
 	if err := tx.Exec(`SELECT 1 FROM user_assets WHERE user_id = ? AND id = ? FOR UPDATE`, userID, assetID).Error; err != nil {
-		return model.AssetErasureOutcome{}, err
+		return 0, err
 	}
-	pinned, err := countAssetDiagnosisRefs(tx, userID, assetID)
+	return countAssetPinningConditions(tx, userID, assetID)
+}
+
+// eraseAssetDocumentExtractions erases extraction runs and indicator reviews
+// once no adopted condition cites the asset (pinned evidence waits for the
+// Diagnosis to be revised or the condition withdrawn). Rows nothing links to
+// are deleted; rows a withdrawn condition still links to become tombstones
+// (identity kept, content cleared), so no Diagnosis row is ever changed.
+func eraseAssetDocumentExtractions(tx *gorm.DB, userID, assetID uuid.UUID) (model.AssetErasureOutcome, error) {
+	pinned, err := lockAssetForPin(tx, userID, assetID)
 	if err != nil {
 		return model.AssetErasureOutcome{}, err
 	}
@@ -341,11 +350,27 @@ func eraseAssetDocumentExtractions(tx *gorm.DB, userID, assetID uuid.UUID) (mode
 	if active > 0 {
 		return model.AssetErasureOutcome{State: model.AssetErasureTargetFailed, Outstanding: active, FailureCode: model.AssetErasureCodeDerivedWorkActive}, nil
 	}
-	reviews := tx.Exec(`DELETE FROM document_indicator_reviews WHERE user_id = ? AND asset_id = ?`, userID, assetID)
+	const linked = `EXISTS (SELECT 1 FROM condition_entry_evidence e
+    WHERE e.user_id = r.user_id AND e.document_review_id = r.id)`
+	tombstonedReviews := tx.Exec(`UPDATE document_indicator_reviews r
+SET erased_at = now(), reviewed_payload = '{}', machine_candidate = '{}', source_refs = '[]', page_ref = '{}', note = ''
+WHERE r.user_id = ? AND r.asset_id = ? AND r.erased_at IS NULL AND `+linked, userID, assetID)
+	if tombstonedReviews.Error != nil {
+		return model.AssetErasureOutcome{}, tombstonedReviews.Error
+	}
+	reviews := tx.Exec(`DELETE FROM document_indicator_reviews r WHERE r.user_id = ? AND r.asset_id = ? AND NOT `+linked, userID, assetID)
 	if reviews.Error != nil {
 		return model.AssetErasureOutcome{}, reviews.Error
 	}
-	runs := tx.Exec(`DELETE FROM document_extraction_runs WHERE user_id = ? AND asset_id = ?`, userID, assetID)
+	const kept = `EXISTS (SELECT 1 FROM document_indicator_reviews r WHERE r.extraction_run_id = x.id)`
+	tombstonedRuns := tx.Exec(`UPDATE document_extraction_runs x
+SET erased_at = now(), result_payload = NULL, document_sha256 = NULL, result_sha256 = NULL, raw_text_sha256 = NULL,
+    indicator_snapshot = '[]', source_summary = '{}', updated_at = now()
+WHERE x.user_id = ? AND x.asset_id = ? AND x.erased_at IS NULL AND `+kept, userID, assetID)
+	if tombstonedRuns.Error != nil {
+		return model.AssetErasureOutcome{}, tombstonedRuns.Error
+	}
+	runs := tx.Exec(`DELETE FROM document_extraction_runs x WHERE x.user_id = ? AND x.asset_id = ? AND NOT `+kept, userID, assetID)
 	if runs.Error != nil {
 		return model.AssetErasureOutcome{}, runs.Error
 	}
@@ -356,7 +381,30 @@ func eraseAssetDocumentExtractions(tx *gorm.DB, userID, assetID uuid.UUID) (mode
 	if held > 0 {
 		return model.AssetErasureOutcome{State: model.AssetErasureTargetFailed, Outstanding: held, FailureCode: model.AssetErasureCodeCopyReappeared}, nil
 	}
-	return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: int(reviews.RowsAffected + runs.RowsAffected)}, nil
+	erased := tombstonedReviews.RowsAffected + reviews.RowsAffected + tombstonedRuns.RowsAffected + runs.RowsAffected
+	return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: int(erased)}, nil
+}
+
+// eraseAssetAssessmentReports deletes the assessment reports whose frozen
+// input or output names the asset, once no adopted condition cites it. A
+// frozen replay input is never rewritten: the whole derived report goes.
+func eraseAssetAssessmentReports(tx *gorm.DB, userID, assetID uuid.UUID) (model.AssetErasureOutcome, error) {
+	pinned, err := lockAssetForPin(tx, userID, assetID)
+	if err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	held, err := countAssetAssessmentRefs(tx, userID, assetID)
+	if err != nil || held == 0 {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}, err
+	}
+	if pinned > 0 {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetBlocked, Outstanding: held, FailureCode: model.AssetErasureCodeAssessmentFrozen}, nil
+	}
+	deleted := tx.Exec(`DELETE FROM assessment_reports t WHERE t.user_id = ? AND strpos(to_jsonb(t)::text, ?) > 0`, userID, assetID.String())
+	if deleted.Error != nil {
+		return model.AssetErasureOutcome{}, deleted.Error
+	}
+	return verifyCount(tx, int(deleted.RowsAffected), `SELECT count(*) FROM assessment_reports t WHERE t.user_id = ? AND strpos(to_jsonb(t)::text, ?) > 0`, userID, assetID.String())
 }
 
 func verifyCount(tx *gorm.DB, erased int, query string, args ...any) (model.AssetErasureOutcome, error) {
@@ -370,28 +418,36 @@ func verifyCount(tx *gorm.DB, erased int, query string, args ...any) (model.Asse
 	return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: erased}, nil
 }
 
+// countAssetDocumentCopies counts extraction runs and reviews that still hold
+// content; tombstones are identity only.
 func countAssetDocumentCopies(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
-	return countRows(tx, `SELECT (SELECT count(*) FROM document_extraction_runs WHERE user_id = ? AND asset_id = ?)
- + (SELECT count(*) FROM document_indicator_reviews WHERE user_id = ? AND asset_id = ?)`, userID, assetID, userID, assetID)
+	return countRows(tx, `SELECT (SELECT count(*) FROM document_extraction_runs WHERE user_id = ? AND asset_id = ? AND erased_at IS NULL)
+ + (SELECT count(*) FROM document_indicator_reviews WHERE user_id = ? AND asset_id = ? AND erased_at IS NULL)`, userID, assetID, userID, assetID)
 }
 
-// countAssetDiagnosisRefs counts Diagnosis rows that cite the asset or one of
-// its indicator reviews, by FK column or anywhere inside their JSON.
-func countAssetDiagnosisRefs(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
-	var reviewIDs []string
-	if err := tx.Raw(`SELECT id::text FROM document_indicator_reviews WHERE user_id = ? AND asset_id = ?`, userID, assetID).Scan(&reviewIDs).Error; err != nil {
-		return 0, err
-	}
-	needles := append([]string{assetID.String()}, reviewIDs...)
-	total := 0
-	for _, table := range assetErasureDiagnosisTables {
-		n, err := countRowsMentioning(tx, table, userID, needles)
-		if err != nil {
-			return 0, err
-		}
-		total += n
-	}
-	return total, nil
+// assetPinningConditionsSQL selects the adopted condition entries citing the
+// asset: a current evidence link to one of its indicator reviews, or a
+// clinical_document claim naming it. Withdrawn (inactive) conditions and the
+// immutable Diagnosis audit trail (ids and AI rationale, never document
+// content) do not pin.
+const assetPinningConditionsSQL = `SELECT c.id FROM condition_entries c
+WHERE c.user_id = @user AND c.disposition = 'adopted' AND (
+  EXISTS (SELECT 1 FROM condition_entry_evidence e
+    JOIN document_indicator_reviews r ON r.user_id = e.user_id AND r.id = e.document_review_id
+    WHERE e.user_id = c.user_id AND e.condition_id = c.id AND r.asset_id = @asset)
+  OR EXISTS (SELECT 1 FROM jsonb_array_elements(c.source_claim_refs) ref
+    WHERE ref->>'sourceKind' = 'clinical_document' AND ref->>'sourceId' = @asset_text))
+ORDER BY c.id`
+
+func assetPinningConditions(tx *gorm.DB, userID, assetID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := tx.Raw(assetPinningConditionsSQL, map[string]any{"user": userID, "asset": assetID, "asset_text": assetID.String()}).Scan(&ids).Error
+	return ids, err
+}
+
+func countAssetPinningConditions(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
+	ids, err := assetPinningConditions(tx, userID, assetID)
+	return len(ids), err
 }
 
 func countAssetAssessmentRefs(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
@@ -532,7 +588,7 @@ func recheckAssetCopies(tx *gorm.DB, userID, assetID uuid.UUID) (map[model.Asset
 		{model.AssetErasurePostureAnalyses, func(tx *gorm.DB, u, a uuid.UUID) (int, error) {
 			return countRows(tx, `SELECT count(*) FROM posture_analysis_runs WHERE user_id = ? AND asset_id = ?`, u, a)
 		}},
-		{model.AssetErasureDiagnosisRecords, countAssetDiagnosisRefs},
+		{model.AssetErasureDiagnosisRecords, countAssetPinningConditions},
 		{model.AssetErasureDocumentExtractions, countAssetDocumentCopies},
 		{model.AssetErasureAssessmentReports, countAssetAssessmentRefs},
 	}

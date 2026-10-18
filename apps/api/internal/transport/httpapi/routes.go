@@ -78,6 +78,8 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/body-state/records", wrapper.ListBodyFactRecords)
 	protected.POST("/body-state/records/:id/correct", wrapper.CorrectBodyFactRecord)
 	protected.POST("/body-state/records/:id/withdraw", wrapper.WithdrawBodyFactRecord)
+	protected.POST("/body-state/statements/:id/erasure", wrapper.RequestStatementErasure)
+	protected.GET("/body-state/statements/:id/erasure", wrapper.GetStatementErasure)
 	// New source-backed BodyObservation ledger, distinct from legacy observations.
 	protected.POST("/body-state/observation-records", wrapper.RecordBodyObservation)
 	protected.GET("/body-state/observation-records", wrapper.ListBodyObservationRecords)

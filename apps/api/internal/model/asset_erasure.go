@@ -76,6 +76,10 @@ const (
 	AssetErasureTargetBlocked AssetErasureTargetState = "blocked"
 	// AssetErasureTargetUnsupported has no erasure handler yet (a later slice).
 	AssetErasureTargetUnsupported AssetErasureTargetState = "unsupported"
+	// ErasureTargetRetainedByPolicy is terminal and honest: the copies stay by
+	// a documented policy (frozen replay inputs) and its retention reason says
+	// which. Only the statement inventory's decision_records target uses it.
+	ErasureTargetRetainedByPolicy AssetErasureTargetState = "retained_by_policy"
 )
 
 // Failure codes are safe, closed identifiers; no health content is stored.
@@ -87,6 +91,12 @@ const (
 	AssetErasureCodeDiagnosisPinned    = "diagnosis_evidence_pinned"
 	AssetErasureCodeDiagnosisReview    = "diagnosis_review_required"
 	AssetErasureCodeAssessmentFrozen   = "assessment_replay_frozen"
+	// ErasureCodePlanReview: an active or paused Training plan's current
+	// revision rests on the source; the plan needs review first.
+	ErasureCodePlanReview = "training_plan_review_required"
+	// ErasureCodeBodyRecordActive: a BodyState record derived from the
+	// statement is still asserted; withdraw it first.
+	ErasureCodeBodyRecordActive = "body_record_active"
 	// AssetErasureCodeRuntimeThreadBusy: a conversation is mid-turn or waiting
 	// on an Ask User answer; its runtime state is left untouched and retried.
 	AssetErasureCodeRuntimeThreadBusy = "runtime_thread_busy"
@@ -139,10 +149,40 @@ type AssetErasureTarget struct {
 
 func (AssetErasureTarget) TableName() string { return "asset_erasure_targets" }
 
-// AssetErasureReceipt is the request with its targets in inventory order.
+// AssetErasureReceipt is the request with its targets in inventory order and
+// the live review signal of what depends on the asset.
 type AssetErasureReceipt struct {
 	Request AssetErasureRequest
 	Targets []AssetErasureTarget
+	Reviews []ErasureReview
+}
+
+// ErasureReviewSubject names what needs the user's review because a source
+// being erased still supports it.
+type ErasureReviewSubject string
+
+const (
+	// ErasureReviewDiagnosisCondition is an adopted condition entry citing the source.
+	ErasureReviewDiagnosisCondition ErasureReviewSubject = "diagnosis_condition"
+	// ErasureReviewTrainingPlan is an active or paused plan whose current
+	// revision rests on such a condition or on a record derived from the source.
+	ErasureReviewTrainingPlan ErasureReviewSubject = "training_plan"
+	// ErasureReviewBodyFact, ErasureReviewBodyObservation and
+	// ErasureReviewBodyHypothesis are BodyState records derived from an erased
+	// statement that are still asserted: withdrawing them releases the erasure.
+	ErasureReviewBodyFact        ErasureReviewSubject = "body_fact"
+	ErasureReviewBodyObservation ErasureReviewSubject = "body_observation"
+	ErasureReviewBodyHypothesis  ErasureReviewSubject = "body_hypothesis"
+)
+
+// ErasureReview is the review signal of an erasure. It is computed live and
+// never changes the Diagnosis or plan: it clears once the user revises the
+// Diagnosis or withdraws the condition (or revises the plan), which is also
+// what releases the pinned copies for erasure.
+type ErasureReview struct {
+	Subject    ErasureReviewSubject
+	SubjectID  uuid.UUID
+	RevisionID *uuid.UUID
 }
 
 // Outstanding lists the targets that have not verified yet.
@@ -157,11 +197,13 @@ func (r AssetErasureReceipt) Outstanding() []AssetErasureTarget {
 }
 
 // AssetErasureOutcome is what one execution pass learned about a target.
+// RetentionReason is set only with ErasureTargetRetainedByPolicy.
 type AssetErasureOutcome struct {
-	State       AssetErasureTargetState
-	Erased      int
-	Outstanding int
-	FailureCode string
+	State           AssetErasureTargetState
+	Erased          int
+	Outstanding     int
+	FailureCode     string
+	RetentionReason string
 }
 
 // AssetRuntimeScope is what the runtime target asks the ai-service to erase:
@@ -174,17 +216,17 @@ type AssetRuntimeScope struct {
 	ContentSHA256     string
 }
 
-// AssetRuntimeErasureReceipt is the ai-service answer, read back from
-// checkpoint storage.
-type AssetRuntimeErasureReceipt struct {
-	Status  string                      `json:"status"`
-	AssetID string                      `json:"asset_id"`
-	Threads []AssetRuntimeThreadReceipt `json:"threads"`
+// RuntimeErasureReceipt is the ai-service answer for one erased source (an
+// asset or a statement), read back from checkpoint storage.
+type RuntimeErasureReceipt struct {
+	Status    string                 `json:"status"`
+	SubjectID string                 `json:"subject_id"`
+	Threads   []RuntimeThreadReceipt `json:"threads"`
 }
 
-// AssetRuntimeThreadReceipt is one thread's result: absent (never held the
-// asset), erased (rewritten, compacted and verified) or outstanding.
-type AssetRuntimeThreadReceipt struct {
+// RuntimeThreadReceipt is one thread's result: absent (never held the
+// source), erased (rewritten, compacted and verified) or outstanding.
+type RuntimeThreadReceipt struct {
 	ThreadID           string  `json:"thread_id"`
 	Status             string  `json:"status"`
 	CheckpointID       *string `json:"checkpoint_id"`
@@ -196,17 +238,23 @@ type AssetRuntimeThreadReceipt struct {
 // Outcome turns a runtime receipt into the target outcome. It verifies only
 // a receipt for this asset that reports every requested thread absent or
 // erased; anything else stays outstanding and is retried.
-func (s AssetRuntimeScope) Outcome(assetID uuid.UUID, receipt *AssetRuntimeErasureReceipt) AssetErasureOutcome {
-	unverified := AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: max(len(s.ThreadIDs), 1), FailureCode: AssetErasureCodeRuntimeUnverified}
-	if receipt == nil || receipt.AssetID != assetID.String() {
+func (s AssetRuntimeScope) Outcome(assetID uuid.UUID, receipt *RuntimeErasureReceipt) AssetErasureOutcome {
+	return RuntimeOutcome(s.ThreadIDs, assetID, receipt)
+}
+
+// RuntimeOutcome verifies a runtime receipt for one subject: it must name
+// the subject and report every requested thread absent or erased.
+func RuntimeOutcome(threadIDs []uuid.UUID, subjectID uuid.UUID, receipt *RuntimeErasureReceipt) AssetErasureOutcome {
+	unverified := AssetErasureOutcome{State: AssetErasureTargetFailed, Outstanding: max(len(threadIDs), 1), FailureCode: AssetErasureCodeRuntimeUnverified}
+	if receipt == nil || receipt.SubjectID != subjectID.String() {
 		return unverified
 	}
-	byThread := make(map[string]AssetRuntimeThreadReceipt, len(receipt.Threads))
+	byThread := make(map[string]RuntimeThreadReceipt, len(receipt.Threads))
 	for _, thread := range receipt.Threads {
 		byThread[thread.ThreadID] = thread
 	}
 	erased, outstanding, busy := 0, 0, 0
-	for _, id := range s.ThreadIDs {
+	for _, id := range threadIDs {
 		thread, ok := byThread[id.String()]
 		switch {
 		case !ok:

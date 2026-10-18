@@ -2287,6 +2287,83 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/body-state/statements/{id}/erasure:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: The statement (source_evidence_id of a BodyState record).
+      schema:
+        type: string
+        format: uuid
+    post:
+      operationId: requestStatementErasure
+      summary: Erase one owned health statement and every record derived from it, with a verified receipt.
+      description: >
+        AS-002 per-statement erasure. Goes after the statement and every controlled copy: the facts,
+        observations and hypotheses derived from it (their text is cleared once they are withdrawn),
+        assessment reports naming them and consultation runtime state, each target verified on its own.
+        Still-asserted derived records, adopted Diagnosis conditions citing the statement and active plans
+        resting on them block with a review signal; nothing here changes a Diagnosis or a plan. Frozen
+        replay inputs (Diagnosis runs, revisions and proposals, plan proposals and accepted revisions) are
+        never rewritten: decision_records ends retained_by_policy and the request ends
+        erased_with_retention, never erased. One erasure exists per statement; repeating the command (with
+        any key) retries it, including after the review. An idempotency key already used for another
+        statement is a 409. Foreign or missing statements return owner-masked 404.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestStatementErasureRequest'
+      responses:
+        '200':
+          description: Terminal; the statement is erased (status erased or erased_with_retention).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementErasureReceipt'
+        '202':
+          description: Erasure accepted; some targets are still outstanding (see the receipt).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementErasureReceipt'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      operationId: getStatementErasure
+      summary: Read the erasure receipt of one owned statement.
+      description: Returns the current receipt, including outstanding and retained targets and the review signal. 404 when the statement is foreign, missing or has no erasure.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current erasure receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementErasureReceipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/uploads:
     post:
       operationId: createUpload
@@ -7168,7 +7245,7 @@ components:
     AssetErasureReceipt:
       type: object
       additionalProperties: false
-      required: [request_id, asset_id, status, inventory_revision, requested_at, targets, outstanding_targets]
+      required: [request_id, asset_id, status, inventory_revision, requested_at, targets, outstanding_targets, reviews]
       properties:
         request_id: {type: string, format: uuid}
         asset_id: {type: string, format: uuid}
@@ -7187,6 +7264,97 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AssetErasureTargetName'
+        reviews:
+          type: array
+          description: Live review signal. What still rests on the asset and needs the user's review before the pinned copies can go. Computed on every read; nothing here is changed by the erasure.
+          items:
+            $ref: '#/components/schemas/ErasureReview'
+    ErasureReview:
+      type: object
+      additionalProperties: false
+      required: [subject, subject_id]
+      properties:
+        subject:
+          type: string
+          enum: [diagnosis_condition, training_plan, body_fact, body_observation, body_hypothesis]
+          description: >
+            diagnosis_condition is an adopted condition citing the source (revise the Diagnosis or withdraw
+            the condition); training_plan is an active or paused plan whose current revision rests on it
+            (revise or end the plan); body_* is a still-asserted record derived from an erased statement
+            (withdraw it).
+        subject_id: {type: string, format: uuid}
+        revision_id: {type: string, format: uuid, description: The plan revision that rests on the source (training_plan only).}
+    RequestStatementErasureRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    StatementErasureTargetName:
+      type: string
+      enum: [diagnosis_records, training_plans, body_records, assessment_reports, decision_records, runtime_checkpoints, statement_manifest]
+      description: One controlled-copy family of the statement, in execution order. statement_manifest (the statement itself) is finalized last.
+    StatementErasureTargetReceipt:
+      type: object
+      additionalProperties: false
+      required: [target, state, erased_count, outstanding_count]
+      properties:
+        target:
+          $ref: '#/components/schemas/StatementErasureTargetName'
+        state:
+          type: string
+          enum: [pending, verified, failed, blocked, unsupported, retained_by_policy]
+          description: >
+            verified means no copy of this family remains. failed is retried automatically; blocked needs the
+            user's review (see reviews) and a repeated command. retained_by_policy is terminal: the copies stay
+            by the documented policy named in retention_reason and are never retried; only decision_records
+            can be retained.
+        erased_count: {type: integer, minimum: 0, description: Copies this target has erased so far.}
+        outstanding_count: {type: integer, minimum: 0, description: Copies still present (or retained) at the last check.}
+        failure_code:
+          type: string
+          enum: [diagnosis_evidence_pinned, diagnosis_review_required, training_plan_review_required, body_record_active, assessment_replay_frozen, runtime_thread_busy, runtime_unavailable, runtime_erasure_unverified, targets_outstanding, copy_reappeared, execution_error]
+        retention_reason:
+          type: string
+          enum: [replay_input_frozen]
+          description: Why a retained_by_policy target keeps its copies. replay_input_frozen means immutable Diagnosis or plan decision inputs that are never rewritten; account erasure removes them.
+        verified_at: {type: string, format: date-time}
+    StatementErasureReceipt:
+      type: object
+      additionalProperties: false
+      required: [request_id, statement_id, status, inventory_revision, requested_at, targets, outstanding_targets, retained_targets, reviews]
+      properties:
+        request_id: {type: string, format: uuid}
+        statement_id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [pending, running, outstanding, erased, erased_with_retention]
+          description: >
+            erased only after every target verified. erased_with_retention means the statement and every other
+            copy are erased except the frozen replay inputs listed in retained_targets; it never claims a full
+            erasure. Both are terminal and never reported early.
+        inventory_revision: {type: string, description: The controlled-copy inventory this erasure was planned against.}
+        requested_at: {type: string, format: date-time}
+        erased_at: {type: string, format: date-time}
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementErasureTargetReceipt'
+        outstanding_targets:
+          type: array
+          description: Targets neither verified nor retained by policy.
+          items:
+            $ref: '#/components/schemas/StatementErasureTargetName'
+        retained_targets:
+          type: array
+          description: Targets retained by policy (terminal).
+          items:
+            $ref: '#/components/schemas/StatementErasureTargetName'
+        reviews:
+          type: array
+          description: Live review signal of what still rests on the statement; empty once the request is terminal.
+          items:
+            $ref: '#/components/schemas/ErasureReview'
     PostureAnalysisView:
       type: object
       additionalProperties: false

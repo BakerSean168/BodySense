@@ -8,6 +8,7 @@
 import * as zod from 'zod/mini';
 import { AssetErasureTargetName } from './assetErasureTargetName.zod';
 import { AssetErasureTargetReceipt } from './assetErasureTargetReceipt.zod';
+import { ErasureReview } from './erasureReview.zod';
 
 export const AssetErasureReceipt = /*#__PURE__*/ zod.strictObject({
   "request_id": /*#__PURE__*/ zod.uuid(),
@@ -17,7 +18,8 @@ export const AssetErasureReceipt = /*#__PURE__*/ zod.strictObject({
   "requested_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "erased_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
   "targets": /*#__PURE__*/ zod.array(AssetErasureTargetReceipt),
-  "outstanding_targets": /*#__PURE__*/ zod.array(AssetErasureTargetName)
+  "outstanding_targets": /*#__PURE__*/ zod.array(AssetErasureTargetName),
+  "reviews": /*#__PURE__*/ zod.array(ErasureReview).check(/*#__PURE__*/ zod.describe('Live review signal. What still rests on the asset and needs the user\'s review before the pinned copies can go. Computed on every read; nothing here is changed by the erasure.'))
 });
 
 export type AssetErasureReceipt = zod.input<typeof AssetErasureReceipt>;

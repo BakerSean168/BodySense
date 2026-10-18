@@ -266,10 +266,10 @@ func TestUserAssetErasureWorkerRecoveryPostgres(t *testing.T) {
 
 type fakeRuntimeEraser struct {
 	scopes   []model.AssetRuntimeScope
-	receipts []func(asset uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error)
+	receipts []func(asset uuid.UUID, scope model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error)
 }
 
-func (f *fakeRuntimeEraser) EraseAssetRuntimeCopies(_ context.Context, _ uuid.UUID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+func (f *fakeRuntimeEraser) EraseAssetRuntimeCopies(_ context.Context, _ uuid.UUID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error) {
 	f.scopes = append(f.scopes, scope)
 	next := f.receipts[0]
 	if len(f.receipts) > 1 {
@@ -278,9 +278,9 @@ func (f *fakeRuntimeEraser) EraseAssetRuntimeCopies(_ context.Context, _ uuid.UU
 	return next(assetID, scope)
 }
 
-func runtimeReceipt(status string, threads ...model.AssetRuntimeThreadReceipt) func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
-	return func(asset uuid.UUID, _ model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
-		return &model.AssetRuntimeErasureReceipt{Status: status, AssetID: asset.String(), Threads: threads}, nil
+func runtimeReceipt(status string, threads ...model.RuntimeThreadReceipt) func(uuid.UUID, model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error) {
+	return func(asset uuid.UUID, _ model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error) {
+		return &model.RuntimeErasureReceipt{Status: status, SubjectID: asset.String(), Threads: threads}, nil
 	}
 }
 
@@ -310,14 +310,14 @@ func TestUserAssetErasureRuntimeCheckpointsPostgres(t *testing.T) {
 	f.erasure.retryAfter = 0
 	attached := f.seedPhotoConversation(t)
 	busy := "thread_busy"
-	runtime := &fakeRuntimeEraser{receipts: []func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error){
-		func(uuid.UUID, model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error) {
+	runtime := &fakeRuntimeEraser{receipts: []func(uuid.UUID, model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error){
+		func(uuid.UUID, model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error) {
 			return nil, errors.New("synthetic ai-service outage")
 		},
 		runtimeReceipt("outstanding",
-			model.AssetRuntimeThreadReceipt{ThreadID: attached.String(), Status: "outstanding", FailureCode: &busy}),
+			model.RuntimeThreadReceipt{ThreadID: attached.String(), Status: "outstanding", FailureCode: &busy}),
 		runtimeReceipt("erased",
-			model.AssetRuntimeThreadReceipt{ThreadID: attached.String(), Status: "erased", RedactedRefs: 1, DeletedCheckpoints: 6}),
+			model.RuntimeThreadReceipt{ThreadID: attached.String(), Status: "erased", RedactedRefs: 1, DeletedCheckpoints: 6}),
 	}}
 
 	// Without a runtime eraser the target cannot verify.

@@ -34,7 +34,7 @@ type assetSourceEraser interface {
 // AssetRuntimeEraser erases one asset from the owner's consultation runtime
 // state (LangGraph checkpoints) and returns a receipt read back from storage.
 type AssetRuntimeEraser interface {
-	EraseAssetRuntimeCopies(ctx context.Context, userID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.AssetRuntimeErasureReceipt, error)
+	EraseAssetRuntimeCopies(ctx context.Context, userID, assetID uuid.UUID, scope model.AssetRuntimeScope) (*model.RuntimeErasureReceipt, error)
 }
 
 // assetRuntimeErasureTimeout bounds one runtime erasure call inside a pass.
