@@ -28,6 +28,12 @@ it**. Everything else goes, Ask User answers included:
 | Run-scoped copies (`runtime_events`, `agent_tool_calls`, interactions) of a Run that keeps a cited message or is named by `statement_evidence.source_run_id` / `safety_screens.source_run_id` / a cited interaction | The evidence names that Run's identity                                                                                                                      |
 | `runs` rows                                                                                                                                                                                                         | Never pruned; they hold no raw text and anchor ids that evidence and jobs name                                                                              |
 
+The AS-002 statement erasure receipt (`statement_erasure_requests`) references
+`statement_evidence` with `ON DELETE CASCADE`; it names the statement only, never a
+chat row, so it neither protects nor prunes chat. An erased statement keeps its
+`source_message_id`, so its source message stays protected like any other cited
+statement (the message is a conversation record; see privacy-erasure-retention §8).
+
 | Removed by the pass                                                                                                   |
 | --------------------------------------------------------------------------------------------------------------------- |
 | Every other message in the window, and its `thread_projection_messages` copy                                          |

@@ -44,6 +44,9 @@ var chatReferenceScope = map[string]string{
 	"condition_direct_edits(user_id,request_evidence_id,request_message_id,request_source_version)->statement_evidence ON DELETE NO ACTION":  "evidence funnel",
 	"safety_resolutions(user_id,source_evidence_id,source_message_id,source_version)->statement_evidence ON DELETE NO ACTION":                "evidence funnel",
 	"safety_resolutions(user_id,check_interaction_id,source_message_id)->interaction_resumes ON DELETE NO ACTION":                            "cited Ask User",
+	// The AS-002 statement erasure receipt names the statement (never a chat
+	// row) and goes with it on account erasure.
+	"statement_erasure_requests(user_id,statement_id)->statement_evidence ON DELETE CASCADE": "erasure receipt of a statement",
 	// Soft (id-only) references: each is in protectedMessages, the cited
 	// interaction set or referencedRuns, or is a copy of the row itself.
 	"condition_analysis_runs.request_message_id":   "protected message",
