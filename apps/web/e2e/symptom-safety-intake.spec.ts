@@ -36,8 +36,8 @@ function events(text: string): StreamEvent[] {
     .map((line) => parseStreamEvent(JSON.parse(line.slice(5).trim())));
 }
 
-// Starts one native formal Diagnosis run from the user's own statement.
-async function diagnose(
+// Asks for one native formal Diagnosis run from the user's own statement.
+async function requestDiagnosis(
   request: APIRequestContext,
   headers: Record<string, string>,
   requestEvidenceId: string,
@@ -52,8 +52,20 @@ async function diagnose(
     },
     timeout: 60_000,
   });
-  const body = await response.text();
-  expect(response.status(), body).toBe(201);
+  return { status: response.status(), body: await response.text() };
+}
+
+async function diagnose(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  requestEvidenceId: string,
+) {
+  const { status, body } = await requestDiagnosis(
+    request,
+    headers,
+    requestEvidenceId,
+  );
+  expect(status, body).toBe(201);
   return JSON.parse(body) as {
     state: string;
     outcome?: string;
@@ -128,16 +140,17 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
     "safety_signals",
   ]);
 
-  // Control: the symptom is committed but not yet screened, so the formal
-  // Diagnosis run closes without any proposal: Safety coverage is incomplete.
+  // Control: the symptom is committed but not yet screened, so Go fails the
+  // formal Diagnosis run closed (Safety coverage incomplete) and writes no run;
+  // the later run at expected revision 0 proves nothing was persisted.
   const requestEvidenceId = await statementEvidenceId(
     request,
     headers,
     receipt.receipt.fact_ids[0]!,
   );
-  const before = await diagnose(request, headers, requestEvidenceId);
-  expect(before.proposals).toEqual([]);
-  expect(before.state).toBe("closed_without_change");
+  const before = await requestDiagnosis(request, headers, requestEvidenceId);
+  expect(before.status, before.body).toBe(503);
+  expect(JSON.parse(before.body).error.code).toBe("SAFETY_UNAVAILABLE");
 
   const card = page.getByTestId("pending-interaction-composer");
   await expect(card).toBeVisible();
