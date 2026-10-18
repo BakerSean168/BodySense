@@ -20,7 +20,6 @@ export const TrainingProgress = /*#__PURE__*/ zod.strictObject({
   "total_checkins": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(trainingProgressTotalCheckinsMin)),
   "current_week": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "total_weeks": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
-  "treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.union([/*#__PURE__*/ zod.uuid(),/*#__PURE__*/ zod.null()])),
   "plan_status": /*#__PURE__*/ zod.string()
 });
 

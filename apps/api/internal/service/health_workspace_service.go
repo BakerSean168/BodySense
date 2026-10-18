@@ -34,9 +34,7 @@ type workspaceFreshnessSource interface {
 	Preview(ctx context.Context, userID uuid.UUID, analysis *model.DiagnosisAnalysisRecord) (*model.DiagnosisAnalysisFreshness, error)
 }
 
-type workspaceTreatmentSource interface {
-	PreviewCurrentReview(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
-	ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error)
+type workspaceOutcomeSource interface {
 	ListOutcomes(ctx context.Context, userID uuid.UUID, limit int) ([]model.Outcome, error)
 }
 
@@ -52,7 +50,7 @@ type HealthWorkspaceService struct {
 	bodyState     workspaceBodyStateSource
 	diagnosis     workspaceDiagnosisSource
 	freshness     workspaceFreshnessSource
-	treatment     workspaceTreatmentSource
+	outcomes      workspaceOutcomeSource
 	training      workspaceTrainingSource
 }
 
@@ -62,12 +60,12 @@ func NewHealthWorkspaceService(
 	bodyState workspaceBodyStateSource,
 	diagnosis workspaceDiagnosisSource,
 	freshness workspaceFreshnessSource,
-	treatment workspaceTreatmentSource,
+	outcomes workspaceOutcomeSource,
 	training workspaceTrainingSource,
 ) *HealthWorkspaceService {
 	return &HealthWorkspaceService{
 		profiles: profiles, consultations: consultations, bodyState: bodyState,
-		diagnosis: diagnosis, freshness: freshness, treatment: treatment, training: training,
+		diagnosis: diagnosis, freshness: freshness, outcomes: outcomes, training: training,
 	}
 }
 
@@ -80,8 +78,8 @@ func (s *HealthWorkspaceService) Get(
 	userID uuid.UUID,
 ) (*HealthWorkspace, error) {
 	workspace := &HealthWorkspace{
-		GeneratedAt: time.Now().UTC(),
-		Diagnosis:   map[string]any{}, TreatmentRevisions: []model.TreatmentRevision{},
+		GeneratedAt:    time.Now().UTC(),
+		Diagnosis:      map[string]any{},
 		RecentOutcomes: []model.Outcome{}, Trends: []HealthWorkspaceTrend{},
 		Actions: []HealthWorkspaceAction{},
 	}
@@ -127,40 +125,33 @@ func (s *HealthWorkspaceService) Get(
 		workspace.Diagnosis["freshness"] = freshness
 	}
 
-	workspace.Treatment, err = s.treatment.PreviewCurrentReview(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("load workspace treatment: %w", err)
-	}
-	workspace.TreatmentRevisions, err = s.treatment.ListRevisions(ctx, userID, 20)
-	if err != nil {
-		return nil, fmt.Errorf("load workspace treatment revisions: %w", err)
-	}
 	if s.training != nil {
 		workspace.TrainingPlan, err = s.training.GetActivePlan(ctx, userID)
 		if err != nil {
 			return nil, fmt.Errorf("load workspace training plan: %w", err)
 		}
 	}
-	workspace.RecentOutcomes, err = s.treatment.ListOutcomes(ctx, userID, 100)
+	workspace.RecentOutcomes, err = s.outcomes.ListOutcomes(ctx, userID, 100)
 	if err != nil {
 		return nil, fmt.Errorf("load workspace outcomes: %w", err)
 	}
 	workspace.Trends = deriveWorkspaceTrends(workspace.RecentOutcomes)
 	workspace.Capabilities = deriveWorkspaceCapabilities(
-		snapshot, analysis, freshness, assessments, workspace.Treatment, workspace.TrainingPlan, workspace.TreatmentRevisions,
+		snapshot, analysis, freshness, assessments, workspace.TrainingPlan,
 	)
 	workspace.Actions = deriveWorkspaceActions(workspace)
 	return workspace, nil
 }
 
+// deriveWorkspaceCapabilities gates the loop from durable state. Generation
+// only creates a pending PlanProposal; execution needs an active TrainingPlan
+// and complete Safety coverage.
 func deriveWorkspaceCapabilities(
 	snapshot *BodyStateReadModel,
 	analysis *model.DiagnosisAnalysisRecord,
 	freshness *model.DiagnosisAnalysisFreshness,
 	assessments []model.DiagnosisCandidateAssessment,
-	treatment *model.Treatment,
 	trainingPlan *model.TrainingPlan,
-	revisions []model.TreatmentRevision,
 ) HealthWorkspaceCapabilities {
 	envelope, safetyErr := ProjectSafetyEnvelopeV2(snapshot)
 	requiresSafety := safetyErr != nil || envelope.RequiresReview || len(envelope.Coverage.IncompleteSourceRefs) > 0
@@ -172,39 +163,23 @@ func deriveWorkspaceCapabilities(
 	}
 	trainingSafetyIncomplete := requiresSafety || !envelope.Coverage.Complete
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
-	hasAnalysis := analysis != nil
 	diagnosisReview := freshness != nil && freshness.State != model.DiagnosisFreshnessFresh
 	analysisEligible := analysis != nil &&
 		(analysis.Status == "completed" || analysis.Status == "partial") &&
 		len(analysis.Candidates) > 0 &&
 		treatmentCandidateAssessmentsReady(analysis, assessments) &&
 		(freshness == nil || freshness.State == model.DiagnosisFreshnessFresh)
-	hasAcceptableProposal := false
-	for _, revision := range revisions {
-		if revision.AcceptanceState == model.TreatmentAcceptanceProposed &&
-			analysisEligible && analysis != nil &&
-			revision.SourceDiagnosisAnalysisID == analysis.ID &&
-			revision.SourceBodyStateRevision <= snapshot.CurrentRevision {
-			hasAcceptableProposal = true
-			break
-		}
-	}
-	hasCurrent := treatment != nil && treatment.Current != nil &&
-		treatment.Current.AcceptanceState == model.TreatmentAcceptanceAccepted
-	treatmentReview := hasCurrent && (treatment.Status == model.TreatmentStatusReviewRecommended || treatment.Status == model.TreatmentStatusPaused)
+	activePlan := trainingPlan != nil && trainingPlan.Status == "active"
 	return HealthWorkspaceCapabilities{
 		CanContinueConsultation: true,
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !diagnosisBlocked,
-		CanReviewDiagnosis:      hasAnalysis,
+		CanReviewDiagnosis:      analysis != nil,
 		CanGenerateTreatment:    analysisEligible && !trainingSafetyIncomplete,
-		CanAcceptTreatment:      hasAcceptableProposal && !trainingSafetyIncomplete,
-		CanExecuteTreatment:     hasCurrent && treatment.Status == model.TreatmentStatusActive && trainingPlan != nil && trainingPlan.Status == "active" && !trainingSafetyIncomplete,
-		CanRecordOutcome:        hasCurrent,
-		CanReviewTreatment:      hasCurrent,
+		CanExecuteTreatment:     activePlan && !trainingSafetyIncomplete,
+		CanRecordOutcome:        activePlan,
 		RequiresSafetyReview:    requiresSafety,
 		RequiresDiagnosisReview: diagnosisReview,
-		RequiresTreatmentReview: treatmentReview,
 	}
 }
 
@@ -222,20 +197,14 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 	if caps.RequiresSafetyReview {
 		add("review_safety", 100, true, "存在需要优先审核的安全状态。", map[string]any{"section": "safety"})
 	}
-	if caps.RequiresTreatmentReview {
-		add("review_treatment", 90, true, "当前方案因新状态变化需要审核。", map[string]any{"section": "treatment"})
-	}
 	if caps.RequiresDiagnosisReview {
 		add("review_diagnosis", 85, true, "最近分析与当前 BodyState 可能不再完全一致。", map[string]any{"section": "diagnosis"})
 	}
-	if caps.CanAcceptTreatment {
-		add("review_treatment_proposal", 80, true, "存在尚未接受的方案版本。", map[string]any{"section": "treatment_history"})
-	}
 	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
-		add("open_training", 75, true, "当前已接受方案可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
+		add("open_training", 75, true, "当前训练计划可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
 	}
 	if caps.CanGenerateTreatment {
-		add("generate_treatment", 70, true, "当前分析可用于创建一个需审核的方案 proposal。", map[string]any{"section": "diagnosis"})
+		add("generate_treatment", 70, true, "当前分析可用于生成一个需你确认的训练计划 proposal。", map[string]any{"section": "diagnosis"})
 	}
 	if caps.CanRequestDiagnosis {
 		add("request_diagnosis", 60, true, "当前 BodyState 已有可分析信息。", map[string]any{"section": "diagnosis"})

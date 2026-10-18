@@ -22,12 +22,7 @@ func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(
 		},
 		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
 		[]model.DiagnosisCandidateAssessment{{State: "confirmed"}},
-		&model.Treatment{
-			Status:  model.TreatmentStatusActive,
-			Current: &model.TreatmentRevision{AcceptanceState: model.TreatmentAcceptanceAccepted},
-		},
 		&model.TrainingPlan{Status: "active"},
-		nil,
 	)
 	if !caps.RequiresSafetyReview {
 		t.Fatal("expected safety review capability")
@@ -37,30 +32,6 @@ func TestWorkspaceCapabilitiesUnscreenedSymptomBlocksTrainingButAllowsDiagnosis(
 	}
 	if !caps.CanContinueConsultation || !caps.CanEditBodyState {
 		t.Fatal("safety review must not disable correction or consultation")
-	}
-}
-
-func TestWorkspaceCapabilitiesExposeProposalAcceptanceWithoutMakingItCurrent(t *testing.T) {
-	analysisID := uuid.New()
-	candidateID := uuid.New()
-	caps := deriveWorkspaceCapabilities(
-		screenedWorkspaceBodyState(7),
-		&model.DiagnosisAnalysisRecord{
-			ID: analysisID, Status: "completed",
-			Candidates: []model.DiagnosisCandidateRecord{{ID: candidateID, Name: "candidate"}},
-		},
-		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
-		[]model.DiagnosisCandidateAssessment{{CandidateID: candidateID, State: "confirmed"}},
-		nil,
-		nil,
-		[]model.TreatmentRevision{{
-			AcceptanceState:           model.TreatmentAcceptanceProposed,
-			SourceDiagnosisAnalysisID: analysisID,
-			SourceBodyStateRevision:   7,
-		}},
-	)
-	if !caps.CanAcceptTreatment || caps.CanExecuteTreatment {
-		t.Fatalf("proposal must be reviewable but not executable: %#v", caps)
 	}
 }
 
@@ -76,14 +47,8 @@ func TestWorkspaceCapabilitiesRequireCandidateAssessmentForTreatment(t *testing.
 		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
 		nil,
 		nil,
-		nil,
-		[]model.TreatmentRevision{{
-			AcceptanceState:           model.TreatmentAcceptanceProposed,
-			SourceDiagnosisAnalysisID: analysisID,
-			SourceBodyStateRevision:   7,
-		}},
 	)
-	if caps.CanGenerateTreatment || caps.CanAcceptTreatment {
+	if caps.CanGenerateTreatment {
 		t.Fatalf("treatment must remain gated until a candidate is confirmed or unsure: %#v", caps)
 	}
 }
@@ -99,15 +64,13 @@ func TestWorkspaceCapabilitiesRejectPotentiallyStaleDiagnosisForTreatment(t *tes
 		&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessPotentiallyStale},
 		[]model.DiagnosisCandidateAssessment{{CandidateID: candidateID, State: "confirmed"}},
 		nil,
-		nil,
-		nil,
 	)
 	if caps.CanGenerateTreatment || !caps.RequiresDiagnosisReview {
 		t.Fatalf("potentially stale analysis must be reviewed before treatment generation: %#v", caps)
 	}
 }
 
-func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *testing.T) {
+func TestWorkspaceCapabilitiesRequireActiveTrainingPlanForExecution(t *testing.T) {
 	analysisID := uuid.New()
 	candidateID := uuid.New()
 	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
@@ -119,16 +82,17 @@ func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *tes
 			},
 			&model.DiagnosisAnalysisFreshness{State: model.DiagnosisFreshnessFresh},
 			[]model.DiagnosisCandidateAssessment{{CandidateID: candidateID, State: "confirmed"}},
-			&model.Treatment{Status: model.TreatmentStatusActive, Current: &model.TreatmentRevision{AcceptanceState: model.TreatmentAcceptanceAccepted}},
 			plan,
-			nil,
 		)
 	}
-	if caps := baseArgs(nil); caps.CanExecuteTreatment {
-		t.Fatalf("accepted treatment without projection must not be advertised executable: %#v", caps)
+	if caps := baseArgs(nil); caps.CanExecuteTreatment || caps.CanRecordOutcome {
+		t.Fatalf("no active plan must not be advertised executable: %#v", caps)
 	}
-	if caps := baseArgs(&model.TrainingPlan{Status: "active"}); !caps.CanExecuteTreatment {
-		t.Fatalf("active projection should make treatment executable: %#v", caps)
+	if caps := baseArgs(&model.TrainingPlan{Status: "paused"}); caps.CanExecuteTreatment {
+		t.Fatalf("a paused plan must not be advertised executable: %#v", caps)
+	}
+	if caps := baseArgs(&model.TrainingPlan{Status: "active"}); !caps.CanExecuteTreatment || !caps.CanRecordOutcome {
+		t.Fatalf("an active plan with complete Safety should be executable: %#v", caps)
 	}
 }
 
@@ -181,10 +145,8 @@ func screenedWorkspaceBodyState(revision int64) *BodyStateReadModel {
 func TestWorkspaceCapabilitiesIncompleteSafetyBlocksTraining(t *testing.T) {
 	snapshot := screenedWorkspaceBodyState(7)
 	snapshot.SafetyScreens = nil
-	caps := deriveWorkspaceCapabilities(snapshot, nil, nil, nil,
-		&model.Treatment{Status: model.TreatmentStatusActive, Current: &model.TreatmentRevision{AcceptanceState: model.TreatmentAcceptanceAccepted}},
-		&model.TrainingPlan{Status: "active"}, nil)
-	if caps.CanExecuteTreatment || caps.CanAcceptTreatment || caps.CanGenerateTreatment {
+	caps := deriveWorkspaceCapabilities(snapshot, nil, nil, nil, &model.TrainingPlan{Status: "active"})
+	if caps.CanExecuteTreatment || caps.CanGenerateTreatment {
 		t.Fatalf("unscreened native symptoms must block training: %+v", caps)
 	}
 	if !caps.CanContinueConsultation || !caps.CanRequestDiagnosis {

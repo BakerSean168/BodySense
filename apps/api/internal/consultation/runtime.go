@@ -83,7 +83,7 @@ type Runtime struct {
 	contextRetrievalService     *service.ContextRetrievalService
 	diagnosisAnalysisService    *service.DiagnosisAnalysisService
 	diagnosisFreshnessService   *service.DiagnosisFreshnessService
-	treatmentService            *service.TreatmentService
+	outcomeService              *service.OutcomeService
 	streamRuntime               *stream.Runtime
 	deployment                  *service.AgentDeploymentPolicy
 	rolloutService              *service.ConsultationRolloutService
@@ -139,12 +139,12 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	contextRetrieval *service.ContextRetrievalService,
 	diagnosis *service.DiagnosisAnalysisService,
 	freshness *service.DiagnosisFreshnessService,
-	treatment *service.TreatmentService,
+	outcomes *service.OutcomeService,
 ) {
 	r.contextRetrievalService = contextRetrieval
 	r.diagnosisAnalysisService = diagnosis
 	r.diagnosisFreshnessService = freshness
-	r.treatmentService = treatment
+	r.outcomeService = outcomes
 }
 
 // AttachRolloutService attaches the anonymous rollout observer (North-Star).
@@ -910,15 +910,8 @@ func (r *Runtime) buildBusinessContext(
 			}
 		}
 	}
-	if r.treatmentService != nil {
-		if treatment, err := r.treatmentService.PreviewCurrentReview(ctx, uid); err != nil {
-			log.Printf("current treatment context load failed for user %s: %v", uid, err)
-		} else if treatment != nil {
-			if raw, marshalErr := json.Marshal(treatment); marshalErr == nil {
-				bc.CurrentTreatment = raw
-			}
-		}
-		if outcomes, err := r.treatmentService.ListOutcomes(ctx, uid, 12); err == nil {
+	if r.outcomeService != nil {
+		if outcomes, err := r.outcomeService.ListOutcomes(ctx, uid, 12); err == nil {
 			if raw, marshalErr := json.Marshal(outcomes); marshalErr == nil {
 				bc.RecentOutcomes = raw
 			}

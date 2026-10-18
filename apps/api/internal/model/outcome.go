@@ -1,0 +1,31 @@
+package model
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
+)
+
+// Outcome records what the user reported after training or another
+// intervention. It is linked to no plan or revision. CausalityLevel defaults
+// to association_only so temporal sequence is not misrepresented as proof.
+type Outcome struct {
+	ID                   uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID               uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
+	SourceType           string         `gorm:"type:varchar(40);not null" json:"source_type"`
+	SourceKey            string         `gorm:"type:text;not null" json:"source_key"`
+	Kind                 string         `gorm:"type:varchar(50);not null" json:"kind"`
+	ConcernKey           string         `gorm:"type:varchar(120);not null;default:'general'" json:"concern_key"`
+	BodyRegion           string         `gorm:"type:text;not null;default:''" json:"body_region"`
+	Value                datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"value"`
+	Notes                string         `gorm:"type:text;not null;default:''" json:"notes"`
+	AssociationStatement string         `gorm:"type:text;not null;default:''" json:"association_statement"`
+	CausalityLevel       string         `gorm:"type:varchar(30);not null;default:'association_only'" json:"causality_level"`
+	OccurredAt           time.Time      `gorm:"not null" json:"occurred_at"`
+	Provenance           datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"provenance"`
+	BodyStateRevision    *int64         `json:"body_state_revision,omitempty"`
+	CreatedAt            time.Time      `gorm:"not null;default:now()" json:"created_at"`
+}
+
+func (Outcome) TableName() string { return "outcomes" }

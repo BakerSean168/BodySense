@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -77,8 +76,6 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "diagnosis_analyses", table: "diagnosis_analyses", column: "user_id"},
 	{name: "diagnosis_candidate_assessments", table: "diagnosis_candidate_assessments", column: "user_id"},
 	{name: "diagnosis_freshness", table: "diagnosis_analysis_freshness", column: "user_id"},
-	{name: "treatments", table: "treatments", column: "user_id"},
-	{name: "interventions", table: "interventions", column: "user_id"},
 	{name: "outcomes", table: "outcomes", column: "user_id"},
 }
 
@@ -91,18 +88,6 @@ type PrivacyErasureRepository struct {
 
 func NewPrivacyErasureRepository(db *gorm.DB) *PrivacyErasureRepository {
 	return &PrivacyErasureRepository{db: db}
-}
-
-// DeleteRestrictBoundAggregates removes only aggregates whose domain FK is
-// intentionally RESTRICT in normal operation. This privileged lifecycle step
-// runs inside the erasure transaction so normal Diagnosis/Treatment lineage
-// remains protected everywhere else.
-func (r *PrivacyErasureRepository) DeleteRestrictBoundAggregates(ctx context.Context, userID uuid.UUID) error {
-	db := database.FromContext(ctx, r.db)
-	if err := db.Exec("DELETE FROM treatments WHERE user_id = ?", userID).Error; err != nil {
-		return fmt.Errorf("delete privacy restrict-bound treatments: %w", err)
-	}
-	return nil
 }
 
 func (r *PrivacyErasureRepository) CountUserData(ctx context.Context, userID uuid.UUID) ([]PrivacyDataCount, error) {

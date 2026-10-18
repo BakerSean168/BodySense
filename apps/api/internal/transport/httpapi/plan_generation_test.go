@@ -18,7 +18,6 @@ import (
 )
 
 type planGenerationFake struct {
-	treatmentApplication
 	owner    uuid.UUID
 	input    service.TreatmentPlanGenerationInput
 	replayed bool
@@ -45,7 +44,7 @@ func (f *planGenerationFake) GeneratePlanProposal(_ context.Context, owner uuid.
 	}}, nil
 }
 
-func planGenerationRoute(t *testing.T, owner uuid.UUID, app treatmentApplication) *gin.Engine {
+func planGenerationRoute(t *testing.T, owner uuid.UUID, app *planGenerationFake) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	spec, err := openapiv1.GetSpec()
@@ -55,7 +54,7 @@ func planGenerationRoute(t *testing.T, owner uuid.UUID, app treatmentApplication
 	router := gin.New()
 	server := NewPublicServer()
 	if app != nil {
-		server = server.WithTreatment(app, nil, nil)
+		server = server.WithPlanGeneration(app)
 	}
 	RegisterRoutes(router, StrictHandler(server), RouteSecurity{
 		Auth: func(c *gin.Context) {

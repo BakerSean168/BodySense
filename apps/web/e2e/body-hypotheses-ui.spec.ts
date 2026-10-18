@@ -122,7 +122,6 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
       return reply({
         generated_at: now,
         profile_ready: true,
-        treatment_revisions: [],
         recent_outcomes: [],
         trends: [],
         actions: [],
@@ -132,13 +131,10 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
           can_request_diagnosis: false,
           can_review_diagnosis: false,
           can_generate_treatment: false,
-          can_accept_treatment: false,
           can_execute_treatment: false,
           can_record_outcome: false,
-          can_review_treatment: false,
           requires_safety_review: false,
           requires_diagnosis_review: false,
-          requires_treatment_review: false,
         },
       });
     if (path.endsWith("/profile"))

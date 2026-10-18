@@ -516,13 +516,13 @@
             ]
         },
         {
-            "table": "body_state_evidence",
+            "table": "body_fact_commits",
             "columns": [
                 {
                     "udt": "uuid",
                     "name": "id",
                     "type": "uuid",
-                    "default": "uuid_generate_v4()",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -534,77 +534,63 @@
                 },
                 {
                     "udt": "varchar",
-                    "name": "source_type",
+                    "name": "idempotency_key",
                     "type": "character varying",
                     "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "source_key",
-                    "type": "text",
+                    "udt": "bpchar",
+                    "name": "fingerprint",
+                    "type": "character",
                     "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "source_version",
-                    "type": "text",
-                    "default": "''::text",
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "title",
-                    "type": "text",
-                    "default": "''::text",
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "summary",
-                    "type": "text",
-                    "default": "''::text",
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "excerpt",
-                    "type": "text",
-                    "default": "''::text",
+                    "udt": "uuid",
+                    "name": "event_id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "jsonb",
-                    "name": "metadata",
+                    "name": "fact_ids",
                     "type": "jsonb",
-                    "default": "'{}'::jsonb",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "timestamptz",
-                    "name": "retrieved_at",
+                    "name": "committed_at",
                     "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
+                    "default": null,
                     "nullable": false
                 }
             ]
         },
         {
-            "table": "body_state_facts",
+            "table": "body_facts",
             "columns": [
                 {
                     "udt": "uuid",
                     "name": "id",
                     "type": "uuid",
-                    "default": "uuidv7()",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -615,176 +601,17 @@
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
-                    "name": "concern_key",
-                    "type": "character varying",
-                    "default": "''::character varying",
+                    "udt": "text",
+                    "name": "subject",
+                    "type": "text",
+                    "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
+                    "udt": "text",
                     "name": "kind",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "body_region",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "value",
                     "type": "text",
-                    "default": "''::text",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "details",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "origin",
-                    "type": "character varying",
                     "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "review_state",
-                    "type": "character varying",
-                    "default": "'unverified'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "lifecycle_state",
-                    "type": "character varying",
-                    "default": "'active'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "trend",
-                    "type": "character varying",
-                    "default": "'unknown'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "source_key",
-                    "type": "text",
-                    "default": "''::text",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "observed_at",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "valid_from",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "valid_until",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "uuid",
-                    "name": "supersedes_fact_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "bool",
-                    "name": "excluded_from_reasoning",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "int8",
-                    "name": "created_revision",
-                    "type": "bigint",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int8",
-                    "name": "updated_revision",
-                    "type": "bigint",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "updated_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "body_region_id",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": true
-                }
-            ]
-        },
-        {
-            "table": "body_state_hypotheses",
-            "columns": [
-                {
-                    "udt": "uuid",
-                    "name": "id",
-                    "type": "uuid",
-                    "default": "uuid_generate_v4()",
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "user_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "concern_key",
-                    "type": "character varying",
-                    "default": "'general'::character varying",
                     "nullable": false
                 },
                 {
@@ -795,59 +622,38 @@
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
-                    "name": "lifecycle_state",
-                    "type": "character varying",
-                    "default": "'active'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "confidence",
-                    "type": "character varying",
+                    "udt": "jsonb",
+                    "name": "body_region_ids",
+                    "type": "jsonb",
                     "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "supporting_fact_ids",
-                    "type": "jsonb",
-                    "default": "'[]'::jsonb",
                     "nullable": false
                 },
                 {
                     "udt": "jsonb",
-                    "name": "supporting_observation_ids",
+                    "name": "temporal",
                     "type": "jsonb",
-                    "default": "'[]'::jsonb",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "jsonb",
-                    "name": "supporting_evidence_ids",
+                    "name": "details",
                     "type": "jsonb",
-                    "default": "'[]'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "counterevidence_ids",
-                    "type": "jsonb",
-                    "default": "'[]'::jsonb",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "uuid",
-                    "name": "source_analysis_id",
+                    "name": "source_evidence_id",
                     "type": "uuid",
                     "default": null,
-                    "nullable": true
+                    "nullable": false
                 },
                 {
-                    "udt": "jsonb",
-                    "name": "provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
+                    "udt": "text",
+                    "name": "assertion_status",
+                    "type": "text",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -858,36 +664,118 @@
                     "nullable": false
                 },
                 {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "supersedes_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "body_hypotheses",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "statement",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "assertion_status",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
                     "udt": "int8",
-                    "name": "updated_revision",
+                    "name": "created_revision",
                     "type": "bigint",
                     "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "timestamptz",
-                    "name": "created_at",
+                    "name": "recorded_at",
                     "type": "timestamp with time zone",
-                    "default": "now()",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "timestamptz",
-                    "name": "updated_at",
+                    "name": "withdrawn_at",
                     "type": "timestamp with time zone",
-                    "default": "now()",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "withdrawn_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "withdrawal_reason",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "supersedes_hypothesis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "lineage_id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 }
             ]
         },
         {
-            "table": "body_state_observations",
+            "table": "body_hypothesis_commits",
             "columns": [
                 {
                     "udt": "uuid",
                     "name": "id",
                     "type": "uuid",
-                    "default": "uuidv7()",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -899,9 +787,246 @@
                 },
                 {
                     "udt": "varchar",
-                    "name": "concern_key",
+                    "name": "idempotency_key",
                     "type": "character varying",
-                    "default": "''::character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "fingerprint",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "operation",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "hypothesis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "event_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "committed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "target_hypothesis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "body_hypothesis_fact_links",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "hypothesis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int2",
+                    "name": "ordinal",
+                    "type": "smallint",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_hypothesis_observation_links",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "hypothesis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int2",
+                    "name": "ordinal",
+                    "type": "smallint",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_observation_commits",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "idempotency_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "fingerprint",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "event_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "committed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "operation",
+                    "type": "text",
+                    "default": "'record'::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "target_observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "body_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -912,101 +1037,52 @@
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
-                    "name": "body_region",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "method",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "value",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "condition",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
+                    "udt": "text",
+                    "name": "raw_value",
+                    "type": "text",
+                    "default": "''::text",
                     "nullable": false
                 },
                 {
                     "udt": "text",
-                    "name": "source_key",
+                    "name": "raw_unit",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "method",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "measurement_context",
                     "type": "text",
                     "default": "''::text",
                     "nullable": false
                 },
                 {
                     "udt": "jsonb",
-                    "name": "provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
                     "name": "observed_at",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "review_state",
-                    "type": "character varying",
-                    "default": "'unverified'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "lifecycle_state",
-                    "type": "character varying",
-                    "default": "'active'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "excluded_from_reasoning",
-                    "type": "boolean",
-                    "default": "true",
-                    "nullable": false
-                },
-                {
-                    "udt": "int8",
-                    "name": "created_revision",
-                    "type": "bigint",
+                    "type": "jsonb",
                     "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "int8",
-                    "name": "updated_revision",
-                    "type": "bigint",
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
                     "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "updated_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
+                    "udt": "text",
+                    "name": "assertion_status",
+                    "type": "text",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -1017,11 +1093,65 @@
                     "nullable": true
                 },
                 {
-                    "udt": "varchar",
-                    "name": "body_region_id",
-                    "type": "character varying",
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
                     "default": null,
-                    "nullable": true
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_state_outbox",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "event_type",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "payload",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
                 }
             ]
         },
@@ -1097,13 +1227,6 @@
                     "nullable": false
                 },
                 {
-                    "udt": "jsonb",
-                    "name": "safety_state",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
                     "udt": "timestamptz",
                     "name": "created_at",
                     "type": "timestamp with time zone",
@@ -1115,6 +1238,603 @@
                     "name": "updated_at",
                     "type": "timestamp with time zone",
                     "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "condition_analysis_events",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "sequence",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "proposal_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "details",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "condition_analysis_runs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "request_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "request_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "request_source_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "trigger",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "scope",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "based_on_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "based_on_diagnosis_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "input_evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "agent_hypotheses",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "condition_disposition_changes",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "from_disposition",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "to_disposition",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "reason",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "related_condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "details",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "decision_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "committed_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "changed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "condition_entries",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "medical_name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "concept_ref",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "qualifiers",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "assessment",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "assessment_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "source_claim_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "cause_analysis",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "information_gaps",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "handling_plan",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "disposition",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "latest_decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "latest_decision_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "last_analysis_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "committed_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "condition_entry_evidence",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "evidence_type",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "evidence_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "role",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "rationale",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "analyzed_by_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "document_review_action",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "body_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "body_observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "symptom_episode_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "episode_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "document_review_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "condition_relations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "from_condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "to_condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "basis_evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "rationale",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "latest_decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "latest_decision_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "committed_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
                     "nullable": false
                 }
             ]
@@ -1256,53 +1976,6 @@
             ]
         },
         {
-            "table": "conversation_shares",
-            "columns": [
-                {
-                    "udt": "uuid",
-                    "name": "id",
-                    "type": "uuid",
-                    "default": "uuidv7()",
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "conversation_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "share_token",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "snapshot_messages",
-                    "type": "jsonb",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "snapshot_title",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                }
-            ]
-        },
-        {
             "table": "conversations",
             "columns": [
                 {
@@ -1320,39 +1993,11 @@
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "title",
-                    "type": "text",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "title_status",
-                    "type": "character varying",
-                    "default": "'pending'::character varying",
-                    "nullable": false
-                },
-                {
                     "udt": "varchar",
                     "name": "status",
                     "type": "character varying",
                     "default": "'active'::character varying",
                     "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "pinned",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "pinned_at",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
                 },
                 {
                     "udt": "text",
@@ -1439,38 +2084,71 @@
                     "nullable": true
                 },
                 {
-                    "udt": "timestamptz",
-                    "name": "deleted_at",
-                    "type": "timestamp with time zone",
+                    "udt": "int4",
+                    "name": "processed_through_seq",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "context_start_seq",
+                    "type": "integer",
+                    "default": "1",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "pruned_through_seq",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "retention_revision",
+                    "type": "bigint",
+                    "default": "0",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnoses",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "current_revision",
+                    "type": "bigint",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "head_revision",
+                    "type": "bigint",
                     "default": null,
                     "nullable": true
                 },
                 {
-                    "udt": "varchar",
-                    "name": "title_agent_configuration_id",
-                    "type": "character varying",
-                    "default": "''::character varying",
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
                     "nullable": false
                 },
                 {
-                    "udt": "jsonb",
-                    "name": "title_agent_configuration",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "title_execution_provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "title_decision_trace",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
                     "nullable": false
                 }
             ]
@@ -1860,6 +2538,308 @@
             ]
         },
         {
+            "table": "diagnosis_decisions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "proposal_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "decided_evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "decision",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "decided_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "expected_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "receipt_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_proposals",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "target_condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "change_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "content",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "base_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "counter_evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "supersedes_proposal_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_revisions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "previous_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "direct_edit_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "patch",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "decision_ids",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_refs",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "receipt_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "committed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "diagnosis_rollout_observations",
             "columns": [
                 {
@@ -1970,6 +2950,116 @@
             ]
         },
         {
+            "table": "diagnosis_settlements",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "expected_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "diagnosis_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "outcome",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "condition_ids",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "decision_ids",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "receipt_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "settled_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "document_extraction_runs",
             "columns": [
                 {
@@ -1981,16 +3071,23 @@
                 },
                 {
                     "udt": "uuid",
-                    "name": "upload_id",
+                    "name": "user_id",
                     "type": "uuid",
                     "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "uuid",
-                    "name": "user_id",
+                    "name": "asset_id",
                     "type": "uuid",
                     "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
                     "nullable": false
                 },
                 {
@@ -2012,28 +3109,35 @@
                     "name": "mechanism_revision",
                     "type": "character varying",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "bpchar",
                     "name": "document_sha256",
                     "type": "character",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "bpchar",
                     "name": "result_sha256",
                     "type": "character",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
                 },
                 {
                     "udt": "bpchar",
                     "name": "raw_text_sha256",
                     "type": "character",
                     "default": null,
-                    "nullable": false
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "result_payload",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
                 },
                 {
                     "udt": "jsonb",
@@ -2062,6 +3166,13 @@
                     "type": "timestamp with time zone",
                     "default": "now()",
                     "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
                 }
             ]
         },
@@ -2084,7 +3195,7 @@
                 },
                 {
                     "udt": "uuid",
-                    "name": "upload_id",
+                    "name": "asset_id",
                     "type": "uuid",
                     "default": null,
                     "nullable": false
@@ -2169,13 +3280,170 @@
             ]
         },
         {
-            "table": "interventions",
+            "table": "episode_command_receipts",
             "columns": [
                 {
                     "udt": "uuid",
                     "name": "id",
                     "type": "uuid",
-                    "default": "uuid_generate_v4()",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "idempotency_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "fingerprint",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "operation",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "episode_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "event_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "committed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "episode_fact_links",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "episode_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "fact_kind",
+                    "type": "text",
+                    "default": "'symptom'::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "basis_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "role",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "association_method",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "is_primary",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "authorization_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "episode_relations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -2187,73 +3455,195 @@
                 },
                 {
                     "udt": "uuid",
-                    "name": "treatment_id",
+                    "name": "from_episode_id",
                     "type": "uuid",
                     "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "uuid",
-                    "name": "treatment_revision_id",
+                    "name": "to_episode_id",
                     "type": "uuid",
                     "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
+                    "udt": "text",
                     "name": "kind",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "title",
                     "type": "text",
                     "default": null,
                     "nullable": false
                 },
                 {
+                    "udt": "uuid",
+                    "name": "basis_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "basis_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "authorization_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "episode_state_evidence",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "episode_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
                     "udt": "text",
-                    "name": "description",
+                    "name": "claim",
                     "type": "text",
-                    "default": "''::text",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "jsonb",
-                    "name": "prescription",
+                    "name": "as_of",
                     "type": "jsonb",
-                    "default": "'{}'::jsonb",
+                    "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "int4",
-                    "name": "position",
-                    "type": "integer",
-                    "default": "0",
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "equipment_assets",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
                     "nullable": false
                 },
                 {
-                    "udt": "varchar",
-                    "name": "status",
-                    "type": "character varying",
-                    "default": "'proposed'::character varying",
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "display_name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "notes",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "access_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "availability",
+                    "type": "text",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "timestamptz",
-                    "name": "started_at",
+                    "name": "valid_from",
                     "type": "timestamp with time zone",
                     "default": null,
                     "nullable": true
                 },
                 {
                     "udt": "timestamptz",
-                    "name": "ended_at",
+                    "name": "valid_until",
                     "type": "timestamp with time zone",
                     "default": null,
                     "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": "1",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "create_idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "create_request_digest",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
                 },
                 {
                     "udt": "timestamptz",
@@ -2267,6 +3657,81 @@
                     "name": "updated_at",
                     "type": "timestamp with time zone",
                     "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "interaction_resumes",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "interaction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "answer_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "question_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "assistant_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "claimed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
                     "nullable": false
                 }
             ]
@@ -3356,27 +4821,6 @@
                     "nullable": false
                 },
                 {
-                    "udt": "uuid",
-                    "name": "treatment_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "uuid",
-                    "name": "treatment_revision_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "uuid",
-                    "name": "intervention_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
                     "udt": "varchar",
                     "name": "source_type",
                     "type": "character varying",
@@ -3463,6 +4907,294 @@
                 {
                     "udt": "timestamptz",
                     "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "plan_decision_receipts",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "proposal_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "operation",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "plan_proposals",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "state",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "initiated_by",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "based_on_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "draft",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "relevant_context_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "expires_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "decision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "expired_reason",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "generation_provenance",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "posture_analysis_runs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "asset_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "view",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "job_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "result_payload",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
                     "type": "timestamp with time zone",
                     "default": "now()",
                     "nullable": false
@@ -3800,6 +5532,390 @@
             ]
         },
         {
+            "table": "safety_resolutions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "restriction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "restriction_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_evidence_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "check_interaction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "basis_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_level",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "scope_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "policy_revision",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "event_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "actor",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "lifted_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "safety_restriction_exercises",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "restriction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "exercise_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "safety_restrictions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "safety_screen_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "concept",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "policy_revision",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "risk_level",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "scope_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "lift_policy",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "lift_conditions",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "reason",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "valid_from",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "valid_until",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "safety_screens",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "capture_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "body_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_interaction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "trauma",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "radiating_pain",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "numbness",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "weakness",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "dizziness",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "schema_migrations",
             "columns": [
                 {
@@ -3813,6 +5929,163 @@
                     "udt": "bool",
                     "name": "dirty",
                     "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "statement_evidence",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "excerpt",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "availability",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_interaction_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "source_tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "question_excerpt",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "symptom_episodes",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "symptom_type",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "body_region_ids",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "laterality",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "identity_status",
+                    "type": "text",
+                    "default": "'current'::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
                     "default": null,
                     "nullable": false
                 }
@@ -4084,39 +6357,11 @@
                     "nullable": false
                 },
                 {
-                    "udt": "text",
-                    "name": "title",
-                    "type": "text",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "title_status",
-                    "type": "character varying",
-                    "default": "'pending'::character varying",
-                    "nullable": false
-                },
-                {
                     "udt": "varchar",
                     "name": "status",
                     "type": "character varying",
                     "default": "'active'::character varying",
                     "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "pinned",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "pinned_at",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
                 },
                 {
                     "udt": "text",
@@ -4278,25 +6523,260 @@
                     "nullable": false
                 },
                 {
-                    "udt": "uuid",
-                    "name": "treatment_revision_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "uuid",
-                    "name": "intervention_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
                     "udt": "timestamptz",
                     "name": "outcome_recorded_at",
                     "type": "timestamp with time zone",
                     "default": null,
                     "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "training_plan_entry_identities",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "training_plan_revision_body_refs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "body_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "symptom_episode_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "body_observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "training_plan_revision_conditions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "condition_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "training_plan_revisions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "parent_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "snapshot",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "change_set",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "authorization_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "training_plan_status_events",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "from_status",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "to_status",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "status_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_kind",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_fingerprint",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
                 }
             ]
         },
@@ -4320,6 +6800,20 @@
                 {
                     "udt": "uuid",
                     "name": "consultation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "title",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "current_accepted_revision_id",
                     "type": "uuid",
                     "default": null,
                     "nullable": true
@@ -4360,326 +6854,29 @@
                     "nullable": false
                 },
                 {
-                    "udt": "uuid",
-                    "name": "treatment_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "uuid",
-                    "name": "treatment_revision_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": true
-                },
-                {
                     "udt": "varchar",
                     "name": "status",
                     "type": "character varying",
                     "default": "'active'::character varying",
                     "nullable": false
-                }
-            ]
-        },
-        {
-            "table": "treatment_revisions",
-            "columns": [
-                {
-                    "udt": "uuid",
-                    "name": "id",
-                    "type": "uuid",
-                    "default": "uuid_generate_v4()",
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "treatment_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int4",
-                    "name": "revision",
-                    "type": "integer",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "acceptance_state",
-                    "type": "character varying",
-                    "default": "'proposed'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "lifecycle_state",
-                    "type": "character varying",
-                    "default": "'review_recommended'::character varying",
-                    "nullable": false
                 },
                 {
                     "udt": "int8",
-                    "name": "source_body_state_revision",
+                    "name": "status_revision",
                     "type": "bigint",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "source_diagnosis_analysis_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "goal",
-                    "type": "text",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int4",
-                    "name": "duration_weeks",
-                    "type": "integer",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "plan",
-                    "type": "jsonb",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "user_constraints",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "evidence_ids",
-                    "type": "jsonb",
-                    "default": "'[]'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "governance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "change_reason",
-                    "type": "text",
-                    "default": "''::text",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "accepted_at",
-                    "type": "timestamp with time zone",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "agent_configuration_id",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "agent_configuration",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "execution_provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "evidence_acquisition_trace",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "generation_decision_trace",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "acceptance_decision_trace",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "replay_input",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "rollout_provenance",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                }
-            ]
-        },
-        {
-            "table": "treatment_rollout_observations",
-            "columns": [
-                {
-                    "udt": "uuid",
-                    "name": "id",
-                    "type": "uuid",
-                    "default": "uuid_generate_v4()",
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "source_revision_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "stage",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int4",
-                    "name": "subject_bucket",
-                    "type": "integer",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int4",
-                    "name": "canary_bps",
-                    "type": "integer",
                     "default": "0",
                     "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "champion_configuration_id",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "challenger_configuration_id",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "served_configuration_id",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "shadow_configuration_id",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "promotion_record",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "comparison",
-                    "type": "jsonb",
-                    "default": "'{}'::jsonb",
-                    "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "unsafe_relaxation",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "forbidden_side_effect",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "bool",
-                    "name": "configuration_mismatch",
-                    "type": "boolean",
-                    "default": "false",
-                    "nullable": false
-                },
-                {
-                    "udt": "text",
-                    "name": "shadow_error",
-                    "type": "text",
-                    "default": "''::text",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
                 }
             ]
         },
         {
-            "table": "treatments",
+            "table": "user_asset_storage_cleanups",
             "columns": [
                 {
                     "udt": "uuid",
-                    "name": "id",
+                    "name": "asset_id",
                     "type": "uuid",
-                    "default": "uuid_generate_v4()",
+                    "default": null,
                     "nullable": false
                 },
                 {
@@ -4690,39 +6887,107 @@
                     "nullable": false
                 },
                 {
-                    "udt": "int4",
-                    "name": "current_revision",
-                    "type": "integer",
-                    "default": "0",
+                    "udt": "varchar",
+                    "name": "storage_backend",
+                    "type": "character varying",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "varchar",
-                    "name": "status",
+                    "name": "storage_key",
                     "type": "character varying",
-                    "default": "'review_recommended'::character varying",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "user_assets",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "kind",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "photo_view",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "original_name",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "mime_type",
+                    "type": "character varying",
+                    "default": null,
                     "nullable": false
                 },
                 {
                     "udt": "int8",
-                    "name": "source_body_state_revision",
+                    "name": "byte_size",
                     "type": "bigint",
                     "default": null,
-                    "nullable": true
+                    "nullable": false
                 },
                 {
-                    "udt": "uuid",
-                    "name": "source_diagnosis_analysis_id",
-                    "type": "uuid",
+                    "udt": "bpchar",
+                    "name": "content_sha256",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "storage_backend",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "storage_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "availability",
+                    "type": "character varying",
+                    "default": "'available'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "source_removed_at",
+                    "type": "timestamp with time zone",
                     "default": null,
                     "nullable": true
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "status_reasons",
-                    "type": "jsonb",
-                    "default": "'[]'::jsonb",
-                    "nullable": false
                 },
                 {
                     "udt": "timestamptz",
@@ -4788,116 +7053,6 @@
             ]
         },
         {
-            "table": "user_uploads",
-            "columns": [
-                {
-                    "udt": "uuid",
-                    "name": "id",
-                    "type": "uuid",
-                    "default": "uuid_generate_v4()",
-                    "nullable": false
-                },
-                {
-                    "udt": "uuid",
-                    "name": "user_id",
-                    "type": "uuid",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "file_type",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "original_name",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "int8",
-                    "name": "file_size",
-                    "type": "bigint",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "mime_type",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "ocr_result",
-                    "type": "jsonb",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "ocr_status",
-                    "type": "character varying",
-                    "default": "'pending'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "created_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "timestamptz",
-                    "name": "updated_at",
-                    "type": "timestamp with time zone",
-                    "default": "now()",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "analysis_status",
-                    "type": "character varying",
-                    "default": "'none'::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "jsonb",
-                    "name": "analysis_result",
-                    "type": "jsonb",
-                    "default": null,
-                    "nullable": true
-                },
-                {
-                    "udt": "varchar",
-                    "name": "agent_configuration_id",
-                    "type": "character varying",
-                    "default": "''::character varying",
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "storage_backend",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                },
-                {
-                    "udt": "varchar",
-                    "name": "storage_key",
-                    "type": "character varying",
-                    "default": null,
-                    "nullable": false
-                }
-            ]
-        },
-        {
             "table": "users",
             "columns": [
                 {
@@ -4945,7 +7100,7 @@
             ]
         }
     ],
-    "runtime_image": "pgvector/pgvector:pg18",
+    "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
     "migration_state": "1:false"
 }

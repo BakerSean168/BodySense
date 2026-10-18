@@ -5,56 +5,6 @@ import {
   makeDiagnosis,
   makeWorkspace,
 } from "./__fixtures__/diagnosisFixtures";
-import type { TreatmentRevision } from "@/features/workspace/types/workspace";
-
-function acceptedRevision(
-  overrides: Partial<TreatmentRevision> = {},
-): TreatmentRevision {
-  return {
-    id: "rev-1",
-    treatment_id: "treatment-1",
-    revision: 1,
-    acceptance_state: "accepted",
-    lifecycle_state: "active",
-    source_body_state_revision: 3,
-    source_diagnosis_analysis_id: "analysis-1",
-    goal: "缓解肩颈紧张",
-    duration_weeks: 4,
-    plan: {
-      summary: "渐进式肩胛控制计划",
-      goal: "缓解肩颈紧张",
-      duration_weeks: 4,
-      interventions: [],
-      daily_habits: [],
-      expected_timeline: "",
-      warning_signs: [],
-      review_triggers: [],
-      safety_notes: [],
-    },
-    user_constraints: {},
-    evidence_ids: [],
-    governance: {},
-    change_reason: "",
-    created_at: "2026-10-11T00:00:00Z",
-    interventions: [
-      {
-        id: "int-1",
-        treatment_id: "treatment-1",
-        treatment_revision_id: "rev-1",
-        kind: "exercise",
-        title: "靠墙肩胛滑动",
-        description: "缓慢控制",
-        prescription: { sets: 3, reps: 10 },
-        position: 0,
-        status: "active",
-        created_at: "2026-10-11T00:00:00Z",
-        updated_at: "2026-10-11T00:00:00Z",
-      },
-    ],
-    ...overrides,
-  };
-}
-
 describe("diagnosis view only lists confirmed conditions", () => {
   it("returns an empty view when no analysis exists", () => {
     expect(projectDiagnosisView(undefined, undefined).confirmed).toEqual([]);
@@ -128,74 +78,12 @@ describe("diagnosis view only lists confirmed conditions", () => {
     expect(CERTAINTY_LABELS[condition.certainty]).toBe("你已确认的分析结果");
   });
 
-  it("leaves handling unconfirmed when no accepted plan covers this analysis", () => {
+  it("leaves handling unconfirmed: no plan is linked to a condition", () => {
     const diagnosis = makeDiagnosis({
       candidates: [candidate({ candidate_id: "a" })],
       candidate_assessments: [{ candidate_id: "a", state: "confirmed" }],
     });
     const [condition] = projectDiagnosisView(makeWorkspace(), diagnosis).confirmed;
-    expect(condition.handling.state).toBe("not_confirmed");
-  });
-
-  it("attaches plan-level handling only for a matching accepted revision", () => {
-    const diagnosis = makeDiagnosis({
-      candidates: [candidate({ candidate_id: "a" })],
-      candidate_assessments: [{ candidate_id: "a", state: "confirmed" }],
-    });
-    const workspace = makeWorkspace({
-      treatment: {
-        id: "treatment-1",
-        current_revision: 1,
-        status: "active",
-        status_reasons: [],
-        created_at: "2026-10-11T00:00:00Z",
-        updated_at: "2026-10-11T00:00:00Z",
-        current: acceptedRevision(),
-      },
-    });
-    const [condition] = projectDiagnosisView(workspace, diagnosis).confirmed;
-    expect(condition.handling.state).toBe("plan_level");
-    expect(condition.handling.planGoal).toBe("缓解肩颈紧张");
-    expect(condition.handling.actions).toEqual(["靠墙肩胛滑动"]);
-  });
-
-  it("does not attach a proposal (unaccepted) revision as handling", () => {
-    const diagnosis = makeDiagnosis({
-      candidates: [candidate({ candidate_id: "a" })],
-      candidate_assessments: [{ candidate_id: "a", state: "confirmed" }],
-    });
-    const workspace = makeWorkspace({
-      treatment: {
-        id: "treatment-1",
-        current_revision: 1,
-        status: "active",
-        status_reasons: [],
-        created_at: "2026-10-11T00:00:00Z",
-        updated_at: "2026-10-11T00:00:00Z",
-        current: acceptedRevision({ acceptance_state: "proposed" }),
-      },
-    });
-    const [condition] = projectDiagnosisView(workspace, diagnosis).confirmed;
-    expect(condition.handling.state).toBe("not_confirmed");
-  });
-
-  it("does not attach handling generated from a different analysis", () => {
-    const diagnosis = makeDiagnosis({
-      candidates: [candidate({ candidate_id: "a" })],
-      candidate_assessments: [{ candidate_id: "a", state: "confirmed" }],
-    });
-    const workspace = makeWorkspace({
-      treatment: {
-        id: "treatment-1",
-        current_revision: 1,
-        status: "active",
-        status_reasons: [],
-        created_at: "2026-10-11T00:00:00Z",
-        updated_at: "2026-10-11T00:00:00Z",
-        current: acceptedRevision({ source_diagnosis_analysis_id: "other" }),
-      },
-    });
-    const [condition] = projectDiagnosisView(workspace, diagnosis).confirmed;
     expect(condition.handling.state).toBe("not_confirmed");
   });
 

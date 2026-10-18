@@ -861,7 +861,7 @@ paths:
     put:
       operationId: updateEquipmentAsset
       summary: Edit an equipment asset, mark it unavailable, or retire it.
-      description: Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+      description: Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted TrainingPlan revision or training log.
       security:
       - bearerAuth: []
       parameters:
@@ -1900,187 +1900,6 @@ paths:
           $ref: '#/components/responses/BadGateway'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
-  /api/v1/treatments/proposals:
-    post:
-      operationId: generateTreatmentProposal
-      summary: Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TreatmentProposalRequest'
-      responses:
-        '201':
-          description: Treatment revision proposal.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TreatmentProposalResponse'
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '500': {$ref: '#/components/responses/InternalError'}
-        '503': {$ref: '#/components/responses/ServiceUnavailable'}
-  /api/v1/treatments/current:
-    get:
-      operationId: getCurrentTreatment
-      summary: Read the deterministic current Treatment review projection without mutating state.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Current treatment, or null when none exists.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CurrentTreatmentResponse'
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '500': {$ref: '#/components/responses/InternalError'}
-  /api/v1/treatments/current/review:
-    post:
-      operationId: reviewCurrentTreatment
-      summary: Persist the latest deterministic current Treatment review state.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Reviewed current treatment, or null when none exists.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CurrentTreatmentResponse'
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '500': {$ref: '#/components/responses/InternalError'}
-  /api/v1/treatments/revisions:
-    get:
-      operationId: listTreatmentRevisions
-      summary: List immutable Treatment revisions for the authenticated user.
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: limit
-        in: query
-        required: false
-        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
-      responses:
-        '200':
-          description: Treatment revision timeline.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TreatmentRevisionListResponse'
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '500': {$ref: '#/components/responses/InternalError'}
-  /api/v1/treatments/revisions/{revisionId}:
-    get:
-      operationId: getTreatmentRevision
-      summary: Get one immutable Treatment revision.
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/TreatmentRevisionId'
-      responses:
-        '200':
-          description: Treatment revision.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TreatmentRevision'
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '500': {$ref: '#/components/responses/InternalError'}
-  /api/v1/treatments/revisions/{revisionId}/replay:
-    post:
-      operationId: replayTreatmentRevision
-      summary: Replay an immutable Treatment revision historically or counterfactually.
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/TreatmentRevisionId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TreatmentReplayRequest'
-      responses:
-        '200':
-          description: Deterministic Treatment replay report.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TreatmentReplayReport'
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ReplayUnavailable'}
-        '502': {$ref: '#/components/responses/BadGateway'}
-        '503': {$ref: '#/components/responses/ServiceUnavailable'}
-  /api/v1/treatments/revisions/{revisionId}/regression-export:
-    get:
-      operationId: exportTreatmentRegressionCase
-      summary: Export one frozen Treatment developer regression case.
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/TreatmentRevisionId'
-      responses:
-        '200':
-          description: Regression dataset envelope.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/JsonObject'}
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ReplayUnavailable'}
-        '502': {$ref: '#/components/responses/BadGateway'}
-        '503': {$ref: '#/components/responses/ServiceUnavailable'}
-  /api/v1/treatments/revisions/{revisionId}/accept:
-    post:
-      operationId: acceptTreatmentRevision
-      summary: Atomically accept one Treatment revision and project its TrainingPlan.
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/TreatmentRevisionId'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionRequest'}
-      responses:
-        '200':
-          description: Accepted Treatment and executable TrainingPlan projection.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionResponse'}
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '500': {$ref: '#/components/responses/InternalError'}
-        '503': {$ref: '#/components/responses/ServiceUnavailable'}
-  /api/v1/treatments/revisions/{revisionId}/reject:
-    post:
-      operationId: rejectTreatmentRevision
-      summary: Reject one proposed Treatment revision.
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/TreatmentRevisionId'
-      responses:
-        '204': {description: Treatment revision rejected.}
-        '400': {$ref: '#/components/responses/InvalidRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/outcomes:
     post:
       operationId: recordOutcome
@@ -2194,7 +2013,7 @@ paths:
   /api/v1/training/{id}/reassess:
     post:
       operationId: reassessTrainingPlan
-      summary: Reassess training feedback and optionally propose a new Treatment revision.
+      summary: Record reassessment feedback as an Outcome; never changes or proposes a plan.
       security: [{bearerAuth: []}]
       parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
       requestBody:
@@ -2291,7 +2110,7 @@ paths:
     post:
       operationId: generatePlanProposal
       summary: Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
-      description: Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+      description: Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -2918,13 +2737,6 @@ components:
         format: uuid
     DiagnosisAnalysisId:
       name: analysisId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    TreatmentRevisionId:
-      name: revisionId
       in: path
       required: true
       schema:
@@ -5617,178 +5429,11 @@ components:
         comparison: {$ref: '#/components/schemas/DiagnosisReplayComparison'}
         output:
           $ref: '#/components/schemas/JsonObject'
-    TreatmentInterventionDraft:
-      type: object
-      additionalProperties: false
-      required:
-      - kind
-      - title
-      - description
-      - prescription
-      properties:
-        kind:
-          type: string
-        title:
-          type: string
-        description:
-          type: string
-        prescription:
-          $ref: '#/components/schemas/JsonObject'
-    TreatmentPlanContent:
-      type: object
-      additionalProperties: false
-      required:
-      - summary
-      - goal
-      - duration_weeks
-      - interventions
-      - daily_habits
-      - expected_timeline
-      - warning_signs
-      - review_triggers
-      - safety_notes
-      properties:
-        summary:
-          type: string
-        goal:
-          type: string
-        duration_weeks:
-          type: integer
-        interventions:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentInterventionDraft'
-        daily_habits:
-          $ref: '#/components/schemas/StringArray'
-        expected_timeline:
-          type: string
-        warning_signs:
-          $ref: '#/components/schemas/StringArray'
-        review_triggers:
-          $ref: '#/components/schemas/StringArray'
-        safety_notes:
-          $ref: '#/components/schemas/StringArray'
-    TreatmentProposalRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        diagnosis_analysis_id:
-          type: string
-          format: uuid
-        user_constraints: {$ref: '#/components/schemas/JsonObject'}
-        change_reason: {type: string, maxLength: 1000}
-    TreatmentProposalResponse:
-      type: object
-      additionalProperties: false
-      required: [proposal]
-      properties:
-        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
-    CurrentTreatmentResponse:
-      type: object
-      additionalProperties: false
-      required: [treatment]
-      properties:
-        treatment:
-          anyOf:
-          - {$ref: '#/components/schemas/Treatment'}
-          - {type: 'null'}
-    TreatmentRevisionListResponse:
-      type: object
-      additionalProperties: false
-      required: [revisions]
-      properties:
-        revisions:
-          type: array
-          items: {$ref: '#/components/schemas/TreatmentRevision'}
-    AcceptTreatmentRevisionRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        consultation_id:
-          anyOf:
-          - {type: string, format: uuid}
-          - {type: 'null'}
-    AcceptTreatmentRevisionResponse:
-      type: object
-      additionalProperties: false
-      required: [treatment, training_plan]
-      properties:
-        treatment: {$ref: '#/components/schemas/Treatment'}
-        training_plan: {$ref: '#/components/schemas/TrainingPlan'}
-    TreatmentReplayRequest:
-      type: object
-      additionalProperties: false
-      required: [mode]
-      properties:
-        mode: {type: string, enum: [historical, counterfactual]}
-        configuration_id: {type: string}
-    TreatmentReplayCheck:
-      type: object
-      additionalProperties: false
-      required: [name, match]
-      properties:
-        name: {type: string}
-        match: {type: boolean}
-        baseline: {type: string}
-        candidate: {type: string}
-    TreatmentReplayLayer:
-      type: object
-      additionalProperties: false
-      required: [match, checks]
-      properties:
-        match: {type: boolean}
-        checks:
-          type: array
-          items: {$ref: '#/components/schemas/TreatmentReplayCheck'}
-    TreatmentReplaySnapshot:
-      type: object
-      additionalProperties: false
-      required: [status, governance_verdict, intervention_count, intervention_kinds, evidence_ids, warning_sign_count, review_trigger_count, duration_weeks, summary, goal, intervention_titles]
-      properties:
-        status: {type: string}
-        governance_verdict: {type: string}
-        intervention_count: {type: integer, minimum: 0}
-        intervention_kinds: {$ref: '#/components/schemas/StringArray'}
-        evidence_ids: {$ref: '#/components/schemas/StringArray'}
-        warning_sign_count: {type: integer, minimum: 0}
-        review_trigger_count: {type: integer, minimum: 0}
-        duration_weeks: {type: integer, minimum: 0}
-        summary: {type: string}
-        goal: {type: string}
-        intervention_titles: {$ref: '#/components/schemas/StringArray'}
-    TreatmentReplayComparison:
-      type: object
-      additionalProperties: false
-      required: [hard, semantic, presentation]
-      properties:
-        hard: {$ref: '#/components/schemas/TreatmentReplayLayer'}
-        semantic: {$ref: '#/components/schemas/TreatmentReplayLayer'}
-        presentation: {$ref: '#/components/schemas/TreatmentReplayLayer'}
-    TreatmentReplayReport:
-      type: object
-      additionalProperties: false
-      required: [mode, source_revision_id, source_configuration_id, target_configuration_id, input_fingerprint, artifact_integrity, source_generation_decision, generation_decision, baseline, replay, comparison, output]
-      properties:
-        mode: {type: string, enum: [historical, counterfactual]}
-        source_revision_id: {type: string, format: uuid}
-        source_configuration_id: {type: string}
-        target_configuration_id: {type: string}
-        input_fingerprint: {type: string}
-        artifact_integrity: {$ref: '#/components/schemas/TreatmentReplayLayer'}
-        source_generation_decision: {$ref: '#/components/schemas/JsonObject'}
-        generation_decision: {$ref: '#/components/schemas/JsonObject'}
-        baseline: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
-        replay: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
-        comparison: {$ref: '#/components/schemas/TreatmentReplayComparison'}
-        output: {$ref: '#/components/schemas/JsonObject'}
     RecordOutcomeRequest:
       type: object
       additionalProperties: false
       required: [source_type, source_key, kind]
       properties:
-        treatment_id: {type: string, format: uuid}
-        treatment_revision_id: {type: string, format: uuid}
-        intervention_id: {type: string, format: uuid}
         source_type: {type: string, minLength: 1}
         source_key: {type: string, minLength: 1}
         kind: {type: string, minLength: 1}
@@ -5815,210 +5460,11 @@ components:
         outcomes:
           type: array
           items: {$ref: '#/components/schemas/Outcome'}
-    Intervention:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - treatment_id
-      - treatment_revision_id
-      - kind
-      - title
-      - description
-      - prescription
-      - position
-      - status
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
-          type: string
-          format: uuid
-        kind:
-          type: string
-        title:
-          type: string
-        description:
-          type: string
-        prescription:
-          $ref: '#/components/schemas/JsonObject'
-        position:
-          type: integer
-        status:
-          type: string
-        started_at:
-          type: string
-          format: date-time
-        ended_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-    TreatmentRevision:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - treatment_id
-      - revision
-      - acceptance_state
-      - lifecycle_state
-      - source_body_state_revision
-      - source_diagnosis_analysis_id
-      - goal
-      - duration_weeks
-      - plan
-      - user_constraints
-      - evidence_ids
-      - governance
-      - agent_configuration_id
-      - agent_configuration
-      - execution_provenance
-      - evidence_acquisition_trace
-      - generation_decision_trace
-      - acceptance_decision_trace
-      - rollout_provenance
-      - change_reason
-      - created_at
-      - interventions
-      properties:
-        id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        revision:
-          type: integer
-        acceptance_state:
-          type: string
-          enum:
-          - proposed
-          - accepted
-          - rejected
-        lifecycle_state:
-          type: string
-          enum:
-          - active
-          - review_recommended
-          - paused
-          - superseded
-          - completed
-        source_body_state_revision:
-          type: integer
-        source_diagnosis_analysis_id:
-          type: string
-          format: uuid
-        goal:
-          type: string
-        duration_weeks:
-          type: integer
-        plan:
-          $ref: '#/components/schemas/TreatmentPlanContent'
-        user_constraints:
-          $ref: '#/components/schemas/JsonObject'
-        evidence_ids:
-          $ref: '#/components/schemas/StringArray'
-        governance:
-          $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id:
-          type: string
-        agent_configuration:
-          $ref: '#/components/schemas/JsonObject'
-        execution_provenance:
-          $ref: '#/components/schemas/JsonObject'
-        evidence_acquisition_trace:
-          $ref: '#/components/schemas/JsonObject'
-        generation_decision_trace:
-          $ref: '#/components/schemas/JsonObject'
-        acceptance_decision_trace:
-          $ref: '#/components/schemas/JsonObject'
-        rollout_provenance:
-          $ref: '#/components/schemas/JsonObject'
-        change_reason:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        accepted_at:
-          type: string
-          format: date-time
-        interventions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Intervention'
-    TreatmentStatusReason:
-      type: object
-      additionalProperties: false
-      required: []
-      properties:
-        code:
-          type: string
-        revision:
-          type: integer
-        change_type:
-          type: string
-        concern_key:
-          type: string
-        message:
-          type: string
-    Treatment:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - current_revision
-      - status
-      - status_reasons
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        current_revision:
-          type: integer
-        status:
-          type: string
-          enum:
-          - active
-          - review_recommended
-          - paused
-          - superseded
-          - completed
-        source_body_state_revision:
-          type: integer
-        source_diagnosis_analysis_id:
-          type: string
-          format: uuid
-        status_reasons:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentStatusReason'
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        current:
-          $ref: '#/components/schemas/TreatmentRevision'
     TrainingExerciseLogInput:
       type: object
       additionalProperties: false
       required: [name, completed]
       properties:
-        intervention_id: {type: string, format: uuid}
         name: {type: string}
         completed: {type: boolean}
     TrainingLog:
@@ -6028,8 +5474,6 @@ components:
       properties:
         id: {type: string, format: uuid}
         plan_id: {type: string, format: uuid}
-        treatment_revision_id: {type: string, format: uuid}
-        intervention_id: {type: string, format: uuid}
         date: {type: string, format: date-time}
         exercises:
           type: array
@@ -6076,21 +5520,13 @@ components:
       additionalProperties: false
       properties:
         outcome: {$ref: '#/components/schemas/Outcome'}
-        treatment_status: {type: string}
-        review_recommended: {type: boolean}
-        paused: {type: boolean}
-        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
-        has_proposal: {type: boolean}
-        requires_new_diagnosis: {type: boolean}
     TrainingLogUpdateResponse:
       type: object
       additionalProperties: false
-      required: [message, has_proposal, result]
+      required: [message, result]
       properties:
         message: {type: string}
-        has_proposal: {type: boolean}
         result: {$ref: '#/components/schemas/TrainingFeedbackResult'}
-        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
     TrainingProgress:
       type: object
       additionalProperties: false
@@ -6100,10 +5536,6 @@ components:
         total_checkins: {type: integer, minimum: 0}
         current_week: {type: integer, minimum: 1}
         total_weeks: {type: integer, minimum: 1}
-        treatment_revision_id:
-          anyOf:
-          - {type: string, format: uuid}
-          - {type: 'null'}
         plan_status: {type: string}
     TrainingReassessmentRequest:
       type: object
@@ -6116,9 +5548,6 @@ components:
       additionalProperties: false
       required: [name, description, sets, reps]
       properties:
-        intervention_id:
-          type: string
-          format: uuid
         name:
           type: string
           minLength: 1
@@ -6144,9 +5573,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrainingExercise'
-        source_treatment_revision_id:
-          type: string
-          format: uuid
     TrainingPlan:
       type: object
       additionalProperties: false
@@ -6163,12 +5589,6 @@ components:
           type: string
           format: uuid
         consultation_id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
           type: string
           format: uuid
         status:
@@ -6205,15 +5625,6 @@ components:
       - created_at
       properties:
         id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
-          type: string
-          format: uuid
-        intervention_id:
           type: string
           format: uuid
         source_type:
@@ -6301,13 +5712,10 @@ components:
       - can_request_diagnosis
       - can_review_diagnosis
       - can_generate_treatment
-      - can_accept_treatment
       - can_execute_treatment
       - can_record_outcome
-      - can_review_treatment
       - requires_safety_review
       - requires_diagnosis_review
-      - requires_treatment_review
       properties:
         can_continue_consultation:
           type: boolean
@@ -6319,19 +5727,13 @@ components:
           type: boolean
         can_generate_treatment:
           type: boolean
-        can_accept_treatment:
-          type: boolean
         can_execute_treatment:
           type: boolean
         can_record_outcome:
           type: boolean
-        can_review_treatment:
-          type: boolean
         requires_safety_review:
           type: boolean
         requires_diagnosis_review:
-          type: boolean
-        requires_treatment_review:
           type: boolean
     WorkspaceAction:
       type: object
@@ -6358,7 +5760,6 @@ components:
       required:
       - generated_at
       - profile_ready
-      - treatment_revisions
       - recent_outcomes
       - trends
       - capabilities
@@ -6374,14 +5775,8 @@ components:
           type: boolean
         diagnosis:
           $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
-        treatment:
-          $ref: '#/components/schemas/Treatment'
         training_plan:
           $ref: '#/components/schemas/TrainingPlan'
-        treatment_revisions:
-          type: array
-          items:
-            $ref: '#/components/schemas/TreatmentRevision'
         recent_outcomes:
           type: array
           items:

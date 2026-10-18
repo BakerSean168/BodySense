@@ -7,13 +7,10 @@
  */
 import * as zod from 'zod/mini';
 import { TrainingFeedbackResult } from './trainingFeedbackResult.zod';
-import { TreatmentRevision } from './treatmentRevision.zod';
 
 export const TrainingLogUpdateResponse = /*#__PURE__*/ zod.strictObject({
   "message": /*#__PURE__*/ zod.string(),
-  "has_proposal": /*#__PURE__*/ zod.boolean(),
-  "result": TrainingFeedbackResult,
-  "proposal": /*#__PURE__*/ zod.optional(TreatmentRevision)
+  "result": TrainingFeedbackResult
 });
 
 export type TrainingLogUpdateResponse = zod.input<typeof TrainingLogUpdateResponse>;

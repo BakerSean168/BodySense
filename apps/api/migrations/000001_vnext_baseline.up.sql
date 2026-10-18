@@ -760,29 +760,6 @@ CREATE TABLE public.interaction_resumes (
 
 
 --
--- Name: interventions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.interventions (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    treatment_id uuid NOT NULL,
-    treatment_revision_id uuid NOT NULL,
-    kind character varying(40) NOT NULL,
-    title text NOT NULL,
-    description text DEFAULT ''::text NOT NULL,
-    prescription jsonb DEFAULT '{}'::jsonb NOT NULL,
-    "position" integer DEFAULT 0 NOT NULL,
-    status character varying(20) DEFAULT 'proposed'::character varying NOT NULL,
-    started_at timestamp with time zone,
-    ended_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT interventions_status_check CHECK (((status)::text = ANY (ARRAY[('proposed'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text, ('completed'::character varying)::text, ('cancelled'::character varying)::text, ('superseded'::character varying)::text])))
-);
-
-
---
 -- Name: job_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1084,9 +1061,6 @@ CREATE TABLE public.messages (
 CREATE TABLE public.outcomes (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
-    treatment_id uuid,
-    treatment_revision_id uuid,
-    intervention_id uuid,
     source_type character varying(40) NOT NULL,
     source_key text NOT NULL,
     kind character varying(50) NOT NULL,
@@ -1359,8 +1333,6 @@ CREATE TABLE public.training_logs (
     notes text,
     is_checked_in boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    treatment_revision_id uuid,
-    intervention_id uuid,
     outcome_recorded_at timestamp with time zone
 );
 
@@ -1380,89 +1352,8 @@ CREATE TABLE public.training_plans (
     current_week integer DEFAULT 1 NOT NULL,
     phases jsonb DEFAULT '[]'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    treatment_id uuid,
-    treatment_revision_id uuid,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
     status_revision bigint DEFAULT 0 NOT NULL CHECK (status_revision >= 0)
-);
-
-
---
--- Name: treatment_revisions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.treatment_revisions (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    treatment_id uuid NOT NULL,
-    revision integer NOT NULL,
-    acceptance_state character varying(20) DEFAULT 'proposed'::character varying NOT NULL,
-    lifecycle_state character varying(30) DEFAULT 'review_recommended'::character varying NOT NULL,
-    source_body_state_revision bigint NOT NULL,
-    source_diagnosis_analysis_id uuid NOT NULL,
-    goal text NOT NULL,
-    duration_weeks integer NOT NULL,
-    plan jsonb NOT NULL,
-    user_constraints jsonb DEFAULT '{}'::jsonb NOT NULL,
-    evidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
-    governance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    change_reason text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    accepted_at timestamp with time zone,
-    agent_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
-    agent_configuration jsonb DEFAULT '{}'::jsonb NOT NULL,
-    execution_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    evidence_acquisition_trace jsonb DEFAULT '{}'::jsonb NOT NULL,
-    generation_decision_trace jsonb DEFAULT '{}'::jsonb NOT NULL,
-    acceptance_decision_trace jsonb DEFAULT '{}'::jsonb NOT NULL,
-    replay_input jsonb DEFAULT '{}'::jsonb NOT NULL,
-    rollout_provenance jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT treatment_revisions_acceptance_state_check CHECK (((acceptance_state)::text = ANY (ARRAY[('proposed'::character varying)::text, ('accepted'::character varying)::text, ('rejected'::character varying)::text]))),
-    CONSTRAINT treatment_revisions_duration_weeks_check CHECK ((duration_weeks > 0)),
-    CONSTRAINT treatment_revisions_lifecycle_state_check CHECK (((lifecycle_state)::text = ANY (ARRAY[('active'::character varying)::text, ('review_recommended'::character varying)::text, ('paused'::character varying)::text, ('superseded'::character varying)::text, ('completed'::character varying)::text])))
-);
-
-
---
--- Name: treatment_rollout_observations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.treatment_rollout_observations (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    source_revision_id uuid NOT NULL,
-    stage character varying(24) NOT NULL,
-    subject_bucket integer NOT NULL,
-    canary_bps integer DEFAULT 0 NOT NULL,
-    champion_configuration_id character varying(80) CONSTRAINT treatment_rollout_observatio_champion_configuration_id_not_null NOT NULL,
-    challenger_configuration_id character varying(80) CONSTRAINT treatment_rollout_observati_challenger_configuration_i_not_null NOT NULL,
-    served_configuration_id character varying(80) NOT NULL,
-    shadow_configuration_id character varying(80) DEFAULT ''::character varying NOT NULL,
-    promotion_record character varying(80) DEFAULT ''::character varying NOT NULL,
-    comparison jsonb DEFAULT '{}'::jsonb NOT NULL,
-    unsafe_relaxation boolean DEFAULT false NOT NULL,
-    forbidden_side_effect boolean DEFAULT false NOT NULL,
-    configuration_mismatch boolean DEFAULT false NOT NULL,
-    shadow_error text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT treatment_rollout_observations_canary_bps_check CHECK (((canary_bps >= 0) AND (canary_bps <= 10000))),
-    CONSTRAINT treatment_rollout_observations_subject_bucket_check CHECK (((subject_bucket >= 0) AND (subject_bucket < 10000)))
-);
-
-
---
--- Name: treatments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.treatments (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    current_revision integer DEFAULT 0 NOT NULL,
-    status character varying(30) DEFAULT 'review_recommended'::character varying NOT NULL,
-    source_body_state_revision bigint,
-    source_diagnosis_analysis_id uuid,
-    status_reasons jsonb DEFAULT '[]'::jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT treatments_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('review_recommended'::character varying)::text, ('paused'::character varying)::text, ('superseded'::character varying)::text, ('completed'::character varying)::text])))
 );
 
 
@@ -2036,14 +1927,6 @@ ALTER TABLE ONLY public.interaction_resumes
 
 
 --
--- Name: interventions interventions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interventions
-    ADD CONSTRAINT interventions_pkey PRIMARY KEY (id);
-
-
---
 -- Name: job_events job_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2362,46 +2245,6 @@ ALTER TABLE ONLY public.training_logs
 ALTER TABLE ONLY public.training_plans
     ADD CONSTRAINT training_plans_pkey PRIMARY KEY (id);
 ALTER TABLE public.training_plans ADD CONSTRAINT training_plans_owner_identity UNIQUE (user_id, id);
-
-
---
--- Name: treatment_revisions treatment_revisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_revisions
-    ADD CONSTRAINT treatment_revisions_pkey PRIMARY KEY (id);
-
-
---
--- Name: treatment_revisions treatment_revisions_treatment_id_revision_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_revisions
-    ADD CONSTRAINT treatment_revisions_treatment_id_revision_key UNIQUE (treatment_id, revision);
-
-
---
--- Name: treatment_rollout_observations treatment_rollout_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_rollout_observations
-    ADD CONSTRAINT treatment_rollout_observations_pkey PRIMARY KEY (id);
-
-
---
--- Name: treatments treatments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatments
-    ADD CONSTRAINT treatments_pkey PRIMARY KEY (id);
-
-
---
--- Name: treatments treatments_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatments
-    ADD CONSTRAINT treatments_user_id_key UNIQUE (user_id);
 
 
 --
@@ -2823,20 +2666,6 @@ CREATE INDEX idx_document_indicator_reviews_user_created ON public.document_indi
 
 
 --
--- Name: idx_interventions_revision; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_interventions_revision ON public.interventions USING btree (treatment_revision_id, "position");
-
-
---
--- Name: idx_interventions_user_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_interventions_user_status ON public.interventions USING btree (user_id, status, created_at DESC);
-
-
---
 -- Name: idx_job_events_job_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3047,13 +2876,6 @@ CREATE INDEX idx_outcomes_concern ON public.outcomes USING btree (user_id, conce
 
 
 --
--- Name: idx_outcomes_treatment; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_outcomes_treatment ON public.outcomes USING btree (treatment_id, occurred_at DESC);
-
-
---
 -- Name: idx_outcomes_user_occurred; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3167,13 +2989,6 @@ CREATE INDEX idx_thread_projections_user_updated ON public.thread_projections US
 
 
 --
--- Name: idx_training_logs_intervention; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_training_logs_intervention ON public.training_logs USING btree (intervention_id, date DESC);
-
-
---
 -- Name: idx_training_logs_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3188,13 +3003,6 @@ CREATE INDEX idx_training_logs_user_date ON public.training_logs USING btree (us
 
 
 --
--- Name: idx_training_plans_treatment_revision; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_training_plans_treatment_revision ON public.training_plans USING btree (treatment_revision_id) WHERE (treatment_revision_id IS NOT NULL);
-
-
---
 -- Name: idx_training_plans_user_active; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3206,34 +3014,6 @@ CREATE UNIQUE INDEX idx_training_plans_treatment_revision ON public.training_pla
 --
 
 CREATE INDEX idx_training_plans_user_id ON public.training_plans USING btree (user_id);
-
-
---
--- Name: idx_treatment_revisions_agent_configuration; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_treatment_revisions_agent_configuration ON public.treatment_revisions USING btree (agent_configuration_id, created_at DESC) WHERE ((agent_configuration_id)::text <> ''::text);
-
-
---
--- Name: idx_treatment_revisions_source_analysis; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_treatment_revisions_source_analysis ON public.treatment_revisions USING btree (source_diagnosis_analysis_id);
-
-
---
--- Name: idx_treatment_revisions_treatment_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_treatment_revisions_treatment_created ON public.treatment_revisions USING btree (treatment_id, revision DESC);
-
-
---
--- Name: idx_treatment_rollout_observations_pair_stage; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_treatment_rollout_observations_pair_stage ON public.treatment_rollout_observations USING btree (champion_configuration_id, challenger_configuration_id, stage, canary_bps, created_at DESC);
 
 
 --
@@ -4099,30 +3879,6 @@ ALTER TABLE ONLY public.interaction_resumes
 
 
 --
--- Name: interventions interventions_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interventions
-    ADD CONSTRAINT interventions_treatment_id_fkey FOREIGN KEY (treatment_id) REFERENCES public.treatments(id) ON DELETE CASCADE;
-
-
---
--- Name: interventions interventions_treatment_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interventions
-    ADD CONSTRAINT interventions_treatment_revision_id_fkey FOREIGN KEY (treatment_revision_id) REFERENCES public.treatment_revisions(id) ON DELETE CASCADE;
-
-
---
--- Name: interventions interventions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interventions
-    ADD CONSTRAINT interventions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
 -- Name: job_events job_events_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4232,30 +3988,6 @@ ALTER TABLE ONLY public.messages
 
 ALTER TABLE ONLY public.posture_analysis_runs
     ADD CONSTRAINT posture_analysis_runs_user_asset_fkey FOREIGN KEY (user_id, asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE CASCADE;
-
-
---
--- Name: outcomes outcomes_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.outcomes
-    ADD CONSTRAINT outcomes_intervention_id_fkey FOREIGN KEY (intervention_id) REFERENCES public.interventions(id) ON DELETE SET NULL;
-
-
---
--- Name: outcomes outcomes_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.outcomes
-    ADD CONSTRAINT outcomes_treatment_id_fkey FOREIGN KEY (treatment_id) REFERENCES public.treatments(id) ON DELETE SET NULL;
-
-
---
--- Name: outcomes outcomes_treatment_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.outcomes
-    ADD CONSTRAINT outcomes_treatment_revision_id_fkey FOREIGN KEY (treatment_revision_id) REFERENCES public.treatment_revisions(id) ON DELETE SET NULL;
 
 
 --
@@ -4395,27 +4127,11 @@ ALTER TABLE ONLY public.thread_projections
 
 
 --
--- Name: training_logs training_logs_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_intervention_id_fkey FOREIGN KEY (intervention_id) REFERENCES public.interventions(id) ON DELETE SET NULL;
-
-
---
 -- Name: training_logs training_logs_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.training_logs
     ADD CONSTRAINT training_logs_plan_id_fkey FOREIGN KEY (user_id, plan_id) REFERENCES public.training_plans(user_id, id) ON DELETE CASCADE;
-
-
---
--- Name: training_logs training_logs_treatment_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_logs
-    ADD CONSTRAINT training_logs_treatment_revision_id_fkey FOREIGN KEY (treatment_revision_id) REFERENCES public.treatment_revisions(id) ON DELETE SET NULL;
 
 
 --
@@ -4427,67 +4143,11 @@ ALTER TABLE ONLY public.training_logs
 
 
 --
--- Name: training_plans training_plans_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_plans
-    ADD CONSTRAINT training_plans_treatment_id_fkey FOREIGN KEY (treatment_id) REFERENCES public.treatments(id) ON DELETE SET NULL;
-
-
---
--- Name: training_plans training_plans_treatment_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.training_plans
-    ADD CONSTRAINT training_plans_treatment_revision_id_fkey FOREIGN KEY (treatment_revision_id) REFERENCES public.treatment_revisions(id) ON DELETE SET NULL;
-
-
---
 -- Name: training_plans training_plans_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.training_plans
     ADD CONSTRAINT training_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: treatment_revisions treatment_revisions_source_diagnosis_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_revisions
-    ADD CONSTRAINT treatment_revisions_source_diagnosis_analysis_id_fkey FOREIGN KEY (source_diagnosis_analysis_id) REFERENCES public.diagnosis_analyses(id) ON DELETE RESTRICT;
-
-
---
--- Name: treatment_revisions treatment_revisions_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_revisions
-    ADD CONSTRAINT treatment_revisions_treatment_id_fkey FOREIGN KEY (treatment_id) REFERENCES public.treatments(id) ON DELETE CASCADE;
-
-
---
--- Name: treatment_rollout_observations treatment_rollout_observations_source_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatment_rollout_observations
-    ADD CONSTRAINT treatment_rollout_observations_source_revision_id_fkey FOREIGN KEY (source_revision_id) REFERENCES public.treatment_revisions(id) ON DELETE CASCADE;
-
-
---
--- Name: treatments treatments_source_diagnosis_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatments
-    ADD CONSTRAINT treatments_source_diagnosis_analysis_id_fkey FOREIGN KEY (source_diagnosis_analysis_id) REFERENCES public.diagnosis_analyses(id) ON DELETE SET NULL;
-
-
---
--- Name: treatments treatments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.treatments
-    ADD CONSTRAINT treatments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -4892,7 +4552,7 @@ CREATE TABLE public.user_asset_storage_cleanups (
 --
 
 -- TP-002 slice 1: accepted prescriptions and proposals are separate authorities.
--- Existing Treatment projection columns are removed with their consumers in slice 3.
+-- TP-002 slice 3 removed the Treatment aggregate and its plan/log/outcome links.
 CREATE TABLE public.plan_proposals (
     id uuid PRIMARY KEY,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,

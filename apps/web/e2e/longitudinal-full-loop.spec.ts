@@ -142,141 +142,80 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "assess Diagnosis candidate",
   );
 
-  const proposalResponse = await expectJson<{
-    proposal: {
-      id: string;
-      acceptance_state: string;
-      source_diagnosis_analysis_id: string;
-      source_body_state_revision: number;
-      agent_configuration_id: string;
-    };
+  // Generation only proposes: the Treatment Agent's draft becomes a pending
+  // agent PlanProposal(create). Nothing is accepted or executable yet.
+  const generationCommand = {
+    diagnosisAnalysisId: diagnosis.analysis_id,
+    userConstraints: { available_minutes_per_day: 10 },
+    changeReason: "initial accepted strategy",
+    idempotencyKey: `plan-generation-${conversationId}`,
+  };
+  const generated = await expectJson<{
+    proposalId: string;
+    kind: string;
+    state: string;
+    initiatedBy: string;
+    contentFingerprint: string;
+    draft: { content: { sessions: unknown[] } };
   }>(
-    await request.post(`${apiBase}/api/v1/treatments/proposals`, {
+    await request.post(`${apiBase}/api/v1/plan-proposals/generations`, {
       headers: authHeaders,
-      data: {
-        diagnosis_analysis_id: diagnosis.analysis_id,
-        user_constraints: { available_minutes_per_day: 10 },
-        change_reason: "initial accepted strategy",
-      },
+      data: generationCommand,
       timeout: 60_000,
     }),
-    "generate Treatment proposal",
+    "generate agent PlanProposal",
   );
-  expect(proposalResponse.proposal.acceptance_state).toBe("proposed");
-  expect(proposalResponse.proposal.source_diagnosis_analysis_id).toBe(
-    diagnosis.analysis_id,
-  );
+  expect(generated.kind).toBe("create");
+  expect(generated.state).toBe("pending");
+  expect(generated.initiatedBy).toBe("agent");
+  expect(generated.draft.content.sessions.length).toBeGreaterThan(0);
 
-  const historicalReplay = await expectJson<{
-    mode: string;
-    artifact_integrity: { match: boolean };
-    comparison: {
-      hard: { match: boolean };
-      semantic: { match: boolean };
-      presentation: { match: boolean };
-    };
+  // Retrying the same command returns the stored proposal.
+  const replayedGeneration = await expectJson<{ proposalId: string }>(
+    await request.post(`${apiBase}/api/v1/plan-proposals/generations`, {
+      headers: authHeaders,
+      data: generationCommand,
+      timeout: 60_000,
+    }),
+    "replay agent PlanProposal generation",
+  );
+  expect(replayedGeneration.proposalId).toBe(generated.proposalId);
+
+  const pendingWorkspace = await expectJson<{
+    training_plan?: { id: string };
+    capabilities: { can_execute_treatment: boolean };
+  }>(
+    await request.get(`${apiBase}/api/v1/health-workspace`, {
+      headers: authHeaders,
+    }),
+    "load HealthWorkspace with a pending proposal",
+  );
+  expect(pendingWorkspace.training_plan).toBeUndefined();
+  expect(pendingWorkspace.capabilities.can_execute_treatment).toBe(false);
+
+  // Only the user's explicit accept writes the plan.
+  const acceptance = await expectJson<{
+    planId: string;
+    revisionId: string;
+    proposalId: string;
   }>(
     await request.post(
-      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
-      { headers: authHeaders, data: { mode: "historical" } },
-    ),
-    "historical Treatment replay",
-  );
-  expect(historicalReplay.mode).toBe("historical");
-  expect(historicalReplay.artifact_integrity.match).toBe(true);
-  expect(historicalReplay.comparison.hard.match).toBe(true);
-  expect(historicalReplay.comparison.semantic.match).toBe(true);
-  expect(historicalReplay.comparison.presentation.match).toBe(true);
-
-  const counterfactualTarget = proposalResponse.proposal.agent_configuration_id;
-  const counterfactualReplay = await expectJson<{
-    mode: string;
-    target_configuration_id: string;
-    comparison: { hard: { match: boolean } };
-  }>(
-    await request.post(
-      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
+      `${apiBase}/api/v1/plan-proposals/${generated.proposalId}/accept`,
       {
         headers: authHeaders,
         data: {
-          mode: "counterfactual",
-          configuration_id: counterfactualTarget,
+          decisionId: crypto.randomUUID(),
+          presentedFingerprint: generated.contentFingerprint,
+          idempotencyKey: `plan-accept-${generated.proposalId}`,
         },
-        timeout: 60_000,
       },
     ),
-    "current-config Treatment counterfactual replay",
+    "accept agent PlanProposal",
   );
-  expect(counterfactualReplay.mode).toBe("counterfactual");
-  expect(counterfactualReplay.target_configuration_id).toBe(
-    counterfactualTarget,
-  );
-  expect(counterfactualReplay.comparison.hard.match).toBe(true);
-
-  const retiredReplay = await request.post(
-    `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
-    {
-      headers: authHeaders,
-      data: {
-        mode: "counterfactual",
-        configuration_id: "treat-config-85718f8e90ac9d80",
-      },
-    },
-  );
-  expect(retiredReplay.status()).toBe(422);
-  expect(await retiredReplay.json()).toMatchObject({
-    error: { code: "UNKNOWN_AGENT_CONFIGURATION" },
-  });
-
-  const regressionExport = await expectJson<{
-    schema_target: string;
-    case: { inputs: { body_state_revision: number } };
-  }>(
-    await request.get(
-      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/regression-export`,
-      { headers: authHeaders },
-    ),
-    "Treatment regression export",
-  );
-  expect(regressionExport.schema_target).toBe("treatment_qualification_v1");
-  expect(regressionExport.case.inputs.body_state_revision).toBe(
-    proposalResponse.proposal.source_body_state_revision,
-  );
-
-  const proposalAfterReplay = await expectJson<{ acceptance_state: string }>(
-    await request.get(
-      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}`,
-      { headers: authHeaders },
-    ),
-    "Treatment proposal after replay",
-  );
-  expect(proposalAfterReplay.acceptance_state).toBe("proposed");
-
-  const acceptance = await expectJson<{
-    treatment: { status: string; current: { id: string } };
-    training_plan: {
-      id: string;
-      status: string;
-      treatment_revision_id: string;
-    };
-  }>(
-    await request.post(
-      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/accept`,
-      {
-        headers: authHeaders,
-        data: { consultation_id: conversationId },
-      },
-    ),
-    "accept Treatment and create TrainingPlan",
-  );
-  expect(acceptance.treatment.status).toBe("active");
-  expect(acceptance.training_plan.status).toBe("active");
-  expect(acceptance.training_plan.treatment_revision_id).toBe(
-    proposalResponse.proposal.id,
-  );
+  expect(acceptance.proposalId).toBe(generated.proposalId);
 
   const activeWorkspace = await expectJson<{
-    training_plan: { id: string };
+    training_plan: { id: string; status: string };
     capabilities: { can_execute_treatment: boolean };
     actions: Array<{ kind: string; target?: { route?: string } }>;
   }>(
@@ -285,7 +224,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     }),
     "load active HealthWorkspace",
   );
-  expect(activeWorkspace.training_plan.id).toBe(acceptance.training_plan.id);
+  expect(activeWorkspace.training_plan.id).toBe(acceptance.planId);
+  expect(activeWorkspace.training_plan.status).toBe("active");
   expect(activeWorkspace.capabilities.can_execute_treatment).toBe(true);
   expect(activeWorkspace.actions).toContainEqual(
     expect.objectContaining({
@@ -308,7 +248,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   ).toBeVisible();
 
   const checkIn = await request.post(
-    `${apiBase}/api/v1/training/${acceptance.training_plan.id}/checkin`,
+    `${apiBase}/api/v1/training/${acceptance.planId}/checkin`,
     { headers: authHeaders },
   );
   expect(
@@ -319,12 +259,10 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   const feedback = await expectJson<{
     result: {
       outcome: { id: string; body_state_revision: number };
-      treatment_status: string;
-      review_recommended: boolean;
     };
   }>(
     await request.put(
-      `${apiBase}/api/v1/training/${acceptance.training_plan.id}/log`,
+      `${apiBase}/api/v1/training/${acceptance.planId}/log`,
       {
         headers: authHeaders,
         data: {
@@ -344,14 +282,12 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(feedback.result.outcome.body_state_revision).toBeGreaterThan(
     diagnosis.body_state_revision,
   );
-  expect(feedback.result.review_recommended).toBe(true);
-  expect(feedback.result.treatment_status).toBe("review_recommended");
 
   const finalWorkspace = await expectJson<{
-    treatment: { status: string };
+    training_plan: { id: string; status: string };
     capabilities: {
       can_execute_treatment: boolean;
-      requires_treatment_review: boolean;
+      requires_safety_review: boolean;
     };
     recent_outcomes: Array<{
       id: string;
@@ -386,10 +322,12 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     created_revision: feedback.result.outcome.body_state_revision,
   });
   expect(records.facts.some((fact) => fact.id === symptom.id)).toBe(true);
-  // The new Outcome symptom has not been screened: fail closed until its own checklist.
-  expect(finalWorkspace.treatment.status).toBe("paused");
-  expect(finalWorkspace.capabilities.requires_treatment_review).toBe(true);
+  // The new Outcome symptom has not been screened: execution fails closed
+  // until its own checklist, without changing the user's plan status.
+  expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);
+  expect(finalWorkspace.training_plan.id).toBe(acceptance.planId);
+  expect(finalWorkspace.training_plan.status).toBe("active");
   expect(
     finalWorkspace.recent_outcomes.some(
       (outcome) =>

@@ -20,9 +20,10 @@ const integration = fs.readFileSync(
 );
 const server = fs.readFileSync("apps/api/cmd/server/main.go", "utf8");
 
-test("TP-D1 owner lock is an explicit opt-in only, not wired to legacy Server", () => {
-  assert.match(service, /WithIndependentTrainingPlans\(\)/);
-  assert.match(service, /if s\.independentPlans/);
+test("legacy TrainingService no longer takes the TP-D1 owner lock", () => {
+  // TP-002 slice 3: the legacy service creates no plan, so only the
+  // independent TrainingPlan service serializes plan activation per owner.
+  assert.doesNotMatch(service, /lockIndependentTrainingOwner|WithIndependentTrainingPlans/);
   assert.doesNotMatch(server, /WithIndependentTrainingPlans\(/);
 });
 
@@ -35,48 +36,6 @@ test("TP-D1 repository locks a real scoped owner row in the outer transaction", 
   assert.match(repository, /ErrTrainingPlanOwnerNotFound/);
   assert.match(repository, /ErrTrainingPlanOwnerLockRequiresTransaction/);
   assert.doesNotMatch(repository, /pg_advisory_lock/);
-});
-
-test("TP-D1 locks owner before proposal acceptance, not after an idempotency lookup", () => {
-  const activation = service.slice(
-    service.indexOf("func (s *TrainingService) AcceptTreatmentAndEnsurePlan("),
-    service.indexOf("func (s *TrainingService) EnsurePlanForTreatment("),
-  );
-  assert.ok(
-    activation.indexOf("s.lockIndependentTrainingOwner") <
-      activation.indexOf("s.treatment.AcceptProposal"),
-  );
-  assert.ok(
-    activation.indexOf("s.treatment.AcceptProposal") <
-      activation.indexOf("s.EnsurePlanForTreatment"),
-  );
-  assert.match(activation, /s\.unitOfWork\.WithinTransaction/);
-});
-
-test("TP-D1 cannot write in an independent mode with an unlocked or other-owner context", () => {
-  const projection = service.slice(
-    service.indexOf("func (s *TrainingService) EnsurePlanForTreatment("),
-    service.indexOf("func (s *TrainingService) GetPlanByTreatmentRevision("),
-  );
-  assert.match(projection, /independentTrainingOwnerLockKey/);
-  assert.match(projection, /lockedOwner != userID/);
-  assert.match(projection, /ErrIndependentTrainingOwnerLockRequired/);
-  assert.ok(
-    projection.indexOf("lockedOwner != userID") <
-      projection.indexOf("CreatePlan("),
-  );
-});
-
-test("TP-D1 recovery reacquires owner lock within a unit-of-work transaction", () => {
-  const recovery = service.slice(
-    service.indexOf("func (s *TrainingService) EnsureCurrentPlan("),
-    service.indexOf("func (s *TrainingService) GetPlan("),
-  );
-  assert.match(recovery, /s\.unitOfWork\.WithinTransaction/);
-  assert.ok(
-    recovery.indexOf("lockIndependentTrainingOwner") <
-      recovery.indexOf("s.treatment.GetCurrent(lockedCtx"),
-  );
 });
 
 test("TP-D1 native fixture never exposes TCP or uses a shared database", () => {

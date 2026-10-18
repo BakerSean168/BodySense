@@ -33,7 +33,6 @@ import {
 } from "./PersonWindow";
 import { TrainingPlanWindow } from "./TrainingPlanWindow";
 import { TrainerEntryGuard } from "./TrainerEntryGuard";
-import { PlanProposals } from "./PlanProposals";
 import "../body-canvas.css";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
@@ -338,17 +337,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "training":
         return (
           <TrainingPlanWindow
-            proposals={
-              props.workspace ? (
-                <PlanProposals
-                  workspace={props.workspace}
-                  onAccepted={(planId) => {
-                    setSelectedPlanId(planId);
-                    writeSelectedPlanId(planId);
-                  }}
-                />
-              ) : null
-            }
             projected={projected}
             loading={data.loading}
             error={data.error}

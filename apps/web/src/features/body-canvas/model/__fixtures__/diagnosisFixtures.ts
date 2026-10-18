@@ -41,7 +41,6 @@ export function makeWorkspace(
   return {
     generated_at: "2026-10-11T00:00:00Z",
     profile_ready: true,
-    treatment_revisions: [],
     recent_outcomes: [],
     trends: [],
     capabilities: {
@@ -50,13 +49,10 @@ export function makeWorkspace(
       can_request_diagnosis: true,
       can_review_diagnosis: true,
       can_generate_treatment: true,
-      can_accept_treatment: true,
       can_execute_treatment: true,
       can_record_outcome: true,
-      can_review_treatment: true,
       requires_safety_review: false,
       requires_diagnosis_review: false,
-      requires_treatment_review: false,
     },
     actions: [],
     ...overrides,

@@ -53,7 +53,8 @@ test("TP-D1 V2 mode requires the baseline to allow independent active plans", ()
 });
 
 test("TP-D1 fixture distinguishes physical index and service responsibilities", () => {
-  assert.match(harness, /idx_training_plans_treatment_revision/);
+  // TP-002 slice 3 removed the TreatmentRevision column and its index.
+  assert.doesNotMatch(harness, /idx_training_plans_treatment_revision/);
   assert.match(
     harness,
     /GET STACKED DIAGNOSTICS violated_name = CONSTRAINT_NAME/,

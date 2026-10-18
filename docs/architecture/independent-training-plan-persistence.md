@@ -206,6 +206,62 @@ sourceId=treatment_agent:<configurationId>)`. No Treatment revision is
   command under the same key is a 409. If the BodyState revision changed while
   the Agent ran, the proposal is stale: 409 with no write.
 
-The legacy `POST /treatments/proposals` path is unchanged and still writes
-Treatment revisions for its current web consumer. Slice 3 deletes it with
-Treatment, the legacy `/training/*` projections and their consumers.
+Slice 3 removed the legacy `POST /treatments/proposals` path together with
+Treatment (see below).
+
+## Slice 3 · Treatment removed
+
+TrainingPlan + PlanProposal is now the only plan authority. The Treatment
+aggregate, its lifecycle and every link to it are gone:
+
+- **HTTP.** The `/treatments/*` routes are removed. `HealthWorkspace` drops
+  `treatment`, `treatment_revisions`, `can_accept_treatment`,
+  `can_review_treatment` and `requires_treatment_review`.
+  `can_generate_treatment` keeps its Diagnosis + Safety gate (generation yields
+  a pending PlanProposal); `can_execute_treatment` and `can_record_outcome`
+  follow the active TrainingPlan, and execution still needs complete Safety
+  coverage.
+- **Outcomes** stay the user's longitudinal feedback in their own
+  `OutcomeService`/`OutcomeRepository`. `Outcome` loses `treatment_id`,
+  `treatment_revision_id` and `intervention_id`; a user-authored symptom still
+  commits a BodyState fact in the same transaction.
+- **Legacy `/training/*`** stays until TP-003 but no longer creates,
+  supersedes or follows a plan from a Treatment:
+  `AcceptTreatmentAndEnsurePlan`, `EnsurePlanForTreatment`,
+  `EnsureCurrentPlan`, the reassess-driven Treatment regeneration,
+  `SupersedePlansExcept` and `GetPlanByTreatmentRevision` are deleted, and the
+  contract loses its Treatment and intervention fields. Plans are created
+  only by accepting a PlanProposal. The TP-D1 opt-in owner-lock path in the
+  legacy service went with them; the independent TrainingPlan service keeps
+  its own owner lock.
+- **Generation.** `TreatmentService` keeps only the Treatment Agent generation
+  core (`runGeneration`, `GeneratePlanProposal`). The Go decision policy keeps
+  its `treatment-go-acceptance-v1` identity, which Agent configurations pin,
+  but only its generation phase. The deployment route (champion, shadow,
+  canary) is still recorded in `generation_provenance.rolloutProvenance`;
+  the Treatment replay service, the rollout-observation service and
+  `cmd/treatment-rollout-status` are deleted, so no shadow run is executed or
+  observed.
+- **Schema.** The baseline migration is edited in place. Dropped tables:
+  `treatments`, `treatment_revisions`, `interventions`,
+  `treatment_rollout_observations`. Dropped columns with their foreign keys:
+  `training_plans.treatment_id`, `training_plans.treatment_revision_id`,
+  `training_logs.treatment_revision_id`, `training_logs.intervention_id`,
+  `outcomes.treatment_id`, `outcomes.treatment_revision_id`,
+  `outcomes.intervention_id`. Dropped indexes:
+  `idx_training_plans_treatment_revision`, `idx_outcomes_treatment`,
+  `idx_training_logs_intervention`. `checksums.sha256` and
+  `docs/refactor/vnext/schema/database-schema.json` are regenerated; the
+  frozen Phase 00 snapshot under `baseline/` is not.
+- **Privacy erasure** needs no privileged pre-delete any more: the only
+  `ON DELETE RESTRICT` lineage (TreatmentRevision → DiagnosisAnalysis) is
+  gone, so every user-owned row cascades from the user.
+- **Web.** The Treatment panel and the Treatment-backed proposal section are
+  removed; UI-TP-001 rebinds proposals to `/plan-proposals`. Longitudinal E2E
+  creates plans through `/plan-proposals/generations` + `/accept`.
+- **Validation.** `scripts/local-deploy-validate.sh` checks Treatment Agent
+  output as `plan_proposals` rows (`source_id=treatment_agent:<config>`) with
+  a generation decision trace and replay input.
+  `TP002_FULL_CHECKS=1 scripts/plan/test-tp002-pg18.sh` runs the migration and
+  domain validators, `go vet` and the race test suite against a disposable
+  PG18.

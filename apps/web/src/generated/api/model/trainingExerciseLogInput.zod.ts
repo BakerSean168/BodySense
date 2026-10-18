@@ -8,7 +8,6 @@
 import * as zod from 'zod/mini';
 
 export const TrainingExerciseLogInput = /*#__PURE__*/ zod.strictObject({
-  "intervention_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "name": /*#__PURE__*/ zod.string(),
   "completed": /*#__PURE__*/ zod.boolean()
 });

@@ -7,16 +7,9 @@
  */
 import * as zod from 'zod/mini';
 import { Outcome } from './outcome.zod';
-import { TreatmentRevision } from './treatmentRevision.zod';
 
 export const TrainingFeedbackResult = /*#__PURE__*/ zod.strictObject({
-  "outcome": /*#__PURE__*/ zod.optional(Outcome),
-  "treatment_status": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
-  "review_recommended": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.boolean()),
-  "paused": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.boolean()),
-  "proposal": /*#__PURE__*/ zod.optional(TreatmentRevision),
-  "has_proposal": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.boolean()),
-  "requires_new_diagnosis": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.boolean())
+  "outcome": /*#__PURE__*/ zod.optional(Outcome)
 });
 
 export type TrainingFeedbackResult = zod.input<typeof TrainingFeedbackResult>;

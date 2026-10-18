@@ -172,15 +172,7 @@ func (s *PublicServer) UpdateTrainingLog(ctx context.Context, request openapiv1.
 	if err != nil {
 		return nil, err
 	}
-	hasProposal := boolFromAny(result["has_proposal"])
-	response := openapiv1.TrainingLogUpdateResponse{Message: "training log updated", HasProposal: hasProposal, Result: publicResult}
-	if proposal, ok := result["proposal"].(*model.TreatmentRevision); ok && proposal != nil {
-		publicProposal, convertErr := strictTreatmentRevision(proposal)
-		if convertErr != nil {
-			return nil, convertErr
-		}
-		response.Proposal = &publicProposal
-	}
+	response := openapiv1.TrainingLogUpdateResponse{Message: "training log updated", Result: publicResult}
 	return openapiv1.UpdateTrainingLog200JSONResponse(response), nil
 }
 
@@ -271,12 +263,7 @@ func mapTrainingFeedback(body openapiv1.TrainingFeedbackInput) service.TrainingF
 func mapTrainingExercises(items []openapiv1.TrainingExerciseLogInput) []service.TrainingExerciseLogInput {
 	result := make([]service.TrainingExerciseLogInput, 0, len(items))
 	for _, item := range items {
-		mapped := service.TrainingExerciseLogInput{Name: item.Name, Completed: item.Completed}
-		if item.InterventionId != nil {
-			value := uuid.UUID(*item.InterventionId)
-			mapped.InterventionID = &value
-		}
-		result = append(result, mapped)
+		result = append(result, service.TrainingExerciseLogInput{Name: item.Name, Completed: item.Completed})
 	}
 	return result
 }
@@ -289,13 +276,5 @@ func strictTrainingFeedbackResult(result map[string]any) (openapiv1.TrainingFeed
 	if outcome, ok := projected["outcome"].(map[string]any); ok {
 		sanitizeOutcomeMap(outcome)
 	}
-	if proposal, ok := projected["proposal"].(map[string]any); ok {
-		sanitizeTreatmentRevisionMap(proposal)
-	}
 	return strictOpenAPIConvert[openapiv1.TrainingFeedbackResult]("TrainingFeedbackResult", projected)
-}
-
-func boolFromAny(value any) bool {
-	result, _ := value.(bool)
-	return result
 }

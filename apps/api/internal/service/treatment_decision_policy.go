@@ -7,19 +7,20 @@ import (
 	"github.com/bodysense/api/internal/model"
 )
 
+// TreatmentDecisionPolicyV1 keeps its historical identity: Treatment Agent
+// configurations pin it. Since TP-002 slice 3 only the generation phase
+// remains; acceptance is the user's TrainingPlan decision.
 const (
 	TreatmentDecisionPolicyV1   = "treatment-go-acceptance-v1"
 	TreatmentDecisionTraceV1    = "treatment-decision-trace-v1"
 	TreatmentDecisionGeneration = "generation"
-	TreatmentDecisionAcceptance = "acceptance"
 )
 
 type TreatmentDecisionOutcome string
 
 const (
-	TreatmentAllowProposal   TreatmentDecisionOutcome = "allow-proposal"
-	TreatmentAllowAcceptance TreatmentDecisionOutcome = "allow-acceptance"
-	TreatmentBlock           TreatmentDecisionOutcome = "block"
+	TreatmentAllowProposal TreatmentDecisionOutcome = "allow-proposal"
+	TreatmentBlock         TreatmentDecisionOutcome = "block"
 )
 
 type TreatmentDecision struct {
@@ -30,20 +31,16 @@ type TreatmentDecision struct {
 }
 
 type TreatmentDecisionFacts struct {
-	DiagnosisStatus          string                         `json:"diagnosis_status"`
-	CandidateCount           int                            `json:"candidate_count"`
-	FreshnessState           string                         `json:"freshness_state,omitempty"`
-	SafetyEnvelope           *SafetyEnvelopeV2              `json:"safety_envelope"`
-	CandidateAssessmentReady bool                           `json:"candidate_assessment_ready"`
-	ProposalAcceptanceState  model.TreatmentAcceptanceState `json:"proposal_acceptance_state,omitempty"`
-	SourceBodyStateRevision  int64                          `json:"source_body_state_revision,omitempty"`
-	CurrentBodyStateRevision int64                          `json:"current_body_state_revision"`
-	MaterialReviewStatus     model.TreatmentStatus          `json:"material_review_status,omitempty"`
-	MaterialReviewReasons    []TreatmentReviewReason        `json:"material_review_reasons,omitempty"`
+	DiagnosisStatus          string            `json:"diagnosis_status"`
+	CandidateCount           int               `json:"candidate_count"`
+	FreshnessState           string            `json:"freshness_state,omitempty"`
+	SafetyEnvelope           *SafetyEnvelopeV2 `json:"safety_envelope"`
+	CandidateAssessmentReady bool              `json:"candidate_assessment_ready"`
+	CurrentBodyStateRevision int64             `json:"current_body_state_revision"`
 }
 
 // EvaluateTreatmentDecision is the Go-owned deny-overrides authority for
-// proposal generation and acceptance. Model confidence and Agent prose are
+// Treatment Agent generation. Model confidence and Agent prose are
 // intentionally absent from the policy facts.
 func EvaluateTreatmentDecision(
 	policyRevision string,
@@ -60,27 +57,17 @@ func EvaluateTreatmentDecision(
 		decision.Reasons = []string{"unsupported_decision_policy_revision"}
 		return decision
 	}
-	if phase != TreatmentDecisionGeneration && phase != TreatmentDecisionAcceptance {
+	if phase != TreatmentDecisionGeneration {
 		decision.Reasons = []string{"unsupported_decision_phase"}
 		return decision
 	}
-
-	// Preserve the established command-boundary ordering. Acceptance first
-	// verifies that the artifact is still a proposal; generation has no such fact.
-	if phase == TreatmentDecisionAcceptance && facts.ProposalAcceptanceState != model.TreatmentAcceptanceProposed {
-		decision.Reasons = []string{"proposal_not_proposed"}
+	if !treatmentDiagnosisFactsReady(facts) {
+		decision.Reasons = []string{"diagnosis_not_ready"}
 		return decision
 	}
-
-	if phase == TreatmentDecisionGeneration {
-		if !treatmentDiagnosisFactsReady(facts) {
-			decision.Reasons = []string{"diagnosis_not_ready"}
-			return decision
-		}
-		if treatmentFreshnessBlocks(facts.FreshnessState) {
-			decision.Reasons = []string{"diagnosis_not_fresh"}
-			return decision
-		}
+	if treatmentFreshnessBlocks(facts.FreshnessState) {
+		decision.Reasons = []string{"diagnosis_not_fresh"}
+		return decision
 	}
 
 	activeSafety, err := strictTreatmentSafetyReview(facts.SafetyEnvelope, facts.CurrentBodyStateRevision)
@@ -93,38 +80,11 @@ func EvaluateTreatmentDecision(
 		return decision
 	}
 
-	if phase == TreatmentDecisionAcceptance && facts.CurrentBodyStateRevision < facts.SourceBodyStateRevision {
-		decision.Reasons = []string{"body_state_revision_regressed"}
-		return decision
-	}
-	if phase == TreatmentDecisionAcceptance {
-		if !treatmentDiagnosisFactsReady(facts) {
-			decision.Reasons = []string{"diagnosis_not_ready"}
-			return decision
-		}
-		if treatmentFreshnessBlocks(facts.FreshnessState) {
-			decision.Reasons = []string{"diagnosis_not_fresh"}
-			return decision
-		}
-	}
-
 	if !facts.CandidateAssessmentReady {
 		decision.Reasons = []string{"candidate_assessment_required"}
 		return decision
 	}
-
-	if phase == TreatmentDecisionAcceptance && facts.CurrentBodyStateRevision > facts.SourceBodyStateRevision {
-		if facts.MaterialReviewStatus != model.TreatmentStatusActive || len(facts.MaterialReviewReasons) > 0 {
-			decision.Reasons = []string{"material_related_body_state_change"}
-			return decision
-		}
-	}
-
-	if phase == TreatmentDecisionGeneration {
-		decision.Outcome = TreatmentAllowProposal
-	} else {
-		decision.Outcome = TreatmentAllowAcceptance
-	}
+	decision.Outcome = TreatmentAllowProposal
 	return decision
 }
 

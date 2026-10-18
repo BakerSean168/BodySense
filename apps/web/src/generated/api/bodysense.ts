@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import {
-  AcceptTreatmentRevisionResponse,
   AssessmentListResponse,
   AssessmentRegressionExport,
   AssessmentReplayReport,
@@ -31,7 +30,6 @@ import {
   ConsultationThreadResponse,
   ConversationDetailResponse,
   ConversationRunListResponse,
-  CurrentTreatmentResponse,
   CurrentUser,
   DerivedConcernGroupList,
   DiagnosisAnalysisListResponse,
@@ -85,17 +83,11 @@ import {
   TrainingPlanRevisionRecord,
   TrainingPlanStatusReceipt,
   TrainingProgress,
-  TreatmentProposalResponse,
-  TreatmentReplayReport,
-  TreatmentRevision,
-  TreatmentRevisionListResponse,
   UploadListResponse,
   UserProfileResponse,
   UserUpload
 } from './model';
 import type {
-  AcceptTreatmentRevisionRequest,
-  AcceptTreatmentRevisionResponseOutput,
   AppendHealthDocumentReviewRequest,
   AssessmentListResponseOutput,
   AssessmentRegressionExportOutput,
@@ -135,7 +127,6 @@ import type {
   CreateEquipmentAssetRequest,
   CreatePlanProposalRequest,
   CreateUploadRequest,
-  CurrentTreatmentResponseOutput,
   CurrentUserOutput,
   DerivedConcernGroupListOutput,
   DiagnosisAnalysisListResponseOutput,
@@ -173,7 +164,6 @@ import type {
   ListOutcomesParams,
   ListPlanProposalRecordsParams,
   ListRunEventsParams,
-  ListTreatmentRevisionsParams,
   LogoutAcknowledgementOutput,
   NativeDiagnosisDecisionReceiptOutput,
   NativeDiagnosisDecisionRequest,
@@ -222,12 +212,6 @@ import type {
   TrainingPlanStatusReceiptOutput,
   TrainingProgressOutput,
   TrainingReassessmentRequest,
-  TreatmentProposalRequest,
-  TreatmentProposalResponseOutput,
-  TreatmentReplayReportOutput,
-  TreatmentReplayRequest,
-  TreatmentRevisionListResponseOutput,
-  TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
   UpdateEquipmentAssetRequest,
   UpdateInjuryHistoryRequest,
@@ -1845,7 +1829,7 @@ export const getUpdateEquipmentAssetUrl = (id: string,) => {
 }
 
 /**
- * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted Treatment or training log.
+ * Replaces the editable fields under optimistic concurrency (expected_revision is the asset revision). Retired is terminal. An exact replay of the update that produced the current revision returns the current asset. Equipment changes never edit an accepted TrainingPlan revision or training log.
  * @summary Edit an equipment asset, mark it unavailable, or retire it.
  */
 export const updateEquipmentAsset = async (id: string,
@@ -3498,407 +3482,6 @@ export const exportDiagnosisRegressionCase = async (analysisId: string, options?
 
 
 
-export const getGenerateTreatmentProposalUrl = () => {
-
-
-
-
-  return `/api/v1/treatments/proposals`
-}
-
-/**
- * @summary Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
- */
-export const generateTreatmentProposal = async (treatmentProposalRequest: TreatmentProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentProposalResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getGenerateTreatmentProposalUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(treatmentProposalRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: TreatmentProposalResponse, status?: number} = new globalThis.Error();
-    const data : TreatmentProposalResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? TreatmentProposalResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getGetCurrentTreatmentUrl = () => {
-
-
-
-
-  return `/api/v1/treatments/current`
-}
-
-/**
- * @summary Read the deterministic current Treatment review projection without mutating state.
- */
-export const getCurrentTreatment = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CurrentTreatmentResponseOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getGetCurrentTreatmentUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: CurrentTreatmentResponse, status?: number} = new globalThis.Error();
-    const data : CurrentTreatmentResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? CurrentTreatmentResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReviewCurrentTreatmentUrl = () => {
-
-
-
-
-  return `/api/v1/treatments/current/review`
-}
-
-/**
- * @summary Persist the latest deterministic current Treatment review state.
- */
-export const reviewCurrentTreatment = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CurrentTreatmentResponseOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getReviewCurrentTreatmentUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: CurrentTreatmentResponse, status?: number} = new globalThis.Error();
-    const data : CurrentTreatmentResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? CurrentTreatmentResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getListTreatmentRevisionsUrl = (params?: ListTreatmentRevisionsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/treatments/revisions?${stringifiedParams}` : `/api/v1/treatments/revisions`
-}
-
-/**
- * @summary List immutable Treatment revisions for the authenticated user.
- */
-export const listTreatmentRevisions = async (params?: ListTreatmentRevisionsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentRevisionListResponseOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getListTreatmentRevisionsUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: TreatmentRevisionListResponse, status?: number} = new globalThis.Error();
-    const data : TreatmentRevisionListResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? TreatmentRevisionListResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getGetTreatmentRevisionUrl = (revisionId: string,) => {
-
-
-
-
-  return `/api/v1/treatments/revisions/${revisionId}`
-}
-
-/**
- * @summary Get one immutable Treatment revision.
- */
-export const getTreatmentRevision = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentRevisionOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getGetTreatmentRevisionUrl(revisionId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: TreatmentRevision, status?: number} = new globalThis.Error();
-    const data : TreatmentRevision = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? TreatmentRevision.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getReplayTreatmentRevisionUrl = (revisionId: string,) => {
-
-
-
-
-  return `/api/v1/treatments/revisions/${revisionId}/replay`
-}
-
-/**
- * @summary Replay an immutable Treatment revision historically or counterfactually.
- */
-export const replayTreatmentRevision = async (revisionId: string,
-    treatmentReplayRequest: TreatmentReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentReplayReportOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getReplayTreatmentRevisionUrl(revisionId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(treatmentReplayRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: TreatmentReplayReport, status?: number} = new globalThis.Error();
-    const data : TreatmentReplayReport = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? TreatmentReplayReport.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getExportTreatmentRegressionCaseUrl = (revisionId: string,) => {
-
-
-
-
-  return `/api/v1/treatments/revisions/${revisionId}/regression-export`
-}
-
-/**
- * @summary Export one frozen Treatment developer regression case.
- */
-export const exportTreatmentRegressionCase = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getExportTreatmentRegressionCaseUrl(revisionId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
-    const data : JsonObject = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getAcceptTreatmentRevisionUrl = (revisionId: string,) => {
-
-
-
-
-  return `/api/v1/treatments/revisions/${revisionId}/accept`
-}
-
-/**
- * @summary Atomically accept one Treatment revision and project its TrainingPlan.
- */
-export const acceptTreatmentRevision = async (revisionId: string,
-    acceptTreatmentRevisionRequest?: AcceptTreatmentRevisionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AcceptTreatmentRevisionResponseOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getAcceptTreatmentRevisionUrl(revisionId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(acceptTreatmentRevisionRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: AcceptTreatmentRevisionResponse, status?: number} = new globalThis.Error();
-    const data : AcceptTreatmentRevisionResponse = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? AcceptTreatmentRevisionResponse.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getRejectTreatmentRevisionUrl = (revisionId: string,) => {
-
-
-
-
-  return `/api/v1/treatments/revisions/${revisionId}/reject`
-}
-
-/**
- * @summary Reject one proposed Treatment revision.
- */
-export const rejectTreatmentRevision = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<void> => {
-
-  const res = await (fetchFn ?? fetch)(getRejectTreatmentRevisionUrl(revisionId),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: void, status?: number} = new globalThis.Error();
-    const data : void = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const data: void = body ? JSON.parse(body) : undefined
-  return data
-}
-
-
-
 export const getRecordOutcomeUrl = () => {
 
 
@@ -4256,7 +3839,7 @@ export const getReassessTrainingPlanUrl = (id: string,) => {
 }
 
 /**
- * @summary Reassess training feedback and optionally propose a new Treatment revision.
+ * @summary Record reassessment feedback as an Outcome; never changes or proposes a plan.
  */
 export const reassessTrainingPlan = async (id: string,
     trainingReassessmentRequest: TrainingReassessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingFeedbackResultOutput> => {
@@ -4585,7 +4168,7 @@ export const getGeneratePlanProposalUrl = () => {
 }
 
 /**
- * Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed and no Treatment revision is written; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
+ * Go applies the Treatment decision policy and Safety gate, freezes the Agent input and validates the strict Agent plan block; Go assigns every template and entry ID. Nothing is accepted, activated or changed; the user accepts or rejects the proposal separately. A retried idempotencyKey with the same command returns the stored proposal (200) without calling the Agent.
  * @summary Ask the Treatment Agent for a plan draft, saved only as a pending agent PlanProposal(create).
  */
 export const generatePlanProposal = async (generatePlanProposalRequest: GeneratePlanProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PlanProposalRecordOutput> => {

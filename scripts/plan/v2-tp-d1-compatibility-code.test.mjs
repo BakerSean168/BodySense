@@ -24,14 +24,20 @@ const harness = fs.readFileSync(
   "utf8",
 );
 
-test("TP-D1 compatibility is opt-in and legacy Treatment behavior is unchanged by default", () => {
-  assert.match(trainingService, /independentPlans bool/);
-  assert.match(trainingService, /WithIndependentTrainingPlans/);
-  assert.match(trainingService, /options \.\.\.TrainingServiceOption/);
-  assert.match(trainingService, /if !s\.independentPlans/);
-  assert.match(trainingService, /SupersedePlansExcept/);
+test("legacy /training no longer creates, supersedes or activates plans from a Treatment", () => {
+  // TP-002 slice 3 removed the Treatment aggregate and with it the TP-D1
+  // opt-in compatibility path; plans are created only via PlanProposals.
+  for (const legacy of [
+    /SupersedePlans/,
+    /AcceptTreatmentAndEnsurePlan/,
+    /EnsurePlanForTreatment/,
+    /GetPlanByTreatmentRevision/,
+    /independentPlans/,
+  ]) {
+    assert.doesNotMatch(trainingService, legacy);
+    assert.doesNotMatch(repository, legacy);
+  }
   assert.doesNotMatch(main, /WithIndependentTrainingPlans/);
-  assert.match(trainingService, /WARNING: This must not be used by production/);
 });
 
 test("TP-D1 legacy single-plan view fails closed on ambiguity", () => {
@@ -45,15 +51,11 @@ test("TP-D1 legacy single-plan view fails closed on ambiguity", () => {
   );
 });
 
-test("TP-D1 preview forward preserves TreatmentRevision uniqueness and removes only legacy active index", () => {
+test("TP-D1 preview forward removes only the legacy active index", () => {
   assert.match(forward, /PREVIEW ONLY/);
-  assert.match(forward, /idx_training_plans_treatment_revision/);
+  assert.doesNotMatch(forward, /idx_training_plans_treatment_revision/);
   assert.match(forward, /DROP INDEX public\.idx_training_plans_user_active/);
   assert.doesNotMatch(forward, /\b(?:DELETE|UPDATE|TRUNCATE|DROP TABLE)\b/);
-  assert.doesNotMatch(
-    forward,
-    /DROP INDEX public\.idx_training_plans_treatment_revision/,
-  );
 });
 
 test("TP-D1 preview reverse must fail before recreating unique index on multiple active plans", () => {
@@ -71,7 +73,7 @@ test("TP-D1 preview never reaches external databases or live migrations", () => 
   assert.match(harness, /trap cleanup EXIT/);
   assert.match(harness, /ON_ERROR_STOP=1/);
   assert.match(harness, /-name '\*\.up\.sql' \| sort -V/);
-  assert.match(harness, /idx_training_plans_treatment_revision/);
+  assert.doesNotMatch(harness, /idx_training_plans_treatment_revision/);
   assert.match(harness, /TP_D1_REVERSE_FAIL_CLOSED_WITH_MULTIPLE_ACTIVE=PASS/);
   assert.match(harness, /TP_D1_SYNTHETIC_RECONCILED_REVERSE=PASS/);
   assert.doesNotMatch(harness, /--(?:publish|volume|mount)\b/);
