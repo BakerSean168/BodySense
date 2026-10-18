@@ -1,8 +1,21 @@
 # DX-RETIRE-001 · Delete legacy candidate assessment / diagnosis_analyses / diagnosis_candidates paths
 
-Status: QUEUED. Phase 3. Lane A (Diagnosis), after DX-003 and UI-DX-001. SF cross-reference: SF-40.
+Status: QUEUED (slice 3 ai) · lane A · slices 1–2 merged in #356 #359 (last merge `3dd993a02`). Phase 3. SF cross-reference: SF-40.
 **Owner role:** Diagnosis Retirement Owner. **Dependencies:** `DX-003`, `UI-DX-001`.
 **Exclusive resources:** `diagnosis-legacy`, plus the shared hotspots `database-migrations` and `public-openapi` (rebase rule).
+
+## Domain closeout · 2026-10-18
+
+Synced on main `3dd993a02`. #341 has 4 of 6 scope checkboxes ticked; the issue stays open.
+
+| Slice            | PR                                                                       | Delivered                                                                                                                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · web          | [#356](https://github.com/BakerSean168/BodySense/pull/356) (`28398ddd6`) | legacy Diagnosis panels, consultation service methods/types and `HealthWorkspace.diagnosis` projection removed from web                                                                                                                  |
+| 2 · api + tables | [#359](https://github.com/BakerSean168/BodySense/pull/359) (`3dd993a02`) | plan generation, consultation context and workspace flags rebound to the native Diagnosis; `/consultations/{id}/diagnosis`, `/diagnosis-analyses/**`, the Go stack, 5 baseline tables and privacy entries deleted; E2E seeds native runs |
+
+Plan generation now needs at least one adopted native Condition at the current Diagnosis revision and complete Safety coverage (user decision 2026-10-18).
+
+**Remaining (slice 3, ai):** legacy candidate output in `apps/ai-service/src/models/diagnosis.py` and `services/diagnosis_service.py`; the treatment-side `diagnosis_analysis` → `diagnosis` rename and `candidate_assessments` removal; qualification evals; then the grep acceptance.
 
 ## Why this ticket exists · 2026-10-17
 

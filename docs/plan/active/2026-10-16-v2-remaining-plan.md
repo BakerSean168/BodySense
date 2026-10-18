@@ -1,6 +1,6 @@
 # BodySense V2 · Remaining work plan (code-verified) · 2026-10-16
 
-Status: ACTIVE / EXECUTION PLAN. Subordinate to the [V2 Master](./2026-10-13-v2-parallel-master.md) (§0 big-bang single-writer policy) and to `docs/product/**` (business authority). The execution DAG remains [`queue.json`](../tickets/v2/queue.json); domain gates remain in [`v2-handoff-state.json`](./v2-handoff-state.json). This plan raises **no** gate. **2026-10-17:** execution runs in parallel lanes (§7); §4's single-writer interleaving is historical.
+Status: ACTIVE / EXECUTION PLAN. Subordinate to the [V2 Master](./2026-10-13-v2-parallel-master.md) (§0 big-bang single-writer policy) and to `docs/product/**` (business authority). The execution DAG remains [`queue.json`](../tickets/v2/queue.json); domain gates remain in [`v2-handoff-state.json`](./v2-handoff-state.json). This plan raises **no** gate. **2026-10-17:** execution runs in parallel lanes (§7); §4's single-writer interleaving is historical. **2026-10-18:** domain-closeout sync on main `3dd993a02` (§8).
 
 **Verified against main:** `adaa02607` (`adaa02607a208a1a7d4cc9ba5b70845d6a77f351`: af3e1993b code + #299 status sync + #274 TP-PROP-001); main then advanced to `6687a9e26` with #249 (GitHub Actions pin bump only, no product code). Every "exists" claim below was checked in that tree (baseline `apps/api/migrations/000001_vnext_baseline.up.sql`, `packages/contracts/openapi/bodysense.v1.openapi.yaml`, `apps/api/internal/**`, `apps/web/src/**`, `apps/ai-service/src/**`).
 
@@ -11,7 +11,7 @@ Status: ACTIVE / EXECUTION PLAN. Subordinate to the [V2 Master](./2026-10-13-v2-
 | BodyState ledger              | `body_facts`/`body_fact_commits`, `body_observations`(+commits, V12 correct/withdraw), `symptom_episodes` (+status/recurrence/relations), `body_state_revisions`/`body_state_outbox`, `statement_evidence`                                                                                                                       | PR #279–#281, BS-OBS-001   |
 | Hypothesis / ConcernGroup     | user-only `body_hypotheses` + `body_hypothesis_fact_links`, `GET/POST /body-state/hypothesis-records`, `…/{id}/withdraw`, derived `GET /body-state/concern-groups` (no table, provisional id = UUIDv5 of earliest member, `model/concern_group.go`) ; AI hypotheses only in `diagnosis_analyses.decision_trace.agent_hypotheses` | PR #283                    |
 | Equipment                     | `equipment_assets` + `/api/v1/equipment[/{id}]`; Treatment generation reads usable equipment                                                                                                                                                                                                                                     | PR #285                    |
-| Freshness / review            | relevance-based Diagnosis freshness (`diagnosis_analysis_freshness`) and Treatment review                                                                                                                                                                                                                                        | PR #286                    |
+| Freshness / review            | relevance-based Diagnosis freshness (`diagnosis_analysis_freshness`) and Treatment review (**both removed 2026-10-18**: Treatment by #348, legacy freshness by #359; see §8)                                                                                                                                                     | PR #286                    |
 | Agent body context            | `agent-body-context-v1` built in Go (`service/agent_body_context.go`), Go-only safety_state never sent                                                                                                                                                                                                                           | PR #287                    |
 | Safety                        | `safety_screens`, native `safety_restrictions` (scope `all_training`, lift `professional_clearance` only), source-bound `safety_resolutions`, `GET /body-state/safety/restrictions`, `POST …/{id}/resolve`, fail-closed consumers                                                                                                | PR #281/#282, #294–#296    |
 | Legacy retirement             | all `body_state_*` legacy tables/model/API removed; Web reads native V2; full Chromium 25/25                                                                                                                                                                                                                                     | PR6 A–E (#284–#298)        |
@@ -54,6 +54,8 @@ Size: S ≤ 1 PR/≈½ day, M 2–3 PRs, L 4+ PRs.
 
 #### PC-RET-001 · Three-cursor retention + controlled pruning — **M**
 
+> **2026-10-18 closeout:** all four scope items merged (#343 #354 #355, last merge `1f2db35c0`). Blocked on an owner decision about the residual acceptance #355 lists (§8). The bullets below are historical.
+
 - **Exists:** spec models `scripts/plan/v2-chat-retention-*.mjs` (DS-PC-01); Python only truncates model context; LangGraph checkpointer keeps everything.
 - **Missing:** cursor columns on `conversations` (`processed_through_message_id`, `context_start_message_id`, `pruned_through_message_id` + revision), Go pruning job (via `jobs`) that deletes `messages`/`thread_projection_*` only below min(processed, context) and only when every referencing `statement_evidence`/AskUser source is preserved; Python checkpoint cleanup endpoint keyed by the pruned cursor; context assembly reads from `context_start`.
 - **Slices:** (1) api: cursors + ordering invariants + context window read; (2) api+ai: prune job + checkpoint cleanup with interrupted-resume/concurrent-message tests.
@@ -83,6 +85,8 @@ Size: S ≤ 1 PR/≈½ day, M 2–3 PRs, L 4+ PRs.
 - **Deps:** none. **Acceptance:** observation-linked groups; ids stable across unrelated revisions; still no authority/FK target.
 
 #### BS-AGENT-001 · Source-bound AI suggestions → Go decisions — **M**
+
+> **2026-10-18:** slice 1 merged (#347, hypothesis suggestions only). Observation/episode kinds, ai emission and the web card remain (§8).
 
 - **Exists:** runtime proto events `ExtractedInfoUpsert`, `LifestyleContextUpsert`, `InteractionRequired` (AskUser), `RedFlagDetected`; Go `consultation/body_fact.go` commits facts only from accepted structured answers; frozen `agent-body-context-v1`.
 - **Missing:** proposal envelope for chat-sourced **hypothesis / observation / episode** suggestions (new proto `BodyStateSuggestion` with cited user `message_id`+span), Go validation (owner, revision, source span exists in the user's own message), surfacing as AskUser confirmation, commit only on user accept; withdrawn-source and stale-revision rejection; bounded retry with no model-text commit.
@@ -114,17 +118,23 @@ Size: S ≤ 1 PR/≈½ day, M 2–3 PRs, L 4+ PRs.
 
 #### DX-003 · Diagnosis Go/Agent decision API — **M**
 
+> **2026-10-18 closeout:** both slices merged (#345 #353, last merge `614dcdad2`). Blocked on an owner decision: no ConditionEntry-level freshness hook exists after #359 deleted the legacy freshness (§8).
+
 - **Missing:** diagnosis agent output mapped to `diagnosis_proposals` (AI level read-only, provenance), user accept/reject/direct-correct/withdraw commands, freshness hooks to ConditionEntry, safety interruption.
 - **Slices:** (1) api+ai: proposal ingestion + tools; (2) api: direct user correction/withdrawal (§3.5).
 - **Deps:** none open (DX-002 native API merged; `#310 blocked by #305` removed 2026-10-17). **Acceptance:** no partial/unauthorized commit; confirmed only after receipt.
 
 #### DX-RETIRE-001 · Delete legacy candidate assessment / diagnosis_analyses / diagnosis_candidates — **L**
 
+> **2026-10-18:** slice 1 web (#356) and slice 2 api/tables (#359, `3dd993a02`) merged. Slice 3 (ai) and the grep acceptance remain (§8).
+
 - **Exists:** legacy baseline tables, Go model/repository/service/HTTP, OpenAPI `/diagnosis-analyses/**` + generated clients, Web consultation Diagnosis panel and AI candidate structures (~28–37 non-test files on `1abcc9f16`).
 - **Missing:** delete all of it once DX-003 moves Agent output to native proposals and UI-DX-001 moves the window to the native API; no compatibility layer.
 - **Deps:** DX-003, UI-DX-001. **Issue:** [#341](https://github.com/BakerSean168/BodySense/issues/341). **Acceptance:** legacy grep empty outside tests/historical docs; full checks green.
 
 #### UI-DX-001 · Diagnosis window on decision API — **M**
+
+> **2026-10-18:** #349 #350 #351 merged (binding, states, 390px, E2E, Penpot alignment). Blocked on the user's Q-19 visual sign-off (§8).
 
 - **Exists:** `DiagnosisWindow.tsx` (162 lines), `useDiagnosisActions.ts` on legacy analyses.
 - **Missing:** bind to `GET /diagnosis` + proposal decisions; distinct pending/undecided/changed/rejected/committed states; Q-19 visual sign-off.
@@ -141,12 +151,16 @@ Size: S ≤ 1 PR/≈½ day, M 2–3 PRs, L 4+ PRs.
 
 #### TP-002 · Independent TrainingPlan persistence — **L**
 
+> **2026-10-18 closeout: DONE (ticket).** #326 #344 #346 #348 merged, last merge `2f3f41ee9`; #311 is ready to close. The bullets below are historical. No domain gate raised.
+
 - **Exists:** legacy `training_plans` (single active via `idx_training_plans_user_active`, `phases` JSON, `treatment_id`), `training_logs` (`is_checked_in`, date by server `localDate(time.Now())`), `treatments`/`treatment_revisions` lifecycle, `/treatments/*` and `/training/*` routes, dormant `WithIndependentTrainingPlans` + owner lock (`FOR NO KEY UPDATE`), `domain/trainingplan` precommit policy.
 - **Missing:** `training_plans` reshaped (title, goal, status active|paused|completed, multi-active, `current_accepted_revision_id`, related condition/body refs), `training_plan_revisions` (immutable `TrainingPlanContent`: sessions[], frequency, schedule), `plan_proposals` (create|update, 7-day TTL, fingerprints) with accept transaction calling `EvaluateAcceptance` under the owner lock + receipt; remove `treatments`/`treatment_revisions` coupling and `SupersedePlansExcept`.
 - **Slices:** (1) api: baseline tables + repo + proposal accept transaction; (2) api: OpenAPI `/training-plans`, `/plan-proposals/{id}/accept|reject`; treatment generation → PlanProposal(create); (3) api: delete Treatment lifecycle/routes.
 - **Deps:** TP-001 (gate in accept path), TP-PROP-001 (done). **Acceptance:** plan A never supersedes plan B; no stale safety allow.
 
 #### TP-003 · Trainer runtime + user action receipt — **M**
+
+> **2026-10-18 closeout: DONE (ticket).** #352 #357 #358 #360 merged, last merge `a7826b2b0`; #313 is ready to close. Full Trainer UI is UI-TP-001. No domain gate raised.
 
 - **Missing:** `training_sessions` (user IANA timezone snapshot, started_at), `training_set_actions` (planExerciseId+setNumber+sessionId, performed|skipped, idempotency), TrainerGate check against exact restriction versions on each action, feedback → review projection only.
 - **Deps:** TP-002. **Acceptance:** every performed/skipped action user-originated and receipted.
@@ -197,13 +211,13 @@ Domain order: Conversation/Person → Diagnosis → Training/Safety → Assets, 
 | UI-001        | hypothesis/concern UI + Penpot states                                          | M    | BS-HYP-001         | 4          |
 | DX-001        | done — folded into DX-002 s1 (#322)                                            | S    | —                  | done       |
 | DX-002        | done (#322 #332 #334 #336–#338); legacy retirement → DX-RETIRE-001             | L    | —                  | done       |
-| BS-AGENT-001  | chat-sourced suggestion envelope → AskUser confirm → Go commit                 | M    | BS-HYP-001         | 6          |
-| DX-003        | agent→proposal ingestion, direct correction                                    | M    | —                  | lane A     |
-| DX-RETIRE-001 | delete legacy candidate-assessment / diagnosis_analyses / candidates           | L    | DX-003, UI-DX-001  | lane A     |
-| TP-002        | plans/revisions/proposals, drop Treatment lifecycle                            | L    | TP-001             | 8          |
-| PC-RET-001    | 3 cursors + pruning + checkpoint cleanup                                       | M    | PC-001             | 9          |
-| UI-DX-001     | Diagnosis window on decision API                                               | M    | DX-003             | 10         |
-| TP-003        | sessions + per-set actions + gate                                              | M    | TP-002             | 11         |
+| BS-AGENT-001  | slice 1 merged (#347); observation/episode, ai, web remain                     | M    | BS-HYP-001         | 6          |
+| DX-003        | merged (#345 #353); freshness-hook decision pending                            | M    | —                  | lane A     |
+| DX-RETIRE-001 | web + api/tables merged (#356 #359); slice 3 ai remains                        | L    | DX-003, UI-DX-001  | lane A     |
+| TP-002        | done (#326 #344 #346 #348)                                                     | L    | TP-001             | done       |
+| PC-RET-001    | merged (#343 #354 #355); residual acceptance decision pending                  | M    | PC-001             | 9          |
+| UI-DX-001     | merged (#349 #350 #351); Q-19 visual sign-off pending                          | M    | DX-003             | 10         |
+| TP-003        | done (#352 #357 #358 #360)                                                     | M    | TP-002             | done       |
 | AS-001        | user_assets identity + source removal                                          | M    | —                  | 12         |
 | UI-TP-001     | plan/trainer windows on new API                                                | M    | TP-003             | 13         |
 | AS-002        | controlled-copy erasure + receipts                                             | M    | AS-001, PC-RET-001 | 14         |
@@ -268,3 +282,21 @@ At the user's request (2026-10-17), Hark implements the remaining V2 work in **p
 - **Writers.** `maxParallelWriters: 4`. The queue validator (`scripts/plan/validate-v2-ticket-queue.mjs`) still rejects a fifth writer, a shared checkout, an unaccepted prerequisite and any shared exclusive resource that names domain files. The shared generated hotspots (`database-migrations` = baseline migration + checksums, `public-openapi` = OpenAPI + generated Go/TS/Zod + Postman, `domain-contract`) are allowed concurrently and resolved by the rebase rule.
 - **Rebase rule.** Whoever merges second rebases onto latest `origin/main`, takes main's version of generated files, regenerates (`scripts/contracts/generate-public-rest.sh`, `pnpm postman:generate`, baseline `checksums.sha256`), and re-runs the checks before merging.
 - One slice = one PR; own worktree under `~/projects/.hark-worktrees/`; `gh pr merge <n> --merge --match-head-commit <sha>`, never `--admin`; no staging/production operations.
+
+## 8. Domain closeout · 2026-10-18
+
+Synced on main `3dd993a023c50a0de82c8602a179f09e0338d547` (#359 merge). GitHub issue checkboxes were ticked for merged work first; this section, [`queue.json`](../tickets/v2/queue.json), the ticket docs and [`v2-handoff-state.json`](./v2-handoff-state.json) `latestExecution` follow them. No domain gate is raised and no issue is closed by this sync.
+
+| Ticket        | Issue                                                            | Merged PRs (merge SHA)                                                 | Queue status             | Remaining                                                                                                                                                         |
+| ------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TP-002        | [#311](https://github.com/BakerSean168/BodySense/issues/311) 6/6 | #326, #344 `cde83efbb`, #346 `e6bf1b2af`, #348 `2f3f41ee9`             | done                     | none; issue ready to close                                                                                                                                        |
+| TP-003        | [#313](https://github.com/BakerSean168/BodySense/issues/313) 4/4 | #352 `1f2196746`, #357 `eb1922639`, #358 `e69b4c0b4`, #360 `a7826b2b0` | done                     | none; full Trainer UI is UI-TP-001                                                                                                                                |
+| PC-RET-001    | [#307](https://github.com/BakerSean168/BodySense/issues/307) 4/4 | #343 `bf2fea6e9`, #354 `100f14686`, #355 `1f2db35c0`                   | blocked (owner decision) | residual from #355: Ask User expiry settle trigger, cross-domain deletion-scope proof, `interaction_resumes` cascade review, PC3-19 share retirement, browser E2E |
+| DX-003        | [#310](https://github.com/BakerSean168/BodySense/issues/310) 2/3 | #345 `3e0931b21`, #353 `614dcdad2`                                     | blocked (owner decision) | ConditionEntry-level freshness/review hook (legacy freshness deleted by #359; open runs are fenced by revision only)                                              |
+| UI-DX-001     | [#312](https://github.com/BakerSean168/BodySense/issues/312) 2/3 | #349 `e86e0ff2d`, #350 `78f04e997`, #351 `576201e85`                   | blocked (user sign-off)  | Q-19 visual sign-off                                                                                                                                              |
+| DX-RETIRE-001 | [#341](https://github.com/BakerSean168/BodySense/issues/341) 4/6 | #356 `28398ddd6`, #359 `3dd993a02`                                     | queued                   | slice 3 ai: legacy candidate output, `diagnosis_analysis` → `diagnosis` rename, evals, grep acceptance                                                            |
+| BS-AGENT-001  | [#308](https://github.com/BakerSean168/BodySense/issues/308) 1/4 | #347 `d0037a291`                                                       | queued                   | observation/episode kinds, typed proto (optional), ai emission + bounded retry, web confirmation card + E2E                                                       |
+
+**Lanes after this sync.** A: DX-RETIRE-001 slice 3 next, with DX-003 and UI-DX-001 waiting on decisions. B: UI-TP-001 #315. C: AS-002 #314, BS-AGENT-001 slices 2–3, AS-001 profile slice, UI-001 residual. UI-TP-001 is admitted in the queue (worktree `bodysense-uitp001`, base `3dd993a02`). An AS-002 writer is also running, but its queue admission waits until AS-001 and PC-RET-001 are accepted. The queue `mainBaselineSha` moves to `3dd993a02`.
+
+**Removed on main since §0:** Treatment lifecycle and Treatment review (#348), legacy `training_logs` and `/training/*` (#360), the legacy Diagnosis analysis/candidate/freshness stack (#359). IG-01 and IG-02 in `docs/product/implementation-gaps.md` are resolved by the Trainer runtime (#352, #360).

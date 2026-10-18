@@ -20,6 +20,10 @@ The frozen baseline is main `af3e1993b1f62930e3b680b54abab5ade456935b`, with exa
 
 At the user's request, Hark now implements V2 in **parallel lanes** with up to four writers (`maxParallelWriters: 4`), replacing the single-writer rule above for scheduling: docs/phase-0 (sole editor of `docs/plan/**`), lane A Diagnosis (#310 → #312 → #341), lane B Training (#311 → #313 → #315), lane C interleaved (#307, #308, #306 → #314, #309). Queue baseline is main `1abcc9f1634bb6039e00c6f9654817118ae5cf4c`. The queue validator now treats only the shared generated hotspots (`database-migrations`, `public-openapi`, `domain-contract`) as concurrent-safe under the rebase rule; every other exclusive resource still collides. GitHub issue checkboxes are the live status; this queue is synced per domain closeout, not per slice. See [remaining plan §7](../../active/2026-10-16-v2-remaining-plan.md#7-parallel-lanes--2026-10-17).
 
+## Current checkpoint · 2026-10-18 · domain closeout
+
+Synced on main `3dd993a023c50a0de82c8602a179f09e0338d547`, which is the new queue `mainBaselineSha`. TP-002 (#311) and TP-003 (#313) are **done** as tickets. PC-RET-001 (#307), DX-003 (#310) and UI-DX-001 (#312) have their planned slices merged and are **blocked** on an owner or user decision. DX-RETIRE-001 (#341) and BS-AGENT-001 (#308) are queued for their next slices. UI-TP-001 (#315) is in progress in lane B. No domain gate is raised. Details: [remaining plan §8](../../active/2026-10-16-v2-remaining-plan.md#8-domain-closeout--2026-10-18).
+
 ## Scheduling policy
 
 Write a short execution handoff for each thread: `ticketId, threadId, projectId, absolute worktree, branch, expectedHead, provider/model, run status, changed paths, tests, output exact SHA, blockers`. Never retry an ambiguous T3 create/message blindly; first query its durable thread status. Stop a previous writer before ChatGPT Web assumes the same checkout. Existing hourly Track A/C/D tasks must not race new thread owners.

@@ -1,8 +1,20 @@
 # BS-AGENT-001 · Connect source-bound AI suggestions to Go decisions
 
-Status: QUEUED / NOT ADMITTED. Phase 2. SF cross-reference: SF-12/SF-20.
+Status: QUEUED (slices 2–3) · lane C · slice 1 merged in #347 (`d0037a291`). Phase 2. SF cross-reference: SF-12/SF-20.
 **Owner role:** Go/Python Owner. **Dependencies:** `BS-OBS-001`, `BS-HYP-001`.
 **Exclusive resources:** `agent-tools`, `public-openapi`.
+
+## Domain closeout · 2026-10-18
+
+Synced on main `3dd993a02`. #308 has 1 of 4 scope checkboxes ticked; the issue stays open.
+
+| Slice                        | PR                                                                       | Delivered                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 · Go validator + committer | [#347](https://github.com/BakerSean168/BodySense/pull/347) (`d0037a291`) | Agent cites a span of the user's own message; Go binds a fixed Ask User confirmation; confirm commits the user's verbatim words as a BodyHypothesis with a receipt; decline writes nothing |
+
+The suggestion envelope rides in the existing `InteractionRequired.question` Struct; no new proto message was added.
+
+**Remaining:** `observation`/`episode` kinds (commands and bindings), a typed proto message if the owner wants one, slice 2 ai emission with bounded retry, slice 3 web confirmation card + E2E.
 
 ## Current remaining scope · 2026-10-16
 

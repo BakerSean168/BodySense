@@ -1,8 +1,20 @@
 # UI-DX-001 · Bind the Diagnosis V2 window to exact decision API
 
-Status: QUEUED / NOT ADMITTED. Phase 3. SF cross-reference: SF-80.
+Status: BLOCKED (user Q-19 visual sign-off, 2026-10-18) · lane A · #349 #350 #351 merged, last merge `576201e85`. Phase 3. SF cross-reference: SF-80.
 **Owner role:** React Diagnosis Owner. **Dependencies:** `DX-003`.
 **Exclusive resources:** `diagnosis-ui`.
+
+## Domain closeout · 2026-10-18
+
+Synced on main `3dd993a02`. #312 has 2 of 3 scope checkboxes ticked; the issue stays open.
+
+| Slice                | PR                                                                       | Delivered                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1 · bind window      | [#349](https://github.com/BakerSean168/BodySense/pull/349) (`e86e0ff2d`) | `DiagnosisWindow` reads `GET /diagnosis`; per-proposal decide + whole-run settlement; committed only after a settlement receipt |
+| 2 · states + E2E     | [#350](https://github.com/BakerSean168/BodySense/pull/350) (`78f04e997`) | Penpot PD-DX-01 states, 390px layout, Chromium E2E (commit, Safety lock, 390px)                                                 |
+| 3 · Penpot alignment | [#351](https://github.com/BakerSean168/BodySense/pull/351) (`576201e85`) | serial stepper per the Penpot "03 App" Diagnosis boards; receipt / no-change / Safety stopped / empty states                    |
+
+**Remaining:** the user's Q-19 visual sign-off. Known follow-ups outside the checkboxes: a start-analysis entry from Chat, Safety → Restricted navigation, and Diagnosis History.
 
 ## Current remaining scope · 2026-10-16
 

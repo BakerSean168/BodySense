@@ -578,8 +578,44 @@
       ]
     }
   ],
-  "updatedAtUtc": "Sat 2026-10-17 10:30 PM CST (UTC+08:00)",
+  "updatedAtUtc": "Sun 2026-10-18 9:50 PM CST (UTC+08:00)",
   "latestExecution": {
+    "owner": "Hark parallel-lane implementation; user request 2026-10-17",
+    "baselineHead": "3dd993a023c50a0de82c8602a179f09e0338d547",
+    "previousBaselineHead": "1abcc9f1634bb6039e00c6f9654817118ae5cf4c",
+    "state": "HARK_PARALLEL_LANES;max_4_writers;domain_closeout_sync_2026-10-18;TP-002_and_TP-003_tickets_done;DX-003_PC-RET-001_UI-DX-001_await_owner_decision;no_domain_gate_raised;scheduler_user_paused;release_HOLD",
+    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
+    "lanes": {
+      "docs": "phase-0 sync; sole editor of docs/plan/**",
+      "A": "Diagnosis: DX-003 #310 (blocked: freshness decision) -> UI-DX-001 #312 (blocked: Q-19 sign-off) -> DX-RETIRE-001 #341 (slice 3 ai next)",
+      "B": "Training: TP-002 #311 done -> TP-003 #313 done -> UI-TP-001 #315",
+      "C": "Interleaved: PC-RET-001 #307 (blocked: residual acceptance decision), BS-AGENT-001 #308 (slices 2-3), AS-001 #306 -> AS-002 #314, UI-001 #309"
+    },
+    "activeTickets": ["UI-TP-001"],
+    "activeTicketsNote": "UI-TP-001 #315 is admitted in lane B (bodysense-uitp001, base 3dd993a02). An AS-002 #314 writer is also running in lane C, but its queue admission waits for AS-001 and PC-RET-001 acceptance. Queue mainBaselineSha moves to 3dd993a02 with this sync.",
+    "nextTickets": [
+      "UI-TP-001",
+      "AS-002",
+      "DX-RETIRE-001",
+      "BS-AGENT-001",
+      "AS-001",
+      "UI-001",
+      "QA-001"
+    ],
+    "verification": {
+      "mergedEvidence": "PR343:bf2fea6e99b2e4ab1e7ed97af146d805e27e181d;PR344:cde83efbb7526fde37c707b2da16c065f125ad94;PR345:3e0931b21ff37ef6ebd8adfed2feed2fb48b0956;PR346:e6bf1b2af2a2cfdfd025d2a658d8b53cbb54cac3;PR347:d0037a291426d28f6be948d50084d214b172da70;PR348:2f3f41ee918149f96725d356a23b35e9b6a5330d;PR349:e86e0ff2d4e966c97497182787121e0fd14c06a6;PR350:78f04e99747df12ed7e72dcbde78d002ccdf367c;PR351:576201e853fd1536e8c89b7e481af733c07096c4;PR352:1f219674638a8eb0d21904a9be900aea1ade6cc1;PR353:614dcdad2391ac889697e13f0e3038b1f5525730;PR354:100f1468689a5160bfe53d8dc3dbad50bd5826e1;PR355:1f2db35c0672881b1c59f58ece12d3784802d424;PR356:28398ddd65054b45e7b3a29bb0e9c73028227b28;PR357:eb192263991ba2717c32fbb237b7c98e6e0312f7;PR358:e69b4c0b40d37e2f2ee09e4b98b824e8e5f3ef82;PR359:3dd993a023c50a0de82c8602a179f09e0338d547;PR360:a7826b2b0f6d0c98e4d25e99b5e2e2910bd327d7",
+      "closedIssues": "#302 #303 #304 #305 #323",
+      "closableIssues": "#311 #313 (all scope checkboxes ticked); #307 and #310 need an owner decision on residual items; #312 needs Q-19 sign-off",
+      "ci": "Every merged PR passed exact-head required CI (12/12, or 10 + 2 scope-skipped PG18 children for web-only PRs).",
+      "readiness": "No whole-domain gate raised. TP-002/TP-003 are done as tickets only. #306/#307/#308/#309/#310/#312/#341 remain open for residual scope.",
+      "statusRule": "GitHub issue checkboxes are the live status; docs/plan and queue.json are synced per domain closeout, not per slice.",
+      "operations": "No staging/production DB, deployment or scheduler change."
+    },
+    "auditedAtUtc": "Sun 2026-10-18 9:50 PM CST (UTC+08:00)",
+    "executionMode": "HARK_PARALLEL_LANES",
+    "schedulerState": "user_paused_do_not_reenable_without_explicit_request"
+  },
+  "previousExecution": {
     "owner": "Hark parallel-lane implementation; user request 2026-10-17",
     "baselineHead": "1abcc9f1634bb6039e00c6f9654817118ae5cf4c",
     "previousBaselineHead": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
@@ -614,34 +650,6 @@
     "auditedAtUtc": "Sat 2026-10-17 10:30 PM CST (UTC+08:00)",
     "executionMode": "HARK_PARALLEL_LANES",
     "schedulerState": "user_paused_do_not_reenable_without_explicit_request"
-  },
-  "previousExecution": {
-    "owner": "ChatGPT Web direct implementation; user handoff 2026-10-17",
-    "baselineHead": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-    "previousBaselineHead": "391f3e5151d0b68330a45032c2e726802bfb56f8",
-    "state": "CHATGPT_direct;Diagnosis_storage_decisions_and_atomic_settlement_accepted;native_HTTP_and_legacy_retirement_pending;user_paused_scheduler;release_HOLD",
-    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
-    "nextTickets": [
-      "DX-002",
-      "DX-003",
-      "TP-002",
-      "AS-001",
-      "PC-RET-001",
-      "BS-AGENT-001",
-      "UI-001",
-      "QA-001"
-    ],
-    "verification": {
-      "mergedEvidence": "PR322:0dfc2454e2fd251666d56cf252ef217e24b5950b;PR326:76aa8d22759de7f9eea2db8bcce79b68c2f970ed;PR327:b82a384b7189747e7a2ea2b5cf35f4f311a4545c;PR330:ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48;PR331:165cc8f112670fecc4233fb939ff25e44dbe6eb0;PR332:391f3e5151d0b68330a45032c2e726802bfb56f8;PR334:74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-      "currentDrafts": "No V2 code PR remains open after #334 at this audit. The service-layer kernel is merged; native API wiring and legacy retirement are the next bounded slice.",
-      "readiness": "No whole-domain gate raised. #305/#306/#309/#311 remain open for residual scope.",
-      "operations": "Direct ChatGPT source implementation and isolated tests; no provider delegation, scheduler resume, staging/prod DB or release operation.",
-      "validation": "PR334 exact head 18e56eb1b9c53a93784c207fe3eb7558f4bfef00 passed 12/12 GitHub CI; native PG18 -race targeted 18 groups, full Go race/vet/staticcheck, migration/domain validators, contracts regeneration equality, Postman and plan:check passed."
-    },
-    "auditedAtUtc": "2026-10-17T09:09:20Z",
-    "executionMode": "CHATGPT",
-    "schedulerState": "user_paused_do_not_reenable_without_explicit_request",
-    "providerPolicy": "No further exhausted community-provider calls or new T3 sessions for this takeover."
   },
   "completedPrograms": [
     {

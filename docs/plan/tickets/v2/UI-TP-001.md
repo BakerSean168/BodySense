@@ -1,6 +1,6 @@
 # UI-TP-001 · Bind TrainingPlan/Trainer windows to real safety-gated API
 
-Status: QUEUED / NOT ADMITTED. Phase 3. SF cross-reference: SF-80.
+Status: IN PROGRESS · lane B (Hark parallel lanes), worktree `bodysense-uitp001`, base `3dd993a02`, admitted at the 2026-10-18 closeout after TP-003 was accepted. Phase 3. SF cross-reference: SF-80.
 **Owner role:** React Training Owner. **Dependencies:** `TP-003`.
 **Exclusive resources:** `training-ui`.
 
