@@ -45,7 +45,7 @@ def test_unknown_treatment_configuration_is_rejected() -> None:
         get_treatment_configuration("treat-config-does-not-exist")
 
 
-def test_runtime_rejects_unimplemented_treatment_revisions() -> None:
+def test_runtime_rejects_unimplemented_treatment_config_revisions() -> None:
     from src.agents.treatment_agent import create_treatment_agent
 
     with pytest.raises(ValueError, match="prompt revision"):
