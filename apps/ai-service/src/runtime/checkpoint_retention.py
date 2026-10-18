@@ -70,7 +70,7 @@ def tag_runtime_message(message: dict[str, Any], run_id: str | None) -> dict[str
     return message
 
 
-def _segment_runs(messages: list[dict[str, Any]]) -> list[str | None]:
+def segment_runs(messages: list[dict[str, Any]]) -> list[str | None]:
     """Attribute every entry to the Run whose tagged user entry opened it.
 
     A Run (including its Ask User resume) appends one user entry tagged with its
@@ -96,7 +96,7 @@ def trim_runtime_messages(
     entries to drop are a prefix here too. An entry of a kept Run inside that
     prefix means the two sides disagree about order: refuse instead of guessing.
     """
-    owners = _segment_runs(messages)
+    owners = segment_runs(messages)
     cut = 0
     for index, owner in enumerate(owners):
         if owner is not None and owner in pruned_run_ids:
@@ -261,7 +261,7 @@ async def cleanup_thread_checkpoints(
     if final is None or final.checkpoint["id"] != keep_id:
         raise CheckpointConflictError("kept checkpoint is no longer the latest")
     final_messages = list(final.checkpoint["channel_values"].get(RUNTIME_MESSAGES) or [])
-    owners = {owner for owner in _segment_runs(final_messages) if owner is not None}
+    owners = {owner for owner in segment_runs(final_messages) if owner is not None}
     if owners & pruned:
         raise CheckpointCleanupError("pruned Run entries survived cleanup")
     history = [item async for item in saver.alist(config, limit=2)]

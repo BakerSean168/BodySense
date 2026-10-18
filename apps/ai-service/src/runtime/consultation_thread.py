@@ -86,11 +86,13 @@ from ..services.consultation_state_acquisition import (
 )
 from ..services.red_flag_detector import get_red_flag_detector
 from .body_fact_capture import acquire_body_fact_answer, acquire_body_fact_turn
-from .checkpoint_retention import tag_runtime_message
+from .checkpoint_retention import segment_runs, tag_runtime_message
 from .checkpointing import get_runtime_checkpointer
 
 logger = logging.getLogger(__name__)
 
+# Fallback only: used when Go sent no context window (PC-RET-001). With a
+# window, Go's token-budgeted context cursor decides the raw history.
 MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
 STREAM_TAIL_HOLD_CHARS = 320
@@ -155,6 +157,9 @@ class ConsultationThreadState(TypedDict, total=False):
     latest_user_message: str
     pending_user_images: list[dict[str, Any]]
     runtime_messages: list[dict[str, Any]]
+    # Go's chat retention context cursor for this turn (PC-RET-001):
+    # {"context_start_seq": int, "run_ids": [str, ...]} or None.
+    context_window: dict[str, Any] | None
     extracted_symptoms: Annotated[list[dict[str, Any]], _merge_symptoms]
     red_flag_result: dict[str, Any] | None
     accumulated_text: str
@@ -483,9 +488,7 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
     messages.append(ChatMessage(role="system", content=system_content))
 
-    history = state.get("runtime_messages", [])
-    history = history[-MAX_CONTEXT_TURNS * 4 :]
-    for item in history:
+    for item in context_history(state):
         chat_message = ChatMessage(
             role=item["role"],
             content=item.get("content", ""),
@@ -508,6 +511,34 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
     return messages
 
 
+def context_history(state: ConsultationThreadState) -> list[dict[str, Any]]:
+    """Return the raw runtime history the model may see this turn.
+
+    Go owns the context window (PC-RET-001): it advances its context cursor by
+    a token budget and names the Runs owning messages from the cursor on.
+    ``runtime_messages`` is kept by Run, so the history starts at the first
+    entry owned by one of those Runs or by the current Run; everything before
+    it has left the model context even if its checkpoint copy is not pruned
+    yet. Entries with no Run (written before Runs were tagged) count as left.
+
+    Without a window (an older API, or Go could not read the cursor) the
+    runtime falls back to its bounded ``MAX_CONTEXT_TURNS`` tail.
+    """
+    history = list(state.get("runtime_messages", []))
+    window = state.get("context_window")
+    run_ids = window.get("run_ids") if isinstance(window, dict) else None
+    if not isinstance(run_ids, list):
+        return history[-MAX_CONTEXT_TURNS * 4 :]
+    keep = {str(run_id) for run_id in run_ids}
+    current_run = state.get("run_id")
+    if current_run:
+        keep.add(str(current_run))
+    for index, owner in enumerate(segment_runs(history)):
+        if owner is not None and owner in keep:
+            return history[index:]
+    return []
+
+
 def _get_conversation_text(state: ConsultationThreadState) -> str:
     """Return only user-authored text for deterministic safety scanning.
 
@@ -516,7 +547,7 @@ def _get_conversation_text(state: ConsultationThreadState) -> str:
     positives that can permanently block downstream health workflows.
     """
     texts: list[str] = []
-    for message in state.get("runtime_messages", [])[-MAX_CONTEXT_TURNS * 4 :]:
+    for message in context_history(state):
         if message.get("role") != "user":
             continue
         content = message.get("content", "")
@@ -1389,6 +1420,7 @@ async def stream_thread_turn(
     recent_outcomes: list[dict[str, Any]] | None = None,
     spatial_context: dict[str, Any] | None = None,
     configuration_id: str | None = None,
+    context_window: dict[str, Any] | None = None,
 ) -> AsyncIterator[ConsultationRuntimeEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
@@ -1413,6 +1445,8 @@ async def stream_thread_turn(
             "current_treatment": current_treatment or {},
             "recent_outcomes": list(recent_outcomes or []),
             "spatial_context": spatial_context or {},
+            # Set every turn so a window from an earlier turn never lingers.
+            "context_window": context_window,
             "phase": phase,
             "extracted_symptoms": extracted_info,
             "current_user_message": user_message,
@@ -1465,6 +1499,7 @@ async def resume_thread_interrupt(
     current_treatment: dict[str, Any] | None = None,
     recent_outcomes: list[dict[str, Any]] | None = None,
     spatial_context: dict[str, Any] | None = None,
+    context_window: dict[str, Any] | None = None,
 ) -> AsyncIterator[ConsultationRuntimeEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
@@ -1559,6 +1594,7 @@ async def resume_thread_interrupt(
                 "current_treatment": current_treatment or {},
                 "recent_outcomes": list(recent_outcomes or []),
                 "spatial_context": spatial_context or {},
+                "context_window": context_window,
             },
         ),
         config=config,
