@@ -37,6 +37,9 @@ type workspaceFreshnessSource interface {
 type workspaceTreatmentSource interface {
 	PreviewCurrentReview(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
 	ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error)
+}
+
+type workspaceOutcomeSource interface {
 	ListOutcomes(ctx context.Context, userID uuid.UUID, limit int) ([]model.Outcome, error)
 }
 
@@ -53,6 +56,7 @@ type HealthWorkspaceService struct {
 	diagnosis     workspaceDiagnosisSource
 	freshness     workspaceFreshnessSource
 	treatment     workspaceTreatmentSource
+	outcomes      workspaceOutcomeSource
 	training      workspaceTrainingSource
 }
 
@@ -63,11 +67,12 @@ func NewHealthWorkspaceService(
 	diagnosis workspaceDiagnosisSource,
 	freshness workspaceFreshnessSource,
 	treatment workspaceTreatmentSource,
+	outcomes workspaceOutcomeSource,
 	training workspaceTrainingSource,
 ) *HealthWorkspaceService {
 	return &HealthWorkspaceService{
 		profiles: profiles, consultations: consultations, bodyState: bodyState,
-		diagnosis: diagnosis, freshness: freshness, treatment: treatment, training: training,
+		diagnosis: diagnosis, freshness: freshness, treatment: treatment, outcomes: outcomes, training: training,
 	}
 }
 
@@ -141,7 +146,7 @@ func (s *HealthWorkspaceService) Get(
 			return nil, fmt.Errorf("load workspace training plan: %w", err)
 		}
 	}
-	workspace.RecentOutcomes, err = s.treatment.ListOutcomes(ctx, userID, 100)
+	workspace.RecentOutcomes, err = s.outcomes.ListOutcomes(ctx, userID, 100)
 	if err != nil {
 		return nil, fmt.Errorf("load workspace outcomes: %w", err)
 	}

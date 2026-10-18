@@ -27,6 +27,7 @@ type validator struct {
 	body        *service.BodyStateService
 	diagnosis   *service.DiagnosisAnalysisService
 	treatment   *service.TreatmentService
+	outcomes    *service.OutcomeService
 	training    *service.TrainingService
 	treatmentDB *repository.TreatmentRepository
 }
@@ -138,14 +139,16 @@ func newValidator(db *gorm.DB) *validator {
 		unitOfWork,
 		agentDeploymentPolicy,
 	)
+	outcomeService := service.NewOutcomeService(repository.NewOutcomeRepository(db), bodyService, unitOfWork)
 	trainingService := service.NewTrainingService(
 		repository.NewTrainingRepository(db),
 		treatmentService,
+		outcomeService,
 		unitOfWork,
 	)
 	return &validator{
 		db: db, bodyRepo: bodyRepo, body: bodyService,
-		diagnosis: diagnosisService, treatment: treatmentService,
+		diagnosis: diagnosisService, treatment: treatmentService, outcomes: outcomeService,
 		training: trainingService, treatmentDB: treatmentRepo,
 	}
 }
@@ -422,8 +425,6 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 	}
 	sourceKey := "domain-validator:outcome:retry"
 	outcome := model.Outcome{
-		TreatmentID:         plan.TreatmentID,
-		TreatmentRevisionID: plan.TreatmentRevisionID,
 		SourceType:          "domain_validator",
 		SourceKey:           sourceKey,
 		Kind:                "symptom_change",
@@ -436,7 +437,7 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		OccurredAt:     time.Now().UTC(),
 		Provenance:     datatypes.JSON(`{"source_type":"domain_validator"}`),
 	}
-	if _, _, err := v.treatment.RecordOutcome(ctx, userID, outcome); err == nil {
+	if _, _, err := v.outcomes.RecordOutcome(ctx, userID, outcome); err == nil {
 		return errors.New("forced BodyState projection failure unexpectedly succeeded")
 	}
 	var outcomeCount int64
@@ -452,7 +453,7 @@ func (v *validator) validateOutcomeFeedbackAtomicity(
 		return err
 	}
 
-	stored, created, err := v.treatment.RecordOutcome(ctx, userID, outcome)
+	stored, created, err := v.outcomes.RecordOutcome(ctx, userID, outcome)
 	if err != nil {
 		return fmt.Errorf("retry outcome projection: %w", err)
 	}

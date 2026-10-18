@@ -31,9 +31,12 @@ type trainingRepository interface {
 
 type trainingTreatmentService interface {
 	AcceptProposal(ctx context.Context, userID, revisionID uuid.UUID) (*model.Treatment, error)
-	RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.Outcome, bool, error)
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
 	GenerateProposal(ctx context.Context, userID uuid.UUID, input TreatmentProposalInput) (*model.TreatmentRevision, error)
+}
+
+type trainingOutcomeRecorder interface {
+	RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.Outcome, bool, error)
 }
 
 var ErrTrainingProjectionFailed = errors.New("failed to create executable training projection")
@@ -66,6 +69,7 @@ func (s *TrainingService) lockIndependentTrainingOwner(ctx context.Context, user
 type TrainingService struct {
 	trainingRepo     trainingRepository
 	treatment        trainingTreatmentService
+	outcomes         trainingOutcomeRecorder
 	unitOfWork       treatmentUnitOfWork
 	independentPlans bool
 }
@@ -87,11 +91,12 @@ func WithIndependentTrainingPlans() TrainingServiceOption {
 func NewTrainingService(
 	trainingRepo trainingRepository,
 	treatment trainingTreatmentService,
+	outcomes trainingOutcomeRecorder,
 	unitOfWork treatmentUnitOfWork,
 	options ...TrainingServiceOption,
 ) *TrainingService {
 	service := &TrainingService{
-		trainingRepo: trainingRepo, treatment: treatment, unitOfWork: unitOfWork,
+		trainingRepo: trainingRepo, treatment: treatment, outcomes: outcomes, unitOfWork: unitOfWork,
 	}
 	for _, option := range options {
 		if option != nil {
@@ -338,11 +343,10 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 	if err != nil {
 		return err
 	}
-	if s.treatment == nil || plan.TreatmentRevisionID == nil {
+	if s.outcomes == nil || plan.TreatmentRevisionID == nil {
 		return nil
 	}
-	_, _, err = s.treatment.RecordOutcome(ctx, userID, model.Outcome{
-		TreatmentID: plan.TreatmentID, TreatmentRevisionID: plan.TreatmentRevisionID,
+	_, _, err = s.outcomes.RecordOutcome(ctx, userID, model.Outcome{
 		SourceType: "training_checkin", SourceKey: "training-log:" + log.ID.String() + ":checkin",
 		Kind: "training_adherence", ConcernKey: "general",
 		Value:                datatypes.JSON(rawJSON(map[string]any{"checked_in": true, "date": log.Date}, `{}`)),
@@ -400,7 +404,7 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	if err := s.trainingRepo.SaveLog(ctx, log); err != nil {
 		return nil, err
 	}
-	if s.treatment == nil || plan.TreatmentRevisionID == nil {
+	if s.outcomes == nil || s.treatment == nil || plan.TreatmentRevisionID == nil {
 		return map[string]any{"review_recommended": false}, nil
 	}
 
@@ -418,8 +422,7 @@ func (s *TrainingService) UpdateLogWithFeedback(
 		value["trend"] = feedback.Trend
 	}
 	payloadHash := bodyStateHash(string(rawJSON(map[string]any{"notes": feedback.Notes, "value": value}, `{}`)))
-	outcome, _, err := s.treatment.RecordOutcome(ctx, userID, model.Outcome{
-		TreatmentID: plan.TreatmentID, TreatmentRevisionID: plan.TreatmentRevisionID,
+	outcome, _, err := s.outcomes.RecordOutcome(ctx, userID, model.Outcome{
 		SourceType: "training_feedback", SourceKey: "training-log:" + log.ID.String() + ":feedback:" + payloadHash,
 		Kind: kind, ConcernKey: firstNonEmpty(feedback.ConcernKey, "general"), BodyRegion: feedback.BodyRegion,
 		Value: datatypes.JSON(rawJSON(value, `{}`)), Notes: feedback.Notes,

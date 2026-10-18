@@ -151,7 +151,7 @@ func TestAcceptTreatmentAndEnsurePlanUsesOneUnitOfWork(t *testing.T) {
 	svc := NewTrainingService(
 		repo,
 		&fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{called: &called},
+		nil, testTreatmentUnitOfWork{called: &called},
 	)
 
 	accepted, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID, treatment.Current.ID, nil)
@@ -175,7 +175,7 @@ func TestAcceptTreatmentAndEnsurePlanSurfacesProjectionFailure(t *testing.T) {
 	svc := NewTrainingService(
 		&fakeTrainingRepository{createErr: errors.New("insert failed")},
 		&fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{},
+		nil, testTreatmentUnitOfWork{},
 	)
 
 	_, _, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID, treatment.Current.ID, nil)
@@ -189,7 +189,7 @@ func TestEnsurePlanForTreatmentIsIdempotent(t *testing.T) {
 	treatment := acceptedTreatment(userID)
 	existing := &model.TrainingPlan{ID: uuid.New(), UserID: userID, Status: "active", TreatmentRevisionID: &treatment.Current.ID}
 	repo := &fakeTrainingRepository{byRevision: existing, active: existing}
-	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment}, testTreatmentUnitOfWork{})
+	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment}, nil, testTreatmentUnitOfWork{})
 
 	plan, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
 	if err != nil || plan.ID != existing.ID {
@@ -210,7 +210,7 @@ func TestIndependentTrainingProjectionPreservesOtherActivePlanAndIdempotentRetry
 	repo := &fakeTrainingRepository{active: old, otherPlan: old}
 	svc := NewTrainingService(
 		repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
 	)
 
 	_, first, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID, treatment.Current.ID, nil)
@@ -246,7 +246,7 @@ func TestIndependentTrainingProjectionSkipsLegacySupersedeFailure(t *testing.T) 
 	}
 	svc := NewTrainingService(
 		repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans(),
 	)
 	_, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID, treatment.Current.ID, nil)
 	if err != nil || plan == nil || plan.ID != existing.ID {
@@ -262,7 +262,7 @@ func TestLegacyTrainingProjectionStillSupersedesByDefault(t *testing.T) {
 	other := &model.TrainingPlan{ID: uuid.New(), UserID: userID, Status: "active"}
 	treatment := acceptedTreatment(userID)
 	repo := &fakeTrainingRepository{otherPlan: other}
-	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment}, testTreatmentUnitOfWork{})
+	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment}, nil, testTreatmentUnitOfWork{})
 	if _, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment); err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestIndependentTrainingProjectionRejectsUnacceptedRevision(t *testing.T) {
 	treatment.Current.AcceptanceState = model.TreatmentAcceptanceProposed
 	repo := &fakeTrainingRepository{}
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	_, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID, treatment.Current.ID, nil)
 	if err == nil || plan != nil || repo.created != nil || repo.supersedeCalled {
 		t.Fatalf("unaccepted revision was projected: plan=%#v err=%v", plan, err)
@@ -290,7 +290,7 @@ func TestIndependentTrainingProjectionRejectsDirectUnlockedWrites(t *testing.T) 
 	treatment := acceptedTreatment(userID)
 	repo := &fakeTrainingRepository{}
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	plan, err := svc.EnsurePlanForTreatment(context.Background(), userID, nil, treatment)
 	if plan != nil || !errors.Is(err, ErrIndependentTrainingOwnerLockRequired) {
 		t.Fatalf("independent direct projection must fail closed: plan=%#v err=%v", plan, err)
@@ -305,7 +305,7 @@ func TestIndependentTrainingProjectionRejectsAnotherOwnersLock(t *testing.T) {
 	treatment := acceptedTreatment(userID)
 	repo := &fakeTrainingRepository{}
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	lockedCtx, err := svc.lockIndependentTrainingOwner(context.Background(), other)
 	if err != nil {
 		t.Fatal(err)
@@ -325,7 +325,7 @@ func TestIndependentTrainingAcceptanceStopsBeforeProposalOnLockError(t *testing.
 	repo := &fakeTrainingRepository{lockErr: errors.New("synthetic missing user")}
 	tracker := &fakeTrainingTreatmentService{accepted: treatment}
 	svc := NewTrainingService(repo, tracker,
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	accepted, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID,
 		treatment.Current.ID, nil)
 	if accepted != nil || plan != nil || !errors.Is(err, repo.lockErr) {
@@ -350,7 +350,7 @@ func TestIndependentTrainingLocksBeforeProposalAcceptance(t *testing.T) {
 			return nil
 		},
 	}
-	svc := NewTrainingService(repo, tracker, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+	svc := NewTrainingService(repo, tracker, nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	accepted, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(), userID,
 		treatment.Current.ID, nil)
 	if err != nil || accepted == nil || plan == nil || tracker.acceptCalls != 1 {
@@ -364,7 +364,7 @@ func TestIndependentTrainingRecoveryStopsBeforeCurrentLookupOnLockFailure(t *tes
 	treatment := acceptedTreatment(owner)
 	repo := &fakeTrainingRepository{lockErr: errors.New("synthetic owner lock failed")}
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{}, WithIndependentTrainingPlans())
 	got, err := svc.EnsureCurrentPlan(context.Background(), owner, nil)
 	if got != nil || !errors.Is(err, repo.lockErr) || repo.created != nil {
 		t.Fatalf("lock failure must not recover a plan: plan=%#v err=%v", got, err)
@@ -377,7 +377,7 @@ func TestIndependentTrainingCurrentRecoveryIsOwnerSerialized(t *testing.T) {
 	repo := &fakeTrainingRepository{}
 	called := false
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{called: &called}, WithIndependentTrainingPlans())
+		nil, testTreatmentUnitOfWork{called: &called}, WithIndependentTrainingPlans())
 	first, err := svc.EnsureCurrentPlan(context.Background(), userID, nil)
 	if err != nil || first == nil || first.TreatmentRevisionID == nil ||
 		*first.TreatmentRevisionID != treatment.Current.ID {
@@ -398,7 +398,7 @@ func TestLegacyTrainingAcceptanceDoesNotAcquireNewV2Lock(t *testing.T) {
 	treatment := acceptedTreatment(userID)
 	repo := &fakeTrainingRepository{lockErr: errors.New("must not be called")}
 	svc := NewTrainingService(repo, &fakeTrainingTreatmentService{accepted: treatment},
-		testTreatmentUnitOfWork{})
+		nil, testTreatmentUnitOfWork{})
 	accepted, plan, err := svc.AcceptTreatmentAndEnsurePlan(context.Background(),
 		userID, treatment.Current.ID, nil)
 	if err != nil || accepted == nil || plan == nil || repo.lockCalls != 0 || !repo.supersedeCalled {
@@ -416,7 +416,7 @@ func TestUpdateLogWithFeedbackPreservesExercisesWhenReassessmentOmitsThem(t *tes
   "completed":true
 }]`)
 	repo := &fakeTrainingRepository{active: plan, log: &model.TrainingLog{ID: uuid.New(), UserID: userID, PlanID: plan.ID, Exercises: original}}
-	svc := NewTrainingService(repo, nil, testTreatmentUnitOfWork{})
+	svc := NewTrainingService(repo, nil, nil, testTreatmentUnitOfWork{})
 
 	if _, err := svc.UpdateLogWithFeedback(context.Background(), plan.ID, userID, TrainingFeedbackInput{
 		Notes: "复评反馈", TrainingFeeling: "更稳定",

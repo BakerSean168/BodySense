@@ -5485,9 +5485,6 @@ components:
       additionalProperties: false
       required: [source_type, source_key, kind]
       properties:
-        treatment_id: {type: string, format: uuid}
-        treatment_revision_id: {type: string, format: uuid}
-        intervention_id: {type: string, format: uuid}
         source_type: {type: string, minLength: 1}
         source_key: {type: string, minLength: 1}
         kind: {type: string, minLength: 1}
@@ -5904,15 +5901,6 @@ components:
       - created_at
       properties:
         id:
-          type: string
-          format: uuid
-        treatment_id:
-          type: string
-          format: uuid
-        treatment_revision_id:
-          type: string
-          format: uuid
-        intervention_id:
           type: string
           format: uuid
         source_type:

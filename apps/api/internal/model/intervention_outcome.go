@@ -27,14 +27,12 @@ type Intervention struct {
 
 func (Intervention) TableName() string { return "interventions" }
 
-// Outcome records what happened after an intervention. CausalityLevel defaults
+// Outcome records what the user reported after training or another
+// intervention. It is linked to no plan or revision. CausalityLevel defaults
 // to association_only so temporal sequence is not misrepresented as proof.
 type Outcome struct {
 	ID                   uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID               uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	TreatmentID          *uuid.UUID     `gorm:"type:uuid" json:"treatment_id,omitempty"`
-	TreatmentRevisionID  *uuid.UUID     `gorm:"type:uuid" json:"treatment_revision_id,omitempty"`
-	InterventionID       *uuid.UUID     `gorm:"type:uuid" json:"intervention_id,omitempty"`
 	SourceType           string         `gorm:"type:varchar(40);not null" json:"source_type"`
 	SourceKey            string         `gorm:"type:text;not null" json:"source_key"`
 	Kind                 string         `gorm:"type:varchar(50);not null" json:"kind"`

@@ -30,10 +30,6 @@ type treatmentRepository interface {
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
 	GetRevision(ctx context.Context, userID, revisionID uuid.UUID) (*model.TreatmentRevision, error)
 	ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error)
-	GetIntervention(ctx context.Context, userID, interventionID uuid.UUID) (*model.Intervention, error)
-	CreateOutcome(ctx context.Context, outcome *model.Outcome) (*model.Outcome, bool, error)
-	UpdateOutcomeBodyStateRevision(ctx context.Context, outcomeID, userID uuid.UUID, revision int64) error
-	ListOutcomes(ctx context.Context, userID uuid.UUID, limit int) ([]model.Outcome, error)
 }
 
 type treatmentDiagnosisSource interface {
@@ -48,7 +44,6 @@ type treatmentBodyStateSource interface {
 	GetBodyStateHead(ctx context.Context, userID uuid.UUID) (*model.BodyStateHead, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
 	ResolveRevisionFacts(ctx context.Context, userID uuid.UUID, revisions []model.BodyStateRevision) (BodyStateFactIndex, error)
-	RecordOutcomeSymptom(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.BodyStateRevision, error)
 }
 
 type treatmentFreshnessSource interface {
@@ -544,76 +539,6 @@ func (s *TreatmentService) ListRevisions(ctx context.Context, userID uuid.UUID, 
 	return s.repo.ListRevisions(ctx, userID, limit)
 }
 
-func (s *TreatmentService) ListOutcomes(ctx context.Context, userID uuid.UUID, limit int) ([]model.Outcome, error) {
-	return s.repo.ListOutcomes(ctx, userID, limit)
-}
-
-// RecordOutcome closes the feedback loop with idempotent source identity. The
-// Outcome is persisted first; only a user-authored symptom description becomes
-// a V2 symptom BodyFact (linked via body_state_revision). Other outcomes write
-// no BodyState and leave body_state_revision empty.
-func (s *TreatmentService) RecordOutcome(ctx context.Context, userID uuid.UUID, outcome model.Outcome) (*model.Outcome, bool, error) {
-	outcome.UserID = userID
-	if outcome.SourceType == "" || strings.TrimSpace(outcome.SourceKey) == "" || outcome.Kind == "" {
-		return nil, false, errors.New("outcome source_type, source_key and kind are required")
-	}
-	if outcome.CausalityLevel == "" {
-		outcome.CausalityLevel = "association_only"
-	}
-	if outcome.CausalityLevel == "association_only" && outcome.AssociationStatement == "" {
-		outcome.AssociationStatement = "该变化发生在干预之后，表示时间关联，不代表已经证明因果关系。"
-	}
-	if outcome.InterventionID != nil {
-		intervention, err := s.repo.GetIntervention(ctx, userID, *outcome.InterventionID)
-		if err != nil {
-			return nil, false, err
-		}
-		if intervention == nil {
-			return nil, false, errors.New("intervention not found")
-		}
-		outcome.TreatmentID = &intervention.TreatmentID
-		outcome.TreatmentRevisionID = &intervention.TreatmentRevisionID
-	}
-	if s.unitOfWork == nil {
-		return nil, false, errors.New("treatment unit of work is not configured")
-	}
-	var stored *model.Outcome
-	var created bool
-	err := s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
-		var createErr error
-		stored, created, createErr = s.repo.CreateOutcome(txCtx, &outcome)
-		if createErr != nil {
-			return createErr
-		}
-		if stored == nil {
-			return errors.New("outcome repository returned no record")
-		}
-		if !created && stored.BodyStateRevision != nil {
-			return nil
-		}
-
-		revision, projectionErr := s.bodyState.RecordOutcomeSymptom(txCtx, userID, *stored)
-		if projectionErr != nil {
-			return projectionErr
-		}
-		if revision != nil {
-			if revision.Revision <= 0 {
-				return errors.New("outcome symptom fact has no BodyState revision")
-			}
-			stored.BodyStateRevision = &revision.Revision
-			if updateErr := s.repo.UpdateOutcomeBodyStateRevision(txCtx, stored.ID, userID, revision.Revision); updateErr != nil {
-				return updateErr
-			}
-		}
-		_, reviewErr := s.EvaluateCurrentReview(txCtx, userID)
-		return reviewErr
-	})
-	if err != nil {
-		return nil, false, err
-	}
-	return stored, created, nil
-}
-
 // EvaluateCurrentReview is the explicit write boundary for deterministic review
 // policy. It never asks the model whether a safety gate should be enforced.
 func (s *TreatmentService) EvaluateCurrentReview(ctx context.Context, userID uuid.UUID) (*model.Treatment, error) {
@@ -665,20 +590,12 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	if err != nil {
 		return "", nil, err
 	}
-	outcomes, err := s.repo.ListOutcomes(ctx, userID, 200)
-	if err != nil {
-		return "", nil, err
-	}
 	revisionFacts, err := s.bodyState.ResolveRevisionFacts(ctx, userID, revisions)
 	if err != nil {
 		return "", nil, err
 	}
+	// Outcomes are no longer linked to a Treatment, so none is attributed here.
 	reviewContext := TreatmentReviewContext{Facts: revisionFacts, OutcomeRevisions: map[int64]bool{}}
-	for _, outcome := range outcomes {
-		if outcome.BodyStateRevision != nil && outcome.TreatmentID != nil && *outcome.TreatmentID == current.ID {
-			reviewContext.OutcomeRevisions[*outcome.BodyStateRevision] = true
-		}
-	}
 	status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions, reviewContext)
 	return status, reasons, nil
 }

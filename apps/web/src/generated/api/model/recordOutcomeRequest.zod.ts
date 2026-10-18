@@ -14,9 +14,6 @@ import { JsonObject } from './jsonObject.zod';
 
 
 export const RecordOutcomeRequest = /*#__PURE__*/ zod.strictObject({
-  "treatment_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
-  "treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
-  "intervention_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "source_type": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "source_key": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "kind": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),

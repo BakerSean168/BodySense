@@ -70,9 +70,6 @@ func (s *PublicServer) RecordOutcome(
 		provenance = jsonObjectBytes(*request.Body.Provenance)
 	}
 	outcome := model.Outcome{
-		TreatmentID:          uuidPointer(request.Body.TreatmentId),
-		TreatmentRevisionID:  uuidPointer(request.Body.TreatmentRevisionId),
-		InterventionID:       uuidPointer(request.Body.InterventionId),
 		SourceType:           request.Body.SourceType,
 		SourceKey:            request.Body.SourceKey,
 		Kind:                 request.Body.Kind,
@@ -201,14 +198,6 @@ func marshalPublicMap(value any) (map[string]any, error) {
 func jsonObjectBytes(value openapiv1.JsonObject) datatypes.JSON {
 	encoded, _ := json.Marshal(value)
 	return datatypes.JSON(encoded)
-}
-
-func uuidPointer(value *uuid.UUID) *uuid.UUID {
-	if value == nil {
-		return nil
-	}
-	copy := *value
-	return &copy
 }
 
 func stringOrEmpty(value *string) string {
