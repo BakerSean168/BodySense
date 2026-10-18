@@ -108,9 +108,16 @@ test("shared generated hotspots do not collide between parallel writers", () => 
 test("same-domain resources still collide between parallel writers", () =>
   assert.ok(
     mutate((q) => {
-      const active = q.tickets.filter((t) => t.status === "in_progress");
-      active[0].exclusiveResources = ["public-openapi", "agent-tools"];
-      active[1].exclusiveResources = ["public-openapi", "agent-tools"];
+      // Synthesize two writers; the live queue may hold fewer than two.
+      const pair = q.tickets.filter(
+        (t) => t.status === "done" && t.id !== "INT-001",
+      );
+      for (const [i, t] of pair.slice(0, 2).entries()) {
+        t.status = "in_progress";
+        t.baseSha = q.mainBaselineSha;
+        t.worktree = "/tmp/same-domain-" + i;
+        t.exclusiveResources = ["public-openapi", "agent-tools"];
+      }
     }).some(
       (s) => s.includes("resource collision") && s.includes("agent-tools"),
     ),
