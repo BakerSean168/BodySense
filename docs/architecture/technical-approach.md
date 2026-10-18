@@ -77,12 +77,12 @@ PR6-C removed the three legacy fact/observation/evidence tables and their mutati
 
 Safety uses independent owner-bound restrictions and exact-target resolutions, with source/revision/lift-basis checks and conservative source-invalidation handling. No JSON overwrite, global clear or AI-write path exists. Incomplete/unavailable coverage fails closed. A positive five-concept screen creates restricted/all-training/professional-clearance restrictions; it is not an AI urgent classification.
 
-Diagnosis and Treatment use separate durable history rather than writing final truth into `consultation_sessions`:
+Diagnosis and training plans use separate durable history rather than writing final truth into `consultation_sessions` (TP-002 slice 3 removed the Treatment aggregate; Treatment Agent output is a pending PlanProposal):
 
 ```text
 diagnosis_analyses / diagnosis_candidates / diagnosis_candidate_assessments
-treatments / treatment_revisions
-interventions / outcomes
+plan_proposals / training_plans / training_plan_revisions
+outcomes
 ```
 
 `consultation_sessions` is workflow/session state tied 1:1 to a Conversation; it is not the health aggregate.
