@@ -286,6 +286,9 @@ VALUES (?,?,?,'ask-1','{"q":"where"}','{"a":"knee"}','answered',now())`, interac
 	f.exec(`INSERT INTO interaction_resumes(interaction_id,user_id,conversation_id,run_id,request_id,answer_fingerprint,question_fingerprint,
 user_message_id,assistant_message_id,claimed_at) VALUES (?,?,?,?,'resume-1',?,?,?,?,now())`,
 		interaction, f.owner, f.conversation, *ask.run, strings.Repeat("b", 64), strings.Repeat("c", 64), ask.user, ask.reply)
+	// The answer is cited by structured-answer evidence; an uncited Ask User
+	// is pruned (TestChatRetentionPruneKeepsOnlyCitedEvidencePostgres).
+	f.citeAnswer(ask, interaction, ask.user)
 
 	f.advance(10, 11)
 	receipt, err := f.prune(ctx, f.owner)
@@ -316,7 +319,7 @@ user_message_id,assistant_message_id,claimed_at) VALUES (?,?,?,?,'resume-1',?,?,
 		t.Fatal("pruned run kept its tool-call copy")
 	}
 	if f.count("SELECT COUNT(*) FROM interaction_resumes WHERE interaction_id = ?", interaction) != 1 ||
-		f.count("SELECT COUNT(*) FROM statement_evidence WHERE user_id = ?", f.owner) != 2 ||
+		f.count("SELECT COUNT(*) FROM statement_evidence WHERE user_id = ?", f.owner) != 3 ||
 		f.count("SELECT COUNT(*) FROM condition_analysis_runs WHERE user_id = ?", f.owner) != 1 {
 		t.Fatal("durable evidence lost")
 	}

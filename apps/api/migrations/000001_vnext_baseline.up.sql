@@ -3519,7 +3519,7 @@ ALTER TABLE ONLY public.runs
 --
 
 ALTER TABLE ONLY public.interaction_resumes
-    ADD CONSTRAINT interaction_resumes_assistant_message_id_fkey FOREIGN KEY (assistant_message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+    ADD CONSTRAINT interaction_resumes_assistant_message_id_fkey FOREIGN KEY (assistant_message_id) REFERENCES public.messages(id);
 
 
 --
@@ -3535,7 +3535,7 @@ ALTER TABLE ONLY public.interaction_resumes
 --
 
 ALTER TABLE ONLY public.interaction_resumes
-    ADD CONSTRAINT interaction_resumes_interaction_id_fkey FOREIGN KEY (interaction_id) REFERENCES public.agent_interactions(id) ON DELETE CASCADE;
+    ADD CONSTRAINT interaction_resumes_interaction_id_fkey FOREIGN KEY (interaction_id) REFERENCES public.agent_interactions(id);
 
 
 --
@@ -3559,7 +3559,7 @@ ALTER TABLE ONLY public.interaction_resumes
 --
 
 ALTER TABLE ONLY public.interaction_resumes
-    ADD CONSTRAINT interaction_resumes_user_message_id_fkey FOREIGN KEY (user_message_id) REFERENCES public.messages(id) ON DELETE CASCADE;
+    ADD CONSTRAINT interaction_resumes_user_message_id_fkey FOREIGN KEY (user_message_id) REFERENCES public.messages(id);
 
 
 --

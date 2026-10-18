@@ -295,6 +295,11 @@ func TestInteractionResumeAnswerEvidenceSurvivesSourcePruningPostgres(t *testing
 	if evidence.SourceKind != "structured_answer" || evidence.SourceInteractionID == nil || *evidence.SourceInteractionID != source.InteractionID || evidence.SourceToolCallID == nil || *evidence.SourceToolCallID != "ask-test" || evidence.QuestionExcerpt == nil || evidence.Excerpt != "I have no shoulder pain" {
 		t.Fatalf("source context missing: %#v", evidence)
 	}
+	// Removing the source chat rows must go receipt first: interaction_resumes
+	// no longer cascades from messages or agent_interactions (PC-RET-001).
+	if err := f.db.Delete(&model.InteractionResume{}, "interaction_id = ?", source.InteractionID).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := f.db.Delete(&model.Message{}, "id = ?", source.MessageID).Error; err != nil {
 		t.Fatal(err)
 	}

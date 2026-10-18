@@ -99,6 +99,23 @@ func (r *ChatRetentionRepository) Get(ctx context.Context, owner uuid.UUID) (*mo
 	return cursorOf(&conversation), nil
 }
 
+// OwnerOf returns the owner of a Conversation, for triggers that only carry
+// the Conversation id.
+func (r *ChatRetentionRepository) OwnerOf(ctx context.Context, conversationID uuid.UUID) (uuid.UUID, error) {
+	if conversationID == uuid.Nil {
+		return uuid.Nil, model.ErrRetentionNotFound
+	}
+	var conversation model.Conversation
+	err := database.FromContext(ctx, r.db).Select("id", "user_id").Where("id = ?", conversationID).First(&conversation).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, model.ErrRetentionNotFound
+	}
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return conversation.UserID, nil
+}
+
 func (r *ChatRetentionRepository) lock(ctx context.Context, tx *gorm.DB, owner uuid.UUID) (*model.Conversation, error) {
 	if owner == uuid.Nil {
 		return nil, model.ErrRetentionNotFound
@@ -286,9 +303,24 @@ func PruneJobKey(conversationID uuid.UUID, from int, trigger string) string {
 	return fmt.Sprintf("%s:%s:%d:%s", model.ChatRetentionPruneJobType, conversationID, from, trigger)
 }
 
+// citedInteractionsSQL lists every Ask User interaction a durable record
+// cites, with the citing owner: a structured-answer statement evidence (the
+// BodyFact/Observation/Hypothesis funnel), a Safety intake screen, or a Safety
+// reverification. Only these interactions and their resume receipts outlive a
+// prune; every other interaction of a pruned window is raw chat and goes.
+const citedInteractionsSQL = `
+SELECT source_interaction_id AS interaction_id, user_id FROM statement_evidence WHERE source_interaction_id IS NOT NULL
+UNION ALL
+SELECT source_interaction_id, user_id FROM safety_screens
+UNION ALL
+SELECT check_interaction_id, user_id FROM safety_resolutions WHERE check_interaction_id IS NOT NULL`
+
 // protectedMessages returns live messages in (from, through] that a durable
-// record still references: BodyFact/Safety statement evidence, a Diagnosis
-// request receipt, a Safety screen or lift, or an accepted Ask User answer.
+// record still cites. The full scope and its proof are documented in
+// docs/security/chat-retention-evidence-scope.md: BodyFact/Observation/
+// Hypothesis/Safety statement evidence (which every Diagnosis, BodyState and
+// Plan citation funnels through), a Diagnosis analysis or direct-edit request,
+// a Safety screen or resolution, and both messages of a cited Ask User resume.
 // A reference held by another owner is an anomaly and fails the pass.
 func protectedMessages(ctx context.Context, tx *gorm.DB, conversation *model.Conversation, from, through int) (map[uuid.UUID]bool, error) {
 	var refs []struct {
@@ -298,6 +330,7 @@ func protectedMessages(ctx context.Context, tx *gorm.DB, conversation *model.Con
 	err := tx.WithContext(ctx).Raw(`
 WITH window_messages AS (
   SELECT id FROM messages WHERE conversation_id = ? AND seq > ? AND seq <= ?
+), cited AS (`+citedInteractionsSQL+`
 )
 SELECT e.source_message_id AS message_id, e.user_id AS ref_user_id
   FROM statement_evidence e JOIN window_messages w ON w.id = e.source_message_id
@@ -305,17 +338,22 @@ UNION ALL
 SELECT c.request_message_id, c.user_id
   FROM condition_analysis_runs c JOIN window_messages w ON w.id = c.request_message_id
 UNION ALL
+SELECT c.request_message_id, c.user_id
+  FROM condition_direct_edits c JOIN window_messages w ON w.id = c.request_message_id
+UNION ALL
 SELECT s.source_message_id, s.user_id
   FROM safety_screens s JOIN window_messages w ON w.id = s.source_message_id
 UNION ALL
 SELECT s.source_message_id, s.user_id
   FROM safety_resolutions s JOIN window_messages w ON w.id = s.source_message_id
 UNION ALL
-SELECT ir.user_message_id, ir.user_id
+SELECT ir.user_message_id, cited.user_id
   FROM interaction_resumes ir JOIN window_messages w ON w.id = ir.user_message_id
+  JOIN cited ON cited.interaction_id = ir.interaction_id
 UNION ALL
-SELECT ir.assistant_message_id, ir.user_id
-  FROM interaction_resumes ir JOIN window_messages w ON w.id = ir.assistant_message_id`,
+SELECT ir.assistant_message_id, cited.user_id
+  FROM interaction_resumes ir JOIN window_messages w ON w.id = ir.assistant_message_id
+  JOIN cited ON cited.interaction_id = ir.interaction_id`,
 		conversation.ID, from, through).Scan(&refs).Error
 	if err != nil {
 		return nil, err
@@ -330,7 +368,8 @@ SELECT ir.assistant_message_id, ir.user_id
 	return protected, nil
 }
 
-// referencedRuns returns runs whose identity durable evidence still names.
+// referencedRuns returns runs whose identity durable evidence still names:
+// statement evidence, a Safety screen, or a cited Ask User interaction.
 func referencedRuns(ctx context.Context, tx *gorm.DB, owner uuid.UUID, candidates []uuid.UUID) (map[uuid.UUID]bool, error) {
 	out := map[uuid.UUID]bool{}
 	if len(candidates) == 0 {
@@ -345,7 +384,9 @@ SELECT source_run_id AS run_id, user_id AS ref_user_id FROM statement_evidence W
 UNION ALL
 SELECT source_run_id, user_id FROM safety_screens WHERE source_run_id IN ?
 UNION ALL
-SELECT run_id, user_id FROM interaction_resumes WHERE run_id IN ?`,
+SELECT ai.run_id, cited.user_id
+  FROM agent_interactions ai JOIN (`+citedInteractionsSQL+`) cited ON cited.interaction_id = ai.id
+ WHERE ai.run_id IN ?`,
 		candidates, candidates, candidates).Scan(&refs).Error
 	if err != nil {
 		return nil, err
@@ -570,13 +611,37 @@ func (r *ChatRetentionRepository) CommitPrune(
 			return err
 		}
 
-		var deletedEvents, deletedToolCalls int64
+		// Uncited Ask User receipts go explicitly, never by cascade: those of
+		// pruned Runs, and any whose answer or reply message leaves the window
+		// (a Run held by another cited message). A cited receipt is never in
+		// this set; if one were, its Safety FK would fail the whole commit.
+		window := tx.WithContext(ctx).Model(&model.Message{}).Select("id").
+			Where("conversation_id = ? AND seq > ? AND seq <= ?", conversation.ID, w.from, w.target)
+		if len(d.keep) > 0 {
+			window = window.Where("id NOT IN ?", d.keep)
+		}
+		resumes := tx.WithContext(ctx).Where("conversation_id = ?", conversation.ID)
 		if len(d.runs) > 0 {
+			resumes = resumes.Where("(run_id IN ? OR user_message_id IN (?) OR assistant_message_id IN (?))", d.runs, window, window)
+		} else {
+			resumes = resumes.Where("(user_message_id IN (?) OR assistant_message_id IN (?))", window, window)
+		}
+		if err := resumes.Delete(&model.InteractionResume{}).Error; err != nil {
+			return err
+		}
+
+		var deletedEvents, deletedToolCalls, deletedInteractions int64
+		if len(d.runs) > 0 {
+			res := tx.WithContext(ctx).Exec("DELETE FROM agent_interactions WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs)
+			if res.Error != nil {
+				return res.Error
+			}
+			deletedInteractions = res.RowsAffected
 			if err := tx.WithContext(ctx).Exec(
 				"DELETE FROM thread_projection_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs).Error; err != nil {
 				return err
 			}
-			res := tx.WithContext(ctx).Exec("DELETE FROM agent_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs)
+			res = tx.WithContext(ctx).Exec("DELETE FROM agent_tool_calls WHERE conversation_id = ? AND run_id IN ?", conversation.ID, d.runs)
 			if res.Error != nil {
 				return res.Error
 			}
@@ -611,7 +676,8 @@ func (r *ChatRetentionRepository) CommitPrune(
 			ConversationID: conversation.ID, FromPrunedSeq: w.from, PrunedThroughSeq: w.target,
 			RetentionRevision: next, DeletedMessages: deleted.RowsAffected, RetainedMessages: len(d.keep),
 			PrunedRuns: len(d.runs), DeletedRuntimeEvents: deletedEvents, DeletedToolCalls: deletedToolCalls,
-			CheckpointCleanup: "verified", CheckpointMessagesRemoved: cleanup.RemovedMessages,
+			DeletedInteractions: deletedInteractions,
+			CheckpointCleanup:   "verified", CheckpointMessagesRemoved: cleanup.RemovedMessages,
 			CheckpointsDeleted: cleanup.DeletedCheckpoints,
 		}
 		if cleanup.CheckpointID != nil {

@@ -204,6 +204,9 @@ type ChatRetentionPruneReceipt struct {
 	PrunedRuns           int       `json:"prunedRuns"`
 	DeletedRuntimeEvents int64     `json:"deletedRuntimeEvents"`
 	DeletedToolCalls     int64     `json:"deletedToolCalls"`
+	// DeletedInteractions counts uncited Ask User interactions (with their
+	// resume receipts) removed with the pruned window.
+	DeletedInteractions int64 `json:"deletedInteractions"`
 	// CheckpointCleanup is "verified" once the ai-service receipt proved the
 	// LangGraph copies of the pruned Runs are gone; R never moves without it.
 	CheckpointCleanup         string `json:"checkpointCleanup"`

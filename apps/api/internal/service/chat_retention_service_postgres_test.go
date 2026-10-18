@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
@@ -400,5 +401,60 @@ func TestChatRetentionUnansweredAskUserIsNeverPrunedPostgres(t *testing.T) {
 	f.db.Raw("SELECT COUNT(*) FROM messages WHERE run_id = ?", waiting).Scan(&kept)
 	if kept != 2 {
 		t.Fatalf("answered Ask User run lost %d messages", 2-kept)
+	}
+}
+
+// An Ask User that expires was the only thing keeping its Run unsettled. The
+// expiry worker fires the settle trigger, so the window moves and the turn
+// before it is pruned without waiting for another Run to settle.
+func TestChatRetentionAskUserExpiryTriggersSettlePostgres(t *testing.T) {
+	f := newPruneJobFixture(t)
+	ctx := context.Background()
+	f.svc.WithContextTokenBudget(model.MinChatContextTokenBudget)
+	f.addSizedTurn("completed")
+	waiting := f.addSizedTurn("waiting_user")
+	f.exec(`INSERT INTO agent_interactions(run_id,conversation_id,tool_call_id,question,status,expires_at)
+VALUES (?,?,'ask-expiring','{"q":"where"}','pending',now() - interval '1 minute')`, waiting, f.conversation)
+
+	cursor, job, err := f.svc.ReconcileWindow(ctx, f.owner)
+	if err != nil || job == nil || cursor.ProcessedThroughSeq != 2 || cursor.ContextStartSeq != 3 {
+		t.Fatalf("before expiry: cursor=%+v job=%v %v", cursor, job, err)
+	}
+	if got := f.runJob(job.ID); f.pruned() != 0 || got.Status != model.JobStatusCompleted {
+		t.Fatalf("pass beside a pending Ask User pruned %d (job %s)", f.pruned(), got.Status)
+	}
+
+	interactions := NewAgentInteractionService(
+		repository.NewAgentInteractionRepository(f.db),
+		NewRunService(repository.NewRunRepository(f.db)),
+		repository.NewConversationRepository(f.db),
+		database.NewTransactionManager(f.db),
+	).WithLifecycleEvents(&fakeInteractionLifecycleEvents{}).WithRetentionSettle(f.svc)
+	expired, err := interactions.ExpireExpiredInteractions(ctx, 100)
+	if err != nil || !slices.ContainsFunc(expired, func(i model.AgentInteraction) bool { return i.RunID == waiting }) {
+		t.Fatalf("expiry sweep: %d expired, %v", len(expired), err)
+	}
+	var status string
+	f.db.Raw("SELECT status FROM runs WHERE id = ?", waiting).Scan(&status)
+	if status != string(model.RunStatusFailed) {
+		t.Fatalf("expired Ask User left its Run %q", status)
+	}
+
+	// No other Run settled: only the expiry trigger can have moved P.
+	c, err := f.repo.Get(ctx, f.owner)
+	if err != nil || c.ProcessedThroughSeq != 4 || c.ContextStartSeq != 3 {
+		t.Fatalf("after expiry cursor=%+v %v, want P=4 C=3", c, err)
+	}
+	var next model.Job
+	key := repository.PruneJobKey(f.conversation, 0, "window:4:3")
+	if err := f.db.Where("user_id = ? AND idempotency_key = ?", f.owner, key).First(&next).Error; err != nil {
+		t.Fatalf("expiry enqueued no prune job %s: %v", key, err)
+	}
+	if got := f.runJob(next.ID); got.Status != model.JobStatusCompleted || f.pruned() != 2 || f.messages() != 2 {
+		t.Fatalf("job=%s pruned=%d messages=%d", got.Status, f.pruned(), f.messages())
+	}
+	// A second sweep finds nothing and triggers nothing new.
+	if again, err := interactions.ExpireExpiredInteractions(ctx, 100); err != nil || slices.ContainsFunc(again, func(i model.AgentInteraction) bool { return i.RunID == waiting }) {
+		t.Fatalf("second sweep: %v %v", again, err)
 	}
 }

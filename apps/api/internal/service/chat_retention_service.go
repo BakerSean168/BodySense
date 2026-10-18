@@ -126,6 +126,22 @@ func (s *ChatRetentionService) OnRunSettled(ctx context.Context, owner uuid.UUID
 	}
 }
 
+// OnConversationSettled is OnRunSettled for callers that only know the
+// Conversation, such as the Ask User expiry worker: an expired or cancelled
+// interaction was what kept its Run unsettled, so the window may move now.
+func (s *ChatRetentionService) OnConversationSettled(ctx context.Context, conversationID uuid.UUID) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	owner, err := s.repo.OwnerOf(ctx, conversationID)
+	if err != nil {
+		if !errors.Is(err, model.ErrRetentionNotFound) {
+			log.Printf("chat retention owner of conversation %s: %v", conversationID, err)
+		}
+		return
+	}
+	s.OnRunSettled(ctx, owner)
+}
+
 // ContextWindow is the raw-history window the AI runtime may read.
 func (s *ChatRetentionService) ContextWindow(ctx context.Context, owner, conversationID uuid.UUID) (*model.ChatContextWindow, error) {
 	return s.repo.ContextWindow(ctx, owner, conversationID)

@@ -199,7 +199,11 @@ func main() {
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
-	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB)).WithLifecycleEvents(runtimeEventService)
+	// An expired or cancelled Ask User settles its Run, so the expiry worker
+	// fires the same retention settle trigger as every Run-ending path.
+	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB)).
+		WithLifecycleEvents(runtimeEventService).
+		WithRetentionSettle(chatRetentionService)
 	interactionService.StartInteractionExpiryWorker(context.Background(), time.Minute, nil)
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	consultationRuntime := consultationruntime.NewRuntime(
