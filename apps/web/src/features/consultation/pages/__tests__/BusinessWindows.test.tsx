@@ -510,16 +510,14 @@ describe("body-first business windows", () => {
     expect(screen.getByLabelText("自报性别")).toHaveValue("");
     expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);
     expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
-    // Files, source removal and erasure stay reachable in the 身体档案 drawer.
-    expect(screen.getByTestId("profile-drawer")).toHaveAttribute(
-      "data-open",
-      "false",
-    );
+    // Files, source removal and erasure stay reachable in the 身体档案 drawer,
+    // which loads only once it is first opened.
+    expect(screen.queryByTestId("profile-drawer")).toBeNull();
     await userEvent.click(
       within(popover).getByRole("button", { name: "身体档案与文件" }),
     );
     expect(screen.queryByRole("dialog", { name: "个人资料" })).toBeNull();
-    expect(screen.getByTestId("profile-drawer")).toHaveAttribute(
+    expect(await screen.findByTestId("profile-drawer")).toHaveAttribute(
       "data-open",
       "true",
     );
