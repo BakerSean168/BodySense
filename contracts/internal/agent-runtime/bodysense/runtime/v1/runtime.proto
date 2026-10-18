@@ -82,6 +82,19 @@ message ConsultationBusinessContext {
   repeated google.protobuf.Struct recent_outcomes = 7;
   optional ConsultationSpatialContext spatial_context = 8;
   google.protobuf.Struct posture_analysis = 9;
+  // Go's chat retention context cursor. Absent only when Go could not read
+  // it; the runtime then falls back to its own bounded history.
+  optional ConsultationContextWindow context_window = 10;
+}
+
+// ConsultationContextWindow is the raw chat history the model may see
+// (PC-RET-001). Go advances context_start_seq by a token budget; run_ids are
+// the Runs owning messages at or after it, oldest first. The runtime drops
+// every runtime_messages segment before the first segment of one of these
+// Runs (or of the current Run).
+message ConsultationContextWindow {
+  uint32 context_start_seq = 1 [(buf.validate.field).uint32.gte = 1];
+  repeated string run_ids = 2 [(buf.validate.field).repeated = {max_items: 4096, unique: true, items: {string: {uuid: true}}}];
 }
 
 message RuntimeEventIds {

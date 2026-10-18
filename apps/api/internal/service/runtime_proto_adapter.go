@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	protovalidate "buf.build/go/protovalidate"
 	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
@@ -127,6 +128,15 @@ func consultationBusinessContextToProto(input ConsultationBusinessContext) (*run
 		CurrentTreatment: currentTreatment,
 		RecentOutcomes:   recentOutcomes,
 		PostureAnalysis:  postureAnalysis,
+	}
+	if input.ContextWindow != nil {
+		if input.ContextWindow.ContextStartSeq < 1 || input.ContextWindow.ContextStartSeq > math.MaxUint32 {
+			return nil, fmt.Errorf("invalid runtime command: context_window.context_start_seq %d", input.ContextWindow.ContextStartSeq)
+		}
+		output.ContextWindow = &runtimev1.ConsultationContextWindow{
+			ContextStartSeq: uint32(input.ContextWindow.ContextStartSeq),
+			RunIds:          append([]string{}, input.ContextWindow.RunIDs...),
+		}
 	}
 	if input.SpatialContext != nil {
 		spatial := &runtimev1.ConsultationSpatialContext{}

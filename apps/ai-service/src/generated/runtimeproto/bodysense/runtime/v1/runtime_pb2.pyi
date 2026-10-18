@@ -105,7 +105,7 @@ class ConsultationSpatialContext(_message.Message):
     def __init__(self, body_region_id: _Optional[str] = ..., body_region_label: _Optional[str] = ..., anatomy_id: _Optional[str] = ..., anatomy_name: _Optional[str] = ..., body_region_ids: _Optional[_Iterable[str]] = ..., reference_motion: _Optional[_Union[ConsultationReferenceMotion, _Mapping]] = ...) -> None: ...
 
 class ConsultationBusinessContext(_message.Message):
-    __slots__ = ("profile", "body_state", "runtime_state", "relevant_history", "current_diagnosis", "current_treatment", "recent_outcomes", "spatial_context", "posture_analysis")
+    __slots__ = ("profile", "body_state", "runtime_state", "relevant_history", "current_diagnosis", "current_treatment", "recent_outcomes", "spatial_context", "posture_analysis", "context_window")
     PROFILE_FIELD_NUMBER: _ClassVar[int]
     BODY_STATE_FIELD_NUMBER: _ClassVar[int]
     RUNTIME_STATE_FIELD_NUMBER: _ClassVar[int]
@@ -115,6 +115,7 @@ class ConsultationBusinessContext(_message.Message):
     RECENT_OUTCOMES_FIELD_NUMBER: _ClassVar[int]
     SPATIAL_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     POSTURE_ANALYSIS_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_WINDOW_FIELD_NUMBER: _ClassVar[int]
     profile: _struct_pb2.Struct
     body_state: _struct_pb2.Struct
     runtime_state: ConsultationRuntimeState
@@ -124,7 +125,16 @@ class ConsultationBusinessContext(_message.Message):
     recent_outcomes: _containers.RepeatedCompositeFieldContainer[_struct_pb2.Struct]
     spatial_context: ConsultationSpatialContext
     posture_analysis: _struct_pb2.Struct
-    def __init__(self, profile: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., body_state: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., runtime_state: _Optional[_Union[ConsultationRuntimeState, _Mapping]] = ..., relevant_history: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., current_diagnosis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., current_treatment: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., recent_outcomes: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., spatial_context: _Optional[_Union[ConsultationSpatialContext, _Mapping]] = ..., posture_analysis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    context_window: ConsultationContextWindow
+    def __init__(self, profile: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., body_state: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., runtime_state: _Optional[_Union[ConsultationRuntimeState, _Mapping]] = ..., relevant_history: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., current_diagnosis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., current_treatment: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., recent_outcomes: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., spatial_context: _Optional[_Union[ConsultationSpatialContext, _Mapping]] = ..., posture_analysis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., context_window: _Optional[_Union[ConsultationContextWindow, _Mapping]] = ...) -> None: ...
+
+class ConsultationContextWindow(_message.Message):
+    __slots__ = ("context_start_seq", "run_ids")
+    CONTEXT_START_SEQ_FIELD_NUMBER: _ClassVar[int]
+    RUN_IDS_FIELD_NUMBER: _ClassVar[int]
+    context_start_seq: int
+    run_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, context_start_seq: _Optional[int] = ..., run_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RuntimeEventIds(_message.Message):
     __slots__ = ("conversation_id", "run_id", "tool_call_id", "interaction_id")

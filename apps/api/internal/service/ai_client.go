@@ -125,6 +125,15 @@ type ConsultationBusinessContext struct {
 	// prefetched by Go so the consultation Agent tool can read it without a
 	// Python→Go round trip.
 	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
+	// ContextWindow is Go's chat retention context cursor (PC-RET-001). The
+	// runtime sends the model only the runtime_messages of these Runs onward.
+	ContextWindow *ConsultationContextWindow `json:"context_window,omitempty"`
+}
+
+// ConsultationContextWindow names where the model's raw chat history starts.
+type ConsultationContextWindow struct {
+	ContextStartSeq int      `json:"context_start_seq"`
+	RunIDs          []string `json:"run_ids"`
 }
 
 type StartConsultationTurnRequest struct {
