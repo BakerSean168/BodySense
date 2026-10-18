@@ -4679,6 +4679,33 @@ CREATE TRIGGER diagnosis_settlement_immutable BEFORE UPDATE ON public.diagnosis_
 CREATE TRIGGER condition_disposition_change_immutable BEFORE UPDATE ON public.condition_disposition_changes
     FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
 
+-- UI-DX-001: the user's "not now" on a derived Diagnosis review prompt
+-- (diagnosis.md §3.6). Only the minimal UI dismissal is recorded: which
+-- Condition, the analysis basis and the BodyState revision the user saw, and
+-- the reason codes then shown. It is never a Diagnosis state, never edits a
+-- Condition or its freshness, and newer substantive evidence re-raises the
+-- prompt. Append-only; erasure cascades with the Condition.
+CREATE TABLE public.diagnosis_review_prompt_dismissals (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    id uuid NOT NULL,
+    condition_id uuid NOT NULL,
+    based_on_body_state_revision bigint NOT NULL CHECK (based_on_body_state_revision >= 0),
+    dismissed_through_body_state_revision bigint NOT NULL
+        CHECK (dismissed_through_body_state_revision >= based_on_body_state_revision),
+    diagnosis_revision bigint NOT NULL CHECK (diagnosis_revision >= 1),
+    reason_codes jsonb NOT NULL CHECK (jsonb_typeof(reason_codes)='array' AND jsonb_array_length(reason_codes) BETWEEN 1 AND 32),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 128 AND idempotency_key=btrim(idempotency_key)),
+    dismissed_at timestamptz NOT NULL,
+    PRIMARY KEY (user_id,id),
+    UNIQUE (user_id,idempotency_key),
+    FOREIGN KEY (user_id,condition_id) REFERENCES public.condition_entries(user_id,id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id,diagnosis_revision) REFERENCES public.diagnosis_revisions(user_id,revision)
+);
+CREATE INDEX diagnosis_review_prompt_dismissals_condition
+    ON public.diagnosis_review_prompt_dismissals (user_id, condition_id, dismissed_at DESC);
+CREATE TRIGGER diagnosis_review_prompt_dismissal_immutable BEFORE UPDATE ON public.diagnosis_review_prompt_dismissals
+    FOR EACH ROW EXECUTE FUNCTION public.reject_diagnosis_audit_update();
+
 -- AS-002 slice 1: verified erasure of one asset's source and controlled copies.
 -- One request per asset. Each inventoried target is executed and verified on
 -- its own, so a partial failure stays visible as an outstanding target. The

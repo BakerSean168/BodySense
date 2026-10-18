@@ -49,9 +49,11 @@ import {
   KnowledgeStats,
   LifestyleSnapshot,
   LogoutAcknowledgement,
+  NativeDiagnosisAnalysisRequest,
   NativeDiagnosisDecisionReceipt,
   NativeDiagnosisDirectEditReceipt,
   NativeDiagnosisProjection,
+  NativeDiagnosisReviewPromptDismissal,
   NativeDiagnosisRunPage,
   NativeDiagnosisRunProjection,
   NativeDiagnosisSettlementReceipt,
@@ -153,11 +155,15 @@ import type {
   ListRunEventsParams,
   ListTrainingSessionsParams,
   LogoutAcknowledgementOutput,
+  NativeDiagnosisAnalysisRequestCreate,
+  NativeDiagnosisAnalysisRequestOutput,
   NativeDiagnosisDecisionReceiptOutput,
   NativeDiagnosisDecisionRequest,
   NativeDiagnosisDirectEditReceiptOutput,
   NativeDiagnosisDirectEditRequest,
   NativeDiagnosisProjectionOutput,
+  NativeDiagnosisReviewPromptDismissRequest,
+  NativeDiagnosisReviewPromptDismissalOutput,
   NativeDiagnosisRunPageOutput,
   NativeDiagnosisRunProjectionOutput,
   NativeDiagnosisRunStartRequest,
@@ -3251,6 +3257,115 @@ const res = await (fetchFn ?? fetch)(getDirectEditNativeDiagnosisConditionUrl(co
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? NativeDiagnosisDirectEditReceipt.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateNativeDiagnosisAnalysisRequestUrl = () => {
+
+
+
+
+  return `/api/v1/diagnosis/analysis-requests`
+}
+
+/**
+ * The user explicitly chooses a message they sent and asks for a formal Diagnosis analysis. Go binds that completed user-authored message, verbatim, as versioned user_message statement evidence whose id startNativeDiagnosisRun then cites. Nothing is analysed, inferred or adopted here, and structured Ask User answers are refused. Binding the same message again returns the evidence already bound to it (200).
+ * @summary Bind one of the authenticated user's own chat messages as a formal analysis request statement.
+ */
+export const createNativeDiagnosisAnalysisRequest = async (nativeDiagnosisAnalysisRequestCreate: NativeDiagnosisAnalysisRequestCreate, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisAnalysisRequestOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCreateNativeDiagnosisAnalysisRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(nativeDiagnosisAnalysisRequestCreate)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisAnalysisRequest, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisAnalysisRequest = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisAnalysisRequest.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDismissNativeDiagnosisReviewPromptUrl = (conditionId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis/conditions/${conditionId}/review-prompt-dismissals`
+}
+
+/**
+ * diagnosis.md §3.6: dismissing a review prompt is a minimal, append-only UI record, never a Diagnosis state. It records the Condition, its analysis basis, the BodyState revision the prompt was evaluated at and the reason codes shown. It never edits the Condition, its freshness, any Diagnosis revision, or plan admission. Only an adopted Condition whose freshness is review_recommended has a dismissable prompt; a stale Condition is refused (409). Newer revision-attributed evidence raises the prompt again; a new formal analysis resets it. The Diagnosis revision and evaluated BodyState revision must still be current. Retrying an idempotencyKey returns the original receipt.
+ * @summary Record the authenticated user's "not now" on one Condition's derived review prompt.
+ */
+export const dismissNativeDiagnosisReviewPrompt = async (conditionId: string,
+    nativeDiagnosisReviewPromptDismissRequest: NativeDiagnosisReviewPromptDismissRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NativeDiagnosisReviewPromptDismissalOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getDismissNativeDiagnosisReviewPromptUrl(conditionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(nativeDiagnosisReviewPromptDismissRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NativeDiagnosisReviewPromptDismissal, status?: number} = new globalThis.Error();
+    const data : NativeDiagnosisReviewPromptDismissal = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NativeDiagnosisReviewPromptDismissal.parse(parsedBody) : parsedBody
   return data
 }
 

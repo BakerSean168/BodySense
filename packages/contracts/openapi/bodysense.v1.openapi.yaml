@@ -1772,6 +1772,87 @@ paths:
           $ref: '#/components/responses/ValidationUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/analysis-requests:
+    post:
+      operationId: createNativeDiagnosisAnalysisRequest
+      summary: Bind one of the authenticated user's own chat messages as a formal analysis request statement.
+      description: >
+        The user explicitly chooses a message they sent and asks for a formal Diagnosis analysis.
+        Go binds that completed user-authored message, verbatim, as versioned user_message statement
+        evidence whose id startNativeDiagnosisRun then cites. Nothing is analysed, inferred or adopted
+        here, and structured Ask User answers are refused. Binding the same message again returns the
+        evidence already bound to it (200).
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisAnalysisRequestCreate'}
+      responses:
+        '201':
+          description: New request statement bound to the message.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisAnalysisRequest'}
+        '200':
+          description: The request statement already bound to this message.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisAnalysisRequest'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis/conditions/{conditionId}/review-prompt-dismissals:
+    post:
+      operationId: dismissNativeDiagnosisReviewPrompt
+      summary: Record the authenticated user's "not now" on one Condition's derived review prompt.
+      description: >
+        diagnosis.md §3.6: dismissing a review prompt is a minimal, append-only UI record, never a
+        Diagnosis state. It records the Condition, its analysis basis, the BodyState revision the prompt
+        was evaluated at and the reason codes shown. It never edits the Condition, its freshness, any
+        Diagnosis revision, or plan admission. Only an adopted Condition whose freshness is
+        review_recommended has a dismissable prompt; a stale Condition is refused (409). Newer
+        revision-attributed evidence raises the prompt again; a new formal analysis resets it. The
+        Diagnosis revision and evaluated BodyState revision must still be current. Retrying an
+        idempotencyKey returns the original receipt.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: conditionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NativeDiagnosisReviewPromptDismissRequest'}
+      responses:
+        '200':
+          description: Dismissal receipt (or idempotent replay of it).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/NativeDiagnosisReviewPromptDismissal'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/outcomes:
     post:
       operationId: recordOutcome
@@ -5279,6 +5360,7 @@ components:
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
         freshness: {$ref: '#/components/schemas/NativeDiagnosisFreshness'}
+        reviewPromptDismissal: {$ref: '#/components/schemas/NativeDiagnosisReviewPromptDismissalState'}
     NativeDiagnosisFreshness:
       type: object
       additionalProperties: false
@@ -5315,6 +5397,61 @@ components:
         runId: {type: string, format: uuid}
         conditionId: {type: string, format: uuid}
         diagnosisRevision: {type: integer, format: int64, minimum: 1}
+    NativeDiagnosisReviewPromptDismissalState:
+      type: object
+      additionalProperties: false
+      description: >
+        Present only while the user's latest "not now" still covers every review reason in freshness.
+        A UI record, never a Diagnosis state; freshness is unchanged by it.
+      required: [dismissalId, dismissedThroughBodyStateRevision, dismissedAt]
+      properties:
+        dismissalId: {type: string, format: uuid}
+        dismissedThroughBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        dismissedAt: {type: string, format: date-time}
+    NativeDiagnosisReviewPromptDismissRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedRevision, evaluatedBodyStateRevision, idempotencyKey]
+      properties:
+        expectedRevision: {type: integer, format: int64, minimum: 1}
+        evaluatedBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    NativeDiagnosisReviewPromptDismissal:
+      type: object
+      additionalProperties: false
+      required: [dismissalId, conditionId, basedOnBodyStateRevision, dismissedThroughBodyStateRevision, diagnosisRevision, reasonCodes, idempotencyKey, dismissedAt]
+      properties:
+        dismissalId: {type: string, format: uuid}
+        conditionId: {type: string, format: uuid}
+        basedOnBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        dismissedThroughBodyStateRevision: {type: integer, format: int64, minimum: 0}
+        diagnosisRevision: {type: integer, format: int64, minimum: 1}
+        reasonCodes:
+          type: array
+          minItems: 1
+          items: {type: string, minLength: 1}
+        idempotencyKey: {type: string, minLength: 1, maxLength: 128}
+        dismissedAt: {type: string, format: date-time}
+    NativeDiagnosisAnalysisRequestCreate:
+      type: object
+      additionalProperties: false
+      required: [messageId]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: A completed message the authenticated user wrote (not a structured answer).
+    NativeDiagnosisAnalysisRequest:
+      type: object
+      additionalProperties: false
+      required: [requestEvidenceId, messageId, conversationId, sourceVersion, excerpt, recordedAt]
+      properties:
+        requestEvidenceId: {type: string, format: uuid}
+        messageId: {type: string, format: uuid}
+        conversationId: {type: string, format: uuid}
+        sourceVersion: {type: integer, format: int64, minimum: 1}
+        excerpt: {type: string, minLength: 1, maxLength: 2000}
+        recordedAt: {type: string, format: date-time}
     NativeDiagnosisSourceClaim:
       type: object
       additionalProperties: false
