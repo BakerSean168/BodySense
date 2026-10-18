@@ -4,6 +4,6 @@ export type {
   TrainingPlan,
   TrainingPhase,
   TrainingExercise,
-  TrainingLog,
-  TrainingProgress,
+  TrainingPlanRecord,
+  TrainingSessionRecord,
 } from "./services/trainingService";

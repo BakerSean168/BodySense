@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { completeStructuredSafetyIntake } from "./support/safety";
+import {
+  finishTrainerSessionWithFeedback,
+  recordUserSymptom,
+} from "./support/trainer";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -509,30 +513,22 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
   ).toBeVisible();
 
-  const feedback = await request.put(
-    `${apiBase}/api/v1/training/${accepted.planId}/log`,
-    {
-      headers,
-      data: {
-        notes: "E2E worsening after session",
-        exercises: [],
-        symptom_changes: "肩膀不适加重",
-        training_feeling: "uncomfortable",
-        difficulties: "pain",
-        body_region: "肩部",
-        concern_key: "general",
-        trend: "worsening",
-      },
-    },
+  // Session feedback is verbatim and never becomes a symptom; the worsening the
+  // user reports is recorded through BodyState.
+  await finishTrainerSessionWithFeedback(
+    request,
+    apiBase,
+    headers,
+    accepted.planId,
+    "E2E worsening after session",
   );
-  expect(feedback.ok()).toBeTruthy();
+  await recordUserSymptom(request, apiBase, headers, "肩膀不适加重");
 
   const finalWorkspaceResponse = await request.get(
     `${apiBase}/api/v1/health-workspace`,
     { headers },
   );
   const finalWorkspace = (await finalWorkspaceResponse.json()) as {
-    recent_outcomes: unknown[];
     capabilities: {
       requires_safety_review: boolean;
       can_execute_treatment: boolean;
@@ -545,7 +541,6 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect((await afterFacts.json()).current_revision).toBeGreaterThan(
     revisionBeforeFeedback,
   );
-  expect(finalWorkspace.recent_outcomes.length).toBeGreaterThan(0);
   // The worsening symptom is unscreened: execution pauses, the plan is kept.
   expect(finalWorkspace.capabilities.requires_safety_review).toBe(true);
   expect(finalWorkspace.capabilities.can_execute_treatment).toBe(false);

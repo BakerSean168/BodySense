@@ -15,7 +15,6 @@ function plan(overrides: Partial<TrainingPlan> = {}): TrainingPlan {
     status: "active",
     goal: "肩胛稳定训练",
     duration_weeks: 6,
-    current_week: 1,
     phases: [],
     created_at: "2026-10-11T00:00:00Z",
     ...overrides,
