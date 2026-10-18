@@ -31,3 +31,34 @@ export function projectPendingInteraction(
 export function parsePendingInteraction(input: unknown): PendingInteraction {
   return projectPendingInteraction(AgentInteractionSchema.parse(input));
 }
+
+/**
+ * History shape of an answered BodyState suggestion: Go's receipt lives in
+ * metadata.body_state_receipt, exactly as interaction history returns it, so
+ * a completed turn and a reloaded thread render the same "saved" state.
+ */
+export function suggestionHistoryItem(
+  interaction: PendingInteraction,
+): PendingInteraction {
+  const { body_state_receipt: receipt, ...rest } = interaction;
+  return {
+    ...rest,
+    metadata: {
+      ...(interaction.metadata ?? {}),
+      ...(receipt ? { body_state_receipt: receipt } : {}),
+    },
+  };
+}
+
+/** Answered suggestions a completed turn carried in its message metadata. */
+export function readSuggestionHistory(value: unknown): PendingInteraction[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    try {
+      return [parsePendingInteraction(item)];
+    } catch (error) {
+      console.error("Invalid BodyState suggestion metadata", error);
+      return [];
+    }
+  });
+}

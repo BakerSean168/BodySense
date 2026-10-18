@@ -27,6 +27,7 @@ import {
   type ActiveTurnState,
   type ActiveTurnEffect,
 } from "../runtime/activeTurnReducer";
+import { suggestionHistoryItem } from "../runtime/pendingInteractionProjection";
 import type {
   ExtractedInfo,
   Citation,
@@ -89,19 +90,25 @@ export function useAssistantChatRuntime(
   type StreamRunFn = (
     startRequest: () => Promise<Response>,
     preserveUnstartedState?: boolean,
+    resumedInteraction?: PendingInteraction,
   ) => AsyncGenerator<ChatModelRunResult>;
   const streamConsultationRunRef = useRef<StreamRunFn | null>(null);
 
   async function* streamConsultationRun(
     startRequest: () => Promise<Response>,
     preserveUnstartedState = false,
+    resumedInteraction?: PendingInteraction,
   ): AsyncGenerator<ChatModelRunResult> {
     let streamError: Error | null = null;
     let streamFinished = false;
     let wakeQueueConsumer: (() => void) | null = null;
     let lastYieldSignature: string | null = null;
     const pendingResults: ChatModelRunResult[] = [];
-    let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
+    // A resume stream starts from the interaction it answers, so its answered
+    // milestone (and any BodyState receipt on it) lands on that interaction.
+    let reducerState: ActiveTurnState = resumedInteraction
+      ? { ...INITIAL_ACTIVE_TURN_STATE, pendingInteraction: resumedInteraction }
+      : INITIAL_ACTIVE_TURN_STATE;
     let maxSeq = 0;
     let sawStreamDone = false;
     const networkFailure: { current: Error | null } = { current: null };
@@ -121,7 +128,7 @@ export function useAssistantChatRuntime(
         return;
       }
 
-      const signature = JSON.stringify(result.content);
+      const signature = JSON.stringify([result.content, result.metadata]);
       if (signature === lastYieldSignature) {
         return;
       }
@@ -596,6 +603,7 @@ export function useAssistantChatRuntime(
       threadRuntime: ConsultationThreadController,
       interactionId: string,
       answer: unknown,
+      interaction?: PendingInteraction,
     ): Promise<void> => {
       const content = JSON.stringify(answer);
       if (
@@ -629,6 +637,7 @@ export function useAssistantChatRuntime(
                       { requestId, answer },
                     ),
                   true,
+                  interaction?.id === interactionId ? interaction : undefined,
                 );
                 resolve();
               } catch (error) {
@@ -671,11 +680,24 @@ function buildCompletedSnapshot(
     return null;
   }
 
-  if (state.finalParts.length > 0) {
-    return {
-      content: [...state.finalParts],
-    };
-  }
-
-  return buildStreamingSnapshot(state);
+  const suggestions = state.answeredSuggestions ?? [];
+  // The answered suggestions (with Go's receipts) stay on the completed
+  // message, so "saved" survives the active turn being reset.
+  const metadata =
+    suggestions.length > 0
+      ? {
+          custom: {
+            body_state_suggestions: suggestions.map(suggestionHistoryItem),
+          },
+        }
+      : undefined;
+  const content =
+    state.finalParts.length > 0
+      ? [...state.finalParts]
+      : (buildStreamingSnapshot(state)?.content ?? null);
+  if (!content && !metadata) return null;
+  return {
+    content: content ?? [],
+    ...(metadata ? { metadata } : {}),
+  };
 }

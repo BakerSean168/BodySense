@@ -28,6 +28,7 @@ import type {
   ConsultationPhase,
   ConsultationSpatialContext,
   ExtractedInfo,
+  PendingInteraction,
 } from "../types/consultation";
 import {
   EXECUTION_LOST_USER_MESSAGE,
@@ -44,7 +45,10 @@ import {
   consultationSpatialContextBuffer,
 } from "../hooks/useAssistantChatRuntime";
 import { consultationApi } from "../services/consultationService";
-import { parsePendingInteraction } from "../runtime/pendingInteractionProjection";
+import {
+  parsePendingInteraction,
+  readSuggestionHistory,
+} from "../runtime/pendingInteractionProjection";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { FailedRunStatusCard } from "./FailedRunStatusCard";
 import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
@@ -593,8 +597,13 @@ function ChatContent({
   };
 
   const handleResume = useCallback(
-    async (interactionId: string, answer: unknown) => {
-      await onResumeInteraction(threadRuntime, interactionId, answer);
+    async (interaction: PendingInteraction, answer: unknown) => {
+      await onResumeInteraction(
+        threadRuntime,
+        interaction.id,
+        answer,
+        interaction,
+      );
     },
     [onResumeInteraction, threadRuntime],
   );
@@ -607,7 +616,7 @@ function ChatContent({
       setIsSubmitting(true);
       setInteractionError(null);
       try {
-        await handleResume(interaction.id, answer);
+        await handleResume(interaction, answer);
         return true;
       } catch (err) {
         setInteractionError(
@@ -825,6 +834,10 @@ function CustomAssistantMessage() {
     () => buildAssistantMessagePartsViewModel(content),
     [content],
   );
+  const answeredSuggestions = useMemo(
+    () => readSuggestionHistory(customMetadata.body_state_suggestions),
+    [customMetadata.body_state_suggestions],
+  );
   const [isRedFlagDismissed, setIsRedFlagDismissed] = useState(false);
 
   useEffect(() => {
@@ -866,12 +879,23 @@ function CustomAssistantMessage() {
     return <CancelledRunStatusCard />;
   }
 
+  const suggestionCards = answeredSuggestions.map((interaction) => (
+    <AskUserStatusCard key={interaction.id} interaction={interaction} />
+  ));
+
   if (!viewModel.hasRenderableContent) {
-    return null;
+    return suggestionCards.length > 0 ? (
+      <div className="flex flex-col gap-4">{suggestionCards}</div>
+    ) : null;
   }
 
   return (
-    <MessagePrimitive.Root className="w-full">
+    <MessagePrimitive.Root
+      className={
+        suggestionCards.length > 0 ? "flex w-full flex-col gap-4" : "w-full"
+      }
+    >
+      {suggestionCards}
       <Message from="assistant">
         <MessageContent className="gap-3">
           <StreamingTurnToolCalls toolCalls={viewModel.toolCalls} />

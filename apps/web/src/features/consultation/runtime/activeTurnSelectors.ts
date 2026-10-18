@@ -48,9 +48,7 @@ export function selectActiveTurnViewModel(
     knowledgeGaps: selectKnowledgeGaps(state),
     redFlag: state.redFlag,
     pendingInteraction: state.pendingInteraction,
-    answeredSuggestions: (state.answeredSuggestions ?? []).filter(
-      (item) => item.id !== state.pendingInteraction?.id,
-    ),
+    answeredSuggestions: selectLiveAnsweredSuggestions(state),
     isRunning: state.status === "streaming",
     isInterrupted: state.status === "interrupted",
     isFailed: state.status === "failed",
@@ -110,7 +108,20 @@ export function selectHasVisibleContent(state: ActiveTurnState): boolean {
   return (
     selectHasRenderableContent(state) ||
     state.pendingInteraction !== null ||
-    (state.answeredSuggestions ?? []).length > 0
+    selectLiveAnsweredSuggestions(state).length > 0
+  );
+}
+
+/**
+ * Answered BodyState suggestions of the live turn. Once the turn completes
+ * they ride on its assistant message instead (see buildCompletedSnapshot).
+ */
+export function selectLiveAnsweredSuggestions(
+  state: ActiveTurnState,
+): PendingInteraction[] {
+  if (state.status !== "streaming" && state.status !== "interrupted") return [];
+  return (state.answeredSuggestions ?? []).filter(
+    (item) => item.id !== state.pendingInteraction?.id,
   );
 }
 
