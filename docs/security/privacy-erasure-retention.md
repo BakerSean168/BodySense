@@ -8,7 +8,7 @@ Primary implementation: `PrivacyErasureService` + migration `000054`
 
 BodySense deliberately exposes two different lifecycle actions:
 
-1. **Conversation deletion** removes that conversation history and revokes its share token. It does **not** mutate the longitudinal BodyState, Diagnosis, Treatment, Training, Outcomes, or unrelated uploads.
+1. **Conversation deletion** removes that conversation history (there is no share token to revoke; public sharing is retired). It does **not** mutate the longitudinal BodyState, Diagnosis, Treatment, Training, Outcomes, or unrelated uploads.
 2. **Full privacy erasure** is the privileged account-level operation exposed through `GET /api/v1/privacy/erasure-plan` + `POST /api/v1/privacy/erasure`. It is irreversible after confirmation and destroys all data attributable to the user.
 
 The UI must never use copy that implies these operations are equivalent.
@@ -18,8 +18,8 @@ The UI must never use copy that implies these operations are equivalent.
 | Data family              | Examples / parent tables                                                                                                           | Full privacy erasure                                       | Normal domain retention                                      |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
 | Authentication identity  | `users`, profile, live sessions, refresh families                                                                                  | **Delete/revoke**                                          | Retain while account is active                               |
-| Conversation history     | `conversations`, messages, runs, interactions, runtime events                                                                      | **Delete**                                                 | Retain until user deletes conversation/account               |
-| Share state              | `conversation_shares`                                                                                                              | **Delete/revoke**                                          | Retain only while source conversation is shareable           |
+| Conversation history     | `conversations`, messages, runs, interactions, runtime events                                                                      | **Delete**                                                 | Rolling window; uncited old raw chat pruned                  |
+| Share state              | none (retired, PC-D8 / PC3-19)                                                                                                     | **Nothing to erase** (no table or token)                   | Retired; old share routes return 404                         |
 | Longitudinal BodyState   | `body_states`, facts, observations, revisions, evidence, hypotheses, `safety_screens`, `safety_restrictions`, `safety_resolutions` | **Delete**                                                 | Durable source-of-truth while account exists                 |
 | Diagnosis                | analyses, candidates, assessments, freshness, rollout observations                                                                 | **Delete**                                                 | Immutable/revision-pinned while account exists               |
 | Treatment                | treatment aggregate, revisions, interventions, rollout observations                                                                | **Delete**                                                 | Immutable revisions while account exists                     |

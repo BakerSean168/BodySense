@@ -85,3 +85,17 @@ must be classified in the test's `chatReferenceScope` map. A new reference (or
 a changed delete rule) fails until it is classified there and in this
 document, and until `protectedMessages` / `referencedRuns` cover it if it
 cites chat.
+
+## 5. Legacy public share (PC3-19)
+
+The target product has no public health-conversation share (PC-D8). The share
+service, `POST|DELETE /api/v1/conversations/{id}/share` and the public
+`GET /api/v1/shared-conversations/{token}` read were removed with the single
+Conversation (#321); the vNext baseline has no `conversation_shares` table, and
+the vNext reset replaces the database volume, so no old token or snapshot
+survives. Fail-closed regressions:
+`TestRetiredMultiConversationAndShareRoutesAreGone` (routes are 404 before any
+handler), `TestChatRetentionLegacyShareStateIsGonePostgres` (no share table or
+token column), and the Chromium `legacy-share-retired.spec.ts` (old API paths
+404 with or without a session; old share links land on sign-in or the user's
+own workbench).
