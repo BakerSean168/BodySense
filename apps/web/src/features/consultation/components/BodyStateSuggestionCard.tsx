@@ -12,6 +12,9 @@ import type {
  * copied from the cited message and the question/options are Go's fixed
  * wording. The card never claims anything is saved: "saved" is shown only
  * from Go's commit receipt (see BodyStateSuggestionStatus).
+ *
+ * The pending card sits in the composer, which the canvas theme paints light;
+ * the semantic ask-user-* / bss-* classes let body-canvas.css restyle it.
  */
 
 export const BODY_STATE_SUGGESTION_PURPOSE = "body_state_suggestion";
@@ -91,10 +94,10 @@ function SuggestionLabels({ binding }: { binding: SuggestionBinding }) {
       {labels.map(([term, value]) => (
         <div
           key={term}
-          className="flex gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1"
+          className="bss-label flex gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1"
         >
-          <dt className="text-white/45">{term}</dt>
-          <dd className="font-medium text-white/80">{value}</dd>
+          <dt className="bss-muted text-white/45">{term}</dt>
+          <dd className="bss-ink font-medium text-white/80">{value}</dd>
         </div>
       ))}
     </dl>
@@ -133,23 +136,28 @@ export function BodyStateSuggestionCard({
       aria-labelledby={headingId}
       data-testid="body-state-suggestion-card"
       data-kind={binding.kind}
-      className="ask-user-card my-2 rounded-xl border border-[#75d5a7]/25 bg-[#75d5a7]/[0.045] p-4 text-white/80"
+      className="ask-user-card bss-card my-2 rounded-xl border border-[#75d5a7]/25 bg-[#75d5a7]/[0.045] p-4 text-white/80"
     >
-      <p className="mb-1 text-[11px] font-semibold tracking-wide text-[#9edbbd]/75">
+      <p className="ask-user-title mb-1 text-[11px] font-semibold tracking-wide text-[#9edbbd]/75">
         记录建议 · {KIND_LABEL[binding.kind]}
       </p>
-      <p id={headingId} className="mb-3 text-sm font-medium text-white/90">
+      <p
+        id={headingId}
+        className="ask-user-question mb-3 text-sm font-medium text-white/90"
+      >
         {question.question}
       </p>
       <blockquote
         data-testid="body-state-suggestion-quote"
-        className="mb-3 border-l-2 border-[#75d5a7]/45 pl-3 text-sm leading-relaxed text-white/85"
+        className="bss-quote mb-3 border-l-2 border-[#75d5a7]/45 pl-3 text-sm leading-relaxed text-white/85"
       >
-        <span className="mb-0.5 block text-[11px] text-white/40">你说过</span>“
-        {quote}”
+        <span className="bss-muted mb-0.5 block text-[11px] text-white/40">
+          你说过
+        </span>
+        “{quote}”
       </blockquote>
       <SuggestionLabels binding={binding} />
-      <p className="mb-3 text-xs leading-relaxed text-white/42">
+      <p className="ask-user-context mb-3 text-xs leading-relaxed text-white/42">
         只保存你的原话；是否已保存以系统回执为准。
       </p>
 
@@ -174,7 +182,7 @@ export function BodyStateSuggestionCard({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#171717] transition-colors hover:bg-white disabled:opacity-45"
+          className="ask-user-submit rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#171717] transition-colors hover:bg-white disabled:opacity-45"
           onClick={() => answer(confirm)}
           disabled={isSubmitting}
         >
@@ -183,7 +191,7 @@ export function BodyStateSuggestionCard({
         {onEdit && (
           <button
             type="button"
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] disabled:opacity-45"
+            className="bss-secondary rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] disabled:opacity-45"
             onClick={() => onEdit(quote)}
             disabled={isSubmitting}
           >
@@ -192,7 +200,7 @@ export function BodyStateSuggestionCard({
         )}
         <button
           type="button"
-          className="px-2 py-2 text-sm font-medium text-white/55 transition-colors hover:text-white/80 disabled:opacity-45"
+          className="bss-tertiary px-2 py-2 text-sm font-medium text-white/55 transition-colors hover:text-white/80 disabled:opacity-45"
           onClick={() => answer(REJECT_OPTION)}
           disabled={isSubmitting}
         >

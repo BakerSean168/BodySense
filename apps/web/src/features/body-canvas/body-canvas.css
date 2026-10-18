@@ -1846,9 +1846,36 @@
 }
 .body-canvas-theme .ask-user-error p,
 .body-canvas-theme .ask-user-error button { color: var(--bc-danger); }
+/* BodyState suggestion: the user's own words, framed by the primary accent. */
+.body-canvas-theme .bss-card {
+  border-color: color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line));
+  background: var(--bc-paper);
+}
+.body-canvas-theme .bss-quote {
+  border-left-color: var(--bc-primary);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .bss-muted { color: var(--bc-muted); }
+.body-canvas-theme .bss-ink { color: var(--bc-ink); }
+.body-canvas-theme .bss-label {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .bss-secondary {
+  min-height: 38px;
+  border-color: var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .bss-secondary:hover:not(:disabled) { background: var(--bc-subtle); }
+.body-canvas-theme .bss-tertiary { min-height: 38px; color: var(--bc-secondary); }
+.body-canvas-theme .bss-tertiary:hover:not(:disabled) { color: var(--bc-ink); }
 @media (max-width: 760px) {
   .body-canvas-theme .bc-chat-composer-area { padding-top: 12px; }
-  .body-canvas-theme .ask-user-submit { min-height: 44px; }
+  .body-canvas-theme .ask-user-submit,
+  .body-canvas-theme .bss-secondary,
+  .body-canvas-theme .bss-tertiary { min-height: 44px; }
 }
 
 /* Person keeps one scroll boundary in the existing window/sheet at every width. */
