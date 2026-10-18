@@ -11,6 +11,7 @@ import (
 	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type RuntimeProtocolErrorCode string
@@ -146,6 +147,9 @@ type ConsultationRuntimeInteractionPayload struct {
 	consultationRuntimePayloadMarker
 	InteractionID string          `json:"interaction_id"`
 	Question      json.RawMessage `json:"question"`
+	// Suggestion is the typed source-cited BodyState suggestion (BS-AGENT-001)
+	// as the binder's runtime envelope; empty when the interrupt carries none.
+	Suggestion json.RawMessage `json:"-"`
 }
 
 func (ConsultationRuntimeInteractionPayload) Kind() ConsultationRuntimeEventKind {
@@ -418,9 +422,14 @@ func runtimeEventOneofPayload(event *runtimev1.RuntimeEvent) (ConsultationRuntim
 		if err != nil {
 			return nil, err
 		}
+		suggestion, err := runtimeBodyStateSuggestionEnvelope(value.InteractionRequired.GetSuggestion())
+		if err != nil {
+			return nil, err
+		}
 		return ConsultationRuntimeInteractionPayload{
 			InteractionID: value.InteractionRequired.InteractionId,
 			Question:      question,
+			Suggestion:    suggestion,
 		}, nil
 	case *runtimev1.RuntimeEvent_PhaseChanged:
 		return ConsultationRuntimePhaseChangedPayload{
@@ -510,4 +519,30 @@ func runtimeSafetyOutputPayload(
 
 func consultationProtocolError(message string) ConsultationRuntimeEvent {
 	return ConsultationRuntimeEvent{Seq: 1, Payload: ConsultationRuntimeErrorPayload{Message: message}}
+}
+
+// runtimeBodyStateSuggestionEnvelope maps the typed runtime suggestion onto
+// the binder's JSON envelope. Payload values must be strings; the binder
+// rejects unknown payload keys and unverifiable values.
+func runtimeBodyStateSuggestionEnvelope(suggestion *runtimev1.BodyStateSuggestion) (json.RawMessage, error) {
+	if suggestion == nil {
+		return nil, nil
+	}
+	envelope := map[string]any{
+		"kind": suggestion.GetKind(), "cited_message_id": suggestion.GetCitedMessageId(),
+		"base_body_state_revision": suggestion.GetBaseBodyStateRevision(),
+		"span":                     map[string]any{"start": suggestion.GetSpan().GetStart(), "end": suggestion.GetSpan().GetEnd()},
+	}
+	if fields := suggestion.GetPayload().GetFields(); len(fields) > 0 {
+		payload := make(map[string]string, len(fields))
+		for key, value := range fields {
+			text, ok := value.GetKind().(*structpb.Value_StringValue)
+			if !ok {
+				return nil, fmt.Errorf("body state suggestion payload %q must be a string", key)
+			}
+			payload[key] = text.StringValue
+		}
+		envelope["payload"] = payload
+	}
+	return json.Marshal(envelope)
 }

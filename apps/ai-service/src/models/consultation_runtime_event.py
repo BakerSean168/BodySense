@@ -48,6 +48,8 @@ class LifestyleContextRuntimeEvent:
 class InteractionRequiredRuntimeEvent:
     interaction_id: str
     question: dict[str, Any]
+    # Typed source-cited BodyState suggestion (BS-AGENT-001); Go binds it.
+    suggestion: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)

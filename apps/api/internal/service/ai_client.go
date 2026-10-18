@@ -85,6 +85,9 @@ type ConsultationUserInput struct {
 	Type   string                 `json:"type"`
 	Text   string                 `json:"text"`
 	Images []ConsultationImageRef `json:"images,omitempty"`
+	// MessageID is the persisted user message of this turn: the only chat
+	// message a BodyState suggestion of this turn may cite.
+	MessageID string `json:"message_id,omitempty"`
 }
 
 type ConsultationRuntimeState struct {

@@ -108,11 +108,14 @@ def runtime_event_to_proto(event: ConsultationRuntimeEvent) -> runtime_pb2.Runti
         )
     elif isinstance(payload, InteractionRequiredRuntimeEvent):
         wire.ids.interaction_id = payload.interaction_id
+        interaction_value: dict[str, Any] = {
+            "interaction_id": payload.interaction_id,
+            "question": payload.question,
+        }
+        if payload.suggestion is not None:
+            interaction_value["suggestion"] = payload.suggestion
         wire.interaction_required.CopyFrom(
-            _parse_runtime_payload(
-                {"interaction_id": payload.interaction_id, "question": payload.question},
-                runtime_pb2.InteractionRequired(),
-            )
+            _parse_runtime_payload(interaction_value, runtime_pb2.InteractionRequired())
         )
     elif isinstance(payload, PhaseChangedRuntimeEvent):
         phase_value: dict[str, Any] = {"to": payload.to, "reason": payload.reason}

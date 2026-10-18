@@ -16,6 +16,16 @@ type fakeSuggestionSourceReader struct {
 	revision int64
 	err      error
 	calls    int
+	factID   uuid.UUID
+	excerpts []string
+}
+
+func (f *fakeSuggestionSourceReader) ReadSuggestionEpisodeFact(_ context.Context, _ uuid.UUID, source model.SuggestionSourceMessage, excerpt string) (uuid.UUID, error) {
+	f.excerpts = append(f.excerpts, excerpt)
+	if f.factID == uuid.Nil || source.ID != f.source.ID {
+		return uuid.Nil, model.ErrBodyStateSuggestionRejected
+	}
+	return f.factID, nil
 }
 
 func (f *fakeSuggestionSourceReader) ReadSuggestionSource(_ context.Context, _, conversationID, messageID uuid.UUID) (*model.SuggestionSourceMessage, int64, error) {
@@ -153,16 +163,23 @@ func suggestionJSON(t *testing.T, value any) json.RawMessage {
 
 type suggestionLedgerRepository struct {
 	fakeBodyStateRepository
-	commands []model.ConfirmBodyHypothesisSuggestionCommand
-	receipt  func(owner uuid.UUID) *model.BodyHypothesisCommit
+	commands []model.ConfirmBodyStateSuggestionCommand
+	receipt  func(owner uuid.UUID) *model.BodyStateSuggestionReceipt
 }
 
-func (r *suggestionLedgerRepository) ConfirmBodyHypothesisSuggestion(_ context.Context, owner uuid.UUID, _ model.AnswerFactSource, command model.ConfirmBodyHypothesisSuggestionCommand) (*model.BodyHypothesisCommit, error) {
+func (r *suggestionLedgerRepository) ConfirmBodyStateSuggestion(_ context.Context, owner uuid.UUID, _ model.AnswerFactSource, command model.ConfirmBodyStateSuggestionCommand) (*model.BodyStateSuggestionReceipt, error) {
 	r.commands = append(r.commands, command)
 	if r.receipt != nil {
 		return r.receipt(owner), nil
 	}
-	return &model.BodyHypothesisCommit{ID: uuid.New(), UserID: owner, HypothesisID: uuid.New(), EventID: uuid.New(), RevisionID: uuid.New(), Revision: 8}, nil
+	receipt := &model.BodyStateSuggestionReceipt{Kind: command.Kind, CommitID: uuid.New(), UserID: owner, RecordID: uuid.New(),
+		EventID: uuid.New(), RevisionID: uuid.New(), Revision: 8}
+	if command.Kind == model.BodyStateSuggestionKindEpisode {
+		receipt.FactID = uuid.MustParse(command.Payload.FactID)
+	} else {
+		receipt.SourceEvidenceID = uuid.New()
+	}
+	return receipt, nil
 }
 
 func boundSuggestionInteraction(t *testing.T, answer string) *model.AgentInteraction {
@@ -198,13 +215,97 @@ func TestRecordBodyStateSuggestionAnswerCommitsOnlyConfirmation(t *testing.T) {
 	if _, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, forged); !errors.Is(err, model.ErrBodyStateSuggestionRejected) || len(repo.commands) != 1 {
 		t.Fatalf("forged binding not refused: %v", err)
 	}
-	repo.receipt = func(uuid.UUID) *model.BodyHypothesisCommit {
-		return &model.BodyHypothesisCommit{ID: uuid.New(), UserID: uuid.New(), HypothesisID: uuid.New(), EventID: uuid.New(), RevisionID: uuid.New(), Revision: 9}
+	repo.receipt = func(uuid.UUID) *model.BodyStateSuggestionReceipt {
+		return &model.BodyStateSuggestionReceipt{Kind: model.BodyStateSuggestionKindHypothesis, CommitID: uuid.New(), UserID: uuid.New(), RecordID: uuid.New(),
+			SourceEvidenceID: uuid.New(), EventID: uuid.New(), RevisionID: uuid.New(), Revision: 9}
 	}
 	if _, err := svc.RecordBodyStateSuggestionAnswer(context.Background(), owner, source, confirm); err == nil {
 		t.Fatal("foreign receipt accepted")
 	}
 	if _, err := NewBodyStateService(&fakeBodyStateRepository{}).RecordBodyStateSuggestionAnswer(context.Background(), owner, source, confirm); err == nil {
 		t.Fatal("missing ledger silently dropped a confirmation")
+	}
+}
+
+func typedSuggestion(t *testing.T, kind string, messageID uuid.UUID, start, end int, revision int64, payload map[string]any) json.RawMessage {
+	t.Helper()
+	value := map[string]any{"kind": kind, "cited_message_id": messageID.String(),
+		"span": map[string]any{"start": start, "end": end}, "base_body_state_revision": revision}
+	if payload != nil {
+		value["payload"] = payload
+	}
+	return suggestionJSON(t, value)
+}
+
+func TestAttachRuntimeBodyStateSuggestionOnlyTrustsTheTypedField(t *testing.T) {
+	_, _, reader := suggestionFixture()
+	placeholder := json.RawMessage(`{"question":"要记下来吗？","answer_type":"single_choice","options":["好","不要"]}`)
+	if out, err := AttachRuntimeBodyStateSuggestion(placeholder, nil); err != nil || string(out) != string(placeholder) {
+		t.Fatalf("plain question changed: %s %v", out, err)
+	}
+	// A question that carries its own suggestion/purpose/binding loses them.
+	smuggled := suggestionQuestion(t, reader.source.ID, 4, 13, 7, map[string]any{"state_binding": map[string]any{"revision": "x"}, "quote": "x"})
+	out, err := AttachRuntimeBodyStateSuggestion(smuggled, json.RawMessage("null"))
+	if err != nil || strings.Contains(string(out), "suggestion") || strings.Contains(string(out), "state_binding") || strings.Contains(string(out), `"quote"`) {
+		t.Fatalf("question-carried suggestion survived: %s %v", out, err)
+	}
+	typed := typedSuggestion(t, "hypothesis", reader.source.ID, 4, 13, 7, nil)
+	out, err = AttachRuntimeBodyStateSuggestion(placeholder, typed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, conversation := uuid.New(), reader.source.ConversationID
+	if _, ok, err := BindBodyStateSuggestionQuestion(context.Background(), reader, owner, conversation, out); err != nil || !ok {
+		t.Fatalf("typed suggestion did not bind: %v %v (%s)", ok, err, out)
+	}
+	if _, err := AttachRuntimeBodyStateSuggestion(json.RawMessage(`"x"`), typed); err == nil {
+		t.Fatal("non-object question accepted")
+	}
+}
+
+func TestBindBodyStateSuggestionObservationAndEpisodeKinds(t *testing.T) {
+	owner, conversation := uuid.New(), uuid.New()
+	text := "今早我量了血压是135/88 mmHg。我右肩又开始疼了。"
+	reader := &fakeSuggestionSourceReader{source: &model.SuggestionSourceMessage{ID: uuid.New(), ConversationID: conversation, RunID: uuid.New(), Seq: 1, Text: text}, revision: 2, factID: uuid.New()}
+	bind := func(typed json.RawMessage) (model.BodyStateSuggestionQuestion, bool, json.RawMessage) {
+		question, err := AttachRuntimeBodyStateSuggestion(json.RawMessage(`{"question":"记下来？"}`), typed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, ok, err := BindBodyStateSuggestionQuestion(context.Background(), reader, owner, conversation, question)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var q model.BodyStateSuggestionQuestion
+		_ = json.Unmarshal(out, &q)
+		return q, ok, out
+	}
+	q, ok, _ := bind(typedSuggestion(t, "observation", reader.source.ID, 2, 19, 2, map[string]any{"observation_kind": "blood_pressure", "raw_value": "135/88", "raw_unit": "mmHg"}))
+	if !ok || q.StateBinding.Kind != "observation" || q.StateBinding.Payload == nil || q.StateBinding.Payload.RawValue != "135/88" || q.Options[0] != "记录为身体观察" {
+		t.Fatalf("observation = %+v %v", q, ok)
+	}
+	q, ok, _ = bind(typedSuggestion(t, "episode", reader.source.ID, 20, 28, 2, map[string]any{"symptom_type": "疼"}))
+	if !ok || q.StateBinding.Payload == nil || q.StateBinding.Payload.FactID != reader.factID.String() || reader.excerpts[0] != "我右肩又开始疼了" {
+		t.Fatalf("episode = %+v %v %v", q, ok, reader.excerpts)
+	}
+	unbindable := map[string]json.RawMessage{
+		"observation value not the user's":  typedSuggestion(t, "observation", reader.source.ID, 2, 19, 2, map[string]any{"observation_kind": "blood_pressure", "raw_value": "140/90"}),
+		"observation clinical label":        typedSuggestion(t, "observation", reader.source.ID, 2, 19, 2, map[string]any{"observation_kind": "高血压"}),
+		"episode names its own fact":        typedSuggestion(t, "episode", reader.source.ID, 20, 28, 2, map[string]any{"symptom_type": "疼", "fact_id": uuid.NewString()}),
+		"episode without a committed fact":  typedSuggestion(t, "episode", reader.source.ID, 2, 19, 2, map[string]any{"symptom_type": "血压"}),
+		"episode symptom words invented":    typedSuggestion(t, "episode", reader.source.ID, 20, 28, 2, map[string]any{"symptom_type": "肩周炎"}),
+		"hypothesis with an invented label": typedSuggestion(t, "hypothesis", reader.source.ID, 20, 28, 2, map[string]any{"symptom_type": "疼"}),
+		"unknown payload key":               typedSuggestion(t, "observation", reader.source.ID, 2, 19, 2, map[string]any{"observation_kind": "blood_pressure", "diagnosis": "x"}),
+	}
+	reader.factID = uuid.Nil // no fact for the observation span below
+	for name, typed := range unbindable {
+		if name == "episode symptom words invented" || name == "episode names its own fact" {
+			reader.factID = uuid.New()
+		}
+		_, ok, out := bind(typed)
+		if ok || string(out) != model.BodyStateSuggestionUnverifiedQuestion {
+			t.Errorf("%s: bound=%v out=%s", name, ok, out)
+		}
+		reader.factID = uuid.Nil
 	}
 }

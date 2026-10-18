@@ -42,7 +42,7 @@ async def acquire_body_fact_turn(
         writer({"type": "text_delta", "delta": "本轮身体信息尚未保存，自动提取未通过核验。\n"})
         return {"intake_result": {"capture_status": "unavailable"}, "intake_question": None}
 
-    result = {"turn_kind": output.turn_kind, "capture_status": "not_applicable"}
+    result: dict[str, Any] = {"turn_kind": output.turn_kind, "capture_status": "not_applicable"}
     question = None
     if output.facts:
         tool_id = f"bodyfact-intake-v1:{run_id}"
@@ -61,6 +61,12 @@ async def acquire_body_fact_turn(
             {"type": "tool_result", "id": tool_id, "tool": "record_body_state", "result": proposal}
         )
         result["capture_status"] = "proposed"
+        # Only these exact statements may later be organized as an episode.
+        result["present_symptom_statements"] = [
+            fact.statement
+            for fact in output.facts
+            if fact.kind == "symptom" and fact.presence == "present"
+        ]
         # Every non-absent symptom needs a safety screen before Diagnosis may
         # rely on it. Ask the bounded checklist for the first one; a screen
         # committed after this proposal covers every symptom of this batch.
