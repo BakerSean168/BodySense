@@ -44,7 +44,11 @@ export interface ConditionCause {
 }
 
 export interface ConditionHandling {
-  state: "not_confirmed" | "plan_level";
+  /**
+   * `condition_level` is the handling plan stored on an adopted V2
+   * ConditionEntry; `plan_level` is the legacy accepted-plan summary.
+   */
+  state: "not_confirmed" | "plan_level" | "condition_level";
   summary?: string;
   actions?: string[];
   cautionNotes?: string[];
