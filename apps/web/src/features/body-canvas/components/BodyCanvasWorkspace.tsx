@@ -19,7 +19,7 @@ import {
   isBusinessWindowVisible,
   type BusinessWindowId,
 } from "../model/businessWindows";
-import { projectDiagnosisView } from "../model/confirmedConditions";
+import { useDiagnosisActions } from "@/features/consultation/hooks/useDiagnosisActions";
 import { projectTrainingPlans, readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "../model/trainingPlans";
 import { useTrainingWindowData } from "../hooks/useTrainingWindowData";
 import { BusinessWindowHost } from "./BusinessWindowHost";
@@ -133,7 +133,11 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     return recordBodyRegions(fact).some((region) => selection.regions.includes(region)) && fact.assertion_status === "asserted";
   }), [props.bodyState, selection.regions]);
   const selectionLabel = selection.regions.map((id) => getBodyRegionDefinition(id).labels["zh-CN"]).join("、");
-  const diagnosisView = useMemo(() => projectDiagnosisView(props.workspace, props.workspace?.diagnosis ?? null), [props.workspace]);
+  const diagnosisActions = useDiagnosisActions({
+    enabled: !!props.workspace,
+    safetyReview,
+  });
+  const diagnosisView = diagnosisActions.view;
   const projected = useMemo(
     () => projectTrainingPlans(props.workspace, data.plans, selectedPlanId),
     [props.workspace, data.plans, selectedPlanId],
@@ -328,10 +332,21 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           <DiagnosisWindow
             view={diagnosisView}
             selectedConditionId={selectedConditionId}
-            loading={props.loading && !props.workspace}
+            loading={(props.loading && !props.workspace) || diagnosisActions.loading}
             error={
-              props.error && !props.workspace ? "当前诊断暂时无法同步。" : null
+              props.error && !props.workspace
+                ? "当前诊断暂时无法同步。"
+                : diagnosisActions.loadError
             }
+            controls={{
+              selection: diagnosisActions.selection,
+              onSelect: diagnosisActions.select,
+              onReview: diagnosisActions.reviewProposal,
+              onRecordSelection: () => void diagnosisActions.recordSelection(),
+              onSettle: () => void diagnosisActions.settle(),
+              busy: diagnosisActions.busy,
+              error: diagnosisActions.error,
+            }}
           />
         );
       case "training":

@@ -36,6 +36,18 @@ vi.mock("@/features/profile/services/bodyEpisodeService", () => ({
     }),
   },
 }));
+const mockNativeDiagnosis = vi.fn();
+const mockLatestDiagnosisRun = vi.fn();
+const mockDiagnosisRun = vi.fn();
+vi.mock("../../services/nativeDiagnosisService", () => ({
+  nativeDiagnosisService: {
+    current: () => mockNativeDiagnosis(),
+    latestRun: () => mockLatestDiagnosisRun(),
+    run: (runId: string) => mockDiagnosisRun(runId),
+    decide: vi.fn(),
+    settle: vi.fn(),
+  },
+}));
 const mockListEquipment = vi.fn();
 const mockUpdateEquipment = vi.fn();
 vi.mock("@/features/profile/services/equipmentService", () => ({
@@ -96,6 +108,12 @@ vi.mock("../../components/AssistantChatPanel", () => ({
   AssistantChatPanel: () => <div data-testid="assistant-chat-panel">chat</div>,
 }));
 
+import {
+  RUN_ID,
+  makeCondition,
+  makeDiagnosis,
+  makeRun,
+} from "@/features/body-canvas/model/__fixtures__/nativeDiagnosisFixtures";
 import { ConsultationPage } from "../ConsultationPage";
 import type {
   ConsultationThread,
@@ -200,6 +218,11 @@ beforeEach(() => {
   mockGetLifestyle.mockReset();
   mockListEquipment.mockReset();
   mockListEquipment.mockResolvedValue({ items: [] });
+  mockNativeDiagnosis.mockReset();
+  mockNativeDiagnosis.mockResolvedValue(makeDiagnosis());
+  mockLatestDiagnosisRun.mockReset();
+  mockLatestDiagnosisRun.mockResolvedValue(null);
+  mockDiagnosisRun.mockReset();
   mockUpdateEquipment.mockReset();
   const owner = "11111111-1111-4111-8111-111111111111";
   useAuthStore.setState({
@@ -298,100 +321,44 @@ describe("body-first business windows", () => {
     expect(screen.queryByText(/修订|版本号|revision/i)).not.toBeInTheDocument();
   });
 
-  it("never shows an unconfirmed candidate as a confirmed condition (DX-06)", async () => {
-    mockUseHealthWorkspaceQuery.mockReturnValue({
-      data: makeWorkspace({
-        diagnosis: {
-          analysis_id: "analysis-1",
-          body_state_revision: 2,
-          status: "completed",
-          scope: "comprehensive",
-          summary: "",
-          candidates: [
-            {
-              candidate_id: "cand-1",
-              name: "上交叉综合征倾向",
-              confidence: "高",
-              basis: "久坐后肩颈酸胀",
-            },
-          ],
-          citations: [],
-          freshness: {
-            analysis_id: "analysis-1",
-            state: "fresh",
-            evaluated_against_revision: 2,
-            reasons: [],
-            checked_at: "2026-10-11T00:00:00Z",
-          },
-          candidate_assessments: [],
-          created_at: "2026-10-11T00:00:00Z",
-        },
-      }),
-      isPending: false,
-      isFetching: false,
-      isError: false,
+  it("never shows an unconfirmed proposal as a confirmed condition (DX-06)", async () => {
+    mockLatestDiagnosisRun.mockResolvedValue({
+      runId: RUN_ID,
+      trigger: "new_analysis",
+      basedOnBodyStateRevision: 5,
+      basedOnDiagnosisRevision: 2,
+      startedAt: "2026-10-18T03:00:00Z",
+      state: "open",
     });
+    mockDiagnosisRun.mockResolvedValue(makeRun());
     renderPage();
     await openDock("综合诊断");
     await screen.findByTestId("diagnosis-window");
+    expect(await screen.findByTestId("diagnosis-proposals")).toBeVisible();
     expect(screen.getByText("还没有已确认的病情")).toBeInTheDocument();
-    expect(screen.getByText(/1 条分析提案尚未确认/)).toBeInTheDocument();
+    expect(screen.getAllByText("待你决定")).toHaveLength(2);
+    expect(
+      screen.getByRole("combobox", { name: "选择已确认病情" }),
+    ).toBeDisabled();
   });
 
-  it("lists a confirmed condition with cause, handling boundary and certainty", async () => {
-    mockUseHealthWorkspaceQuery.mockReturnValue({
-      data: makeWorkspace({
-        diagnosis: {
-          analysis_id: "analysis-1",
-          body_state_revision: 2,
-          status: "completed",
-          scope: "comprehensive",
-          summary: "",
-          candidates: [
-            {
-              candidate_id: "cand-1",
-              name: "上交叉综合征倾向",
-              confidence: "高",
-              basis: "久坐后肩颈酸胀",
-              reasoning_summary: "长期久坐使肩胛稳定肌群持续紧张",
-              missing_information: ["夜间痛是否加重"],
-            },
-          ],
-          citations: [],
-          freshness: {
-            analysis_id: "analysis-1",
-            state: "fresh",
-            evaluated_against_revision: 2,
-            reasons: [],
-            checked_at: "2026-10-11T00:00:00Z",
-          },
-          candidate_assessments: [
-            { candidate_id: "cand-1", state: "confirmed" },
-          ],
-          created_at: "2026-10-11T00:00:00Z",
-        },
-      }),
-      isPending: false,
-      isFetching: false,
-      isError: false,
-    });
+  it("lists an adopted condition with cause, handling boundary and certainty", async () => {
+    mockNativeDiagnosis.mockResolvedValue(
+      makeDiagnosis({ conditionEntries: [makeCondition()] }),
+    );
     renderPage();
     await openDock("综合诊断");
     await screen.findByTestId("diagnosis-window");
     expect(
-      screen.getByRole("button", { name: "综合诊断，1 项已确认病情" }),
+      await screen.findByRole("button", { name: "综合诊断，1 项已确认病情" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toHaveValue("cand-1");
-    expect(
-      screen.getByRole("heading", { name: "上交叉综合征倾向" }),
-    ).toBeVisible();
-    expect(
-      screen.getByText("长期久坐使肩胛稳定肌群持续紧张"),
-    ).toBeInTheDocument();
+    ).toHaveValue(makeCondition().conditionId);
+    expect(screen.getByRole("heading", { name: "肩峰下撞击" })).toBeVisible();
+    expect(screen.getByText("肩胛控制不足")).toBeInTheDocument();
     expect(screen.getByText("你已确认的分析结果")).toBeInTheDocument();
-    expect(screen.getByText("夜间痛是否加重")).toBeInTheDocument();
+    expect(screen.getByText("是否做过影像检查")).toBeInTheDocument();
     expect(
       screen.getByText(/还没有针对这条病情的已接受处理方案/),
     ).toBeInTheDocument();
