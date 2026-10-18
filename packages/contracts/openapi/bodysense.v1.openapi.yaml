@@ -2124,6 +2124,83 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/assets/{id}/erasure:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      operationId: requestAssetErasure
+      summary: Erase one owned asset's source and every controlled copy, with a verified receipt.
+      description: >
+        AS-002 per-asset erasure. Unlike source removal (DELETE /api/v1/assets/{id}) it goes
+        after every inventoried controlled copy of the asset (object replicas, derived jobs and
+        AI output reviews, posture and extraction runs, indicator reviews) and verifies each
+        target on its own. The asset becomes unavailable at once but is reported erased only
+        after every target verified; until then the receipt lists the outstanding targets with
+        a failure code. Evidence a Diagnosis still cites, frozen assessment input and
+        consultation runtime state are never removed silently: they stay outstanding for review
+        or for a later handler, and no Diagnosis or training plan is changed. One erasure exists
+        per asset; repeating the command (with any key) retries it and returns the same receipt.
+        An idempotency key already used for another asset is a 409. Foreign or missing assets
+        return owner-masked 404.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestAssetErasureRequest'
+      responses:
+        '200':
+          description: Every target verified; the asset is erased.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetErasureReceipt'
+        '202':
+          description: Erasure accepted; some targets are still outstanding (see the receipt).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetErasureReceipt'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      operationId: getAssetErasure
+      summary: Read the erasure receipt of one owned asset.
+      description: Returns the current receipt, including outstanding targets. 404 when the asset is foreign, missing or has no erasure.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current erasure receipt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetErasureReceipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/uploads:
     post:
       operationId: createUpload
@@ -6881,6 +6958,55 @@ components:
           format: date-time
           description: When source availability was revoked; physical cleanup may require retries. Present when availability is source_removed.
         message: {type: string}
+    RequestAssetErasureRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
+    AssetErasureTargetName:
+      type: string
+      enum: [source_objects, derived_jobs, posture_analyses, diagnosis_records, document_extractions, assessment_reports, runtime_checkpoints, asset_manifest]
+      description: One controlled-copy family of the asset, in execution order. asset_manifest (the asset row itself) is finalized last.
+    AssetErasureTargetReceipt:
+      type: object
+      additionalProperties: false
+      required: [target, state, erased_count, outstanding_count]
+      properties:
+        target:
+          $ref: '#/components/schemas/AssetErasureTargetName'
+        state:
+          type: string
+          enum: [pending, verified, failed, blocked, unsupported]
+          description: verified means no copy of this family remains. failed is retried automatically; blocked needs a decision or review; unsupported has no erasure handler yet.
+        erased_count: {type: integer, minimum: 0, description: Copies this target has erased so far.}
+        outstanding_count: {type: integer, minimum: 0, description: Copies still present (or live work blocking erasure) at the last check.}
+        failure_code:
+          type: string
+          enum: [storage_unavailable, object_delete_failed, object_still_present, derived_work_active, diagnosis_evidence_pinned, diagnosis_review_required, assessment_replay_frozen, runtime_erasure_hook_pending, targets_outstanding, copy_reappeared, execution_error]
+        verified_at: {type: string, format: date-time}
+    AssetErasureReceipt:
+      type: object
+      additionalProperties: false
+      required: [request_id, asset_id, status, inventory_revision, requested_at, targets, outstanding_targets]
+      properties:
+        request_id: {type: string, format: uuid}
+        asset_id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [pending, running, outstanding, erased]
+          description: erased only after every target verified; never reported early.
+        inventory_revision: {type: string, description: The controlled-copy inventory this erasure was planned against.}
+        requested_at: {type: string, format: date-time}
+        erased_at: {type: string, format: date-time}
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetErasureTargetReceipt'
+        outstanding_targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetErasureTargetName'
     PostureAnalysisView:
       type: object
       additionalProperties: false
