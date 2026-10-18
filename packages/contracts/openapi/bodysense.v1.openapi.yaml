@@ -7391,8 +7391,8 @@ components:
         idempotency_key: {type: string, minLength: 1, maxLength: 128, pattern: '^\S(?:.*\S)?$'}
     StatementErasureTargetName:
       type: string
-      enum: [diagnosis_records, training_plans, body_records, assessment_reports, decision_records, runtime_checkpoints, statement_manifest]
-      description: One controlled-copy family of the statement, in execution order. statement_manifest (the statement itself) is finalized last.
+      enum: [diagnosis_records, training_plans, body_records, assessment_reports, decision_records, runtime_checkpoints, source_message, statement_manifest]
+      description: One controlled-copy family of the statement, in execution order. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.
     StatementErasureTargetReceipt:
       type: object
       additionalProperties: false
@@ -7407,16 +7407,20 @@ components:
             verified means no copy of this family remains. failed is retried automatically; blocked needs the
             user's review (see reviews) and a repeated command. retained_by_policy is terminal: the copies stay
             by the documented policy named in retention_reason and are never retried; only decision_records
-            can be retained.
+            and source_message can be retained.
         erased_count: {type: integer, minimum: 0, description: Copies this target has erased so far.}
         outstanding_count: {type: integer, minimum: 0, description: Copies still present (or retained) at the last check.}
         failure_code:
           type: string
-          enum: [diagnosis_evidence_pinned, diagnosis_review_required, training_plan_review_required, body_record_active, assessment_replay_frozen, runtime_thread_busy, runtime_unavailable, runtime_erasure_unverified, targets_outstanding, copy_reappeared, execution_error]
+          enum: [diagnosis_evidence_pinned, diagnosis_review_required, training_plan_review_required, body_record_active, assessment_replay_frozen, runtime_thread_busy, runtime_unavailable, runtime_erasure_unverified, source_message_busy, targets_outstanding, copy_reappeared, execution_error]
         retention_reason:
           type: string
-          enum: [replay_input_frozen]
-          description: Why a retained_by_policy target keeps its copies. replay_input_frozen means immutable Diagnosis or plan decision inputs that are never rewritten; account erasure removes them.
+          enum: [replay_input_frozen, chat_record_cited]
+          description: >
+            Why a retained_by_policy target keeps its copies. replay_input_frozen means immutable Diagnosis or
+            plan decision inputs that are never rewritten; chat_record_cited means another durable record (another
+            statement, a Diagnosis request, a Safety screen or resolution) still cites the source chat message, which
+            stays a conversation record under chat retention. Account erasure removes both.
         verified_at: {type: string, format: date-time}
     StatementErasureReceipt:
       type: object
@@ -7430,8 +7434,8 @@ components:
           enum: [pending, running, outstanding, erased, erased_with_retention]
           description: >
             erased only after every target verified. erased_with_retention means the statement and every other
-            copy are erased except the frozen replay inputs listed in retained_targets; it never claims a full
-            erasure. Both are terminal and never reported early.
+            copy are erased except what retained_targets lists (frozen replay inputs, a source message another
+            record cites); it never claims a full erasure. Both are terminal and never reported early.
         inventory_revision: {type: string, description: The controlled-copy inventory this erasure was planned against.}
         requested_at: {type: string, format: date-time}
         erased_at: {type: string, format: date-time}

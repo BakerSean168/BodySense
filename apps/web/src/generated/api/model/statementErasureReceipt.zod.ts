@@ -13,7 +13,7 @@ import { StatementErasureTargetReceipt } from './statementErasureTargetReceipt.z
 export const StatementErasureReceipt = /*#__PURE__*/ zod.strictObject({
   "request_id": /*#__PURE__*/ zod.uuid(),
   "statement_id": /*#__PURE__*/ zod.uuid(),
-  "status": /*#__PURE__*/ zod.enum(['pending', 'running', 'outstanding', 'erased', 'erased_with_retention']).check(/*#__PURE__*/ zod.describe('erased only after every target verified. erased_with_retention means the statement and every other copy are erased except the frozen replay inputs listed in retained_targets; it never claims a full erasure. Both are terminal and never reported early.\n')),
+  "status": /*#__PURE__*/ zod.enum(['pending', 'running', 'outstanding', 'erased', 'erased_with_retention']).check(/*#__PURE__*/ zod.describe('erased only after every target verified. erased_with_retention means the statement and every other copy are erased except what retained_targets lists (frozen replay inputs, a source message another record cites); it never claims a full erasure. Both are terminal and never reported early.\n')),
   "inventory_revision": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.describe('The controlled-copy inventory this erasure was planned against.')),
   "requested_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "erased_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),

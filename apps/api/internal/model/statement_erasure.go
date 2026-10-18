@@ -9,7 +9,7 @@ import (
 
 // StatementErasureInventoryRevision names the controlled-copy inventory a
 // statement erasure was planned against.
-const StatementErasureInventoryRevision = "statement-erasure-inventory-v1"
+const StatementErasureInventoryRevision = "statement-erasure-inventory-v2"
 
 // StatementErasureStatus is the request lifecycle. Erased and
 // ErasedWithRetention are terminal and are only reachable once the statement
@@ -22,9 +22,10 @@ const (
 	StatementErasureOutstanding StatementErasureStatus = "outstanding"
 	// StatementErasureErased: every target verified; no copy remains.
 	StatementErasureErased StatementErasureStatus = "erased"
-	// StatementErasureErasedWithRetention: erased except the frozen replay
-	// inputs decision_records keeps by policy. It never claims a full erasure;
-	// account erasure removes those inputs too.
+	// StatementErasureErasedWithRetention: erased except what a target keeps
+	// by policy (frozen replay inputs in decision_records, a source message
+	// another record still cites). It never claims a full erasure; account
+	// erasure removes those copies too.
 	StatementErasureErasedWithRetention StatementErasureStatus = "erased_with_retention"
 )
 
@@ -57,6 +58,11 @@ const (
 	// StatementErasureRuntimeCheckpoints is consultation runtime state naming
 	// the statement or a derived record (POST /runtime/statements/{id}/erasure).
 	StatementErasureRuntimeCheckpoints StatementErasureTargetName = "runtime_checkpoints"
+	// StatementErasureSourceMessage is the user chat message the statement was
+	// taken from. Once the statement is erased it no longer protects that
+	// message from chat retention; when no other durable record cites it, the
+	// erasure deletes it too.
+	StatementErasureSourceMessage StatementErasureTargetName = "source_message"
 	// StatementErasureManifest is the statement row itself, erased last.
 	StatementErasureManifest StatementErasureTargetName = "statement_manifest"
 )
@@ -71,6 +77,7 @@ var StatementErasureTargets = []StatementErasureTargetName{
 	StatementErasureAssessmentReports,
 	StatementErasureDecisionRecords,
 	StatementErasureRuntimeCheckpoints,
+	StatementErasureSourceMessage,
 	StatementErasureManifest,
 }
 
@@ -78,6 +85,17 @@ var StatementErasureTargets = []StatementErasureTargetName{
 // frozen replay inputs are never rewritten, so a decision can always be
 // replayed exactly as it was made. Account erasure removes them.
 const ErasureRetentionReplayInputFrozen = "replay_input_frozen"
+
+// ErasureRetentionChatRecordCited is the retention reason of source_message:
+// another durable record (another statement, a Diagnosis request, a Safety
+// screen or resolution, a cited Ask User receipt) still cites the chat
+// message, so it stays a conversation record under chat retention.
+const ErasureRetentionChatRecordCited = "chat_record_cited"
+
+// ErasureCodeSourceMessageBusy: the source message belongs to a Run that has
+// not settled, or is the newest message of the Conversation (seq allocation
+// must never reuse its position); the worker retries it.
+const ErasureCodeSourceMessageBusy = "source_message_busy"
 
 var (
 	ErrStatementErasureNotFound        = errors.New("statement erasure not found")

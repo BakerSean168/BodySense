@@ -29,7 +29,8 @@ var statementDecisionTables = []string{
 // StatementErasureRepository owns the per-statement erasure request, its
 // target receipts and the database-resident copies of one user statement
 // (statement_evidence) and the BodyState records derived from it. Runtime
-// checkpoints are executed by the service through the ai-service port.
+// checkpoints are executed by the service through the ai-service port; the
+// source chat message is deleted here when nothing else cites it.
 type StatementErasureRepository struct {
 	db  *gorm.DB
 	now func() time.Time
@@ -227,6 +228,12 @@ WHERE user_id = ? AND request_id = ? AND target = ?`,
 func (r *StatementErasureRepository) ExecuteDatabaseTarget(ctx context.Context, request *model.StatementErasureRequest, target model.StatementErasureTargetName) (model.AssetErasureOutcome, error) {
 	var outcome model.AssetErasureOutcome
 	err := r.conn(ctx).Transaction(func(tx *gorm.DB) error {
+		if target == model.StatementErasureSourceMessage {
+			// Chat rows are guarded by the Conversation lock, not the pins.
+			var err error
+			outcome, err = eraseStatementSourceMessage(tx, request.UserID, request.StatementID)
+			return err
+		}
 		pins, err := lockStatementPins(tx, request.UserID, request.StatementID)
 		if err != nil {
 			return err
@@ -522,6 +529,104 @@ func mentioningClause(userID uuid.UUID, needles []string) (string, []any) {
 	return fmt.Sprintf("t.user_id = ? AND (%s)", strings.Join(clauses, " OR ")), args
 }
 
+// sourceMessageCitationsSQL counts the durable records other than the
+// statement being erased that still cite one chat message: the same scope
+// chat retention protects (protectedMessages), with erased statements left
+// out. It deliberately ignores owners, so a foreign reference keeps the row.
+const sourceMessageCitationsSQL = `
+WITH cited AS (
+  SELECT source_interaction_id AS interaction_id FROM statement_evidence
+   WHERE source_interaction_id IS NOT NULL AND availability <> 'erased' AND id <> @statement
+  UNION ALL
+  SELECT source_interaction_id FROM safety_screens
+  UNION ALL
+  SELECT check_interaction_id FROM safety_resolutions WHERE check_interaction_id IS NOT NULL
+)
+SELECT (SELECT count(*) FROM statement_evidence
+         WHERE source_message_id = @message AND availability <> 'erased' AND id <> @statement)
+     + (SELECT count(*) FROM condition_analysis_runs WHERE request_message_id = @message)
+     + (SELECT count(*) FROM condition_direct_edits WHERE request_message_id = @message)
+     + (SELECT count(*) FROM safety_screens WHERE source_message_id = @message)
+     + (SELECT count(*) FROM safety_resolutions WHERE source_message_id = @message)
+     + (SELECT count(*) FROM interaction_resumes ir JOIN cited ON cited.interaction_id = ir.interaction_id
+         WHERE ir.user_message_id = @message OR ir.assistant_message_id = @message)`
+
+// eraseStatementSourceMessage deletes the chat message the statement was
+// taken from when nothing else cites it. Under the Conversation lock (the
+// one chat retention and message admission take) it refuses a message whose
+// Run has not settled or that is the newest message (seq is allocated as
+// MAX+1), keeps a message another durable record cites as a conversation
+// record (retained_by_policy, chat_record_cited), and otherwise deletes the
+// uncited Ask User receipts naming it and the message itself; its projection
+// copy cascades. The runtime copy of the turn is chat history like any other
+// turn and leaves with the ordinary prune.
+func eraseStatementSourceMessage(tx *gorm.DB, userID, statementID uuid.UUID) (model.AssetErasureOutcome, error) {
+	verified := model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}
+	var source struct {
+		ConversationID *uuid.UUID
+		MessageID      *uuid.UUID
+	}
+	if err := tx.Raw(`SELECT source_conversation_id AS conversation_id, source_message_id AS message_id
+FROM statement_evidence WHERE user_id = ? AND id = ?`, userID, statementID).Scan(&source).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if source.MessageID == nil || source.ConversationID == nil {
+		return verified, nil // a direct edit has no chat source
+	}
+	var locked []uuid.UUID
+	if err := tx.Raw(`SELECT id FROM conversations WHERE id = ? AND user_id = ? FOR NO KEY UPDATE`,
+		*source.ConversationID, userID).Scan(&locked).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	var message []struct {
+		Seq     int
+		Status  string
+		Settled bool
+		Newest  bool
+	}
+	if err := tx.Raw(`SELECT m.seq, m.status,
+       (m.run_id IS NULL OR r.status IN ('completed','failed','cancelled')) AND NOT EXISTS (
+         SELECT 1 FROM agent_interactions ai WHERE ai.run_id = m.run_id AND ai.status = 'pending') AS settled,
+       m.seq = (SELECT max(seq) FROM messages WHERE conversation_id = m.conversation_id) AS newest
+FROM messages m LEFT JOIN runs r ON r.id = m.run_id
+WHERE m.id = ? AND m.conversation_id = ?`, *source.MessageID, *source.ConversationID).Scan(&message).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if len(locked) == 0 || len(message) == 0 {
+		return verified, nil // already pruned, or the Conversation is gone
+	}
+	if m := message[0]; m.Status == "streaming" || !m.Settled || m.Newest {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetFailed, Outstanding: 1, FailureCode: model.ErasureCodeSourceMessageBusy}, nil
+	}
+	args := map[string]any{"message": *source.MessageID, "statement": statementID}
+	var cited int
+	if err := tx.Raw(sourceMessageCitationsSQL, args).Scan(&cited).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if cited > 0 {
+		return model.AssetErasureOutcome{State: model.ErasureTargetRetainedByPolicy, Outstanding: 1, RetentionReason: model.ErasureRetentionChatRecordCited}, nil
+	}
+	// Receipts name messages without a cascade; any left here is cited by
+	// nothing but this statement (a cited one would have kept the message).
+	if err := tx.Exec(`DELETE FROM interaction_resumes WHERE conversation_id = ? AND (user_message_id = ? OR assistant_message_id = ?)`,
+		*source.ConversationID, *source.MessageID, *source.MessageID).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	deleted := tx.Exec(`DELETE FROM messages WHERE id = ? AND conversation_id = ?`, *source.MessageID, *source.ConversationID)
+	if deleted.Error != nil {
+		return model.AssetErasureOutcome{}, deleted.Error
+	}
+	var left int64
+	if err := tx.Raw(`SELECT count(*) FROM messages WHERE id = ?`, *source.MessageID).Scan(&left).Error; err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if left > 0 {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetFailed, Outstanding: int(left), FailureCode: model.AssetErasureCodeCopyReappeared}, nil
+	}
+	verified.Erased = int(deleted.RowsAffected)
+	return verified, nil
+}
+
 // RuntimeScope lists what the runtime_checkpoints target hands the
 // ai-service: every Conversation of the owner, the one the statement was said
 // in, and the derived record ids. The user's own chat message is a
@@ -553,8 +658,8 @@ func (r *StatementErasureRepository) RuntimeScope(ctx context.Context, userID, s
 }
 
 // Finalize erases the statement and ends the request in one transaction,
-// only when every other target verified (decision_records may be retained by
-// policy) and a re-check of every database family still holds. A copy that
+// only when every other target verified (decision_records and source_message
+// may be retained by policy) and a re-check of every database family still holds. A copy that
 // reappeared reopens its target instead. It returns whether the request is
 // now terminal.
 func (r *StatementErasureRepository) Finalize(ctx context.Context, request *model.StatementErasureRequest) (bool, error) {
@@ -628,8 +733,14 @@ WHERE user_id = ? AND id = ?`, request.UserID, request.StatementID).Error; err !
 			model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: 1}); err != nil {
 			return err
 		}
+		var retained int64
+		if err := tx.Model(&model.StatementErasureTarget{}).
+			Where("user_id = ? AND request_id = ? AND state = ?", request.UserID, request.ID, model.ErasureTargetRetainedByPolicy).
+			Count(&retained).Error; err != nil {
+			return err
+		}
 		status := model.StatementErasureErased
-		if decisions.State == model.ErasureTargetRetainedByPolicy {
+		if retained > 0 {
 			status = model.StatementErasureErasedWithRetention
 		}
 		if err := tx.Exec(`UPDATE statement_erasure_requests

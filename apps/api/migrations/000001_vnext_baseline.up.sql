@@ -4827,7 +4827,8 @@ CREATE TRIGGER document_indicator_review_tombstone BEFORE UPDATE ON public.docum
 -- erasure, plus one honest terminal outcome: frozen replay inputs (Diagnosis
 -- runs, revisions and proposals, plan proposal snapshots) are never rewritten,
 -- so a target holding them ends retained_by_policy with a retention reason and
--- the request ends erased_with_retention, never erased.
+-- the request ends erased_with_retention, never erased. The same holds for the
+-- source chat message when another durable record still cites it.
 CREATE TABLE public.statement_erasure_requests (
     id uuid PRIMARY KEY,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -4854,7 +4855,7 @@ CREATE TABLE public.statement_erasure_targets (
     user_id uuid NOT NULL,
     request_id uuid NOT NULL,
     target text NOT NULL CHECK (target IN ('diagnosis_records','training_plans','body_records',
-        'assessment_reports','decision_records','runtime_checkpoints','statement_manifest')),
+        'assessment_reports','decision_records','runtime_checkpoints','source_message','statement_manifest')),
     state text NOT NULL CHECK (state IN ('pending','verified','failed','blocked','unsupported','retained_by_policy')),
     erased_count integer NOT NULL DEFAULT 0 CHECK (erased_count >= 0),
     outstanding_count integer NOT NULL DEFAULT 0 CHECK (outstanding_count >= 0),
@@ -4869,11 +4870,11 @@ CREATE TABLE public.statement_erasure_targets (
     CHECK (state <> 'verified' OR (outstanding_count = 0 AND failure_code IS NULL)),
     CHECK ((state IN ('pending','verified','retained_by_policy')) = (failure_code IS NULL)),
     CHECK ((state = 'retained_by_policy') = (retention_reason IS NOT NULL)),
-    CHECK (state <> 'retained_by_policy' OR target = 'decision_records')
+    CHECK (state <> 'retained_by_policy' OR target IN ('decision_records','source_message'))
 );
 -- Both terminal states are reached only once the statement itself is erased.
--- erased needs all seven targets verified; erased_with_retention needs the
--- other six verified and decision_records retained_by_policy.
+-- erased needs all eight targets verified; erased_with_retention needs every
+-- target verified or retained_by_policy, at least one retained.
 CREATE FUNCTION public.guard_statement_erasure_request() RETURNS trigger
     LANGUAGE plpgsql AS $$
 DECLARE
@@ -4889,8 +4890,8 @@ BEGIN
           FROM public.statement_erasure_targets t WHERE t.user_id = NEW.user_id AND t.request_id = NEW.id;
         IF NOT EXISTS (SELECT 1 FROM public.statement_evidence e
              WHERE e.user_id = NEW.user_id AND e.id = NEW.statement_id AND e.availability = 'erased')
-           OR (NEW.status = 'erased' AND (verified <> 7 OR retained <> 0))
-           OR (NEW.status = 'erased_with_retention' AND (verified <> 6 OR retained <> 1)) THEN
+           OR (NEW.status = 'erased' AND (verified <> 8 OR retained <> 0))
+           OR (NEW.status = 'erased_with_retention' AND (verified + retained <> 8 OR retained < 1)) THEN
             RAISE EXCEPTION 'statement erasure has unverified targets' USING ERRCODE = '23514';
         END IF;
     END IF;
