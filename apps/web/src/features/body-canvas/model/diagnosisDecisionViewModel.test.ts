@@ -3,6 +3,8 @@ import { ApiRequestError } from "@/lib/api-client";
 import {
   EMPTY_DECISION_SESSION,
   decisionAttemptContent,
+  diagnosisHeaderMode,
+  projectDiagnosisStepper,
   projectNativeDiagnosisWindow,
   settlementAttemptContent,
   withCommandError,
@@ -495,5 +497,78 @@ describe("Penpot Diagnosis phases", () => {
     expect(review.run?.phase).toBe("deciding");
     expect(review.run?.canDecide).toBe(false);
     expect(review.run?.proposals.some((row) => row.selectable)).toBe(false);
+  });
+});
+
+describe("Penpot serial stepper", () => {
+  it("walks proposals one at a time over local choices", () => {
+    const run = projectNativeDiagnosisWindow({
+      diagnosis: makeDiagnosis(),
+      run: makeRun(),
+    }).run!;
+    const first = projectDiagnosisStepper(run, {});
+    expect(first).toMatchObject({
+      step: 1,
+      total: 2,
+      isLast: false,
+      anyAccepted: false,
+    });
+    expect(first.current?.proposalId).toBe(PROPOSAL_A);
+    expect(first.next?.proposalId).toBe(PROPOSAL_B);
+    expect(first.current).toMatchObject({ kindLabel: "新建", kindTone: "ok" });
+
+    const second = projectDiagnosisStepper(run, { [PROPOSAL_A]: "reject" });
+    expect(second).toMatchObject({
+      step: 2,
+      isLast: true,
+      anyAccepted: false,
+      canSubmitEarly: false,
+    });
+    expect(second.decided).toEqual([
+      expect.objectContaining({ choice: "reject", changeable: true }),
+    ]);
+    expect(second.current?.proposalId).toBe(PROPOSAL_B);
+  });
+
+  it("treats recorded decision receipts as fixed choices", () => {
+    const run = projectNativeDiagnosisWindow({
+      diagnosis: makeDiagnosis(),
+      run: makeRun(),
+      session: withDecisionReceipt(
+        EMPTY_DECISION_SESSION,
+        makeDecisionReceipt(),
+      ),
+    }).run!;
+    const stepper = projectDiagnosisStepper(run, {});
+    expect(stepper.decided).toEqual([
+      expect.objectContaining({ choice: "accept", changeable: false }),
+    ]);
+    expect(stepper.anyAccepted).toBe(true);
+  });
+
+  it("labels the toolbar as analysis until a committed receipt", () => {
+    const pending = withDecisionReceipt(
+      EMPTY_DECISION_SESSION,
+      makeDecisionReceipt(),
+    );
+    expect(
+      diagnosisHeaderMode(
+        projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          session: pending,
+        }),
+      ),
+    ).toBe("analysis");
+    expect(
+      diagnosisHeaderMode(
+        projectNativeDiagnosisWindow({
+          diagnosis: makeDiagnosis(),
+          run: makeRun(),
+          session: withSettlementReceipt(pending, makeSettlementReceipt()),
+        }),
+      ),
+    ).toBe("receipt");
+    expect(diagnosisHeaderMode({ run: null })).toBeNull();
   });
 });

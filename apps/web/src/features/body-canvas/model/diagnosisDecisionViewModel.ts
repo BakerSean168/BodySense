@@ -76,6 +76,15 @@ export interface ProposalRow {
   /** 1-based place in the run, for the Penpot "proposal n / total" marker. */
   position: number;
   total: number;
+  /** Penpot proposal kind chip: 新建 / 更新 / 停用 / 调整状态 / 调整关联. */
+  kindLabel: string;
+  kindTone: "ok" | "idle";
+  /** Evidence counts the Agent bound to this proposal (references only). */
+  supportCount: number;
+  counterCount: number;
+  /** Cause rationale and open information gaps the proposal carries. */
+  rationale: string | null;
+  gaps: string[];
 }
 
 /**
@@ -111,6 +120,8 @@ export interface DiagnosisRunView {
   closesRemaining: boolean;
   /** Receipt id proving adoption; null means nothing may be shown as committed. */
   committedReceiptId: string | null;
+  /** When the committed settlement receipt was issued (ISO with offset). */
+  committedAt: string | null;
   phase: DiagnosisRunPhase;
   /** Proposals the receipt proves were written; 0 unless committed/updated. */
   committedCount: number;
@@ -209,6 +220,47 @@ export function projectAdoptedCondition(
   };
 }
 
+function strings(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.flatMap((item) => {
+        const trimmed = text(item);
+        return trimmed ? [trimmed] : [];
+      })
+    : [];
+}
+
+function proposalKind(
+  proposal: NativeDiagnosisRunProposalOutput,
+): Pick<ProposalRow, "kindLabel" | "kindTone"> {
+  switch (proposal.changeKind) {
+    case "create":
+      return { kindLabel: "新建", kindTone: "ok" };
+    case "update":
+      return { kindLabel: "更新", kindTone: "ok" };
+    case "set_disposition":
+      return text(record(proposal.content)?.disposition) === "inactive"
+        ? { kindLabel: "停用", kindTone: "idle" }
+        : { kindLabel: "调整状态", kindTone: "idle" };
+    case "update_relation":
+      return { kindLabel: "调整关联", kindTone: "idle" };
+  }
+}
+
+function proposalDetail(
+  proposal: NativeDiagnosisRunProposalOutput,
+): Pick<ProposalRow, "supportCount" | "counterCount" | "rationale" | "gaps"> {
+  const entry = record(record(proposal.content)?.proposedEntry);
+  const cause = record(entry?.causeAnalysis);
+  const assessment = record(entry?.assessment);
+  const gaps = strings(entry?.informationGaps);
+  return {
+    supportCount: proposal.evidenceRefs.length,
+    counterCount: proposal.counterEvidenceRefs.length,
+    rationale: text(cause?.rationale) ?? text(assessment?.rationale),
+    gaps: gaps.length > 0 ? gaps : strings(assessment?.informationGaps),
+  };
+}
+
 function describeProposal(
   proposal: NativeDiagnosisRunProposalOutput,
   conditions: readonly NativeDiagnosisConditionOutput[],
@@ -246,19 +298,33 @@ function describeProposal(
   }
 }
 
+interface CommittedReceipt {
+  receiptId: string;
+  decisionIds: string[] | null;
+  settledAt: string;
+}
+
 function committedReceipt(
   run: NativeDiagnosisRunProjectionOutput,
   session: DiagnosisDecisionSession,
-): { receiptId: string; decisionIds: string[] | null } | null {
+): CommittedReceipt | null {
   const local = session.settlement;
   // A receipt this session holds is authoritative for its run.
   if (local && local.runId === run.runId)
     return local.outcome === "committed"
-      ? { receiptId: local.receiptId, decisionIds: local.decisionIds }
+      ? {
+          receiptId: local.receiptId,
+          decisionIds: local.decisionIds,
+          settledAt: local.settledAt,
+        }
       : null;
   const server = run.settlement;
   if (run.state === "committed" && server?.outcome === "committed")
-    return { receiptId: server.receiptId, decisionIds: null };
+    return {
+      receiptId: server.receiptId,
+      decisionIds: null,
+      settledAt: server.settledAt,
+    };
   return null;
 }
 
@@ -271,7 +337,7 @@ function proposalRow(
     runChanged: boolean;
     runOpen: boolean;
     canDecide: boolean;
-    receipt: { receiptId: string; decisionIds: string[] | null } | null;
+    receipt: CommittedReceipt | null;
     position: number;
     total: number;
   },
@@ -320,6 +386,8 @@ function proposalRow(
     proposalId: proposal.proposalId,
     changeKind: proposal.changeKind,
     ...describeProposal(proposal, input.conditions),
+    ...proposalKind(proposal),
+    ...proposalDetail(proposal),
     state,
     stateLabel: closedWithRun
       ? "未决定，已随本次分析关闭"
@@ -438,11 +506,69 @@ export function projectNativeDiagnosisWindow({
       acceptedCount,
       closesRemaining: undecidedCount > 0,
       committedReceiptId: receipt?.receiptId ?? null,
+      committedAt: receipt?.settledAt ?? null,
       phase: runPhase(run, ownSession, safetyBlocked, proposals, receipt),
       committedCount: receipt
         ? proposals.filter((row) => row.state === "committed").length
         : 0,
     },
+  };
+}
+
+export interface DiagnosisStepDecision {
+  row: ProposalRow;
+  choice: ProposalChoice;
+  /** Only a local, not yet recorded choice can still be changed. */
+  changeable: boolean;
+}
+
+/**
+ * Penpot Confirm first / Confirm second / First rejected: one proposal at a
+ * time over the same decisions. Local choices stay in the selection until the
+ * final step records them and settles the run in one go.
+ */
+export interface DiagnosisStepper {
+  /** 1-based step shown as "n / total". */
+  step: number;
+  total: number;
+  decided: DiagnosisStepDecision[];
+  /** The proposal the user acts on now; null once every proposal has a choice. */
+  current: ProposalRow | null;
+  next: ProposalRow | null;
+  /** Deciding the current proposal finishes the run: show "采纳并提交". */
+  isLast: boolean;
+  /** Something will be adopted; without it the last reject is "不更改". */
+  anyAccepted: boolean;
+  /** Choices exist and later proposals remain: settling now closes them. */
+  canSubmitEarly: boolean;
+}
+
+export function projectDiagnosisStepper(
+  run: DiagnosisRunView,
+  selection: Readonly<Record<string, ProposalChoice>>,
+): DiagnosisStepper {
+  const decided: DiagnosisStepDecision[] = [];
+  const open: ProposalRow[] = [];
+  for (const row of run.proposals) {
+    const local = row.selectable ? selection[row.proposalId] : undefined;
+    if (local) decided.push({ row, choice: local, changeable: true });
+    else if (row.state === "pending" || row.state === "committed")
+      decided.push({ row, choice: "accept", changeable: false });
+    else if (row.state === "rejected")
+      decided.push({ row, choice: "reject", changeable: false });
+    else open.push(row);
+  }
+  const current = open[0] ?? null;
+  const total = run.proposals.length;
+  return {
+    step: Math.min(decided.length + 1, total),
+    total,
+    decided,
+    current,
+    next: open[1] ?? null,
+    isLast: open.length <= 1,
+    anyAccepted: decided.some((item) => item.choice === "accept"),
+    canSubmitEarly: decided.length > 0 && open.length > 1,
   };
 }
 
@@ -537,4 +663,15 @@ export function settlementAttemptContent(
   closeRemaining: boolean,
 ): string {
   return JSON.stringify(["settle", runId, expectedRevision, closeRemaining]);
+}
+
+/** Penpot toolbar label: "正式分析" while a run is shown, "提交回执" after a commit. */
+export function diagnosisHeaderMode(
+  view: Pick<NativeDiagnosisWindowView, "run">,
+): "analysis" | "receipt" | null {
+  const run = view.run;
+  if (!run || run.proposals.length === 0) return null;
+  return run.phase === "committed" || run.phase === "updated"
+    ? "receipt"
+    : "analysis";
 }
