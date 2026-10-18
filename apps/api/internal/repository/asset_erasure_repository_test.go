@@ -209,6 +209,9 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	job := seedErasureJob(t, db, owner, asset, "running")
 	unrelatedJob := seedErasureJob(t, db, owner, unrelated, "completed")
 	seedUserMessageFactEnvelope(t, db, owner, datatypes.JSON(`[{"type":"image","upload_id":"`+asset.String()+`"}]`), "user")
+	if err := db.Exec(`INSERT INTO user_profiles(user_id, avatar_asset_id) VALUES (?, ?)`, owner, asset).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Exec(`INSERT INTO assessment_reports(user_id,status,observations) VALUES (?,'completed',?::jsonb)`,
 		owner, `[{"ref":"report:upload:`+asset.String()+`:indicator:0"}]`).Error; err != nil {
 		t.Fatal(err)
@@ -334,6 +337,9 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	if stored.Availability != model.UserAssetErased || stored.ErasedAt == nil || stored.OriginalName != "" || stored.ContentSHA256 != "" {
 		t.Fatalf("tombstone=%+v", stored)
 	}
+	if n := erasureRows(t, db, `SELECT count(*) FROM user_profiles WHERE user_id=? AND avatar_asset_id IS NULL AND revision=2`, owner); n != 1 {
+		t.Fatalf("profile avatar pointer survived erasure: %d", n)
+	}
 	// The tombstone keeps identity, kind, size and MIME type; the content hash is cleared.
 	if n := erasureRows(t, db, `SELECT count(*) FROM user_assets WHERE id=? AND content_sha256 IS NULL
  AND kind='report' AND byte_size=1 AND mime_type='application/pdf'`, asset); n != 1 {
@@ -405,6 +411,7 @@ func TestUserAssetErasureInventoryCoversSchemaPostgres(t *testing.T) {
 		"posture_analysis_runs":       true, // posture_analyses
 		"user_asset_storage_cleanups": true, // source_objects
 		"asset_erasure_requests":      true, // the receipt itself
+		"user_profiles":               true, // avatar pointer, cleared with asset_manifest
 	}
 	for _, table := range tables {
 		if !inventoried[strings.TrimPrefix(table, "public.")] {

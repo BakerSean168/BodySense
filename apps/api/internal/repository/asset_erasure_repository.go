@@ -549,6 +549,12 @@ func (r *AssetErasureRepository) Finalize(ctx context.Context, request *model.As
 WHERE user_id = ? AND id = ?`, now, now, request.UserID, request.AssetID).Error; err != nil {
 			return err
 		}
+		// A Profile avatar is a pointer to the asset identity, not a copy: it is
+		// cleared with the manifest so no profile keeps naming an erased asset.
+		if err := tx.Exec(`UPDATE user_profiles SET avatar_asset_id = NULL, revision = revision + 1, updated_at = ?
+WHERE user_id = ? AND avatar_asset_id = ?`, now, request.UserID, request.AssetID).Error; err != nil {
+			return err
+		}
 		if err := recordAssetErasureOutcome(tx, now, request.UserID, request.ID, model.AssetErasureManifest,
 			model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: 1}); err != nil {
 			return err
