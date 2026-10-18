@@ -1,353 +1,451 @@
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { ApiRequestError } from "@/lib/api-client";
+import { useState, type ReactNode } from "react";
 import {
-  formatPlanTarget,
-  trainingApi,
-  type TrainingPlanRecord,
-  type TrainingSessionRecord,
-} from "../services/trainingService";
+  Check,
+  CircleHelp,
+  Clock3,
+  LoaderCircle,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  ShieldAlert,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import {
+  formatClock,
+  formatRestClock,
+  type TrainerExerciseView,
+  type TrainerSessionView,
+} from "@/features/body-canvas/model/trainerSession";
+import type { TrainingGateView } from "@/features/body-canvas/model/trainingPlans";
+import { useTrainerSession, type TrainerNotice } from "../hooks/useTrainerSession";
 
-interface TrainingExecutionPanelProps {
+export interface TrainingExecutionPanelProps {
   planId: string;
+  /** The template the user started from the TrainingPlan window. */
+  templateId: string | null;
+  /** Identity of that explicit Start click; one launch starts one session. */
+  launchKey: string;
+  onOpenPlan?: () => void;
 }
 
 /**
- * Minimal Trainer bound to the Go runtime (`/training-sessions`, TP-003).
- * Every set is an explicit user action with a receipt; nothing is inferred
- * from navigation. The full Trainer design (player, pause/resume, corrections)
- * is UI-TP-001.
+ * Penpot Trainer boards (In progress, Set recorded, Recovery, Ended) on the
+ * Go runtime. Every set is one explicit user action with a receipt; the
+ * TrainerGate decides whether a set can be recorded, never this window.
  */
-export function TrainingExecutionPanel({
-  planId,
-}: TrainingExecutionPanelProps) {
-  const [plan, setPlan] = useState<TrainingPlanRecord | null>(null);
-  const [session, setSession] = useState<TrainingSessionRecord | null>(null);
-  const [templateId, setTemplateId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState("");
+export function TrainingExecutionPanel({ planId, templateId, launchKey, onOpenPlan }: TrainingExecutionPanelProps) {
+  const trainer = useTrainerSession({ planId, templateId, launchKey });
+  const view = trainer.view;
+  // The stepper starts from the prescription for each new set and travels
+  // with that set's Complete command.
+  const current = view?.current ?? null;
+  const setKey = current ? `${view!.sessionId}:${current.exerciseIndex}:${current.setNumber}` : "none";
+  const [actual, setActual] = useState<{ key: string; value: number | null }>({ key: "none", value: null });
+  const actualValue = actual.key === setKey ? actual.value : (current?.defaultActual ?? null);
+  const changeActual = (value: number) => setActual({ key: setKey, value });
 
-  const refresh = useCallback(async () => {
-    const [planRecord, sessions] = await Promise.all([
-      trainingApi.getPlanRecord(planId),
-      trainingApi.listSessions(),
-    ]);
-    setPlan(planRecord);
-    const live = sessions.find(
-      (item) => item.planId === planId && item.state !== "ended",
+  let body: ReactNode;
+  let footer: ReactNode = null;
+  if (trainer.loadError) {
+    body = (
+      <Banner tone="bad" icon={<X size={16} aria-hidden="true" />} role="alert">
+        训练记录暂时无法读取。
+      </Banner>
     );
-    setSession(
-      (current) => live ?? (current?.planId === planId ? current : null),
+  } else if (trainer.loading || (!view && trainer.busy)) {
+    body = (
+      <p role="status" className="bc-window-loading">
+        <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+        正在开始训练
+      </p>
     );
-    setTemplateId(
-      (current) =>
-        current ?? planRecord.currentContent.sessions[0]?.templateId ?? null,
-    );
-  }, [planId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void refresh()
-      .catch(() => {
-        if (!cancelled) setPlan(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refresh]);
-
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await action();
-    } catch (error) {
-      const code = error instanceof ApiRequestError ? error.code : undefined;
-      if (code === "SAFETY_STALE" || code === "TRAINER_GATE_BLOCKED") {
-        toast.error("安全状态已变化或不允许继续，请查看最新提醒后再确认。");
-      } else {
-        toast.error("操作没有被记录，请刷新后重试。");
-      }
-      await refresh().catch(() => undefined);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-64 items-center justify-center">
-        <p className="text-sm text-muted-foreground" role="status">
-          正在加载训练计划…
-        </p>
+  } else if (!view) {
+    // Start was refused: say why, nothing was recorded.
+    body = (
+      <div className="bc-tp-scene" data-testid="trainer-not-started">
+        <Notices notice={trainer.notice} error={trainer.error} gate={trainer.gate} />
+        <p className="bc-dx-note">训练没有开始，也没有记录任何内容。</p>
       </div>
     );
-  }
-
-  if (!plan) {
-    return (
-      <Card className="border-dashed p-6 text-center">
-        <p className="text-sm font-semibold text-foreground">
-          训练计划暂时不可用
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          请稍后重试或重新审核当前方案。
-        </p>
-      </Card>
+    footer = (
+      <footer className="bc-window-footer bc-dx-footer">
+        <button type="button" className="bc-dx-tonal" onClick={onOpenPlan}>
+          返回计划
+        </button>
+      </footer>
     );
-  }
-
-  const templates = plan.currentContent.sessions;
-  const activeTemplateId = session?.templateId ?? templateId;
-  const template = templates.find(
-    (item) => item.templateId === activeTemplateId,
-  );
-  const gate = plan.executionGate;
-  const effective = new Map<string, string>();
-  if (session) {
-    const retracted = new Set(
-      session.actions.flatMap((a) =>
-        a.correctsActionId ? [a.correctsActionId] : [],
-      ),
+  } else if (view.state === "ended") {
+    body = <EndedScene view={view} />;
+    footer = (
+      <footer className="bc-window-footer bc-dx-footer">
+        <button type="button" className="bc-dx-primary" onClick={onOpenPlan}>
+          <Check size={16} aria-hidden="true" />
+          完成
+        </button>
+      </footer>
     );
-    for (const action of session.actions) {
-      if (action.kind === "corrected" || retracted.has(action.actionId))
-        continue;
-      effective.set(
-        `${action.planExerciseId}:${action.setNumber ?? "all"}`,
-        action.kind,
-      );
-    }
+  } else if (view.state === "paused") {
+    body = (
+      <RecoveryScene view={view}>
+        <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
+      </RecoveryScene>
+    );
+    footer = (
+      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
+        <button type="button" className="bc-dx-tonal bc-dx-early" disabled={trainer.busy} onClick={trainer.finish}>
+          结束
+        </button>
+        <button
+          type="button"
+          className="bc-dx-primary"
+          disabled={trainer.busy || !view.gate.permits}
+          aria-describedby={view.gate.permits ? undefined : "trainer-gate-reason"}
+          onClick={trainer.resume}
+        >
+          <Play size={16} aria-hidden="true" />
+          继续
+        </button>
+      </footer>
+    );
+  } else {
+    body = <InProgressScene view={view} trainer={trainer} actual={actualValue} onActual={changeActual} />;
+    footer = <InProgressFooter view={view} trainer={trainer} actual={actualValue} />;
   }
-  const live = session !== null && session.state !== "ended";
-
-  const start = () =>
-    run(async () => {
-      if (!activeTemplateId) return;
-      setSession(await trainingApi.startSession(plan, activeTemplateId));
-    });
-  const recordSet = (
-    planExerciseId: string,
-    setNumber: number,
-    kind: "performed" | "skipped",
-  ) =>
-    run(async () => {
-      if (!session) return;
-      await trainingApi.recordSet(
-        session,
-        planExerciseId,
-        setNumber,
-        kind,
-        gate.safetyRevision,
-      );
-      await refresh();
-    });
-  const finish = (reason: "finished" | "stopped_early") =>
-    run(async () => {
-      if (!session) return;
-      setSession(await trainingApi.finishSession(session, reason));
-    });
-  const submitFeedback = () =>
-    run(async () => {
-      if (!session || !feedback.trim()) return;
-      setSession(await trainingApi.recordFeedback(session.sessionId, feedback));
-      toast.success("反馈已记录，仅用于计划复核提示，不会自动修改计划。");
-    });
 
   return (
-    <div className="w-full space-y-6" data-testid="trainer-session-panel">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          训练计划 (Training Plan)
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {plan.title || plan.goal}
+    <section
+      className="bc-business-window-body bc-dx bc-tp bc-tr"
+      aria-label="训练执行"
+      data-testid="trainer-session-panel"
+      data-state={view?.state ?? "none"}
+    >
+      <div className="bc-window-body" role="region" aria-label="当前训练">
+        {body}
+      </div>
+      {footer}
+    </section>
+  );
+}
+
+function Chip({ tone, children, dot, icon, testId }: { tone: string; children: ReactNode; dot?: boolean; icon?: ReactNode; testId?: string }) {
+  return (
+    <span className="bc-dx-chip" data-tone={tone} data-testid={testId}>
+      {dot ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+function Banner({ tone, icon, children, role, testId }: { tone: string; icon?: ReactNode; children: ReactNode; role?: "alert" | "status"; testId?: string }) {
+  return (
+    <div className="bc-dx-banner bc-tp-banner" data-tone={tone} role={role} data-testid={testId}>
+      {icon}
+      <span className="bc-dx-banner-text">{children}</span>
+    </div>
+  );
+}
+
+function GateChip({ gate }: { gate: TrainingGateView }) {
+  return (
+    <Chip
+      tone={gate.tone}
+      icon={gate.permits ? <ShieldCheck size={12} aria-hidden="true" /> : <ShieldAlert size={12} aria-hidden="true" />}
+      testId="trainer-gate"
+    >
+      {gate.permits ? "可以继续" : "暂不能继续"}
+    </Chip>
+  );
+}
+
+/** Why the last command did not count, and the gate's own reasons. */
+function Notices({ notice, error, gate }: { notice: TrainerNotice; error: string | null; gate: TrainingGateView | null }) {
+  return (
+    <>
+      {notice === "safety_changed" ? (
+        <Banner tone="warn" icon={<ShieldAlert size={16} aria-hidden="true" />} role="alert" testId="trainer-safety-changed">
+          安全状态刚刚更新，这一步没有记录。请看一下当前提醒，再确认一次。
+        </Banner>
+      ) : null}
+      {notice === "changed" ? (
+        <Banner tone="info" icon={<CircleHelp size={16} aria-hidden="true" />} role="status" testId="trainer-changed">
+          训练记录已在别处更新，已重新读取。
+        </Banner>
+      ) : null}
+      {error ? (
+        <Banner tone="bad" icon={<X size={16} aria-hidden="true" />} role="alert">
+          {error}
+        </Banner>
+      ) : null}
+      {gate && gate.reasons.length > 0 ? (
+        <Banner
+          tone={gate.permits ? "warn" : "bad"}
+          icon={<ShieldAlert size={16} aria-hidden="true" />}
+          role={gate.permits ? "status" : "alert"}
+          testId="trainer-gate-reason"
+        >
+          <span id="trainer-gate-reason">
+            {gate.permits ? "可以继续，但请留意：" : "安全检查不允许继续："}
+            {gate.reasons.join("；")}
+          </span>
+        </Banner>
+      ) : null}
+    </>
+  );
+}
+
+function ProgressBar({ exercises }: { exercises: TrainerExerciseView[] }) {
+  const done = exercises.filter((exercise) => exercise.progress === "done").length;
+  return (
+    <div
+      className="bc-tr-progress"
+      role="progressbar"
+      aria-label="训练进度"
+      aria-valuemin={0}
+      aria-valuemax={exercises.length}
+      aria-valuenow={done}
+    >
+      {exercises.map((exercise) => (
+        <span key={exercise.planExerciseId} data-progress={exercise.progress} />
+      ))}
+    </div>
+  );
+}
+
+function StatusRow({ view }: { view: TrainerSessionView }) {
+  return (
+    <div className="bc-tr-status">
+      <div className="bc-dx-status">
+        <Chip tone={view.state === "paused" ? "warn" : "ok"} dot testId="trainer-state">
+          {view.state === "paused" ? "已暂停" : "进行中"}
+        </Chip>
+        <GateChip gate={view.gate} />
+      </div>
+      <span className="bc-tr-clock" aria-label={`已训练 ${formatClock(view.elapsedSeconds)}`}>
+        {view.state === "paused" ? "已计时 " : ""}
+        {formatClock(view.elapsedSeconds)}
+      </span>
+    </div>
+  );
+}
+
+function setLabel(state: string, index: number) {
+  return `第 ${index + 1} 组${state === "skipped" ? " · 跳过" : ""}`;
+}
+
+function InProgressScene({
+  view,
+  trainer,
+  actual,
+  onActual,
+}: {
+  view: TrainerSessionView;
+  trainer: ReturnType<typeof useTrainerSession>;
+  actual: number | null;
+  onActual: (value: number) => void;
+}) {
+  const current = view.current;
+  const exercise = current ? view.exercises[current.exerciseIndex]! : null;
+  const resting = view.restRemainingSeconds > 0;
+  const step = current?.actualUnit === "seconds" ? 5 : 1;
+  const max = current?.actualUnit === "seconds" ? 86_400 : 1000;
+
+  return (
+    <div className="bc-tp-scene" data-testid={resting ? "trainer-set-recorded" : "trainer-in-progress"}>
+      <StatusRow view={view} />
+      <ProgressBar exercises={view.exercises} />
+      <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
+      {view.last ? (
+        <Banner tone="info" icon={<Check size={16} aria-hidden="true" />} role="status" testId="trainer-last-receipt">
+          {view.last.setNumber ? `第 ${view.last.setNumber} 组` : view.last.name}
+          {view.last.kind === "skipped" ? "已跳过" : "已记录"}
+          {view.last.actualReps ? ` · ${view.last.actualReps} 次` : ""}
+          {view.last.actualDurationSeconds ? ` · ${view.last.actualDurationSeconds} 秒` : ""}
+        </Banner>
+      ) : null}
+      {exercise && current ? (
+        <section className="bc-tr-card" aria-label="当前动作" data-testid="trainer-current">
+          <span className="bc-tr-card-stage">
+            {exercise.stageLabel} · {exercise.position} / {exercise.stageSize}
+          </span>
+          <h3 className="bc-tr-card-name">{exercise.name}</h3>
+          <ol className="bc-tr-sets" aria-label="组">
+            {exercise.sets.map((state, index) => (
+              <li
+                key={index}
+                data-set-state={state}
+                data-current={index + 1 === current.setNumber ? "true" : undefined}
+                aria-current={index + 1 === current.setNumber ? "step" : undefined}
+              >
+                {state !== "pending" ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
+                {setLabel(state, index)}
+              </li>
+            ))}
+          </ol>
+          <p className="bc-tr-target">
+            目标 {exercise.prescription.replace(/^\d+ 组 × /, "")}
+            {exercise.restSeconds && resting ? ` · 休息 ${exercise.restSeconds} 秒` : ""}
+          </p>
+          {resting ? (
+            <p className="bc-tr-rest" data-testid="trainer-rest" aria-live="off">
+              <Clock3 size={14} aria-hidden="true" />
+              <span>休息中</span>
+              <strong>{formatRestClock(view.restRemainingSeconds)}</strong>
+            </p>
+          ) : actual !== null ? (
+            <div className="bc-tr-stepper">
+              <button
+                type="button"
+                className="bc-tr-step"
+                aria-label="减少"
+                disabled={actual <= 1}
+                onClick={() => onActual(Math.max(1, actual - step))}
+              >
+                <Minus size={18} aria-hidden="true" />
+              </button>
+              <output className="bc-tr-actual" aria-label={current.actualUnit === "seconds" ? "实际秒数" : "实际次数"}>
+                {actual}
+              </output>
+              <button
+                type="button"
+                className="bc-tr-step"
+                aria-label="增加"
+                disabled={actual >= max}
+                onClick={() => onActual(Math.min(max, actual + step))}
+              >
+                <Plus size={18} aria-hidden="true" />
+              </button>
+              <span className="bc-tr-actual-label">{current.actualUnit === "seconds" ? "实际秒数" : "实际次数"}</span>
+            </div>
+          ) : null}
+        </section>
+      ) : view.allRecorded ? (
+        <p className="bc-dx-note" data-testid="trainer-all-recorded">
+          所有组都已记录，可以结束本次训练。
+        </p>
+      ) : null}
+      {view.next ? (
+        <p className="bc-dx-next">
+          <span className="bc-dx-next-label">下一项</span>
+          <span className="bc-dx-next-name">
+            {view.next.name} · {view.next.prescription}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function InProgressFooter({
+  view,
+  trainer,
+  actual,
+}: {
+  view: TrainerSessionView;
+  trainer: ReturnType<typeof useTrainerSession>;
+  actual: number | null;
+}) {
+  const resting = view.restRemainingSeconds > 0;
+  const blocked = !view.canRecord;
+  return (
+    <footer className="bc-window-footer bc-dx-footer bc-tr-footer" data-testid="trainer-actions">
+      <button type="button" className="bc-dx-icon-button bc-tr-pause" aria-label="暂停训练" disabled={trainer.busy} onClick={trainer.pause}>
+        <Pause size={18} aria-hidden="true" />
+      </button>
+      {view.allRecorded || resting || blocked ? (
+        <button type="button" className="bc-dx-link bc-dx-early" disabled={trainer.busy} onClick={trainer.finish}>
+          结束
+        </button>
+      ) : (
+        <button type="button" className="bc-dx-link bc-dx-early" disabled={trainer.busy} onClick={trainer.skip}>
+          跳过本组
+        </button>
+      )}
+      {view.allRecorded ? (
+        <button type="button" className="bc-dx-primary" disabled={trainer.busy} onClick={trainer.finish}>
+          <Check size={16} aria-hidden="true" />
+          结束训练
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="bc-dx-primary"
+          disabled={trainer.busy || blocked}
+          aria-busy={trainer.busy || undefined}
+          aria-describedby={view.gate.reasons.length ? "trainer-gate-reason" : undefined}
+          onClick={() => trainer.complete(actual)}
+        >
+          {trainer.busy ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+          完成本组
+        </button>
+      )}
+    </footer>
+  );
+}
+
+function RecordedList({ view }: { view: TrainerSessionView }) {
+  return (
+    <section className="bc-dx-section" aria-label="已记录">
+      <h4 className="bc-dx-label">已记录</h4>
+      <ul className="bc-dx-rows" data-testid="trainer-recorded">
+        {view.exercises.map((exercise) => (
+          <li key={exercise.planExerciseId} className="bc-dx-row bc-tr-recorded" data-progress={exercise.progress}>
+            <span
+              className="bc-dx-mark"
+              data-mark={exercise.progress === "done" ? "support" : exercise.progress === "partial" ? "gap" : "context"}
+              aria-hidden="true"
+            >
+              {exercise.progress === "done" ? <Check size={13} /> : exercise.progress === "partial" ? <CircleHelp size={13} /> : <Minus size={13} />}
+            </span>
+            <span className="bc-dx-row-text">
+              <span className="bc-dx-row-statement">{exercise.name}</span>
+            </span>
+            <span className="bc-tr-recorded-count">
+              {exercise.performedCount} / {exercise.sets.length} 组
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function RecoveryScene({ view, children }: { view: TrainerSessionView; children: ReactNode }) {
+  const exercise = view.current ? view.exercises[view.current.exerciseIndex] : null;
+  return (
+    <div className="bc-tp-scene" data-testid="trainer-recovery">
+      <StatusRow view={view} />
+      <ProgressBar exercises={view.exercises} />
+      {children}
+      {exercise && view.current ? (
+        <div className="bc-tr-resume">
+          <span>上次停在</span>
+          <strong>
+            {exercise.name} · 第 {view.current.setNumber} 组
+          </strong>
+        </div>
+      ) : null}
+      <RecordedList view={view} />
+    </div>
+  );
+}
+
+function EndedScene({ view }: { view: TrainerSessionView }) {
+  const minutes = Math.max(1, Math.round(view.elapsedSeconds / 60));
+  return (
+    <div className="bc-tp-scene" data-testid="trainer-ended">
+      <div className="bc-dx-state" data-tone="ok">
+        <span className="bc-dx-state-halo" aria-hidden="true">
+          <Check size={22} />
+        </span>
+        <p className="bc-dx-state-title">训练已结束</p>
+        <p className="bc-dx-state-text">
+          {view.endedReason === "finished" ? "按计划完成" : "提前结束"} · {minutes} 分钟
         </p>
       </div>
-
-      {!gate.permitsExecution && (
-        <Card className="p-4 text-sm" role="alert">
-          当前安全状态不允许开始或继续训练（{gate.result}
-          ）。已记录的内容会保留。
-        </Card>
-      )}
-
-      {!session && (
-        <Card className="space-y-3 p-4">
-          <label
-            className="block text-sm font-semibold"
-            htmlFor="trainer-template"
-          >
-            选择本次训练
-          </label>
-          <select
-            id="trainer-template"
-            className="w-full rounded-md border p-2 text-sm"
-            value={activeTemplateId ?? ""}
-            onChange={(event) => setTemplateId(event.target.value)}
-          >
-            {templates.map((item) => (
-              <option key={item.templateId} value={item.templateId}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-          <Button
-            onClick={start}
-            disabled={busy || !gate.permitsExecution || !activeTemplateId}
-          >
-            开始本次训练
-          </Button>
-        </Card>
-      )}
-
-      {template && (
-        <Card className="space-y-4 p-4">
-          <h2 className="text-lg font-semibold">{template.title}</h2>
-          {template.stages.map((stage, stageIndex) => (
-            <div key={`${stage.phase}-${stageIndex}`} className="space-y-3">
-              {stage.exercises.map((exercise) => (
-                <div
-                  key={exercise.planExerciseId}
-                  className="rounded-md border p-3"
-                >
-                  <p className="font-medium">{exercise.nameSnapshot}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {exercise.sets} 组 ·{" "}
-                    {formatPlanTarget(exercise) || "目标未提供"}
-                  </p>
-                  {session && (
-                    <ul className="mt-2 space-y-1">
-                      {Array.from(
-                        { length: exercise.sets },
-                        (_, index) => index + 1,
-                      ).map((setNumber) => {
-                        const recorded =
-                          effective.get(
-                            `${exercise.planExerciseId}:${setNumber}`,
-                          ) ?? effective.get(`${exercise.planExerciseId}:all`);
-                        return (
-                          <li
-                            key={setNumber}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span>第 {setNumber} 组</span>
-                            {recorded ? (
-                              <span>
-                                {recorded === "performed" ? "已完成" : "已跳过"}
-                              </span>
-                            ) : live ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  disabled={
-                                    busy || session.state !== "in_progress"
-                                  }
-                                  onClick={() =>
-                                    recordSet(
-                                      exercise.planExerciseId,
-                                      setNumber,
-                                      "performed",
-                                    )
-                                  }
-                                >
-                                  完成
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={
-                                    busy || session.state !== "in_progress"
-                                  }
-                                  onClick={() =>
-                                    recordSet(
-                                      exercise.planExerciseId,
-                                      setNumber,
-                                      "skipped",
-                                    )
-                                  }
-                                >
-                                  跳过
-                                </Button>
-                              </>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                未记录
-                              </span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-          {live && (
-            <div className="flex gap-2">
-              <Button disabled={busy} onClick={() => finish("finished")}>
-                结束训练
-              </Button>
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={() => finish("stopped_early")}
-              >
-                提前结束
-              </Button>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {session?.state === "ended" && (
-        <Card className="space-y-3 p-4">
-          <p className="text-sm font-semibold">
-            本次训练已{session.endedReason === "finished" ? "结束" : "提前结束"}
-          </p>
-          {session.feedback ? (
-            <p
-              className="whitespace-pre-wrap text-sm"
-              data-testid="trainer-session-feedback"
-            >
-              {session.feedback.text}
-            </p>
-          ) : (
-            <>
-              <label className="block text-sm" htmlFor="trainer-feedback">
-                本次感受（原话保存，只用于计划复核提示；身体不适请在对话中告诉我们）
-              </label>
-              <textarea
-                id="trainer-feedback"
-                className="w-full rounded-md border p-2 text-sm"
-                maxLength={2000}
-                rows={3}
-                value={feedback}
-                onChange={(event) => setFeedback(event.target.value)}
-              />
-              <Button
-                disabled={busy || !feedback.trim()}
-                onClick={submitFeedback}
-              >
-                提交反馈
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => setSession(null)}
-          >
-            返回
-          </Button>
-        </Card>
-      )}
+      <RecordedList view={view} />
     </div>
   );
 }

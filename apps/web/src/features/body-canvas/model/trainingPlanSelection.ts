@@ -14,7 +14,12 @@ export interface TrainingPlanSummary {
 
 export interface TrainingSelection {
   plans: TrainingPlanSummary[];
-  selected: (TrainingPlanSummary & { gatePermits: boolean }) | null;
+  selected:
+    | (TrainingPlanSummary & {
+        gatePermits: boolean;
+        templates: { templateId: string; title: string }[];
+      })
+    | null;
 }
 
 /**
@@ -45,6 +50,7 @@ export function selectTrainingPlan(
           title: record.title,
           status: record.status,
           gatePermits: record.executionGate.permitsExecution,
+          templates: record.currentContent.sessions.map(({ templateId, title }) => ({ templateId, title })),
         }
       : null,
   };

@@ -1,0 +1,193 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ApiRequestError } from "@/lib/api-client";
+import { PLAN_ID, REVISION_ID, makePlan } from "@/features/body-canvas/model/__fixtures__/trainingPlanFixtures";
+import type { TrainingSessionRecord } from "../services/trainingService";
+
+const api = vi.hoisted(() => ({
+  getPlanRecord: vi.fn(),
+  listSessions: vi.fn(),
+  getRevisionContent: vi.fn(),
+  startSession: vi.fn(),
+  recordSet: vi.fn(),
+  finishSession: vi.fn(),
+  pauseSession: vi.fn(),
+  resumeSession: vi.fn(),
+}));
+vi.mock("../services/trainingService", () => ({
+  trainingApi: api,
+  newIdempotencyKey: () => crypto.randomUUID(),
+}));
+
+import { TrainingExecutionPanel } from "./TrainingExecutionPanel";
+
+const SESSION_ID = "88888888-8888-4888-8888-888888888888";
+const gate = { result: "allow" as const, safetyRevision: 4, policyRevision: "p1" };
+
+function session(overrides: Partial<TrainingSessionRecord> = {}): TrainingSessionRecord {
+  return {
+    sessionId: SESSION_ID,
+    planId: PLAN_ID,
+    planRevisionId: REVISION_ID,
+    templateId: "a",
+    timeZone: "Asia/Shanghai",
+    trainingDate: "2026-10-18",
+    state: "in_progress",
+    revision: 0,
+    startedAt: new Date().toISOString(),
+    startGate: gate,
+    actions: [],
+    transitions: [],
+    ...overrides,
+  };
+}
+
+function performed(planExerciseId: string, setNumber: number, revision: number, actualReps?: number) {
+  return {
+    actionId: crypto.randomUUID(),
+    sessionId: SESSION_ID,
+    planExerciseId,
+    exerciseId: planExerciseId,
+    scope: "set" as const,
+    setNumber,
+    kind: "performed" as const,
+    actualReps,
+    sessionRevision: revision,
+    gate,
+    idempotencyKey: `k${revision}`,
+    recordedAt: new Date().toISOString(),
+  };
+}
+
+function renderPanel(onOpenPlan = vi.fn()) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <TrainingExecutionPanel planId={PLAN_ID} templateId="a" launchKey="launch-1" onOpenPlan={onOpenPlan} />
+    </QueryClientProvider>,
+  );
+  return onOpenPlan;
+}
+
+describe("Penpot Trainer boards", () => {
+  beforeEach(() => {
+    Object.values(api).forEach((fn) => fn.mockReset());
+    api.getPlanRecord.mockResolvedValue(makePlan());
+  });
+
+  it("starts the launched template once and records the first set with its actual reps", async () => {
+    let current = session();
+    api.listSessions.mockResolvedValueOnce([]).mockImplementation(async () => [current]);
+    api.startSession.mockImplementation(async () => current);
+    renderPanel();
+    expect(await screen.findByTestId("trainer-in-progress")).toBeVisible();
+    expect(api.startSession).toHaveBeenCalledTimes(1);
+    expect(api.startSession.mock.calls[0]![1]).toBe("a");
+    expect(screen.getByRole("heading", { name: "猫牛式" })).toBeVisible();
+    expect(screen.getByText("热身 · 1 / 1")).toBeVisible();
+    expect(screen.getByLabelText("实际次数")).toHaveTextContent("10");
+    await userEvent.click(screen.getByRole("button", { name: "增加" }));
+    expect(screen.getByLabelText("实际次数")).toHaveTextContent("11");
+
+    api.recordSet.mockImplementation(async () => {
+      current = session({ revision: 1, actions: [performed("cat-cow", 1, 1, 11)] });
+      return current.actions[0];
+    });
+    await userEvent.click(screen.getByRole("button", { name: "完成本组" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "臀桥" })).toBeVisible());
+    expect(api.recordSet).toHaveBeenCalledTimes(1);
+    expect(api.recordSet.mock.calls[0]![0]).toMatchObject({
+      planExerciseId: "cat-cow",
+      setNumber: 1,
+      kind: "performed",
+      actualReps: 11,
+      expectedSafetyRevision: 4,
+    });
+    expect(screen.getByTestId("trainer-last-receipt")).toHaveTextContent("第 1 组已记录 · 11 次");
+  });
+
+  it("picks up this plan's live session instead of starting another", async () => {
+    api.listSessions.mockResolvedValue([session({ revision: 1, actions: [performed("cat-cow", 1, 1)] })]);
+    renderPanel();
+    expect(await screen.findByRole("heading", { name: "臀桥" })).toBeVisible();
+    expect(api.startSession).not.toHaveBeenCalled();
+  });
+
+  it("keeps recording disabled with the gate's reason while the TrainerGate blocks", async () => {
+    api.getPlanRecord.mockResolvedValue(
+      makePlan({
+        executionGate: { ...makePlan().executionGate, result: "block", permitsExecution: false, reasons: ["restricted_restriction"] },
+      }),
+    );
+    api.listSessions.mockResolvedValue([session()]);
+    renderPanel();
+    expect(await screen.findByTestId("trainer-gate")).toHaveTextContent("暂不能继续");
+    expect(screen.getByRole("button", { name: "完成本组" })).toBeDisabled();
+    expect(screen.getByTestId("trainer-gate-reason")).toHaveTextContent("有限制训练的安全提醒");
+    // Stopping is never gated.
+    expect(screen.getByRole("button", { name: "结束" })).toBeEnabled();
+  });
+
+  it("says the step was not recorded when Safety changed under it", async () => {
+    api.listSessions.mockResolvedValue([session()]);
+    api.recordSet.mockRejectedValue(new ApiRequestError("stale", 409, "SAFETY_STALE"));
+    renderPanel();
+    await userEvent.click(await screen.findByRole("button", { name: "完成本组" }));
+    expect(await screen.findByTestId("trainer-safety-changed")).toHaveTextContent("这一步没有记录");
+    expect(api.getPlanRecord.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("ignores a second tap while a set is being recorded", async () => {
+    api.listSessions.mockResolvedValue([session()]);
+    let resolve!: () => void;
+    api.recordSet.mockReturnValue(new Promise<void>((done) => (resolve = done)));
+    renderPanel();
+    const complete = await screen.findByRole("button", { name: "完成本组" });
+    await userEvent.dblClick(complete);
+    resolve();
+    await waitFor(() => expect(api.recordSet).toHaveBeenCalledTimes(1));
+  });
+
+  it("pauses into Recovery and resumes at the Safety revision shown", async () => {
+    let current = session({ revision: 1, actions: [performed("cat-cow", 1, 1)] });
+    api.listSessions.mockImplementation(async () => [current]);
+    api.pauseSession.mockImplementation(async () => {
+      current = { ...current, state: "paused", revision: 2 };
+      return current;
+    });
+    renderPanel();
+    await userEvent.click(await screen.findByRole("button", { name: "暂停训练" }));
+    expect(await screen.findByTestId("trainer-recovery")).toBeVisible();
+    expect(screen.getByText("臀桥 · 第 1 组")).toBeVisible();
+    api.resumeSession.mockImplementation(async () => {
+      current = { ...current, state: "in_progress", revision: 3 };
+      return current;
+    });
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(await screen.findByTestId("trainer-in-progress")).toBeVisible();
+    expect(api.resumeSession.mock.calls[0]![1]).toBe(4);
+  });
+
+  it("finishes early when sets remain and shows the Ended board", async () => {
+    let current = session({ revision: 1, actions: [performed("cat-cow", 1, 1)] });
+    api.listSessions.mockImplementation(async () => [current]);
+    api.pauseSession.mockImplementation(async () => {
+      current = { ...current, state: "paused", revision: 2 };
+      return current;
+    });
+    api.finishSession.mockImplementation(async () => {
+      current = { ...current, state: "ended", endedReason: "stopped_early", endedAt: new Date().toISOString(), revision: 3 };
+      return current;
+    });
+    const open = renderPanel();
+    await userEvent.click(await screen.findByRole("button", { name: "暂停训练" }));
+    await userEvent.click(await screen.findByRole("button", { name: "结束" }));
+    expect(await screen.findByTestId("trainer-ended")).toHaveTextContent("提前结束");
+    expect(api.finishSession.mock.calls[0]![1]).toBe("stopped_early");
+    expect(screen.getByTestId("trainer-recorded")).toHaveTextContent("猫牛式1 / 1 组");
+    await userEvent.click(screen.getByRole("button", { name: "完成" }));
+    expect(open).toHaveBeenCalled();
+  });
+});

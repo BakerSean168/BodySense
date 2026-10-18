@@ -24,13 +24,13 @@ import { readSelectedPlanId, resolveSelectedPlanId, writeSelectedPlanId } from "
 import { useTrainingPlanActions } from "@/features/training/hooks/useTrainingPlanActions";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
-import { ChatWindowHeader, DiagnosisWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
+import { ChatWindowHeader, DiagnosisWindowHeader, TrainerWindowHeader, TrainingWindowHeader } from "./V2WindowHeaders";
 import {
   PersonIdentityTrigger,
   PersonWindow,
   type PersonProfileIdentity,
 } from "./PersonWindow";
-import { TrainerEntryGuard } from "./TrainerEntryGuard";
+import { TrainerEntryGuard, type TrainerLaunch } from "./TrainerEntryGuard";
 import { diagnosisHeaderMode } from "../model/diagnosisDecisionViewModel";
 import "../body-canvas.css";
 
@@ -122,7 +122,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => readSelectedPlanId());
   const [selectedConditionId, setSelectedConditionId] = useState<string | null>(null);
   /** Page-local explicit Start intent. A deep link or shortcut never supplies it. */
-  const [launchedTrainerPlanId, setLaunchedTrainerPlanId] = useState<string | null>(null);
+  const [trainerLaunch, setTrainerLaunch] = useState<TrainerLaunch | null>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const activeWindow = activeBusinessWindow(windows);
@@ -402,7 +402,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                 trainingActions.backToPlan();
               },
               onOpenChat: () => openWindow("chat"),
-              onStart: (planId) => {
+              onStart: (planId, templateId) => {
                 // UI admission only: the Go service remains authoritative.
                 const plan = trainingSelection.selected;
                 if (
@@ -412,7 +412,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                   props.workspace?.capabilities.can_execute_treatment !== true ||
                   safetyReview
                 ) return;
-                setLaunchedTrainerPlanId(planId);
+                setTrainerLaunch({ planId, templateId, key: crypto.randomUUID() });
                 openWindow("trainer");
               },
             }}
@@ -423,7 +423,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         return (
           <TrainerEntryGuard
             planId={trainingSelection.selected?.planId ?? null}
-            launchedPlanId={launchedTrainerPlanId}
+            launch={trainerLaunch}
             accepted={trainingSelection.selected?.status === "active"}
             canExecute={props.workspace?.capabilities.can_execute_treatment === true}
             safetyBlocked={safetyReview || trainingSelection.selected?.gatePermits === false}
@@ -464,6 +464,18 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               chooseTrainingPlan(planId);
               trainingActions.backToPlan();
             }}
+          />
+        );
+      case "trainer":
+        return (
+          <TrainerWindowHeader
+            templateTitle={
+              trainerLaunch && trainingSelection.selected?.planId === trainerLaunch.planId
+                ? (trainingSelection.selected.templates.find(
+                    (template) => template.templateId === trainerLaunch.templateId,
+                  )?.title ?? null)
+                : null
+            }
           />
         );
       case "chat":
@@ -564,7 +576,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               onClose={() => closeWindow(window)}
               headerLeft={renderWindowHeader(window)}
               headerActions={renderHeaderActions(window)}
-              hideTitle={["person", "diagnosis", "training", "chat"].includes(
+              hideTitle={["person", "diagnosis", "training", "trainer", "chat"].includes(
                 window,
               )}
             >

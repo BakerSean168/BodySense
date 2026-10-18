@@ -2,6 +2,9 @@ import {
   acceptPlanProposal,
   finishTrainingSession,
   getTrainingPlanRecord,
+  getTrainingPlanRevisionRecord,
+  pauseTrainingSession,
+  resumeTrainingSession,
   listPlanProposalRecords,
   listTrainingPlanRecords,
   listTrainingSessions,
@@ -74,7 +77,7 @@ export function formatPlanTarget(exercise: PlanExerciseOutput): string {
   return "";
 }
 
-function newIdempotencyKey(): string {
+export function newIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
 
@@ -152,9 +155,25 @@ export const trainingApi = {
       return response.sessions;
     }),
 
+  /** The content of one accepted revision (a session pins its revision). */
+  getRevisionContent: async (
+    planId: string,
+    revisionId: string,
+  ): Promise<TrainingPlanRecord["currentContent"]> =>
+    withOpenApiError(async () => {
+      const revision = await getTrainingPlanRevisionRecord(
+        planId,
+        revisionId,
+        undefined,
+        openApiAuthFetch,
+      );
+      return revision.snapshot.content;
+    }),
+
   startSession: async (
     plan: TrainingPlanRecord,
     templateId: string,
+    idempotencyKey: string = newIdempotencyKey(),
   ): Promise<TrainingSessionRecord> =>
     withOpenApiError(() =>
       startTrainingSession(
@@ -164,31 +183,45 @@ export const trainingApi = {
           templateId,
           timeZone: userTimeZone(),
           expectedSafetyRevision: plan.executionGate.safetyRevision,
-          idempotencyKey: newIdempotencyKey(),
+          idempotencyKey,
         },
         undefined,
         openApiAuthFetch,
       ),
     ),
 
-  recordSet: async (
-    session: TrainingSessionRecord,
-    planExerciseId: string,
-    setNumber: number,
-    kind: "performed" | "skipped",
-    expectedSafetyRevision: number,
-  ): Promise<TrainingSetActionRecord> =>
+  /**
+   * One explicit set action. The caller keeps `idempotencyKey` for retries
+   * of the same action so a repeated tap replays the original receipt.
+   */
+  recordSet: async (command: {
+    session: TrainingSessionRecord;
+    planExerciseId: string;
+    setNumber: number;
+    kind: "performed" | "skipped";
+    actualReps?: number;
+    actualDurationSeconds?: number;
+    expectedSafetyRevision: number;
+    idempotencyKey: string;
+  }): Promise<TrainingSetActionRecord> =>
     withOpenApiError(() =>
       recordTrainingSetAction(
-        session.sessionId,
+        command.session.sessionId,
         {
-          planExerciseId,
+          planExerciseId: command.planExerciseId,
           scope: "set",
-          setNumber,
-          kind,
-          expectedSessionRevision: session.revision,
-          expectedSafetyRevision,
-          idempotencyKey: newIdempotencyKey(),
+          setNumber: command.setNumber,
+          kind: command.kind,
+          ...(command.kind === "performed" && command.actualReps !== undefined
+            ? { actualReps: command.actualReps }
+            : {}),
+          ...(command.kind === "performed" &&
+          command.actualDurationSeconds !== undefined
+            ? { actualDurationSeconds: command.actualDurationSeconds }
+            : {}),
+          expectedSessionRevision: command.session.revision,
+          expectedSafetyRevision: command.expectedSafetyRevision,
+          idempotencyKey: command.idempotencyKey,
         },
         undefined,
         openApiAuthFetch,
@@ -198,6 +231,7 @@ export const trainingApi = {
   finishSession: async (
     session: TrainingSessionRecord,
     endedReason: "finished" | "stopped_early",
+    idempotencyKey: string = newIdempotencyKey(),
   ): Promise<TrainingSessionRecord> =>
     withOpenApiError(() =>
       finishTrainingSession(
@@ -205,7 +239,40 @@ export const trainingApi = {
         {
           endedReason,
           expectedSessionRevision: session.revision,
-          idempotencyKey: newIdempotencyKey(),
+          idempotencyKey,
+        },
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+
+  /** Pausing is never gated; only an in-progress session can pause. */
+  pauseSession: async (
+    session: TrainingSessionRecord,
+    idempotencyKey: string = newIdempotencyKey(),
+  ): Promise<TrainingSessionRecord> =>
+    withOpenApiError(() =>
+      pauseTrainingSession(
+        session.sessionId,
+        { expectedSessionRevision: session.revision, idempotencyKey },
+        undefined,
+        openApiAuthFetch,
+      ),
+    ),
+
+  /** Resuming re-gates at exactly the Safety revision the user was shown. */
+  resumeSession: async (
+    session: TrainingSessionRecord,
+    expectedSafetyRevision: number,
+    idempotencyKey: string = newIdempotencyKey(),
+  ): Promise<TrainingSessionRecord> =>
+    withOpenApiError(() =>
+      resumeTrainingSession(
+        session.sessionId,
+        {
+          expectedSessionRevision: session.revision,
+          expectedSafetyRevision,
+          idempotencyKey,
         },
         undefined,
         openApiAuthFetch,

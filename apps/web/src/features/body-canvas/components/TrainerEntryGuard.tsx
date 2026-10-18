@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 
-// The legacy training player and its dependencies must not join the main
+// The Trainer and its dependencies must not join the main
 // ConsultationPage chunk or load until Go permission, plan and Safety gates pass.
 const TrainingExecutionPanel = lazy(() =>
   import("@/features/training/components/TrainingExecutionPanel").then(
@@ -13,7 +13,7 @@ const TrainingExecutionPanel = lazy(() =>
  * A Trainer window can be opened by deep link or keyboard, but opening a
  * window is NOT equivalent to authorizing an executable training session.
  *
- * All four gates must hold before mounting the legacy execution panel:
+ * All four gates must hold before mounting the Trainer:
  * 1. The selected plan is the plan the user explicitly launched in this page.
  * 2. The authoritative projection marks that revision accepted.
  * 3. The server exposes execution capability.
@@ -21,9 +21,16 @@ const TrainingExecutionPanel = lazy(() =>
  *
  * This is a UI admission guard, never a substitute for server authorization.
  */
+export interface TrainerLaunch {
+  planId: string;
+  templateId: string;
+  /** One explicit Start click; the Trainer starts at most one session for it. */
+  key: string;
+}
+
 export interface TrainerEntryGuardProps {
   planId: string | null;
-  launchedPlanId: string | null;
+  launch: TrainerLaunch | null;
   accepted: boolean;
   canExecute: boolean;
   safetyBlocked: boolean;
@@ -34,7 +41,7 @@ export interface TrainerEntryGuardProps {
 
 export function TrainerEntryGuard({
   planId,
-  launchedPlanId,
+  launch,
   accepted,
   canExecute,
   safetyBlocked,
@@ -44,7 +51,7 @@ export function TrainerEntryGuard({
 }: TrainerEntryGuardProps) {
   const canRenderExecution =
     planId !== null &&
-    launchedPlanId === planId &&
+    launch?.planId === planId &&
     accepted &&
     canExecute &&
     !safetyBlocked &&
@@ -69,7 +76,13 @@ export function TrainerEntryGuard({
     >
       {canRenderExecution ? (
         <Suspense fallback={<p role="status">正在加载训练执行界面</p>}>
-          <TrainingExecutionPanel key={planId} planId={planId} />
+          <TrainingExecutionPanel
+            key={launch!.key}
+            planId={planId}
+            templateId={launch!.templateId}
+            launchKey={launch!.key}
+            onOpenPlan={onOpenTraining}
+          />
         </Suspense>
       ) : (
         <div
