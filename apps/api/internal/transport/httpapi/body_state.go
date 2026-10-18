@@ -54,7 +54,6 @@ type PublicServer struct {
 	diagnosisReplay            diagnosisReplayApplication
 	outcomes                   outcomeApplication
 	planGenerator              planGenerationApplication
-	training                   trainingApplication
 	trainingPlans              trainingPlanApplication
 	trainerSessions            trainerSessionApplication
 	uploads                    uploadApplication

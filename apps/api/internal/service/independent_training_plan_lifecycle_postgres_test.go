@@ -38,9 +38,6 @@ func TestIndependentTrainingStatusLifecyclePostgres(t *testing.T) {
 	ctx := context.Background()
 	a := acceptIndependentPlan(t, svc, owner, "A")
 	b := acceptIndependentPlan(t, svc, owner, "B")
-	if err := db.Exec("INSERT INTO training_logs(user_id,plan_id,notes) VALUES (?,?,'B history')", owner, b.PlanID).Error; err != nil {
-		t.Fatal(err)
-	}
 	beforeB := independentPlanSnapshot(t, db, owner, b.PlanID)
 
 	pause := planStatusCmd(a.PlanID, trainingplan.PlanPaused, 0)

@@ -80,7 +80,7 @@ func independentPlanSnapshot(t *testing.T, db *gorm.DB, owner, plan uuid.UUID) s
 	err := db.Raw(`SELECT jsonb_build_object(
  'plan',(SELECT to_jsonb(p) FROM training_plans p WHERE user_id=? AND id=?),
  'revisions',(SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY id),'[]') FROM training_plan_revisions r WHERE user_id=? AND plan_id=?),
- 'logs',(SELECT coalesce(jsonb_agg(to_jsonb(l) ORDER BY id),'[]') FROM training_logs l WHERE user_id=? AND plan_id=?)
+ 'sessions',(SELECT coalesce(jsonb_agg(to_jsonb(l) ORDER BY id),'[]') FROM training_sessions l WHERE user_id=? AND plan_id=?)
  )::text`, owner, plan, owner, plan, owner, plan).Scan(&snapshot).Error
 	if err != nil {
 		t.Fatal(err)
@@ -104,9 +104,6 @@ func TestIndependentTrainingDecisionAtomicityPostgres(t *testing.T) {
 	bp := independentProposal(t, svc, owner, bDraft, uuid.Nil, uuid.Nil)
 	b, err := svc.Accept(ctx, owner, independentDecision(bp))
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err = db.Exec("INSERT INTO training_logs(user_id,plan_id,notes) VALUES (?,?,'B unchanged history')", owner, b.PlanID).Error; err != nil {
 		t.Fatal(err)
 	}
 	beforeB := independentPlanSnapshot(t, db, owner, b.PlanID)
@@ -134,10 +131,6 @@ func TestIndependentTrainingDecisionAtomicityPostgres(t *testing.T) {
 	}
 	if _, err = svc.Revision(ctx, foreign, a.PlanID, a.RevisionID); !errors.Is(err, ErrPlanNotFound) {
 		t.Fatalf("foreign revision must be 404: %v", err)
-	}
-	// The owner-scoped composite FK independently rejects owner laundering.
-	if err = db.Exec("INSERT INTO training_logs(user_id,plan_id) VALUES (?,?)", foreign, a.PlanID).Error; err == nil {
-		t.Fatal("cross-owner log FK accepted")
 	}
 	// Neither rejection nor failed acceptance may affect the other plan.
 	aDraft.Goal = "Proposed A goal"
