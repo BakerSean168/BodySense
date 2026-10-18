@@ -122,7 +122,7 @@ func (s *DiagnosisFormalAnalysisService) Start(ctx context.Context, owner uuid.U
 	profileJSON := json.RawMessage(`{}`)
 	if s.profiles != nil {
 		if profile, profileErr := s.profiles.GetProfile(ctx, owner); profileErr == nil && profile != nil {
-			if encoded, marshalErr := json.Marshal(profile); marshalErr == nil {
+			if encoded, marshalErr := json.Marshal(profile.AgentContext()); marshalErr == nil {
 				profileJSON = encoded
 			}
 		}

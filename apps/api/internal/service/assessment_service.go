@@ -141,7 +141,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if profile == nil {
 		return nil, errors.New("user profile not found")
 	}
-	profilePayload, err := json.Marshal(profile)
+	profilePayload, err := json.Marshal(profile.AgentContext())
 	if err != nil {
 		return nil, fmt.Errorf("encode assessment profile: %w", err)
 	}

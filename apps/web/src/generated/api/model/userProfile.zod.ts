@@ -6,21 +6,29 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
+import { ProfilePreferences } from './profilePreferences.zod';
+
+export const userProfileDisplayNameMax = 40;
 
 export const userProfileAgeYearsMin = 0;
 export const userProfileAgeYearsMax = 150;
 
 
 
+
 export const UserProfile = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
-  "gender": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['male', 'female'])),
+  "display_name": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)).check(/*#__PURE__*/ zod.maxLength(userProfileDisplayNameMax))),
+  "avatar_asset_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()).check(/*#__PURE__*/ zod.describe('Owner\'s available photo UserAsset; omitted once that source is removed or erased.')),
+  "gender": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.enum(['male', 'female'])).check(/*#__PURE__*/ zod.describe('Self-reported gender. Not a physiological or medical determination.')),
   "birth_date": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.date()),
-  "age_years": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(userProfileAgeYearsMin)).check(/*#__PURE__*/ zod.lte(userProfileAgeYearsMax))),
+  "age_years": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(userProfileAgeYearsMin)).check(/*#__PURE__*/ zod.lte(userProfileAgeYearsMax))).check(/*#__PURE__*/ zod.describe('Derived from birth_date on read; never stored.')),
+  "preferences": ProfilePreferences,
+  "revision": /*#__PURE__*/ zod.int().check(/*#__PURE__*/ zod.gte(1)),
   "created_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
   "updated_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
-});
+}).check(/*#__PURE__*/ zod.describe('Minimal optional Profile (PC-D1): display identity and preferences only. Body measurements, lifestyle, symptoms and history are BodyState facts and never appear here. Absent optional fields mean "not provided"; the service never infers them. revision is the concurrency token for updates, not a user-facing value.'));
 
 export type UserProfile = zod.input<typeof UserProfile>;
 export type UserProfileOutput = zod.output<typeof UserProfile>;

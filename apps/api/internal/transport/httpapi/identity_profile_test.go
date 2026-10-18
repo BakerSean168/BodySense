@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,24 +15,33 @@ import (
 	"github.com/google/uuid"
 )
 
+// fakeProfileApplication mimics the service: it canonicalizes durable fields
+// (id, timestamps, revision) itself instead of trusting the request.
 type fakeProfileApplication struct {
-	profile *model.UserProfile
-	getErr  error
-	putErr  error
-	updates []*model.UserProfile
+	profile  *model.UserProfile
+	getErr   error
+	putErr   error
+	commands []model.ReplaceProfileCommand
 }
 
 func (f *fakeProfileApplication) GetProfile(_ context.Context, _ uuid.UUID) (*model.UserProfile, error) {
 	return f.profile, f.getErr
 }
 
-func (f *fakeProfileApplication) CreateOrUpdateProfile(_ context.Context, userID uuid.UUID, profile *model.UserProfile) error {
-	profile.UserID = userID
-	f.updates = append(f.updates, profile)
-	if f.putErr == nil {
-		f.profile = profile
+func (f *fakeProfileApplication) ReplaceProfile(_ context.Context, userID uuid.UUID, command model.ReplaceProfileCommand) (*model.UserProfile, error) {
+	f.commands = append(f.commands, command)
+	if f.putErr != nil {
+		return nil, f.putErr
 	}
-	return f.putErr
+	now := time.Date(2026, 10, 19, 8, 0, 0, 0, time.UTC)
+	stored := &model.UserProfile{
+		ID: uuid.New(), UserID: userID, DisplayName: command.DisplayName, AvatarAssetID: command.AvatarAssetID,
+		Gender: command.Gender, BirthDate: command.BirthDate, Locale: command.Locale, TimeZone: command.TimeZone,
+		UnitPreference: command.UnitPreference, Revision: command.ExpectedRevision + 1, CreatedAt: now, UpdatedAt: now,
+	}
+	stored.ProjectPreferences()
+	f.profile = stored
+	return stored, nil
 }
 
 func newProfileOpenAPIRouter(t *testing.T, profile profileApplication) *gin.Engine {
@@ -89,66 +99,114 @@ func TestGetUserProfileReturnsExplicitNullEnvelope(t *testing.T) {
 	}
 }
 
-func TestUpdateUserProfileRejectsPersistenceFieldsBeforeApplication(t *testing.T) {
-	profile := &fakeProfileApplication{}
-	rec := performJSONAt(
-		newProfileOpenAPIRouter(t, profile),
-		http.MethodPut,
-		"/api/v1/profile",
-		`{"gender":"male","age_years":22}`,
-	)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
+func TestGetUserProfileProjectsPreferencesWithoutStorageColumns(t *testing.T) {
+	zone, unit := "Asia/Tokyo", "imperial"
+	stored := &model.UserProfile{
+		ID: uuid.New(), UserID: uuid.New(), TimeZone: &zone, UnitPreference: &unit, Revision: 3,
+		CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC(),
 	}
-	if len(profile.updates) != 0 {
-		t.Fatalf("application updates=%d want=0", len(profile.updates))
+	stored.ProjectPreferences()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/profile", nil)
+	req.Header.Set("Authorization", "Bearer validated-by-auth-middleware")
+	rec := httptest.NewRecorder()
+	newProfileOpenAPIRouter(t, &fakeProfileApplication{profile: stored}).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	assertErrorCode(t, rec, "INVALID_REQUEST")
+	assertOpenAPIResponse(t, req, rec)
+	var raw struct {
+		Profile map[string]json.RawMessage `json:"profile"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("decode raw: %v", err)
+	}
+	for _, column := range []string{"time_zone", "unit_preference", "locale"} {
+		if _, leaked := raw.Profile[column]; leaked {
+			t.Fatalf("storage column %s leaked to the top level: %s", column, rec.Body.String())
+		}
+	}
+	var body openapiv1.NullableUserProfileResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Profile == nil || body.Profile.Revision != 3 || body.Profile.Preferences.TimeZone == nil ||
+		*body.Profile.Preferences.TimeZone != zone || body.Profile.Preferences.Locale != nil {
+		t.Fatalf("profile=%+v", body.Profile)
+	}
 }
 
-func TestUpdateUserProfileReturnsCanonicalStoredProjection(t *testing.T) {
-	profile := &fakeProfileApplication{}
-	// Return the same object after the write, but provide durable fields that a
-	// real repository load owns rather than trusting client-supplied values.
-	profileID := uuid.New()
-	userID := uuid.New()
-	now := time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC)
-	profile.profile = &model.UserProfile{ID: profileID, UserID: userID, CreatedAt: now, UpdatedAt: now}
+const validProfilePut = `{"expected_revision":2,"display_name":"  BakerSean ","avatar_asset_id":null,` +
+	`"gender":"female","birth_date":"2000-01-02",` +
+	`"preferences":{"locale":"zh-CN","time_zone":"Asia/Shanghai","unit_preference":"metric"}}`
 
-	// The fake update replaces profile.profile, so emulate repository canonicalization
-	// through a wrapper that fills durable identity on write.
-	profile.putErr = nil
-	router := newProfileOpenAPIRouter(t, &canonicalProfileApplication{inner: profile, id: profileID, createdAt: now})
-	rec := performJSONAt(router, http.MethodPut, "/api/v1/profile", `{"gender":"female","birth_date":"2000-01-02"}`)
+func TestUpdateUserProfileMapsTheFullReplacementCommand(t *testing.T) {
+	profile := &fakeProfileApplication{}
+	rec := performJSONAt(newProfileOpenAPIRouter(t, profile), http.MethodPut, "/api/v1/profile", validProfilePut)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d want=200 body=%s", rec.Code, rec.Body.String())
 	}
 	assertOpenAPIResponse(t, httptest.NewRequest(http.MethodPut, "/api/v1/profile", nil), rec)
+	if len(profile.commands) != 1 {
+		t.Fatalf("commands=%d", len(profile.commands))
+	}
+	command := profile.commands[0]
+	if command.ExpectedRevision != 2 || command.DisplayName == nil || command.Gender == nil || *command.Gender != "female" ||
+		command.BirthDate == nil || command.BirthDate.String() != "2000-01-02" || command.TimeZone == nil ||
+		*command.TimeZone != "Asia/Shanghai" || command.UnitPreference == nil || *command.UnitPreference != "metric" ||
+		command.Locale == nil || command.AvatarAssetID != nil {
+		t.Fatalf("command=%+v", command)
+	}
 	var body openapiv1.UserProfileResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode profile: %v", err)
 	}
-	if body.Profile.Id != profileID || body.Profile.Gender == nil || string(*body.Profile.Gender) != "female" {
+	if body.Profile.Revision != 3 || body.Profile.Gender == nil || string(*body.Profile.Gender) != "female" {
 		t.Fatalf("profile response=%+v", body.Profile)
 	}
 }
 
-type canonicalProfileApplication struct {
-	inner     *fakeProfileApplication
-	id        uuid.UUID
-	createdAt time.Time
+func TestUpdateUserProfileRejectsPartialOrPersistenceFieldsBeforeApplication(t *testing.T) {
+	for name, payload := range map[string]string{
+		"derived age":       strings.Replace(validProfilePut, `"gender"`, `"age_years":22,"gender"`, 1),
+		"revision field":    strings.Replace(validProfilePut, `"gender"`, `"revision":4,"gender"`, 1),
+		"missing field":     `{"expected_revision":0,"gender":"male"}`,
+		"unknown gender":    strings.Replace(validProfilePut, `"female"`, `"unspecified"`, 1),
+		"unknown unit":      strings.Replace(validProfilePut, `"metric"`, `"stone"`, 1),
+		"negative version":  strings.Replace(validProfilePut, `"expected_revision":2`, `"expected_revision":-1`, 1),
+		"height in profile": strings.Replace(validProfilePut, `"gender"`, `"height_cm":180,"gender"`, 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			profile := &fakeProfileApplication{}
+			rec := performJSONAt(newProfileOpenAPIRouter(t, profile), http.MethodPut, "/api/v1/profile", payload)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
+			}
+			if len(profile.commands) != 0 {
+				t.Fatalf("application commands=%d want=0", len(profile.commands))
+			}
+			assertErrorCode(t, rec, "INVALID_REQUEST")
+		})
+	}
 }
 
-func (c *canonicalProfileApplication) GetProfile(ctx context.Context, userID uuid.UUID) (*model.UserProfile, error) {
-	profile, err := c.inner.GetProfile(ctx, userID)
-	if profile != nil {
-		profile.ID = c.id
-		profile.UserID = userID
-		profile.CreatedAt = c.createdAt
-		profile.UpdatedAt = c.createdAt
+func TestUpdateUserProfileMapsDomainErrors(t *testing.T) {
+	for _, tc := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{model.ErrProfileRevisionConflict, http.StatusConflict, "PROFILE_REVISION_CONFLICT"},
+		{model.ErrProfileAvatarUnavailable, http.StatusBadRequest, "PROFILE_AVATAR_UNAVAILABLE"},
+		{model.ErrInvalidProfile, http.StatusBadRequest, "INVALID_PROFILE"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			profile := &fakeProfileApplication{putErr: tc.err}
+			rec := performJSONAt(newProfileOpenAPIRouter(t, profile), http.MethodPut, "/api/v1/profile", validProfilePut)
+			if rec.Code != tc.status {
+				t.Fatalf("status=%d want=%d body=%s", rec.Code, tc.status, rec.Body.String())
+			}
+			assertErrorCode(t, rec, tc.code)
+			assertOpenAPIResponse(t, httptest.NewRequest(http.MethodPut, "/api/v1/profile", nil), rec)
+		})
 	}
-	return profile, err
-}
-func (c *canonicalProfileApplication) CreateOrUpdateProfile(ctx context.Context, userID uuid.UUID, profile *model.UserProfile) error {
-	return c.inner.CreateOrUpdateProfile(ctx, userID, profile)
 }

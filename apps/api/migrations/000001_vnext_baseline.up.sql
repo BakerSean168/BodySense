@@ -1250,7 +1250,19 @@ CREATE TABLE public.user_profiles (
     gender character varying(20),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    birth_date date
+    birth_date date,
+    display_name text,
+    avatar_asset_id uuid,
+    locale text,
+    time_zone text,
+    unit_preference text,
+    revision bigint DEFAULT 1 NOT NULL,
+    CONSTRAINT ck_user_profiles_display_name CHECK (((display_name IS NULL) OR (((char_length(display_name) >= 1) AND (char_length(display_name) <= 40)) AND (display_name = btrim(display_name))))),
+    CONSTRAINT ck_user_profiles_gender CHECK (((gender IS NULL) OR ((gender)::text = ANY (ARRAY[('male'::character varying)::text, ('female'::character varying)::text])))),
+    CONSTRAINT ck_user_profiles_locale CHECK (((locale IS NULL) OR ((char_length(locale) <= 35) AND (locale ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$'::text)))),
+    CONSTRAINT ck_user_profiles_revision CHECK ((revision > 0)),
+    CONSTRAINT ck_user_profiles_time_zone CHECK (((time_zone IS NULL) OR (((char_length(time_zone) >= 1) AND (char_length(time_zone) <= 64)) AND (time_zone <> 'Local'::text)))),
+    CONSTRAINT ck_user_profiles_unit_preference CHECK (((unit_preference IS NULL) OR (unit_preference = ANY (ARRAY['metric'::text, 'imperial'::text]))))
 );
 
 
@@ -3842,6 +3854,14 @@ ALTER TABLE ONLY public.user_assets
 
 ALTER TABLE ONLY public.user_profiles
     ADD CONSTRAINT user_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_profiles user_profiles_avatar_asset_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_profiles
+    ADD CONSTRAINT user_profiles_avatar_asset_fkey FOREIGN KEY (user_id, avatar_asset_id) REFERENCES public.user_assets(user_id, id) ON DELETE SET NULL (avatar_asset_id);
 
 
 -- Go-owned, immutable restrictions for complete structured Safety screens.

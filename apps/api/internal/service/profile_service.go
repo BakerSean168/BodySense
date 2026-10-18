@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,10 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-var ErrInvalidProfile = errors.New("invalid profile")
+// ErrInvalidProfile is the shared Profile validation error.
+var ErrInvalidProfile = model.ErrInvalidProfile
 
-// ProfileService owns stable identity context only. Health facts and
-// observations are deliberately excluded and belong to BodyState.
+// ProfileService owns the minimal optional Profile (PC-D1): display identity
+// and preferences. Health facts and observations are deliberately excluded and
+// belong to BodyState; age is derived on read and never stored.
 type ProfileService struct {
 	profileRepo *repository.ProfileRepository
 }
@@ -32,6 +33,8 @@ func (s *ProfileService) GetProfile(ctx context.Context, userID uuid.UUID) (*mod
 	return profile, nil
 }
 
+// CreateOrUpdateProfile records the onboarding identity answers (gender and
+// birth date) without touching display fields or preferences.
 func (s *ProfileService) CreateOrUpdateProfile(ctx context.Context, userID uuid.UUID, profile *model.UserProfile) error {
 	profile.UserID = userID
 	if profile.BirthDate != nil {
@@ -42,7 +45,31 @@ func (s *ProfileService) CreateOrUpdateProfile(ctx context.Context, userID uuid.
 	return s.profileRepo.CreateOrUpdate(ctx, profile)
 }
 
+// ReplaceProfile replaces every editable Profile field under optimistic
+// concurrency. Clearing a field is sending it as null.
+func (s *ProfileService) ReplaceProfile(ctx context.Context, userID uuid.UUID, command model.ReplaceProfileCommand) (*model.UserProfile, error) {
+	if command.ExpectedRevision < 0 {
+		return nil, fmt.Errorf("%w: expected_revision must not be negative", ErrInvalidProfile)
+	}
+	command.Normalize()
+	if err := command.Validate(); err != nil {
+		return nil, err
+	}
+	if command.BirthDate != nil {
+		if err := validateBirthDate(command.BirthDate.Time(), time.Now().UTC()); err != nil {
+			return nil, err
+		}
+	}
+	profile, err := s.profileRepo.Replace(ctx, userID, command)
+	if err != nil || profile == nil {
+		return profile, err
+	}
+	normalizeProfileForCurrentContract(profile, time.Now().UTC())
+	return profile, nil
+}
+
 func normalizeProfileForCurrentContract(profile *model.UserProfile, now time.Time) {
+	profile.ProjectPreferences()
 	if profile.BirthDate == nil {
 		return
 	}

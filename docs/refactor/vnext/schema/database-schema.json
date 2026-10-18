@@ -7489,6 +7489,48 @@
                     "type": "date",
                     "default": null,
                     "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "display_name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "avatar_asset_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "locale",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "time_zone",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "unit_preference",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": "1",
+                    "nullable": false
                 }
             ]
         },
