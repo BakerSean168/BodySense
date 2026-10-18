@@ -7,7 +7,7 @@ import {
   SELECTED_PLAN_STORAGE_KEY,
   writeSelectedPlanId,
 } from "./trainingPlans";
-import { makeWorkspace } from "./__fixtures__/diagnosisFixtures";
+import { makeWorkspace } from "./__fixtures__/workspaceFixtures";
 import type { TrainingPlan } from "@/features/training/services/trainingService";
 function plan(overrides: Partial<TrainingPlan> = {}): TrainingPlan {
   return {

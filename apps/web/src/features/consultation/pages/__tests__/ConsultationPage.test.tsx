@@ -60,7 +60,6 @@ function makeThread(
     conversation_id: conversation.id,
     phase: "collecting",
     extracted_info: [],
-    diagnosis: null,
     pending_interactions: [],
     interaction_history: [],
     created_at: "2026-07-06T00:00:00Z",

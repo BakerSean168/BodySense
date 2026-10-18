@@ -254,11 +254,9 @@ function ConditionCard({ condition }: { condition: ConfirmedCondition }) {
           </MarkRow>
         ) : null}
       </Section>
-      {handling.state !== "not_confirmed" ? (
+      {handling.state === "condition_level" ? (
         <p className="bc-dx-note">
-          {handling.state === "plan_level"
-            ? "以上为当前已接受计划的整体安排，不是针对这一条病情的独立处方。"
-            : "以上是你采纳的分析里的处理方向，不是医疗处方；训练计划仍需单独确认。"}
+          以上是你采纳的分析里的处理方向，不是医疗处方；训练计划仍需单独确认。
         </p>
       ) : null}
     </article>

@@ -3,7 +3,6 @@ import { consultationKeys } from "./consultationQueryKeys";
 import {
   consultationThreadQueryOptions,
   conversationQueryOptions,
-  diagnosisHistoryQueryOptions,
 } from "./consultationQueryOptions";
 
 describe("consultation query options", () => {
@@ -13,9 +12,6 @@ describe("consultation query options", () => {
     );
     expect(consultationThreadQueryOptions("conversation-1").queryKey).toEqual(
       consultationKeys.thread("conversation-1"),
-    );
-    expect(diagnosisHistoryQueryOptions(20).queryKey).toEqual(
-      consultationKeys.diagnosisHistory(20),
     );
   });
 });

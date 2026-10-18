@@ -8,8 +8,6 @@ export type {
   ConsultationSession,
   ConsultationPhase,
   ExtractedInfo,
-  DiagnosisCandidate,
-  DiagnosisAnalysis,
   Citation,
   Conversation,
   Message,
