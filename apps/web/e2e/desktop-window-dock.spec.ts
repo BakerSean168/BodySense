@@ -50,6 +50,45 @@ async function register(page: Page, request: APIRequestContext) {
   return headers;
 }
 
+/**
+ * Answers the structured Safety screening in a fresh conversation. A new
+ * account has no screening yet, so the workspace starts with a safety review
+ * (and the global banner); "none of the above" clears it.
+ */
+async function screenSafety(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  signals?: string[],
+  statement?: string,
+) {
+  const opening = await request.post(`${api}/api/v1/consultation-runs`, {
+    headers,
+    data: {
+      conversationId: null,
+      clientMessageId: `e2e-dock-open-${crypto.randomUUID()}`,
+      requestId: crypto.randomUUID(),
+      message: { role: "user", parts: [{ type: "text", text: "你好" }] },
+    },
+    timeout: 60_000,
+  });
+  expect(opening.ok(), await opening.text()).toBeTruthy();
+  const conversation = await request.get(`${api}/api/v1/conversation`, {
+    headers,
+  });
+  expect(conversation.ok()).toBeTruthy();
+  const { id } = (
+    (await conversation.json()) as { conversation: { id: string } }
+  ).conversation;
+  await completeStructuredSafetyIntake(
+    request,
+    api,
+    headers,
+    id,
+    signals,
+    statement,
+  );
+}
+
 /** Opens one window by its deep link and returns its desktop element. */
 async function openWindow(page: Page, id: DockedWindow) {
   await page.goto(`/consultation?view=${id}`);
@@ -85,7 +124,8 @@ test("desktop windows dock at the Penpot geometry and leave the body visible", a
   request,
 }) => {
   await page.setViewportSize(VIEWPORT);
-  await register(page, request);
+  const headers = await register(page, request);
+  await screenSafety(request, headers);
   for (const id of Object.keys(PENPOT_DOCK) as DockedWindow[]) {
     const window = await openWindow(page, id);
     await expect(page.getByTestId("safety-banner")).toHaveCount(0);
@@ -94,9 +134,14 @@ test("desktop windows dock at the Penpot geometry and leave the body visible", a
     expectClose(box.x, penpot.x, `${id} x`);
     expectClose(box.y, penpot.y, `${id} top`);
     expectClose(box.width, penpot.width, `${id} width`);
-    expectClose(box.height, penpot.height, `${id} height`);
-    // The window ends above the Dock instead of running under it.
+    // Penpot ends the window at y 792, 8px above its 72px Dock. The real Dock
+    // (labels + shortcut keys) is taller, so the window keeps the same 8px
+    // above it instead of running under it: Penpot's height, clamped only by
+    // the Dock that is actually on screen.
     const dock = (await page.locator(".bc-dock").boundingBox())!;
+    const bottom = Math.min(penpot.y + penpot.height, dock.y - 8);
+    expectClose(box.height, bottom - penpot.y, `${id} height`);
+    expect(penpot.y + penpot.height - bottom).toBeLessThanOrEqual(24);
     expect(box.y + box.height, `${id} bottom above Dock`).toBeLessThanOrEqual(
       dock.y,
     );
@@ -109,34 +154,9 @@ test("the desktop safety banner never covers a window header", async ({
 }) => {
   await page.setViewportSize(VIEWPORT);
   const headers = await register(page, request);
-  const opening = await request.post(`${api}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `e2e-dock-open-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: { role: "user", parts: [{ type: "text", text: "你好" }] },
-    },
-    timeout: 60_000,
-  });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversation = await request.get(`${api}/api/v1/conversation`, {
-    headers,
-  });
-  expect(conversation.ok()).toBeTruthy();
-  const { id: conversationId } = (
-    (await conversation.json()) as { conversation: { id: string } }
-  ).conversation;
   // A positive red-flag answer leaves the workspace safety review pending,
   // which shows the global banner on every surface.
-  await completeStructuredSafetyIntake(
-    request,
-    api,
-    headers,
-    conversationId,
-    ["麻木"],
-    "我今天肩膀不舒服。",
-  );
+  await screenSafety(request, headers, ["麻木"], "我今天肩膀不舒服。");
 
   for (const id of Object.keys(PENPOT_DOCK) as DockedWindow[]) {
     const window = await openWindow(page, id);
@@ -155,6 +175,11 @@ test("the desktop safety banner never covers a window header", async ({
     const penpot = PENPOT_DOCK[id];
     expectClose(box.x, penpot.x, `${id} x`);
     expectClose(box.width, penpot.width, `${id} width`);
-    expectClose(box.y + box.height, penpot.y + penpot.height, `${id} bottom`);
+    const dock = (await page.locator(".bc-dock").boundingBox())!;
+    expectClose(
+      box.y + box.height,
+      Math.min(penpot.y + penpot.height, dock.y - 8),
+      `${id} bottom`,
+    );
   }
 });

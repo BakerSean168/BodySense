@@ -1465,7 +1465,9 @@
    The desktop canvas stays mounted beside one visible window docked like the
    Penpot 1440 x 900 boards: 40px from its side (Person/Chat left; Diagnosis,
    Training, Trainer right), stage top 28 (screen y 92) and 108px kept above
-   the stage bottom for the Dock, so 700px tall at 900. On narrow screens the
+   the stage bottom for the Dock, so 700px tall at 900. When the real Dock
+   is taller than Penpot's 72px one, the window keeps 8px above its measured
+   top (--bc-dock-reserve) instead of running under it. On narrow screens the
    same mounted task is displayed in a 358px sheet above the persistent Dock. Fixed header/footer and overflow:auto
    content do not depend on Penpot's limited prototype scroll API.
    ========================================================================== */
@@ -1488,7 +1490,13 @@
   height: min(
     var(--bc-window-height, 700px),
     var(--bc-window-max-height, 700px),
-    calc(100% - var(--bc-window-y) - var(--bc-window-bottom, 108px))
+    calc(
+      100% - var(--bc-window-y) -
+        max(
+          var(--bc-window-bottom, 108px),
+          calc(var(--bc-dock-reserve, 0px) + 8px)
+        )
+    )
   );
   min-height: 0;
   display: flex;

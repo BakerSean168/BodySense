@@ -260,6 +260,24 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     safetyBannerObserver.current = new ResizeObserver(update);
     safetyBannerObserver.current.observe(node);
   }, []);
+  // A desktop window ends above the Dock. The Penpot frame keeps 108px for a
+  // 72px Dock; the real Dock (labels + shortcut keys) can be taller, so the
+  // space it takes from the stage bottom is measured and reserved too.
+  const stageRef = useRef<HTMLElement>(null);
+  const [dockReserve, setDockReserve] = useState<number | null>(null);
+  useEffect(() => {
+    const stage = stageRef.current;
+    const dock = stage?.querySelector<HTMLElement>(".bc-dock");
+    if (!stage || !dock) return;
+    const update = () =>
+      setDockReserve(Math.max(0, stage.clientHeight - dock.offsetTop) || null);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(stage);
+    observer.observe(dock);
+    return () => observer.disconnect();
+  }, []);
   const activeWindow = activeBusinessWindow(windows);
   const trainingOpen =
     isBusinessWindowVisible(windows, "training") ||
@@ -880,10 +898,16 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       <section
         className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}`}
         aria-label="身体画布"
+        ref={stageRef}
         style={
-          safetyBannerHeight
+          safetyBannerHeight || dockReserve
             ? ({
-                "--bc-safety-banner-height": `${safetyBannerHeight}px`,
+                ...(safetyBannerHeight
+                  ? { "--bc-safety-banner-height": `${safetyBannerHeight}px` }
+                  : {}),
+                ...(dockReserve
+                  ? { "--bc-dock-reserve": `${dockReserve}px` }
+                  : {}),
               } as CSSProperties)
             : undefined
         }
