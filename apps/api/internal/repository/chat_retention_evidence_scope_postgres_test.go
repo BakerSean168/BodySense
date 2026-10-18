@@ -226,3 +226,23 @@ func TestChatRetentionPruneKeepsOnlyCitedEvidencePostgres(t *testing.T) {
 		t.Fatalf("cursor=%#v", c)
 	}
 }
+
+// PC3-19 / PC-D8: the legacy public share state is gone from the schema, so no
+// token or snapshot can outlive the vNext reset or be written again.
+func TestChatRetentionLegacyShareStateIsGonePostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	var leftovers []string
+	if err := db.Raw(`
+SELECT table_name || COALESCE('.' || column_name, '') FROM (
+  SELECT table_name, NULL::text AS column_name FROM information_schema.tables
+   WHERE table_schema = 'public' AND table_name ~ 'share'
+  UNION ALL
+  SELECT table_name, column_name FROM information_schema.columns
+   WHERE table_schema = 'public' AND column_name ~ '(^|_)(share|shared|public)_?(token|id|snapshot|url|at)$'
+) leftovers`).Scan(&leftovers).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(leftovers) != 0 {
+		t.Fatalf("legacy share state still in the schema: %v", leftovers)
+	}
+}
