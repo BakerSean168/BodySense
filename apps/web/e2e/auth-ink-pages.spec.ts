@@ -113,6 +113,18 @@ for (const vp of viewports) {
         linkBox!.y - (submitBox!.y + submitBox!.height),
       ).toBeGreaterThanOrEqual(24);
 
+      // The register sheet is tightened on mobile so 390×844 has no page scroll.
+      if (vp.name === "390") {
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollHeight - window.innerHeight,
+        );
+        expect(overflow).toBeLessThanOrEqual(0);
+        const footerPad = await page
+          .locator("main")
+          .evaluate((el) => getComputedStyle(el).paddingBottom);
+        expect(footerPad).toBe("40px");
+      }
+
       await page.getByTestId("confirmPassword-visibility").click();
       await expect(confirm).toHaveAttribute("type", "text");
       await expect(page.getByLabel("密码", { exact: true })).toHaveAttribute(
