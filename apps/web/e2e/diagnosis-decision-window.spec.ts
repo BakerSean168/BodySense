@@ -133,10 +133,28 @@ async function seedDiagnosisRun(
   };
 }
 
-async function openDiagnosis(page: Page, conversationId: string) {
-  await page.goto(`/consultation/${conversationId}?view=diagnosis`);
+/**
+ * Deep-links the Diagnosis window and waits for what it renders from.
+ *
+ * The window shows the run only after a chain of reads (workspace, then
+ * Diagnosis and the latest run, then the run itself), and its lazy chunk loads
+ * while the same cold page boots the software-rendered WebGL body scene. A
+ * fixed 8 s assertion budget raced that chain under CI load (QA-001 #316), so
+ * synchronize on the run read the window needs, then give the lazy window one
+ * explicit render budget.
+ */
+async function openDiagnosis(page: Page, seeded: SeededRun) {
+  const runRead = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname ===
+        `/api/v1/diagnosis/analysis-runs/${seeded.runId}`,
+    { timeout: 45_000 },
+  );
+  await page.goto(`/consultation/${seeded.conversationId}?view=diagnosis`);
+  expect((await runRead).ok()).toBeTruthy();
   const window = page.getByTestId("diagnosis-window");
-  await expect(window).toBeVisible();
+  await expect(window).toBeVisible({ timeout: 20_000 });
   return window;
 }
 
@@ -146,7 +164,7 @@ test("Diagnosis proposal -> decide -> committed only after the settlement receip
 }) => {
   test.setTimeout(150_000);
   const seeded = await seedDiagnosisRun(page, request);
-  const window = await openDiagnosis(page, seeded.conversationId);
+  const window = await openDiagnosis(page, seeded);
 
   // Penpot Confirm first: one proposal at a time, AI output, not yet written.
   const panel = window.getByTestId("diagnosis-proposals");
@@ -224,7 +242,7 @@ test("rejecting the only proposal closes the run with No changes", async ({
 }) => {
   test.setTimeout(150_000);
   const seeded = await seedDiagnosisRun(page, request);
-  const window = await openDiagnosis(page, seeded.conversationId);
+  const window = await openDiagnosis(page, seeded);
   const footer = window.getByTestId("diagnosis-decide");
   const settleResponse = page.waitForResponse(
     (response) =>
@@ -273,7 +291,7 @@ test("urgent Safety keeps Diagnosis decisions disabled", async ({
   };
   expect(body.capabilities.requires_safety_review).toBe(true);
 
-  const window = await openDiagnosis(page, seeded.conversationId);
+  const window = await openDiagnosis(page, seeded);
   await expect(window.getByTestId("diagnosis-safety")).toBeVisible();
   await expect(window.getByRole("radio")).toHaveCount(0);
   const decide = window.getByTestId("diagnosis-decide");
@@ -292,7 +310,7 @@ test("Diagnosis window fits a 390px viewport with touch-sized controls", async (
   test.setTimeout(150_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const seeded = await seedDiagnosisRun(page, request);
-  const window = await openDiagnosis(page, seeded.conversationId);
+  const window = await openDiagnosis(page, seeded);
   const item = window.locator(".bc-diagnosis-proposal").first();
   await expect(item).toBeVisible();
 
