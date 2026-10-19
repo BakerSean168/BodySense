@@ -115,4 +115,25 @@ describe("Penpot V2 Body Canvas Dock", () => {
     expect(screen.getByRole("button", { name: "个人档案" })).toBeVisible();
     expect(screen.getByRole("button", { name: "收起导航" })).toHaveFocus();
   });
+
+  it("follows the Penpot desktop Dock order and shortcuts (/ D P M)", () => {
+    render(
+      <BodyCanvasDock
+        activeWindow={null}
+        confirmedDiagnosisCount={0}
+        onToggle={vi.fn()}
+      />,
+    );
+    const items = Array.from(
+      screen
+        .getByRole("navigation", { name: "身体工作区导航" })
+        .querySelectorAll(".bc-dock-item"),
+    );
+    expect(items.map((item) => item.getAttribute("title"))).toEqual([
+      "对话 · /",
+      "综合诊断 · D",
+      "训练计划 · P",
+      "个人档案 · M",
+    ]);
+  });
 });

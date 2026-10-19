@@ -40,7 +40,7 @@ interface SurfaceAnchor { mesh: ReferenceRig["meshes"][number]; triangle: [numbe
 
 function SceneContents(props: BodyCanvasSceneProps & { rig: ReferenceRig; cursor: HTMLDivElement | null; box: HTMLDivElement | null; onHover: (id: BodyRegionId | null) => void; onContextLost: () => void }) {
   const { rig } = props;
-  const { camera, gl, invalidate } = useThree();
+  const { camera, gl, invalidate, size } = useThree();
   const latest = useRef(props);
   latest.current = props;
   const controls = useRef<OrbitControls | null>(null);
@@ -66,6 +66,18 @@ function SceneContents(props: BodyCanvasSceneProps & { rig: ReferenceRig; cursor
     gl.domElement.addEventListener("webglcontextlost", lost);
     return () => { orbit.removeEventListener("change", handleOrbitChange); orbit.dispose(); controls.current = null; document.removeEventListener("visibilitychange", visibility); gl.domElement.removeEventListener("webglcontextlost", lost); };
   }, [camera, gl, invalidate]);
+
+  // Penpot Home frames the reference body at ~3/4 of the full-height stage
+  // (desktop y 105-775 of 900, mobile 155-700 of 844); the stage has no app
+  // bar, so widen the lens rather than letting the figure fill the viewport.
+  useEffect(() => {
+    if (!("fov" in camera)) return;
+    const fov = size.width / Math.max(size.height, 1) < 0.8 ? 47 : 42;
+    if (camera.fov === fov) return;
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+    invalidate();
+  }, [camera, size.width, size.height, invalidate]);
 
   const lying = props.motion === "bridge";
   useEffect(() => {

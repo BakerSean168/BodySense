@@ -114,7 +114,8 @@ describe("ConsultationPage", () => {
     renderConsultationPage();
 
     expect(screen.getByTestId("body-canvas-workspace")).toBeInTheDocument();
-    expect(screen.getByText("BodySense")).toBeInTheDocument();
+    // Penpot Home has no app bar (no brand row); the stage owns the page.
+    expect(screen.queryByRole("banner")).toBeNull();
     expect(
       screen.getByRole("heading", { name: "我的身体" }),
     ).toBeInTheDocument();

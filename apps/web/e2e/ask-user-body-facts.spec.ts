@@ -529,7 +529,14 @@ test("Ask User mobile replacement composer fits the sheet in both themes and sub
     path: testInfo.outputPath("ask-user-mobile-light.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "切换深色", exact: true }).click();
+  // Penpot Home has no app bar: the theme lives in Person → 账户菜单 → 设置.
+  const dock = page.getByRole("navigation", { name: "身体工作区导航" });
+  await dock.getByRole("button", { name: "个人档案", exact: true }).click();
+  await page.locator(".bc-person-identity").click();
+  await page.getByRole("menuitem", { name: "设置" }).click();
+  await page.getByRole("radio", { name: "深色" }).click();
+  await page.getByRole("button", { name: "关闭", exact: true }).click();
+  await dock.getByRole("button", { name: "对话", exact: true }).click();
   const darkColor = await assertBounds();
   expect(darkColor).not.toBe(lightColor);
   await expect(input).toHaveValue("我没有肩痛。");

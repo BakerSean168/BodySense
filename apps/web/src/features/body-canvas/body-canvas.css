@@ -63,69 +63,7 @@
 .bc-inventory-dialog button {
   font: inherit;
 }
-.bc-topbar {
-  position: relative;
-  z-index: 40;
-  height: 64px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--bc-line);
-  background: color-mix(in srgb, var(--bc-canvas) 94%, transparent);
-  backdrop-filter: blur(18px);
-}
-.bc-brand {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--bc-ink);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.bc-brand svg {
-  color: var(--bc-primary);
-}
-.bc-mode-switch {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px;
-  border: 1px solid var(--bc-line);
-  border-radius: 999px;
-  background: var(--bc-subtle);
-}
-.bc-mode-switch button {
-  min-width: 112px;
-  height: 32px;
-  padding: 0 17px;
-  border-radius: 999px;
-  color: var(--bc-muted);
-  font-size: 12px;
-  font-weight: 600;
-  transition:
-    background 0.16s ease,
-    color 0.16s ease,
-    box-shadow 0.16s ease;
-}
-.bc-mode-switch button[aria-pressed="true"] {
-  background: var(--bc-paper);
-  color: var(--bc-primary);
-  box-shadow: 0 1px 3px rgba(33, 52, 40, 0.09);
-}
-.bc-account {
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bc-private-label {
-  margin-right: 8px;
-  color: var(--bc-muted);
-  font-size: 11px;
-}
+
 .bc-stage {
   position: absolute;
   inset: 64px 0 0;
@@ -210,14 +148,7 @@
   font-size: 11px;
   box-shadow: 0 4px 16px rgba(35, 47, 39, 0.08);
 }
-.bc-intro {
-  position: absolute;
-  z-index: 12;
-  left: clamp(80px, 8vw, 132px);
-  top: 68px;
-  width: min(340px, 27vw);
-  pointer-events: none;
-}
+
 .bc-eyebrow {
   display: block;
   margin-bottom: 16px;
@@ -226,27 +157,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
 }
-.bc-intro h1 {
-  margin: 0;
-  color: var(--bc-ink);
-  font-size: clamp(34px, 3.2vw, 50px);
-  line-height: 1.04;
-  font-weight: 700;
-  letter-spacing: -0.045em;
-}
-.bc-intro > p {
-  margin: 16px 0 0;
-  color: var(--bc-secondary);
-  font-size: 14px;
-  line-height: 1.7;
-}
-.bc-attention {
-  width: 244px;
-  margin-top: 28px;
-  display: grid;
-  gap: 7px;
-  pointer-events: auto;
-}
+
 .bc-status {
   display: inline-flex;
   width: fit-content;
@@ -256,25 +167,7 @@
   font-size: 11px;
   font-weight: 650;
 }
-.bc-region-link {
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 12px 0 13px;
-  border: 1px solid var(--bc-line);
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--bc-paper) 75%, transparent);
-  color: var(--bc-ink);
-  font-size: 12px;
-  backdrop-filter: blur(12px);
-}
-.bc-onboarding-note {
-  color: var(--bc-muted);
-  font-size: 12px;
-  line-height: 1.65;
-}
+
 .bc-icon-button {
   width: 40px;
   height: 40px;
@@ -303,8 +196,7 @@
 .bc-icon-button:focus-visible,
 .bc-button:focus-visible,
 .bc-region-grid button:focus-visible,
-.bc-dock button:focus-visible,
-.bc-motion-switch button:focus-visible {
+.bc-dock button:focus-visible {
   outline: 2px solid var(--bc-primary);
   outline-offset: 2px;
 }
@@ -611,22 +503,7 @@
   right: 30px;
   top: 78px;
 }
-.bc-ask-entry {
-  position: absolute;
-  z-index: 20;
-  right: clamp(48px, 7vw, 112px);
-  top: 96px;
-  width: 220px;
-  text-align: right;
-}
-.bc-ask-entry .bc-button {
-  width: 100%;
-}
-.bc-ask-entry p {
-  margin: 9px 2px 0;
-  color: var(--bc-muted);
-  font-size: 10px;
-}
+
 .bc-region-picker {
   position: absolute;
   z-index: 36;
@@ -686,36 +563,7 @@
   background: var(--bc-primary-soft);
   color: var(--bc-primary);
 }
-.bc-motion-switch {
-  position: absolute;
-  z-index: 22;
-  top: 20px;
-  right: 24px;
-  transform: none;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--bc-line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bc-paper) 88%, transparent);
-  backdrop-filter: blur(18px);
-}
-.bc-motion-switch button {
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 12px;
-  border-radius: 999px;
-  color: var(--bc-muted);
-  font-size: 11px;
-}
-.bc-motion-switch button[aria-pressed="true"] {
-  background: var(--bc-primary-soft);
-  color: var(--bc-primary);
-  font-weight: 650;
-}
-.bc-motion-switch kbd,
+
 .bc-dock kbd,
 .bc-help-entry kbd {
   min-width: 20px;
@@ -1333,13 +1181,7 @@
   font-size: 11px;
 }
 @media (max-width: 1120px) {
-  .bc-private-label {
-    display: none;
-  }
-  .bc-intro {
-    left: 92px;
-    width: 280px;
-  }
+
   .bc-chat-panel {
     width: 380px;
   }
@@ -1354,17 +1196,7 @@
   }
 }
 @media (max-width: 760px) {
-  .bc-topbar {
-    height: 58px;
-    grid-template-columns: 1fr auto;
-    padding: 0 12px;
-  }
-  .bc-mode-switch {
-    display: none;
-  }
-  .bc-account {
-    grid-column: 2;
-  }
+
   .bc-stage {
     inset: 58px 0 0;
   }
@@ -1372,28 +1204,9 @@
     bottom: 88px;
     width: 320px;
   }
-  .bc-intro {
-    left: 20px;
-    top: 28px;
-    width: 70vw;
-  }
-  .bc-intro .bc-eyebrow {
-    margin-bottom: 7px;
-  }
-  .bc-intro h1 {
-    font-size: 27px;
-  }
-  .bc-intro > p {
-    margin-top: 7px;
-    font-size: 11px;
-  }
-  .bc-attention {
-    display: none;
-  }
+
   /* Mobile motion controls occupy a dedicated row, not the title's midline. */
-  .bc-stage-motion .bc-intro {
-    top: 76px;
-  }
+
   .bc-tool-rail {
     left: 12px;
     top: auto;
@@ -1445,15 +1258,7 @@
   .bc-region-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .bc-ask-entry {
-    right: 16px;
-    top: auto;
-    bottom: 88px;
-    width: 180px;
-  }
-  .bc-ask-entry p {
-    display: none;
-  }
+
   .bc-chat-panel {
     left: 0;
     right: 0;
@@ -1492,17 +1297,7 @@
   .bc-tool-rail-collapse {
     display: none;
   }
-  .bc-motion-switch {
-    top: 12px;
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: calc(100vw - 28px);
-    overflow-x: auto;
-  }
-  .bc-motion-switch button {
-    min-width: fit-content;
-  }
+
   .bc-playback {
     left: 12px;
     right: 12px;
@@ -1562,12 +1357,7 @@
   }
 }
 @media (max-height: 650px) and (min-width: 761px) {
-  .bc-intro {
-    top: 36px;
-  }
-  .bc-attention {
-    margin-top: 16px;
-  }
+
   .bc-playback {
     bottom: calc(var(--bc-dock-clearance) + 36px);
   }
@@ -1721,8 +1511,7 @@
     margin-top: auto;
     padding-bottom: 8px;
   }
-  .bc-stage:has(> .bc-region-card)
-    :is(.bc-intro, .bc-tool-rail, .bc-tool-rail-tab) {
+  .bc-stage:has(> .bc-region-card) :is(.bc-tool-rail, .bc-tool-rail-tab) {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -1804,17 +1593,13 @@
    left-docked window, the Tools rail (it collapses instead of peeking out
    from under the window). Both fade back when the window closes; reduced
    motion drops the transition through the theme rule above. */
-.bc-intro,
 .bc-tool-rail {
   transition:
     opacity 0.2s ease,
     visibility 0.2s ease,
     translate 0.2s ease;
 }
-.bc-stage:has(.bc-business-window:not([hidden])) .bc-intro {
-  opacity: 0;
-  visibility: hidden;
-}
+
 .bc-stage:has(.bc-business-window[data-dock="left"]:not([hidden]))
   :is(.bc-tool-rail, .bc-tool-rail-tab) {
   opacity: 0;
@@ -5316,4 +5101,425 @@
 }
 .bc-person-state-related .bc-person-related {
   justify-content: center;
+}
+
+/* ------------------------------------------------------------------
+   Penpot "Desktop / Home" and "Mobile / Home": no app bar. The stage is
+   the whole viewport; the motion ribbon sits top-centre, the 4-tool rail
+   left (desktop) or above the Dock (mobile), and a mint disc sits behind
+   the reference body. Windows keep the board's y 92 top.
+   ------------------------------------------------------------------ */
+.bc-stage {
+  inset: 0;
+  background: var(--bc-stage);
+}
+.bc-business-window {
+  --bc-window-y: var(--bc-window-top, 92px);
+}
+.bc-backdrop-disc {
+  position: absolute;
+  z-index: 0;
+  left: calc(50% + 73px);
+  top: 54.5%;
+  width: min(770px, 86vh);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bc-paper) 38%, var(--bc-stage));
+  pointer-events: none;
+}
+.bc-motion-ribbon,
+.bc-motion-ribbon-tab {
+  position: absolute;
+  z-index: 22;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--bc-line);
+  background: var(--bc-paper);
+  box-shadow: 0 6px 22px rgba(36, 52, 41, 0.05);
+}
+.bc-motion-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 58px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 20px;
+}
+.bc-motion-pose {
+  position: relative;
+  width: 90px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--bc-subtle);
+  color: var(--bc-secondary);
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.bc-motion-pose:hover {
+  color: var(--bc-ink);
+  border-color: var(--bc-line);
+}
+.bc-motion-pose[aria-pressed="true"] {
+  border-color: var(--bc-primary);
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.bc-motion-pose kbd,
+.bc-tool-rail kbd {
+  position: absolute;
+  right: 7px;
+  bottom: 3px;
+  min-width: 15px;
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 3px;
+  border: 1px solid var(--bc-line);
+  border-radius: 4px;
+  background: var(--bc-paper);
+  color: var(--bc-secondary);
+  font-size: 8px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1;
+}
+.bc-motion-ribbon-collapse,
+.bc-motion-ribbon-tab {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--bc-primary);
+  cursor: pointer;
+}
+.bc-motion-ribbon-collapse {
+  width: 28px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+.bc-motion-ribbon-collapse:hover {
+  background: var(--bc-subtle);
+}
+/* Penpot "Home · Motions collapsed": a 52 x 32 pill at the ribbon top. */
+.bc-motion-ribbon-tab {
+  width: 52px;
+  height: 32px;
+  border-radius: 12px;
+}
+.bc-motion-pose:focus-visible,
+.bc-motion-ribbon-collapse:focus-visible,
+.bc-motion-ribbon-tab:focus-visible,
+.bc-theme-options button:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+/* Penpot rail: 62 px wide, 50 x 46 tool cells with a shortcut badge. */
+.bc-tool-rail {
+  left: 28px;
+  width: 62px;
+  gap: 7px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--bc-paper);
+}
+.bc-tool-rail .bc-icon-button {
+  position: relative;
+  width: 50px;
+  height: 46px;
+  border-radius: 10px;
+}
+.bc-tool-rail .bc-icon-button[aria-pressed="true"] {
+  border-color: var(--bc-primary);
+}
+.bc-tool-rail kbd {
+  right: 3px;
+  bottom: 2px;
+}
+.bc-tool-rail .bc-tool-rail-collapse {
+  height: 22px;
+}
+.bc-hover-label {
+  top: 100px;
+}
+.bc-sync-banner {
+  top: 96px;
+}
+.bc-sync-indicator,
+.bc-safety-banner,
+.bc-stage:has(.bc-business-window:not([hidden])) > .bc-safety-banner {
+  top: 96px;
+}
+.bc-stage:has(> .bc-safety-banner) .bc-business-window {
+  --bc-window-y: max(
+    var(--bc-window-top, 92px),
+    calc(96px + var(--bc-safety-banner-height, 46px) + 8px)
+  );
+}
+.bc-tool-hint {
+  top: 96px;
+}
+.bc-reopen-selection {
+  top: 26px;
+}
+.bc-region-picker {
+  top: 96px;
+}
+@media (min-width: 761px) {
+  .bc-region-card {
+    top: 92px;
+    height: min(
+      700px,
+      calc(100% - 92px - var(--bc-dock-reserve, 108px) - 8px)
+    );
+  }
+}
+/* Settings and Logout confirm (Penpot Overlay / Settings, Logout confirm). */
+.bc-account-dialog {
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 22px 18px 18px;
+  border-radius: 14px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.bc-account-dialog-title {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.bc-account-dialog-text {
+  display: grid;
+  gap: 8px;
+  padding: 0 4px;
+  color: var(--bc-secondary);
+  font-size: 13px;
+}
+.bc-account-dialog-text small {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-account-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 96px;
+}
+.bc-account-dialog-actions .bc-button,
+.bc-account-dialog-close {
+  height: 48px;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bc-subtle);
+  font-weight: 700;
+}
+.bc-account-dialog-actions .bc-danger-button {
+  background: #dc2828;
+  color: #fff;
+}
+.bc-theme-field {
+  display: grid;
+  gap: 2px;
+  margin-top: 46px;
+}
+.bc-theme-label {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-theme-hint {
+  padding: 0 4px;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 2px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--bc-subtle);
+}
+.bc-theme-options button {
+  height: 36px;
+  border: 1.5px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--bc-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.bc-theme-options button[aria-checked="true"] {
+  border-color: var(--bc-primary);
+  background: var(--bc-paper);
+  color: var(--bc-primary);
+  font-weight: 700;
+}
+.bc-account-dialog-close {
+  width: 100%;
+  margin-top: 56px;
+}
+@media (max-width: 760px) {
+  .bc-backdrop-disc {
+    display: none;
+  }
+  /* Mobile ribbon: 350 x 50 at y 55, equal cells, no shortcut badges. */
+  .bc-motion-ribbon {
+    top: 55px;
+    left: 20px;
+    right: 20px;
+    transform: none;
+    height: 50px;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 16px;
+  }
+  .bc-motion-ribbon-tab {
+    top: 65px;
+  }
+  .bc-motion-pose {
+    flex: 1 1 0;
+    width: auto;
+    height: 38px;
+  }
+  .bc-motion-pose kbd,
+  .bc-tool-rail kbd {
+    display: none;
+  }
+  .bc-motion-ribbon-collapse {
+    width: 22px;
+    height: 38px;
+  }
+  /* Mobile rail: a full-width labelled row just above the Dock. */
+  .bc-tool-rail {
+    left: 14px;
+    right: 14px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    width: auto;
+    height: 60px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 4px;
+    gap: 4px;
+    border-radius: 14px;
+  }
+  .bc-tool-rail .bc-icon-button {
+    width: 100%;
+    height: 50px;
+    display: grid;
+    grid-template-rows: 22px auto;
+    align-content: center;
+    gap: 2px;
+    color: var(--bc-ink);
+  }
+  .bc-tool-rail .bc-icon-button[aria-pressed="true"] {
+    border-color: transparent;
+    background: transparent;
+    color: var(--bc-primary);
+  }
+  .bc-tool-rail .bc-tool-caption {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    overflow: visible;
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .bc-stage-motion .bc-tool-rail {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .bc-playback {
+    bottom: 152px;
+  }
+  .bc-motion-disclaimer {
+    bottom: 212px;
+  }
+  .bc-stage-motion .bc-tool-hint,
+  .bc-tool-hint {
+    bottom: 152px;
+  }
+  /* Penpot mobile Dock: icons only, 64 px, labels kept for AT. */
+  .bc-dock {
+    left: 13px;
+    right: 13px;
+    height: 64px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+    box-shadow: 0 6px 22px rgba(36, 52, 41, 0.06);
+  }
+  .bc-dock-item {
+    min-height: 52px;
+    grid-template-rows: 26px;
+    align-content: center;
+  }
+  .bc-dock-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* 390 safety banner: below the ribbon, never over the stage content. */
+  .bc-safety-banner,
+  .bc-sync-indicator {
+    top: 116px;
+  }
+  .bc-sync-banner {
+    top: 116px;
+  }
+  .bc-stage:has(.bc-business-sheet:not([hidden])) > .bc-safety-banner {
+    top: 12px;
+  }
+  .bc-account-dialog {
+    width: calc(100vw - 20px);
+  }
+  /* Penpot mobile has no help entry, but touch users need the region-by-name
+     list it holds (the non-3D way to pick a region), so keep a quiet "?". */
+  .bc-help-entry {
+    display: grid;
+    right: 16px;
+    bottom: calc(156px + env(safe-area-inset-bottom));
+    width: 36px;
+    height: 36px;
+  }
+  .bc-stage-motion .bc-help-entry {
+    bottom: calc(244px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bc-motion-pose,
+  .bc-theme-options button {
+    transition: none;
+  }
+}
+/* Penpot account menu: 264 px, independent of the trigger width. */
+.bc-account-menu.bc-account-menu {
+  width: 240px;
+  padding: 6px;
+  border-radius: 12px;
+}
+/* Penpot Body / Region footer: 14px bold actions; undo/clear stay quiet.
+   (`.bc-workspace button { font: inherit }` otherwise resets them.) */
+.bc-workspace .bc-region-footer button {
+  font-size: 14px;
+  font-weight: 700;
+}
+.bc-workspace .bc-region-card .bc-actions button {
+  font-size: 12px;
 }

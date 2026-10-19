@@ -47,7 +47,7 @@ export const BUSINESS_WINDOWS: readonly BusinessWindowMeta[] = [
     title: "个人档案",
     description: "当前个人资料、身体记录、器材与资料。",
     dockLabel: "个人",
-    key: "I",
+    key: "M",
   },
   {
     id: "diagnosis",
@@ -324,8 +324,8 @@ export const BUSINESS_WINDOW_LAYOUT: Record<
 
 /** Distance from the docked side of the stage (Penpot x 40 / 1440 - 40). */
 export const DESKTOP_WINDOW_BASE_LEFT = 40;
-/** Stage top under the 64px app bar: Penpot's screen y 92 minus 64. */
-export const DESKTOP_WINDOW_BASE_TOP = 28;
+/** Penpot screen y 92: the stage is full height (no app bar), below the ribbon. */
+export const DESKTOP_WINDOW_BASE_TOP = 92;
 /** Space kept below a window for the Dock: Penpot 900 - 792. */
 export const DESKTOP_WINDOW_BOTTOM_RESERVE = 108;
 export const DESKTOP_WINDOW_STACK_STEP = 26;

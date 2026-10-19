@@ -66,6 +66,7 @@ async function upload(
 async function openFiles(page: Page) {
   await page.goto("/consultation?view=person");
   await page.locator(".bc-person-identity").click();
+  await page.getByRole("menuitem", { name: "个人资料" }).click();
   await page.getByRole("button", { name: "身体档案与文件" }).click();
   await page.getByRole("button", { name: /^文件管理/ }).click();
 }

@@ -111,7 +111,8 @@ export function canvasShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "m
   if (key === "z") return { type: "undo" };
   const tools: Record<string, CanvasTool> = { v: "orbit", b: "brush", s: "box" };
   if (tools[key]) return { type: "tool", tool: tools[key] };
-  const panels: Record<string, CanvasPanel> = { p: "training", d: "diagnosis", i: "state", t: "trainer", c: "state", e: "equipment", h: "progress", x: "anatomy", "?": "help" };
+  // Penpot Dock: / D P M (M = Person; I stays as a legacy alias). L = Layers rail tool.
+  const panels: Record<string, CanvasPanel> = { p: "training", d: "diagnosis", m: "state", i: "state", t: "trainer", c: "state", e: "equipment", h: "progress", l: "anatomy", x: "anatomy", "?": "help" };
   if (panels[key]) return { type: "panel", panel: panels[key] };
   const motions: Record<string, MotionId> = { "1": "stand", "2": "run", "3": "jump", "4": "sit" };
   return motions[key] ? { type: "motion", motion: motions[key] } : null;

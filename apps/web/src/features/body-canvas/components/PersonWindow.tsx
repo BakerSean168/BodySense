@@ -8,7 +8,17 @@ import {
   LoaderCircle,
   Plus,
   Backpack,
+  LogOut,
+  Settings,
+  UserRound,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import personAvatar from "../assets/person-avatar.png";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -81,32 +91,70 @@ export interface PersonWindowProps {
  * the header chrome, and the design puts this trigger *instead of* a repeated
  * business title.
  */
+/**
+ * Penpot "Overlay / Person / Account menu": the avatar + nickname in the Person
+ * header is the only account entry (Home has no app bar). It opens a menu with
+ * 个人资料 (identity popover), 设置 (theme) and 退出登录 (confirm first).
+ */
 export function PersonIdentityTrigger({
   identity,
   open,
   onToggle,
+  onOpenSettings,
+  onRequestLogout,
 }: {
   identity: PersonProfileIdentity;
   open: boolean;
   onToggle: () => void;
+  onOpenSettings?: () => void;
+  onRequestLogout?: () => void;
 }) {
   const displayName = identity.nickname.trim() || "未设置昵称";
   return (
-    <button
-      type="button"
-      className="bc-person-identity"
-      aria-expanded={open}
-      aria-haspopup="dialog"
-      onClick={onToggle}
-    >
-      {/* Penpot Person header: the BodySense figure avatar (exported from the
-          board) and the nickname with the gold dantian dot. */}
-      <span className="bc-person-avatar" aria-hidden="true">
-        <img src={personAvatar} alt="" width={32} height={32} />
-      </span>
-      <span className="bc-person-name">{displayName}</span>
-      <span className="bc-person-dantian" aria-hidden="true" />
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="bc-person-identity"
+        title="账户菜单"
+        data-identity-open={open ? "true" : undefined}
+      >
+        {/* Penpot Person header: the BodySense figure avatar (exported from the
+            board) and the nickname with the gold dantian dot. */}
+        <span className="bc-person-avatar" aria-hidden="true">
+          <img src={personAvatar} alt="" width={32} height={32} />
+        </span>
+        <span className="bc-person-name">{displayName}</span>
+        <span className="bc-person-dantian" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        className="bc-account-menu"
+      >
+        <DropdownMenuItem
+          onClick={() => {
+            if (!open) onToggle();
+          }}
+        >
+          <UserRound />
+          个人资料
+        </DropdownMenuItem>
+        {onOpenSettings ? (
+          <DropdownMenuItem onClick={onOpenSettings}>
+            <Settings />
+            设置
+          </DropdownMenuItem>
+        ) : null}
+        {onRequestLogout ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onRequestLogout}>
+              <LogOut />
+              退出登录
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -119,12 +167,16 @@ export function PersonWindowHeader({
   identity,
   open,
   onToggle,
+  onOpenSettings,
+  onRequestLogout,
   category,
   onCategoryChange,
 }: {
   identity: PersonProfileIdentity;
   open: boolean;
   onToggle: () => void;
+  onOpenSettings?: () => void;
+  onRequestLogout?: () => void;
   category: ProfileCategoryId;
   onCategoryChange: (category: ProfileCategoryId) => void;
 }) {
@@ -134,6 +186,8 @@ export function PersonWindowHeader({
         identity={identity}
         open={open}
         onToggle={onToggle}
+        onOpenSettings={onOpenSettings}
+        onRequestLogout={onRequestLogout}
       />
       <span className="bc-window-context-sep" aria-hidden="true">
         /
