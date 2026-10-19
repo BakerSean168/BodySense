@@ -821,6 +821,11 @@ describe("body-first business windows", () => {
     expect(erase).toHaveAttribute("aria-checked", "true");
     await user.keyboard("{ArrowUp}");
     expect(source).toHaveAttribute("aria-checked", "true");
+    // Penpot footer: the other scope is the quiet left action.
+    expect(
+      within(scene).getByRole("button", { name: "完整清理" }),
+    ).toBeInTheDocument();
+    expect(within(scene).getByRole("button", { name: "取消" })).toBeVisible();
     // Nothing is removed before the confirm step.
     await user.click(within(scene).getByRole("button", { name: "仅移除原件" }));
     expect(deleteUpload).not.toHaveBeenCalled();
@@ -913,6 +918,8 @@ describe("body-first business windows", () => {
     await user.click(within(scene).getByRole("button", { name: "完整清理" }));
     expect(scene).toHaveAttribute("data-scene", "confirm-erase");
     expect(within(scene).getByText("确认后立即停用该来源")).toBeVisible();
+    // Only the original has a knowable count before erasure.
+    expect(within(scene).getByText("1 份")).toBeVisible();
     expect(mockRequestErasure).not.toHaveBeenCalled();
     await user.click(within(scene).getByRole("button", { name: "确认清理" }));
     await waitFor(() =>

@@ -6039,6 +6039,30 @@
   font-size: 11px;
   font-weight: 650;
 }
+.bc-asset-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bc-asset-cancel {
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: transparent;
+  color: var(--bc-muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.bc-asset-cancel:hover {
+  background: var(--bc-subtle);
+  color: var(--bc-ink, inherit);
+}
+.bc-asset-cancel:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 1px;
+}
 .bc-asset-scopes {
   display: grid;
   gap: 12px;
