@@ -15,7 +15,7 @@ describe("Penpot V2 Body Canvas Dock", () => {
     const navigation = screen.getByRole("navigation", {
       name: "身体工作区导航",
     });
-    expect(navigation.querySelectorAll("button")).toHaveLength(4);
+    expect(navigation.querySelectorAll(".bc-dock-item")).toHaveLength(4);
     expect(screen.getByRole("button", { name: "个人档案" })).toBeVisible();
     expect(screen.getByRole("button", { name: "训练计划" })).toBeVisible();
     expect(screen.getByRole("button", { name: "综合诊断" })).toBeVisible();
@@ -55,7 +55,7 @@ describe("Penpot V2 Body Canvas Dock", () => {
     );
     const items = screen
       .getByRole("navigation", { name: "身体工作区导航" })
-      .querySelectorAll("button");
+      .querySelectorAll(".bc-dock-item");
     for (const item of items) {
       expect(item).toHaveAccessibleName();
       expect(item.getAttribute("title")).toMatch(/ · .$/);
@@ -90,5 +90,29 @@ describe("Penpot V2 Body Canvas Dock", () => {
       />,
     );
     expect(document.querySelector(".bc-dock-count")).toHaveTextContent("99+");
+  });
+
+  it("folds to the Penpot collapsed pill and restores, keeping focus on the toggle", async () => {
+    render(
+      <BodyCanvasDock
+        activeWindow={null}
+        confirmedDiagnosisCount={0}
+        onToggle={vi.fn()}
+      />,
+    );
+    const collapse = screen.getByRole("button", { name: "收起导航" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(collapse);
+    const navigation = screen.getByRole("navigation", {
+      name: "身体工作区导航",
+    });
+    expect(navigation).toHaveAttribute("data-collapsed", "true");
+    expect(navigation.querySelectorAll(".bc-dock-item")).toHaveLength(0);
+    const expand = screen.getByRole("button", { name: "展开导航" });
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    expect(expand).toHaveFocus();
+    await userEvent.click(expand);
+    expect(screen.getByRole("button", { name: "个人档案" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "收起导航" })).toHaveFocus();
   });
 });

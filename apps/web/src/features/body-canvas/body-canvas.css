@@ -329,6 +329,64 @@
   width: 40px;
   height: 40px;
 }
+/* Penpot rail chevron (bottom, muted) and the collapsed side tab. */
+.bc-tool-rail .bc-tool-rail-collapse {
+  height: 24px;
+  color: var(--bc-muted);
+}
+.bc-tool-rail-tab {
+  position: absolute;
+  z-index: 18;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bc-paper) 92%, transparent);
+  color: var(--bc-secondary);
+  box-shadow: 0 8px 26px rgba(36, 52, 41, 0.05);
+  cursor: pointer;
+}
+.bc-tool-rail-tab:hover {
+  color: var(--bc-ink);
+}
+.bc-tool-rail-tab:focus-visible,
+.bc-dock-toggle:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-dock-toggle {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--bc-primary);
+  cursor: pointer;
+}
+.bc-dock-toggle:hover {
+  background: var(--bc-subtle);
+}
+/* Penpot "Dock collapsed": a 52 x 32 pill at the Dock's bottom edge. */
+.bc-dock[data-collapsed="true"] {
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  border-radius: 12px;
+}
+.bc-dock[data-collapsed="true"] .bc-dock-toggle {
+  width: 50px;
+  height: 30px;
+}
 .bc-tool-caption {
   position: absolute;
   width: 1px;
@@ -1429,7 +1487,9 @@
     font-size: 10px;
   }
   .bc-help-entry,
-  .bc-attribution {
+  .bc-attribution,
+  .bc-dock-toggle,
+  .bc-tool-rail-collapse {
     display: none;
   }
   .bc-motion-switch {
@@ -1622,7 +1682,7 @@
   visibility: hidden;
 }
 .bc-stage:has(.bc-business-window[data-dock="left"]:not([hidden]))
-  .bc-tool-rail {
+  :is(.bc-tool-rail, .bc-tool-rail-tab) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
