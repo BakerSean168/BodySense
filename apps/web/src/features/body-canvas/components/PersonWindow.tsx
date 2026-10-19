@@ -172,7 +172,9 @@ export function PersonIdentityTrigger({
  * and habits are paged ledgers, so their counts are left out, never guessed.
  */
 function usePersonCategoryCounts(): Partial<Record<ProfileCategoryId, string>> {
-  const uploads = useUploadStore((state) => state.uploads);
+  const uploads = useUploadStore(
+    (state) => state.uploads,
+  ) as ProfileUploadLike[];
   const fetched = useUploadStore((state) => state.hasFetched);
   const equipment = useQuery({
     queryKey: equipmentKeys.all,
