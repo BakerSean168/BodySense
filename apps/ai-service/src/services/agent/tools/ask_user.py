@@ -102,6 +102,8 @@ ASK_USER_SCHEMA: dict[str, Any] = {
 }
 
 YES_NO_QUESTION_RE = re.compile(r"(是否|有无|有没有|是不是|会不会|能否)")
+# Machine codes such as "runtime_text_question_guard" are never user copy.
+INTERNAL_CODE_RE = re.compile(r"^[a-z0-9]+(?:[_.:-][a-z0-9]+)+$")
 NUMBERED_QUESTION_RE = re.compile(r"\d+[\.、]\s*([^?？]+[?？]?)")
 
 
@@ -216,7 +218,7 @@ def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
 
 
 def _build_default_context(question: str, reason: str) -> str:
-    if isinstance(reason, str) and reason.strip():
+    if isinstance(reason, str) and reason.strip() and not INTERNAL_CODE_RE.match(reason.strip()):
         return reason.strip()
     if YES_NO_QUESTION_RE.search(question):
         return "这能帮助我确认当前情况是否已经伴随明显不适，从而决定下一步判断重点。"
