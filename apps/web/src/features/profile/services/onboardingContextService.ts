@@ -3,6 +3,9 @@ import type { ReportedDiscomfortAreaCode } from "@/generated/api/model/reportedD
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type { LifestyleSectionInput } from "./lifestyleService";
 
+/** Step 05 coarse area code (or "none"), re-exported so callers stay off generated types. */
+export type DiscomfortAreaCode = ReportedDiscomfortAreaCode;
+
 export interface OnboardingContextPayload {
   expected_body_state_revision: number;
   profile: {
@@ -23,7 +26,7 @@ export interface OnboardingContextPayload {
   };
   injury_history: string;
   /** Step 05 self-report: coarse areas or ["none"]; omitted when unanswered. Not a symptom record. */
-  discomfort_areas?: ReportedDiscomfortAreaCode[];
+  discomfort_areas?: DiscomfortAreaCode[];
 }
 
 export interface OnboardingContextResult {

@@ -6,8 +6,10 @@
  * (stable profile + BodyState baseline + lifestyle sections). This module owns the
  * mapping between the two so the wizard stays presentational.
  */
-import type { ReportedDiscomfortAreaCode } from "@/generated/api/model/reportedDiscomfortAreaCode.zod";
-import type { OnboardingContextPayload } from "../../services/onboardingContextService";
+import type {
+  DiscomfortAreaCode,
+  OnboardingContextPayload,
+} from "../../services/onboardingContextService";
 
 export interface ChoiceOption {
   value: string;
@@ -203,12 +205,12 @@ const DISCOMFORT_CODES = new Set<string>(DISCOMFORT_OPTIONS.map((option) => opti
  * Step 05 chips → the API's coarse area codes in the board order. "都没有不适" stands
  * alone; nothing chosen means the field is omitted (the API leaves it untouched).
  */
-export function toDiscomfortAreas(regions: string[]): ReportedDiscomfortAreaCode[] | undefined {
+export function toDiscomfortAreas(regions: string[]): DiscomfortAreaCode[] | undefined {
   if (regions.includes(NO_DISCOMFORT)) return [NO_DISCOMFORT];
   const chosen = DISCOMFORT_OPTIONS.map((option) => option.value).filter(
     (value) => value !== NO_DISCOMFORT && regions.includes(value) && DISCOMFORT_CODES.has(value),
   );
-  return chosen.length > 0 ? (chosen as ReportedDiscomfortAreaCode[]) : undefined;
+  return chosen.length > 0 ? (chosen as DiscomfortAreaCode[]) : undefined;
 }
 
 const labelOf = (options: ChoiceOption[], value: string) =>
