@@ -68,6 +68,7 @@ DROP TABLE IF EXISTS
     public.outcomes,
     public.posture_analysis_runs,
     public.privacy_erasure_requests,
+    public.reported_discomfort_areas,
     public.runs,
     public.runtime_events,
     public.safety_resolutions,

@@ -30,7 +30,7 @@ done
 if [[ "$ready" != 1 ]]; then docker logs --tail 30 "$container"; exit 1; fi
 export BODYSENSE_INTEGRATION_DATABASE_URL="host=$socket_dir user=postgres password=synthetic-onb005-only dbname=synthetic_onb005 sslmode=disable"
 cd "$repo_root/apps/api"
-# up -> down one step -> replay up, so 000002 is exercised both ways.
+# up -> down -> replay up, so the baseline (with the step 05 table) is exercised both ways.
 GOMAXPROCS=2 go run ./cmd/migration-validator -database-url "postgres://postgres:synthetic-onb005-only@/synthetic_onb005?host=$socket_dir&sslmode=disable"
 GOMAXPROCS=2 go test -p 1 -count=1 -v ./internal/service -run '^(TestOnboardingContext|TestReportedDiscomfort)' "$@"
 GOMAXPROCS=2 go test -p 1 -count=1 ./internal/repository -run 'Privacy' "$@"

@@ -77,7 +77,6 @@ var privacyCountSpecs = []privacyCountSpec{
 	{name: "diagnosis_decisions", table: "diagnosis_decisions", column: "user_id"},
 	{name: "diagnosis_revisions", table: "diagnosis_revisions", column: "user_id"},
 	{name: "outcomes", table: "outcomes", column: "user_id"},
-	{name: "reported_discomfort_areas", table: "reported_discomfort_areas", column: "user_id"},
 }
 
 // PrivacyErasureRepository owns durable erasure workflow state and dry-run
