@@ -68,6 +68,7 @@ import {
   PostureAnalysisSummary,
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
+  ReportedDiscomfortSnapshot,
   RuntimeEventListResponse,
   SafetyResolution,
   SafetyRestrictionList,
@@ -192,6 +193,7 @@ import type {
   RecordTrainingSessionFeedbackRequest,
   RecordTrainingSetActionRequest,
   RegisterKnowledgeSourceRequest,
+  ReportedDiscomfortSnapshotOutput,
   RequestAssetErasureRequest,
   RequestStatementErasureRequest,
   ResolveSafetyRestrictionRequest,
@@ -1589,6 +1591,46 @@ const res = await (fetchFn ?? fetch)(getSubmitOnboardingContextUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? OnboardingContextResult.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetReportedDiscomfortAreasUrl = () => {
+
+
+
+
+  return `/api/v1/onboarding/discomfort-areas`
+}
+
+/**
+ * The user's own step 05 answer (coarse areas or "none"). It is a self-report kept outside BodyState: not a symptom record, safety screen or diagnosis.
+ * @summary Get the onboarding self-report of current discomfort areas.
+ */
+export const getReportedDiscomfortAreas = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ReportedDiscomfortSnapshotOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetReportedDiscomfortAreasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ReportedDiscomfortSnapshot, status?: number} = new globalThis.Error();
+    const data : ReportedDiscomfortSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ReportedDiscomfortSnapshot.parse(parsedBody) : parsedBody
   return data
 }
 

@@ -21,6 +21,10 @@ type onboardingBodyStateWriter interface {
 	UpdateBodyContext(ctx context.Context, userID uuid.UUID, expectedRevision *int64, update BodyContextUpdate) (int64, error)
 }
 
+type onboardingDiscomfortWriter interface {
+	Replace(ctx context.Context, userID uuid.UUID, codes []string, reportedAt time.Time) error
+}
+
 type onboardingTransactionManager interface {
 	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
 }
@@ -32,6 +36,7 @@ type OnboardingContextService struct {
 	profiles     onboardingProfileWriter
 	bodyState    onboardingBodyStateWriter
 	transactions onboardingTransactionManager
+	discomfort   onboardingDiscomfortWriter
 }
 
 func NewOnboardingContextService(
@@ -42,6 +47,13 @@ func NewOnboardingContextService(
 	return &OnboardingContextService{
 		profiles: profiles, bodyState: bodyState, transactions: transactions,
 	}
+}
+
+// WithReportedDiscomfort wires the step 05 self-report store. Without it a
+// request that carries discomfort_areas is rejected rather than dropped.
+func (s *OnboardingContextService) WithReportedDiscomfort(writer onboardingDiscomfortWriter) *OnboardingContextService {
+	s.discomfort = writer
+	return s
 }
 
 func (s *OnboardingContextService) Submit(
@@ -70,6 +82,17 @@ func (s *OnboardingContextService) Submit(
 		return nil, fmt.Errorf("%w: body metrics are outside the supported range", ErrInvalidOnboardingContext)
 	}
 
+	var discomfortAreas []string
+	if request.DiscomfortAreas != nil {
+		discomfortAreas, err = model.NormalizeReportedDiscomfortAreas(request.DiscomfortAreas)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidOnboardingContext, err)
+		}
+		if s.discomfort == nil {
+			return nil, errors.New("onboarding discomfort store is required")
+		}
+	}
+
 	update := buildOnboardingBodyContext(request)
 	profile := &model.UserProfile{
 		Gender:    &gender,
@@ -89,6 +112,11 @@ func (s *OnboardingContextService) Submit(
 		)
 		if err != nil {
 			return fmt.Errorf("persist onboarding BodyState context: %w", err)
+		}
+		if discomfortAreas != nil {
+			if err := s.discomfort.Replace(txCtx, userID, discomfortAreas, time.Now().UTC()); err != nil {
+				return fmt.Errorf("persist onboarding discomfort self-report: %w", err)
+			}
 		}
 		return nil
 	})

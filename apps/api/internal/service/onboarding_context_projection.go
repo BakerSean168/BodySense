@@ -9,6 +9,10 @@ type OnboardingContextRequest struct {
 	BodyMetrics               OnboardingBodyMetricsInput `json:"body_metrics"`
 	Lifestyle                 OnboardingLifestyleInput   `json:"lifestyle"`
 	InjuryHistory             string                     `json:"injury_history"`
+	// DiscomfortAreas is step 05's self-report (coarse areas or ["none"]). Nil
+	// leaves any earlier answer untouched. It is stored outside BodyState and is
+	// never a symptom record or a diagnosis.
+	DiscomfortAreas []string `json:"discomfort_areas,omitempty"`
 }
 
 type OnboardingProfileInput struct {

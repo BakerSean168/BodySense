@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -42,4 +43,15 @@ func TestOnboardingOpenAPIRequiresInitialBodyStateRevision(t *testing.T) {
 		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
 	}
 	assertErrorCode(t, rec, "INVALID_REQUEST")
+}
+
+func TestOnboardingOpenAPIRejectsUnknownOrRepeatedDiscomfortAreas(t *testing.T) {
+	base := `{"expected_body_state_revision":0,"profile":{"gender":"male","birth_date":"2004-01-01"},"body_metrics":{"height_cm":175,"weight_kg":65},"lifestyle":{"activity":{"summary":""},"sleep":{"summary":""},"exercise":{"summary":""},"nutrition":{"summary":""},"substances":{"summary":""},"recovery":{"summary":""}},"injury_history":"","discomfort_areas":%s}`
+	for _, areas := range []string{`["knee"]`, `["neck","neck"]`, `[]`, `"neck"`} {
+		rec := performJSONAt(newOpenAPITestRouter(t), http.MethodPut, "/api/v1/onboarding/context", fmt.Sprintf(base, areas))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("discomfort_areas=%s status=%d want=400 body=%s", areas, rec.Code, rec.Body.String())
+		}
+		assertErrorCode(t, rec, "INVALID_REQUEST")
+	}
 }

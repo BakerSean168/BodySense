@@ -5202,6 +5202,39 @@
             ]
         },
         {
+            "table": "reported_discomfort_areas",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "area_codes",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "reported_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "runs",
             "columns": [
                 {
@@ -7584,5 +7617,5 @@
     ],
     "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
-    "migration_state": "1:false"
+    "migration_state": "2:false"
 }

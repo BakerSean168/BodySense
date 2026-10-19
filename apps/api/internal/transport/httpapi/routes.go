@@ -122,6 +122,7 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/health-history/injury", wrapper.GetInjuryHistory)
 	protected.PUT("/health-history/injury", wrapper.UpdateInjuryHistory)
 	protected.PUT("/onboarding/context", wrapper.SubmitOnboardingContext)
+	protected.GET("/onboarding/discomfort-areas", wrapper.GetReportedDiscomfortAreas)
 
 	// Identity and profile.
 	protected.GET("/me", wrapper.GetCurrentUser)

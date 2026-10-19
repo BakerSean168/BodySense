@@ -9,6 +9,7 @@ import * as zod from 'zod/mini';
 import { OnboardingBodyMetricsInput } from './onboardingBodyMetricsInput.zod';
 import { OnboardingLifestyleInput } from './onboardingLifestyleInput.zod';
 import { OnboardingProfileInput } from './onboardingProfileInput.zod';
+import { ReportedDiscomfortAreaCodes } from './reportedDiscomfortAreaCodes.zod';
 
 export const onboardingContextRequestExpectedBodyStateRevisionMin = 0;
 
@@ -19,7 +20,8 @@ export const OnboardingContextRequest = /*#__PURE__*/ zod.strictObject({
   "profile": OnboardingProfileInput,
   "body_metrics": OnboardingBodyMetricsInput,
   "lifestyle": OnboardingLifestyleInput,
-  "injury_history": /*#__PURE__*/ zod.string()
+  "injury_history": /*#__PURE__*/ zod.string(),
+  "discomfort_areas": /*#__PURE__*/ zod.optional(ReportedDiscomfortAreaCodes)
 });
 
 export type OnboardingContextRequest = zod.input<typeof OnboardingContextRequest>;
