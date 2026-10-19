@@ -47,6 +47,7 @@ async function upload(
   headers: Headers,
   name: string,
   png: string,
+  fileType = "consultation_photo",
 ): Promise<string> {
   const response = await request.post(`${api}/api/v1/uploads`, {
     headers,
@@ -56,7 +57,7 @@ async function upload(
         mimeType: "image/png",
         buffer: Buffer.from(png, "base64"),
       },
-      file_type: "consultation_photo",
+      file_type: fileType,
     },
   });
   expect(response.status(), await response.text()).toBe(201);
@@ -248,4 +249,96 @@ test("asset erasure receipt shows retrying and review states and never claims do
   ).toBeVisible();
   await panel.getByRole("button", { name: "稍后再看" }).click();
   await expect(pinned).toBeVisible();
+});
+
+// Penpot "Person / Reports" + "Assets" scenes: the same two commands inside
+// the Person window, each behind the delete scope and a confirm step.
+async function openPersonReport(page: Page, name: string) {
+  await page.goto("/consultation?view=person");
+  await expect(page.getByTestId("person-window")).toBeVisible();
+  await page.getByLabel("档案分类").selectOption("reports");
+  const card = page.getByTestId("person-report").filter({ hasText: name });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: `管理“${name}”` }).click();
+  await page.getByRole("menuitem", { name: "删除…" }).click();
+  const scene = page.getByTestId("person-asset-deletion");
+  await expect(scene).toHaveAttribute("data-scene", "scope");
+  return scene;
+}
+
+test("person reports remove the original after the scope and confirm steps", async ({
+  page,
+  request,
+}) => {
+  const headers = await register(page, request);
+  const id = await upload(request, headers, "person-report.png", PNG_A, "report");
+  const scene = await openPersonReport(page, "person-report.png");
+  await expect(scene.getByRole("radio", { name: /仅移除原件/ })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await scene.getByRole("button", { name: "仅移除原件" }).click();
+  await expect(scene).toHaveAttribute("data-scene", "confirm-source");
+  expect((await listed(request, headers))[0].source_availability).toBe(
+    "available",
+  );
+  await scene.getByRole("button", { name: "确认移除原件" }).click();
+  await expect(scene).toHaveAttribute("data-scene", "source-removed");
+  await expect(scene.getByText("历史证据保留，原件不可再核验")).toBeVisible();
+  const uploads = await listed(request, headers);
+  expect(uploads.map((u) => u.id)).toEqual([id]);
+  expect(uploads[0].source_availability).toBe("source_unavailable");
+  await scene.getByRole("button", { name: "返回报告" }).click();
+  const card = page.getByTestId("person-report");
+  await expect(card.getByText("原件不可用")).toBeVisible();
+});
+
+test("person reports erase every copy and show done only once verified", async ({
+  page,
+  request,
+}) => {
+  const headers = await register(page, request);
+  await upload(request, headers, "erase-me.png", PNG_B, "report");
+  const states = [
+    (id: string) =>
+      syntheticReceipt(id, "outstanding", {
+        runtime_checkpoints: {
+          state: "failed",
+          failure_code: "runtime_thread_busy",
+          outstanding_count: 1,
+        },
+        asset_manifest: {
+          state: "blocked",
+          failure_code: "targets_outstanding",
+          outstanding_count: 1,
+        },
+      }),
+    (id: string) => syntheticReceipt(id, "erased"),
+  ];
+  let call = 0;
+  const keys: string[] = [];
+  await page.route("**/api/v1/assets/*/erasure", async (route) => {
+    const assetId = route.request().url().split("/assets/")[1].split("/")[0];
+    keys.push(
+      (route.request().postDataJSON() as { idempotency_key: string })
+        .idempotency_key,
+    );
+    const body = states[Math.min(call, states.length - 1)](assetId);
+    call += 1;
+    await route.fulfill({ status: 202, json: body });
+  });
+  const scene = await openPersonReport(page, "erase-me.png");
+  await scene.getByRole("radio", { name: /文件及相关健康数据/ }).click();
+  await scene.getByRole("button", { name: "完整清理" }).click();
+  await expect(scene).toHaveAttribute("data-scene", "confirm-erase");
+  expect(call).toBe(0);
+  await scene.getByRole("button", { name: "确认清理" }).click();
+  await expect(scene).toHaveAttribute("data-phase", "outstanding");
+  await expect(scene.getByText("部分副本仍待清理")).toBeVisible();
+  await expect(scene.getByText("对话正在进行，空闲后会自动重试")).toBeVisible();
+  await expect(scene.getByText("清理已完成")).toHaveCount(0);
+  await scene.getByRole("button", { name: "重试未完成" }).click();
+  await expect(scene).toHaveAttribute("data-phase", "erased");
+  await expect(scene.getByText("全部范围已核验")).toBeVisible();
+  expect(new Set(keys).size).toBe(1);
 });
