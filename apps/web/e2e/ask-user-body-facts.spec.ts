@@ -8,6 +8,11 @@ import {
 import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import {
+  conversationIdFromUrl,
+  isTerminal,
+  readRunEvents,
+} from "./support/runEvents";
 
 test.describe.configure({ timeout: 100_000 });
 const api = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
@@ -40,7 +45,11 @@ function events(text: string): StreamEvent[] {
     .map((line) => parseStreamEvent(JSON.parse(line.slice(5).trim())));
 }
 
-async function startAsk(page: Page, marker = "E2E_BODYFACT_ASK_SELF") {
+async function startAsk(
+  page: Page,
+  headers: Record<string, string>,
+  marker = "E2E_BODYFACT_ASK_SELF",
+) {
   await page.goto("/consultation?view=chat");
   const composer = page.getByPlaceholder("和 BodySense 说说你的身体感受…");
   // The lazy chat chunk can take longer than the default assertion budget on a cold Vite server.
@@ -52,27 +61,36 @@ async function startAsk(page: Page, marker = "E2E_BODYFACT_ASK_SELF") {
   );
   await composer.fill(marker);
   await page.getByRole("button", { name: "发送", exact: true }).click();
-  const response = await responsePromise;
-  expect(response.ok()).toBeTruthy();
-  const stream = events(await response.text());
+  expect((await responsePromise).ok()).toBeTruthy();
+  await expect(page.getByTestId("pending-interaction-composer")).toBeVisible();
+  await expect(composer).toHaveCount(0);
+  await expect(page).toHaveURL(/\/consultation\/[0-9a-f-]{36}/);
+  const conversationId = conversationIdFromUrl(page.url());
+  const threadURL = `${api}/api/v1/consultations/${conversationId}/thread`;
+  const request = page.context().request;
+  const runId: string = (await getJSON(request, threadURL, headers))
+    .active_turn_run_id;
+  expect(runId).toBeTruthy();
+  // The paused segment ends with its own stream.done (see support/runEvents).
+  const stream = await readRunEvents(request, headers, conversationId, runId, {
+    until: (events) => events.some(isTerminal),
+  });
   const pending = stream.find(
     (event) => event.type === "state.interaction.required",
   );
   expect(pending?.type).toBe("state.interaction.required");
   if (!pending || pending.type !== "state.interaction.required")
     throw new Error("Missing pending interaction");
-  const conversationId = pending.ids.conversation_id!;
-  const runId = pending.ids.run_id!;
+  expect(pending.ids.conversation_id).toBe(conversationId);
+  expect(pending.ids.run_id).toBe(runId);
   const interactionId = pending.payload.interaction_id;
-  await expect(page.getByTestId("pending-interaction-composer")).toBeVisible();
-  await expect(composer).toHaveCount(0);
   return {
     conversationId,
     runId,
     interactionId,
     stream,
     answerURL: `${api}/api/v1/consultations/${conversationId}/interrupts/${interactionId}/answers`,
-    threadURL: `${api}/api/v1/consultations/${conversationId}/thread`,
+    threadURL,
   };
 }
 
@@ -100,7 +118,7 @@ test("second device and second tab recover the same pending Ask User and resume 
 }) => {
   const email = `ask-devices-${crypto.randomUUID()}@example.test`;
   const headers = await register(page, page.context().request, email);
-  const ask = await startAsk(page);
+  const ask = await startAsk(page, headers);
   // A fresh context logs in independently: no shared cookies or browser storage.
   const device = await browser.newContext({ baseURL });
   try {
@@ -154,8 +172,14 @@ test("second device and second tab recover the same pending Ask User and resume 
     );
     await pending.getByRole("button", { name: "提交", exact: true }).click();
     const response = await responsePromise;
-    expect(response.ok(), await response.text()).toBeTruthy();
-    const resumed = events(await response.text());
+    expect(response.ok()).toBeTruthy();
+    const resumed = await readRunEvents(
+      device.request,
+      remoteHeaders,
+      ask.conversationId,
+      ask.runId,
+      { afterSeq: ask.stream.at(-1)!.seq, until: (e) => e.some(isTerminal) },
+    );
     expect(
       resumed.filter((event) => event.type === "run.resumed"),
     ).toHaveLength(1);
@@ -207,7 +231,7 @@ test("Ask User reload preserves the original Run; accepted answer becomes one so
   request,
 }, testInfo) => {
   const headers = await register(page, request);
-  const ask = await startAsk(page);
+  const ask = await startAsk(page, headers);
   const before = await getJSON(request, ask.threadURL, headers);
   expect(before.pending_interactions).toHaveLength(1);
   expect(before.active_turn_run_id).toBe(ask.runId);
@@ -247,8 +271,14 @@ test("Ask User reload preserves the original Run; accepted answer becomes one so
   await pending.getByPlaceholder("输入你的回答...").fill("我没有肩痛。");
   await pending.getByRole("button", { name: "提交", exact: true }).click();
   const response = await responsePromise;
-  expect(response.ok(), await response.text()).toBeTruthy();
-  const accepted = events(await response.text());
+  expect(response.ok()).toBeTruthy();
+  const accepted = await readRunEvents(
+    request,
+    headers,
+    ask.conversationId,
+    ask.runId,
+    { afterSeq: ask.stream.at(-1)!.seq, until: (e) => e.some(isTerminal) },
+  );
   expect(accepted.some((event) => event.type === "stream.error")).toBe(false);
   expect(accepted.every((event) => event.ids.run_id === ask.runId)).toBe(true);
   expect(accepted[0].seq).toBeGreaterThan(ask.stream.at(-1)!.seq);
@@ -342,7 +372,7 @@ test("Ask User rejects foreign owners, forged choices and cancelled answers with
   baseURL,
 }) => {
   const headers = await register(page, request);
-  const ask = await startAsk(page, "E2E_BODYFACT_ASK_CHOICE");
+  const ask = await startAsk(page, headers, "E2E_BODYFACT_ASK_CHOICE");
   const other = await anotherOwner(browser, baseURL);
   try {
     const denied = await request.post(ask.answerURL, {
@@ -397,7 +427,7 @@ test("Ask User failed submission preserves its draft and retry identity in the r
   request,
 }) => {
   const headers = await register(page, request);
-  const ask = await startAsk(page);
+  const ask = await startAsk(page, headers);
   const requests: unknown[] = [];
   let attempts = 0;
   await page.route(
@@ -453,7 +483,7 @@ test("Ask User mobile replacement composer fits the sheet in both themes and sub
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const headers = await register(page, request);
-  const ask = await startAsk(page);
+  const ask = await startAsk(page, headers);
   const pending = page.getByTestId("pending-interaction-composer");
   const input = pending.getByPlaceholder("输入你的回答...");
   const submit = pending.getByRole("button", { name: "提交", exact: true });
