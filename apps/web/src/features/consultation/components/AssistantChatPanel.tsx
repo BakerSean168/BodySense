@@ -796,6 +796,8 @@ function ChatContent({
 }
 function CustomUserMessage() {
   const customMetadata = useAuiState((state) => state.message.metadata.custom);
+  // The Chat header's day picker scrolls to a day's first message by id.
+  const messageId = useAuiState((state) => state.message.id);
 
   // If this message has metadata indicating it's an interaction answer, hide it.
   const isInteractionAnswer = customMetadata.is_interaction_answer === true;
@@ -804,7 +806,7 @@ function CustomUserMessage() {
   }
 
   return (
-    <MessagePrimitive.Root className="w-full">
+    <MessagePrimitive.Root className="w-full" data-message-id={messageId}>
       <Message from="user">
         <MessageContent>
           <div className="whitespace-pre-wrap">
