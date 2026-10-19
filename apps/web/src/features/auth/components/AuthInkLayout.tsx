@@ -17,6 +17,12 @@ interface AuthInkLayoutProps {
   testId: string;
   children: ReactNode;
   footer: ReactNode;
+  /**
+   * Register carries one more field than the board (confirm password), so on mobile
+   * its sheet trims the bottom padding (51 → 40) and the gap above the bottom link
+   * (40 → 28) to keep 390×844 free of scroll. Desktop spacing is unchanged.
+   */
+  compactMobile?: boolean;
 }
 
 export function AuthInkLayout({
@@ -24,6 +30,7 @@ export function AuthInkLayout({
   testId,
   children,
   footer,
+  compactMobile = false,
 }: AuthInkLayoutProps) {
   return (
     <div
@@ -63,7 +70,8 @@ export function AuthInkLayout({
         </h1>
 
         {/* Rice-paper card (desktop) / sheet (mobile) */}
-        <main className="relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[#E4E0D3] bg-[#FBFAF5] px-6 pt-8 pb-[51px] shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]">
+        <main className={`relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[#E4E0D3] bg-[#FBFAF5] px-6 pt-8 ${compactMobile ? "pb-10" : "pb-[51px]"} shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]`}
+        >
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[length:390px_460px] bg-top-right bg-no-repeat lg:hidden"
@@ -83,7 +91,9 @@ export function AuthInkLayout({
             />
           </h2>
           <div className="relative mt-[39px] lg:mt-[50px]">{children}</div>
-          <p className="relative mt-auto pt-10 text-center text-sm leading-[1.2] text-[#718075]">
+          <p
+            className={`relative mt-auto ${compactMobile ? "pt-7" : "pt-10"} lg:pt-10 text-center text-sm leading-[1.2] text-[#718075]`}
+          >
             {footer}
           </p>
         </main>

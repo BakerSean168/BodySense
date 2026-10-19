@@ -5,6 +5,7 @@ import { AuthInkLayout } from "@/features/auth/components/AuthInkLayout";
 export function RegisterPage() {
   return (
     <AuthInkLayout
+      compactMobile
       title="注册"
       testId="auth-register-page"
       footer={
