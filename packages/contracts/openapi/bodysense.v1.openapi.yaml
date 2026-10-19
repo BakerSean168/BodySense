@@ -754,6 +754,26 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/OnboardingContextRequest'
+  /api/v1/onboarding/discomfort-areas:
+    get:
+      operationId: getReportedDiscomfortAreas
+      summary: Get the onboarding self-report of current discomfort areas.
+      description: >-
+        The user's own step 05 answer (coarse areas or "none"). It is a self-report kept
+        outside BodyState: not a symptom record, safety screen or diagnosis.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportedDiscomfortSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/me:
     get:
       operationId: getCurrentUser
@@ -6289,6 +6309,46 @@ components:
           $ref: '#/components/schemas/OnboardingLifestyleInput'
         injury_history:
           type: string
+        discomfort_areas:
+          $ref: '#/components/schemas/ReportedDiscomfortAreaCodes'
+    ReportedDiscomfortAreaCode:
+      type: string
+      description: >-
+        Coarse onboarding area (not a BodyRegion id). "none" is the explicit
+        "都没有不适" answer and is only valid alone.
+      enum: [neck, shoulder, upper_back, lower_back, hip, leg, arm_wrist, none]
+    ReportedDiscomfortAreaCodes:
+      type: array
+      description: >-
+        Onboarding step 05 self-report. Omit to skip; a self-report, never a symptom
+        record or diagnosis.
+      minItems: 1
+      maxItems: 7
+      uniqueItems: true
+      items:
+        $ref: '#/components/schemas/ReportedDiscomfortAreaCode'
+    ReportedDiscomfortReport:
+      type: object
+      additionalProperties: false
+      required: [area_codes, source, reported_at]
+      properties:
+        area_codes:
+          $ref: '#/components/schemas/ReportedDiscomfortAreaCodes'
+        source:
+          type: string
+          enum: [onboarding]
+        reported_at:
+          type: string
+          format: date-time
+    ReportedDiscomfortSnapshot:
+      type: object
+      additionalProperties: false
+      required: [report]
+      properties:
+        report:
+          oneOf:
+          - $ref: '#/components/schemas/ReportedDiscomfortReport'
+          - type: 'null'
     OnboardingContextResult:
       type: object
       additionalProperties: false

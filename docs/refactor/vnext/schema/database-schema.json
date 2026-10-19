@@ -5202,6 +5202,39 @@
             ]
         },
         {
+            "table": "reported_discomfort_areas",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "area_codes",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "reported_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "runs",
             "columns": [
                 {

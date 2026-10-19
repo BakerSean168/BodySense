@@ -28,6 +28,7 @@ type PublicServer struct {
 	bodyMetrics                  bodyMetricsApplication
 	healthHistory                healthHistoryApplication
 	onboarding                   onboardingContextApplication
+	reportedDiscomfort           reportedDiscomfortReader
 	profile                      profileApplication
 	privacy                      privacyErasureApplication
 	privacyCookie                privacyRefreshCookiePolicy
