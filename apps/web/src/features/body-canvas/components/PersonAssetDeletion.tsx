@@ -22,11 +22,7 @@ import type { ProfileUploadLike } from "../model/profileCategories";
 import { formatMediaDate } from "../model/personMedia";
 
 type Scene =
-  | "scope"
-  | "confirm-source"
-  | "confirm-erase"
-  | "source-removed"
-  | "receipt";
+  "scope" | "confirm-source" | "confirm-erase" | "source-removed" | "receipt";
 
 const FILE_KIND: Record<string, string> = {
   report: "体检报告",
@@ -172,9 +168,7 @@ export function PersonAssetDeletion({
         <h3
           ref={heading}
           tabIndex={-1}
-          className={
-            options.visibleTitle ? "bc-asset-scene-title" : "sr-only"
-          }
+          className={options.visibleTitle ? "bc-asset-scene-title" : "sr-only"}
         >
           {title}
         </h3>
@@ -203,10 +197,7 @@ export function PersonAssetDeletion({
             onSelect={() => setScope("source")}
             icon={<Minus size={14} />}
             title="仅移除原件"
-            tags={[
-              { label: "原件" },
-              { label: "证据保留", tone: "keep" },
-            ]}
+            tags={[{ label: "原件" }, { label: "证据保留", tone: "keep" }]}
           />
           <ScopeOption
             checked={scope === "erase"}
@@ -225,7 +216,11 @@ export function PersonAssetDeletion({
         </p>
       </>,
       <>
-        <button type="button" className="bc-person-footer-link" onClick={onBack}>
+        <button
+          type="button"
+          className="bc-person-footer-link"
+          onClick={onBack}
+        >
           取消
         </button>
         <button
@@ -369,7 +364,11 @@ export function PersonAssetDeletion({
         >
           彻底清理
         </button>
-        <button type="button" className="bc-person-footer-action" onClick={onBack}>
+        <button
+          type="button"
+          className="bc-person-footer-action"
+          onClick={onBack}
+        >
           {backLabel}
         </button>
       </>,
@@ -511,7 +510,11 @@ function ScopeOption({
       onClick={onSelect}
       onKeyDown={(event) => {
         // Radio group arrows move between the two options.
-        if (["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+        if (
+          ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(
+            event.key,
+          )
+        ) {
           event.preventDefault();
           const group = event.currentTarget.parentElement;
           const options = Array.from(
@@ -531,7 +534,11 @@ function ScopeOption({
       tabIndex={checked ? 0 : -1}
     >
       <span className="bc-asset-scope-title">
-        <span className="bc-asset-mark" data-tone={tone ?? "neutral"} aria-hidden="true">
+        <span
+          className="bc-asset-mark"
+          data-tone={tone ?? "neutral"}
+          aria-hidden="true"
+        >
           {icon}
         </span>
         {title}
@@ -565,7 +572,11 @@ function AssetList({
       <ul aria-label={label}>
         {rows.map((row) => (
           <li key={row.label} data-tone={row.tone}>
-            <span className="bc-asset-mark" data-tone={row.tone} aria-hidden="true">
+            <span
+              className="bc-asset-mark"
+              data-tone={row.tone}
+              aria-hidden="true"
+            >
               {row.tone === "keep" ? (
                 <Check size={12} />
               ) : row.tone === "pending" ? (

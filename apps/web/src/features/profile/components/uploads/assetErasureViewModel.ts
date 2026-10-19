@@ -136,7 +136,11 @@ export const ASSET_ERASURE_FAMILIES: ReadonlyArray<{
   label: string;
   targets: readonly string[];
 }> = [
-  { id: "original", label: "原件", targets: ["source_objects", "asset_manifest"] },
+  {
+    id: "original",
+    label: "原件",
+    targets: ["source_objects", "asset_manifest"],
+  },
   {
     id: "derived",
     label: "派生内容",

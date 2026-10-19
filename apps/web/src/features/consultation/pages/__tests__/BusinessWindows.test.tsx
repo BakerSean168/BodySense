@@ -734,7 +734,9 @@ describe("body-first business windows", () => {
     const scene = await screen.findByTestId("person-asset-deletion");
     expect(scene).toHaveAttribute("data-scene", "scope");
     const source = within(scene).getByRole("radio", { name: /仅移除原件/ });
-    const erase = within(scene).getByRole("radio", { name: /文件及相关健康数据/ });
+    const erase = within(scene).getByRole("radio", {
+      name: /文件及相关健康数据/,
+    });
     expect(source).toHaveAttribute("aria-checked", "true");
     // Arrow keys move the radio selection.
     source.focus();
@@ -753,7 +755,9 @@ describe("body-first business windows", () => {
     await waitFor(() =>
       expect(scene).toHaveAttribute("data-scene", "source-removed"),
     );
-    expect(within(scene).getByText("历史证据保留，原件不可再核验")).toBeVisible();
+    expect(
+      within(scene).getByText("历史证据保留，原件不可再核验"),
+    ).toBeVisible();
     expect(mockRequestErasure).not.toHaveBeenCalled();
     await user.click(within(scene).getByRole("button", { name: "返回报告" }));
     const after = await screen.findByTestId("person-report");
