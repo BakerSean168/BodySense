@@ -32,6 +32,8 @@ import {
 } from "@/features/body-canvas/model/businessWindows";
 import { useProfileStore } from "@/stores/profileStore";
 import { useAuthStore } from "@/stores/authStore";
+import { effectiveTimeZone } from "@/features/profile/model/profilePreferences";
+import { groupChatHistory } from "@/features/body-canvas/model/chatHistory";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -217,6 +219,13 @@ export function ConsultationPage() {
   const [profileDrawerMounted, setProfileDrawerMounted] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   const accountName = useAuthStore((state) => state.user?.email ?? "");
+  // Penpot Chat header 今天 picker + history list: days the user wrote in,
+  // on their display clock, straight from the thread's own messages.
+  const chatTimeZone = effectiveTimeZone(profile?.preferences).zone;
+  const chatHistory = useMemo(
+    () => groupChatHistory(messages, chatTimeZone),
+    [messages, chatTimeZone],
+  );
   // The identity header shows the Profile nickname, else the account email's
   // local part (personDisplayName), so it is never a fabricated label.
   const personIdentity = useMemo(
@@ -397,6 +406,7 @@ export function ConsultationPage() {
         bodyExplorer={bodyExplorer}
         chat={chatPanel}
         latestUserMessage={latestUserMessage}
+        chatHistory={chatHistory}
         onAskContext={handleAskSpatialContext}
         onOpenProfile={() => {
           setProfileDrawerMounted(true);

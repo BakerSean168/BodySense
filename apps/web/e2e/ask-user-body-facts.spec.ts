@@ -498,7 +498,7 @@ test("Ask User mobile replacement composer fits the sheet in both themes and sub
       const button = node
         .querySelector("button.ask-user-submit")
         ?.getBoundingClientRect();
-      // V2 Chat now renders a contextual title + local clock, not the generic h2.
+      // V2 Chat renders the Penpot title "对话 / 今天", not the generic h2.
       const title = sheet?.querySelector(".bc-chat-context-title");
       if (!(title instanceof HTMLElement)) {
         throw new Error("Missing V2 Chat title in the mobile sheet");
