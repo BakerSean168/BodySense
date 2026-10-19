@@ -163,6 +163,14 @@ export function PersonAssetDeletion({
       data-testid="person-asset-deletion"
       data-scene={scene}
       data-phase={options.phase}
+      onKeyDown={(event) => {
+        // Escape leaves the scope choice without deleting anything.
+        if (event.key === "Escape" && scene === "scope" && !working) {
+          event.preventDefault();
+          event.stopPropagation();
+          onBack();
+        }
+      }}
     >
       <div className="bc-person-detail-body">
         <h3
@@ -184,9 +192,19 @@ export function PersonAssetDeletion({
       "选择删除范围",
       <>
         {fileCard}
-        <p className="bc-asset-label" id="bc-asset-scope-label">
-          删除范围
-        </p>
+        <div className="bc-asset-label-row">
+          <p className="bc-asset-label" id="bc-asset-scope-label">
+            删除范围
+          </p>
+          <button
+            type="button"
+            className="bc-asset-cancel"
+            onClick={onBack}
+            title="不删除，返回列表（Esc）"
+          >
+            取消
+          </button>
+        </div>
         <div
           role="radiogroup"
           aria-labelledby="bc-asset-scope-label"
@@ -210,18 +228,24 @@ export function PersonAssetDeletion({
         </div>
         <p className="bc-asset-keep-note">
           <span className="bc-asset-mark" data-tone="keep" aria-hidden="true">
-            <Check size={12} />
+            <Check size={14} strokeWidth={2.6} />
           </span>
           其他独立来源的事实不受影响
         </p>
       </>,
+      // Penpot footer: the other scope as a quiet link on the left
+      // ("完整清理" while 仅移除原件 is chosen), the chosen scope as the
+      // primary action. Both only open their confirm step.
       <>
         <button
           type="button"
           className="bc-person-footer-link"
-          onClick={onBack}
+          onClick={() => {
+            setScope(scope === "source" ? "erase" : "source");
+            setScene(scope === "source" ? "confirm-erase" : "confirm-source");
+          }}
         >
-          取消
+          {scope === "source" ? "完整清理" : "仅移除原件"}
         </button>
         <button
           type="button"
@@ -287,7 +311,13 @@ export function PersonAssetDeletion({
         <AssetList
           label="将清理"
           rows={[
-            { label: "原件", tone: "remove" },
+            // One upload is one original file. Derived and checkpoint copies
+            // have no pre-erasure count in the API, so they show none.
+            {
+              label: "原件",
+              tone: "remove",
+              chip: sourceGone ? undefined : "1 份",
+            },
             { label: "派生内容", tone: "remove" },
             { label: "检查点副本", tone: "remove" },
           ]}
@@ -578,11 +608,11 @@ function AssetList({
               aria-hidden="true"
             >
               {row.tone === "keep" ? (
-                <Check size={12} />
+                <Check size={14} strokeWidth={2.6} />
               ) : row.tone === "pending" ? (
-                <CircleHelp size={12} />
+                <CircleHelp size={14} strokeWidth={2.4} />
               ) : (
-                <X size={12} />
+                <X size={14} strokeWidth={2.6} />
               )}
             </span>
             <span className="bc-asset-list-text">

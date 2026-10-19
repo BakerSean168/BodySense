@@ -1,24 +1,36 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentType,
+  type KeyboardEvent,
+} from "react";
 import {
   ChevronDown,
-  Dumbbell,
   FileText,
   Image as ImageIcon,
   List,
-  Repeat2,
+  Repeat,
 } from "lucide-react";
+import { DockTrainingIcon } from "./DockIcons";
 import {
   PROFILE_CATEGORIES,
   getProfileCategoryMeta,
   type ProfileCategoryId,
 } from "../model/profileCategories";
 
-const ICONS: Record<ProfileCategoryId, typeof List> = {
+// Penpot menu glyphs: equipment is the level barbell the Dock uses for 训练,
+// habits the two-arrow repeat loop.
+const ICONS: Record<
+  ProfileCategoryId,
+  ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" }>
+> = {
   records: List,
-  equipment: Dumbbell,
+  equipment: DockTrainingIcon,
   media: ImageIcon,
   reports: FileText,
-  habits: Repeat2,
+  habits: Repeat,
 };
 
 /**

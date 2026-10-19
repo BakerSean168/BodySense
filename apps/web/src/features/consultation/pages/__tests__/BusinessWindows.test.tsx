@@ -609,10 +609,12 @@ describe("body-first business windows", () => {
     ).toEqual(["身体记录", "器材", "媒体", "报告", "生活习惯"]);
     expect(options[0]).toHaveAttribute("aria-selected", "true");
     expect(list).toHaveAttribute("aria-activedescendant", options[0].id);
-    // Counts only for data already read: uploads yes, records never guessed.
+    // Counts only for data already read: uploads, and the fully loaded
+    // body-fact ledger (records = every fact, habits = lifestyle facts).
     expect(options[2]).toHaveTextContent("0 个");
     expect(options[3]).toHaveTextContent("1 份");
-    expect(options[0].querySelector(".bc-category-option-count")).toBeNull();
+    await waitFor(() => expect(options[0]).toHaveTextContent("1 条"));
+    expect(options[4]).toHaveTextContent("1 项");
     await user.keyboard("{ArrowDown}{ArrowDown}");
     expect(list).toHaveAttribute("aria-activedescendant", options[2].id);
     await user.keyboard("{End}");
@@ -821,6 +823,11 @@ describe("body-first business windows", () => {
     expect(erase).toHaveAttribute("aria-checked", "true");
     await user.keyboard("{ArrowUp}");
     expect(source).toHaveAttribute("aria-checked", "true");
+    // Penpot footer: the other scope is the quiet left action.
+    expect(
+      within(scene).getByRole("button", { name: "完整清理" }),
+    ).toBeInTheDocument();
+    expect(within(scene).getByRole("button", { name: "取消" })).toBeVisible();
     // Nothing is removed before the confirm step.
     await user.click(within(scene).getByRole("button", { name: "仅移除原件" }));
     expect(deleteUpload).not.toHaveBeenCalled();
@@ -913,6 +920,8 @@ describe("body-first business windows", () => {
     await user.click(within(scene).getByRole("button", { name: "完整清理" }));
     expect(scene).toHaveAttribute("data-scene", "confirm-erase");
     expect(within(scene).getByText("确认后立即停用该来源")).toBeVisible();
+    // Only the original has a knowable count before erasure.
+    expect(within(scene).getByText("1 份")).toBeVisible();
     expect(mockRequestErasure).not.toHaveBeenCalled();
     await user.click(within(scene).getByRole("button", { name: "确认清理" }));
     await waitFor(() =>
