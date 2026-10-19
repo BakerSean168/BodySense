@@ -48,6 +48,13 @@ vi.mock("../../services/nativeDiagnosisService", () => ({
     settle: vi.fn(),
   },
 }));
+const mockRequestErasure = vi.fn();
+vi.mock("@/features/profile/services/assetErasureService", () => ({
+  assetErasureService: {
+    request: (id: string, key: string) => mockRequestErasure(id, key),
+    receipt: vi.fn(),
+  },
+}));
 const mockListEquipment = vi.fn();
 const mockUpdateEquipment = vi.fn();
 vi.mock("@/features/profile/services/equipmentService", () => ({
@@ -233,6 +240,7 @@ beforeEach(() => {
   mockLatestDiagnosisRun.mockResolvedValue(null);
   mockDiagnosisRun.mockReset();
   mockUpdateEquipment.mockReset();
+  mockRequestErasure.mockReset();
   const owner = "11111111-1111-4111-8111-111111111111";
   useAuthStore.setState({
     user: { id: owner, email: "synthetic@example.test" },
@@ -680,6 +688,179 @@ describe("body-first business windows", () => {
     await userEvent.click(more);
     expect(screen.getAllByTestId("person-media-tile")).toHaveLength(10);
     expect(screen.queryByRole("button", { name: /查看全部/ })).toBeNull();
+  });
+
+  it("removes a report original in Person after the Penpot scope and confirm steps", async () => {
+    const user = userEvent.setup();
+    const report = {
+      id: "33333333-3333-4333-8333-333333333333",
+      file_type: "report",
+      original_name: "体检报告_2026-09.pdf",
+      file_size: 2_400_000,
+      mime_type: "application/pdf",
+      ocr_status: "completed",
+      ocr_result: null,
+      analysis_status: "none",
+      source_availability: "available",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const deleteUpload = vi.fn(async (id: string) => {
+      useUploadStore.setState((state) => ({
+        uploads: state.uploads.map((u) =>
+          u.id === id
+            ? { ...u, source_availability: "source_unavailable" as const }
+            : u,
+        ),
+      }));
+    });
+    useUploadStore.setState({ uploads: [report], deleteUpload } as never);
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "reports",
+    );
+    const card = await screen.findByTestId("person-report");
+    expect(card).toHaveTextContent("PDF · 2.3 MB · 今天上传");
+    expect(within(card).getByText("可用")).toBeInTheDocument();
+    expect(within(card).getByText("完成")).toBeInTheDocument();
+    await user.click(
+      within(card).getByRole("button", { name: "管理“体检报告_2026-09.pdf”" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "删除…" }));
+
+    const scene = await screen.findByTestId("person-asset-deletion");
+    expect(scene).toHaveAttribute("data-scene", "scope");
+    const source = within(scene).getByRole("radio", { name: /仅移除原件/ });
+    const erase = within(scene).getByRole("radio", {
+      name: /文件及相关健康数据/,
+    });
+    expect(source).toHaveAttribute("aria-checked", "true");
+    // Arrow keys move the radio selection.
+    source.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(erase).toHaveAttribute("aria-checked", "true");
+    await user.keyboard("{ArrowUp}");
+    expect(source).toHaveAttribute("aria-checked", "true");
+    // Nothing is removed before the confirm step.
+    await user.click(within(scene).getByRole("button", { name: "仅移除原件" }));
+    expect(deleteUpload).not.toHaveBeenCalled();
+    expect(scene).toHaveAttribute("data-scene", "confirm-source");
+    await user.click(
+      within(scene).getByRole("button", { name: "确认移除原件" }),
+    );
+    expect(deleteUpload).toHaveBeenCalledWith(report.id);
+    await waitFor(() =>
+      expect(scene).toHaveAttribute("data-scene", "source-removed"),
+    );
+    expect(
+      within(scene).getByText("历史证据保留，原件不可再核验"),
+    ).toBeVisible();
+    expect(mockRequestErasure).not.toHaveBeenCalled();
+    await user.click(within(scene).getByRole("button", { name: "返回报告" }));
+    const after = await screen.findByTestId("person-report");
+    expect(within(after).getByText("原件不可用")).toBeInTheDocument();
+    expect(after).toHaveTextContent("PDF · 原件已移除");
+  });
+
+  it("erases a report in Person and shows done only once every target verified", async () => {
+    const user = userEvent.setup();
+    const report = {
+      id: "44444444-4444-4444-8444-444444444444",
+      file_type: "report",
+      original_name: "示例报告.png",
+      file_size: 300_000,
+      mime_type: "image/png",
+      ocr_status: "processing",
+      ocr_result: null,
+      analysis_status: "none",
+      source_availability: "available",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const names = [
+      "source_objects",
+      "derived_jobs",
+      "posture_analyses",
+      "diagnosis_records",
+      "document_extractions",
+      "assessment_reports",
+      "runtime_checkpoints",
+      "asset_manifest",
+    ];
+    const receipt = (status: string, busy: boolean) => ({
+      request_id: "abcdef12-0000-4000-8000-000000000001",
+      asset_id: report.id,
+      status,
+      inventory_revision: "v1",
+      requested_at: new Date().toISOString(),
+      ...(status === "erased" ? { erased_at: new Date().toISOString() } : {}),
+      targets: names.map((target) => ({
+        target,
+        state: busy && target === "runtime_checkpoints" ? "failed" : "verified",
+        erased_count: 1,
+        outstanding_count: busy && target === "runtime_checkpoints" ? 1 : 0,
+        ...(busy && target === "runtime_checkpoints"
+          ? { failure_code: "runtime_thread_busy" }
+          : {}),
+      })),
+      outstanding_targets: busy ? ["runtime_checkpoints"] : [],
+      reviews: [],
+    });
+    mockRequestErasure
+      .mockReset()
+      .mockResolvedValueOnce(receipt("outstanding", true))
+      .mockResolvedValueOnce(receipt("erased", false));
+    const forgetUpload = vi.fn((id: string) =>
+      useUploadStore.setState((state) => ({
+        uploads: state.uploads.filter((u) => u.id !== id),
+      })),
+    );
+    useUploadStore.setState({ uploads: [report], forgetUpload } as never);
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "reports",
+    );
+    const card = await screen.findByTestId("person-report");
+    expect(within(card).getByText("处理中")).toBeInTheDocument();
+    await user.click(
+      within(card).getByRole("button", { name: "管理“示例报告.png”" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "删除…" }));
+    const scene = await screen.findByTestId("person-asset-deletion");
+    await user.click(
+      within(scene).getByRole("radio", { name: /文件及相关健康数据/ }),
+    );
+    await user.click(within(scene).getByRole("button", { name: "完整清理" }));
+    expect(scene).toHaveAttribute("data-scene", "confirm-erase");
+    expect(within(scene).getByText("确认后立即停用该来源")).toBeVisible();
+    expect(mockRequestErasure).not.toHaveBeenCalled();
+    await user.click(within(scene).getByRole("button", { name: "确认清理" }));
+    await waitFor(() =>
+      expect(scene).toHaveAttribute("data-phase", "outstanding"),
+    );
+    expect(within(scene).getByText("部分副本仍待清理")).toBeVisible();
+    expect(within(scene).getByText("未完成")).toBeVisible();
+    expect(
+      within(scene).getByText("对话正在进行，空闲后会自动重试"),
+    ).toBeVisible();
+    expect(within(scene).queryByText("清理已完成")).toBeNull();
+    const key = mockRequestErasure.mock.calls[0][1];
+    await user.click(within(scene).getByRole("button", { name: "重试未完成" }));
+    await waitFor(() => expect(scene).toHaveAttribute("data-phase", "erased"));
+    // The retry continues the same erasure (same key).
+    expect(mockRequestErasure).toHaveBeenLastCalledWith(report.id, key);
+    expect(within(scene).getByText("全部范围已核验")).toBeVisible();
+    expect(within(scene).getAllByText("已核验")).toHaveLength(3);
+    expect(within(scene).getByText(/回执 ABCDEF12/)).toBeVisible();
+    await user.click(within(scene).getByRole("button", { name: "返回报告" }));
+    expect(forgetUpload).toHaveBeenCalledWith(report.id);
+    expect(await screen.findByText("还没有报告")).toBeInTheDocument();
   });
 
   it("shows a centred equipment empty state with a single add action", async () => {

@@ -64,6 +64,55 @@ describe("uploadStore OpenAPI boundary", () => {
     expect(useUploadStore.getState().error).toBeNull();
   });
 
+  it("keeps the list when a failed extraction carries an error payload", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          uploads: [
+            {
+              ...uploadWire,
+              file_type: "report",
+              ocr_status: "failed",
+              ocr_result: { error: "persist document extraction audit run" },
+            },
+          ],
+        }),
+      ),
+    );
+
+    await useUploadStore.getState().fetchUploads();
+
+    const [upload] = useUploadStore.getState().uploads;
+    expect(upload?.ocr_status).toBe("failed");
+    expect(upload?.ocr_result).toBeNull();
+    expect(useUploadStore.getState().error).toBeNull();
+  });
+
+  it("still rejects a malformed completed extraction", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          uploads: [
+            {
+              ...uploadWire,
+              file_type: "report",
+              ocr_status: "completed",
+              ocr_result: { error: "not a result" },
+            },
+          ],
+        }),
+      ),
+    );
+
+    await useUploadStore.getState().fetchUploads();
+
+    expect(useUploadStore.getState().uploads).toEqual([]);
+    expect(useUploadStore.getState().error).not.toBeNull();
+  });
+
   it("fails closed when a nominal 200 reintroduces persistence/storage compatibility fields", async () => {
     vi.stubGlobal(
       "fetch",
