@@ -2,6 +2,7 @@ import { expect, test, type APIResponse, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory } from "./support/person";
 
 // These cases include registration, real Go/Python/DB calls and full reloads.
 // Keep each expectation's normal timeout; allow a cold 3D/browser startup on
@@ -71,7 +72,7 @@ test("lifestyle temporal change preserves the earlier assertion rather than corr
 
   await page.goto("/consultation?view=state");
   await expect(page.getByTestId("person-window")).toBeVisible();
-  await page.getByLabel("档案分类").selectOption("habits");
+  await choosePersonCategory(page, "habits");
   const records = page.getByTestId("body-fact-records");
   await expect(
     records.getByText(previousStatement, { exact: true }),

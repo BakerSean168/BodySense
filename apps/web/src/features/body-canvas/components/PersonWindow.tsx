@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
-  ChevronDown,
   Dumbbell,
   FileText,
   Image as ImageIcon,
@@ -41,7 +40,6 @@ import {
   formatFileSize,
   formatOcrStatus,
   getProfileCategoryMeta,
-  PROFILE_CATEGORIES,
   selectUploadsByCategory,
   type ProfileCategoryId,
   type ProfileUploadLike,
@@ -49,6 +47,7 @@ import {
 import { usePersonWindowData } from "../hooks/usePersonWindowData";
 import { PersonIdentityPopover } from "./PersonIdentityPopover";
 import { PersonMediaGrid } from "./PersonMediaGrid";
+import { PersonCategoryMenu } from "./PersonCategoryMenu";
 import { PersonAssetDeletion } from "./PersonAssetDeletion";
 import { formatMediaDate } from "../model/personMedia";
 import { useUploadStore } from "@/stores/uploadStore";
@@ -168,9 +167,32 @@ export function PersonIdentityTrigger({
 }
 
 /**
+ * Counts for the category menu, only from data the app already read: the
+ * upload list once fetched and the equipment inventory once cached. Records
+ * and habits are paged ledgers, so their counts are left out, never guessed.
+ */
+function usePersonCategoryCounts(): Partial<Record<ProfileCategoryId, string>> {
+  const uploads = useUploadStore(
+    (state) => state.uploads,
+  ) as ProfileUploadLike[];
+  const fetched = useUploadStore((state) => state.hasFetched);
+  const equipment = useQuery({
+    queryKey: equipmentKeys.all,
+    queryFn: equipmentService.list,
+    enabled: false,
+  });
+  const counts: Partial<Record<ProfileCategoryId, string>> = {};
+  if (fetched) {
+    counts.media = `${selectUploadsByCategory(uploads, "media").length} 个`;
+    counts.reports = `${selectUploadsByCategory(uploads, "reports").length} 份`;
+  }
+  if (equipment.data) counts.equipment = `${equipment.data.items.length} 件`;
+  return counts;
+}
+
+/**
  * Penpot Person header: "BakerSean / 身体记录 ▾". The category picker replaces
- * the old tab strip; it is a native select so keyboard and screen readers get
- * the platform listbox.
+ * the old tab strip; it opens Penpot's icon menu, built as an ARIA listbox.
  */
 export function PersonWindowHeader({
   identity,
@@ -189,6 +211,7 @@ export function PersonWindowHeader({
   category: ProfileCategoryId;
   onCategoryChange: (category: ProfileCategoryId) => void;
 }) {
+  const counts = usePersonCategoryCounts();
   return (
     <div className="bc-window-context bc-person-context">
       <PersonIdentityTrigger
@@ -201,23 +224,11 @@ export function PersonWindowHeader({
       <span className="bc-window-context-sep" aria-hidden="true">
         /
       </span>
-      <span className="bc-window-select-wrap">
-        <select
-          className="bc-window-context-select"
-          aria-label="档案分类"
-          value={category}
-          onChange={(event) =>
-            onCategoryChange(event.target.value as ProfileCategoryId)
-          }
-        >
-          {PROFILE_CATEGORIES.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
-      </span>
+      <PersonCategoryMenu
+        value={category}
+        onChange={onCategoryChange}
+        counts={counts}
+      />
     </div>
   );
 }
