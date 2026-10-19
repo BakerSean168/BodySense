@@ -592,7 +592,9 @@ describe("body-first business windows", () => {
     expect(list).toHaveFocus();
     const options = within(list).getAllByRole("option");
     expect(
-      options.map((o) => o.querySelector(".bc-category-option-label")?.textContent),
+      options.map(
+        (o) => o.querySelector(".bc-category-option-label")?.textContent,
+      ),
     ).toEqual(["身体记录", "器材", "媒体", "报告", "生活习惯"]);
     expect(options[0]).toHaveAttribute("aria-selected", "true");
     expect(list).toHaveAttribute("aria-activedescendant", options[0].id);

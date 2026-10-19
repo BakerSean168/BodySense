@@ -184,8 +184,7 @@ function usePersonCategoryCounts(): Partial<Record<ProfileCategoryId, string>> {
     counts.media = `${selectUploadsByCategory(uploads, "media").length} 个`;
     counts.reports = `${selectUploadsByCategory(uploads, "reports").length} 份`;
   }
-  if (equipment.data)
-    counts.equipment = `${equipment.data.items.length} 件`;
+  if (equipment.data) counts.equipment = `${equipment.data.items.length} 件`;
   return counts;
 }
 

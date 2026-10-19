@@ -16,7 +16,10 @@ export function personCategoryTrigger(page: Page) {
 }
 
 /** Opens the Penpot category menu and chooses a category by its option. */
-export async function choosePersonCategory(page: Page, category: PersonCategory) {
+export async function choosePersonCategory(
+  page: Page,
+  category: PersonCategory,
+) {
   const trigger = personCategoryTrigger(page);
   await trigger.click();
   const list = page.getByRole("listbox", { name: "档案分类" });
