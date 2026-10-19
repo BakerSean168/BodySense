@@ -33,7 +33,7 @@ test("Person identity edits optional Profile fields and preferences without touc
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
   await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByLabel("确认密码").fill("BodySenseE2E!123");
+  await page.getByRole("checkbox", { name: /同意/ }).check();
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding|consultation)/);
   const accessToken = await refreshBrowserAccessToken(page, apiBase);

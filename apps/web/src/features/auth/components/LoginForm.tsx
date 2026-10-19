@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { InkButton, InkField } from "./InkField";
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -46,42 +45,43 @@ export function LoginForm() {
     }
   };
 
+  // Penpot "Sign in · Error": the server error sits under the password field.
+  const passwordError = validationErrors.password ?? error ?? undefined;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <Input
+    <form onSubmit={handleSubmit} noValidate data-testid="auth-login-form">
+      <InkField
         id="email"
-        type="email"
-        label="邮箱地址"
+        kind="email"
+        accessibleLabel="邮箱地址"
+        autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
+        placeholder="邮箱"
         error={validationErrors.email}
       />
 
-      <Input
+      <InkField
         id="password"
-        type="password"
-        label="密码"
+        kind="password"
+        accessibleLabel="密码"
+        autoComplete="current-password"
+        className="mt-7 lg:mt-[34px]"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="••••••••"
-        error={validationErrors.password}
+        placeholder="密码"
+        error={passwordError}
       />
 
-      {error && (
-        <div className="rounded-xl bg-red-50 p-4 border border-red-100">
-          <p className="text-sm font-medium text-red-800">{error}</p>
-        </div>
-      )}
-
-      <Button
-        type="submit"
-        isLoading={isLoading}
-        className="w-full mt-2"
-        size="lg"
-      >
-        登录
-      </Button>
+      <div className="mt-[52px] lg:mt-[56px]">
+        <InkButton
+          isLoading={isLoading}
+          loadingLabel="登录中…"
+          testId="auth-login-submit"
+        >
+          登录
+        </InkButton>
+      </div>
     </form>
   );
 }

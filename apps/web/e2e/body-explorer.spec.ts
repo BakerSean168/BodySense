@@ -48,7 +48,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByLabel("确认密码").fill(password);
+  await page.getByRole("checkbox", { name: /同意/ }).check();
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(onboarding|consultation)/);
 
@@ -379,7 +379,7 @@ test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
   await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByLabel("确认密码").fill(password);
+  await page.getByRole("checkbox", { name: /同意/ }).check();
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(onboarding|consultation)/);
 
