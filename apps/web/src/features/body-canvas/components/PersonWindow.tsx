@@ -129,7 +129,9 @@ export function PersonIdentityTrigger({
       <DropdownMenuTrigger
         className="bc-person-identity"
         title={
-          identity.accountEmail ? `账户菜单 · ${identity.accountEmail}` : "账户菜单"
+          identity.accountEmail
+            ? `账户菜单 · ${identity.accountEmail}`
+            : "账户菜单"
         }
         data-identity-open={open ? "true" : undefined}
         data-name-source={display.source}

@@ -1070,9 +1070,7 @@ describe("body-first business windows", () => {
     expect(screen.queryByRole("button", { name: "切换深色" })).toBeNull();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await user.click(
-      screen.getByRole("button", { name: "synthetic" }),
-    );
+    await user.click(screen.getByRole("button", { name: "synthetic" }));
     await user.click(await screen.findByRole("menuitem", { name: "设置" }));
     const settings = await screen.findByRole("dialog", { name: "设置" });
     const light = within(settings).getByRole("radio", { name: "浅色" });
@@ -1092,9 +1090,7 @@ describe("body-first business windows", () => {
     await user.click(within(settings).getByRole("button", { name: "关闭" }));
     expect(screen.queryByRole("dialog", { name: "设置" })).toBeNull();
 
-    await user.click(
-      screen.getByRole("button", { name: "synthetic" }),
-    );
+    await user.click(screen.getByRole("button", { name: "synthetic" }));
     await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
     const confirm = await screen.findByRole("dialog", { name: "退出登录" });
     expect(confirm).toHaveTextContent("确定要退出当前账号吗？");

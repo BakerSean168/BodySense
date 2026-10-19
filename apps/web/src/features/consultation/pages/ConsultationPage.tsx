@@ -269,17 +269,22 @@ export function ConsultationPage() {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index]!;
       if (message.role !== "user") continue;
-      const metadata = message.metadata as Record<string, unknown> | null | undefined;
+      const metadata = message.metadata as
+        Record<string, unknown> | null | undefined;
       if (metadata?.is_interaction_answer === true) continue;
       if (message.status !== "completed") return null;
       const text = (message.parts as Array<{ type?: string; text?: unknown }>)
         .flatMap((part) =>
-          part.type === "text" && typeof part.text === "string" && part.text.trim()
+          part.type === "text" &&
+          typeof part.text === "string" &&
+          part.text.trim()
             ? [part.text.trim()]
             : [],
         )
         .join("\n");
-      return UUID_PATTERN.test(message.id) && text ? { id: message.id, text } : null;
+      return UUID_PATTERN.test(message.id) && text
+        ? { id: message.id, text }
+        : null;
     }
     return null;
   }, [messages]);
