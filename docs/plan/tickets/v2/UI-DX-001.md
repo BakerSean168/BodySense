@@ -1,8 +1,18 @@
 # UI-DX-001 · Bind the Diagnosis V2 window to exact decision API
 
-Status: BLOCKED (user Q-19 visual sign-off, 2026-10-18) · lane A · #349 #350 #351 merged, last merge `576201e85`. Phase 3. SF cross-reference: SF-80.
+Status: DONE (ticket, 2026-10-19) · #349, #350, #351, #370, #375 merged, last merge `cfdb48c29`. Issue #312 closed. Domain gates raised at the V2 final closeout with QA-001 evidence.
 **Owner role:** React Diagnosis Owner. **Dependencies:** `DX-003`.
 **Exclusive resources:** `diagnosis-ui`.
+
+## Final closeout · 2026-10-19
+
+Synced on main `da14c3435`. [#312](https://github.com/BakerSean168/BodySense/issues/312) is closed with every scope checkbox ticked.
+
+Merged: [#349](https://github.com/BakerSean168/BodySense/pull/349) (`e86e0ff2d`), [#350](https://github.com/BakerSean168/BodySense/pull/350) (`78f04e997`), [#351](https://github.com/BakerSean168/BodySense/pull/351) (`576201e85`), [#370](https://github.com/BakerSean168/BodySense/pull/370) (`792815b8a`), [#375](https://github.com/BakerSean168/BodySense/pull/375) (`cfdb48c29`).
+
+DiagnosisWindow on /diagnosis + decide (#349), Penpot states + 390px + Chromium E2E (#350, #351), analysis-request binding + review-prompt dismissal API (#370), History, review prompt, Chat analysis request and Safety view (#375). Final visual acceptance is F-PENPOT Q-19 (user).
+
+Cross-domain re-verification: [QA-001](./QA-001.md) on main `da14c3435`.
 
 ## Domain closeout · 2026-10-18
 

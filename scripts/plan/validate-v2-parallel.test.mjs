@@ -22,6 +22,12 @@ test("V2 foundation plans and five domain gates are connected to actual files", 
 
 test("a domain cannot be integrated before all prerequisite gates", () => {
   const mutation = fresh();
+  // Independent of the live state: force one prerequisite gate open.
+  mutation.domains[0].gates.design = {
+    state: "in_progress",
+    next: "PD-TEST-01",
+    details: "Design acceptance still open.",
+  };
   mutation.domains[0].gates.integration = {
     state: "ready",
     proof: ["docs/product/acceptance.md"],
@@ -35,6 +41,12 @@ test("a domain cannot be integrated before all prerequisite gates", () => {
 
 test("a domain cannot sign off engineering on only an additive migration", () => {
   const mutation = fresh();
+  // Independent of the live state: the database gate is not signed off yet.
+  mutation.domains[0].gates.database = {
+    state: "in_progress",
+    next: "DB-TEST-01",
+    details: "Only an additive migration exists.",
+  };
   mutation.domains[0].gates.engineering = {
     state: "ready",
     proof: ["apps/api/migrations/000002_body_fact_ledger.up.sql"],

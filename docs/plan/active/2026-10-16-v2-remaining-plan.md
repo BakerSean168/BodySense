@@ -1,6 +1,6 @@
 # BodySense V2 · Remaining work plan (code-verified) · 2026-10-16
 
-Status: ACTIVE / EXECUTION PLAN. Subordinate to the [V2 Master](./2026-10-13-v2-parallel-master.md) (§0 big-bang single-writer policy) and to `docs/product/**` (business authority). The execution DAG remains [`queue.json`](../tickets/v2/queue.json); domain gates remain in [`v2-handoff-state.json`](./v2-handoff-state.json). This plan raises **no** gate. **2026-10-17:** execution runs in parallel lanes (§7); §4's single-writer interleaving is historical. **2026-10-18:** domain-closeout sync on main `3dd993a02` (§8).
+Status: ACTIVE / EXECUTION PLAN · V2 implementation complete 2026-10-19 (§10); REL-001 awaits the user. Subordinate to the [V2 Master](./2026-10-13-v2-parallel-master.md) (§0 big-bang single-writer policy) and to `docs/product/**` (business authority). The execution DAG remains [`queue.json`](../tickets/v2/queue.json); domain gates remain in [`v2-handoff-state.json`](./v2-handoff-state.json). This plan raises **no** gate. **2026-10-17:** execution runs in parallel lanes (§7); §4's single-writer interleaving is historical. **2026-10-18:** domain-closeout sync on main `3dd993a02` (§8).
 
 **Verified against main:** `adaa02607` (`adaa02607a208a1a7d4cc9ba5b70845d6a77f351`: af3e1993b code + #299 status sync + #274 TP-PROP-001); main then advanced to `6687a9e26` with #249 (GitHub Actions pin bump only, no product code). Every "exists" claim below was checked in that tree (baseline `apps/api/migrations/000001_vnext_baseline.up.sql`, `packages/contracts/openapi/bodysense.v1.openapi.yaml`, `apps/api/internal/**`, `apps/web/src/**`, `apps/ai-service/src/**`).
 
@@ -311,3 +311,33 @@ Synced on main `f2e52c79ccadc4a868650ac43f02469ff13bc542` (#362 merge), the new 
 | AS-002    | [#314](https://github.com/BakerSean168/BodySense/issues/314) | #362 `f2e52c79c`                   | queued       | slice 2 ai checkpoint hook, slice 3 review projection + per-health-data erasure, slice 4 web+E2E; admission waits for AS-001 and PC-RET-001 |
 
 TP-002 #311 and TP-003 #313 are closed. No domain gate is raised.
+
+## 10. Final closeout · 2026-10-19
+
+Synced on main `da14c3435ea3b70bd63bb3a845519722b40a159f` (#388 merge), the new queue `mainBaselineSha`. Every implementation ticket is done and
+its issue closed; all five domains have view_model/database/design/engineering/integration gates **ready with
+proof** in [`v2-handoff-state.json`](./v2-handoff-state.json), as do F-BODYFACT, F-CONTRACT and F-ACCEPTANCE.
+
+| Ticket        | Issue                                                        | Merged PRs               | Queue status               |
+| ------------- | ------------------------------------------------------------ | ------------------------ | -------------------------- |
+| PC-RET-001    | [#307](https://github.com/BakerSean168/BodySense/issues/307) | #343 #354 #355 #368      | done                       |
+| AS-001        | [#306](https://github.com/BakerSean168/BodySense/issues/306) | #327 #374                | done                       |
+| BS-AGENT-001  | [#308](https://github.com/BakerSean168/BodySense/issues/308) | #347 #372 #379           | done                       |
+| UI-001        | [#309](https://github.com/BakerSean168/BodySense/issues/309) | #330 #331 #380 #381      | done                       |
+| DX-003        | [#310](https://github.com/BakerSean168/BodySense/issues/310) | #345 #353 #366           | done                       |
+| UI-DX-001     | [#312](https://github.com/BakerSean168/BodySense/issues/312) | #349 #350 #351 #370 #375 | done                       |
+| DX-RETIRE-001 | [#341](https://github.com/BakerSean168/BodySense/issues/341) | #356 #359 #365           | done                       |
+| AS-002        | [#314](https://github.com/BakerSean168/BodySense/issues/314) | #362 #367 #371 #376 #377 | done                       |
+| UI-TP-001     | [#315](https://github.com/BakerSean168/BodySense/issues/315) | #363 #364 #369           | done                       |
+| QA-001        | [#316](https://github.com/BakerSean168/BodySense/issues/316) | #385 #386 #387 #388      | done                       |
+| REL-001       | [#317](https://github.com/BakerSean168/BodySense/issues/317) | #383 (prep)              | blocked: awaiting the user |
+
+**QA-001 evidence** ([ticket](../tickets/v2/QA-001.md)): Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green.
+
+**Awaiting the user (nothing executed, never faked):**
+
+1. **F-PENPOT / Q-19:** visual sign-off of the Penpot-aligned UI and the final V2 acceptance.
+2. **REL-001 A1** staging wipe, **A2** production wipe, **A3** canary promote
+   ([runbook](../../runbooks/v2-release-cutover.md)). `pnpm release:v2:dry-run` on `da14c3435`: failures=0, DRY_RUN_REMOTE_ACTIONS=0, approval points A1/A2/A3; after this sync the only readiness blocker is F-PENPOT (user Q-19).
+
+No staging or production resource, deployment or scheduler was changed. #301 closes with this sync; #317 stays open.

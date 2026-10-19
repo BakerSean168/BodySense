@@ -35,37 +35,45 @@
     {
       "id": "F-BODYFACT",
       "name": "Additive BodyFact ledger and typed API",
-      "state": "in_progress",
-      "next": "ENG-BS-02",
-      "details": "Native BodyFact, Episode, BodyObservation and user BodyHypothesis persistence/API plus native Web/Agent consumers are merged; PR6 A-E legacy BodyState retirement complete. Remaining full BodyState authorization, presentation and privacy acceptance stay open."
+      "state": "ready",
+      "proof": [
+        "apps/api/migrations/000001_vnext_baseline.up.sql",
+        "docs/plan/tickets/v2/BS-OBS-001.md",
+        "docs/plan/tickets/v2/BS-HYP-001.md"
+      ],
+      "details": "Native BodyFact/Episode/Observation/Hypothesis ledger with typed API; verified at da14c3435."
     },
     {
       "id": "F-CONTRACT",
       "name": "Canonical domain-to-view-model handoff",
-      "state": "in_progress",
-      "next": "DS-BASE-01",
-      "details": "Generated native records/observations/hypotheses/Episode and Safety restriction contracts are live; EquipmentAsset is separate. Full target Diagnosis, singleton Chat, Trainer and shared UserAsset contracts/acceptance remain open."
+      "state": "ready",
+      "proof": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "docs/plan/tickets/v2/DX-001.md",
+        "docs/plan/tickets/v2/INT-001.md"
+      ],
+      "details": "Generated contracts verified by pnpm contracts:verify inside pnpm verify:release at da14c3435."
     },
     {
       "id": "F-PENPOT",
       "name": "Editable UI source and flow inventory",
-      "state": "in_progress",
+      "state": "blocked",
       "next": "PD-BASE-01",
-      "details": "Design/React foundations integrated in #255 and native V2 Web reads in #288. Complete V2 editable Penpot/Viewer acceptance is not recorded."
+      "details": "Implementation follows the Penpot boards (UI-001, UI-DX-001, UI-TP-001, window dock #382/#384). Awaiting the user's visual sign-off Q-19; never marked ready without it."
     },
     {
       "id": "F-ACCEPTANCE",
       "name": "Per-domain executable integration matrix",
-      "state": "in_progress",
-      "next": "IR-BASE-01",
-      "details": "PR6 complete; #298 records full Chromium 25/25 zero retries/skips at post-C runtime source, and exact main CI passes. Remaining domain-wide QA and final visual acceptance are open."
+      "state": "ready",
+      "proof": ["docs/plan/tickets/v2/QA-001.md", "playwright.qa.config.ts"],
+      "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
     },
     {
       "id": "F-RELEASE",
       "name": "V2 release qualification",
-      "state": "not_started",
+      "state": "blocked",
       "next": "IR-FINAL-01",
-      "details": "Exact main candidate built successfully; mutable staging promotion skipped by V2 gate. Whole V2 release qualification remains not started; production deployment not verified here."
+      "details": "Candidate main da14c3435ea3b70bd63bb3a845519722b40a159f. pnpm release:v2:dry-run passes local preconditions; awaiting the user's F-PENPOT Q-19 and human approvals A1 staging wipe, A2 production wipe, A3 canary promote (REL-001 #317). No staging or production action taken."
     }
   ],
   "domains": [
@@ -83,29 +91,50 @@
           ]
         },
         "view_model": {
-          "state": "in_progress",
-          "next": "DS-BS-01",
-          "details": "Native Fact/Observation/Episode/user-Hypothesis/derived ConcernGroup contracts exist; Web and Agent consume source/owner/revision-pinned native reads. Remaining full Hypothesis/ConcernGroup presentation, Episode reorganization and final contract acceptance are open."
+          "state": "ready",
+          "proof": [
+            "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+            "docs/plan/tickets/v2/BS-HYP-001.md",
+            "docs/plan/tickets/v2/BS-AGENT-001.md"
+          ],
+          "details": "Native Fact/Observation/Episode/user-Hypothesis/derived ConcernGroup and source-cited suggestion contracts (#320, #347, #372)."
         },
         "database": {
-          "state": "in_progress",
-          "next": "DS-BS-02",
-          "details": "PR279 consolidated v1-v12 into one 000001_vnext_baseline under the approved big-bang reset. PR283 adds user hypotheses; PR294-296 native restrictions/resolutions; PR297 removes legacy fact/observation/evidence and Safety JSON. PG18 baseline/recovery CI passes at the current main. Remaining complete-domain schema acceptance is open; do not restart additive v11/v12 migrations or legacy retirement."
+          "state": "ready",
+          "proof": [
+            "apps/api/migrations/000001_vnext_baseline.up.sql",
+            "docs/refactor/vnext/schema/database-schema.json",
+            "docs/plan/tickets/v2/BS-OBS-001.md"
+          ],
+          "details": "Single 000001_vnext_baseline; BodyState ledger, hypotheses and suggestion commits validated by migration/domain validators on PG18 at da14c3435."
         },
         "design": {
-          "state": "in_progress",
-          "next": "PD-BS-01",
-          "details": "Design/React baseline merged through #255 and native consumer UI through #288. Final editable Penpot, Episode and Hypothesis/ConcernGroup interaction acceptance remain open."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/UI-001.md",
+            "apps/web/e2e/person-records-penpot.spec.ts",
+            "apps/web/e2e/body-state-suggestion.spec.ts"
+          ],
+          "details": "Penpot Person records, Episode/Hypothesis/ConcernGroup and suggestion card implemented (#330 #331 #380 #381 #379). Final visual acceptance is F-PENPOT Q-19 (user)."
         },
         "engineering": {
-          "state": "in_progress",
-          "next": "ENG-BS-02",
-          "details": "PR6 A-E COMPLETE/MERGED through #298: source-bound native writers, Agent/Web reads, analysis audit evidence, independent Safety restrictions/resolutions and legacy persistence/API removal. This bounded retirement is done; remaining source-authorized Agent actions and full target BodyState/visual acceptance are separate work."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/BS-OBS-001.md",
+            "docs/plan/tickets/v2/BS-HYP-001.md",
+            "docs/plan/tickets/v2/BS-AGENT-001.md"
+          ],
+          "details": "Source-bound writers, Go-committed AI suggestions with receipts (#347 #372 #379)."
         },
         "integration": {
-          "state": "in_progress",
-          "next": "IR-BS-01",
-          "details": "PR6 A-E COMPLETE/MERGED. #298 records post-C full Chromium 25/25 zero skips/retries, retired-schema/route checks and native Safety/recovery paths. Exact main af3e1993b CI including PG18 baseline/recovery/browser SUCCESS. Complete domain design/integration sign-off and staging/production remain open."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/QA-001.md",
+            "apps/web/e2e/ask-user-body-facts.spec.ts",
+            "apps/web/e2e/body-fact-records.spec.ts",
+            "apps/web/e2e/body-hypotheses-ui.spec.ts"
+          ],
+          "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
         }
       }
     },
@@ -123,29 +152,50 @@
           ]
         },
         "view_model": {
-          "state": "in_progress",
-          "next": "DS-PC-01",
-          "details": "Existing canonical answer and stream contracts now support original-Run sequenced continuation and a replacement composer. Singleton Conversation and retention projection still pending."
+          "state": "ready",
+          "proof": [
+            "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+            "docs/plan/tickets/v2/PC-001.md",
+            "docs/plan/tickets/v2/AS-001.md"
+          ],
+          "details": "Singleton GET /conversation, serial Run per user, Profile replacement under expected_revision (#321 #374)."
         },
         "database": {
-          "state": "in_progress",
-          "next": "DS-PC-01",
-          "details": "Accepted-answer resume/source receipts are consolidated into the single baseline. Read-only singleton preflight seam PR266 exists; unique Conversation owner constraint, serialized creation/runtime admission and full retention remain pending."
+          "state": "ready",
+          "proof": [
+            "apps/api/migrations/000001_vnext_baseline.up.sql",
+            "docs/refactor/vnext/schema/database-schema.json",
+            "docs/plan/tickets/v2/PC-RET-001.md"
+          ],
+          "details": "One live conversation per owner + one active Run per user; three-cursor retention (#321 #343)."
         },
         "design": {
-          "state": "in_progress",
-          "next": "PD-PC-01",
-          "details": "Shared AskUserCard replaces ordinary input; retry/draft, all fields, accessibility and 390px light/dark canvas styles tested/inspected. Editable Penpot single-session and complete Chat theme parity remain open."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/UI-001.md",
+            "apps/web/e2e/person-identity-profile.spec.ts",
+            "apps/web/e2e/desktop-window-dock.spec.ts"
+          ],
+          "details": "Light Penpot chat thread, identity popover, Penpot window dock (#380 #374 #382 #384). Final visual acceptance is F-PENPOT Q-19 (user)."
         },
         "engineering": {
-          "state": "in_progress",
-          "next": "ENG-PC-01",
-          "details": "Same-Run Ask User and true source-bound receipts/UI implemented; PR266 singleton reader has no runtime caller and PR267 share-retirement gate remains opt-in. Singleton runtime, retention and complete sharing retirement remain pending."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/PC-001.md",
+            "docs/plan/tickets/v2/PC-RET-001.md",
+            "docs/security/chat-retention-evidence-scope.md"
+          ],
+          "details": "Controlled prune, verified checkpoint cleanup, cited-only deletion scope, share retirement (#343 #354 #355 #368)."
         },
         "integration": {
-          "state": "in_progress",
-          "next": "IR-PC-01",
-          "details": "Actual native LangGraph checkpoint test plus four real-server browser paths cover reload/answer/negative/forged/foreign/cancel/retry/mobile. No singleton Chat or complete retention acceptance claimed."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/QA-001.md",
+            "apps/web/e2e/chat-retention-window.spec.ts",
+            "apps/web/e2e/consultation-runtime-recovery.spec.ts",
+            "apps/web/e2e/legacy-share-retired.spec.ts"
+          ],
+          "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
         }
       }
     },
@@ -163,47 +213,49 @@
           ]
         },
         "view_model": {
-          "state": "not_started",
-          "next": "DS-DX-01",
-          "details": "DS-DX-01 contract candidate exists, not accepted/generated ConditionEntry decision API. PR286/290/291 migrated current diagnosis readers and analysis audit to native V2 evidence; target ConditionEntry/exact proposal workflow remains pending."
+          "state": "ready",
+          "proof": [
+            "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+            "docs/plan/tickets/v2/DX-002.md",
+            "docs/plan/tickets/v2/DX-003.md"
+          ],
+          "details": "Native Diagnosis projection, run/proposal/decision/settlement receipts, ConditionEntry freshness (#336-#338 #345 #366)."
         },
         "database": {
-          "state": "in_progress",
-          "next": "DS-DX-01",
-          "details": "Singleton Diagnosis, typed ConditionEntry evidence and immutable decisions/revisions are merged (#322/#332); settlement receipts, exact relations and disposition audit are merged in #334. Legacy candidate-assessment retirement is still pending; this gate is not ready.",
-          "boundedEvidence": {
-            "pullRequest": 334,
-            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
-            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
-          }
+          "state": "ready",
+          "proof": [
+            "apps/api/migrations/000001_vnext_baseline.up.sql",
+            "docs/refactor/vnext/schema/database-schema.json",
+            "docs/plan/tickets/v2/DX-RETIRE-001.md"
+          ],
+          "details": "Native Diagnosis tables only; legacy analysis/candidate stack deleted (#359 #365)."
         },
         "design": {
-          "state": "in_progress",
-          "next": "PD-DX-01",
-          "details": "Existing Diagnosis window visual baseline; precise confirmation and Q-19 review pending"
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/UI-DX-001.md",
+            "apps/web/e2e/diagnosis-decision-window.spec.ts",
+            "apps/web/e2e/diagnosis-history-review.spec.ts"
+          ],
+          "details": "Penpot Diagnosis states, History, review prompt, 390px (#350 #351 #375). Final visual acceptance is F-PENPOT Q-19 (user)."
         },
         "engineering": {
-          "state": "in_progress",
-          "next": "ENG-DX-01",
-          "details": "Go decision recording and whole-run atomic settlement are implemented (#332/#334). Create/update/disposition/relation, pending/no-op, Safety, exact source recheck and transaction failure paths have native PG18 tests. Public read/decide/settle and Agent/UI wiring remain.",
-          "boundedEvidence": {
-            "pullRequest": 334,
-            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
-            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
-          }
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/DX-002.md",
+            "docs/plan/tickets/v2/DX-003.md",
+            "docs/plan/tickets/v2/DX-RETIRE-001.md"
+          ],
+          "details": "Go-owned adoption only from user decisions with receipts; Safety interruption zero-commit (#334 #337 #353)."
         },
         "integration": {
-          "state": "in_progress",
-          "next": "IR-DX-01",
-          "details": "Exact-head #334 PostgreSQL migration/recovery, broad Go race and Browser CI passed. Real native Diagnosis public-API/Agent/UI acceptance matrix is not complete; no whole-domain integration acceptance.",
-          "boundedEvidence": {
-            "pullRequest": 334,
-            "acceptedHead": "18e56eb1b9c53a93784c207fe3eb7558f4bfef00",
-            "mergeSha": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-            "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39019387899"
-          }
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/QA-001.md",
+            "apps/web/e2e/diagnosis-decision-window.spec.ts",
+            "apps/web/e2e/diagnosis-history-review.spec.ts"
+          ],
+          "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
         }
       }
     },
@@ -225,29 +277,50 @@
           ]
         },
         "view_model": {
-          "state": "in_progress",
-          "next": "DS-TP-01",
-          "details": "Native Safety restriction list and exact source-bound per-restriction resolution DTOs are implemented in PR294-296. Independent PlanProposal/Trainer session and action/gate projections remain target work."
+          "state": "ready",
+          "proof": [
+            "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+            "docs/plan/tickets/v2/TP-002.md",
+            "docs/plan/tickets/v2/TP-003.md"
+          ],
+          "details": "Plan records/revisions/proposals and Trainer session/set-action receipts (#344 #352 #357 #358)."
         },
         "database": {
-          "state": "in_progress",
-          "next": "DS-TP-01",
-          "details": "Native safety_restrictions/safety_resolutions are in the single baseline and old Safety JSON is removed. Independent TrainingPlan/Trainer persistence and live multi-active activation remain pending."
+          "state": "ready",
+          "proof": [
+            "apps/api/migrations/000001_vnext_baseline.up.sql",
+            "docs/refactor/vnext/schema/database-schema.json",
+            "docs/plan/tickets/v2/TP-003.md"
+          ],
+          "details": "training_plans/revisions/proposals, training_sessions/set_actions; Treatment and training_logs removed (#348 #360)."
         },
         "design": {
-          "state": "in_progress",
-          "next": "PD-TP-01",
-          "details": "Existing training window prototypes; proposal/execution/safety semantics not accepted"
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/UI-TP-001.md",
+            "apps/web/e2e/training-plan-window.spec.ts",
+            "apps/web/e2e/trainer-window.spec.ts"
+          ],
+          "details": "Penpot TrainingPlan/Trainer windows and Safety/Restricted view (#363 #364 #369 #378). Final visual acceptance is F-PENPOT Q-19 (user)."
         },
         "engineering": {
-          "state": "in_progress",
-          "next": "ENG-TP-01",
-          "details": "Native Go-owned restriction recording, exact clearance and fail-closed consumer cutover complete in PR294-296. Multi-active compatibility remains dormant; proposal policy PR274 is OPEN/BEHIND, not integrated. Complete PlanProposal/Trainer workflow remains pending."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/TP-001.md",
+            "docs/plan/tickets/v2/TP-002.md",
+            "docs/plan/tickets/v2/TP-003.md"
+          ],
+          "details": "Restriction-specific fail-closed Safety, pure TrainerGate on exact revision, plans never auto-modified (#319 #325 #352)."
         },
         "integration": {
-          "state": "in_progress",
-          "next": "IR-TP-01",
-          "details": "PR6 native Safety browser/PG18 coverage is accepted; PR298 records full suite 25/25. This is not complete TrainingPlan/Trainer action, lifecycle or design acceptance."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/QA-001.md",
+            "apps/web/e2e/symptom-safety-intake.spec.ts",
+            "apps/web/e2e/training-plan-window.spec.ts",
+            "apps/web/e2e/trainer-window.spec.ts"
+          ],
+          "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
         }
       }
     },
@@ -265,29 +338,49 @@
           ]
         },
         "view_model": {
-          "state": "in_progress",
-          "next": "DS-ASSET-01",
-          "details": "EquipmentAsset generated owner-scoped list/create/update contracts and Person UI implemented in PR285. Shared UserAsset admission/removal/verified-erasure projections remain pending."
+          "state": "ready",
+          "proof": [
+            "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+            "docs/plan/tickets/v2/AS-001.md",
+            "docs/plan/tickets/v2/AS-002.md"
+          ],
+          "details": "user_assets identity, source removal, asset/statement erasure receipts (#327 #362 #371)."
         },
         "database": {
-          "state": "in_progress",
-          "next": "DS-ASSET-01",
-          "details": "equipment_assets is persisted independently from BodyState in the single baseline (PR285). Full UserAsset/source/controlled-copy deletion storage remains pending."
+          "state": "ready",
+          "proof": [
+            "apps/api/migrations/000001_vnext_baseline.up.sql",
+            "docs/refactor/vnext/schema/database-schema.json",
+            "docs/plan/tickets/v2/AS-002.md"
+          ],
+          "details": "Controlled-copy inventory and multi-step erasure state machine (#362 #367)."
         },
         "design": {
-          "state": "in_progress",
-          "next": "PD-ASSET-01",
-          "details": "Existing Person tabs; source availability and distinct deletion confirmations not accepted"
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/AS-002.md",
+            "apps/web/e2e/asset-erasure.spec.ts",
+            "apps/web/e2e/statement-erasure.spec.ts"
+          ],
+          "details": "Upload deletion and statement erasure flows (#376 #377). Final visual acceptance is F-PENPOT Q-19 (user)."
         },
         "engineering": {
-          "state": "in_progress",
-          "next": "ENG-ASSET-01",
-          "details": "Person Equipment uses the real EquipmentAsset API; usable equipment enters frozen Agent input (PR285/287). Media/Reports/shared UserAsset admission and verified controlled-copy erasure remain pending."
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/AS-001.md",
+            "docs/plan/tickets/v2/AS-002.md",
+            "docs/security/privacy-erasure-retention.md"
+          ],
+          "details": "Nothing is reported erased before every target verifies; checkpoint hook verified (#362 #367 #371 #376)."
         },
         "integration": {
-          "state": "not_started",
-          "next": "IR-ASSET-01",
-          "details": "No target source-erasure E2E"
+          "state": "ready",
+          "proof": [
+            "docs/plan/tickets/v2/QA-001.md",
+            "apps/web/e2e/asset-erasure.spec.ts",
+            "apps/web/e2e/statement-erasure.spec.ts"
+          ],
+          "details": "QA-001 exact-SHA matrix on main da14c3435: Go race 18 packages and 156 PG18 integration tests, PG18 schema/recovery/DR validators, ai pytest 787 and 7 evals, web vitest 613/613, pnpm verify:release PASS; Chromium 53 tests at 1440 and at 390 with --retries=0 including the API-restart test (environmental failures re-run in isolation, desktop-only specs pinned); main CI green."
         }
       }
     }
@@ -578,8 +671,55 @@
       ]
     }
   ],
-  "updatedAtUtc": "Mon 2026-10-19 12:04 AM CST (UTC+08:00)",
+  "updatedAtUtc": "2026-10-19T05:11:46Z",
   "latestExecution": {
+    "owner": "Hark V2 final closeout (QA-001 #316); user request 2026-10-18",
+    "baselineHead": "da14c3435ea3b70bd63bb3a845519722b40a159f",
+    "previousBaselineHead": "f2e52c79ccadc4a868650ac43f02469ff13bc542",
+    "state": "V2_IMPLEMENTATION_COMPLETE;all_domain_gates_ready_with_proof;F-PENPOT_awaiting_user_Q-19;release_awaiting_user_A1_A2_A3",
+    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
+    "activeTickets": [],
+    "nextTickets": ["REL-001"],
+    "qa": {
+      "ticket": "QA-001",
+      "issue": 316,
+      "candidateSha": "da14c3435ea3b70bd63bb3a845519722b40a159f",
+      "evidence": "docs/plan/tickets/v2/QA-001.md",
+      "matrix": {
+        "goRacePackages": 18,
+        "goPg18Tests": 156,
+        "aiPytest": 787,
+        "aiEvals": 7,
+        "webVitest": "613/613",
+        "verifyRelease": "PASS (MIN_FREE_GIB=1)",
+        "e2e1440": "49/53 + 4/4 isolated re-run",
+        "e2e390": "50/53 + desktop-only pins 4/4",
+        "apiRestart": "pass at 1440 and 390",
+        "dryRun": "failures=0",
+        "ci": "https://github.com/BakerSean168/BodySense/actions/runs/39194970618"
+      },
+      "ciRun": "https://github.com/BakerSean168/BodySense/actions/runs/39194970618",
+      "ciStatus": "success (CI push run, all jobs green)",
+      "fixesMerged": {
+        "385": "465e470c04ef557b5106b05bc8377cab32bb4794",
+        "386": "26b9c5850d35e0bf994fbc8bc11d89e78d4ab068",
+        "387": "ba942ccd8bd636da484d86ea88b668d6e96b32bf",
+        "388": "da14c3435ea3b70bd63bb3a845519722b40a159f"
+      }
+    },
+    "awaitingUser": [
+      "F-PENPOT: visual sign-off Q-19 and final V2 acceptance",
+      "REL-001 A1: staging wipe",
+      "REL-001 A2: production wipe",
+      "REL-001 A3: canary promote"
+    ],
+    "closedIssues": "#302-#315 #323 #341 and #316 (QA-001); #317 REL-001 stays open for the user's approvals",
+    "operations": "No staging/production DB, deployment or scheduler change.",
+    "auditedAtUtc": "2026-10-19T05:11:46Z",
+    "executionMode": "HARK_FINAL_CLOSEOUT",
+    "schedulerState": "user_paused_do_not_reenable_without_explicit_request"
+  },
+  "previousExecution": {
     "owner": "Hark parallel-lane implementation; user request 2026-10-17",
     "baselineHead": "f2e52c79ccadc4a868650ac43f02469ff13bc542",
     "previousBaselineHead": "3dd993a023c50a0de82c8602a179f09e0338d547",
@@ -612,42 +752,6 @@
       "operations": "No staging/production DB, deployment or scheduler change."
     },
     "auditedAtUtc": "Mon 2026-10-19 12:04 AM CST (UTC+08:00)",
-    "executionMode": "HARK_PARALLEL_LANES",
-    "schedulerState": "user_paused_do_not_reenable_without_explicit_request"
-  },
-  "previousExecution": {
-    "owner": "Hark parallel-lane implementation; user request 2026-10-17",
-    "baselineHead": "1abcc9f1634bb6039e00c6f9654817118ae5cf4c",
-    "previousBaselineHead": "74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0",
-    "state": "HARK_PARALLEL_LANES;max_4_writers;DX-002_ticket_closed_legacy_retirement_moved_to_DX-RETIRE-001;no_domain_gate_raised;scheduler_user_paused;release_HOLD",
-    "contract": "docs/plan/active/2026-10-16-v2-remaining-plan.md",
-    "lanes": {
-      "docs": "phase-0 sync; sole editor of docs/plan/**",
-      "A": "Diagnosis: DX-003 #310 -> UI-DX-001 #312 -> DX-RETIRE-001 #341",
-      "B": "Training: TP-002 #311 -> TP-003 #313 -> UI-TP-001 #315",
-      "C": "Interleaved: PC-RET-001 #307, BS-AGENT-001 #308, AS-001 #306 -> AS-002 #314, UI-001 #309"
-    },
-    "activeTickets": ["DX-003", "TP-002", "PC-RET-001"],
-    "nextTickets": [
-      "DX-003",
-      "TP-002",
-      "PC-RET-001",
-      "BS-AGENT-001",
-      "AS-001",
-      "UI-001",
-      "UI-DX-001",
-      "TP-003",
-      "DX-RETIRE-001",
-      "QA-001"
-    ],
-    "verification": {
-      "mergedEvidence": "PR322:0dfc2454e2fd251666d56cf252ef217e24b5950b;PR324:6456d52dbf5b0be14dc37a7ee5d499bd36b0c96d;PR325:51b6380fec608fe65a5feca554941fc88cc3731b;PR326:76aa8d22759de7f9eea2db8bcce79b68c2f970ed;PR327:b82a384b7189747e7a2ea2b5cf35f4f311a4545c;PR330:ebf9a1f19a7c2c1ed9f88ce09ae35b87fb5dba48;PR331:165cc8f112670fecc4233fb939ff25e44dbe6eb0;PR332:391f3e5151d0b68330a45032c2e726802bfb56f8;PR334:74b19b19b7ef9c09eba3a4466c6bf3f670c99dd0;PR336:9b48396e20cbc642917c6eaea8e5f60204304eb6;PR337:92840114a543528661b732e76b4c1e881c0f7a33;PR338:425ee88042798e401f166583e09def1ef025b291;PR339:3a055040cb406b2f7662c831c10c7d9217952f2c;PR340:1abcc9f1634bb6039e00c6f9654817118ae5cf4c",
-      "closedIssues": "#302 #303 #304 #305 #323",
-      "readiness": "No whole-domain gate raised. DX-001/DX-002 are closed as tickets only; #306/#309/#311 remain open for residual scope; legacy Diagnosis retirement is #341.",
-      "statusRule": "GitHub issue checkboxes are the live status; docs/plan and queue.json are synced per domain closeout, not per slice.",
-      "operations": "No staging/production DB, deployment or scheduler change."
-    },
-    "auditedAtUtc": "Sat 2026-10-17 10:30 PM CST (UTC+08:00)",
     "executionMode": "HARK_PARALLEL_LANES",
     "schedulerState": "user_paused_do_not_reenable_without_explicit_request"
   },

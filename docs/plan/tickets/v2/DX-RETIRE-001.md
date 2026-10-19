@@ -1,8 +1,18 @@
 # DX-RETIRE-001 · Delete legacy candidate assessment / diagnosis_analyses / diagnosis_candidates paths
 
-Status: QUEUED (slice 3 ai) · lane A · slices 1–2 merged in #356 #359 (last merge `3dd993a02`). Phase 3. SF cross-reference: SF-40.
+Status: DONE (ticket, 2026-10-19) · #356, #359, #365 merged, last merge `e5033aa91`. Issue #341 closed. Domain gates raised at the V2 final closeout with QA-001 evidence.
 **Owner role:** Diagnosis Retirement Owner. **Dependencies:** `DX-003`, `UI-DX-001`.
 **Exclusive resources:** `diagnosis-legacy`, plus the shared hotspots `database-migrations` and `public-openapi` (rebase rule).
+
+## Final closeout · 2026-10-19
+
+Synced on main `da14c3435`. [#341](https://github.com/BakerSean168/BodySense/issues/341) is closed with every scope checkbox ticked.
+
+Merged: [#356](https://github.com/BakerSean168/BodySense/pull/356) (`28398ddd6`), [#359](https://github.com/BakerSean168/BodySense/pull/359) (`3dd993a02`), [#365](https://github.com/BakerSean168/BodySense/pull/365) (`e5033aa91`).
+
+legacy web consumers (#356), legacy api analysis/candidate/freshness stack (#359), legacy ai candidate readers (#365).
+
+Cross-domain re-verification: [QA-001](./QA-001.md) on main `da14c3435`.
 
 ## Domain closeout · 2026-10-18
 

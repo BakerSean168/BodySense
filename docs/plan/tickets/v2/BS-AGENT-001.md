@@ -1,8 +1,18 @@
 # BS-AGENT-001 · Connect source-bound AI suggestions to Go decisions
 
-Status: QUEUED (slices 2–3) · lane C · slice 1 merged in #347 (`d0037a291`). Phase 2. SF cross-reference: SF-12/SF-20.
+Status: DONE (ticket, 2026-10-19) · #347, #372, #379 merged, last merge `b93c9fb9d`. Issue #308 closed. Domain gates raised at the V2 final closeout with QA-001 evidence.
 **Owner role:** Go/Python Owner. **Dependencies:** `BS-OBS-001`, `BS-HYP-001`.
 **Exclusive resources:** `agent-tools`, `public-openapi`.
+
+## Final closeout · 2026-10-19
+
+Synced on main `da14c3435`. [#308](https://github.com/BakerSean168/BodySense/issues/308) is closed with every scope checkbox ticked.
+
+Merged: [#347](https://github.com/BakerSean168/BodySense/pull/347) (`d0037a291`), [#372](https://github.com/BakerSean168/BodySense/pull/372) (`dff4bf4f0`), [#379](https://github.com/BakerSean168/BodySense/pull/379) (`b93c9fb9d`).
+
+source-bound hypothesis suggestion validator/committer (#347), typed suggestion + observation/episode commit + ai emission with bounded retry (#372), web confirmation card saved only from Go's receipt + Chromium E2E (#379).
+
+Cross-domain re-verification: [QA-001](./QA-001.md) on main `da14c3435`.
 
 ## Domain closeout · 2026-10-18
 
