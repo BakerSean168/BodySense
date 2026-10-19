@@ -575,6 +575,113 @@ describe("body-first business windows", () => {
     expect(uploadFile).toHaveBeenLastCalledWith(file, "report");
   });
 
+  it("shows Person Media as a Penpot thumbnail grid grouped by month", async () => {
+    const at = (month: number, day: number) =>
+      new Date(new Date().getFullYear(), month, day, 10).toISOString();
+    const base = {
+      file_type: "consultation_photo",
+      file_size: 2_100_000,
+      mime_type: "image/jpeg",
+      ocr_status: "pending",
+      ocr_result: null,
+      analysis_status: "none",
+      source_availability: "available",
+      updated_at: at(0, 1),
+    };
+    const uploads = [
+      { ...base, id: "m1", original_name: "侧面.jpg", created_at: at(1, 3) },
+      {
+        ...base,
+        id: "m2",
+        original_name: "深蹲.mp4",
+        mime_type: "video/mp4",
+        created_at: at(2, 9),
+      },
+      {
+        ...base,
+        id: "m3",
+        original_name: "正面.jpg",
+        analysis_status: "processing",
+        created_at: at(2, 8),
+      },
+      {
+        ...base,
+        id: "m4",
+        original_name: "背面.jpg",
+        analysis_status: "failed",
+        created_at: at(2, 7),
+      },
+      {
+        ...base,
+        id: "r1",
+        file_type: "report",
+        original_name: "体检.pdf",
+        created_at: at(2, 6),
+      },
+    ];
+    useUploadStore.setState({ uploads } as never);
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "media",
+    );
+    expect(await screen.findByText("4 个")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "上传照片" })).toBeEnabled();
+    const months = within(screen.getByTestId("person-window")).getAllByRole(
+      "heading",
+      { level: 3 },
+    );
+    expect(months.map((h) => h.textContent)).toEqual(["3月", "2月"]);
+    const march = within(
+      screen.getByRole("region", { name: "3月" }),
+    ).getAllByTestId("person-media-tile");
+    expect(march.map((tile) => tile.dataset.state)).toEqual([
+      "ready",
+      "processing",
+      "failed",
+    ]);
+    expect(march[0]).toHaveAttribute("data-kind", "video");
+    expect(within(march[0]).getByText("视频")).toBeInTheDocument();
+    expect(within(march[1]).getByText("处理中…")).toBeInTheDocument();
+    expect(within(march[2]).getByText("处理失败")).toBeInTheDocument();
+    expect(within(march[0]).getByText("2.0 MB · 3月9日")).toBeInTheDocument();
+    // Reports stay out of Media; the manifest has no duration, so none shows.
+    expect(screen.queryByText("体检.pdf")).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d:\d\d/)).not.toBeInTheDocument();
+  });
+
+  it("collapses Person Media to the first rows behind 查看全部", async () => {
+    const uploads = Array.from({ length: 10 }, (_, i) => ({
+      id: `m${i}`,
+      file_type: "consultation_photo",
+      original_name: `照片${i}.jpg`,
+      file_size: 1_000_000,
+      mime_type: "image/jpeg",
+      ocr_status: "pending",
+      ocr_result: null,
+      analysis_status: "none",
+      source_availability: "available",
+      created_at: new Date(Date.now() - i * 86_400_000).toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+    useUploadStore.setState({ uploads } as never);
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "media",
+    );
+    expect(await screen.findAllByTestId("person-media-tile")).toHaveLength(8);
+    const more = screen.getByRole("button", { name: "查看全部 10 个" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(more);
+    expect(screen.getAllByTestId("person-media-tile")).toHaveLength(10);
+    expect(screen.queryByRole("button", { name: /查看全部/ })).toBeNull();
+  });
+
   it("shows a centred equipment empty state with a single add action", async () => {
     renderPage();
     await openDock("个人档案");

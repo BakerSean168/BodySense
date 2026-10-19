@@ -61,6 +61,8 @@ export interface ProfileUploadLike {
   ocr_status: string;
   analysis_status: string;
   created_at: string;
+  /** CD-D4: source_unavailable once the private original was removed. */
+  source_availability?: "available" | "source_unavailable";
 }
 
 export function selectUploadsByCategory<T extends ProfileUploadLike>(

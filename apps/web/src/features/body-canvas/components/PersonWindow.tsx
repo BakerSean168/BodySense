@@ -7,10 +7,13 @@ import {
   Image as ImageIcon,
   LoaderCircle,
   Plus,
+  RotateCcw,
   Backpack,
   LogOut,
   Settings,
+  Upload,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,6 +46,7 @@ import {
 } from "../model/profileCategories";
 import { usePersonWindowData } from "../hooks/usePersonWindowData";
 import { PersonIdentityPopover } from "./PersonIdentityPopover";
+import { PersonMediaGrid } from "./PersonMediaGrid";
 import { useUploadStore } from "@/stores/uploadStore";
 
 /**
@@ -542,15 +546,21 @@ function EquipmentCategory({
 function UploadsCategory({
   uploads,
   category,
+  mobile = false,
 }: {
   uploads: readonly ProfileUploadLike[];
   category: "media" | "reports";
+  mobile?: boolean;
 }) {
   const items = selectUploadsByCategory(uploads, category);
   const uploadFile = useUploadStore((state) => state.uploadFile);
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{
+    name: string;
+    size: number;
+    at: Date;
+  } | null>(null);
   const label = category === "reports" ? "上传报告" : "上传照片";
   // Penpot "Media · Upload failed" keeps the file name and offers a retry.
   const lastFile = useRef<File | null>(null);
@@ -565,7 +575,7 @@ function UploadsCategory({
       );
       lastFile.current = null;
     } catch {
-      setFailed(file.name);
+      setFailed({ name: file.name, size: file.size, at: new Date() });
     } finally {
       setUploading(false);
     }
@@ -592,14 +602,45 @@ function UploadsCategory({
       正在上传…
     </p>
   ) : failed ? (
-    <div role="alert" className="bc-person-upload-status bc-error">
-      <span>“{failed}”没有上传成功。</span>
+    // Penpot "Media · Upload failed": a pink row above the grid with the
+    // file, 上传失败, retry and dismiss.
+    <div role="alert" className="bc-person-upload-failed">
+      <span className="bc-person-upload-failed-thumb" aria-hidden="true" />
+      <span className="bc-person-upload-failed-text">
+        <strong>{failed.name}</strong>
+        <span>
+          {formatFileSize(failed.size)} ·{" "}
+          {failed.at.toLocaleString("zh-CN", {
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </span>
+      <span className="bc-person-upload-failed-chip">
+        上传失败
+      </span>
       <button
         type="button"
-        className="bc-text-button"
+        className="bc-icon-button"
+        aria-label="重试"
+        title="重试"
         onClick={() => lastFile.current && void send(lastFile.current)}
       >
-        重试
+        <RotateCcw size={17} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="bc-icon-button"
+        aria-label="关闭失败提示"
+        title="关闭"
+        onClick={() => {
+          setFailed(null);
+          lastFile.current = null;
+        }}
+      >
+        <X size={17} aria-hidden="true" />
       </button>
     </div>
   ) : null;
@@ -633,30 +674,41 @@ function UploadsCategory({
     <>
       {picker}
       <div className="bc-person-uploads-head">
-        <span>已上传 {items.length} 个</span>
+        <span>
+          {category === "media"
+            ? `${items.length} 个`
+            : `已上传 ${items.length} 个`}
+        </span>
         <button
           type="button"
-          className="bc-person-add"
+          className="bc-person-upload"
           aria-label={label}
           title={label}
           onClick={open}
           disabled={uploading}
         >
-          <Plus size={17} />
+          <Upload size={17} aria-hidden="true" />
+          <span className="bc-person-upload-text" aria-hidden="true">
+            上传
+          </span>
         </button>
       </div>
       {status}
-      <ul className="bc-person-uploads">
-        {items.map((upload) => (
-          <li key={upload.id}>
-            <strong>{upload.original_name}</strong>
-            <span>
-              {formatFileSize(upload.file_size)} ·{" "}
-              {formatOcrStatus(upload.ocr_status)}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {category === "media" ? (
+        <PersonMediaGrid uploads={items} initialLimit={mobile ? 6 : 8} />
+      ) : (
+        <ul className="bc-person-uploads">
+          {items.map((upload) => (
+            <li key={upload.id}>
+              <strong>{upload.original_name}</strong>
+              <span>
+                {formatFileSize(upload.file_size)} ·{" "}
+                {formatOcrStatus(upload.ocr_status)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }
@@ -729,7 +781,11 @@ export function PersonWindow({
             onAddEquipment={() => setCategory("equipment")}
           />
         ) : category === "media" ? (
-          <UploadsCategory uploads={data.uploads} category="media" />
+          <UploadsCategory
+            uploads={data.uploads}
+            category="media"
+            mobile={mobile}
+          />
         ) : category === "reports" ? (
           <UploadsCategory uploads={data.uploads} category="reports" />
         ) : null}
