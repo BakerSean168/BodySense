@@ -1,106 +1,161 @@
-import type { ReactNode } from "react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+/**
+ * OnboardingLayout: shell for the Penpot "02 Onboarding" boards (Onboarding / Desktop /
+ * Step 01 … 16, 1440×900). White page, 64px header (back ‹, BodySense, section, n/16),
+ * 6px forest-green progress bar, one 620px question column and an optional pill footer.
+ * Penpot has no 390 boards; mobile keeps the same parts with 16/20px insets and a footer
+ * pinned to the bottom of the screen.
+ */
+import { useEffect, useRef, type ReactNode } from "react";
 
 interface OnboardingLayoutProps {
-  children: ReactNode;
-  currentStep: number;
+  stepIndex: number;
   totalSteps: number;
-  onNext: () => void;
+  section: string;
+  title: string;
+  subtitle: string;
   onBack: () => void;
-  onSubmit: () => void;
-  isLoading: boolean;
-  isLastStep: boolean;
-  canProceed: boolean;
+  children: ReactNode;
+  /** Footer contents (继续 / 完成 button or a quiet 跳过); none on choose-to-advance steps. */
+  footer?: ReactNode;
 }
 
 export function OnboardingLayout({
-  children,
-  currentStep,
+  stepIndex,
   totalSteps,
-  onNext,
+  section,
+  title,
+  subtitle,
   onBack,
-  onSubmit,
-  isLoading,
-  isLastStep,
-  canProceed,
+  children,
+  footer,
 }: OnboardingLayoutProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const step = stepIndex + 1;
+  const isFirst = stepIndex === 0;
+
+  // Move focus to the new question so screen readers announce each step.
+  useEffect(() => {
+    if (stepIndex > 0) headingRef.current?.focus({ preventScroll: true });
+  }, [stepIndex]);
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary-50 to-transparent z-0 pointer-events-none" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 pointer-events-none" />
-      <div className="absolute top-1/3 -left-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 z-0 pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary-500/30">
-          <svg
-            className="w-8 h-8 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+    <div
+      data-testid="onboarding-page"
+      data-step={step}
+      className="flex min-h-[100dvh] flex-col bg-white text-[#1A1A1A]"
+    >
+      <header className="mx-4 flex h-14 shrink-0 items-center lg:mx-10 lg:h-16">
+        <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-0">
+          {!isFirst && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="上一步"
+              className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-[#1A1A1A] hover:bg-[#F7F7F7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] lg:-ml-[10px] lg:h-8 lg:w-8"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M10 3.5 5.5 8l4.5 4.5" />
+              </svg>
+            </button>
+          )}
+          <span
+            className={`text-[15px] leading-5 font-bold ${isFirst ? "lg:ml-6" : ""}`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
+            BodySense
+          </span>
         </div>
-        <h1 className="text-center text-3xl font-bold text-slate-900 tracking-tight mb-2">
-          身体档案
+        <span className="text-[13px] leading-[18px] text-[#6B7280]">
+          {section}
+        </span>
+        <span className="flex flex-1 justify-end text-[13px] leading-[18px] text-[#6B7280] tabular-nums">
+          {step}/{totalSteps}
+        </span>
+      </header>
+
+      <div
+        role="progressbar"
+        aria-label="资料填写进度"
+        aria-valuemin={1}
+        aria-valuemax={totalSteps}
+        aria-valuenow={step}
+        aria-valuetext={`第 ${step} 步，共 ${totalSteps} 步`}
+        className="mx-4 mt-1 h-1.5 shrink-0 overflow-hidden rounded-[3px] bg-[#E5E7EB] lg:mx-10 lg:mt-2"
+      >
+        <div
+          data-testid="onboarding-progress-fill"
+          className="h-full rounded-[3px] bg-[#2C694F] motion-safe:transition-[width] motion-safe:duration-300"
+          style={{ width: `${(step / totalSteps) * 100}%` }}
+        />
+      </div>
+
+      <main className="mx-auto flex w-full max-w-[660px] flex-1 flex-col px-5 pt-8 lg:px-5 lg:pt-9">
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          id="onboarding-question"
+          className="text-[22px] leading-[30px] font-bold outline-none lg:text-2xl lg:leading-[33px]"
+        >
+          {title}
         </h1>
-        <p className="text-center text-slate-500 mb-8">
-          完善身体资料，建立可持续更新的健康档案
+        <p
+          id="onboarding-question-hint"
+          className="mt-2 text-sm leading-[19px] text-[#6B7280]"
+        >
+          {subtitle}
         </p>
-      </div>
+        <div className="mt-6 lg:mt-[26px]">{children}</div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Progress bar */}
-        <div className="mb-6 px-4 sm:px-0">
-          <div className="flex justify-between text-sm font-medium text-slate-500 mb-3">
-            <span>
-              步骤 {currentStep + 1} / {totalSteps}
-            </span>
-            <span className="text-primary-600">
-              {Math.round(((currentStep + 1) / totalSteps) * 100)}%
-            </span>
-          </div>
-          <div className="w-full bg-slate-200/60 rounded-full h-2.5 overflow-hidden backdrop-blur-sm">
-            <div
-              className="bg-gradient-to-r from-primary-500 to-indigo-500 h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Content card */}
-        <Card className="py-8 px-6 sm:px-10 shadow-xl border-slate-100/50 bg-white/90 backdrop-blur-md">
-          <div className="min-h-[300px]">{children}</div>
-        </Card>
-
-        {/* Navigation buttons */}
-        <div className="mt-8 flex justify-between px-4 sm:px-0 gap-4">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            disabled={currentStep === 0}
-            className="w-1/3 bg-white"
+        {footer && (
+          <div
+            data-testid="onboarding-footer"
+            className="sticky bottom-0 mt-auto bg-white pt-6 pb-[max(24px,env(safe-area-inset-bottom))] lg:static lg:pt-0 lg:pb-[min(192px,21.33vh)]"
           >
-            上一步
-          </Button>
-
-          <Button
-            onClick={isLastStep ? onSubmit : onNext}
-            disabled={!canProceed || isLoading}
-            isLoading={isLoading}
-            className="w-2/3 shadow-md shadow-primary-500/20"
-          >
-            {isLastStep ? "完成" : "下一步"}
-          </Button>
-        </div>
-      </div>
+            <div className="mt-6 border-t border-[#E5E7EB] pt-3 lg:mt-10">
+              {footer}
+            </div>
+          </div>
+        )}
+      </main>
     </div>
+  );
+}
+
+interface FooterButtonProps {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+export function OnboardingPrimaryButton({ children, onClick, disabled }: FooterButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="h-14 w-full rounded-[28px] bg-[#2C694F] text-base font-bold text-white hover:bg-[#245A43] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+export function OnboardingSkipButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-14 w-full rounded-[28px] text-[15px] text-[#6B7280] hover:bg-[#F7F7F7] hover:text-[#1A1A1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F]"
+    >
+      跳过
+    </button>
   );
 }
