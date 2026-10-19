@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, Clock3, Stethoscope } from "lucide-react";
+import { ChevronDown, List, MessageCircle, Stethoscope } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { ChatHistory } from "../model/chatHistory";
 import { TrainingIcon } from "./TrainingIcon";
 import type { TrainingSelection } from "../model/trainingPlanSelection";
 
@@ -135,7 +141,10 @@ export interface TrainingWindowHeaderProps {
  * a user-accepted revision, so all of the user's plans are offered; an empty
  * list shows the title only, like Diagnosis / Empty.
  */
-export function TrainingWindowHeader({ view, onSelectPlan }: TrainingWindowHeaderProps) {
+export function TrainingWindowHeader({
+  view,
+  onSelectPlan,
+}: TrainingWindowHeaderProps) {
   const title = (separator: boolean) => (
     <>
       <span className="bc-window-context-title">
@@ -150,7 +159,11 @@ export function TrainingWindowHeader({ view, onSelectPlan }: TrainingWindowHeade
     </>
   );
   if (view.plans.length === 0)
-    return <div className="bc-window-context bc-training-context">{title(false)}</div>;
+    return (
+      <div className="bc-window-context bc-training-context">
+        {title(false)}
+      </div>
+    );
   return (
     <div className="bc-window-context bc-training-context">
       {title(true)}
@@ -196,7 +209,11 @@ export function TrainingSafetyHeader() {
 }
 
 /** Penpot "Window / Title Trainer": 训练 / <the session's template>. */
-export function TrainerWindowHeader({ templateTitle }: { templateTitle: string | null }) {
+export function TrainerWindowHeader({
+  templateTitle,
+}: {
+  templateTitle: string | null;
+}) {
   return (
     <div className="bc-window-context bc-training-context">
       <span className="bc-window-context-title">
@@ -208,7 +225,10 @@ export function TrainerWindowHeader({ templateTitle }: { templateTitle: string |
           <span className="bc-window-context-sep" aria-hidden="true">
             /
           </span>
-          <span className="bc-window-select-wrap bc-window-context-mode" data-testid="trainer-template">
+          <span
+            className="bc-window-select-wrap bc-window-context-mode"
+            data-testid="trainer-template"
+          >
             {templateTitle}
           </span>
         </>
@@ -217,37 +237,110 @@ export function TrainerWindowHeader({ templateTitle }: { templateTitle: string |
   );
 }
 
-function localClockLabel(time: Date): string {
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(time);
-}
-
-/** The time is labelled as a live local clock, never misrepresented as message creation time. */
-export function ChatWindowHeader({ now: override }: { now?: Date }) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    if (override) return;
-    const ticker = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(ticker);
-  }, [override]);
-  const time = override ?? now;
-
+/**
+ * Penpot "Window / Title Chat": 💬 对话 / 今天 ▾. The picker lists the days the
+ * user actually wrote something in their single Conversation; choosing one
+ * scrolls the thread there. With no earlier day it reads 今天 without a menu.
+ */
+export function ChatWindowHeader({
+  history,
+  selectedDay,
+  onSelectDay,
+}: {
+  history?: ChatHistory;
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
+}) {
+  const todayKey = history?.todayKey ?? "";
+  const earlier = (history?.days ?? []).filter((day) => day.day !== todayKey);
+  const title = (
+    <>
+      <span className="bc-window-context-title bc-chat-context-title">
+        <MessageCircle size={18} aria-hidden="true" />
+        对话
+      </span>
+      <span className="bc-window-context-sep" aria-hidden="true">
+        /
+      </span>
+    </>
+  );
+  if (!history || earlier.length === 0 || !onSelectDay)
+    return (
+      <div className="bc-window-context bc-chat-context">
+        {title}
+        <span
+          className="bc-window-select-wrap bc-window-context-mode"
+          data-testid="chat-day"
+        >
+          今天
+        </span>
+      </div>
+    );
   return (
     <div className="bc-window-context bc-chat-context">
-      <strong className="bc-chat-context-title">对话</strong>
-      <time
-        className="bc-chat-context-time"
-        dateTime={time.toISOString()}
-        aria-label={`当前本地时间 ${localClockLabel(time)}`}
-      >
-        <Clock3 size={13} aria-hidden="true" />
-        {localClockLabel(time)}
-      </time>
+      {title}
+      <span className="bc-window-select-wrap">
+        <select
+          className="bc-window-context-select"
+          aria-label="跳到某天的对话"
+          data-testid="chat-day"
+          value={selectedDay ?? todayKey}
+          onChange={(event) => onSelectDay(event.target.value)}
+        >
+          <option value={todayKey}>今天</option>
+          {earlier.map((day) => (
+            <option key={day.day} value={day.day}>
+              {day.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={15} aria-hidden="true" />
+      </span>
     </div>
+  );
+}
+
+/**
+ * Penpot Chat header list icon: the conversation's history by day, each with
+ * how many messages the user wrote and the first of them. Choosing a day
+ * scrolls the thread there; nothing here changes or deletes a message.
+ */
+export function ChatHistoryMenu({
+  history,
+  onSelectDay,
+}: {
+  history: ChatHistory;
+  onSelectDay: (day: string) => void;
+}) {
+  if (history.days.length === 0) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="bc-icon-button bc-header-chat-action"
+        aria-label="对话历史"
+        title="对话历史"
+      >
+        <List size={19} strokeWidth={1.8} aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="bc-chat-history-menu"
+      >
+        {history.days.map((day) => (
+          <DropdownMenuItem
+            key={day.day}
+            className="bc-chat-history-item"
+            onClick={() => onSelectDay(day.day)}
+          >
+            <span className="bc-chat-history-day">
+              <strong>{day.label}</strong>
+              <span>{day.count} 条</span>
+            </span>
+            <span className="bc-chat-history-preview">{day.preview}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

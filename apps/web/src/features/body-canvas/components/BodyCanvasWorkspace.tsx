@@ -83,7 +83,9 @@ import { useTrainingPlanActions } from "@/features/training/hooks/useTrainingPla
 import { useRouteWindowSync } from "../hooks/useRouteWindowSync";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
+import type { ChatHistory } from "../model/chatHistory";
 import {
+  ChatHistoryMenu,
   ChatWindowHeader,
   DiagnosisWindowHeader,
   TrainerWindowHeader,
@@ -132,6 +134,8 @@ export interface BodyCanvasWorkspaceProps {
   chat: ReactNode;
   /** The user's latest completed message: the only candidate analysis request. */
   latestUserMessage?: DiagnosisRequestMessage | null;
+  /** Days the user wrote in, for the Chat header picker and history list. */
+  chatHistory?: ChatHistory;
   onAskContext: (context: ConsultationSpatialContext) => void;
   onOpenProfile: () => void;
   /** Real profile values for the Person window; never invented when absent. */
@@ -273,6 +277,34 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const [trainingView, setTrainingView] = useState<"plan" | "safety">("plan");
   /** Chat shows the formal-analysis request entry (explicit user intent only). */
   const [analysisRequest, setAnalysisRequest] = useState(false);
+  // Chat header day: 今天 until the user jumps; a new message brings it back.
+  const chatHistory = props.chatHistory;
+  const [chatJump, setChatJump] = useState<{
+    day: string;
+    latest: string | undefined;
+  } | null>(null);
+  const latestChatMessage = chatHistory?.days[0]?.firstMessageId;
+  const chatDay =
+    chatJump && chatJump.latest === latestChatMessage ? chatJump.day : null;
+  const jumpToChatDay = useCallback(
+    (day: string) => {
+      setChatJump({ day, latest: latestChatMessage });
+      const viewport = document.querySelector<HTMLElement>(
+        ".bc-chat-content .chat-thread-viewport",
+      );
+      if (!viewport) return;
+      const entry = chatHistory?.days.find((item) => item.day === day);
+      const target = entry
+        ? viewport.querySelector<HTMLElement>(
+            `[data-message-id="${entry.firstMessageId}"]`,
+          )
+        : null;
+      if (target) target.scrollIntoView({ block: "start", behavior: "smooth" });
+      else if (day === chatHistory?.todayKey)
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    },
+    [chatHistory, latestChatMessage],
+  );
   /** Page-local explicit Start intent. A deep link or shortcut never supplies it. */
   const [trainerLaunch, setTrainerLaunch] = useState<TrainerLaunch | null>(
     null,
@@ -850,13 +882,23 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           />
         );
       case "chat":
-        return <ChatWindowHeader />;
+        return (
+          <ChatWindowHeader
+            history={chatHistory}
+            selectedDay={chatDay ?? chatHistory?.todayKey}
+            onSelectDay={jumpToChatDay}
+          />
+        );
       default:
         return undefined;
     }
   };
 
   const renderHeaderActions = (window: BusinessWindowId): ReactNode => {
+    if (window === "chat")
+      return chatHistory ? (
+        <ChatHistoryMenu history={chatHistory} onSelectDay={jumpToChatDay} />
+      ) : null;
     // Penpot Diagnosis / History has only the close button.
     if (window === "diagnosis" && diagnosisActions.scene === "history")
       return null;
