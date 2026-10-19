@@ -2607,14 +2607,24 @@
 .body-canvas-theme .bc-chat-composer-area {
   background: linear-gradient(to top, var(--bc-window-paper) 78%, transparent);
 }
+/* Penpot Chat / Running has no status box: the thread's 正在/继续分析 pill
+   says what is happening. Stop stays reachable as a quiet line. */
 .body-canvas-theme .bc-chat-run-status {
-  border-color: var(--bc-line);
-  background: var(--bc-subtle);
+  border-color: transparent;
+  background: transparent;
+  padding-block: 0;
+  margin-bottom: 4px;
 }
 .body-canvas-theme .bc-chat-run-status p {
   color: var(--bc-muted);
+  font-size: 11px;
 }
 .body-canvas-theme .bc-chat-run-status button {
+  color: var(--bc-muted);
+}
+.body-canvas-theme .bc-chat-run-status button:hover,
+.body-canvas-theme .bc-chat-run-status button:focus-visible {
+  background: var(--bc-danger-soft);
   color: var(--bc-danger);
 }
 .body-canvas-theme .bc-pending-composer {
@@ -4365,6 +4375,18 @@
 .body-canvas-theme .chat-thinking,
 .body-canvas-theme .chat-tool-summary {
   color: var(--bc-muted);
+}
+.body-canvas-theme .chat-thinking {
+  background: color-mix(in srgb, var(--bc-primary-soft) 45%, var(--bc-paper));
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(1) {
+  background: var(--bc-primary);
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(2) {
+  background: color-mix(in srgb, var(--bc-primary) 60%, var(--bc-paper));
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(3) {
+  background: color-mix(in srgb, var(--bc-primary) 30%, var(--bc-paper));
 }
 .body-canvas-theme .chat-tool-label,
 .body-canvas-theme .chat-source {
