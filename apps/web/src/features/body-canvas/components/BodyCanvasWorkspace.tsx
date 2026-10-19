@@ -80,6 +80,7 @@ import {
   writeSelectedPlanId,
 } from "../model/trainingPlanSelection";
 import { useTrainingPlanActions } from "@/features/training/hooks/useTrainingPlanActions";
+import { useRouteWindowSync } from "../hooks/useRouteWindowSync";
 import { BusinessWindowHost } from "./BusinessWindowHost";
 import { BodyCanvasDock } from "./BodyCanvasDock";
 import {
@@ -410,20 +411,14 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     // A bridge selection from the anatomy panel takes priority only when that bridge changes.
   }, [props.bodyExplorer.selectedRegionId]);
 
-  // Report the active business window so the route can deep-link it.
-  const reportedWindow = props.onWindowChange;
-  useEffect(() => {
-    reportedWindow?.(activeWindow);
-  }, [activeWindow, reportedWindow]);
-
-  // Deep link: open the requested window once, without fighting later closes.
-  const initialWindow = props.initialWindow ?? null;
-  const appliedInitialRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!initialWindow || appliedInitialRef.current === initialWindow) return;
-    appliedInitialRef.current = initialWindow;
-    openWindow(initialWindow);
-  }, [initialWindow, openWindow]);
+  // Mirror the active window into the route and open a deep-linked window
+  // once, without letting the route's echo reopen a window the user closed.
+  useRouteWindowSync({
+    requestedWindow: props.initialWindow ?? null,
+    activeWindow,
+    openWindow,
+    onWindowChange: props.onWindowChange,
+  });
 
   // An external request (e.g. asking a question from the anatomy overlay) must
   // both open the target window and dismiss the modal that triggered it, so the
