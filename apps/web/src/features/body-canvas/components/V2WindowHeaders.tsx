@@ -255,7 +255,7 @@ export function ChatWindowHeader({
   const earlier = (history?.days ?? []).filter((day) => day.day !== todayKey);
   const title = (
     <>
-      <span className="bc-window-context-title">
+      <span className="bc-window-context-title bc-chat-context-title">
         <MessageCircle size={18} aria-hidden="true" />
         对话
       </span>
