@@ -927,7 +927,6 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
                 "name": "ask_user",
                 "arguments": {
                     "question": guarded_question,
-                    "reason": "runtime_text_question_guard",
                     "answer_type": "text",
                     "allow_custom_input": True,
                 },

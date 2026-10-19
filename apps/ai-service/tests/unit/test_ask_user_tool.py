@@ -166,3 +166,12 @@ async def test_handle_ask_user_preserves_only_valid_exclusive_options():
             assert "exclusive_options" not in field
         else:
             assert field["exclusive_options"] == expected
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_never_shows_internal_reason_code():
+    result = await handle_ask_user(
+        {"question": "最近一次疼痛持续了多久？", "reason": "runtime_text_question_guard"}
+    )
+    assert result.content["context"] == "为了给出更准确的下一步判断，我需要先确认这一点。"
+    assert "runtime_text_question_guard" not in result.content["context"]
