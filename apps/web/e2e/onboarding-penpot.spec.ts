@@ -68,5 +68,15 @@ for (const vp of viewports) {
       profile?: { gender?: string; birth_date?: string };
     };
     expect(body.profile).toMatchObject({ gender: "male", birth_date: "1995-06-15" });
+
+    // Step 05 (颈部 + 腰部) is kept as a self-report, read back from its own endpoint.
+    const discomfort = await request.get(`${apiBase}/api/v1/onboarding/discomfort-areas`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(discomfort.ok(), await discomfort.text()).toBeTruthy();
+    const reported = (await discomfort.json()) as {
+      report?: { area_codes?: string[]; source?: string } | null;
+    };
+    expect(reported.report).toMatchObject({ area_codes: ["neck", "lower_back"], source: "onboarding" });
   });
 }

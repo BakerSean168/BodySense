@@ -18,7 +18,7 @@ vi.mock("./steps/UploadStep", () => ({
 
 import { useProfileStore } from "@/stores/profileStore";
 import { OnboardingWizard } from "./OnboardingWizard";
-import {
+import { toDiscomfortAreas,
   buildOnboardingPayload,
   formatBirthInput,
   INITIAL_ANSWERS,
@@ -161,8 +161,8 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
     expect(payload.lifestyle.nutrition).toEqual({ summary: "", details: {} });
     expect(payload.lifestyle.substances).toEqual({ summary: "都不碰", details: { pattern: "none" } });
     expect(payload.lifestyle.recovery).toEqual({ summary: "" });
-    // Discomfort regions are shown (Penpot) but the onboarding API has no field for them.
-    expect(JSON.stringify(payload)).not.toContain("discomfort");
+    // Step 05: "都没有不适" replaced the areas picked before it and is sent alone.
+    expect(payload.discomfort_areas).toEqual(["none"]);
     expect(generate).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("健康工作台")).toBeInTheDocument();
   });
@@ -202,6 +202,16 @@ describe("buildOnboardingPayload", () => {
     });
     expect(payload.injury_history).toBe("无运动损伤或确诊的脊柱问题");
     expect(payload.lifestyle.activity).toEqual({ summary: "", details: {} });
+  });
+
+  it("sends step 05 areas as coarse codes in board order and omits an unanswered step", () => {
+    const base = { ...INITIAL_ANSWERS, gender: "male" as const, birth_date: "1990-01-01", height_cm: 170, weight_kg: 60 };
+    expect(
+      buildOnboardingPayload({ ...base, discomfort_regions: ["leg", "neck", "lower_back"] }).discomfort_areas,
+    ).toEqual(["neck", "lower_back", "leg"]);
+    expect(buildOnboardingPayload({ ...base, discomfort_regions: ["neck", "none"] }).discomfort_areas).toEqual(["none"]);
+    expect(buildOnboardingPayload(base)).not.toHaveProperty("discomfort_areas");
+    expect(toDiscomfortAreas(["knee"])).toBeUndefined();
   });
 
   it("refuses to build without the required identity and metrics", () => {
