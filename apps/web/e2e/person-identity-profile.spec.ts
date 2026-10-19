@@ -60,9 +60,13 @@ test("Person identity edits optional Profile fields and preferences without touc
   await page.goto("/consultation?view=person");
   const person = page.getByTestId("person-window");
   await expect(person).toBeVisible();
-  // No display name yet: the header falls back to the real account name.
-  const trigger = page.getByRole("button", { name: email });
+  // No display name yet: the header shows the account email's local part
+  // (Penpot draws a name), never the whole address.
+  const localPart = email.split("@")[0];
+  const trigger = page.getByRole("button", { name: localPart, exact: true });
   await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute("data-name-source", "account");
+  await expect(trigger).not.toContainText("@");
   await trigger.click();
   await page.getByRole("menuitem", { name: "个人资料" }).click();
 
@@ -140,7 +144,9 @@ test("Person identity edits optional Profile fields and preferences without touc
   await identity.getByLabel("昵称").fill("");
   await identity.getByRole("button", { name: "保存" }).click();
   await expect(identity.getByRole("status")).toHaveText("已保存");
-  await expect(page.getByRole("button", { name: email })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: localPart, exact: true }),
+  ).toBeVisible();
   await identity.getByRole("button", { name: "关闭" }).click();
   await expect(identity).toBeHidden();
 });

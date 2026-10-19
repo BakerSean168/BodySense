@@ -10,6 +10,8 @@ import {
   effectiveTimeZone,
   selectableTimeZones,
 } from "@/features/profile/model/profilePreferences";
+import { useAuthStore } from "@/stores/authStore";
+import { personDisplayName } from "../model/personIdentity";
 
 /**
  * Identity popover (Penpot "Overlay / Person / Identity"): the minimal optional
@@ -30,6 +32,9 @@ export function PersonIdentityPopover({
   onOpenRecords?: () => void;
 }) {
   const profile = useProfileStore((state) => state.profile);
+  const accountEmail = useAuthStore((state) => state.user?.email ?? "");
+  // Same fallback as the Person header, so an empty nickname says what shows.
+  const fallbackName = personDisplayName({ accountEmail }).name;
   const saveProfile = useProfileStore((state) => state.saveProfile);
   const panelRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState<ProfileEditable>(() =>
@@ -125,7 +130,7 @@ export function PersonIdentityPopover({
               change("display_name", event.target.value || null)
             }
             maxLength={40}
-            placeholder="未填写"
+            placeholder={`未填写 · 显示为 ${fallbackName}`}
             autoComplete="nickname"
             disabled={disabled}
           />
