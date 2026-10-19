@@ -550,8 +550,10 @@ describe("body-first business windows", () => {
       screen.getByRole("combobox", { name: "档案分类" }),
       "equipment",
     );
+    // Penpot "Person / Equipment · Empty": title, one quiet line, round add.
+    expect(await screen.findByText("还没有器材")).toBeInTheDocument();
     expect(
-      await screen.findByText("添加个人器材，帮助 AI 更好规划训练项目"),
+      screen.getByText("加上家里或健身房能用的器材，训练会按它来安排"),
     ).toBeInTheDocument();
     expect(mockListEquipment).toHaveBeenCalled();
     expect(

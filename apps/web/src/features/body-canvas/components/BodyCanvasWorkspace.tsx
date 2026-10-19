@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  CircleHelp,
   ArrowRight,
   BoxSelect,
   Brush,
@@ -1394,10 +1395,12 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           <span>拖动旋转 · 滚轮缩放 · 点击选区</span>
         </div>
         <button
-          className="bc-help-entry bc-button"
+          className="bc-help-entry"
+          aria-label="快捷键"
+          title="快捷键 · ?"
           onClick={() => setCanvasOverlay("help")}
         >
-          快捷键<kbd>?</kbd>
+          <CircleHelp size={20} strokeWidth={1.8} aria-hidden="true" />
         </button>
         <BodyCanvasDock
           activeWindow={activeWindow}
