@@ -192,8 +192,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   );
   await expect(personWindow).toBeVisible();
   await page.getByLabel("档案分类").selectOption("equipment");
+  await expect(personWindow.getByText("还没有器材")).toBeVisible();
   await expect(
-    personWindow.getByText("添加个人器材，帮助 AI 更好规划训练项目"),
+    personWindow.getByText("加上家里或健身房能用的器材，训练会按它来安排"),
   ).toBeVisible();
   // No fixed slot ceiling is shown anywhere.
   await expect(personWindow.getByText(/\/\s*12/)).toBeHidden();

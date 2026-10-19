@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Backpack,
   Check,
   ChevronDown,
+  Dumbbell,
   FileText,
-  Images,
+  Image as ImageIcon,
   LoaderCircle,
   Plus,
+  Backpack,
 } from "lucide-react";
+import personAvatar from "../assets/person-avatar.png";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -74,12 +76,6 @@ export interface PersonWindowProps {
   onCategoryChange?: (category: ProfileCategoryId) => void;
 }
 
-/** Avatar glyph is derived from the nickname only; never invented. */
-function identityInitial(nickname: string): string {
-  const trimmed = nickname.trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : "·";
-}
-
 /**
  * Avatar + nickname header trigger. Exported because the shared window host owns
  * the header chrome, and the design puts this trigger *instead of* a repeated
@@ -103,10 +99,13 @@ export function PersonIdentityTrigger({
       aria-haspopup="dialog"
       onClick={onToggle}
     >
+      {/* Penpot Person header: the BodySense figure avatar (exported from the
+          board) and the nickname with the gold dantian dot. */}
       <span className="bc-person-avatar" aria-hidden="true">
-        {identityInitial(identity.nickname)}
+        <img src={personAvatar} alt="" width={32} height={32} />
       </span>
       <span className="bc-person-name">{displayName}</span>
+      <span className="bc-person-dantian" aria-hidden="true" />
     </button>
   );
 }
@@ -163,32 +162,38 @@ export function PersonWindowHeader({
 /** Stable empty snapshot so the workbench can render its own empty state. */
 function EmptyState({
   icon,
+  title,
   message,
   actionLabel,
   onAction,
   disabled,
 }: {
   icon: React.ReactNode;
+  title: string;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
   disabled?: boolean;
 }) {
+  // Penpot "<Category> · Empty": 64px mint icon disc, title, one quiet line
+  // and a round 32px primary action (same anatomy as Records · Empty).
   return (
-    <div className="bc-person-empty">
-      <span className="bc-person-empty-icon" aria-hidden="true">
+    <div className="bc-person-state bc-person-empty">
+      <span className="bc-person-state-icon" aria-hidden="true">
         {icon}
       </span>
-      <p className="bc-person-empty-text">{message}</p>
+      <strong>{title}</strong>
+      <span className="bc-person-empty-text">{message}</span>
       {actionLabel && onAction ? (
         <button
           type="button"
-          className="bc-button bc-primary bc-person-empty-action"
+          className="bc-person-add bc-person-empty-action"
+          aria-label={actionLabel}
+          title={actionLabel}
           onClick={onAction}
           disabled={disabled}
         >
-          <Plus size={16} />
-          {actionLabel}
+          <Plus size={17} />
         </button>
       ) : null}
     </div>
@@ -382,8 +387,9 @@ function EquipmentCategory({
     return (
       <>
         <EmptyState
-          icon={<Backpack size={30} />}
-          message="添加个人器材，帮助 AI 更好规划训练项目"
+          icon={<Dumbbell size={24} />}
+          title="还没有器材"
+          message="加上家里或健身房能用的器材，训练会按它来安排"
           actionLabel="添加个人器材"
           onAction={() => {
             setAdding(true);
@@ -490,12 +496,17 @@ function UploadsCategory({
     return (
       <EmptyState
         icon={
-          category === "reports" ? <FileText size={30} /> : <Images size={30} />
+          category === "reports" ? (
+            <FileText size={24} />
+          ) : (
+            <ImageIcon size={24} />
+          )
         }
+        title={category === "reports" ? "还没有报告" : "还没有照片或视频"}
         message={
           category === "reports"
-            ? "还没有医学报告。上传报告后会显示来源与处理状态。"
-            : "还没有影像资料。上传照片或视频后可以在这里核对。"
+            ? "上传体检、影像或化验报告，会关联到相关记录"
+            : "上传动作视频或身体照片，方便之后对照"
         }
       />
     );

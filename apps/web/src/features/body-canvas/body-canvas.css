@@ -16,6 +16,13 @@
   --bc-danger: #a83e3c;
   --bc-danger-soft: #fceae7;
   --bc-shadow: 0 24px 70px rgba(31, 47, 37, 0.1);
+  /* Penpot window paper (Desktop/Mobile window boards). */
+  --bc-window-paper: #fbfaf5;
+  --bc-window-line: #e4e0d3;
+  --bc-window-divider: #e9e4d8;
+  --bc-window-control: #f1f5f1;
+  --bc-window-ink-corner: url("./assets/ink-corner-d.webp");
+  --bc-window-ink-corner-size: 452px 500px;
   color: var(--bc-ink);
   font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 }
@@ -37,6 +44,11 @@
   --bc-danger: #efaaa6;
   --bc-danger-soft: #462a29;
   --bc-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+  --bc-window-paper: var(--bc-paper);
+  --bc-window-line: var(--bc-line);
+  --bc-window-divider: var(--bc-line);
+  --bc-window-control: var(--bc-subtle);
+  --bc-window-ink-corner: none;
 }
 .bc-workspace {
   position: relative;
@@ -746,12 +758,30 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* Penpot Home: a 40px round "?" at right 32 / bottom 43. */
 .bc-help-entry {
   position: absolute;
   z-index: 20;
-  right: 24px;
-  bottom: 20px;
-  min-height: 36px;
+  right: 32px;
+  bottom: 43px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--bc-line);
+  border-radius: 999px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  box-shadow: 0 6px 18px rgba(31, 47, 37, 0.1);
+  cursor: pointer;
+}
+.bc-help-entry:hover {
+  background: var(--bc-subtle);
+}
+.bc-help-entry:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
 }
 .bc-dock {
   position: absolute;
@@ -1542,11 +1572,26 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--bc-line);
+  border: 1px solid var(--bc-window-line);
   border-radius: 18px;
-  background: var(--bc-paper);
+  background: var(--bc-window-paper);
   color: var(--bc-ink);
   box-shadow: var(--bc-shadow);
+  isolation: isolate;
+}
+/* Penpot ink-wash corner pad (same exported media as the auth card), painted
+   under the header and content; decorative only. */
+.bc-business-window::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto auto;
+  z-index: -1;
+  width: 452px;
+  height: 500px;
+  max-width: 100%;
+  background: var(--bc-window-ink-corner) top right / var(--bc-window-ink-corner-size)
+    no-repeat;
+  pointer-events: none;
 }
 .bc-business-window[data-dock="right"] {
   left: auto;
@@ -1611,7 +1656,7 @@
   min-height: 64px;
   gap: 10px;
   padding: 0 14px 0 18px;
-  border-bottom: 1px solid var(--bc-line);
+  border-bottom: 1px solid var(--bc-window-divider);
   z-index: 2;
 }
 .bc-business-window-title {
@@ -1634,6 +1679,13 @@
   border-radius: 9px;
   background: transparent;
   color: var(--bc-secondary);
+}
+.bc-business-window-controls .bc-icon-button:last-child {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bc-window-control);
+  color: var(--bc-ink);
 }
 .bc-business-window-controls .bc-icon-button:hover {
   background: var(--bc-subtle);
@@ -1849,16 +1901,27 @@
   background: var(--bc-subtle);
 }
 .bc-person-avatar {
+  flex: 0 0 auto;
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--bc-line);
+  overflow: hidden;
   border-radius: 999px;
-  background: var(--bc-primary-soft);
-  color: var(--bc-primary);
-  font-size: 13px;
-  font-weight: 700;
+}
+.bc-person-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.bc-person-dantian {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin: 10px 0 0 -8px;
+  border-radius: 999px;
+  background: #f6c95a;
+  box-shadow: 0 0 6px rgba(246, 201, 90, 0.7);
 }
 .bc-person-name {
   font-size: 14px;
@@ -4491,6 +4554,8 @@
 .bc-person-context .bc-window-select-wrap {
   flex: 0 0 auto;
   border-color: transparent;
+  border-radius: 8px;
+  background: var(--bc-window-control);
 }
 .bc-person-context .bc-window-context-select {
   font-size: 15px;
@@ -4708,21 +4773,31 @@
   text-align: center;
 }
 .bc-person-state > strong {
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 22px;
 }
 .bc-person-state > span:not(.bc-person-state-icon) {
-  color: var(--bc-secondary);
+  color: var(--bc-muted);
   font-size: 12px;
+  line-height: 18px;
 }
+/* Penpot Person · Empty: 64px #E7F3EC disc, 24px glyph, title 20px below. */
 .bc-person-state-icon {
-  width: 44px;
-  height: 44px;
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   border-radius: 999px;
-  background: var(--bc-primary-soft);
+  background: #e7f3ec;
   color: var(--bc-primary);
+}
+.bc-dark .bc-person-state-icon {
+  background: var(--bc-primary-soft);
+}
+.bc-person-state-icon > svg {
+  width: 24px;
+  height: 24px;
 }
 .bc-person-state[data-tone="danger"] .bc-person-state-icon {
   background: var(--bc-danger-soft);
@@ -4730,7 +4805,15 @@
 }
 .bc-person-state > .bc-person-add,
 .bc-person-state > .bc-icon-button {
-  margin-top: 8px;
+  margin-top: 20px;
+}
+.bc-person-state > .bc-person-add {
+  width: 32px;
+  height: 32px;
+  background: #24583f;
+}
+.bc-dark .bc-person-state > .bc-person-add {
+  background: var(--bc-primary);
 }
 .bc-person-skeleton {
   display: grid;
@@ -4966,6 +5049,14 @@
   justify-content: space-between;
 }
 @media (max-width: 760px) {
+  .body-canvas-theme:not(.bc-dark) .bc-business-window {
+    --bc-window-ink-corner: url("./assets/ink-corner-m.webp");
+    --bc-window-ink-corner-size: 390px 460px;
+  }
+  .bc-business-window::before {
+    width: 390px;
+    height: 460px;
+  }
   .bc-person-context .bc-person-name {
     max-width: 92px;
   }
