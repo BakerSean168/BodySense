@@ -7,6 +7,7 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory, personCategoryTrigger } from "./support/person";
 
 // UI-001 #309: Penpot Person / Records + Body / Episode scenes on real Go/PG.
 // Registration, real receipts, full reloads and 390px geometry; no fixtures.
@@ -87,8 +88,10 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   ).not.toBeNull();
 
   // Penpot header: "nickname / 身体记录"; no tab strip.
-  const picker = page.getByLabel("档案分类");
-  await expect(picker).toHaveValue("records");
+  await expect(personCategoryTrigger(page)).toHaveAttribute(
+    "data-value",
+    "records",
+  );
   await expect(person.locator(".bc-person-tabs")).toHaveCount(0);
   const records = page.getByTestId("body-fact-records");
   await expect(records.getByText("还没有身体记录")).toBeVisible();
@@ -229,9 +232,9 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   // (Reloads above replaced the document, so take the live canvas again.)
   const liveCanvas = await page.locator(".bc-scene canvas").elementHandle();
   expect(liveCanvas).not.toBeNull();
-  await picker.selectOption("habits");
+  await choosePersonCategory(page, "habits");
   await expect(records.getByText("还没有生活习惯")).toBeVisible();
-  await picker.selectOption("records");
+  await choosePersonCategory(page, "records");
   await expect(records.getByText("已加载 2 条")).toBeVisible();
   expect(await liveCanvas!.evaluate((node) => node.isConnected)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 844 });
@@ -275,9 +278,8 @@ test("Person Records shows the failed read and keeps the last list as possibly s
         })
       : route.continue(),
   );
-  const picker = page.getByLabel("档案分类");
-  await picker.selectOption("equipment");
-  await picker.selectOption("records");
+  await choosePersonCategory(page, "equipment");
+  await choosePersonCategory(page, "records");
   await expect(records.getByRole("alert")).toContainText("可能不是最新");
   await expect(records.getByText("早上快走了 40 分钟。")).toBeVisible();
 

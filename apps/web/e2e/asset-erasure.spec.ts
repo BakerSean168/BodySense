@@ -7,6 +7,7 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory } from "./support/person";
 
 // AS-002 deletion flows for an uploaded file in the profile drawer: source
 // removal (the original goes, derived records stay with a source-unavailable
@@ -256,7 +257,7 @@ test("asset erasure receipt shows retrying and review states and never claims do
 async function openPersonReport(page: Page, name: string) {
   await page.goto("/consultation?view=person");
   await expect(page.getByTestId("person-window")).toBeVisible();
-  await page.getByLabel("档案分类").selectOption("reports");
+  await choosePersonCategory(page, "reports");
   const card = page.getByTestId("person-report").filter({ hasText: name });
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: `管理“${name}”` }).click();

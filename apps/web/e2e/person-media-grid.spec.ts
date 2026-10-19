@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory } from "./support/person";
 
 // Penpot "Person / Media": uploads from the Person window land in a month
 // grouped thumbnail grid; a failed upload is the pink row with retry.
@@ -17,7 +18,7 @@ async function openMedia(page: Page) {
   await page.goto("/consultation?view=person");
   const person = page.getByTestId("person-window");
   await expect(person).toBeVisible();
-  await page.getByLabel("档案分类").selectOption("media");
+  await choosePersonCategory(page, "media");
   return person;
 }
 

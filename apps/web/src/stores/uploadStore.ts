@@ -64,6 +64,8 @@ function toUserUpload(upload: UploadWire): UserUpload {
 
 interface UploadState {
   uploads: UserUpload[];
+  /** True once a list read succeeded, so a count of 0 is a real count. */
+  hasFetched: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -78,6 +80,7 @@ interface UploadState {
 
 export const useUploadStore = create<UploadState>()((set) => ({
   uploads: [],
+  hasFetched: false,
   isLoading: false,
   error: null,
 
@@ -87,18 +90,23 @@ export const useUploadStore = create<UploadState>()((set) => ({
     try {
       const { accessToken } = useAuthStore.getState();
       if (!accessToken) {
-        set({ uploads: [], isLoading: false });
+        set({ uploads: [], hasFetched: false, isLoading: false });
         return;
       }
 
       const response = await withOpenApiError(() =>
         listUploads(undefined, openApiAuthFetch),
       );
-      set({ uploads: response.uploads.map(toUserUpload), isLoading: false });
+      set({
+        uploads: response.uploads.map(toUserUpload),
+        hasFetched: true,
+        isLoading: false,
+      });
     } catch (error) {
       console.error("Failed to fetch uploads:", error);
       set({
         uploads: [],
+        hasFetched: false,
         isLoading: false,
         error:
           error instanceof Error ? error.message : "Failed to fetch uploads",

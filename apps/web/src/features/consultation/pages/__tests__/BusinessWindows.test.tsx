@@ -304,6 +304,15 @@ beforeEach(() => {
   });
 });
 
+/** Penpot category menu: the header trigger opens an ARIA listbox. */
+async function chooseCategory(label: string) {
+  await userEvent.click(screen.getByRole("button", { name: /^档案分类/ }));
+  const list = await screen.findByRole("listbox", { name: "档案分类" });
+  await userEvent.click(
+    within(list).getByRole("option", { name: new RegExp(`^${label}`) }),
+  );
+}
+
 describe("body-first business windows", () => {
   it("starts body-first with no business window open", () => {
     renderPage();
@@ -514,13 +523,10 @@ describe("body-first business windows", () => {
     await openDock("个人档案");
     const person = await screen.findByTestId("person-window");
     // Penpot Person header: "nickname / <category picker>" replaces the tabs.
-    const picker = screen.getByRole("combobox", { name: "档案分类" });
-    expect(
-      within(picker)
-        .getAllByRole("option")
-        .map((option) => option.textContent),
-    ).toEqual(["身体记录", "器材", "媒体", "报告", "生活习惯"]);
-    expect(picker).toHaveValue("records");
+    const picker = screen.getByRole("button", { name: "档案分类 身体记录" });
+    expect(picker).toHaveAttribute("aria-haspopup", "listbox");
+    expect(picker).toHaveAttribute("aria-expanded", "false");
+    expect(picker).toHaveAttribute("data-value", "records");
     // The picker label is the only place the category name appears.
     expect(screen.queryAllByRole("heading", { name: "身体记录" })).toHaveLength(
       0,
@@ -554,6 +560,76 @@ describe("body-first business windows", () => {
     );
   });
 
+  it("switches Person categories from the Penpot icon menu as an accessible listbox", async () => {
+    const user = userEvent.setup();
+    useUploadStore.setState({
+      uploads: [
+        {
+          id: "r1",
+          file_type: "report",
+          original_name: "体检.pdf",
+          file_size: 1000,
+          mime_type: "application/pdf",
+          ocr_status: "pending",
+          ocr_result: null,
+          analysis_status: "none",
+          source_availability: "available",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      hasFetched: true,
+    } as never);
+    renderPage();
+    await openDock("个人档案");
+    const person = await screen.findByTestId("person-window");
+    const trigger = screen.getByRole("button", { name: "档案分类 身体记录" });
+    trigger.focus();
+    await user.keyboard("{ArrowDown}");
+    const list = await screen.findByRole("listbox", { name: "档案分类" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(trigger).toHaveAttribute("aria-controls", list.id);
+    expect(list).toHaveFocus();
+    const options = within(list).getAllByRole("option");
+    expect(
+      options.map((o) => o.querySelector(".bc-category-option-label")?.textContent),
+    ).toEqual(["身体记录", "器材", "媒体", "报告", "生活习惯"]);
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+    expect(list).toHaveAttribute("aria-activedescendant", options[0].id);
+    // Counts only for data already read: uploads yes, records never guessed.
+    expect(options[2]).toHaveTextContent("0 个");
+    expect(options[3]).toHaveTextContent("1 份");
+    expect(options[0].querySelector(".bc-category-option-count")).toBeNull();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(list).toHaveAttribute("aria-activedescendant", options[2].id);
+    await user.keyboard("{End}");
+    expect(list).toHaveAttribute("aria-activedescendant", options[4].id);
+    await user.keyboard("{Home}{ArrowDown}{ArrowDown}{ArrowDown}");
+    // Escape closes without changing the category or closing the window.
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("data-value", "records");
+    expect(person).toBeInTheDocument();
+    // Enter on the active option chooses it and returns focus.
+    await user.keyboard("{Enter}");
+    await screen.findByRole("listbox", { name: "档案分类" });
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    const reports = screen.getByRole("button", { name: "档案分类 报告" });
+    expect(reports).toHaveFocus();
+    expect(await screen.findByTestId("person-report")).toBeInTheDocument();
+    // Pointer: an outside press closes it; clicking an option chooses it.
+    await user.click(reports);
+    await screen.findByRole("listbox", { name: "档案分类" });
+    await user.click(document.body);
+    expect(screen.queryByRole("listbox")).toBeNull();
+    await chooseCategory("器材");
+    expect(
+      screen.getByRole("button", { name: "档案分类 器材" }),
+    ).toHaveAttribute("data-value", "equipment");
+  });
+
   it("uploads a report from the Penpot Reports empty state and offers retry on failure", async () => {
     const user = userEvent.setup();
     const uploadFile = vi
@@ -564,10 +640,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "reports",
-    );
+    await chooseCategory("报告");
     const add = await screen.findByRole("button", { name: "上传报告" });
     const input =
       document.querySelector<HTMLInputElement>('input[type="file"]')!;
@@ -631,10 +704,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "media",
-    );
+    await chooseCategory("媒体");
     expect(await screen.findByText("4 个")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "上传照片" })).toBeEnabled();
     const months = within(screen.getByTestId("person-window")).getAllByRole(
@@ -678,10 +748,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "media",
-    );
+    await chooseCategory("媒体");
     expect(await screen.findAllByTestId("person-media-tile")).toHaveLength(8);
     const more = screen.getByRole("button", { name: "查看全部 10 个" });
     expect(more).toHaveAttribute("aria-expanded", "false");
@@ -718,10 +785,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "reports",
-    );
+    await chooseCategory("报告");
     const card = await screen.findByTestId("person-report");
     expect(card).toHaveTextContent("PDF · 2.3 MB · 今天上传");
     expect(within(card).getByText("可用")).toBeInTheDocument();
@@ -822,10 +886,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "reports",
-    );
+    await chooseCategory("报告");
     const card = await screen.findByTestId("person-report");
     expect(within(card).getByText("处理中")).toBeInTheDocument();
     await user.click(
@@ -867,10 +928,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "equipment",
-    );
+    await chooseCategory("器材");
     // Penpot "Person / Equipment · Empty": title, one quiet line, round add.
     expect(await screen.findByText("还没有器材")).toBeInTheDocument();
     expect(
@@ -907,10 +965,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "equipment",
-    );
+    await chooseCategory("器材");
     expect(await screen.findByText("弹力带")).toBeInTheDocument();
     expect(screen.getByText("中等阻力")).toBeInTheDocument();
     expect(screen.getByText("当前可用")).toBeInTheDocument();
@@ -928,10 +983,7 @@ describe("body-first business windows", () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "档案分类" }),
-      "habits",
-    );
+    await chooseCategory("生活习惯");
     await waitFor(() =>
       expect(screen.getByText("每晚 7 小时")).toBeInTheDocument(),
     );

@@ -7,6 +7,7 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory } from "./support/person";
 
 // These cases include registration, real Go/Python/DB calls and full reloads.
 // Keep each expectation's normal timeout; allow a cold 3D/browser startup on
@@ -139,7 +140,7 @@ test("Python extraction -> Go receipt -> PostgreSQL -> actual Person Habits surv
   expect(ledger.facts[0].statement).toBe("我每晚睡七小时。");
   expect(ledger.current_revision).toBe(receipt.revision);
   await page.goto(`/consultation/${turn.conversationId}?view=state`);
-  await page.getByLabel("档案分类").selectOption("habits");
+  await choosePersonCategory(page, "habits");
   await expect(
     page
       .getByTestId("body-fact-records")

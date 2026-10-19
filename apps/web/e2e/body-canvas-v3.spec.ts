@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { choosePersonCategory } from "./support/person";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -207,7 +208,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     '.bc-business-window[data-window="person"]',
   );
   await expect(personWindow).toBeVisible();
-  await page.getByLabel("档案分类").selectOption("equipment");
+  await choosePersonCategory(page, "equipment");
   await expect(personWindow.getByText("还没有器材")).toBeVisible();
   await expect(
     personWindow.getByText("加上家里或健身房能用的器材，训练会按它来安排"),
