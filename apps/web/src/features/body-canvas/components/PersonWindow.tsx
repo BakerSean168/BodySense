@@ -43,6 +43,7 @@ import {
 } from "../model/profileCategories";
 import { usePersonWindowData } from "../hooks/usePersonWindowData";
 import { PersonIdentityPopover } from "./PersonIdentityPopover";
+import { useUploadStore } from "@/stores/uploadStore";
 
 /**
  * Person/Profile business window.
@@ -546,37 +547,117 @@ function UploadsCategory({
   category: "media" | "reports";
 }) {
   const items = selectUploadsByCategory(uploads, category);
+  const uploadFile = useUploadStore((state) => state.uploadFile);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const label = category === "reports" ? "上传报告" : "上传照片";
+  // Penpot "Media · Upload failed" keeps the file name and offers a retry.
+  const lastFile = useRef<File | null>(null);
+  const send = async (file: File) => {
+    lastFile.current = file;
+    setUploading(true);
+    setFailed(null);
+    try {
+      await uploadFile(
+        file,
+        category === "reports" ? "report" : "consultation_photo",
+      );
+      lastFile.current = null;
+    } catch {
+      setFailed(file.name);
+    } finally {
+      setUploading(false);
+    }
+  };
+  const picker = (
+    <input
+      ref={inputRef}
+      type="file"
+      className="sr-only"
+      tabIndex={-1}
+      aria-hidden="true"
+      accept={category === "reports" ? "image/*,application/pdf" : "image/*"}
+      onChange={(event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (file) void send(file);
+      }}
+    />
+  );
+  const open = () => inputRef.current?.click();
+  const status = uploading ? (
+    <p role="status" className="bc-person-upload-status">
+      <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+      正在上传…
+    </p>
+  ) : failed ? (
+    <div role="alert" className="bc-person-upload-status bc-error">
+      <span>“{failed}”没有上传成功。</span>
+      <button
+        type="button"
+        className="bc-text-button"
+        onClick={() => lastFile.current && void send(lastFile.current)}
+      >
+        重试
+      </button>
+    </div>
+  ) : null;
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={
-          category === "reports" ? (
-            <FileText size={24} />
-          ) : (
-            <ImageIcon size={24} />
-          )
-        }
-        title={category === "reports" ? "还没有报告" : "还没有照片或视频"}
-        message={
-          category === "reports"
-            ? "上传体检、影像或化验报告，会关联到相关记录"
-            : "上传动作视频或身体照片，方便之后对照"
-        }
-      />
+      <>
+        {picker}
+        <EmptyState
+          icon={
+            category === "reports" ? (
+              <FileText size={24} />
+            ) : (
+              <ImageIcon size={24} />
+            )
+          }
+          title={category === "reports" ? "还没有报告" : "还没有照片或视频"}
+          message={
+            category === "reports"
+              ? "上传体检、影像或化验报告，会关联到相关记录"
+              : "上传动作视频或身体照片，方便之后对照"
+          }
+          actionLabel={label}
+          onAction={open}
+          disabled={uploading}
+        />
+        {status}
+      </>
     );
   }
   return (
-    <ul className="bc-person-uploads">
-      {items.map((upload) => (
-        <li key={upload.id}>
-          <strong>{upload.original_name}</strong>
-          <span>
-            {formatFileSize(upload.file_size)} ·{" "}
-            {formatOcrStatus(upload.ocr_status)}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <>
+      {picker}
+      <div className="bc-person-uploads-head">
+        <span>已上传 {items.length} 个</span>
+        <button
+          type="button"
+          className="bc-person-add"
+          aria-label={label}
+          title={label}
+          onClick={open}
+          disabled={uploading}
+        >
+          <Plus size={17} />
+        </button>
+      </div>
+      {status}
+      <ul className="bc-person-uploads">
+        {items.map((upload) => (
+          <li key={upload.id}>
+            <strong>{upload.original_name}</strong>
+            <span>
+              {formatFileSize(upload.file_size)} ·{" "}
+              {formatOcrStatus(upload.ocr_status)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

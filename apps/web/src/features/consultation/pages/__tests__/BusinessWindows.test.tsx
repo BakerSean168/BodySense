@@ -546,6 +546,35 @@ describe("body-first business windows", () => {
     );
   });
 
+  it("uploads a report from the Penpot Reports empty state and offers retry on failure", async () => {
+    const user = userEvent.setup();
+    const uploadFile = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(undefined);
+    useUploadStore.setState({ uploadFile });
+    renderPage();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "档案分类" }),
+      "reports",
+    );
+    const add = await screen.findByRole("button", { name: "上传报告" });
+    const input =
+      document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    expect(input).toHaveAttribute("accept", "image/*,application/pdf");
+    const file = new File(["%PDF"], "体检.pdf", { type: "application/pdf" });
+    expect(add).toBeEnabled();
+    await user.upload(input, file);
+    expect(uploadFile).toHaveBeenCalledWith(file, "report");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("体检.pdf");
+    await user.click(within(alert).getByRole("button", { name: "重试" }));
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(2));
+    expect(uploadFile).toHaveBeenLastCalledWith(file, "report");
+  });
+
   it("shows a centred equipment empty state with a single add action", async () => {
     renderPage();
     await openDock("个人档案");
