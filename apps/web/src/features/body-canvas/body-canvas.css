@@ -5608,3 +5608,207 @@
     pointer-events: none;
   }
 }
+/* Penpot "Person / Media": month groups of thumbnail tiles. Desktop tiles are
+   194 x 128 in four columns; mobile is two columns. The manifest has no image
+   bytes, so the tile is Penpot's mint wash with the image / play glyph. */
+.bc-person-upload {
+  flex: 0 0 auto;
+  min-width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bc-primary);
+  color: var(--bc-paper);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(31, 47, 37, 0.16);
+}
+.bc-person-upload:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bc-primary) 85%, var(--bc-ink));
+}
+.bc-person-upload:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.bc-person-upload:focus-visible,
+.bc-person-media-more:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-person-upload-text {
+  display: none;
+}
+.bc-person-media {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 8px;
+}
+.bc-person-media-month {
+  margin: 0 0 8px;
+  color: var(--bc-secondary, var(--bc-muted));
+  font-size: 11px;
+  font-weight: 650;
+}
+.bc-person-media-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-media-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bc-person-media-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 194 / 128;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #d9e8de 0%, #c6dccf 100%);
+  color: rgba(255, 255, 255, 0.92);
+}
+.bc-person-media-tile:nth-child(3n + 2) .bc-person-media-thumb {
+  background: linear-gradient(135deg, #e3ebe2 0%, #cfdfd2 100%);
+}
+.bc-person-media-tile:nth-child(3n) .bc-person-media-thumb {
+  background: linear-gradient(135deg, #dde9e6 0%, #c4d9d0 100%);
+}
+.bc-person-media-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(36, 52, 41, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.bc-person-media-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 52, 41, 0.46);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-person-media-tile[data-state="failed"] .bc-person-media-overlay {
+  background: color-mix(in srgb, var(--bc-danger) 72%, transparent);
+}
+.bc-person-media-tile[data-state="source_unavailable"] .bc-person-media-overlay {
+  background: rgba(113, 128, 117, 0.72);
+}
+.bc-person-media-tile[data-state="source_unavailable"] .bc-person-media-name {
+  color: var(--bc-muted);
+}
+.bc-person-media-name {
+  margin-top: 8px;
+  overflow: hidden;
+  color: var(--bc-ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bc-person-media-meta {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-workspace .bc-person-media-more {
+  align-self: center;
+  margin-top: 6px;
+  color: var(--bc-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Penpot "Media · Upload failed": the pink row above the grid. */
+.bc-person-upload-failed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bc-danger-soft);
+}
+.bc-person-upload-failed-thumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bc-danger) 14%, var(--bc-paper));
+}
+.bc-person-upload-failed-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bc-person-upload-failed-text strong {
+  overflow: hidden;
+  color: var(--bc-ink);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bc-person-upload-failed-text span {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-person-upload-failed-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bc-danger) 10%, var(--bc-paper));
+  color: var(--bc-danger);
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-person-upload-failed-chip::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+@media (max-width: 760px) {
+  .bc-person-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 14px;
+  }
+  .bc-person-media-thumb {
+    aspect-ratio: 155 / 100;
+  }
+  /* Mobile Penpot: a labelled "上传" pill instead of the round icon. */
+  .bc-person-upload {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+  .bc-person-upload-text {
+    display: inline;
+    font-weight: 700;
+  }
+  .bc-person-upload-failed {
+    flex-wrap: wrap;
+  }
+}
