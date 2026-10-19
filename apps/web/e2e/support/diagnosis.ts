@@ -2,6 +2,7 @@ import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./auth";
 import { profileReplacement } from "./profile";
 import { completeStructuredSafetyIntake } from "./safety";
+import { fillRegisterPassword } from "./register";
 
 interface NativeRunProposal {
   proposalId: string;
@@ -159,8 +160,7 @@ export async function seedUserWithSymptom(
   const password = "BodySenseE2E!123";
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const accessToken = await refreshBrowserAccessToken(page, apiBase);

@@ -23,11 +23,22 @@ interface InkFieldProps extends Omit<
   accessibleLabel: string;
   error?: string;
   errorExtra?: ReactNode;
+  /** Noun used by the eye toggle's accessible name ("显示密码" / "隐藏确认密码"). */
+  visibilityLabel?: string;
 }
 
 export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
   (
-    { id, kind, accessibleLabel, error, errorExtra, className = "", ...props },
+    {
+      id,
+      kind,
+      accessibleLabel,
+      error,
+      errorExtra,
+      visibilityLabel = "密码",
+      className = "",
+      ...props
+    },
     ref,
   ) => {
     const [visible, setVisible] = useState(false);
@@ -60,7 +71,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
             <button
               type="button"
               onClick={() => setVisible((v) => !v)}
-              aria-label={visible ? "隐藏密码" : "显示密码"}
+              aria-label={`${visible ? "隐藏" : "显示"}${visibilityLabel}`}
               aria-pressed={visible}
               aria-controls={id}
               data-testid={`${id}-visibility`}

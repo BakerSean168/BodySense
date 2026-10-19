@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // UI-001 #309: Penpot Person / Records + Body / Episode scenes on real Go/PG.
 // Registration, real receipts, full reloads and 390px geometry; no fixtures.
@@ -18,8 +19,7 @@ async function register(page: Page, request: APIRequestContext) {
   await page
     .getByLabel("邮箱地址")
     .fill(`person-penpot-${crypto.randomUUID()}@example.test`);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding|consultation)/);
   const accessToken = await refreshBrowserAccessToken(page, api);

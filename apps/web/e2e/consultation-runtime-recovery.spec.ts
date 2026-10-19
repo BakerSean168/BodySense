@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { expect, test, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -19,8 +20,7 @@ async function registerBrowser(page: Page): Promise<void> {
   const password = "BodySenseE2E!123";
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 
@@ -37,7 +37,10 @@ async function registerBrowser(page: Page): Promise<void> {
   // Body Canvas V3 is intentionally body-first, so the contextual assistant
   // starts collapsed. Runtime recovery still exercises the real composer after
   // the user explicitly opens that surface.
-  await page.locator(".bc-dock").getByRole("button", { name: "对话", exact: true }).click();
+  await page
+    .locator(".bc-dock")
+    .getByRole("button", { name: "对话", exact: true })
+    .click();
   await expect(
     page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeVisible();

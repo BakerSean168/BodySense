@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // AS-002 statement erasure in the Person Records window at 390px: the real
 // Go/PostgreSQL flow (review -> withdraw -> verified erasure) and the receipt
@@ -19,8 +20,7 @@ async function register(page: Page, request: APIRequestContext) {
   const email = `statement-erasure-${crypto.randomUUID()}@example.test`;
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const accessToken = await refreshBrowserAccessToken(page, api);

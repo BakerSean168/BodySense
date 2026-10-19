@@ -82,10 +82,45 @@ for (const vp of viewports) {
         "placeholder",
         "密码（至少 8 位）",
       );
-      await expect(page.getByLabel("确认密码")).toHaveCount(0);
+      const confirm = page.getByLabel("确认密码", { exact: true });
+      await expect(confirm).toHaveAttribute("placeholder", "确认密码");
+      await expect(confirm).toHaveAttribute("type", "password");
       await expect(
         page.getByRole("checkbox", { name: /同意/ }),
       ).not.toBeChecked();
+
+      // Confirm sits below password with the same Penpot field rhythm.
+      const pwBox = await page
+        .getByLabel("密码", { exact: true })
+        .boundingBox();
+      const confirmBox = await confirm.boundingBox();
+      const emailBox = await page.getByLabel("邮箱地址").boundingBox();
+      expect(pwBox && confirmBox && emailBox).toBeTruthy();
+      expect(Math.round(confirmBox!.y - pwBox!.y)).toBe(
+        Math.round(pwBox!.y - emailBox!.y),
+      );
+
+      // Submit button and the bottom link stay inside the first screen.
+      const submitBox = await page
+        .getByRole("button", { name: "创建账号" })
+        .boundingBox();
+      const linkBox = await page
+        .getByRole("link", { name: "登录" })
+        .boundingBox();
+      expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(vp.height);
+      expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(vp.height);
+      expect(
+        linkBox!.y - (submitBox!.y + submitBox!.height),
+      ).toBeGreaterThanOrEqual(24);
+
+      await page.getByTestId("confirmPassword-visibility").click();
+      await expect(confirm).toHaveAttribute("type", "text");
+      await expect(page.getByLabel("密码", { exact: true })).toHaveAttribute(
+        "type",
+        "password",
+      );
+      await page.getByTestId("confirmPassword-visibility").click();
+
       await page.screenshot({
         path: `test-results/auth-ink/register-${vp.name}.png`,
         animations: "disabled",
@@ -95,6 +130,11 @@ for (const vp of viewports) {
       await expect(
         page.getByText("请先阅读并同意服务条款和健康数据处理说明"),
       ).toBeVisible();
+
+      await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
+      await confirm.fill("BodySenseE2E!124");
+      await page.getByRole("button", { name: "创建账号" }).click();
+      await expect(page.getByText("两次输入的密码不一致")).toBeVisible();
 
       await page.getByRole("link", { name: "登录" }).click();
       await expect(page).toHaveURL(/\/login$/);

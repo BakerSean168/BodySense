@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { fillRegisterPassword } from "./support/register";
 
 // PC3-19 / PC-D8: the target product has no public health-conversation share.
 // Every old share entry point fails closed on the real stack: the API routes
@@ -34,8 +35,7 @@ test("old public share links and share endpoints fail closed", async ({
   await page
     .getByLabel("邮箱地址")
     .fill(`share-${crypto.randomUUID()}@example.test`);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const headers = {

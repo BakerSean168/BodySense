@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { fillRegisterPassword } from "./support/register";
 
 // Genuine browser cookie/JWT + Go validation + PostgreSQL 18 source/receipt.
 // The final observation editor is Track B's Penpot scope, so this tests only
@@ -16,8 +17,7 @@ test("direct-user BodyObservation keeps raw source, exact replay and isolation a
   const email = `v11-observation-${crypto.randomUUID()}@example.test`;
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 

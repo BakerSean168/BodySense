@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // These cases include registration, real Go/Python/DB calls and full reloads.
 // Keep each expectation's normal timeout; allow a cold 3D/browser startup on
@@ -18,8 +19,7 @@ async function register(page: Page, request: APIRequestContext) {
   const email = `body-fact-${crypto.randomUUID()}@example.test`;
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const accessToken = await refreshBrowserAccessToken(page, api);

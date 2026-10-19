@@ -1,6 +1,7 @@
 import { expect, test, type APIResponse } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // AS-001 #306: the minimal optional Profile is edited in the Person identity
 // popover at phone width. Registration, real Go/DB calls and reloads.
@@ -21,7 +22,10 @@ interface ProfileBody {
 
 async function expectJson<T>(response: APIResponse, label: string): Promise<T> {
   const body = await response.text();
-  expect(response.ok(), `${label} failed with ${response.status()}: ${body}`).toBeTruthy();
+  expect(
+    response.ok(),
+    `${label} failed with ${response.status()}: ${body}`,
+  ).toBeTruthy();
   return JSON.parse(body) as T;
 }
 
@@ -32,8 +36,7 @@ test("Person identity edits optional Profile fields and preferences without touc
   const email = `profile-identity-${crypto.randomUUID()}@example.test`;
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding|consultation)/);
   const accessToken = await refreshBrowserAccessToken(page, apiBase);
@@ -108,9 +111,16 @@ test("Person identity edits optional Profile fields and preferences without touc
     await request.put(`${apiBase}/api/v1/profile`, {
       headers,
       data: {
-        ...profileReplacement({ display_name: "Elsewhere", birth_date: "1996-08-27" }),
+        ...profileReplacement({
+          display_name: "Elsewhere",
+          birth_date: "1996-08-27",
+        }),
         expected_revision: stored.profile!.revision,
-        preferences: { locale: null, time_zone: "Asia/Tokyo", unit_preference: "imperial" },
+        preferences: {
+          locale: null,
+          time_zone: "Asia/Tokyo",
+          unit_preference: "imperial",
+        },
       },
     }),
     "concurrent profile write",
