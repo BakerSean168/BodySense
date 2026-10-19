@@ -28,20 +28,6 @@ const jointIndex = new Map<JointId, number>(JOINTS.map(([id], index) => [id, ind
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const smooth = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
-function invertMirroredNormals(geometry: BufferGeometry): void {
-  const normal = geometry.getAttribute("normal");
-  if (!(normal instanceof BufferAttribute)) return;
-  for (let vertex = 0; vertex < normal.count; vertex += 1) {
-    normal.setXYZ(
-      vertex,
-      -normal.getX(vertex),
-      -normal.getY(vertex),
-      -normal.getZ(vertex),
-    );
-  }
-  normal.needsUpdate = true;
-}
-
 function restoreMirroredTriangleWinding(geometry: BufferGeometry): void {
   // Several right-side Vanatome shell nodes are mirrored with a negative scale.
   // Baking that matrix into geometry reverses triangle winding. Keep the source
@@ -115,12 +101,13 @@ export function buildReferenceRig(source: Object3D): ReferenceRig {
     const mirrored = object.matrixWorld.determinant() < 0;
     const geometry = object.geometry.clone().applyMatrix4(object.matrixWorld);
     if (mirrored) {
+      // The left-side Vanatome shells reuse the right-side meshes under a
+      // negative X scale. applyMatrix4 already reflects their normals through
+      // the normal matrix, so they stay outward; only the triangle winding
+      // flips. Restore the winding and leave the normals alone: inverting them
+      // as well lit the whole left half from inside (dark, split down the
+      // midline).
       restoreMirroredTriangleWinding(geometry);
-      // Z-Anatomy's mirrored left-side shell nodes carry normals authored for
-      // the unreflected source. Three's normal-matrix transform preserves that
-      // orientation, so after restoring front-face winding the normals must be
-      // inverted as well to keep PBR lighting outward on both body halves.
-      invertMirroredNormals(geometry);
     }
     for (const key of Object.keys(geometry.attributes)) if (key !== "position" && key !== "normal") geometry.deleteAttribute(key);
     if (!geometry.getAttribute("normal")) geometry.computeVertexNormals();
