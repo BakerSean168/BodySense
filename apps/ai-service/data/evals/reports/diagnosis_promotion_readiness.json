@@ -89,6 +89,7 @@
   "reasons": [],
   "required_policy_reports": [
     {
+      "identity": {},
       "minimum_pass_rate": 1.0,
       "pass_rate": 1.0,
       "passed": 5,
