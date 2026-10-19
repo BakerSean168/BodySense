@@ -1024,7 +1024,7 @@
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
-  background: var(--bc-paper);
+  background: transparent;
 }
 .bc-chat-content > * {
   height: 100%;
@@ -1812,7 +1812,7 @@
   gap: 8px;
   padding: 12px 20px;
   border-top: 1px solid var(--bc-line);
-  background: var(--bc-paper);
+  background: transparent;
 }
 .bc-window-footer .bc-button {
   flex: 1 1 auto;
@@ -1885,7 +1885,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bc-paper);
+  background: transparent;
   color: var(--bc-ink);
 }
 .bc-person-identity {
@@ -2613,7 +2613,7 @@
 
 /* Pending Ask User reuses the shared card and the active canvas theme. */
 .body-canvas-theme .bc-chat-composer-area {
-  background: linear-gradient(to top, var(--bc-paper) 78%, transparent);
+  background: linear-gradient(to top, var(--bc-window-paper) 78%, transparent);
 }
 .body-canvas-theme .bc-chat-run-status {
   border-color: var(--bc-line);
@@ -4322,7 +4322,10 @@
 /* Penpot Chat boards: a light thread on window paper (UI-001). The shared chat
    components keep their standalone dark utilities; inside the Body Canvas the
    semantic chat-* hooks take the active canvas theme (light or .bc-dark). */
-.body-canvas-theme .chat-thread,
+.body-canvas-theme .chat-thread {
+  background: transparent;
+  color: var(--bc-ink);
+}
 .body-canvas-theme .chat-skeleton {
   background: var(--bc-paper);
   color: var(--bc-ink);
@@ -4975,7 +4978,7 @@
   margin: 0 -24px;
   padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--bc-line);
-  background: var(--bc-paper);
+  background: transparent;
 }
 .bc-person-footer-link,
 .bc-person-footer-action {
