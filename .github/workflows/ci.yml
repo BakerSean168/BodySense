@@ -200,6 +200,8 @@ jobs:
           go run ./cmd/migration-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
           -migrations 'file://migrations'
+      - name: Verify committed baseline schema snapshot
+        run: bash scripts/schema/check-snapshot.sh
       - name: Validate longitudinal domain semantics
         working-directory: apps/api
         run: >-
