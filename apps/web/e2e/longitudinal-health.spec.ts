@@ -79,11 +79,9 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await expect(page).toHaveURL(/view=chat/);
   await page.reload();
   await expect(page).toHaveURL(/view=chat/);
-  await expect(
-    page.locator('.bc-business-window[data-window="chat"]'),
-  ).toBeVisible();
+  await expect(page.locator('[data-window="chat"]')).toBeVisible();
   await page
-    .locator('.bc-business-window[data-window="chat"]')
+    .locator('[data-window="chat"]')
     .getByRole("button", { name: "关闭对话" })
     .click();
 
@@ -95,9 +93,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await expect(page.getByTestId("diagnosis-window")).toBeVisible();
   // Penpot V2 replaces the old heading with a toolbar selector. Verify the
   // actual labeled business window and the empty, non-clinical state.
-  const diagnosisWindow = page.locator(
-    '.bc-business-window[data-window="diagnosis"]',
-  );
+  const diagnosisWindow = page.locator('[data-window="diagnosis"]');
   await expect(
     diagnosisWindow.getByRole("region", { name: "当前诊断内容" }),
   ).toBeVisible();

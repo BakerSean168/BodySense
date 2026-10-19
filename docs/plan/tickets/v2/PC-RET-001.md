@@ -1,8 +1,18 @@
 # PC-RET-001 · Implement three-cursor retention and controlled pruning
 
-Status: BLOCKED (owner decision, 2026-10-18) · lane C · all four scope items merged in #343 #354 #355 (last merge `1f2db35c0`); residual acceptance below awaits the owner. Phase 2. SF cross-reference: SF-70.
+Status: DONE (ticket, 2026-10-19) · #343, #354, #355, #368 merged, last merge `267b87ef6`. Issue #307 closed. Domain gates raised at the V2 final closeout with QA-001 evidence.
 **Owner role:** Chat Retention Owner. **Dependencies:** `PC-001`.
 **Exclusive resources:** `conversation-schema`, `privacy-erasure`.
+
+## Final closeout · 2026-10-19
+
+Synced on main `da14c3435`. [#307](https://github.com/BakerSean168/BodySense/issues/307) is closed with every scope checkbox ticked.
+
+Merged: [#343](https://github.com/BakerSean168/BodySense/pull/343) (`bf2fea6e9`), [#354](https://github.com/BakerSean168/BodySense/pull/354) (`100f14686`), [#355](https://github.com/BakerSean168/BodySense/pull/355) (`1f2db35c0`), [#368](https://github.com/BakerSean168/BodySense/pull/368) (`267b87ef6`).
+
+three cursors + controlled prune (#343), verified checkpoint cleanup + prune job (#354), token-budget window + Go-cursor context assembly (#355), residual acceptance: Ask User expiry settle, cited-only deletion-scope proof, interaction_resumes cascade, share retirement, Chromium rolling-window E2E (#368).
+
+Cross-domain re-verification: [QA-001](./QA-001.md) on main `da14c3435`.
 
 ## Domain closeout · 2026-10-18
 

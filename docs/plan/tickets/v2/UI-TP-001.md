@@ -1,8 +1,18 @@
 # UI-TP-001 · Bind TrainingPlan/Trainer windows to real safety-gated API
 
-Status: IN PROGRESS · lane B (Hark parallel lanes) · slices 1–2 merged in #363 #364 (last merge `b8b7c1740`); slice 3 next, base `f2e52c79c`. Admitted at the 2026-10-18 closeout after TP-003 was accepted. Phase 3. SF cross-reference: SF-80.
+Status: DONE (ticket, 2026-10-19) · #363, #364, #369 merged, last merge `05ed96033`. Issue #315 closed. Domain gates raised at the V2 final closeout with QA-001 evidence.
 **Owner role:** React Training Owner. **Dependencies:** `TP-003`.
 **Exclusive resources:** `training-ui`.
+
+## Final closeout · 2026-10-19
+
+Synced on main `da14c3435`. [#315](https://github.com/BakerSean168/BodySense/issues/315) is closed with every scope checkbox ticked.
+
+Merged: [#363](https://github.com/BakerSean168/BodySense/pull/363) (`fcdc025ed`), [#364](https://github.com/BakerSean168/BodySense/pull/364) (`b8b7c1740`), [#369](https://github.com/BakerSean168/BodySense/pull/369) (`05ed96033`).
+
+TrainingPlan plans + proposals (#363), Trainer sessions + gate + pause/resume (#364), corrections, exercise skip, Ended feedback, Home chip, Training naming, 390px + Chromium E2E (#369).
+
+Cross-domain re-verification: [QA-001](./QA-001.md) on main `da14c3435`.
 
 ## Slice sync · 2026-10-19
 

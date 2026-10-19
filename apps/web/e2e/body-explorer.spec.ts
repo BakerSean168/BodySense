@@ -3,6 +3,10 @@ import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
+
+// Desktop-authored: both scenarios open the 3D explorer from the desktop Tools
+// rail; the main scenario checks the 390px layout itself once it is open.
+test.use({ viewport: { width: 1280, height: 720 } });
 const publicAssetOrigin = process.env.E2E_PUBLIC_ASSET_ORIGIN?.replace(
   /\/$/,
   "",
