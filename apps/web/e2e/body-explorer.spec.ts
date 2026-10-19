@@ -263,10 +263,12 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   const heapBeforeTabs = await readUsedJsHeap(page);
   const chatWindow = page.locator('.bc-business-window[data-window="chat"]');
   const openAnatomy = async () => {
-    await page
-      .getByRole("toolbar", { name: "身体画布工具" })
-      .getByRole("button", { name: "精细解剖" })
-      .click();
+    // The docked Region scene hides the tool rail (Penpot); X still opens the
+    // anatomy overlay once focus has left the region select.
+    await page.evaluate(() =>
+      (document.activeElement as HTMLElement | null)?.blur(),
+    );
+    await page.keyboard.press("x");
     await expect(
       page
         .locator(".bc-anatomy-dialog")
@@ -374,10 +376,11 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     }),
   });
 
-  await page
-    .getByRole("toolbar", { name: "身体画布工具" })
-    .getByRole("button", { name: "精细解剖" })
-    .click();
+  // The Region scene is still docked, so the rail is hidden; X opens anatomy.
+  await page.evaluate(() =>
+    (document.activeElement as HTMLElement | null)?.blur(),
+  );
+  await page.keyboard.press("x");
   await expect(anatomyDialog).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
