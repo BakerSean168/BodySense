@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -1205,17 +1206,14 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             aria-label="已选区域当前状况"
           >
             <div className="bc-panel-heading">
-              <div>
-                <span className="bc-eyebrow">
-                  {selection.regions.length > 1
-                    ? "SELECTION / 选区预览"
-                    : "CURRENT REGION"}
-                </span>
+              {/* Penpot "Body / Region": region name + a mint 已选择 chip. */}
+              <div className="bc-region-title">
                 <h2>
                   {selection.regions.length > 1
                     ? `${selection.regions.length} 个区域`
                     : getBodyRegionDefinition(primary).labels["zh-CN"]}
                 </h2>
+                <span className="bc-region-selected">已选择</span>
               </div>
               <button
                 className="bc-icon-button"
@@ -1245,11 +1243,16 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               ) : regionFacts.length ? (
                 <>
                   <span className="bc-small-label">
-                    用户陈述 {regionFacts.length} 条
+                    相关描述 {regionFacts.length} 条
                   </span>
                   {regionFacts.slice(0, 3).map((fact) => (
                     <article key={fact.id}>
-                      <strong>{fact.statement}</strong>
+                      <Check
+                        className="bc-region-fact-mark"
+                        size={14}
+                        aria-hidden="true"
+                      />
+                      <strong>“{fact.statement}”</strong>
                       <span>
                         用户陈述 ·{" "}
                         {new Date(fact.recorded_at).toLocaleDateString("zh-CN")}
@@ -1277,16 +1280,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               </div>
             )}
             <div className="bc-panel-actions">
-              <button className="bc-button bc-primary" onClick={ask}>
-                针对这里提问
-                <ArrowRight size={17} />
-              </button>
-              <button
-                className="bc-button"
-                onClick={() => openWindow("person")}
-              >
-                查看完整记录
-              </button>
               <div className="bc-actions">
                 <button
                   className="bc-text-button"
@@ -1300,6 +1293,20 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                   清除选区
                 </button>
               </div>
+            </div>
+            {/* Penpot footer: 身体记录 on the left, the region question right. */}
+            <div className="bc-region-footer">
+              <button
+                className="bc-text-button bc-region-records"
+                onClick={() => openWindow("person")}
+              >
+                身体记录
+              </button>
+              <button className="bc-button bc-region-ask" onClick={ask}>
+                {selection.regions.length > 1
+                  ? "围绕选区提问"
+                  : `围绕${getBodyRegionDefinition(primary).labels["zh-CN"]}提问`}
+              </button>
             </div>
           </aside>
         )}
