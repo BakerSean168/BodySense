@@ -28,6 +28,11 @@ const PENPOT_DOCK: Record<DockedWindow, Box> = {
   trainer: { x: 800, y: 92, width: 600, height: 700 },
 };
 
+// Penpot "Desktop / Home" Dock bar: y 800, 72 tall (icon-only).
+const PENPOT_DOCK_BAR = { y: 800, height: 72 };
+// Penpot Body / Episode, Body / Region and Assets scenes: 40/92/560/700.
+const PENPOT_PERSON_SCENE: Box = { x: 40, y: 92, width: 560, height: 700 };
+
 async function register(page: Page, request: APIRequestContext) {
   await page.goto("/register");
   await page
@@ -134,17 +139,16 @@ test("desktop windows dock at the Penpot geometry and leave the body visible", a
     expectClose(box.x, penpot.x, `${id} x`);
     expectClose(box.y, penpot.y, `${id} top`);
     expectClose(box.width, penpot.width, `${id} width`);
-    // Penpot ends the window at y 792, 8px above its 72px Dock. The real Dock
-    // (labels + shortcut keys) is taller, so the window keeps the same 8px
-    // above it instead of running under it: Penpot's height, clamped only by
-    // the Dock that is actually on screen.
+    // Penpot ends the window at y 792, 8px above its 72px icon Dock (y 800
+    // to 872); the shipped Dock matches it, so windows get the full 700px.
+    expectClose(box.height, penpot.height, `${id} height`);
     const dock = (await page.locator(".bc-dock").boundingBox())!;
-    const bottom = Math.min(penpot.y + penpot.height, dock.y - 8);
-    expectClose(box.height, bottom - penpot.y, `${id} height`);
-    expect(penpot.y + penpot.height - bottom).toBeLessThanOrEqual(24);
-    expect(box.y + box.height, `${id} bottom above Dock`).toBeLessThanOrEqual(
-      dock.y,
-    );
+    expectClose(dock.y, PENPOT_DOCK_BAR.y, "Dock top");
+    expectClose(dock.height, PENPOT_DOCK_BAR.height, "Dock height");
+    expect(
+      box.y + box.height + 8,
+      `${id} bottom above Dock`,
+    ).toBeLessThanOrEqual(dock.y + 1);
   }
 });
 
@@ -182,4 +186,97 @@ test("the desktop safety banner never covers a window header", async ({
       `${id} bottom`,
     );
   }
+});
+
+test("desktop chrome follows the Penpot window boards", async ({
+  page,
+  request,
+}) => {
+  await page.setViewportSize(VIEWPORT);
+  const headers = await register(page, request);
+  await screenSafety(request, headers);
+
+  // Home: intro, Tools rail and the icon-only Dock with accessible names.
+  await page.goto("/consultation");
+  const intro = page.locator(".bc-intro");
+  const tools = page.getByRole("toolbar", { name: "身体画布工具" });
+  const dock = page.getByRole("navigation", { name: "身体工作区导航" });
+  await expect(intro).toBeVisible();
+  await expect(tools).toBeVisible();
+  for (const name of ["个人档案", "训练计划", "综合诊断", "对话"]) {
+    const item = dock.getByRole("button", { name, exact: true });
+    await expect(item).toBeVisible();
+    await expect(item).toHaveAttribute("title", new RegExp(`^${name} · `));
+    // The text label is only visually hidden on desktop (Penpot icon Dock).
+    const label = (await item.locator(".bc-dock-label").boundingBox())!;
+    expect(label.width).toBeLessThanOrEqual(1);
+  }
+  const bar = (await dock.boundingBox())!;
+  expectClose(bar.y, PENPOT_DOCK_BAR.y, "Dock top");
+  expectClose(bar.height, PENPOT_DOCK_BAR.height, "Dock height");
+  // Keyboard users still reach every Dock entry.
+  await dock.getByRole("button", { name: "个人档案", exact: true }).focus();
+  await expect(
+    dock.getByRole("button", { name: "个人档案", exact: true }),
+  ).toBeFocused();
+
+  // Right-docked windows: the body keeps its place (Penpot does not move it),
+  // the intro gives way, the Tools rail stays.
+  for (const id of ["diagnosis", "training", "trainer"] as const) {
+    await openWindow(page, id);
+    await expect(intro).toBeHidden();
+    await expect(tools).toBeVisible();
+  }
+
+  // Left-docked Person: the Tools rail collapses instead of peeking out.
+  const person = await openWindow(page, "person");
+  await expect(intro).toBeHidden();
+  await expect(tools).toBeHidden();
+  expectClose((await person.boundingBox())!.width, 860, "person list width");
+
+  // Person detail scenes are 560 wide from the left dock, then back to 860.
+  await person.getByRole("button", { name: "经历 0 段" }).click();
+  await expect(page.getByTestId("person-episodes")).toBeVisible();
+  await expect
+    .poll(async () => Math.round((await person.boundingBox())!.width))
+    .toBeLessThanOrEqual(PENPOT_PERSON_SCENE.width + TOLERANCE);
+  const scene = (await person.boundingBox())!;
+  expectClose(scene.x, PENPOT_PERSON_SCENE.x, "scene x");
+  expectClose(scene.y, PENPOT_PERSON_SCENE.y, "scene top");
+  expectClose(scene.width, PENPOT_PERSON_SCENE.width, "scene width");
+  expectClose(scene.height, PENPOT_PERSON_SCENE.height, "scene height");
+  await person.getByRole("button", { name: "返回记录" }).click();
+  await expect
+    .poll(async () => Math.round((await person.boundingBox())!.width))
+    .toBeGreaterThanOrEqual(860 - TOLERANCE);
+
+  // Closing the window brings the intro and the Tools rail back.
+  await person.getByRole("button", { name: "关闭个人档案" }).click();
+  await expect(person).toBeHidden();
+  await expect(intro).toBeVisible();
+  await expect(tools).toBeVisible();
+
+  // Reduced motion: the chrome changes without animating.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const duration = await tools.evaluate(
+    (node) => getComputedStyle(node).transitionDuration,
+  );
+  expect(
+    duration.split(",").every((value) => parseFloat(value) < 0.01),
+    duration,
+  ).toBe(true);
+  await page.emulateMedia({ reducedMotion: null });
+
+  // Mobile keeps its labelled Dock and its sheet; nothing desktop leaks in.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/consultation");
+  await expect(dock.locator(".bc-dock-item")).toHaveCount(4);
+  await expect(dock.getByText("个人", { exact: true })).toBeVisible();
+  await expect(intro).toBeVisible();
+  await expect(tools).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  ).toBe(true);
 });

@@ -89,7 +89,7 @@ export function StatementErasure({
 
   return (
     <section
-      className="bc-equipment-form"
+      className="bc-equipment-form bc-statement-erasure"
       aria-label="彻底删除这条陈述"
       data-testid="statement-erasure"
       data-phase={view?.phase ?? (working ? "in_progress" : "confirm")}

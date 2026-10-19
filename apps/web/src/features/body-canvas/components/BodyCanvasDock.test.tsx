@@ -45,6 +45,26 @@ describe("Penpot V2 Body Canvas Dock", () => {
     expect(onToggle).toHaveBeenCalledWith("training");
   });
 
+  it("keeps an accessible name, tooltip and shortcut on every icon-only item", () => {
+    render(
+      <BodyCanvasDock
+        activeWindow={null}
+        confirmedDiagnosisCount={0}
+        onToggle={vi.fn()}
+      />,
+    );
+    const items = screen
+      .getByRole("navigation", { name: "身体工作区导航" })
+      .querySelectorAll("button");
+    for (const item of items) {
+      expect(item).toHaveAccessibleName();
+      expect(item.getAttribute("title")).toMatch(/ · .$/);
+      expect(item.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+      expect(item.querySelector(".bc-dock-label")?.textContent).toBeTruthy();
+      expect(item.querySelector("kbd")).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
   it("hides the numeric badge for empty or untrusted counts and caps very large values", () => {
     const { rerender } = render(
       <BodyCanvasDock
