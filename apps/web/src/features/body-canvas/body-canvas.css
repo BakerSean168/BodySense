@@ -5523,3 +5523,20 @@
 .bc-workspace .bc-region-card .bc-actions button {
   font-size: 12px;
 }
+/* Person Media / Reports upload (Penpot "+" and "Upload failed"). */
+.bc-person-uploads-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  color: var(--bc-muted);
+  font-size: 13px;
+}
+.bc-person-upload-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
