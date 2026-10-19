@@ -5540,3 +5540,71 @@
   margin: 8px 0;
   font-size: 12px;
 }
+/* Penpot "Mobile / Body / Region": the region detail is the same near-full
+   card as the mobile window sheets (16px inset, 18px corners, window paper),
+   ending above the Dock, not a bottom half-sheet over the body. The footer
+   (身体记录 / 围绕…提问) sits on the card's bottom edge; the rail gives way
+   and the safety banner moves to the top edge, as for a sheet. */
+@media (max-width: 760px) {
+  .bc-region-card {
+    --bc-sheet-top: 16px;
+    left: 16px;
+    right: 16px;
+    top: var(--bc-sheet-top);
+    bottom: auto;
+    width: auto;
+    height: min(704px, calc(100% - var(--bc-sheet-top) - 92px));
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--bc-window-line, var(--bc-line));
+    border-radius: 18px;
+    background: var(--bc-window-paper, var(--bc-paper));
+    backdrop-filter: none;
+    box-shadow: 0 18px 60px rgba(31, 47, 37, 0.16);
+  }
+  .bc-stage:has(> .bc-safety-banner) .bc-region-card {
+    --bc-sheet-top: calc(12px + var(--bc-safety-banner-height, 46px) + 8px);
+  }
+  .bc-stage:has(> .bc-region-card) > .bc-safety-banner {
+    top: 12px;
+  }
+  .bc-region-card > .bc-panel-heading {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 18px 12px 0 22px;
+  }
+  .bc-region-card
+    > :is(
+      .bc-selection-chips,
+      .bc-region-facts,
+      .bc-context-note,
+      .bc-panel-actions
+    ) {
+    margin-left: 22px;
+    margin-right: 22px;
+  }
+  .bc-region-card .bc-region-facts {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    border: 0;
+    padding: 0;
+  }
+  .bc-region-card .bc-panel-actions {
+    flex: 0 0 auto;
+    padding-bottom: 8px;
+  }
+  .bc-region-card .bc-region-footer {
+    flex: 0 0 auto;
+    padding: 14px 22px calc(14px + env(safe-area-inset-bottom));
+  }
+  .bc-stage:has(> .bc-region-card) :is(.bc-tool-rail, .bc-tool-rail-tab) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
