@@ -126,7 +126,11 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(
     brushSelection.locator(".bc-selection-chips button").first(),
   ).toBeVisible();
-  await page.getByRole("button", { name: "旋转与点选" }).click();
+  // The docked Body / Region scene hides the rail (Penpot); V still selects.
+  await page.keyboard.press("v");
+  await expect(
+    page.getByRole("button", { name: "旋转与点选", includeHidden: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: "动作演示" }).click();
   await expect(page.getByText("MOTION STUDIO")).toBeVisible();
