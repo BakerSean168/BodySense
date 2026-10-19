@@ -9,6 +9,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   request,
 }, testInfo) => {
   test.setTimeout(120_000);
+  // Desktop-authored flow (Tools rail, dock, hotkeys); the 390px layout has
+  // its own test below. Pin the desktop frame so matrix projects agree.
+  await page.setViewportSize({ width: 1280, height: 720 });
   const email = `body-canvas-v3-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
 
