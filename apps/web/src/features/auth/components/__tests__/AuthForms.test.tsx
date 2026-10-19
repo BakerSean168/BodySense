@@ -65,13 +65,17 @@ describe("LoginPage (Penpot ink sign-in)", () => {
 });
 
 describe("RegisterPage (Penpot ink register)", () => {
-  it("links back to sign in and has no confirm-password or stepper", () => {
+  it("links back to sign in and has a label-less confirm-password field", () => {
     renderAt(<RegisterPage />);
     expect(screen.getByRole("heading", { name: "注册" })).toBeTruthy();
     expect(screen.getByLabelText("密码").getAttribute("placeholder")).toBe(
       "密码（至少 8 位）",
     );
-    expect(screen.queryByLabelText("确认密码")).toBeNull();
+    const confirm = screen.getByLabelText("确认密码");
+    expect(confirm.getAttribute("placeholder")).toBe("确认密码");
+    expect(confirm.getAttribute("type")).toBe("password");
+    expect(confirm.getAttribute("autocomplete")).toBe("new-password");
+    expect(screen.queryByText("确认密码")).toBeNull();
     expect(
       screen.getByRole("link", { name: "登录" }).getAttribute("href"),
     ).toBe("/login");
@@ -97,10 +101,90 @@ describe("RegisterPage (Penpot ink register)", () => {
     fireEvent.change(screen.getByLabelText("密码"), {
       target: { value: "longenough1" },
     });
+    fireEvent.change(screen.getByLabelText("确认密码"), {
+      target: { value: "longenough1" },
+    });
     fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
     expect(register).toHaveBeenCalledWith("a@b.co", "longenough1");
+  });
+
+  it("requires the confirm password", () => {
+    const register = vi.fn();
+    act(() => useAuthStore.setState({ register }));
+    renderAt(<RegisterPage />);
+    fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+    expect(screen.getByText("请再次输入密码")).toBeTruthy();
+    expect(screen.getByLabelText("确认密码").getAttribute("aria-invalid")).toBe(
+      "true",
+    );
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("shows a mismatch error inline under confirm and does not register", () => {
+    const register = vi.fn();
+    act(() => useAuthStore.setState({ register }));
+    renderAt(<RegisterPage />);
+    fireEvent.change(screen.getByLabelText("邮箱地址"), {
+      target: { value: "a@b.co" },
+    });
+    fireEvent.change(screen.getByLabelText("密码"), {
+      target: { value: "longenough1" },
+    });
+    fireEvent.change(screen.getByLabelText("确认密码"), {
+      target: { value: "longenough2" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+    const error = screen.getByText("两次输入的密码不一致");
+    expect(error.getAttribute("id")).toBe("confirmPassword-error");
+    expect(error.getAttribute("role")).toBe("alert");
+    expect(
+      screen.getByLabelText("确认密码").getAttribute("aria-describedby"),
+    ).toBe("confirmPassword-error");
+    expect(
+      screen.getByLabelText("密码").getAttribute("aria-invalid"),
+    ).toBeNull();
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("registers when the two passwords match", async () => {
+    const register = vi.fn().mockResolvedValue(undefined);
+    act(() => useAuthStore.setState({ register }));
+    renderAt(<RegisterPage />);
+    fireEvent.change(screen.getByLabelText("邮箱地址"), {
+      target: { value: "a@b.co" },
+    });
+    fireEvent.change(screen.getByLabelText("密码"), {
+      target: { value: "longenough1" },
+    });
+    fireEvent.change(screen.getByLabelText("确认密码"), {
+      target: { value: "longenough1" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+    });
+    expect(screen.queryByText("两次输入的密码不一致")).toBeNull();
+    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1");
+  });
+
+  it("toggles the confirm field with its own eye button", () => {
+    renderAt(<RegisterPage />);
+    fireEvent.click(screen.getByRole("button", { name: "显示确认密码" }));
+    expect(screen.getByLabelText("确认密码").getAttribute("type")).toBe("text");
+    expect(screen.getByLabelText("密码").getAttribute("type")).toBe("password");
+    expect(
+      screen
+        .getByRole("button", { name: "隐藏确认密码" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: "显示密码" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
   });
 });

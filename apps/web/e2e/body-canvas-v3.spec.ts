@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -17,8 +18,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
 
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(onboarding|consultation)/);
 

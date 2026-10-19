@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { fillRegisterPassword } from "./support/register";
 
 // Direct owner + PostgreSQL + generated Go routes. This is deliberately not
 // a Penpot editor test: the final Observation UI belongs to Track B.
@@ -15,8 +16,7 @@ test("v12 actual user corrects original observation then withdraws exact success
   await page
     .getByLabel("邮箱地址")
     .fill(`observation-amend-${crypto.randomUUID()}@example.test`);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const token = await refreshBrowserAccessToken(page, api);

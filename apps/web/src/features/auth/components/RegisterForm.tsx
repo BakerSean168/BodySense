@@ -6,6 +6,7 @@ import { InkButton, InkField } from "./InkField";
 type RegisterErrors = {
   email?: string;
   password?: string;
+  confirmPassword?: string;
   consent?: string;
 };
 
@@ -15,6 +16,7 @@ export function RegisterForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [consent, setConsent] = useState(false);
   const [validationErrors, setValidationErrors] = useState<RegisterErrors>({});
 
@@ -31,6 +33,12 @@ export function RegisterForm() {
       errors.password = "请输入密码";
     } else if (password.length < 8) {
       errors.password = "密码长度不能少于 8 位";
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "请再次输入密码";
+    } else if (confirmPassword !== password) {
+      errors.confirmPassword = "两次输入的密码不一致";
     }
 
     if (!consent) {
@@ -78,6 +86,19 @@ export function RegisterForm() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="密码（至少 8 位）"
         error={validationErrors.password}
+      />
+
+      <InkField
+        id="confirmPassword"
+        kind="password"
+        accessibleLabel="确认密码"
+        visibilityLabel="确认密码"
+        autoComplete="new-password"
+        className="mt-7 lg:mt-[34px]"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        placeholder="确认密码"
+        error={validationErrors.confirmPassword}
       />
 
       <div className="mt-[22px] lg:mt-6">

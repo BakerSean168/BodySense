@@ -7,6 +7,7 @@ import {
 import { parseStreamEvent } from "@bodysense/contracts";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // PC-RET-001 in a real browser against the real Go retention path: the single
 // Conversation keeps a rolling raw-history window sized by the context token
@@ -28,8 +29,7 @@ async function register(page: Page, request: APIRequestContext) {
   await page
     .getByLabel("邮箱地址")
     .fill(`retention-${crypto.randomUUID()}@example.test`);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const headers = {

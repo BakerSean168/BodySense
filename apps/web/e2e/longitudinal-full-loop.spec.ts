@@ -17,6 +17,7 @@ import {
   factStatementEvidenceId,
 } from "./support/diagnosis";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 // The genuine consultation stream explicitly permits a 60s API request.
 // Playwright's default 30s test deadline would abort that allowed request
@@ -44,8 +45,7 @@ async function registerAndProfile(
 
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { fillRegisterPassword } from "./support/register";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -47,8 +48,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
 
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(onboarding|consultation)/);
 
@@ -111,7 +111,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
             `3D atlas failed before readiness: ${JSON.stringify(atlasRequestFailures)}`,
           );
         }
-        return bodyExplorer.getByText("Atlas 1.4.0", { exact: true }).isVisible();
+        return bodyExplorer
+          .getByText("Atlas 1.4.0", { exact: true })
+          .isVisible();
       },
       { timeout: 75_000 },
     )
@@ -127,7 +129,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     fullPage: true,
   });
 
-  const regionSelect = bodyExplorer.getByRole("combobox", { name: "选择身体区域" });
+  const regionSelect = bodyExplorer.getByRole("combobox", {
+    name: "选择身体区域",
+  });
   const pageErrors: Error[] = [];
   page.on("pageerror", (error) => pageErrors.push(error));
 
@@ -179,7 +183,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     }
   }
   expect(pointerHit).toBe(true);
-  await expect(bodyExplorer.getByRole("button", { name: "隔离" })).toBeEnabled();
+  await expect(
+    bodyExplorer.getByRole("button", { name: "隔离" }),
+  ).toBeEnabled();
   const regionBeforeFullBodyReset = await regionSelect.inputValue();
   expect(regionBeforeFullBodyReset).not.toBe("");
   await page.screenshot({
@@ -215,8 +221,12 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     expect(canonicalRegionIds).toContain(regionId);
     await regionSelect.selectOption(regionId);
     await expect(regionSelect).toHaveValue(regionId);
-    await expect(bodyExplorer.getByRole("button", { name: "深入查看" })).toBeVisible();
-    await expect(bodyExplorer.getByText("3D 身体视图暂时不可用")).toHaveCount(0);
+    await expect(
+      bodyExplorer.getByRole("button", { name: "深入查看" }),
+    ).toBeVisible();
+    await expect(bodyExplorer.getByText("3D 身体视图暂时不可用")).toHaveCount(
+      0,
+    );
   }
   expect(pageErrors).toEqual([]);
 
@@ -258,7 +268,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
       .getByRole("button", { name: "精细解剖" })
       .click();
     await expect(
-      page.locator(".bc-anatomy-dialog").getByRole("region", { name: "3D 身体探索" }),
+      page
+        .locator(".bc-anatomy-dialog")
+        .getByRole("region", { name: "3D 身体探索" }),
     ).toBeVisible({ timeout: 30_000 });
   };
   for (let index = 0; index < 2; index += 1) {
@@ -272,7 +284,10 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
       .click();
     await expect(page.locator(".bc-anatomy-dialog")).toBeHidden();
 
-    await page.locator(".bc-dock").getByRole("button", { name: "综合诊断", exact: true }).click();
+    await page
+      .locator(".bc-dock")
+      .getByRole("button", { name: "综合诊断", exact: true })
+      .click();
     await expect(page.getByTestId("diagnosis-window")).toBeVisible();
     await page
       .locator('.bc-business-window[data-window="diagnosis"]')
@@ -281,7 +296,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
 
     await openAnatomy();
     await expect(
-      page.locator(".bc-anatomy-dialog").getByText("Atlas 1.4.0", { exact: true }),
+      page
+        .locator(".bc-anatomy-dialog")
+        .getByText("Atlas 1.4.0", { exact: true }),
     ).toBeVisible({ timeout: 30_000 });
   }
   // Leave the anatomy overlay closed before exercising the Chat window.
@@ -299,7 +316,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   const reopenedExplorer = page
     .locator(".bc-anatomy-dialog")
     .getByRole("region", { name: "3D 身体探索" });
-  const askButtons = reopenedExplorer.getByRole("button", { name: "询问 BodySense" });
+  const askButtons = reopenedExplorer.getByRole("button", {
+    name: "询问 BodySense",
+  });
   await askButtons.first().click();
   await expect(chatWindow).toBeVisible();
   await expect(page.locator(".bc-anatomy-dialog")).toBeHidden();
@@ -364,7 +383,9 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   await expect(
     bodyExplorer.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
-  await expect(bodyExplorer.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
+  await expect(
+    bodyExplorer.getByText("Atlas 1.4.0", { exact: true }),
+  ).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
 
@@ -378,8 +399,7 @@ test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
 
   await page.goto("/register");
   await page.getByLabel("邮箱地址").fill(email);
-  await page.getByLabel("密码", { exact: true }).fill(password);
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(onboarding|consultation)/);
 

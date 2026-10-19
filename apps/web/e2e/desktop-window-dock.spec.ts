@@ -7,6 +7,7 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { completeStructuredSafetyIntake } from "./support/safety";
+import { fillRegisterPassword } from "./support/register";
 
 // Desktop business windows dock like the Penpot "Desktop / <Window> / …"
 // boards (1440 x 900, screen coordinates): Person on the left, Diagnosis,
@@ -38,8 +39,7 @@ async function register(page: Page, request: APIRequestContext) {
   await page
     .getByLabel("邮箱地址")
     .fill(`window-dock-${crypto.randomUUID()}@example.test`);
-  await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByRole("checkbox", { name: /同意/ }).check();
+  await fillRegisterPassword(page, "BodySenseE2E!123");
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding|consultation)/);
   const accessToken = await refreshBrowserAccessToken(page, api);
