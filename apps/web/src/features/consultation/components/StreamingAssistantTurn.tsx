@@ -118,13 +118,22 @@ export function StreamingAssistantTurn({
       ) : null}
 
       {vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0 ? (
+        // Penpot Chat / Running: a quiet pill with three graded dots and what
+        // is happening; "继续分析" once the user answered a question this turn.
         <div
-          className="chat-thinking flex h-7 items-center gap-1.5 text-white/40"
+          className="chat-thinking flex h-9 w-fit items-center gap-1.5 rounded-xl px-3.5 text-[13px] text-white/40"
+          role="status"
           aria-label="BodySense 正在思考"
         >
-          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-240ms]" />
-          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-120ms]" />
-          <span className="size-1.5 animate-pulse rounded-full bg-current" />
+          <span className="chat-thinking-dot size-1.5 animate-pulse rounded-full bg-current [animation-delay:-240ms]" />
+          <span className="chat-thinking-dot size-1.5 animate-pulse rounded-full bg-current [animation-delay:-120ms]" />
+          <span className="chat-thinking-dot size-1.5 animate-pulse rounded-full bg-current" />
+          <span className="chat-thinking-label ml-1">
+            {vm.answeredSuggestions.length > 0 ||
+            vm.pendingInteraction?.status === "answered"
+              ? "继续分析"
+              : "正在分析"}
+          </span>
         </div>
       ) : null}
 
