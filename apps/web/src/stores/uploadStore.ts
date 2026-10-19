@@ -18,6 +18,25 @@ import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
 type UploadWire = Awaited<ReturnType<typeof createUpload>>;
 
+/**
+ * A failed extraction or analysis carries an error payload instead of a
+ * result. It has no usable result, so it reads as null rather than failing
+ * the whole list (which would show the user an empty Reports category).
+ * Completed results stay strictly parsed.
+ */
+function resultOrNull<T>(
+  status: string | undefined,
+  input: unknown,
+  parse: (value: unknown) => T | null,
+): T | null {
+  if (status !== "failed") return parse(input);
+  try {
+    return parse(input);
+  } catch {
+    return null;
+  }
+}
+
 function toUserUpload(upload: UploadWire): UserUpload {
   return {
     id: upload.id,
@@ -26,10 +45,18 @@ function toUserUpload(upload: UploadWire): UserUpload {
     file_size: upload.file_size,
     mime_type: upload.mime_type,
     source_availability: upload.source_availability,
-    ocr_result: parseOCRResult(upload.ocr_result),
+    ocr_result: resultOrNull(
+      upload.ocr_status,
+      upload.ocr_result,
+      parseOCRResult,
+    ),
     ocr_status: upload.ocr_status,
     analysis_status: upload.analysis_status,
-    analysis_result: parsePostureAnalysis(upload.analysis_result),
+    analysis_result: resultOrNull(
+      upload.analysis_status,
+      upload.analysis_result,
+      parsePostureAnalysis,
+    ),
     created_at: upload.created_at,
     updated_at: upload.updated_at,
   };
