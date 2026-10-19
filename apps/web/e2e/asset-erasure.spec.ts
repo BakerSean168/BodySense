@@ -271,12 +271,17 @@ test("person reports remove the original after the scope and confirm steps", asy
   request,
 }) => {
   const headers = await register(page, request);
-  const id = await upload(request, headers, "person-report.png", PNG_A, "report");
-  const scene = await openPersonReport(page, "person-report.png");
-  await expect(scene.getByRole("radio", { name: /仅移除原件/ })).toHaveAttribute(
-    "aria-checked",
-    "true",
+  const id = await upload(
+    request,
+    headers,
+    "person-report.png",
+    PNG_A,
+    "report",
   );
+  const scene = await openPersonReport(page, "person-report.png");
+  await expect(
+    scene.getByRole("radio", { name: /仅移除原件/ }),
+  ).toHaveAttribute("aria-checked", "true");
   await scene.getByRole("button", { name: "仅移除原件" }).click();
   await expect(scene).toHaveAttribute("data-scene", "confirm-source");
   expect((await listed(request, headers))[0].source_availability).toBe(
