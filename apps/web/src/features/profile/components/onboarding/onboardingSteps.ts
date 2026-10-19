@@ -6,7 +6,10 @@
  * (stable profile + BodyState baseline + lifestyle sections). This module owns the
  * mapping between the two so the wizard stays presentational.
  */
-import type { OnboardingContextPayload } from "../../services/onboardingContextService";
+import type {
+  DiscomfortAreaCode,
+  OnboardingContextPayload,
+} from "../../services/onboardingContextService";
 
 export interface ChoiceOption {
   value: string;
@@ -20,7 +23,10 @@ export interface OnboardingAnswers {
   birth_date: string;
   height_cm: number | undefined;
   weight_kg: number | undefined;
-  /** Step 05. Presentation only: the onboarding API has no current-discomfort field. */
+  /**
+   * Step 05. Sent as `discomfort_areas`, a self-report the API keeps outside BodyState
+   * (not a symptom record or diagnosis).
+   */
   discomfort_regions: string[];
   injury: string;
   activity_pattern: string;
@@ -193,6 +199,20 @@ export function parseBirthInput(masked: string, bounds: { min: string; max: stri
   return iso >= bounds.min && iso <= bounds.max ? iso : "";
 }
 
+const DISCOMFORT_CODES = new Set<string>(DISCOMFORT_OPTIONS.map((option) => option.value));
+
+/**
+ * Step 05 chips → the API's coarse area codes in the board order. "都没有不适" stands
+ * alone; nothing chosen means the field is omitted (the API leaves it untouched).
+ */
+export function toDiscomfortAreas(regions: string[]): DiscomfortAreaCode[] | undefined {
+  if (regions.includes(NO_DISCOMFORT)) return [NO_DISCOMFORT];
+  const chosen = DISCOMFORT_OPTIONS.map((option) => option.value).filter(
+    (value) => value !== NO_DISCOMFORT && regions.includes(value) && DISCOMFORT_CODES.has(value),
+  );
+  return chosen.length > 0 ? (chosen as DiscomfortAreaCode[]) : undefined;
+}
+
 const labelOf = (options: ChoiceOption[], value: string) =>
   options.find((option) => option.value === value)?.label ?? "";
 
@@ -269,6 +289,8 @@ export function buildOnboardingPayload(a: OnboardingAnswers): OnboardingContextP
     exerciseFrequency ? `频率：${exerciseFrequency}` : "",
   ].filter(Boolean);
 
+  const discomfortAreas = toDiscomfortAreas(a.discomfort_regions);
+
   const injury =
     a.injury === "none"
       ? "无运动损伤或确诊的脊柱问题"
@@ -311,5 +333,6 @@ export function buildOnboardingPayload(a: OnboardingAnswers): OnboardingContextP
       recovery: { summary: "" },
     },
     injury_history: injury,
+    ...(discomfortAreas ? { discomfort_areas: discomfortAreas } : {}),
   };
 }
