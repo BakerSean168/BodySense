@@ -4480,6 +4480,91 @@
   border-color: var(--bc-line);
   background: var(--bc-subtle);
 }
+/* Penpot Chat boards, thread text and bubbles (UI audit, chat gap). The shared
+   .conversation-prose rules in index.css paint p/li near-white for the standalone
+   dark chat; inside the canvas the prose takes the theme ink so light and
+   .bc-dark both read. Assistant replies sit in a subtle bubble, the user's in a
+   soft primary one (Penpot #F6F8F5 / #EEF5F0 on #FBFAF5 window paper). */
+.body-canvas-theme .conversation-prose,
+.body-canvas-theme .conversation-prose :is(p, li, h1, h2, h3, h4, strong) {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .conversation-prose a {
+  color: var(--bc-primary);
+  text-decoration-color: color-mix(in srgb, var(--bc-primary) 45%, transparent);
+}
+.body-canvas-theme .chat-thread-viewport > div {
+  gap: 18px;
+}
+.body-canvas-theme [data-role="assistant"] > .chat-msg-content {
+  align-items: flex-start;
+}
+.body-canvas-theme [data-role="assistant"] .chat-msg-response {
+  width: fit-content;
+  max-width: min(100%, 560px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-subtle) 70%, var(--bc-primary-soft) 6%);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.body-canvas-theme [data-role="user"] > .chat-msg-content {
+  max-width: 86%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-primary-soft) 45%, var(--bc-paper));
+  font-size: 14px;
+  line-height: 1.6;
+}
+/* Composer: Penpot writes straight on the paper above a soft brushed rule, with
+   square tool buttons and a round primary send button. */
+.body-canvas-theme .chat-composer,
+.body-canvas-theme .chat-composer:focus-within {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+.body-canvas-theme .chat-composer-input {
+  padding: 8px 8px 10px;
+  background:
+    linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--bc-line) 85%, transparent) 6%,
+        color-mix(in srgb, var(--bc-line) 85%, transparent) 94%,
+        transparent
+      )
+      bottom / 100% 2px no-repeat;
+}
+.body-canvas-theme .chat-composer:focus-within .chat-composer-input {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line)) 6%,
+    color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line)) 94%,
+    transparent
+  );
+}
+.body-canvas-theme .chat-composer-input + div {
+  padding: 12px 0 0;
+}
+.body-canvas-theme .chat-composer-tool {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bc-window-control);
+}
+.body-canvas-theme .chat-composer-send {
+  width: 36px;
+  height: 36px;
+  background: color-mix(in srgb, var(--bc-primary) 82%, var(--bc-ink));
+}
+.body-canvas-theme.bc-dark .chat-composer-send {
+  background: var(--bc-primary);
+  color: var(--bc-canvas);
+}
 /* Ask User options read as Penpot's bordered choice rows. */
 .body-canvas-theme
   .ask-user-card
