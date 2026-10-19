@@ -141,6 +141,15 @@ keeps that name and preserves the old contents in a separate rollback volume.
    service healthy; `curl -fsS http://127.0.0.1:20150/api/health` succeeds.
 9. Keep the rollback volume until §6.1 and §7.1 pass; then delete it (commit).
 
+**Simplified A1 (demo, user approval 2026-10-19).** While V2 is a demo, the user
+dropped the rollback volume, off-host backup, canary soak and rollback drill for
+staging. Steps 4 and 9 and §6.1/§7.1 are skipped: the old staging volumes are
+deleted outright and compose recreates an empty `postgres-staging-vnext-data`.
+Because the user's visual sign-off (Q-19, F-PENPOT) happens on staging, step 6
+also sets `BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING=true`
+([delivery-platform-v3.md](../architecture/delivery-platform-v3.md) §8.1.1).
+Production (A2/A3) is unchanged.
+
 ## 6. Canary plan
 
 BodySense runs one coherent revision per environment; there is no request-level

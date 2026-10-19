@@ -374,6 +374,14 @@ temporarily bypass the readiness job or re-tag `staging-latest` out-of-band.
 Production remains governed by its separate published Release and explicit
 `Deploy Production` workflow.
 
+**Visual sign-off on staging (2026-10-19).** F-PENPOT is the user's visual
+sign-off (Q-19), and that sign-off is done on staging. The second Actions
+variable `BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING=true` lets promotion
+proceed while F-PENPOT is explicitly `blocked`; the job prints it as `WAIVED`.
+It waives no other foundation or domain gate, never replaces
+`BODYSENSE_V2_STAGING_PROMOTION_ENABLED`, and has no production effect.
+F-PENPOT is still marked `ready` only after the user signs off.
+
 ### 8.2 GCP watcher
 
 The staging watcher is intentionally simpler than production but must:

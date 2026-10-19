@@ -25,10 +25,20 @@ export const REQUIRED_FOUNDATIONS = Object.freeze([
   "F-ACCEPTANCE",
 ]);
 
+// F-PENPOT is the user's visual sign-off (Q-19), which is performed on staging
+// itself. The separate operator variable lets staging host that acceptance
+// while F-PENPOT is still explicitly `blocked`; it waives nothing else.
+export const STAGING_SIGNOFF_WAIVABLE_FOUNDATIONS = Object.freeze(["F-PENPOT"]);
+
 // This gate governs only mutable staging-latest promotion. Immutable exact-SHA
 // candidate publication and main CI always proceed independently.
-export function evaluateV2StagingReadiness({ enabled, handoff }) {
+export function evaluateV2StagingReadiness({
+  enabled,
+  handoff,
+  visualSignoffOnStaging,
+}) {
   const blockers = [];
+  const waived = [];
   if (enabled !== "true") {
     blockers.push(
       "BODYSENSE_V2_STAGING_PROMOTION_ENABLED is not explicitly true",
@@ -75,10 +85,21 @@ export function evaluateV2StagingReadiness({ enabled, handoff }) {
       !Array.isArray(matching[0].proof) ||
       matching[0].proof.length === 0
     ) {
+      if (
+        visualSignoffOnStaging === "true" &&
+        STAGING_SIGNOFF_WAIVABLE_FOUNDATIONS.includes(id) &&
+        matching.length === 1 &&
+        matching[0].state === "blocked"
+      ) {
+        waived.push(`${id}: user visual sign-off pending on staging`);
+        continue;
+      }
       blockers.push(`${id}: not ready with proof`);
     }
   }
-  return { eligible: blockers.length === 0, blockers };
+  const result = { eligible: blockers.length === 0, blockers };
+  if (waived.length > 0) result.waived = waived;
+  return result;
 }
 
 const script = fileURLToPath(import.meta.url);
@@ -101,10 +122,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === script) {
   const result = evaluateV2StagingReadiness({
     enabled: process.env.BODYSENSE_V2_STAGING_PROMOTION_ENABLED,
     handoff,
+    visualSignoffOnStaging:
+      process.env.BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING,
   });
   const label = result.eligible ? "PASS" : "BLOCKED";
   console.log(`V2_STAGING_PROMOTION=${label}`);
   for (const reason of result.blockers) console.log(`BLOCKER: ${reason}`);
+  for (const reason of result.waived ?? []) console.log(`WAIVED: ${reason}`);
   if (process.argv.includes("--github-output")) {
     const outputFile = process.env.GITHUB_OUTPUT;
     if (!outputFile) throw new Error("GITHUB_OUTPUT is required");
