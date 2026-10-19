@@ -220,6 +220,26 @@ test("desktop chrome follows the Penpot window boards", async ({
     dock.getByRole("button", { name: "个人档案", exact: true }),
   ).toBeFocused();
 
+  // Penpot "Home · Dock collapsed" / "Home · Tools collapsed": the chevrons
+  // fold the Dock to a small pill and the rail to a side tab, and restore.
+  await dock.getByRole("button", { name: "收起导航" }).click();
+  const pill = dock.getByRole("button", { name: "展开导航" });
+  await expect(pill).toBeFocused();
+  await expect(dock.getByRole("button", { name: "个人档案" })).toHaveCount(0);
+  const pillBox = (await dock.boundingBox())!;
+  expectClose(pillBox.height, 32, "collapsed Dock height");
+  expect(pillBox.width).toBeLessThanOrEqual(60);
+  await pill.click();
+  await expect(
+    dock.getByRole("button", { name: "个人档案", exact: true }),
+  ).toBeVisible();
+  await tools.getByRole("button", { name: "收起工具栏" }).click();
+  await expect(tools).toHaveCount(0);
+  const tab = page.getByRole("button", { name: "展开工具栏" });
+  await expect(tab).toBeFocused();
+  await tab.click();
+  await expect(tools).toBeVisible();
+
   // Right-docked windows: the body keeps its place (Penpot does not move it),
   // the intro gives way, the Tools rail stays.
   for (const id of ["diagnosis", "training", "trainer"] as const) {

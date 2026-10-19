@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   DockChatIcon,
   DockDiagnosisIcon,
@@ -34,6 +37,45 @@ export function BodyCanvasDock({
       ? Math.floor(confirmedDiagnosisCount)
       : 0;
 
+  // Penpot "Desktop / Home · Dock collapsed": the chevron folds the Dock to a
+  // small pill; window shortcuts keep working. Mobile always shows the Dock.
+  const mobile = useMediaQuery("(max-width: 760px)");
+  const [collapsedState, setCollapsed] = useState(false);
+  const collapsed = collapsedState && !mobile;
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const toggled = useRef(false);
+  useEffect(() => {
+    if (!toggled.current) return;
+    toggled.current = false;
+    toggleRef.current?.focus();
+  }, [collapsed]);
+  const toggle = () => {
+    toggled.current = true;
+    setCollapsed((value) => !value);
+  };
+
+  if (collapsed) {
+    return (
+      <nav
+        className="bc-dock"
+        data-collapsed="true"
+        aria-label="身体工作区导航"
+      >
+        <button
+          ref={toggleRef}
+          type="button"
+          className="bc-dock-toggle"
+          aria-label="展开导航"
+          title="展开导航"
+          aria-expanded={false}
+          onClick={toggle}
+        >
+          <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
+        </button>
+      </nav>
+    );
+  }
+
   return (
     <nav className="bc-dock" aria-label="身体工作区导航">
       {BODY_CANVAS_DOCK_ITEMS.map(({ id, icon: Icon }) => {
@@ -67,6 +109,17 @@ export function BodyCanvasDock({
           </button>
         );
       })}
+      <button
+        ref={toggleRef}
+        type="button"
+        className="bc-dock-toggle"
+        aria-label="收起导航"
+        title="收起导航"
+        aria-expanded={true}
+        onClick={toggle}
+      >
+        <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
+      </button>
     </nav>
   );
 }

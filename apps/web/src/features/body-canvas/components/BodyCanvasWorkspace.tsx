@@ -12,6 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   ArrowRight,
   BoxSelect,
@@ -267,6 +269,20 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   // widths, larger text) is measured and its space reserved too.
   const stageRef = useRef<HTMLElement>(null);
   const [dockReserve, setDockReserve] = useState<number | null>(null);
+  // Penpot "Desktop / Home · Tools collapsed": the rail folds to a side tab.
+  // Tool shortcuts stay active; focus follows the toggle.
+  const [toolsCollapsed, setToolsCollapsed] = useState(false);
+  const toolsToggleRef = useRef<HTMLButtonElement>(null);
+  const toolsToggled = useRef(false);
+  useEffect(() => {
+    if (!toolsToggled.current) return;
+    toolsToggled.current = false;
+    toolsToggleRef.current?.focus();
+  }, [toolsCollapsed]);
+  const toggleTools = () => {
+    toolsToggled.current = true;
+    setToolsCollapsed((value) => !value);
+  };
   useEffect(() => {
     const stage = stageRef.current;
     const dock = stage?.querySelector<HTMLElement>(".bc-dock");
@@ -1024,59 +1040,88 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           </Suspense>
         ) : null}
 
-        <div className="bc-tool-rail" role="toolbar" aria-label="身体画布工具">
-          {TOOLS.map(([value, label, key, Icon]) => (
+        {toolsCollapsed ? (
+          <button
+            ref={toolsToggleRef}
+            type="button"
+            className="bc-tool-rail-tab"
+            aria-label="展开工具栏"
+            title="展开工具栏"
+            aria-expanded={false}
+            onClick={toggleTools}
+          >
+            <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
+          </button>
+        ) : (
+          <div
+            className="bc-tool-rail"
+            role="toolbar"
+            aria-label="身体画布工具"
+          >
+            {TOOLS.map(([value, label, key, Icon]) => (
+              <button
+                key={value}
+                className="bc-icon-button"
+                aria-label={label}
+                title={`${label} · ${key}`}
+                aria-pressed={tool === value}
+                onClick={() => {
+                  setTool(value);
+                  setRegionListOpen(false);
+                  if (value !== "orbit") setPlaying(false);
+                }}
+              >
+                <Icon size={20} strokeWidth={1.7} />
+                <span className="bc-tool-caption">{label}</span>
+              </button>
+            ))}
+            <span className="bc-tool-divider" />
             <button
-              key={value}
               className="bc-icon-button"
-              aria-label={label}
-              title={`${label} · ${key}`}
-              aria-pressed={tool === value}
+              aria-label="按名称选择区域"
+              title="按名称选择区域"
+              aria-expanded={regionListOpen}
               onClick={() => {
-                setTool(value);
-                setRegionListOpen(false);
-                if (value !== "orbit") setPlaying(false);
+                setRegionListOpen((open) => !open);
+                requestAnimationFrame(() => selectRef.current?.focus());
               }}
             >
-              <Icon size={20} strokeWidth={1.7} />
-              <span className="bc-tool-caption">{label}</span>
+              <List size={20} />
             </button>
-          ))}
-          <span className="bc-tool-divider" />
-          <button
-            className="bc-icon-button"
-            aria-label="按名称选择区域"
-            title="按名称选择区域"
-            aria-expanded={regionListOpen}
-            onClick={() => {
-              setRegionListOpen((open) => !open);
-              requestAnimationFrame(() => selectRef.current?.focus());
-            }}
-          >
-            <List size={20} />
-          </button>
-          <button
-            className="bc-icon-button"
-            aria-label="精细解剖"
-            title="精细解剖 · X"
-            aria-pressed={canvasOverlay === "anatomy"}
-            onClick={() =>
-              setCanvasOverlay((current) =>
-                current === "anatomy" ? null : "anatomy",
-              )
-            }
-          >
-            <Layers3 size={20} />
-          </button>
-          <button
-            className="bc-icon-button"
-            aria-label="重置视角"
-            title="重置视角 · R"
-            onClick={() => setResetKey((value) => value + 1)}
-          >
-            <RotateCcw size={19} />
-          </button>
-        </div>
+            <button
+              className="bc-icon-button"
+              aria-label="精细解剖"
+              title="精细解剖 · X"
+              aria-pressed={canvasOverlay === "anatomy"}
+              onClick={() =>
+                setCanvasOverlay((current) =>
+                  current === "anatomy" ? null : "anatomy",
+                )
+              }
+            >
+              <Layers3 size={20} />
+            </button>
+            <button
+              className="bc-icon-button"
+              aria-label="重置视角"
+              title="重置视角 · R"
+              onClick={() => setResetKey((value) => value + 1)}
+            >
+              <RotateCcw size={19} />
+            </button>
+            <button
+              ref={toolsToggleRef}
+              type="button"
+              className="bc-icon-button bc-tool-rail-collapse"
+              aria-label="收起工具栏"
+              title="收起工具栏"
+              aria-expanded={true}
+              onClick={toggleTools}
+            >
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {tool !== "orbit" && (
           <div className="bc-tool-hint" role="status">
             {tool === "brush"
