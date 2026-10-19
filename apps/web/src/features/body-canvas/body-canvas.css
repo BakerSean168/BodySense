@@ -1666,6 +1666,140 @@
 .bc-business-window:has(.bc-person-detail, .bc-statement-erasure) {
   --bc-window-w: var(--bc-window-scene-width, var(--bc-window-width));
 }
+/* Penpot "Desktop / Body / Region": the region detail is a 560 x 700 scene
+   docked left like the Person window (x 40, y 92), on window paper with the
+   ink corner; intro and Tools rail give way as for a left window. */
+@media (min-width: 761px) {
+  .bc-region-card {
+    left: 40px;
+    right: auto;
+    top: 28px;
+    width: min(560px, calc(100% - 80px));
+    height: min(700px, calc(100% - 28px - var(--bc-dock-reserve, 108px) - 8px));
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--bc-window-line, var(--bc-line));
+    border-radius: 18px;
+    background: var(--bc-window-paper, var(--bc-paper));
+    backdrop-filter: none;
+  }
+  .bc-region-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto auto;
+    z-index: -1;
+    width: 452px;
+    height: 500px;
+    background: var(--bc-window-ink-corner, none) top right /
+      var(--bc-window-ink-corner-size, 452px 500px) no-repeat;
+    pointer-events: none;
+  }
+  .bc-region-card > .bc-panel-heading {
+    align-items: center;
+    padding: 18px 14px 0 20px;
+  }
+  .bc-region-card
+    > :is(
+      .bc-selection-chips,
+      .bc-region-facts,
+      .bc-context-note,
+      .bc-panel-actions
+    ) {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .bc-region-card .bc-region-facts {
+    border: 0;
+    padding: 0;
+    overflow: auto;
+  }
+  .bc-region-card .bc-panel-actions {
+    margin-top: auto;
+    padding-bottom: 8px;
+  }
+  .bc-stage:has(> .bc-region-card)
+    :is(.bc-intro, .bc-tool-rail, .bc-tool-rail-tab) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+.bc-region-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bc-region-card .bc-region-title h2 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.bc-region-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e7f3ec;
+  color: var(--bc-primary);
+  font-size: 10px;
+  font-weight: 650;
+}
+.bc-region-selected::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.bc-dark .bc-region-selected {
+  background: var(--bc-primary-soft);
+}
+.bc-region-facts article {
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 8px;
+}
+.bc-region-facts article > :not(.bc-region-fact-mark) {
+  grid-column: 2;
+}
+.bc-region-fact-mark {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #e7f3ec;
+  color: var(--bc-primary);
+}
+.bc-region-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--bc-window-divider, var(--bc-line));
+}
+.bc-region-card .bc-region-footer {
+  margin-top: 0;
+}
+.bc-region-records {
+  color: var(--bc-primary);
+  font-weight: 700;
+}
+.bc-region-ask {
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bc-window-control, var(--bc-primary-soft));
+  color: var(--bc-primary);
+  font-weight: 700;
+}
 /* Penpot's window boards show neither the canvas intro nor, beside a
    left-docked window, the Tools rail (it collapses instead of peeking out
    from under the window). Both fade back when the window closes; reduced
