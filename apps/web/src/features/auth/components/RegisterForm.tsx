@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { InkButton, InkField } from "./InkField";
+
+type RegisterErrors = {
+  email?: string;
+  password?: string;
+  consent?: string;
+};
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -10,19 +15,11 @@ export function RegisterForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [validationErrors, setValidationErrors] = useState<{
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({});
+  const [consent, setConsent] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<RegisterErrors>({});
 
   const validateForm = (): boolean => {
-    const errors: {
-      email?: string;
-      password?: string;
-      confirmPassword?: string;
-    } = {};
+    const errors: RegisterErrors = {};
 
     if (!email) {
       errors.email = "请输入邮箱地址";
@@ -36,10 +33,8 @@ export function RegisterForm() {
       errors.password = "密码长度不能少于 8 位";
     }
 
-    if (!confirmPassword) {
-      errors.confirmPassword = "请确认密码";
-    } else if (password !== confirmPassword) {
-      errors.confirmPassword = "两次密码输入不一致";
+    if (!consent) {
+      errors.consent = "请先阅读并同意服务条款和健康数据处理说明";
     }
 
     setValidationErrors(errors);
@@ -61,56 +56,75 @@ export function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <Input
+    <form onSubmit={handleSubmit} noValidate data-testid="auth-register-form">
+      <InkField
         id="email"
-        type="email"
-        label="邮箱地址"
+        kind="email"
+        accessibleLabel="邮箱地址"
+        autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
+        placeholder="邮箱"
         error={validationErrors.email}
       />
 
-      <div className="space-y-1">
-        <Input
-          id="password"
-          type="password"
-          label="密码"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          error={validationErrors.password}
-        />
-        {!validationErrors.password && (
-          <p className="ml-1 text-xs text-slate-500">至少 8 个字符</p>
+      <InkField
+        id="password"
+        kind="password"
+        accessibleLabel="密码"
+        autoComplete="new-password"
+        className="mt-7 lg:mt-[34px]"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="密码（至少 8 位）"
+        error={validationErrors.password}
+      />
+
+      <div className="mt-[22px] lg:mt-6">
+        <label className="flex cursor-pointer items-start gap-[10px] text-[13px] leading-[1.2] text-[#52665A]">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            aria-invalid={validationErrors.consent ? true : undefined}
+            aria-describedby={
+              validationErrors.consent ? "consent-error" : undefined
+            }
+            data-testid="auth-register-consent"
+            className="mt-px h-4 w-4 shrink-0 cursor-pointer rounded-[4px] border border-[#AEC0B0] bg-white accent-[#2C694F] focus-visible:ring-2 focus-visible:ring-[#2C694F] focus-visible:ring-offset-2 focus-visible:outline-none"
+          />
+          <span>同意《服务条款》和《健康数据处理说明》</span>
+        </label>
+        {validationErrors.consent && (
+          <p
+            id="consent-error"
+            role="alert"
+            className="mt-2 text-[13px] leading-[1.2] font-semibold text-[#9A3F35]"
+          >
+            {validationErrors.consent}
+          </p>
         )}
       </div>
 
-      <Input
-        id="confirmPassword"
-        type="password"
-        label="确认密码"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        placeholder="••••••••"
-        error={validationErrors.confirmPassword}
-      />
-
       {error && (
-        <div className="rounded-xl bg-red-50 p-4 border border-red-100">
-          <p className="text-sm font-medium text-red-800">{error}</p>
-        </div>
+        <p
+          role="alert"
+          data-testid="auth-register-error"
+          className="mt-3 text-[13px] leading-[1.2] font-semibold text-[#9A3F35]"
+        >
+          {error}
+        </p>
       )}
 
-      <Button
-        type="submit"
-        isLoading={isLoading}
-        className="w-full mt-2"
-        size="lg"
-      >
-        创建账号
-      </Button>
+      <div className="mt-[14px] lg:mt-[26px]">
+        <InkButton
+          isLoading={isLoading}
+          loadingLabel="注册中…"
+          testId="auth-register-submit"
+        >
+          创建账号
+        </InkButton>
+      </div>
     </form>
   );
 }

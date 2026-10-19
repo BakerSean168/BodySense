@@ -16,7 +16,7 @@ test("v12 actual user corrects original observation then withdraws exact success
     .getByLabel("邮箱地址")
     .fill(`observation-amend-${crypto.randomUUID()}@example.test`);
   await page.getByLabel("密码", { exact: true }).fill("BodySenseE2E!123");
-  await page.getByLabel("确认密码").fill("BodySenseE2E!123");
+  await page.getByRole("checkbox", { name: /同意/ }).check();
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
   const token = await refreshBrowserAccessToken(page, api);

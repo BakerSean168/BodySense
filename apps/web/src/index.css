@@ -420,3 +420,58 @@
   background: transparent;
   color: rgba(255, 255, 255, 0.82);
 }
+
+/* ===== Auth ink pages (Penpot 01 Auth · Proposal boards) ===== */
+.auth-ink-underline-focus {
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0.9;
+  transition: transform 280ms ease-out;
+}
+.auth-ink-field:focus-within .auth-ink-underline-focus,
+.auth-ink-field[data-invalid="true"] .auth-ink-underline-focus {
+  transform: scaleX(1);
+}
+.auth-ink-button {
+  border-radius: 12px;
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
+}
+.auth-ink-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.auth-ink-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.auth-ink-button:focus-visible {
+  outline: 2px solid #2c694f;
+  outline-offset: 2px;
+}
+.auth-ink-link {
+  border-radius: 4px;
+}
+.auth-ink-link:focus-visible {
+  outline: 2px solid #2c694f;
+  outline-offset: 2px;
+}
+@keyframes auth-dantian-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(246, 201, 90, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(246, 201, 90, 0.95);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .auth-dantian-dot {
+    animation: auth-dantian-breathe 4.8s ease-in-out infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ink-underline-focus,
+  .auth-ink-button {
+    transition: none;
+  }
+}
