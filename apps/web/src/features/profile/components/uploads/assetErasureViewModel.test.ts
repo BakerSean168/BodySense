@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { AssetErasureReceipt } from "@/features/profile/services/assetErasureService";
-import { projectAssetErasure } from "./assetErasureViewModel";
+import {
+  groupAssetErasure,
+  projectAssetErasure,
+} from "./assetErasureViewModel";
 
 const targets = [
   "source_objects",
@@ -101,5 +104,34 @@ describe("projectAssetErasure", () => {
   it("shows in progress while pending or running", () => {
     expect(projectAssetErasure(receipt("running")).phase).toBe("in_progress");
     expect(projectAssetErasure(receipt("pending")).phase).toBe("in_progress");
+  });
+});
+
+describe("groupAssetErasure", () => {
+  it("folds targets into the Penpot families and keeps the first open reason", () => {
+    const families = groupAssetErasure(
+      receipt("outstanding", {
+        source_objects: { erased_count: 1 },
+        derived_jobs: { erased_count: 2 },
+        runtime_checkpoints: {
+          state: "failed",
+          failure_code: "runtime_thread_busy",
+          outstanding_count: 1,
+        },
+      }),
+    );
+    expect(families.map((f) => [f.label, f.verified, f.copies])).toEqual([
+      ["原件", true, 1],
+      ["派生内容", true, 2],
+      ["检查点副本", false, 1],
+    ]);
+    expect(families[2].reason).toBe("对话正在进行，空闲后会自动重试");
+    expect(families[0].reason).toBeNull();
+  });
+
+  it("is verified everywhere only for a fully verified receipt", () => {
+    expect(groupAssetErasure(receipt("erased")).every((f) => f.verified)).toBe(
+      true,
+    );
   });
 });

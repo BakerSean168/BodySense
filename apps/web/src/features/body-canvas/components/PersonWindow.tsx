@@ -10,7 +10,9 @@ import {
   RotateCcw,
   Backpack,
   LogOut,
+  MoreHorizontal,
   Settings,
+  Trash2,
   Upload,
   UserRound,
   X,
@@ -47,6 +49,8 @@ import {
 import { usePersonWindowData } from "../hooks/usePersonWindowData";
 import { PersonIdentityPopover } from "./PersonIdentityPopover";
 import { PersonMediaGrid } from "./PersonMediaGrid";
+import { PersonAssetDeletion } from "./PersonAssetDeletion";
+import { formatMediaDate } from "../model/personMedia";
 import { useUploadStore } from "@/stores/uploadStore";
 
 /**
@@ -543,6 +547,91 @@ function EquipmentCategory({
   );
 }
 
+const EXTRACTION_LABELS: Record<string, { label: string; tone: string }> = {
+  pending: { label: "等待", tone: "neutral" },
+  processing: { label: "处理中", tone: "warning" },
+  completed: { label: "完成", tone: "keep" },
+  failed: { label: "失败", tone: "danger" },
+};
+
+function fileExtension(upload: ProfileUploadLike): string {
+  const ext = upload.original_name.split(".").pop();
+  if (ext && ext !== upload.original_name) return ext.toUpperCase();
+  return upload.mime_type.split("/").pop()?.toUpperCase() ?? "文件";
+}
+
+/**
+ * Penpot "Person / Reports" card: file glyph, name, "PDF · size · date", and a
+ * 文件 / 提取 status row read from the manifest. The "…" menu opens the Penpot
+ * Assets delete scope for this report.
+ */
+function ReportCard({
+  upload,
+  onDelete,
+}: {
+  upload: ProfileUploadLike;
+  onDelete: () => void;
+}) {
+  const sourceGone = upload.source_availability === "source_unavailable";
+  const extraction = EXTRACTION_LABELS[upload.ocr_status] ?? {
+    label: formatOcrStatus(upload.ocr_status),
+    tone: "neutral",
+  };
+  return (
+    <li className="bc-person-report" data-testid="person-report">
+      <div className="bc-person-report-main">
+        <span className="bc-asset-file-icon" aria-hidden="true">
+          <FileText size={20} />
+        </span>
+        <span className="bc-person-report-text">
+          <strong>{upload.original_name}</strong>
+          <span>
+            {fileExtension(upload)} ·{" "}
+            {sourceGone
+              ? "原件已移除"
+              : `${formatFileSize(upload.file_size)} · ${formatMediaDate(upload.created_at)}上传`}
+          </span>
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="bc-icon-button bc-person-report-menu"
+            aria-label={`管理“${upload.original_name}”`}
+          >
+            <MoreHorizontal size={18} aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bc-account-menu">
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 />
+              删除…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <dl className="bc-person-report-status">
+        <div>
+          <dt>文件</dt>
+          <dd>
+            <span
+              className="bc-asset-chip"
+              data-tone={sourceGone ? "warning" : "keep"}
+            >
+              {sourceGone ? "原件不可用" : "可用"}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt>提取</dt>
+          <dd>
+            <span className="bc-asset-chip" data-tone={extraction.tone}>
+              {extraction.label}
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </li>
+  );
+}
+
 function UploadsCategory({
   uploads,
   category,
@@ -554,6 +643,9 @@ function UploadsCategory({
 }) {
   const items = selectUploadsByCategory(uploads, category);
   const uploadFile = useUploadStore((state) => state.uploadFile);
+  const forgetUpload = useUploadStore((state) => state.forgetUpload);
+  // Penpot Assets scenes replace the list while one file is being deleted.
+  const [deleting, setDeleting] = useState<ProfileUploadLike | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [failed, setFailed] = useState<{
@@ -642,6 +734,19 @@ function UploadsCategory({
       </button>
     </div>
   ) : null;
+  if (deleting) {
+    return (
+      <PersonAssetDeletion
+        upload={deleting}
+        backLabel={category === "reports" ? "返回报告" : "返回媒体"}
+        onBack={() => setDeleting(null)}
+        onErased={(id) => {
+          forgetUpload(id);
+          setDeleting(null);
+        }}
+      />
+    );
+  }
   if (items.length === 0) {
     return (
       <>
@@ -673,9 +778,7 @@ function UploadsCategory({
       {picker}
       <div className="bc-person-uploads-head">
         <span>
-          {category === "media"
-            ? `${items.length} 个`
-            : `已上传 ${items.length} 个`}
+          {category === "media" ? `${items.length} 个` : `${items.length} 份`}
         </span>
         <button
           type="button"
@@ -695,15 +798,13 @@ function UploadsCategory({
       {category === "media" ? (
         <PersonMediaGrid uploads={items} initialLimit={mobile ? 6 : 8} />
       ) : (
-        <ul className="bc-person-uploads">
+        <ul className="bc-person-reports">
           {items.map((upload) => (
-            <li key={upload.id}>
-              <strong>{upload.original_name}</strong>
-              <span>
-                {formatFileSize(upload.file_size)} ·{" "}
-                {formatOcrStatus(upload.ocr_status)}
-              </span>
-            </li>
+            <ReportCard
+              key={upload.id}
+              upload={upload}
+              onDelete={() => setDeleting(upload)}
+            />
           ))}
         </ul>
       )}

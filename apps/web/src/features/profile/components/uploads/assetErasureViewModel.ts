@@ -114,3 +114,63 @@ export function projectAssetErasure(
       };
   }
 }
+
+/**
+ * Penpot "Assets / Erasure" rows: the receipt's targets folded into the three
+ * families the scenes name. A family is verified only when every one of its
+ * targets is; the first unfinished target supplies the reason. Counts come
+ * from the receipt (erased + outstanding copies), never estimated up front.
+ */
+export type AssetErasureFamilyId = "original" | "derived" | "checkpoints";
+
+export interface AssetErasureFamily {
+  id: AssetErasureFamilyId;
+  label: string;
+  verified: boolean;
+  copies: number;
+  reason: string | null;
+}
+
+export const ASSET_ERASURE_FAMILIES: ReadonlyArray<{
+  id: AssetErasureFamilyId;
+  label: string;
+  targets: readonly string[];
+}> = [
+  { id: "original", label: "原件", targets: ["source_objects", "asset_manifest"] },
+  {
+    id: "derived",
+    label: "派生内容",
+    targets: [
+      "derived_jobs",
+      "posture_analyses",
+      "document_extractions",
+      "diagnosis_records",
+      "assessment_reports",
+    ],
+  },
+  { id: "checkpoints", label: "检查点副本", targets: ["runtime_checkpoints"] },
+];
+
+export function groupAssetErasure(
+  receipt: AssetErasureReceipt,
+): AssetErasureFamily[] {
+  return ASSET_ERASURE_FAMILIES.map((family) => {
+    const rows = receipt.targets.filter((target) =>
+      family.targets.includes(target.target),
+    );
+    const open = rows.find((row) => row.state !== "verified");
+    return {
+      id: family.id,
+      label: family.label,
+      verified: !open,
+      copies: rows.reduce(
+        (sum, row) => sum + row.erased_count + row.outstanding_count,
+        0,
+      ),
+      reason: open
+        ? (FAILURE_REASONS[open.failure_code ?? ""] ??
+          (open.state === "pending" ? "等待处理" : "处理中"))
+        : null,
+    };
+  });
+}
