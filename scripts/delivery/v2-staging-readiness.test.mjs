@@ -68,6 +68,51 @@ test("missing domains, duplicate domains, and unapproved foundations block stagi
   foundation.foundations[2].state = "in_progress";
   assert.equal(evaluate("true", foundation).eligible, false);
 });
+function penpotPending() {
+  const v2 = accepted();
+  const penpot = v2.foundations.find((entry) => entry.id === "F-PENPOT");
+  penpot.state = "blocked";
+  penpot.proof = [];
+  return v2;
+}
+test("visual sign-off on staging waives only a blocked F-PENPOT", () => {
+  assert.equal(evaluate("true", penpotPending()).eligible, false);
+  const waived = evaluateV2StagingReadiness({
+    enabled: "true",
+    handoff: penpotPending(),
+    visualSignoffOnStaging: "true",
+  });
+  assert.equal(waived.eligible, true);
+  assert.deepEqual(waived.blockers, []);
+  assert.equal(waived.waived.length, 1);
+  assert.match(waived.waived[0], /^F-PENPOT:/);
+});
+test("visual sign-off waiver never replaces the operator opt-in", () => {
+  const result = evaluateV2StagingReadiness({
+    enabled: undefined,
+    handoff: penpotPending(),
+    visualSignoffOnStaging: "true",
+  });
+  assert.equal(result.eligible, false);
+});
+test("visual sign-off waiver does not cover other foundations or gates", () => {
+  const foundation = penpotPending();
+  foundation.foundations.find((e) => e.id === "F-CONTRACT").state = "blocked";
+  const gate = penpotPending();
+  gate.domains[0].gates.design.state = "blocked";
+  const missing = penpotPending();
+  missing.foundations = missing.foundations.filter((e) => e.id !== "F-PENPOT");
+  const queued = penpotPending();
+  queued.foundations.find((e) => e.id === "F-PENPOT").state = "queued";
+  for (const handoff of [foundation, gate, missing, queued]) {
+    const result = evaluateV2StagingReadiness({
+      enabled: "true",
+      handoff,
+      visualSignoffOnStaging: "true",
+    });
+    assert.equal(result.eligible, false);
+  }
+});
 test("invalid handoff fails closed", () => {
   assert.equal(evaluate("true", null).eligible, false);
   assert.equal(evaluate("true", { version: 2 }).eligible, false);
@@ -92,4 +137,8 @@ test("candidate workflow gates only mutable staging promotion", () => {
   );
   assert.match(workflow, /needs\.resolve\.outputs\.is_current_main == 'true'/);
   assert.match(workflow, /name: Build canonical candidate manifest/);
+  assert.match(
+    workflow,
+    /BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING: \$\{\{ vars\.BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING \}\}/,
+  );
 });

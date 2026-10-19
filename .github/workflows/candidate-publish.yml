@@ -588,6 +588,7 @@ jobs:
         name: Validate five-domain readiness and explicit operator opt-in
         env:
           BODYSENSE_V2_STAGING_PROMOTION_ENABLED: ${{ vars.BODYSENSE_V2_STAGING_PROMOTION_ENABLED }}
+          BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING: ${{ vars.BODYSENSE_V2_STAGING_VISUAL_SIGNOFF_ON_STAGING }}
         run: node scripts/delivery/v2-staging-readiness.mjs --github-output
 
   promote-staging:
