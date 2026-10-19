@@ -217,10 +217,13 @@ export function ConsultationPage() {
   const [profileDrawerMounted, setProfileDrawerMounted] = useState(false);
   const profile = useProfileStore((state) => state.profile);
   const accountName = useAuthStore((state) => state.user?.email ?? "");
-  // The identity header shows the Profile nickname, else the real account
-  // name, so it is never a fabricated label.
+  // The identity header shows the Profile nickname, else the account email's
+  // local part (personDisplayName), so it is never a fabricated label.
   const personIdentity = useMemo(
-    () => ({ nickname: profile?.display_name || accountName }),
+    () => ({
+      nickname: profile?.display_name ?? "",
+      accountEmail: accountName,
+    }),
     [accountName, profile?.display_name],
   );
   const handleWindowChange = useCallback(

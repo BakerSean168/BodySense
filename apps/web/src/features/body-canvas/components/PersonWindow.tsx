@@ -50,6 +50,7 @@ import { PersonMediaGrid } from "./PersonMediaGrid";
 import { PersonCategoryMenu } from "./PersonCategoryMenu";
 import { PersonAssetDeletion } from "./PersonAssetDeletion";
 import { formatMediaDate } from "../model/personMedia";
+import { personDisplayName } from "../model/personIdentity";
 import { useUploadStore } from "@/stores/uploadStore";
 
 /**
@@ -69,9 +70,14 @@ import { useUploadStore } from "@/stores/uploadStore";
  *   fixed slot count.
  */
 
-/** Header identity: the Profile nickname, else the account name. Never invented. */
+/**
+ * Header identity: the Profile nickname, else the account email's local part,
+ * else a placeholder (personDisplayName). Never invented.
+ */
 export interface PersonProfileIdentity {
   nickname: string;
+  /** The signed-in account's email; only its local part is displayed. */
+  accountEmail?: string;
 }
 
 export interface PersonWindowProps {
@@ -117,20 +123,23 @@ export function PersonIdentityTrigger({
   onOpenSettings?: () => void;
   onRequestLogout?: () => void;
 }) {
-  const displayName = identity.nickname.trim() || "未设置昵称";
+  const display = personDisplayName(identity);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className="bc-person-identity"
-        title="账户菜单"
+        title={
+          identity.accountEmail ? `账户菜单 · ${identity.accountEmail}` : "账户菜单"
+        }
         data-identity-open={open ? "true" : undefined}
+        data-name-source={display.source}
       >
         {/* Penpot Person header: the BodySense figure avatar (exported from the
             board) and the nickname with the gold dantian dot. */}
         <span className="bc-person-avatar" aria-hidden="true">
           <img src={personAvatar} alt="" width={32} height={32} />
         </span>
-        <span className="bc-person-name">{displayName}</span>
+        <span className="bc-person-name">{display.name}</span>
         <span className="bc-person-dantian" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent

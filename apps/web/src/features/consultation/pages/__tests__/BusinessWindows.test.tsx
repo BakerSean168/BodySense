@@ -532,9 +532,16 @@ describe("body-first business windows", () => {
       0,
     );
     expect(person.querySelector(".bc-person-popover")).toBeNull();
-    await userEvent.click(
-      screen.getByRole("button", { name: "synthetic@example.test" }),
+    // No nickname: the header shows the account email's local part (Penpot
+    // draws a name), with the full address only in the title.
+    const identity = screen.getByRole("button", { name: "synthetic" });
+    expect(identity).toHaveAttribute("data-name-source", "account");
+    expect(identity).not.toHaveTextContent("@");
+    expect(identity).toHaveAttribute(
+      "title",
+      "账户菜单 · synthetic@example.test",
     );
+    await userEvent.click(identity);
     // Penpot account menu: 个人资料 opens the identity popover.
     await userEvent.click(
       await screen.findByRole("menuitem", { name: "个人资料" }),
@@ -544,6 +551,10 @@ describe("body-first business windows", () => {
     expect(popover.textContent).not.toContain("BMI");
     expect(popover.textContent).toContain("资料缺失不会由 AI 猜测补全");
     expect(screen.getByLabelText("昵称")).toHaveValue("");
+    expect(screen.getByLabelText("昵称")).toHaveAttribute(
+      "placeholder",
+      "未填写 · 显示为 synthetic",
+    );
     expect(screen.getByLabelText("自报性别")).toHaveValue("");
     expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);
     expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
@@ -1060,7 +1071,7 @@ describe("body-first business windows", () => {
     await openDock("个人档案");
     await screen.findByTestId("person-window");
     await user.click(
-      screen.getByRole("button", { name: "synthetic@example.test" }),
+      screen.getByRole("button", { name: "synthetic" }),
     );
     await user.click(await screen.findByRole("menuitem", { name: "设置" }));
     const settings = await screen.findByRole("dialog", { name: "设置" });
@@ -1082,7 +1093,7 @@ describe("body-first business windows", () => {
     expect(screen.queryByRole("dialog", { name: "设置" })).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: "synthetic@example.test" }),
+      screen.getByRole("button", { name: "synthetic" }),
     );
     await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
     const confirm = await screen.findByRole("dialog", { name: "退出登录" });
