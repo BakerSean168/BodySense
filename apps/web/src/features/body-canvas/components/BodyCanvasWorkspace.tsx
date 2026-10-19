@@ -17,26 +17,25 @@ import {
   ChevronRight,
   CircleHelp,
   ArrowRight,
-  BoxSelect,
   Brush,
   ChevronDown,
+  ChevronUp,
   Clock3,
   Layers3,
   List,
   LoaderCircle,
   MessageCircle,
-  Moon,
   MousePointer2,
   Pause,
   PersonStanding,
   Play,
   RotateCcw,
   ShieldAlert,
-  Sun,
   Undo2,
   X,
 } from "lucide-react";
-import { AppUserMenu } from "@/components/layout/AppUserMenu";
+import { useNavigate } from "react-router";
+import { useAuthStore } from "@/stores/authStore";
 import {
   Dialog,
   DialogContent,
@@ -54,10 +53,7 @@ import {
   isBodyRegionId,
   type BodyRegionId,
 } from "@/features/body-explorer/model/bodyRegionOntology";
-import {
-  recordBodyRegions,
-  selectBodyRegionVisualSummaries,
-} from "@/features/body-explorer/model/bodyExplorerSelectors";
+import { recordBodyRegions } from "@/features/body-explorer/model/bodyExplorerSelectors";
 import {
   buildCanvasContext,
   canvasShortcut,
@@ -103,6 +99,7 @@ import {
 import type { ProfileCategoryId } from "../model/profileCategories";
 import { TrainerEntryGuard, type TrainerLaunch } from "./TrainerEntryGuard";
 import { diagnosisHeaderMode } from "../model/diagnosisDecisionViewModel";
+import { MOTION_ICONS } from "./MotionIcons";
 import "../body-canvas.css";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
@@ -154,11 +151,22 @@ export interface BodyCanvasWorkspaceProps {
   onRetry?: () => void;
 }
 
-const TOOLS = [
-  ["orbit", "旋转与点选", "V", MousePointer2],
-  ["brush", "涂抹选区", "B", Brush],
-  ["box", "框选区域", "S", BoxSelect],
+/**
+ * Penpot Home tools rail: 视角 R, 图层 L, 标注 B, 选择 V (top to bottom). Box
+ * select keeps its S shortcut and the region-by-name list lives in the help
+ * overlay, so neither capability is lost with the slimmer rail.
+ */
+const SELECT_TOOLS = [
+  ["brush", "标注 · 涂抹选区", "标注", "B", Brush],
+  ["orbit", "选择 · 旋转与点选", "选择", "V", MousePointer2],
 ] as const;
+
+type ThemePreference = "light" | "dark" | "system";
+const THEME_OPTIONS: ReadonlyArray<[ThemePreference, string]> = [
+  ["light", "浅色"],
+  ["dark", "深色"],
+  ["system", "跟随系统"],
+];
 
 const CANVAS_OVERLAY_META: Record<
   "anatomy" | "help",
@@ -174,18 +182,43 @@ const CANVAS_OVERLAY_META: Record<
   },
 };
 
-function savedTheme(): boolean {
+function savedTheme(): ThemePreference {
   try {
-    return localStorage.getItem("bodysense.canvas.theme") === "dark";
+    const value = localStorage.getItem("bodysense.canvas.theme");
+    return value === "dark" || value === "system" ? value : "light";
   } catch {
-    return false;
+    return "light";
   }
 }
 
 export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const mobile = useMediaQuery("(max-width: 760px)");
-  const [dark, setDark] = useState(savedTheme);
+  const [themePreference, setThemePreference] =
+    useState<ThemePreference>(savedTheme);
+  const systemDark = useMediaQuery("(prefers-color-scheme: dark)");
+  const dark =
+    themePreference === "dark" || (themePreference === "system" && systemDark);
+  // Penpot Person header account menu: Settings and Logout confirm overlays.
+  const [accountDialog, setAccountDialog] = useState<
+    "settings" | "logout" | null
+  >(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+  // Penpot motion ribbon fold (Home · Motions collapsed).
+  const [ribbonCollapsed, setRibbonCollapsed] = useState(false);
+  const ribbonToggleRef = useRef<HTMLButtonElement>(null);
+  const ribbonToggled = useRef(false);
+  useEffect(() => {
+    if (!ribbonToggled.current) return;
+    ribbonToggled.current = false;
+    ribbonToggleRef.current?.focus();
+  }, [ribbonCollapsed]);
+  const toggleRibbon = () => {
+    ribbonToggled.current = true;
+    setRibbonCollapsed((value) => !value);
+  };
   const [tool, setTool] = useState<CanvasTool>("orbit");
   const [selection, dispatch] = useReducer(selectionReducer, EMPTY_SELECTION);
   const [canvasOverlay, setCanvasOverlay] = useState<"anatomy" | "help" | null>(
@@ -323,13 +356,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     props.workspace?.capabilities.requires_safety_review === true;
   // Playback is a background behaviour: any open window pauses it.
   const effectivePlaying = playing && !safetyReview && !activeWindow;
-  const summaries = useMemo(
-    () => selectBodyRegionVisualSummaries(props.bodyState),
-    [props.bodyState],
-  );
-  const attention = summaries.filter(
-    (summary) => summary.visualState !== "none",
-  );
   const regionFacts = useMemo(
     () =>
       (props.bodyState?.facts ?? []).filter((fact) => {
@@ -394,9 +420,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     },
     [chooseTrainingPlan, openWindow],
   );
-  const closeAllWindows = useCallback(() => {
-    dispatchWindow({ type: "closeAll" });
-  }, []);
 
   // Reconcile a stale persisted plan id against the real plan list so the window
   // never displays another plan's identity.
@@ -415,11 +438,11 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   }, [reducedMotion]);
   useEffect(() => {
     try {
-      localStorage.setItem("bodysense.canvas.theme", dark ? "dark" : "light");
+      localStorage.setItem("bodysense.canvas.theme", themePreference);
     } catch {
       /* Preferences never gate the workspace. */
     }
-  }, [dark]);
+  }, [themePreference]);
   useEffect(() => {
     const external = props.bodyExplorer.selectedRegionId;
     if (external !== (selection.regions[0] ?? null)) {
@@ -513,6 +536,19 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     },
     [safetyReview, reducedMotion],
   );
+  const choosePose = useCallback(
+    (id: MotionId) => {
+      if (id !== "stand") {
+        chooseMotion(id);
+        return;
+      }
+      setMotionMode(false);
+      setPlaying(false);
+      setMotion("stand");
+      setSeek((value) => ({ phase: 0, revision: value.revision + 1 }));
+    },
+    [chooseMotion],
+  );
   const requestRevision = props.demonstrationRequest?.revision;
   useEffect(() => {
     if (props.demonstrationRequest)
@@ -558,7 +594,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       } else if (action.type === "tool") {
         setTool(action.tool);
         if (action.tool !== "orbit") setPlaying(false);
-      } else if (action.type === "motion") chooseMotion(action.motion);
+      } else if (action.type === "motion") choosePose(action.motion);
       else if (action.type === "pause") {
         setMotionMode(true);
         if (!safetyReview) setPlaying((value) => !value);
@@ -573,7 +609,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     activeWindow,
     ask,
     canvasOverlay,
-    chooseMotion,
+    choosePose,
     clear,
     closeWindow,
     personInfoOpen,
@@ -770,6 +806,8 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             identity={identity}
             open={personInfoOpen}
             onToggle={() => setPersonInfoOpen((open) => !open)}
+            onOpenSettings={() => setAccountDialog("settings")}
+            onRequestLogout={() => setAccountDialog("logout")}
             category={personCategory}
             onCategoryChange={setPersonCategory}
           />
@@ -859,54 +897,9 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       className={`${themeClass} bc-workspace`}
       data-testid="body-canvas-workspace"
     >
-      <header className="bc-topbar">
-        <button
-          className="bc-brand"
-          onClick={() => {
-            closeAllWindows();
-            setCanvasOverlay(null);
-            setRegionListOpen(false);
-          }}
-          aria-label="返回身体画布"
-        >
-          <PersonStanding size={26} strokeWidth={1.7} />
-          <span>BodySense</span>
-        </button>
-        <div className="bc-mode-switch" aria-label="画布模式">
-          <button
-            aria-pressed={!motionMode}
-            onClick={() => {
-              setMotionMode(false);
-              setPlaying(false);
-              setMotion("stand");
-              setSeek((value) => ({ phase: 0, revision: value.revision + 1 }));
-            }}
-          >
-            探索身体
-          </button>
-          <button
-            aria-pressed={motionMode}
-            onClick={() => {
-              setMotionMode(true);
-              setRegionCardOpen(false);
-            }}
-          >
-            动作演示
-          </button>
-        </div>
-        <div className="bc-account">
-          <span className="bc-private-label">你的身体，由你确认</span>
-          <button
-            className="bc-icon-button"
-            onClick={() => setDark((value) => !value)}
-            aria-label={dark ? "切换浅色" : "切换深色"}
-            title={dark ? "切换浅色" : "切换深色"}
-          >
-            {dark ? <Sun size={19} /> : <Moon size={19} />}
-          </button>
-          <AppUserMenu compact onOpenProfile={() => openWindow("person")} />
-        </div>
-      </header>
+      {/* Penpot Home has no app bar: the account menu, Settings and Logout
+          live in the Person window header. The page heading stays for AT. */}
+      <h1 className="sr-only">我的身体</h1>
 
       <section
         className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}`}
@@ -956,55 +949,56 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           )}
         </div>
 
-        <div className="bc-intro">
-          <span className="bc-eyebrow">
-            {motionMode ? "MOTION STUDIO" : "BODY CANVAS"}
-          </span>
-          <h1>
-            {motionMode ? (
-              <>
-                观察动作，
-                <br />
-                问得更具体。
-              </>
-            ) : (
-              "我的身体"
-            )}
-          </h1>
-          <p>
-            {motionMode
-              ? "暂停、旋转，再选中关心的部位。"
-              : "从身体开始，理解每一次变化。"}
-          </p>
-          {!motionMode && !props.loading && !props.error && (
-            <div className="bc-attention">
-              <span className="bc-status">
-                {attention.length
-                  ? `${attention.length} 个有记录的区域`
-                  : "还没有区域记录"}
-              </span>
-              {attention.slice(0, 3).map((summary) => (
+        {/* Penpot mint backdrop disc behind the reference body. */}
+        <div className="bc-backdrop-disc" aria-hidden="true" />
+        {ribbonCollapsed ? (
+          <button
+            ref={ribbonToggleRef}
+            type="button"
+            className="bc-motion-ribbon-tab"
+            aria-label="展开参考动作"
+            title="展开参考动作"
+            aria-expanded={false}
+            onClick={toggleRibbon}
+          >
+            <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        ) : (
+          <div className="bc-motion-ribbon" role="group" aria-label="参考动作">
+            {REFERENCE_MOTIONS.slice(0, 4).map((item, index) => {
+              const Icon = MOTION_ICONS[item.id];
+              const pressed =
+                item.id === "stand"
+                  ? !motionMode
+                  : motionMode && motion === item.id;
+              return (
                 <button
-                  className="bc-region-link"
-                  key={summary.regionId}
-                  onClick={() => select([summary.regionId])}
+                  key={item.id}
+                  type="button"
+                  className="bc-motion-pose"
+                  aria-label={item.label}
+                  title={`${item.label} · ${index + 1}`}
+                  aria-pressed={pressed}
+                  onClick={() => choosePose(item.id)}
                 >
-                  <span>
-                    {getBodyRegionDefinition(summary.regionId).labels["zh-CN"]}
-                  </span>
-                  <ArrowRight size={15} />
+                  {Icon ? <Icon /> : item.label}
+                  <kbd aria-hidden="true">{index + 1}</kbd>
                 </button>
-              ))}
-              {!attention.length && (
-                <p className="bc-onboarding-note">
-                  点击身体，或直接描述你的感受。
-                  <br />
-                  不需要先填满所有信息。
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+              );
+            })}
+            <button
+              ref={ribbonToggleRef}
+              type="button"
+              className="bc-motion-ribbon-collapse"
+              aria-label="收起参考动作"
+              title="收起参考动作"
+              aria-expanded={true}
+              onClick={toggleRibbon}
+            >
+              <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </div>
+        )}
 
         {safetyReview && (
           <div
@@ -1059,7 +1053,32 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             role="toolbar"
             aria-label="身体画布工具"
           >
-            {TOOLS.map(([value, label, key, Icon]) => (
+            <button
+              className="bc-icon-button"
+              aria-label="视角 · 重置视角"
+              title="重置视角 · R"
+              onClick={() => setResetKey((value) => value + 1)}
+            >
+              <RotateCcw size={20} strokeWidth={1.7} />
+              <span className="bc-tool-caption">视角</span>
+              <kbd aria-hidden="true">R</kbd>
+            </button>
+            <button
+              className="bc-icon-button"
+              aria-label="图层 · 精细解剖"
+              title="精细解剖图层 · L"
+              aria-pressed={canvasOverlay === "anatomy"}
+              onClick={() =>
+                setCanvasOverlay((current) =>
+                  current === "anatomy" ? null : "anatomy",
+                )
+              }
+            >
+              <Layers3 size={20} strokeWidth={1.7} />
+              <span className="bc-tool-caption">图层</span>
+              <kbd aria-hidden="true">L</kbd>
+            </button>
+            {SELECT_TOOLS.map(([value, label, caption, key, Icon]) => (
               <button
                 key={value}
                 className="bc-icon-button"
@@ -1073,43 +1092,10 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                 }}
               >
                 <Icon size={20} strokeWidth={1.7} />
-                <span className="bc-tool-caption">{label}</span>
+                <span className="bc-tool-caption">{caption}</span>
+                <kbd aria-hidden="true">{key}</kbd>
               </button>
             ))}
-            <span className="bc-tool-divider" />
-            <button
-              className="bc-icon-button"
-              aria-label="按名称选择区域"
-              title="按名称选择区域"
-              aria-expanded={regionListOpen}
-              onClick={() => {
-                setRegionListOpen((open) => !open);
-                requestAnimationFrame(() => selectRef.current?.focus());
-              }}
-            >
-              <List size={20} />
-            </button>
-            <button
-              className="bc-icon-button"
-              aria-label="精细解剖"
-              title="精细解剖 · X"
-              aria-pressed={canvasOverlay === "anatomy"}
-              onClick={() =>
-                setCanvasOverlay((current) =>
-                  current === "anatomy" ? null : "anatomy",
-                )
-              }
-            >
-              <Layers3 size={20} />
-            </button>
-            <button
-              className="bc-icon-button"
-              aria-label="重置视角"
-              title="重置视角 · R"
-              onClick={() => setResetKey((value) => value + 1)}
-            >
-              <RotateCcw size={19} />
-            </button>
             <button
               ref={toolsToggleRef}
               type="button"
@@ -1319,30 +1305,8 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             <ChevronDown size={16} />
           </button>
         )}
-        {!primary && !activeWindow && !regionListOpen && !motionMode && (
-          <div className="bc-ask-entry">
-            <button className="bc-button bc-primary" onClick={ask}>
-              开始一次提问
-              <MessageCircle size={18} />
-            </button>
-            <p>明确的本人陈述会自动记录；有歧义时再向你确认。</p>
-          </div>
-        )}
-
         {motionMode && (
           <>
-            <div className="bc-motion-switch" aria-label="参考动作">
-              {REFERENCE_MOTIONS.slice(0, 4).map((item, index) => (
-                <button
-                  key={item.id}
-                  aria-pressed={motion === item.id}
-                  onClick={() => chooseMotion(item.id)}
-                >
-                  {item.label}
-                  <kbd>{index + 1}</kbd>
-                </button>
-              ))}
-            </div>
             <section className="bc-playback" aria-label="动作播放控制">
               <button
                 className="bc-play-toggle"
@@ -1508,12 +1472,12 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             {canvasOverlay === "help" && (
               <div className="bc-keyboard-help">
                 {[
-                  ["V / B / S", "旋转点选、涂抹、框选"],
+                  ["V / B / S", "选择、标注涂抹、框选"],
                   ["1 / 2 / 3 / 4", "站立、跑步、跳跃、坐姿"],
                   ["F / Space", "暂停或继续动作"],
                   ["/", "打开对话窗口"],
-                  ["P / D / I / T", "训练计划、诊断、档案、训练执行"],
-                  ["X / R", "精细解剖、复位视角"],
+                  ["M / P / D / T", "个人档案、训练计划、诊断、训练执行"],
+                  ["L / R", "精细解剖图层、复位视角"],
                   ["Z / Esc", "撤销选区、逐层返回"],
                 ].map(([key, label]) => (
                   <div key={key}>
@@ -1538,6 +1502,131 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={accountDialog !== null}
+        onOpenChange={(open) => {
+          if (!open && !loggingOut) setAccountDialog(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className={`${themeClass} bc-account-dialog`}
+          data-testid={
+            accountDialog === "logout" ? "logout-confirm" : "settings-dialog"
+          }
+        >
+          {accountDialog === "logout" ? (
+            <>
+              <DialogTitle className="bc-account-dialog-title">
+                退出登录
+              </DialogTitle>
+              <DialogDescription className="bc-account-dialog-text">
+                确定要退出当前账号吗？
+                <small>退出后将回到登录页。</small>
+              </DialogDescription>
+              <div className="bc-account-dialog-actions">
+                <button
+                  type="button"
+                  className="bc-button"
+                  disabled={loggingOut}
+                  onClick={() => setAccountDialog(null)}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="bc-button bc-danger-button"
+                  disabled={loggingOut}
+                  onClick={async () => {
+                    setLoggingOut(true);
+                    try {
+                      await logout();
+                    } finally {
+                      setLoggingOut(false);
+                      setAccountDialog(null);
+                      navigate("/login", { replace: true });
+                    }
+                  }}
+                >
+                  {loggingOut ? (
+                    <LoaderCircle size={15} className="animate-spin" />
+                  ) : null}
+                  退出登录
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogTitle className="bc-account-dialog-title">
+                设置
+              </DialogTitle>
+              <DialogDescription className="bc-account-dialog-text">
+                外观与应用偏好。
+              </DialogDescription>
+              <div className="bc-theme-field">
+                <span id="bc-theme-label" className="bc-theme-label">
+                  主题
+                </span>
+                <span className="bc-theme-hint">浅色 / 深色 / 跟随系统</span>
+                <div
+                  className="bc-theme-options"
+                  role="radiogroup"
+                  aria-labelledby="bc-theme-label"
+                >
+                  {THEME_OPTIONS.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={themePreference === value}
+                      tabIndex={themePreference === value ? 0 : -1}
+                      onClick={() => setThemePreference(value)}
+                      onKeyDown={(event) => {
+                        const step =
+                          event.key === "ArrowRight" ||
+                          event.key === "ArrowDown"
+                            ? 1
+                            : event.key === "ArrowLeft" ||
+                                event.key === "ArrowUp"
+                              ? -1
+                              : 0;
+                        if (!step) return;
+                        event.preventDefault();
+                        const index = THEME_OPTIONS.findIndex(
+                          ([option]) => option === themePreference,
+                        );
+                        const next =
+                          THEME_OPTIONS[
+                            (index + step + THEME_OPTIONS.length) %
+                              THEME_OPTIONS.length
+                          ][0];
+                        setThemePreference(next);
+                        const group = event.currentTarget.parentElement;
+                        requestAnimationFrame(() =>
+                          group
+                            ?.querySelector<HTMLButtonElement>(
+                              "[aria-checked='true']",
+                            )
+                            ?.focus(),
+                        );
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="bc-button bc-account-dialog-close"
+                onClick={() => setAccountDialog(null)}
+              >
+                关闭
+              </button>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </main>

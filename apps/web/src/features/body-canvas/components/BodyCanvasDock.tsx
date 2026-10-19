@@ -12,12 +12,16 @@ import {
   type BusinessWindowId,
 } from "../model/businessWindows";
 
-/** The four Penpot V2 Dock entrances. Trainer is opened from Training, not a fifth Dock item. */
+/**
+ * The four Penpot V2 Dock entrances in the desktop board order (/ D P M).
+ * The mobile board mirrors it (个人 训练 诊断 对话), so the thumb reaches Person
+ * first. Trainer is opened from Training, not a fifth Dock item.
+ */
 export const BODY_CANVAS_DOCK_ITEMS = [
-  { id: "person", icon: DockPersonIcon },
-  { id: "training", icon: DockTrainingIcon },
-  { id: "diagnosis", icon: DockDiagnosisIcon },
   { id: "chat", icon: DockChatIcon },
+  { id: "diagnosis", icon: DockDiagnosisIcon },
+  { id: "training", icon: DockTrainingIcon },
+  { id: "person", icon: DockPersonIcon },
 ] as const;
 
 export interface BodyCanvasDockProps {
@@ -78,7 +82,10 @@ export function BodyCanvasDock({
 
   return (
     <nav className="bc-dock" aria-label="身体工作区导航">
-      {BODY_CANVAS_DOCK_ITEMS.map(({ id, icon: Icon }) => {
+      {(mobile
+        ? [...BODY_CANVAS_DOCK_ITEMS].reverse()
+        : BODY_CANVAS_DOCK_ITEMS
+      ).map(({ id, icon: Icon }) => {
         const { title, dockLabel, key: shortcut } = getBusinessWindowMeta(id);
         return (
           <button

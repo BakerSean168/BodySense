@@ -521,6 +521,10 @@ describe("body-first business windows", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "synthetic@example.test" }),
     );
+    // Penpot account menu: 个人资料 opens the identity popover.
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "个人资料" }),
+    );
     const popover = await screen.findByRole("dialog", { name: "个人资料" });
     // Minimal optional Profile only: no body measurements and no revision.
     expect(popover.textContent).not.toContain("BMI");
@@ -646,7 +650,7 @@ describe("body-first business windows", () => {
 
   it("maps Person and Trainer shortcut keys without treating them as a data-write command", async () => {
     renderPage();
-    await userEvent.keyboard("i");
+    await userEvent.keyboard("m");
     expect(await screen.findByTestId("person-window")).toBeVisible();
     await userEvent.keyboard("{Escape}");
     await userEvent.keyboard("t");
@@ -669,9 +673,51 @@ describe("body-first business windows", () => {
     renderPage();
     // Ask from the region card: the canvas sets spatial context and must also
     // open Chat, otherwise the question has nowhere to go.
-    await user.click(screen.getByRole("button", { name: "开始一次提问" }));
+    // Penpot Home has no "开始一次提问" button: "/" asks from the canvas.
+    expect(screen.queryByRole("button", { name: "开始一次提问" })).toBeNull();
+    await user.keyboard("/");
     expect(await screen.findByTestId("assistant-chat-panel")).toBeVisible();
     expect(screen.getByTestId("assistant-chat-panel")).toBeInTheDocument();
+  });
+
+  it("rehomes theme and logout into the Person header account menu", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    // No app bar: no top-level user menu or theme toggle on Home.
+    expect(screen.queryByRole("button", { name: "打开用户菜单" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "切换深色" })).toBeNull();
+    await openDock("个人档案");
+    await screen.findByTestId("person-window");
+    await user.click(
+      screen.getByRole("button", { name: "synthetic@example.test" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "设置" }));
+    const settings = await screen.findByRole("dialog", { name: "设置" });
+    const light = within(settings).getByRole("radio", { name: "浅色" });
+    expect(light).toHaveAttribute("aria-checked", "true");
+    await user.click(within(settings).getByRole("radio", { name: "深色" }));
+    expect(screen.getByTestId("body-canvas-workspace")).toHaveClass("bc-dark");
+    // Arrow keys move the radio selection (roving tabindex).
+    within(settings).getByRole("radio", { name: "深色" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(
+      within(settings).getByRole("radio", { name: "跟随系统" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await user.click(within(settings).getByRole("radio", { name: "浅色" }));
+    expect(screen.getByTestId("body-canvas-workspace")).not.toHaveClass(
+      "bc-dark",
+    );
+    await user.click(within(settings).getByRole("button", { name: "关闭" }));
+    expect(screen.queryByRole("dialog", { name: "设置" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "synthetic@example.test" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
+    const confirm = await screen.findByRole("dialog", { name: "退出登录" });
+    expect(confirm).toHaveTextContent("确定要退出当前账号吗？");
+    await user.click(within(confirm).getByRole("button", { name: "取消" }));
+    expect(screen.queryByRole("dialog", { name: "退出登录" })).toBeNull();
   });
 });
 

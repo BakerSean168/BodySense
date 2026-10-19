@@ -182,8 +182,8 @@ describe("business window lifecycle", () => {
 
 describe("desktop window placement adapts instead of hardcoding the prototype frame", () => {
   it("bases the first window at the Penpot offset and cascades later ones", () => {
-    expect(desktopWindowOffset(0)).toEqual({ left: 40, top: 28 });
-    expect(desktopWindowOffset(1)).toEqual({ left: 66, top: 54 });
+    expect(desktopWindowOffset(0)).toEqual({ left: 40, top: 92 });
+    expect(desktopWindowOffset(1)).toEqual({ left: 66, top: 118 });
   });
 
   it("bounds the cascade so windows cannot walk off stage", () => {
@@ -226,9 +226,9 @@ describe("Penpot V2 business window geometry", () => {
     expect(BUSINESS_WINDOW_LAYOUT.trainer.dock).toBe("right");
   });
 
-  it("fills the 1440 x 900 Penpot frame from y 92 to 792 under the 64px app bar", () => {
-    const stageHeight = 900 - 64;
-    expect(64 + DESKTOP_WINDOW_BASE_TOP).toBe(92);
+  it("fills the 1440 x 900 Penpot frame from y 92 to 792 on the full-height stage", () => {
+    const stageHeight = 900;
+    expect(DESKTOP_WINDOW_BASE_TOP).toBe(92);
     for (const layout of Object.values(BUSINESS_WINDOW_LAYOUT)) {
       expect(
         stageHeight - DESKTOP_WINDOW_BASE_TOP - DESKTOP_WINDOW_BOTTOM_RESERVE,

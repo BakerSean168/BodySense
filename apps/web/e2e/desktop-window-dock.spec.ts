@@ -196,13 +196,19 @@ test("desktop chrome follows the Penpot window boards", async ({
   const headers = await register(page, request);
   await screenSafety(request, headers);
 
-  // Home: intro, Tools rail and the icon-only Dock with accessible names.
+  // Home: motion ribbon, Tools rail and the icon-only Dock (/ D P M).
   await page.goto("/consultation");
-  const intro = page.locator(".bc-intro");
+  const intro = page.getByRole("group", { name: "参考动作" });
   const tools = page.getByRole("toolbar", { name: "身体画布工具" });
   const dock = page.getByRole("navigation", { name: "身体工作区导航" });
   await expect(intro).toBeVisible();
   await expect(tools).toBeVisible();
+  await expect(dock.locator(".bc-dock-item")).toHaveText([
+    /对话/,
+    /诊断/,
+    /训练/,
+    /个人/,
+  ]);
   for (const name of ["个人档案", "训练计划", "综合诊断", "对话"]) {
     const item = dock.getByRole("button", { name, exact: true });
     await expect(item).toBeVisible();
@@ -241,16 +247,16 @@ test("desktop chrome follows the Penpot window boards", async ({
   await expect(tools).toBeVisible();
 
   // Right-docked windows: the body keeps its place (Penpot does not move it),
-  // the intro gives way, the Tools rail stays.
+  // the motion ribbon stays above the windows (Penpot boards), the rail stays.
   for (const id of ["diagnosis", "training", "trainer"] as const) {
     await openWindow(page, id);
-    await expect(intro).toBeHidden();
+    await expect(intro).toBeVisible();
     await expect(tools).toBeVisible();
   }
 
   // Left-docked Person: the Tools rail collapses instead of peeking out.
   const person = await openWindow(page, "person");
-  await expect(intro).toBeHidden();
+  await expect(intro).toBeVisible();
   await expect(tools).toBeHidden();
   expectClose((await person.boundingBox())!.width, 860, "person list width");
 
@@ -287,11 +293,18 @@ test("desktop chrome follows the Penpot window boards", async ({
   ).toBe(true);
   await page.emulateMedia({ reducedMotion: null });
 
-  // Mobile keeps its labelled Dock and its sheet; nothing desktop leaks in.
+  // Mobile keeps its sheet and an icon Dock (Penpot Mobile / Home, M P D /);
+  // nothing desktop leaks in.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/consultation");
   await expect(dock.locator(".bc-dock-item")).toHaveCount(4);
-  await expect(dock.getByText("个人", { exact: true })).toBeVisible();
+  await expect(dock.locator(".bc-dock-item").first()).toHaveAttribute(
+    "aria-label",
+    "个人档案",
+  );
+  await expect(
+    dock.getByRole("button", { name: "个人档案", exact: true }),
+  ).toBeVisible();
   await expect(intro).toBeVisible();
   await expect(tools).toBeVisible();
   expect(

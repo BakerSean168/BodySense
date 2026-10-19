@@ -64,6 +64,7 @@ test("Person identity edits optional Profile fields and preferences without touc
   const trigger = page.getByRole("button", { name: email });
   await expect(trigger).toBeVisible();
   await trigger.click();
+  await page.getByRole("menuitem", { name: "个人资料" }).click();
 
   const identity = page.getByRole("dialog", { name: "个人资料" });
   await expect(identity).toBeVisible();
@@ -134,6 +135,7 @@ test("Person identity edits optional Profile fields and preferences without touc
   await page.reload();
   await expect(page.getByTestId("person-window")).toBeVisible();
   await page.getByRole("button", { name: "Elsewhere" }).click();
+  await page.getByRole("menuitem", { name: "个人资料" }).click();
   await expect(identity.getByLabel("显示时区")).toHaveValue("Asia/Tokyo");
   await identity.getByLabel("昵称").fill("");
   await identity.getByRole("button", { name: "保存" }).click();
