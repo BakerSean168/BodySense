@@ -87,7 +87,10 @@ test("person media uploads land in the penpot month grid; failures retry", async
   await expect(tiles).toHaveCount(2);
   const upload = person.getByRole("button", { name: "上传照片" });
   await expect(upload).toContainText("上传");
-  const [a, b] = [await tiles.nth(0).boundingBox(), await tiles.nth(1).boundingBox()];
+  const [a, b] = [
+    await tiles.nth(0).boundingBox(),
+    await tiles.nth(1).boundingBox(),
+  ];
   expect(Math.abs(a!.y - b!.y)).toBeLessThan(2);
   expect(b!.x).toBeGreaterThan(a!.x + a!.width);
   expect(
