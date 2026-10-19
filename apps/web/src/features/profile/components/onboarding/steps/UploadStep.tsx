@@ -1,100 +1,115 @@
-import { useEffect, useRef, useState } from "react";
+/**
+ * Step 16 · 上传体检报告或体态照片 (Penpot: one 620×200 drop zone).
+ *
+ * The upload API needs a file type per file (report, or posture photo front / side /
+ * back), which a single Penpot drop zone cannot express. PDFs go straight in as
+ * reports; for an image we ask one small follow-up (体检报告 / 正面 / 侧面 / 背面).
+ */
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useUploadStore } from "@/stores/uploadStore";
-import type {
-  AnalysisStatus,
-  FileType,
-  PostureAnalysis,
-} from "../../../types/upload.types";
-import { FILE_TYPE_LABELS, SEVERITY_LABELS } from "../../../types/upload.types";
+import type { FileType, PostureAnalysis, UserUpload } from "../../../types/upload.types";
+import { FILE_TYPE_LABELS } from "../../../types/upload.types";
 import { PostureAnalysisView } from "../../uploads/PostureAnalysisView";
 
-const ANALYSIS_BADGE: Record<
-  AnalysisStatus,
-  { text: string; className: string }
-> = {
-  none: { text: "未分析", className: "bg-slate-100 text-slate-600" },
-  pending: { text: "等待分析", className: "bg-slate-100 text-slate-600" },
-  processing: {
-    text: "AI 分析中",
-    className:
-      "bg-amber-50 text-amber-700 border border-amber-150 animate-pulse",
-  },
-  completed: {
-    text: "分析完成",
-    className: "bg-emerald-50 text-emerald-700 border border-emerald-150",
-  },
-  failed: {
-    text: "分析失败",
-    className: "bg-rose-50 text-rose-700 border border-rose-150",
-  },
-};
+type UploadKind = Extract<FileType, "photo_front" | "photo_side" | "photo_back" | "report">;
+
+const PHOTO_KINDS = ["photo_front", "photo_side", "photo_back"] as const;
+const KIND_CHOICES: { value: UploadKind; label: string }[] = [
+  { value: "report", label: "体检报告" },
+  { value: "photo_front", label: "正面照" },
+  { value: "photo_side", label: "侧面照" },
+  { value: "photo_back", label: "背面照" },
+];
+
+function statusText(file: UserUpload): string {
+  if (file.file_type === "report") {
+    switch (file.ocr_status) {
+      case "completed":
+        return "识别成功";
+      case "processing":
+        return "识别中";
+      case "failed":
+        return "识别失败";
+      default:
+        return "等待识别";
+    }
+  }
+  switch (file.analysis_status) {
+    case "completed":
+      return "分析完成";
+    case "processing":
+      return "分析中";
+    case "failed":
+      return "分析失败";
+    case "pending":
+      return "等待分析";
+    default:
+      return "已上传";
+  }
+}
 
 export function UploadStep() {
-  const { uploads, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
-  const [uploadingTypes, setUploadingTypes] = useState<Record<string, boolean>>(
-    {},
-  );
+  const { uploads: allUploads, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
+  // Chat photos live in the same store; onboarding only lists reports and posture photos.
+  const uploads = allUploads.filter((u) => u.file_type !== "consultation_photo");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fileInputRefs = {
-    photo_front: useRef<HTMLInputElement>(null),
-    photo_side: useRef<HTMLInputElement>(null),
-    photo_back: useRef<HTMLInputElement>(null),
-    report: useRef<HTMLInputElement>(null),
-  };
 
   useEffect(() => {
     fetchUploads();
   }, [fetchUploads]);
 
-  // Posture analysis runs as an async job; poll while any photo is still
-  // pending/processing, and stop once everything settles.
-  const hasInFlightAnalysis = uploads.some(
-    (u) =>
-      u.file_type.startsWith("photo_") &&
-      (u.analysis_status === "pending" || u.analysis_status === "processing"),
+  // Posture analysis and OCR run as async jobs; poll while any is still in flight.
+  const inFlight = uploads.some((u) =>
+    u.file_type === "report"
+      ? u.ocr_status === "processing" || u.ocr_status === "pending"
+      : u.analysis_status === "pending" || u.analysis_status === "processing",
+  );
+  useEffect(() => {
+    if (!inFlight) return;
+    const timer = setInterval(() => fetchUploads(), 4000);
+    return () => clearInterval(timer);
+  }, [inFlight, fetchUploads]);
+
+  const usedPhotoKinds = new Set(
+    uploads.filter((u) => u.file_type.startsWith("photo_")).map((u) => u.file_type),
   );
 
-  useEffect(() => {
-    if (!hasInFlightAnalysis) return;
-    const timer = setInterval(() => {
-      fetchUploads();
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [hasInFlightAnalysis, fetchUploads]);
-
-  // Find files by type
-  const getPhotoByType = (type: FileType) => {
-    return uploads.find((u) => u.file_type === type);
-  };
-
-  const getReports = () => {
-    return uploads.filter((u) => u.file_type === "report");
-  };
-
-  const handleFileChange = async (
-    type: "photo_front" | "photo_side" | "photo_back" | "report",
-    file: File,
-  ) => {
+  const send = async (file: File, kind: UploadKind) => {
     setError(null);
-    setUploadingTypes((prev) => ({ ...prev, [type]: true }));
-
+    setUploading(true);
     try {
-      await uploadFile(file, type);
+      await uploadFile(file, kind);
     } catch (err) {
       setError(err instanceof Error ? err.message : "文件上传失败");
     } finally {
-      setUploadingTypes((prev) => ({ ...prev, [type]: false }));
+      setUploading(false);
+      setPendingImage(null);
     }
   };
 
-  const handleSelectClick = (
-    type: "photo_front" | "photo_side" | "photo_back" | "report",
-  ) => {
-    fileInputRefs[type].current?.click();
+  const accept = (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    if (file.type === "application/pdf") {
+      void send(file, "report");
+    } else if (file.type.startsWith("image/")) {
+      setPendingImage(file);
+    } else {
+      setError("仅支持 PDF 或图片文件");
+    }
   };
 
-  const handleDelete = async (id: string) => {
+  const onDrop = (event: DragEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setDragging(false);
+    accept(event.dataTransfer.files?.[0]);
+  };
+
+  const remove = async (id: string) => {
     try {
       await deleteUpload(id);
     } catch (err) {
@@ -102,353 +117,120 @@ export function UploadStep() {
     }
   };
 
-  // Render a single photo upload slot
-  const renderPhotoSlot = (
-    type: Extract<FileType, "photo_front" | "photo_side" | "photo_back">,
-    label: string,
-    desc: string,
-  ) => {
-    const photo = getPhotoByType(type);
-    const isUploading = uploadingTypes[type];
-
-    return (
-      <div className="border rounded-xl p-4 bg-slate-50/50 relative overflow-hidden flex flex-col justify-between h-56 transition-all hover:border-slate-300">
-        <input
-          type="file"
-          ref={fileInputRefs[type]}
-          onChange={(e) => {
-            const files = e.target.files;
-            if (files && files.length > 0) {
-              handleFileChange(type, files[0]);
-            }
-          }}
-          accept="image/*"
-          className="hidden"
-        />
-
-        <div>
-          <h3 className="font-semibold text-slate-800 text-sm">{label}</h3>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{desc}</p>
-        </div>
-
-        {photo ? (
-          <div className="mt-4 flex-1 flex flex-col justify-end space-y-2">
-            <div className="bg-white border border-slate-200 text-slate-700 rounded-lg p-2.5 flex items-center justify-between text-xs font-medium">
-              <div className="flex items-center space-x-2 truncate">
-                <svg
-                  className="w-4.5 h-4.5 text-emerald-500 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span className="truncate">{photo.original_name}</span>
-              </div>
-              <button
-                onClick={() => handleDelete(photo.id)}
-                className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-slate-200/50 transition-colors"
-                title="删除图片"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {(() => {
-              const status = photo.analysis_status ?? "none";
-              const badge = ANALYSIS_BADGE[status];
-              const findings = photo.analysis_result?.findings ?? [];
-              return (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase ${badge.className}`}
-                  >
-                    {badge.text}
-                  </span>
-                  {status === "completed" &&
-                    findings.slice(0, 2).map((f) => (
-                      <span
-                        key={f.key}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium"
-                      >
-                        {f.label}·{SEVERITY_LABELS[f.severity] ?? f.severity}
-                      </span>
-                    ))}
-                  {status === "completed" && findings.length === 0 && (
-                    <span className="text-[10px] text-slate-400">
-                      未见明显偏差
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        ) : (
-          <div className="mt-4 flex-1 flex flex-col justify-end">
-            <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => handleSelectClick(type)}
-              className="w-full bg-white hover:bg-slate-100/70 border border-slate-200 text-slate-700 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center space-x-1"
-            >
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-slate-600 mr-1.5" />
-                  <span>上传中...</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 mr-1 text-slate-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span>选择照片</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const reports = getReports();
-  const isUploadingReport = uploadingTypes["report"];
-
-  // Completed per-view posture analyses, ordered front → side → back.
-  const postureAnalyses: PostureAnalysis[] = (
-    ["photo_front", "photo_side", "photo_back"] as const
-  ).flatMap((type) => {
-    const upload = getPhotoByType(type);
+  const postureAnalyses: PostureAnalysis[] = PHOTO_KINDS.flatMap((kind) => {
+    const upload = uploads.find((u) => u.file_type === kind);
     return upload?.analysis_status === "completed" && upload.analysis_result
       ? [upload.analysis_result]
       : [];
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">材料上传 (可选)</h2>
-        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-          上传体态照片后，会由独立的体态分析流程生成可复核的视觉观察；上传体检报告后，会通过
-          OCR
-          识别报告中的结构化指标。成功处理后的结果才会作为后续健康评估的证据来源。
-        </p>
-        <p className="text-[11px] text-slate-400 mt-1">
-          注：AI 分析基于照片视觉判断，仅供参考，不构成医疗诊断。
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,image/*"
+        className="hidden"
+        data-testid="onboarding-upload-input"
+        onChange={(event) => {
+          accept(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        aria-describedby="onboarding-upload-hint"
+        className={`flex h-[168px] w-full flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed px-6 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] lg:h-[200px] ${
+          dragging ? "border-[#2C694F] bg-[#E8F0EA]" : "border-[#E5E7EB] bg-[#F6F8F7] hover:border-[#C9D3CC]"
+        }`}
+      >
+        <span className="text-[15px] text-[#6B7280]">
+          {uploading ? "上传中…" : "点击上传或拖拽文件到这里"}
+        </span>
+        <span id="onboarding-upload-hint" className="text-[13px] text-[#9CA3AF]">
+          支持体检报告 PDF、体态照片（选填）
+        </span>
+      </button>
 
-      {error && (
-        <div className="rounded-lg bg-rose-50 border border-rose-100 p-3 flex items-center space-x-2 text-rose-800 text-xs font-medium">
-          <svg
-            className="w-4.5 h-4.5 text-rose-500 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+      {pendingImage && (
+        <div
+          role="group"
+          aria-label={`这张图片是？${pendingImage.name}`}
+          className="rounded-[14px] bg-[#F7F7F7] p-4"
+        >
+          <p className="truncate text-sm text-[#1A1A1A]">
+            这张图片是？<span className="text-[#6B7280]">{pendingImage.name}</span>
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {KIND_CHOICES.map((choice) => {
+              const taken = choice.value !== "report" && usedPhotoKinds.has(choice.value);
+              return (
+                <button
+                  key={choice.value}
+                  type="button"
+                  disabled={taken || uploading}
+                  onClick={() => void send(pendingImage, choice.value)}
+                  className="h-10 rounded-[10px] border-2 border-transparent bg-white text-sm text-[#1A1A1A] hover:border-[#2C694F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {choice.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPendingImage(null)}
+            className="mt-2 text-[13px] text-[#6B7280] hover:text-[#1A1A1A]"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <span>{error}</span>
+            取消
+          </button>
         </div>
       )}
 
-      {/* Posture Photos Row */}
-      <div>
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-          体态三视图
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderPhotoSlot(
-            "photo_front",
-            FILE_TYPE_LABELS.photo_front,
-            "请自然站立拍摄正面全身照，确保双肩双脚清晰可见。",
-          )}
-          {renderPhotoSlot(
-            "photo_side",
-            FILE_TYPE_LABELS.photo_side,
-            "请双手自然下垂拍摄侧面全身照，展示头部和耳垂重心。",
-          )}
-          {renderPhotoSlot(
-            "photo_back",
-            FILE_TYPE_LABELS.photo_back,
-            "请放松站立拍摄背面全身照，观察两肩和肩胛骨对称度。",
-          )}
-        </div>
+      {error && (
+        <p role="alert" className="text-sm text-[#B42318]">
+          {error}
+        </p>
+      )}
 
-        {postureAnalyses.length > 0 && (
-          <div className="mt-4">
-            <PostureAnalysisView analyses={postureAnalyses} />
-          </div>
-        )}
-      </div>
-
-      {/* Health Reports Section */}
-      <div className="border-t border-slate-100 pt-6">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-          体检报告
-        </h3>
-
-        <input
-          type="file"
-          ref={fileInputRefs["report"]}
-          onChange={(e) => {
-            const files = e.target.files;
-            if (files && files.length > 0) {
-              handleFileChange("report", files[0]);
-            }
-          }}
-          accept="image/*,application/pdf"
-          className="hidden"
-        />
-
-        <div className="flex flex-col space-y-3">
-          {reports.map((report) => (
-            <div
-              key={report.id}
-              className="border rounded-lg p-3 bg-slate-50/50 flex items-center justify-between text-xs transition-all hover:bg-slate-50"
+      {uploads.length > 0 && (
+        <ul aria-label="已上传资料" className="flex flex-col gap-2">
+          {uploads.map((file) => (
+            <li
+              key={file.id}
+              className="flex items-center justify-between gap-3 rounded-[10px] bg-[#F7F7F7] px-4 py-3 text-sm"
             >
-              <div className="flex items-center space-x-3 truncate">
-                <svg
-                  className="w-5 h-5 text-slate-400 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <div className="truncate pr-4">
-                  <p className="font-semibold text-slate-800 truncate">
-                    {report.original_name}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    大小: {(report.file_size / (1024 * 1024)).toFixed(2)} MB •{" "}
-                    {report.ocr_status === "completed" && report.ocr_result
-                      ? `OCR 识别 ${report.ocr_result.indicators?.length || 0} 项指标候选，其中 ${report.ocr_result.indicators?.filter((indicator) => indicator.evidence_admissibility?.status === "admissible").length || 0} 项可用于评估`
-                      : report.ocr_status === "processing"
-                        ? "OCR 正在读取中..."
-                        : report.ocr_status === "failed"
-                          ? "指标读取失败"
-                          : "等待 OCR 读取"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase ${
-                    report.ocr_status === "completed"
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-150"
-                      : report.ocr_status === "processing"
-                        ? "bg-amber-50 text-amber-700 border border-amber-150 animate-pulse"
-                        : report.ocr_status === "failed"
-                          ? "bg-rose-50 text-rose-700 border border-rose-150"
-                          : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {report.ocr_status === "completed"
-                    ? "识别成功"
-                    : report.ocr_status === "processing"
-                      ? "处理中"
-                      : report.ocr_status === "failed"
-                        ? "失败"
-                        : "等待中"}
-                </span>
+              <span className="min-w-0 truncate">
+                <span className="text-[#6B7280]">{FILE_TYPE_LABELS[file.file_type] ?? "资料"} · </span>
+                {file.original_name}
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="text-[13px] text-[#2C694F]">{statusText(file)}</span>
                 <button
-                  onClick={() => handleDelete(report.id)}
-                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-full hover:bg-slate-200/50 transition-colors"
+                  type="button"
+                  onClick={() => void remove(file.id)}
+                  aria-label={`删除 ${file.original_name}`}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#B42318] focus-visible:outline-2 focus-visible:outline-[#2C694F]"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
+                  <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+                    <path d="m4 4 8 8M12 4l-8 8" />
                   </svg>
                 </button>
-              </div>
-            </div>
+              </span>
+            </li>
           ))}
+        </ul>
+      )}
 
-          <button
-            type="button"
-            disabled={isUploadingReport}
-            onClick={() => handleSelectClick("report")}
-            className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-4 bg-slate-50/20 text-center cursor-pointer transition-colors flex flex-col items-center justify-center space-y-1.5 text-slate-500 hover:text-slate-700"
-          >
-            {isUploadingReport ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-600 mb-1" />
-                <span className="text-xs font-semibold">
-                  正在上传报告并进行 OCR 分析...
-                </span>
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-6 h-6 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                <span className="text-xs font-semibold">添加体检报告单</span>
-                <span className="text-[10px] text-slate-400">
-                  支持上传单张/多张体检单照片或 PDF 文件
-                </span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+      {postureAnalyses.length > 0 && <PostureAnalysisView analyses={postureAnalyses} />}
     </div>
   );
 }

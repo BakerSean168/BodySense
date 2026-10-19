@@ -1,314 +1,339 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useProfileStore } from "@/stores/profileStore";
-import { OnboardingLayout } from "./OnboardingLayout";
-import { GenderStep } from "./steps/GenderStep";
-import { BirthDateStep } from "./steps/BirthDateStep";
-import { HeightWeightStep } from "./steps/HeightWeightStep";
-import { ActivityPatternStep } from "./steps/ActivityPatternStep";
-import { SleepStep } from "./steps/SleepStep";
-import { ExerciseStep } from "./steps/ExerciseStep";
-import { InjuryStep } from "./steps/InjuryStep";
-import { OtherLifestyleStep } from "./steps/OtherLifestyleStep";
-import { UploadStep } from "./steps/UploadStep";
 import { assessmentApi } from "@/features/assessment/services/assessmentService";
 import { onboardingContextService } from "../../services/onboardingContextService";
+import {
+  OnboardingLayout,
+  OnboardingPrimaryButton,
+  OnboardingSkipButton,
+} from "./OnboardingLayout";
+import { ChipGrid, ChoiceList, ValueBox } from "./OnboardingControls";
+import { UploadStep } from "./steps/UploadStep";
+import {
+  ACTIVITY_OPTIONS,
+  BREAK_OPTIONS,
+  DISCOMFORT_OPTIONS,
+  EXERCISE_FREQUENCY_OPTIONS,
+  EXERCISE_HABIT_OPTIONS,
+  EXERCISE_TYPE_OPTIONS,
+  GENDER_OPTIONS,
+  HEIGHT_RANGE,
+  INITIAL_ANSWERS,
+  INJURY_OPTIONS,
+  NO_DISCOMFORT,
+  NUTRITION_OPTIONS,
+  SITTING_OPTIONS,
+  SLEEP_OPTIONS,
+  STEPS,
+  SUBSTANCES_OPTIONS,
+  TOTAL_STEPS,
+  WEIGHT_RANGE,
+  buildOnboardingPayload,
+  formatBirthInput,
+  parseBirthInput,
+  isStepComplete,
+  type ChoiceOption,
+  type OnboardingAnswers,
+} from "./onboardingSteps";
 
-import { toast } from "sonner";
+type SingleKey =
+  | "gender"
+  | "injury"
+  | "activity_pattern"
+  | "sitting_hours"
+  | "break_interval"
+  | "exercise_habit"
+  | "exercise_type"
+  | "exercise_frequency"
+  | "nutrition"
+  | "substances";
 
-const TOTAL_STEPS = 9;
+const SINGLE_STEPS: Record<string, { key: SingleKey; options: ChoiceOption[] }> = {
+  gender: { key: "gender", options: GENDER_OPTIONS },
+  injury: { key: "injury", options: INJURY_OPTIONS },
+  activity: { key: "activity_pattern", options: ACTIVITY_OPTIONS },
+  sitting: { key: "sitting_hours", options: SITTING_OPTIONS },
+  break: { key: "break_interval", options: BREAK_OPTIONS },
+  exercise_habit: { key: "exercise_habit", options: EXERCISE_HABIT_OPTIONS },
+  exercise_type: { key: "exercise_type", options: EXERCISE_TYPE_OPTIONS },
+  exercise_frequency: { key: "exercise_frequency", options: EXERCISE_FREQUENCY_OPTIONS },
+  nutrition: { key: "nutrition", options: NUTRITION_OPTIONS },
+  substances: { key: "substances", options: SUBSTANCES_OPTIONS },
+};
 
-interface FormData {
-  gender: "" | "male" | "female";
-  birth_date: string;
-  height_cm: number | undefined;
-  weight_kg: number | undefined;
-  activity_pattern: string;
-  exercise_type: string;
-  exercise_frequency: string;
-  sleep_pattern: string;
-  nutrition_pattern: string;
-  substances_pattern: string;
-  recovery_pattern: string;
-  injury_history: string;
+/** Short pause so the chosen row's check is seen before the next question. */
+const ADVANCE_DELAY_MS = 220;
+
+const LOADING_PHRASES = [
+  "正在整理您已提交的身体资料...",
+  "正在读取已完成的体态分析结果...",
+  "正在读取体检报告中已识别的指标...",
+  "正在根据当前可用证据生成健康评估...",
+];
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
-const INITIAL_DATA: FormData = {
-  gender: "",
-  birth_date: "",
-  height_cm: undefined,
-  weight_kg: undefined,
-  activity_pattern: "",
-  exercise_type: "",
-  exercise_frequency: "",
-  sleep_pattern: "",
-  nutrition_pattern: "",
-  substances_pattern: "",
-  recovery_pattern: "",
-  injury_history: "",
-};
+function rangeError(raw: string, range: { min: number; max: number }, name: string, unit: string) {
+  if (raw.trim() === "") return "";
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return `请输入有效的${name}`;
+  if (num < range.min || num > range.max) {
+    return `${name}必须在 ${range.min}-${range.max} ${unit} 之间`;
+  }
+  return "";
+}
+
+function dateBounds() {
+  const today = new Date();
+  const max = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const min = new Date(max);
+  min.setFullYear(min.getFullYear() - 150);
+  const format = (value: Date) =>
+    `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  return { min: format(min), max: format(max) };
+}
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
   const { fetchProfile } = useProfileStore();
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [answers, setAnswers] = useState<OnboardingAnswers>(INITIAL_ANSWERS);
+  const [birthInput, setBirthInput] = useState("");
+  const [heightInput, setHeightInput] = useState("");
+  const [weightInput, setWeightInput] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadingPhrases = [
-    "正在整理您已提交的身体资料...",
-    "正在读取已完成的体态分析结果...",
-    "正在读取体检报告中已识别的指标...",
-    "正在根据当前可用证据生成健康评估...",
-  ];
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
 
   useEffect(() => {
-    if (!isGeneratingReport) return;
-    const interval = setInterval(() => {
-      setLoadingPhraseIndex((prev) => (prev + 1) % loadingPhrases.length);
-    }, 2500);
+    if (!isGenerating) return;
+    const interval = setInterval(
+      () => setPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length),
+      2500,
+    );
     return () => clearInterval(interval);
-  }, [isGeneratingReport]);
+  }, [isGenerating]);
 
-  const updateField = <K extends keyof FormData>(
-    field: K,
-    value: FormData[K],
+  const step = STEPS[stepIndex];
+  const canProceed = isStepComplete(stepIndex, answers);
+
+  const update = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+
+  const goNext = () => setStepIndex((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
+  const goBack = () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    setStepIndex((prev) => Math.max(prev - 1, 0));
+  };
+
+  const choose = (key: SingleKey, value: string) => {
+    update(key, value as never);
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    if (prefersReducedMotion()) {
+      goNext();
+    } else {
+      advanceTimer.current = setTimeout(goNext, ADVANCE_DELAY_MS);
+    }
+  };
+
+  const skip = (key: SingleKey) => {
+    update(key, "" as never);
+    goNext();
+  };
+
+  const toggleDiscomfort = (value: string) =>
+    setAnswers((prev) => {
+      const has = prev.discomfort_regions.includes(value);
+      let next: string[];
+      if (value === NO_DISCOMFORT) next = has ? [] : [NO_DISCOMFORT];
+      else
+        next = has
+          ? prev.discomfort_regions.filter((v) => v !== value)
+          : [...prev.discomfort_regions.filter((v) => v !== NO_DISCOMFORT), value];
+      return { ...prev, discomfort_regions: next };
+    });
+
+  const toggleSleep = (value: string) =>
+    setAnswers((prev) => ({
+      ...prev,
+      sleep_tags: prev.sleep_tags.includes(value)
+        ? prev.sleep_tags.filter((v) => v !== value)
+        : [...prev.sleep_tags, value],
+    }));
+
+  const onMetric = (
+    raw: string,
+    setRaw: (value: string) => void,
+    key: "height_cm" | "weight_kg",
+    range: { min: number; max: number },
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const canProceed = (): boolean => {
-    switch (currentStep) {
-      case 0: // Gender
-        return formData.gender !== "";
-      case 1: // Birth date
-        return formData.birth_date !== "";
-      case 2: // Height/Weight
-        return (
-          formData.height_cm !== undefined && formData.weight_kg !== undefined
-        );
-      case 3: // Daily activity pattern
-        return true; // Optional
-      case 4: // Sleep
-        return true; // Optional
-      case 5: // Exercise
-        return true; // Optional
-      case 6: // Other lifestyle
-        return true; // Optional
-      case 7: // Injury
-        return true; // Optional
-      case 8: // Upload
-        return true; // Optional
-      default:
-        return false;
-    }
-  };
-
-  const handleNext = () => {
-    if (currentStep < TOTAL_STEPS - 1) {
-      setCurrentStep((prev) => prev + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    }
+    setRaw(raw);
+    const num = Number(raw);
+    const valid = raw.trim() !== "" && Number.isFinite(num) && num >= range.min && num <= range.max;
+    update(key, valid ? num : undefined);
   };
 
   const handleSubmit = async () => {
-    setIsGeneratingReport(true);
+    setIsGenerating(true);
     try {
-      // 1. Onboarding 是一次 application command：稳定身份 + 整套 BodyState 基线
-      // 在同一数据库事务中提交；BodyState 只产生一个语义 revision。
-      const exerciseSummary = [
-        formData.exercise_type.trim(),
-        formData.exercise_frequency
-          ? `频率：${formData.exercise_frequency}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("；");
-
-      if (!formData.gender || !formData.birth_date) {
-        throw new Error("请先填写性别和出生日期");
-      }
-      if (
-        formData.height_cm === undefined ||
-        formData.weight_kg === undefined
-      ) {
-        throw new Error("请先填写身高和体重");
-      }
-
-      await onboardingContextService.submit({
-        expected_body_state_revision: 0,
-        profile: {
-          gender: formData.gender,
-          birth_date: formData.birth_date,
-        },
-        body_metrics: {
-          height_cm: formData.height_cm,
-          weight_kg: formData.weight_kg,
-        },
-        lifestyle: {
-          activity: { summary: formData.activity_pattern.trim() },
-          sleep: { summary: formData.sleep_pattern.trim() },
-          exercise: {
-            summary: exerciseSummary,
-            details: {
-              type: formData.exercise_type.trim(),
-              frequency: formData.exercise_frequency,
-            },
-          },
-          nutrition: { summary: formData.nutrition_pattern.trim() },
-          substances: { summary: formData.substances_pattern.trim() },
-          recovery: { summary: formData.recovery_pattern.trim() },
-        },
-        injury_history: formData.injury_history.trim(),
-      });
+      // One application command: stable identity + the whole BodyState baseline in a
+      // single transaction, producing one BodyState revision.
+      await onboardingContextService.submit(buildOnboardingPayload(answers));
       await fetchProfile();
-
-      // 2. 从当前可采纳的 BodyState / 报告 / 已完成体态分析构建证据并生成评估；Profile 本身不是健康观察证据
+      // Build evidence from admissible BodyState / reports / finished posture analyses.
       await assessmentApi.generate();
-
       toast.success("初始身体状态已建立");
-      // 3. 初始 Observation 已投影进 BodyState，直接进入唯一健康工作台。
       navigate("/consultation?view=state", { replace: true });
     } catch (err) {
       console.error("Onboarding submission failed:", err);
-      setIsGeneratingReport(false);
-      toast.error(
-        err instanceof Error ? err.message : "生成评估报告失败，请稍后重试",
-      );
+      setIsGenerating(false);
+      toast.error(err instanceof Error ? err.message : "生成评估报告失败，请稍后重试");
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <GenderStep
-            value={formData.gender}
-            onChange={(v) => updateField("gender", v)}
-          />
-        );
-      case 1:
-        return (
-          <BirthDateStep
-            value={formData.birth_date}
-            onChange={(v) => updateField("birth_date", v)}
-          />
-        );
-      case 2:
-        return (
-          <HeightWeightStep
-            height={formData.height_cm}
-            weight={formData.weight_kg}
-            onHeightChange={(v) => updateField("height_cm", v)}
-            onWeightChange={(v) => updateField("weight_kg", v)}
-          />
-        );
-      case 3:
-        return (
-          <ActivityPatternStep
-            value={formData.activity_pattern}
-            onChange={(v) => updateField("activity_pattern", v)}
-          />
-        );
-      case 4:
-        return (
-          <SleepStep
-            value={formData.sleep_pattern}
-            onChange={(v) => updateField("sleep_pattern", v)}
-          />
-        );
-      case 5:
-        return (
-          <ExerciseStep
-            exerciseType={formData.exercise_type}
-            exerciseFrequency={formData.exercise_frequency}
-            onExerciseTypeChange={(v) => updateField("exercise_type", v)}
-            onExerciseFrequencyChange={(v) =>
-              updateField("exercise_frequency", v)
-            }
-          />
-        );
-      case 6:
-        return (
-          <OtherLifestyleStep
-            nutrition={formData.nutrition_pattern}
-            substances={formData.substances_pattern}
-            recovery={formData.recovery_pattern}
-            onNutritionChange={(v) => updateField("nutrition_pattern", v)}
-            onSubstancesChange={(v) => updateField("substances_pattern", v)}
-            onRecoveryChange={(v) => updateField("recovery_pattern", v)}
-          />
-        );
-      case 7:
-        return (
-          <InjuryStep
-            value={formData.injury_history}
-            onChange={(v) => updateField("injury_history", v)}
-          />
-        );
-      case 8:
-        return <UploadStep />;
-      default:
-        return null;
-    }
-  };
-
-  if (isGeneratingReport) {
+  if (isGenerating) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="relative w-24 h-24 mx-auto">
-            <div className="absolute inset-0 rounded-full border-4 border-[#CD7B67]/20" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-[#CD7B67] animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-[#CD7B67]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.8}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-slate-800">
-              正在生成您的健康评估
-            </h2>
-            <p className="text-sm text-slate-500 font-medium h-6 transition-all duration-300">
-              {loadingPhrases[loadingPhraseIndex]}
-            </p>
-          </div>
-        </div>
+      <div
+        data-testid="onboarding-generating"
+        className="flex min-h-[100dvh] flex-col items-center justify-center bg-white p-6 text-[#1A1A1A]"
+      >
+        <div
+          aria-hidden="true"
+          className="h-14 w-14 rounded-full border-4 border-[#E8F0EA] border-t-[#2C694F] motion-safe:animate-spin"
+        />
+        <h1 className="mt-6 text-xl font-bold">正在生成您的健康评估</h1>
+        <p role="status" aria-live="polite" className="mt-2 h-6 text-sm text-[#6B7280]">
+          {LOADING_PHRASES[phraseIndex]}
+        </p>
       </div>
+    );
+  }
+
+  const single = SINGLE_STEPS[step.id];
+  const bounds = dateBounds();
+  const birthError =
+    birthInput.replace(/\D/g, "").length === 8 && !answers.birth_date
+      ? "请输入有效的出生日期"
+      : "";
+  const heightError = rangeError(heightInput, HEIGHT_RANGE, "身高", "cm");
+  const weightError = rangeError(weightInput, WEIGHT_RANGE, "体重", "kg");
+  const nextIfReady = () => {
+    if (canProceed) goNext();
+  };
+
+  let body: ReactNode = null;
+  let footer: ReactNode = null;
+
+  if (single) {
+    body = (
+      <ChoiceList
+        options={single.options}
+        value={answers[single.key]}
+        onChoose={(value) => choose(single.key, value)}
+      />
+    );
+    if (step.optional) footer = <OnboardingSkipButton onClick={() => skip(single.key)} />;
+  } else if (step.id === "birth_date") {
+    body = (
+      <ValueBox
+        id="birthDate"
+        label="出生日期"
+        type="date"
+        value={birthInput}
+        placeholder="YYYY / MM / DD"
+        error={birthError}
+        onChange={(raw) => {
+          const masked = formatBirthInput(raw);
+          setBirthInput(masked);
+          update("birth_date", parseBirthInput(masked, bounds));
+        }}
+        onEnter={nextIfReady}
+      />
+    );
+  } else if (step.id === "height") {
+    body = (
+      <ValueBox
+        id="height"
+        label="身高（cm）"
+        type="number"
+        unit="cm"
+        value={heightInput}
+        min={HEIGHT_RANGE.min}
+        max={HEIGHT_RANGE.max}
+        step={0.1}
+        placeholder="170"
+        error={heightError}
+        onChange={(raw) => onMetric(raw, setHeightInput, "height_cm", HEIGHT_RANGE)}
+        onEnter={nextIfReady}
+      />
+    );
+  } else if (step.id === "weight") {
+    body = (
+      <ValueBox
+        id="weight"
+        label="体重（kg）"
+        type="number"
+        unit="kg"
+        value={weightInput}
+        min={WEIGHT_RANGE.min}
+        max={WEIGHT_RANGE.max}
+        step={0.1}
+        placeholder="65"
+        error={weightError}
+        onChange={(raw) => onMetric(raw, setWeightInput, "weight_kg", WEIGHT_RANGE)}
+        onEnter={nextIfReady}
+      />
+    );
+  } else if (step.id === "discomfort") {
+    body = (
+      <ChipGrid
+        options={DISCOMFORT_OPTIONS}
+        values={answers.discomfort_regions}
+        onToggle={toggleDiscomfort}
+      />
+    );
+  } else if (step.id === "sleep") {
+    body = <ChipGrid options={SLEEP_OPTIONS} values={answers.sleep_tags} onToggle={toggleSleep} />;
+  } else if (step.id === "upload") {
+    body = <UploadStep />;
+  }
+
+  if (!single) {
+    const isLast = stepIndex === TOTAL_STEPS - 1;
+    footer = (
+      <OnboardingPrimaryButton
+        onClick={isLast ? handleSubmit : goNext}
+        disabled={!canProceed}
+      >
+        {isLast ? "完成" : "继续"}
+      </OnboardingPrimaryButton>
     );
   }
 
   return (
     <OnboardingLayout
-      currentStep={currentStep}
+      stepIndex={stepIndex}
       totalSteps={TOTAL_STEPS}
-      onNext={handleNext}
-      onBack={handleBack}
-      onSubmit={handleSubmit}
-      isLoading={false}
-      isLastStep={currentStep === TOTAL_STEPS - 1}
-      canProceed={canProceed()}
+      section={step.section}
+      title={step.title}
+      subtitle={step.subtitle}
+      onBack={goBack}
+      footer={footer}
     >
-      {renderStep()}
+      <div key={step.id}>{body}</div>
     </OnboardingLayout>
   );
 }
