@@ -618,9 +618,7 @@ function UploadsCategory({
           })}
         </span>
       </span>
-      <span className="bc-person-upload-failed-chip">
-        上传失败
-      </span>
+      <span className="bc-person-upload-failed-chip">上传失败</span>
       <button
         type="button"
         className="bc-icon-button"

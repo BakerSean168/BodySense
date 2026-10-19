@@ -90,9 +90,7 @@ function MediaTile({ tile }: { tile: PersonMediaTile }) {
           <span className="bc-person-media-badge">视频</span>
         ) : null}
         {overlay ? (
-          <span className="bc-person-media-overlay">
-            {overlay}
-          </span>
+          <span className="bc-person-media-overlay">{overlay}</span>
         ) : null}
       </div>
       <strong className="bc-person-media-name" title={upload.original_name}>
