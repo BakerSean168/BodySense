@@ -13,6 +13,34 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Boot recovery. When any request of the entry module graph is dropped
+      // (a network change, or a deploy that replaced the chunks) the browser
+      // fires "error" on the module script and the app never mounts. Reload
+      // once instead of leaving a blank page; a second failure within a
+      // minute stays visible so a real outage cannot loop.
+      (function () {
+        var key = "bodysense:boot-reload-at";
+        window.addEventListener(
+          "error",
+          function (event) {
+            var el = event.target;
+            if (!(el instanceof HTMLScriptElement) || el.type !== "module") {
+              return;
+            }
+            try {
+              var last = Number(window.sessionStorage.getItem(key) || 0);
+              if (Date.now() - last < 60000) return;
+              window.sessionStorage.setItem(key, String(Date.now()));
+            } catch (_) {
+              return;
+            }
+            window.location.reload();
+          },
+          true,
+        );
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
