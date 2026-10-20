@@ -167,7 +167,10 @@ test("Home body anatomy layers toggle in place on the reference body", async ({
     expect(url).not.toContain("shoulder.right");
   }
   if (publicAssetOrigin) {
+    // The atlas comes from the static CDN; the Z-Anatomy muscles are served
+    // same-origin from the Web image.
     for (const url of atlasRequests) {
+      if (url.includes("/anatomy/z-anatomy-muscles-")) continue;
       expect(new URL(url).origin).toBe(publicAssetOrigin);
     }
   }
