@@ -81,7 +81,7 @@ function answeredTurn(bodyStateReceipt: typeof receipt | null) {
 
 describe("answered BodyState suggestion history", () => {
   it("moves Go's receipt into history metadata and parses back", () => {
-    const [live] = answeredTurn(receipt).answeredSuggestions;
+    const [live] = answeredTurn(receipt).answeredInteractions;
     const item = suggestionHistoryItem(live);
     expect(item).not.toHaveProperty("body_state_receipt");
     expect(item.metadata?.body_state_receipt).toEqual(receipt);
@@ -95,7 +95,7 @@ describe("answered BodyState suggestion history", () => {
   });
 
   it("keeps a decline without any receipt", () => {
-    const [live] = answeredTurn(null).answeredSuggestions;
+    const [live] = answeredTurn(null).answeredInteractions;
     const [restored] = readSuggestionHistory([suggestionHistoryItem(live)]);
     expect(restored.metadata).toEqual({});
     expect(restored.answer).toEqual({ text: "不记录", selected: ["不记录"] });
@@ -109,18 +109,20 @@ describe("answered BodyState suggestion history", () => {
   it("shows answered suggestions only while the turn is live", () => {
     const answered = answeredTurn(receipt);
     // Until run.resumed the answered card is still the pending interaction.
-    expect(selectActiveTurnViewModel(answered).answeredSuggestions).toEqual([]);
+    expect(selectActiveTurnViewModel(answered).answeredInteractions).toEqual(
+      [],
+    );
     const state = {
       ...answered,
       status: "streaming" as const,
       pendingInteraction: null,
     };
-    expect(selectActiveTurnViewModel(state).answeredSuggestions).toHaveLength(
+    expect(selectActiveTurnViewModel(state).answeredInteractions).toHaveLength(
       1,
     );
     expect(
       selectActiveTurnViewModel({ ...state, status: "completed" })
-        .answeredSuggestions,
+        .answeredInteractions,
     ).toEqual([]);
   });
 });

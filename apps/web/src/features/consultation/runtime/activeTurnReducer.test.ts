@@ -1108,8 +1108,8 @@ describe("same-Run Ask User continuation", () => {
         makeEvent("run.resumed", { interaction_id: "int-s" }),
       ).state;
       expect(resumed.pendingInteraction).toBeNull();
-      expect(resumed.answeredSuggestions).toHaveLength(1);
-      expect(resumed.answeredSuggestions[0]).toMatchObject({
+      expect(resumed.answeredInteractions).toHaveLength(1);
+      expect(resumed.answeredInteractions[0]).toMatchObject({
         id: "int-s",
         status: "answered",
         body_state_receipt: receipt,
@@ -1119,7 +1119,7 @@ describe("same-Run Ask User continuation", () => {
         resumed,
         makeEvent("run.started", {}, { run_id: "run-2" }),
       ).state;
-      expect(nextTurn.answeredSuggestions).toEqual([]);
+      expect(nextTurn.answeredInteractions).toEqual([]);
     });
 
     it("records a decline with a null receipt and never twice", () => {
@@ -1131,11 +1131,11 @@ describe("same-Run Ask User continuation", () => {
       });
       const once = reduceActiveTurnEvent(asked, decline).state;
       const twice = reduceActiveTurnEvent(once, decline).state;
-      expect(twice.answeredSuggestions).toHaveLength(1);
-      expect(twice.answeredSuggestions[0].body_state_receipt).toBeNull();
+      expect(twice.answeredInteractions).toHaveLength(1);
+      expect(twice.answeredInteractions[0].body_state_receipt).toBeNull();
     });
 
-    it("does not collect ordinary Ask User answers", () => {
+    it("keeps an ordinary Ask User answer across run.resumed", () => {
       const state = reduceActiveTurnEvent(
         INITIAL_ACTIVE_TURN_STATE,
         makeEvent("state.interaction.required", { interaction_id: "int-o" }),
@@ -1144,8 +1144,16 @@ describe("same-Run Ask User continuation", () => {
         state,
         makeEvent("state.interaction.answered", { interaction_id: "int-o" }),
       ).state;
-      expect(answered.answeredSuggestions).toEqual([]);
+      expect(answered.answeredInteractions).toHaveLength(1);
       expect(answered.pendingInteraction?.body_state_receipt).toBeUndefined();
+      const resumed = reduceActiveTurnEvent(
+        answered,
+        makeEvent("run.resumed", { interaction_id: "int-o" }),
+      ).state;
+      expect(resumed.pendingInteraction).toBeNull();
+      expect(resumed.answeredInteractions).toMatchObject([
+        { id: "int-o", status: "answered" },
+      ]);
     });
   });
 });

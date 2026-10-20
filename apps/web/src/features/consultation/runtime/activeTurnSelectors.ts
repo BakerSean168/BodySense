@@ -24,7 +24,7 @@ export interface ActiveTurnViewModel {
   knowledgeGaps: Array<{ query: string; message: string }>;
   redFlag: RedFlagEvent | null;
   pendingInteraction: PendingInteraction | null;
-  answeredSuggestions: PendingInteraction[];
+  answeredInteractions: PendingInteraction[];
   isRunning: boolean;
   isInterrupted: boolean;
   isFailed: boolean;
@@ -48,7 +48,7 @@ export function selectActiveTurnViewModel(
     knowledgeGaps: selectKnowledgeGaps(state),
     redFlag: state.redFlag,
     pendingInteraction: state.pendingInteraction,
-    answeredSuggestions: selectLiveAnsweredSuggestions(state),
+    answeredInteractions: selectLiveAnsweredInteractions(state),
     isRunning: state.status === "streaming",
     isInterrupted: state.status === "interrupted",
     isFailed: state.status === "failed",
@@ -108,19 +108,20 @@ export function selectHasVisibleContent(state: ActiveTurnState): boolean {
   return (
     selectHasRenderableContent(state) ||
     state.pendingInteraction !== null ||
-    selectLiveAnsweredSuggestions(state).length > 0
+    selectLiveAnsweredInteractions(state).length > 0
   );
 }
 
 /**
- * Answered BodyState suggestions of the live turn. Once the turn completes
- * they ride on its assistant message instead (see buildCompletedSnapshot).
+ * Ask User interactions answered in the live turn. Once the turn completes,
+ * suggestions ride on its assistant message (see buildCompletedSnapshot) and
+ * open questions on the thread's interaction history.
  */
-export function selectLiveAnsweredSuggestions(
+export function selectLiveAnsweredInteractions(
   state: ActiveTurnState,
 ): PendingInteraction[] {
   if (state.status !== "streaming" && state.status !== "interrupted") return [];
-  return (state.answeredSuggestions ?? []).filter(
+  return (state.answeredInteractions ?? []).filter(
     (item) => item.id !== state.pendingInteraction?.id,
   );
 }

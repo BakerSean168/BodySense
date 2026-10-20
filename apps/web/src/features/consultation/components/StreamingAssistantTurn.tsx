@@ -60,7 +60,7 @@ export function StreamingAssistantTurn({
     (vm.pendingInteraction !== null &&
       vm.pendingInteraction.status === "answered") ||
     (vm.isInterrupted && vm.pendingInteraction !== null) ||
-    vm.answeredSuggestions.length > 0 ||
+    vm.answeredInteractions.length > 0 ||
     (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0) ||
     vm.isFailed ||
     vm.isCancelled;
@@ -69,7 +69,7 @@ export function StreamingAssistantTurn({
 
   return (
     <div className="flex flex-col gap-4">
-      {vm.answeredSuggestions.map((interaction) => (
+      {vm.answeredInteractions.map((interaction) => (
         <AskUserStatusCard key={interaction.id} interaction={interaction} />
       ))}
 
@@ -129,7 +129,7 @@ export function StreamingAssistantTurn({
           <span className="chat-thinking-dot size-1.5 animate-pulse rounded-full bg-current [animation-delay:-120ms]" />
           <span className="chat-thinking-dot size-1.5 animate-pulse rounded-full bg-current" />
           <span className="chat-thinking-label ml-1">
-            {vm.answeredSuggestions.length > 0 ||
+            {vm.answeredInteractions.length > 0 ||
             vm.pendingInteraction?.status === "answered"
               ? "继续分析"
               : "正在分析"}

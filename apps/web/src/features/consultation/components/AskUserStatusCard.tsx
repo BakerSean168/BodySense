@@ -1,3 +1,4 @@
+import { CircleHelp } from "lucide-react";
 import type { PendingInteraction } from "../types/consultation";
 import {
   BodyStateSuggestionStatus,
@@ -63,6 +64,40 @@ export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
       : isSymptomIntake
         ? "补全身体记录"
         : "待补充信息";
+
+  if (isAnswered && answerText) {
+    // Penpot Chat / Running: the answered question stays in the thread as a
+    // quiet card, the question beside a "?" disc and the answer as a chip.
+    return (
+      <div className="flex justify-start">
+        <section
+          data-tone="answered"
+          aria-label={`${title}（已回答）`}
+          className="chat-status-card chat-answered-card w-full max-w-[620px] rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3.5"
+        >
+          <p className="chat-answered-question flex items-start gap-2.5 text-[13px] leading-5 text-white/62">
+            <span
+              className="chat-answered-icon mt-px grid size-5 shrink-0 place-items-center rounded-full bg-amber-300/10 text-amber-300/80"
+              aria-hidden="true"
+            >
+              <CircleHelp size={13} strokeWidth={2.4} />
+            </span>
+            <span className="chat-status-question">
+              {interaction.question.question}
+            </span>
+          </p>
+          <p className="chat-answered-chip mt-2.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#75d5a7]/10 px-2.5 py-0.5 text-xs font-semibold leading-5 text-[#9edbbd]">
+            <span
+              className="chat-answered-dot size-1.5 shrink-0 rounded-full bg-current"
+              aria-hidden="true"
+            />
+            <span className="sr-only">你的回答：</span>
+            <span className="min-w-0 break-words">{answerText}</span>
+          </p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-start">
