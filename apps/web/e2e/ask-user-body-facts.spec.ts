@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { requiresDeterministicModel } from "./support/consultation";
 import { profileReplacement } from "./support/profile";
 import {
   conversationIdFromUrl,
@@ -17,6 +18,11 @@ import { fillRegisterPassword } from "./support/register";
 
 test.describe.configure({ timeout: 100_000 });
 const api = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
+
+// Subject is a scripted reply of the deterministic E2E model: the
+// E2E_BODYFACT_ASK_* markers make the stub ask one exact Ask User question.
+// A real model decides its own reply, so this cannot be seeded through the API.
+requiresDeterministicModel();
 
 async function register(
   page: Page,

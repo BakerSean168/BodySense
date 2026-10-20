@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
+import { conversationIdFor, settleConversation } from "./support/consultation";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
@@ -175,6 +176,15 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
   const accepted = events(answeredBody);
   expect(accepted.some((event) => event.type === "stream.error")).toBe(false);
   expect(accepted.some((event) => event.type === "stream.done")).toBe(true);
+  // The answered screen leaves the composer.
+  await expect(card.getByLabel("以上均无")).toHaveCount(0);
+  // A real model may follow the screen with a question of its own (e.g. a
+  // BodyState suggestion). It is not under test: cancel its Run, then the
+  // composer must be back.
+  const conversationId = await conversationIdFor(request, api, headers);
+  if ((await settleConversation(request, api, headers, conversationId)) > 0) {
+    await page.reload();
+  }
   await expect(card).toHaveCount(0);
   await expect(composer).toBeEnabled();
 
