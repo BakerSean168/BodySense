@@ -144,3 +144,24 @@ func TestWorkspaceCapabilitiesIncompleteSafetyBlocksTraining(t *testing.T) {
 		t.Fatalf("incomplete screening must still allow information collection: %+v", caps)
 	}
 }
+
+func TestWorkspaceCapabilitiesEmptyBodyStateOwesNoSafetyReview(t *testing.T) {
+	owner := uuid.New()
+	caps := deriveWorkspaceCapabilities(&BodyStateReadModel{UserID: owner}, nil, nil, &model.TrainingPlan{Status: "active"})
+	if caps.RequiresSafetyReview {
+		t.Fatalf("a never-written BodyState has nothing to screen: %#v", caps)
+	}
+	if caps.CanRequestDiagnosis || caps.CanGenerateTrainingPlan || caps.CanStartTraining || caps.CanRecordOutcome {
+		t.Fatalf("an empty BodyState must keep diagnosis and training gated: %#v", caps)
+	}
+	if !caps.CanContinueConsultation || !caps.CanEditBodyState {
+		t.Fatalf("an empty BodyState must allow consultation and edits: %#v", caps)
+	}
+	// A pinned revision whose projection fails still fails closed.
+	bad := &BodyStateReadModel{UserID: owner, CurrentRevision: 0, Facts: []model.BodyFact{
+		{ID: uuid.New(), UserID: owner, Kind: "symptom", AssertionStatus: "asserted", CreatedRevision: 1},
+	}}
+	if caps := deriveWorkspaceCapabilities(bad, nil, nil, nil); !caps.RequiresSafetyReview {
+		t.Fatalf("an unpinned BodyState with facts must still require Safety review: %#v", caps)
+	}
+}

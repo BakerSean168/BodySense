@@ -153,6 +153,18 @@ func deriveWorkspaceCapabilities(
 	latestRun *NativeDiagnosisRunSummary,
 	trainingPlan *model.TrainingPlan,
 ) HealthWorkspaceCapabilities {
+	// A BodyState that has never been written (revision 0, no rows) has nothing
+	// to screen: no symptom, no screen, no restriction. It owes no Safety review,
+	// while training stays gated because coverage is not complete. Any other
+	// projection failure still fails closed.
+	if isEmptyBodyState(snapshot) {
+		return HealthWorkspaceCapabilities{
+			CanContinueConsultation: true,
+			CanEditBodyState:        true,
+			CanReviewDiagnosis:      (diagnosis != nil && diagnosis.CurrentRevision > 0) || latestRun != nil,
+			RequiresDiagnosisReview: latestRun != nil && latestRun.State == "open",
+		}
+	}
 	envelope, safetyErr := ProjectSafetyEnvelopeV2(snapshot)
 	requiresSafety := safetyErr != nil || envelope.RequiresReview || len(envelope.Coverage.IncompleteSourceRefs) > 0
 	diagnosisBlocked := safetyErr != nil
@@ -189,6 +201,14 @@ func deriveWorkspaceCapabilities(
 		RequiresSafetyReview:    requiresSafety,
 		RequiresDiagnosisReview: diagnosisReview,
 	}
+}
+
+// isEmptyBodyState reports a user who has no BodyState row yet, for example a
+// profile created before the onboarding baseline was committed.
+func isEmptyBodyState(snapshot *BodyStateReadModel) bool {
+	return snapshot != nil && snapshot.CurrentRevision == 0 &&
+		len(snapshot.Facts) == 0 && len(snapshot.Observations) == 0 &&
+		len(snapshot.SafetyScreens) == 0 && len(snapshot.SafetyRestrictions) == 0
 }
 
 func diagnosisRevision(diagnosis *NativeDiagnosisView) int64 {
