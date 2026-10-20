@@ -9,6 +9,10 @@ interface RuntimeEvent {
   };
 }
 
+// A real model turn can take over a minute; Go ends it at its own 120 s AI read
+// deadline, so wait just past that to see the Run outcome rather than abort it.
+const TURN_TIMEOUT = 125_000;
+
 const isSafetyChecklist = (event: RuntimeEvent) =>
   event.type === "state.interaction.required" &&
   (event.payload.question?.fields ?? []).some(
@@ -50,7 +54,7 @@ export async function completeStructuredSafetyIntake(
           parts: [{ type: "text", text: statement }],
         },
       },
-      timeout: 60_000,
+      timeout: TURN_TIMEOUT,
     });
     lastRunBody = await run.text();
     expect(run.ok(), lastRunBody).toBeTruthy();
@@ -69,7 +73,7 @@ export async function completeStructuredSafetyIntake(
           fields: { safety_signals: signals },
         },
       },
-      timeout: 60_000,
+      timeout: TURN_TIMEOUT,
     },
   );
   const answerBody = await answer.text();
