@@ -274,15 +274,32 @@ function applyNodeTransform(mesh: Mesh, node: GltfNode): void {
 }
 
 export function parseReferenceAtlasSurface(bytes: ArrayBuffer): Group {
+  return parseReferenceAtlasMeshes(bytes, {
+    accept: (name) => name.startsWith("body-shell"),
+    label: "Vanatome regional body shell / lightweight Body Canvas source",
+    emptyMessage: "Vanatome regional GLB contains no body-shell surface",
+  });
+}
+
+/** Reads every triangle mesh whose node name passes `accept` (flat GLB, no hierarchy). */
+export function parseReferenceAtlasMeshes(
+  bytes: ArrayBuffer,
+  options: {
+    accept: (nodeName: string) => boolean;
+    label: string;
+    emptyMessage: string;
+  },
+): Group {
   const parsed = parseGlb(bytes);
   const group = new Group();
-  group.name = "Vanatome regional body shell / lightweight Body Canvas source";
+  group.name = options.label;
   const sourceMaterial = new MeshBasicMaterial();
-  let shellCount = 0;
+  let meshCount = 0;
 
   for (const node of parsed.json.nodes) {
     if (
-      !node.name?.startsWith("body-shell") ||
+      !node.name ||
+      !options.accept(node.name) ||
       node.mesh == null ||
       !parsed.json.meshes[node.mesh]
     ) {
@@ -320,14 +337,14 @@ export function parseReferenceAtlasSurface(bytes: ArrayBuffer): Group {
       mesh.name = node.name;
       applyNodeTransform(mesh, node);
       group.add(mesh);
-      shellCount += 1;
+      meshCount += 1;
     }
   }
 
-  if (!shellCount) {
+  if (!meshCount) {
     sourceMaterial.dispose();
     group.clear();
-    throw new Error("Vanatome regional GLB contains no body-shell surface");
+    throw new Error(options.emptyMessage);
   }
   return group;
 }
@@ -346,36 +363,35 @@ export function disposeReferenceAtlasSurface(group: Group): void {
   group.clear();
 }
 
-export async function loadPinnedReferenceAtlasSurface(options: {
-  signal?: AbortSignal;
-  catalogUrl?: string;
-  fetchImpl?: typeof fetch;
-} = {}): Promise<ReferenceAtlasSurface> {
+async function fetchPinnedSystemBytes(
+  systemId: string,
+  options: {
+    signal?: AbortSignal;
+    catalogUrl?: string;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<{ bytes: ArrayBuffer; modelUrl: string }> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const source = await resolvePinnedVanatomeSystemSource(
-    VANATOME_INITIAL_SYSTEM_ID,
-    {
-      signal: options.signal,
-      catalogUrl: options.catalogUrl,
-      fetchImpl,
-    },
-  );
+  const source = await resolvePinnedVanatomeSystemSource(systemId, {
+    signal: options.signal,
+    catalogUrl: options.catalogUrl,
+    fetchImpl,
+  });
   const response = await fetchImpl(source.modelUrl, {
     signal: options.signal,
     cache: "force-cache",
   });
   if (!response.ok) {
     throw new Error(
-      `Vanatome regional model failed with HTTP ${response.status}: ${source.modelUrl}`,
+      `Vanatome ${systemId} model failed with HTTP ${response.status}: ${source.modelUrl}`,
     );
   }
   const bytes = await response.arrayBuffer();
   if (source.bytes != null && bytes.byteLength !== source.bytes) {
     throw new Error(
-      `Vanatome regional model length mismatch: expected ${source.bytes}, got ${bytes.byteLength}`,
+      `Vanatome ${systemId} model length mismatch: expected ${source.bytes}, got ${bytes.byteLength}`,
     );
   }
-
   // Let the shell/chrome paint before the bounded geometry extraction begins.
   await new Promise<void>((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -384,10 +400,88 @@ export async function loadPinnedReferenceAtlasSurface(options: {
       setTimeout(resolve, 0);
     }
   });
+  return { bytes, modelUrl: source.modelUrl };
+}
+
+export async function loadPinnedReferenceAtlasSurface(options: {
+  signal?: AbortSignal;
+  catalogUrl?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<ReferenceAtlasSurface> {
+  const { bytes, modelUrl } = await fetchPinnedSystemBytes(
+    VANATOME_INITIAL_SYSTEM_ID,
+    options,
+  );
   const group = parseReferenceAtlasSurface(bytes);
   return {
     group,
-    modelUrl: source.modelUrl,
+    modelUrl,
+    dispose: () => disposeReferenceAtlasSurface(group),
+  };
+}
+
+/**
+ * Full-body muscular layer (≈6.6 MB): superficial and intermediate muscles plus
+ * tendons from Z-Anatomy (CC BY-SA 4.0), exported for BodySense in the same
+ * coordinate space as Atlas 1.4.0 (whose own `muscular` bundle has no limb
+ * muscles). Nodes are named `<structure>__muscle` / `<structure>__tendon`.
+ * Loaded after the skin so the body paints first.
+ */
+export const REFERENCE_MUSCLES_URL = `${import.meta.env.BASE_URL ?? "/"}anatomy/z-anatomy-muscles-v1.glb`;
+
+export async function loadPinnedReferenceMuscles(options: {
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+  /** Download now, but parse only after this settles (e.g. the skin is built). */
+  parseAfter?: Promise<unknown>;
+} = {}): Promise<ReferenceAtlasSurface> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(REFERENCE_MUSCLES_URL, { signal: options.signal, cache: "force-cache" });
+  if (!response.ok) {
+    throw new Error(`Reference muscles failed with HTTP ${response.status}: ${REFERENCE_MUSCLES_URL}`);
+  }
+  const bytes = await response.arrayBuffer();
+  await options.parseAfter?.catch(() => undefined);
+  const group = parseReferenceAtlasMeshes(bytes, {
+    accept: (name) => /__(muscle|tendon)$/.test(name),
+    label: "Z-Anatomy muscular layer / Body Canvas",
+    emptyMessage: "Reference muscles GLB contains no meshes",
+  });
+  return {
+    group,
+    modelUrl: REFERENCE_MUSCLES_URL,
+    dispose: () => disposeReferenceAtlasSurface(group),
+  };
+}
+
+/** The pinned skeletal layer (3.9 MB), fetched only when the 骨骼 layer is turned on. */
+export function loadPinnedReferenceSkeleton(options: {
+  signal?: AbortSignal;
+  catalogUrl?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<ReferenceAtlasSurface> {
+  return loadPinnedReferenceSystem("skeletal", options);
+}
+
+async function loadPinnedReferenceSystem(
+  systemId: "skeletal",
+  options: {
+    signal?: AbortSignal;
+    catalogUrl?: string;
+    fetchImpl?: typeof fetch;
+    parseAfter?: Promise<unknown>;
+  },
+): Promise<ReferenceAtlasSurface> {
+  const { bytes, modelUrl } = await fetchPinnedSystemBytes(systemId, options);
+  await options.parseAfter?.catch(() => undefined);
+  const group = parseReferenceAtlasMeshes(bytes, {
+    accept: () => true,
+    label: `Vanatome ${systemId} layer / Body Canvas`,
+    emptyMessage: `Vanatome ${systemId} GLB contains no meshes`,
+  });
+  return {
+    group,
+    modelUrl,
     dispose: () => disposeReferenceAtlasSurface(group),
   };
 }

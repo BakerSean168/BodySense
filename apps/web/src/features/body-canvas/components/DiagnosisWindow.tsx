@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { WindowLoading } from "./WindowLoading";
 import {
   Check,
   CircleHelp,
@@ -268,13 +269,17 @@ function ConditionCard({
     >
       <h3 className="sr-only">{condition.name}</h3>
       <div className="bc-dx-status">
-        <Chip tone={inactive ? "idle" : "ok"}>{inactive ? "已停用" : "已采纳"}</Chip>
+        <Chip tone={inactive ? "idle" : "ok"}>
+          {inactive ? "已停用" : "已采纳"}
+        </Chip>
         {cause.evidenceStrength ? (
           <Chip tone="ai">AI {cause.evidenceStrength}</Chip>
         ) : null}
         <Chip tone="idle">{CERTAINTY_LABELS[condition.certainty]}</Chip>
       </div>
-      {inactive ? null : <ReviewBanner condition={condition} controls={controls} />}
+      {inactive ? null : (
+        <ReviewBanner condition={condition} controls={controls} />
+      )}
       {!inactive && condition.review?.state === "stale" ? (
         <p className="bc-dx-note" data-testid="diagnosis-stale-note">
           重新分析并确认前，训练计划不会基于这条病情生成；你采纳的内容不会被自动修改。
@@ -462,7 +467,9 @@ function DecidingScene({
         >
           <span className="bc-dx-banner-title">{run.review.title}</span>
           {run.review.details.length > 0 ? (
-            <span className="bc-dx-banner-meta">{run.review.details.join("；")}</span>
+            <span className="bc-dx-banner-meta">
+              {run.review.details.join("；")}
+            </span>
           ) : null}
         </Banner>
       ) : null}
@@ -748,24 +755,9 @@ function EmptyScene({ onOpenChat }: { onOpenChat?: () => void }) {
   );
 }
 
-/** Analyzing-style skeleton while the current Diagnosis loads. */
+/** Centered ink pulse while the current Diagnosis loads. */
 function LoadingScene() {
-  return (
-    <div role="status" className="bc-dx-loading" aria-label="正在读取当前诊断">
-      <span className="sr-only">正在读取当前诊断</span>
-      {["依据", "信息缺口", "处理方向"].map((label) => (
-        <div key={label} className="bc-dx-section" aria-hidden="true">
-          <span className="bc-dx-label">{label}</span>
-          {[0, 1].map((line) => (
-            <span key={line} className="bc-dx-skeleton-row" data-line={line}>
-              <span className="bc-dx-skeleton-dot" />
-              <span className="bc-dx-skeleton-bar" />
-            </span>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
+  return <WindowLoading label="正在读取当前诊断" />;
 }
 
 /**
@@ -874,7 +866,9 @@ export function DiagnosisWindow({
     );
   } else {
     body = (
-      <EmptyScene onOpenChat={controls?.onRequestAnalysis ?? controls?.onOpenChat} />
+      <EmptyScene
+        onOpenChat={controls?.onRequestAnalysis ?? controls?.onOpenChat}
+      />
     );
   }
 

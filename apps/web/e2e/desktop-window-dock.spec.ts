@@ -202,12 +202,12 @@ test("desktop chrome follows the Penpot window boards", async ({
   // A never-written BodyState owes no Safety review, so no chat is needed.
   expect(await safetyReviewPending(request, headers)).toBe(false);
 
-  // Home: motion ribbon, Tools rail and the icon-only Dock (/ D P M).
+  // Home: Tools rail and the icon-only Dock (/ D P M). The pose bar is hidden.
   await page.goto("/consultation");
-  const intro = page.getByRole("group", { name: "参考动作" });
+  const poseBar = page.getByRole("group", { name: "参考动作" });
   const tools = page.getByRole("toolbar", { name: "身体画布工具" });
   const dock = page.getByRole("navigation", { name: "身体工作区导航" });
-  await expect(intro).toBeVisible();
+  await expect(poseBar).toHaveCount(0);
   await expect(tools).toBeVisible();
   await expect(dock.locator(".bc-dock-item")).toHaveText([
     /对话/,
@@ -253,16 +253,16 @@ test("desktop chrome follows the Penpot window boards", async ({
   await expect(tools).toBeVisible();
 
   // Right-docked windows: the body keeps its place (Penpot does not move it),
-  // the motion ribbon stays above the windows (Penpot boards), the rail stays.
+  // the pose bar stays hidden, the rail stays.
   for (const id of ["diagnosis", "training", "trainer"] as const) {
     await openWindow(page, id);
-    await expect(intro).toBeVisible();
+    await expect(poseBar).toHaveCount(0);
     await expect(tools).toBeVisible();
   }
 
   // Left-docked Person: the Tools rail collapses instead of peeking out.
   const person = await openWindow(page, "person");
-  await expect(intro).toBeVisible();
+  await expect(poseBar).toHaveCount(0);
   await expect(tools).toBeHidden();
   expectClose((await person.boundingBox())!.width, 860, "person list width");
 
@@ -282,10 +282,10 @@ test("desktop chrome follows the Penpot window boards", async ({
     .poll(async () => Math.round((await person.boundingBox())!.width))
     .toBeGreaterThanOrEqual(860 - TOLERANCE);
 
-  // Closing the window brings the intro and the Tools rail back.
+  // Closing the window brings the Tools rail back.
   await person.getByRole("button", { name: "关闭个人档案" }).click();
   await expect(person).toBeHidden();
-  await expect(intro).toBeVisible();
+  await expect(poseBar).toHaveCount(0);
   await expect(tools).toBeVisible();
 
   // Reduced motion: the chrome changes without animating.
@@ -311,7 +311,7 @@ test("desktop chrome follows the Penpot window boards", async ({
   await expect(
     dock.getByRole("button", { name: "个人档案", exact: true }),
   ).toBeVisible();
-  await expect(intro).toBeVisible();
+  await expect(poseBar).toHaveCount(0);
   await expect(tools).toBeVisible();
   expect(
     await page.evaluate(

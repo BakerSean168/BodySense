@@ -1,0 +1,21 @@
+BodySense reference muscles — z-anatomy-muscles-v1.glb
+
+Source anatomy project: Z-Anatomy, https://github.com/Z-Anatomy/Models
+Credits: Z-Anatomy contributors, including Gauthier Kervyn and Marcin Zielinski, with
+additional contributors and upstream sources recorded by Z-Anatomy (including material
+derived from BodyParts3D, https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html).
+License: Creative Commons Attribution-ShareAlike 4.0 International
+License URL: https://creativecommons.org/licenses/by-sa/4.0/
+
+This file is an adapted work. BodySense modified the Z-Anatomy material:
+- selected the visible skeletal muscles and their tendons/aponeuroses from the
+  Z-Anatomy muscular system (deep, visceral, facial-internal and fascia parts left out);
+- split each structure into muscle and tendon parts, applied world transforms,
+  triangulated and decimated the meshes, and dropped materials and UVs;
+- exported the result as one flat glTF 2.0 binary in Z-Anatomy world space (Y-up).
+Tool: Blender 4.2 headless, scripts/anatomy/z-anatomy-muscles-v1.export.py.
+The adapted file is shared under the same license, CC BY-SA 4.0.
+SHA-256: 2dab57c04c9c2cfc246b88e1d51371bb88febc20f8b3288a8d1a26eaa34d06bd
+
+No user, BodyState, symptom, diagnosis, treatment, conversation, or other health
+information is part of this file or required by its static asset URL.

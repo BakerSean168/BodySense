@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useBusinessWindowFocus } from "../hooks/useBusinessWindowFocus";
+import { useWindowDrag } from "../hooks/useWindowDrag";
 import { X } from "lucide-react";
 import {
   BUSINESS_WINDOW_LAYOUT,
@@ -62,6 +63,12 @@ export function BusinessWindowHost({
   const offset = desktopWindowOffset(stackIndex);
   const headingId = `bc-window-title-${windowId}`;
   const hostRef = useBusinessWindowFocus(windowId, isActive, minimized);
+  // Desktop windows drag by their header; the mobile sheet keeps its layout.
+  const { offset: drag, handleProps } = useWindowDrag(
+    hostRef,
+    !mobile,
+    DESKTOP_WINDOW_BOTTOM_RESERVE,
+  );
 
   return (
     <div
@@ -89,10 +96,17 @@ export function BusinessWindowHost({
           "--bc-window-left": `${offset.left}px`,
           "--bc-window-top": `${offset.top}px`,
           "--bc-window-bottom": `${DESKTOP_WINDOW_BOTTOM_RESERVE}px`,
+          ...(!mobile && (drag.x || drag.y)
+            ? { translate: `${drag.x}px ${drag.y}px` }
+            : {}),
         } as React.CSSProperties
       }
     >
-      <header className="bc-business-window-header">
+      <header
+        className="bc-business-window-header"
+        data-draggable={mobile ? undefined : "true"}
+        {...handleProps}
+      >
         {headerLeft ?? (
           <h2 id={headingId} className="bc-business-window-title">
             {meta.title}

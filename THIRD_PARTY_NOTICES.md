@@ -83,3 +83,28 @@ The catalog consumed by the Viewer is:
 
 The packaged release also contains the upstream `ATTRIBUTION.txt`,
 `BODYSENSE_PROVENANCE.txt`, and `LICENSES/CC-BY-SA-4.0.txt`.
+
+## Z-Anatomy reference muscles (`z-anatomy-muscles-v1.glb`)
+
+Asset: `apps/web/public/anatomy/z-anatomy-muscles-v1.glb`, served at
+`/anatomy/z-anatomy-muscles-v1.glb` (attribution beside it in
+`z-anatomy-muscles-v1.ATTRIBUTION.txt`)
+SHA-256: `2dab57c04c9c2cfc246b88e1d51371bb88febc20f8b3288a8d1a26eaa34d06bd`
+Source anatomy project: https://github.com/Z-Anatomy/Models
+License: Creative Commons Attribution-ShareAlike 4.0 International
+License: https://creativecommons.org/licenses/by-sa/4.0/
+
+Credits: Z-Anatomy contributors, including Gauthier Kervyn and Marcin Zielinski,
+with additional contributors and upstream sources recorded by Z-Anatomy
+(including BodyParts3D-derived material).
+
+### BodySense modification statement
+
+This is an adapted work, not an untouched upstream file. BodySense selected the
+visible skeletal muscles and tendons from the Z-Anatomy muscular system, split
+muscle and tendon parts, applied world transforms, triangulated and decimated the
+meshes, removed materials/UVs, and exported one flat glTF 2.0 binary with Blender
+4.2 (`scripts/anatomy/z-anatomy-muscles-v1.export.py`). The Home body renders it
+under the translucent reference skin. The adapted file is shared under CC BY-SA
+4.0; this does not relicense any other BodySense code. The upstream Z-Anatomy
+commit the export was made from was not recorded.

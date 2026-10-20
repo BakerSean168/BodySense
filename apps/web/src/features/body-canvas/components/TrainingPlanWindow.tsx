@@ -1,4 +1,5 @@
 import { useId, useMemo, type ReactNode } from "react";
+import { WindowLoading } from "./WindowLoading";
 import {
   ArrowRight,
   CalendarDays,
@@ -448,10 +449,9 @@ export function TrainingPlanWindow({ state, controls, canExecute }: TrainingPlan
     case "loading":
     case "updating":
       body = (
-        <p role="status" className="bc-window-loading">
-          <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
-          {view.scene === "updating" ? "正在读取新的计划修订" : "正在读取训练计划"}
-        </p>
+        <WindowLoading
+          label={view.scene === "updating" ? "正在读取新的计划修订" : "正在读取训练计划"}
+        />
       );
       break;
     case "empty":

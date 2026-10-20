@@ -1,4 +1,5 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
+import { WindowLoading } from "./WindowLoading";
 import {
   lazy,
   Suspense,
@@ -45,7 +46,6 @@ import {
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { ConsultationSpatialContext } from "@/features/consultation/types/consultation";
 import type { HealthWorkspace } from "@/features/workspace/types/workspace";
-import { BodyExplorer } from "@/features/body-explorer/components/BodyExplorer";
 import type { BodyExplorerWorkspaceController } from "@/features/body-explorer/hooks/useBodyExplorerWorkspace";
 import {
   BODY_REGION_IDS,
@@ -58,9 +58,13 @@ import {
   buildCanvasContext,
   canvasShortcut,
   EMPTY_SELECTION,
+  DEFAULT_BODY_LAYERS,
   getReferenceMotion,
   REFERENCE_MOTIONS,
   selectionReducer,
+  SHOW_POSE_BAR,
+  type BodyCanvasLayers,
+  type BodyLayerId,
   type CanvasPanel,
   type CanvasTool,
   type MotionId,
@@ -102,6 +106,7 @@ import type { ProfileCategoryId } from "../model/profileCategories";
 import { TrainerEntryGuard, type TrainerLaunch } from "./TrainerEntryGuard";
 import { diagnosisHeaderMode } from "../model/diagnosisDecisionViewModel";
 import { MOTION_ICONS } from "./MotionIcons";
+import type { SkeletonLayerStatus } from "./BodyCanvasScene";
 import "../body-canvas.css";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
@@ -172,14 +177,17 @@ const THEME_OPTIONS: ReadonlyArray<[ThemePreference, string]> = [
   ["system", "跟随系统"],
 ];
 
+/** 精细解剖 layers offered on the Home body (L). */
+const BODY_LAYER_OPTIONS: ReadonlyArray<[BodyLayerId, string, string]> = [
+  ["skin", "皮肤", "#ebe6d8"],
+  ["muscles", "肌肉", "#c99285"],
+  ["skeleton", "骨骼", "#d9cfb4"],
+];
+
 const CANVAS_OVERLAY_META: Record<
-  "anatomy" | "help",
+  "help",
   { title: string; description: string }
 > = {
-  anatomy: {
-    title: "精细解剖",
-    description: "探索结构与标准身体区域。解剖图谱不是个人扫描。",
-  },
   help: {
     title: "让操作顺手一点",
     description: "每个快捷操作都有可见按钮，也支持按名称选择区域。",
@@ -225,9 +233,18 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   };
   const [tool, setTool] = useState<CanvasTool>("orbit");
   const [selection, dispatch] = useReducer(selectionReducer, EMPTY_SELECTION);
-  const [canvasOverlay, setCanvasOverlay] = useState<"anatomy" | "help" | null>(
-    null,
-  );
+  const [canvasOverlay, setCanvasOverlay] = useState<"help" | null>(null);
+  // 精细解剖 (L) acts on the Home body: a layer panel beside the tool rail.
+  const [anatomyMode, setAnatomyMode] = useState(false);
+  const [bodyLayers, setBodyLayers] =
+    useState<BodyCanvasLayers>(DEFAULT_BODY_LAYERS);
+  const [skeletonStatus, setSkeletonStatus] =
+    useState<SkeletonLayerStatus>("idle");
+  const toggleAnatomy = useCallback(() => {
+    setAnatomyMode((open) => !open);
+    // Leaving (or entering) anatomy mode always starts from the default view.
+    setBodyLayers(DEFAULT_BODY_LAYERS);
+  }, []);
   const [motion, setMotion] = useState<MotionId>("stand");
   const [motionMode, setMotionMode] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -583,7 +600,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   );
   const requestRevision = props.demonstrationRequest?.revision;
   useEffect(() => {
-    if (props.demonstrationRequest)
+    if (SHOW_POSE_BAR && props.demonstrationRequest)
       chooseMotion(props.demonstrationRequest.motion);
   }, [requestRevision, chooseMotion]);
   const onTextFallback = useCallback(() => {
@@ -604,6 +621,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         if (personInfoOpen) setPersonInfoOpen(false);
         else if (activeWindow) closeWindow(activeWindow);
         else if (canvasOverlay) setCanvasOverlay(null);
+        else if (anatomyMode) toggleAnatomy();
         else if (tool !== "orbit") setTool("orbit");
         else if (regionListOpen) setRegionListOpen(false);
         else clear();
@@ -614,10 +632,15 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       if (target?.closest("[role='dialog'], [role='menu']")) return;
       const action = canvasShortcut(event);
       if (!action) return;
+      // Pose bar hidden: 1-4 and F / Space do nothing, the body stays standing.
+      if (!SHOW_POSE_BAR && (action.type === "motion" || action.type === "pause"))
+        return;
       if (action.type === "panel") {
-        if (action.panel === "anatomy" || action.panel === "help") {
-          const overlay = action.panel;
-          setCanvasOverlay((current) => (current === overlay ? null : overlay));
+        if (action.panel === "anatomy") {
+          setCanvasOverlay(null);
+          toggleAnatomy();
+        } else if (action.panel === "help") {
+          setCanvasOverlay((current) => (current === "help" ? null : "help"));
         } else if (CANVAS_PANEL_TO_WINDOW[action.panel]) {
           toggleWindow(CANVAS_PANEL_TO_WINDOW[action.panel]!);
         } else {
@@ -639,6 +662,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [
     activeWindow,
+    anatomyMode,
     ask,
     canvasOverlay,
     choosePose,
@@ -648,6 +672,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     regionListOpen,
     safetyReview,
     tool,
+    toggleAnatomy,
     toggleWindow,
     undo,
   ]);
@@ -705,13 +730,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         );
       case "diagnosis":
         return (
-          <Suspense
-            fallback={
-              <p role="status" className="bc-window-loading">
-                正在读取当前诊断
-              </p>
-            }
-          >
+          <Suspense fallback={<WindowLoading label="正在读取当前诊断" />}>
             <DiagnosisWindow
               view={diagnosisView}
               scene={diagnosisActions.scene}
@@ -744,13 +763,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       case "training":
         if (trainingView === "safety")
           return (
-            <Suspense
-              fallback={
-                <p role="status" className="bc-window-loading">
-                  正在读取安全限制
-                </p>
-              }
-            >
+            <Suspense fallback={<WindowLoading label="正在读取安全限制" />}>
               <SafetyRestrictedView
                 onBack={() => setTrainingView("plan")}
                 onAddReview={() => openWindow("chat")}
@@ -758,13 +771,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             </Suspense>
           );
         return (
-          <Suspense
-            fallback={
-              <p role="status" className="bc-window-loading">
-                正在读取训练计划
-              </p>
-            }
-          >
+          <Suspense fallback={<WindowLoading label="正在读取训练计划" />}>
             <TrainingPlanWindow
               state={trainingActions.state}
               canExecute={
@@ -944,7 +951,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       <h1 className="sr-only">我的身体</h1>
 
       <section
-        className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}`}
+        className={`bc-stage${activeWindow || showRegionCard ? " bc-stage-context" : ""}${motionMode ? " bc-stage-motion" : ""}${anatomyMode ? " bc-stage-anatomy" : ""}`}
         aria-label="身体画布"
         ref={stageRef}
         style={
@@ -967,6 +974,8 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                 tool={tool}
                 selectedRegions={selection.regions}
                 motion={motion}
+                layers={anatomyMode ? bodyLayers : DEFAULT_BODY_LAYERS}
+                onSkeletonStatus={setSkeletonStatus}
                 playing={effectivePlaying}
                 speed={speed}
                 seek={seek}
@@ -993,7 +1002,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
 
         {/* Penpot mint backdrop disc behind the reference body. */}
         <div className="bc-backdrop-disc" aria-hidden="true" />
-        {ribbonCollapsed ? (
+        {!SHOW_POSE_BAR ? null : ribbonCollapsed ? (
           <button
             ref={ribbonToggleRef}
             type="button"
@@ -1109,12 +1118,9 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               className="bc-icon-button"
               aria-label="图层 · 精细解剖"
               title="精细解剖图层 · L"
-              aria-pressed={canvasOverlay === "anatomy"}
-              onClick={() =>
-                setCanvasOverlay((current) =>
-                  current === "anatomy" ? null : "anatomy",
-                )
-              }
+              aria-pressed={anatomyMode}
+              aria-expanded={anatomyMode}
+              onClick={toggleAnatomy}
             >
               <Layers3 size={20} strokeWidth={1.7} />
               <span className="bc-tool-caption">图层</span>
@@ -1148,6 +1154,65 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
               onClick={toggleTools}
             >
               <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        {anatomyMode && (
+          <div
+            className="bc-layer-panel"
+            role="group"
+            aria-label="精细解剖图层"
+            data-testid="body-layer-panel"
+          >
+            <span className="bc-layer-panel-title" aria-hidden="true">
+              图层
+            </span>
+            {BODY_LAYER_OPTIONS.map(([id, label, swatch]) => (
+              <button
+                key={id}
+                type="button"
+                className="bc-layer-toggle"
+                aria-pressed={bodyLayers[id]}
+                aria-busy={
+                  id === "skeleton" && skeletonStatus === "loading"
+                    ? true
+                    : undefined
+                }
+                title={
+                  id === "skeleton" && skeletonStatus === "error"
+                    ? "骨骼层暂时无法加载，点按重试"
+                    : label
+                }
+                onClick={() =>
+                  setBodyLayers((current) => ({
+                    ...current,
+                    [id]: !current[id],
+                  }))
+                }
+              >
+                <span
+                  className="bc-layer-swatch"
+                  style={{ background: swatch }}
+                  aria-hidden="true"
+                />
+                <span className="bc-layer-label">{label}</span>
+                {id === "skeleton" && skeletonStatus === "loading" ? (
+                  <LoaderCircle
+                    size={12}
+                    className="animate-spin bc-layer-status"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="bc-layer-close"
+              aria-label="关闭图层"
+              title="关闭图层 · Esc"
+              onClick={toggleAnatomy}
+            >
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1438,20 +1503,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           ))}
         </div>
 
-        <div className="bc-attribution">
-          <span>参考人体 · 非个人扫描</span>
-          <span>
-            Vanatome / Z-Anatomy ·{" "}
-            <a
-              href="https://creativecommons.org/licenses/by-sa/4.0/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              CC BY-SA 4.0
-            </a>
-          </span>
-          <span>拖动旋转 · 滚轮缩放 · 点击选区</span>
-        </div>
         <button
           className="bc-help-entry"
           aria-label="快捷键"
@@ -1475,7 +1526,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       >
         <DialogContent
           showCloseButton={false}
-          className={`${themeClass} bc-inventory-dialog${canvasOverlay === "anatomy" ? " bc-anatomy-dialog" : ""}`}
+          className={`${themeClass} bc-inventory-dialog`}
         >
           <div className="bc-inventory-heading">
             <div>
@@ -1504,19 +1555,16 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             </button>
           </div>
           <div className="bc-inventory-content">
-            {canvasOverlay === "anatomy" && (
-              <BodyExplorer
-                snapshot={props.bodyState}
-                semanticBridge={props.bodyExplorer.semanticBridge}
-                className="bc-anatomy-viewer"
-              />
-            )}
             {canvasOverlay === "help" && (
               <div className="bc-keyboard-help">
                 {[
                   ["V / B / S", "选择、标注涂抹、框选"],
-                  ["1 / 2 / 3 / 4", "站立、跑步、跳跃、坐姿"],
-                  ["F / Space", "暂停或继续动作"],
+                  ...(SHOW_POSE_BAR
+                    ? [
+                        ["1 / 2 / 3 / 4", "站立、跑步、跳跃、坐姿"],
+                        ["F / Space", "暂停或继续动作"],
+                      ]
+                    : []),
                   ["/", "打开对话窗口"],
                   ["M / P / D / T", "个人档案、训练计划、诊断、训练执行"],
                   ["L / R", "精细解剖图层、复位视角"],
@@ -1660,6 +1708,47 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
                   ))}
                 </div>
               </div>
+              <section className="bc-about" aria-labelledby="bc-about-label">
+                <span id="bc-about-label" className="bc-theme-label">
+                  关于
+                </span>
+                <p className="bc-about-text">
+                  人体模型来自{" "}
+                  <a
+                    href="https://github.com/vixotic/Vanatome"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Vanatome
+                  </a>{" "}
+                  Human Atlas 1.4.0，源自{" "}
+                  <a
+                    href="https://github.com/Z-Anatomy/Models"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Z-Anatomy
+                  </a>
+                  ，按{" "}
+                  <a
+                    href="https://creativecommons.org/licenses/by-sa/4.0/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    CC BY-SA 4.0
+                  </a>{" "}
+                  许可使用。肌肉层取自{" "}
+                  <a
+                    href="https://github.com/Z-Anatomy/Models-of-human-anatomy"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Z-Anatomy
+                  </a>
+                  （Gauthier Kervyn、Marcin Zielinski 等，基于 BodyParts3D），由
+                  BodySense 精简导出并调整材质，同样按 CC BY-SA 4.0 提供。
+                </p>
+              </section>
               <button
                 type="button"
                 className="bc-button bc-account-dialog-close"

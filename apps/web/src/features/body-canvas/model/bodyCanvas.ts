@@ -6,6 +6,14 @@ import {
 } from "@/features/body-explorer/model/bodyRegionOntology";
 
 export type CanvasTool = "orbit" | "brush" | "box";
+
+/** The reference pose bar (站立 / 跑 / 跳 / 坐, keys 1-4) is hidden for now; flip to bring it back. */
+export const SHOW_POSE_BAR = false;
+
+/** Anatomy layers on the Home body. Default view: translucent skin over muscles. */
+export type BodyLayerId = "skin" | "muscles" | "skeleton";
+export type BodyCanvasLayers = Record<BodyLayerId, boolean>;
+export const DEFAULT_BODY_LAYERS: BodyCanvasLayers = { skin: true, muscles: true, skeleton: false };
 export type CanvasPanel = "state" | "diagnosis" | "training" | "trainer" | "progress" | "equipment" | "anatomy" | "help" | "motions";
 export type MotionId = "stand" | "run" | "jump" | "sit" | "arm_raise" | "calf_raise" | "hip_hinge" | "bridge";
 
