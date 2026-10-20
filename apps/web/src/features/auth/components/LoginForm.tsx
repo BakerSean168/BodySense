@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import { InkButton, InkField } from "./InkField";
@@ -13,6 +13,16 @@ export function LoginForm() {
     email?: string;
     password?: string;
   }>({});
+
+  // The auth store error is global: reset it (and this form) whenever the
+  // form mounts or unmounts so a login error never leaks onto /register.
+  useEffect(() => {
+    clearError();
+    setEmail("");
+    setPassword("");
+    setValidationErrors({});
+    return () => clearError();
+  }, [clearError]);
 
   const validateForm = (): boolean => {
     const errors: { email?: string; password?: string } = {};

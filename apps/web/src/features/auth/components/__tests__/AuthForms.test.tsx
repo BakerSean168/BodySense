@@ -57,8 +57,8 @@ describe("LoginPage (Penpot ink sign-in)", () => {
   });
 
   it("shows the store error under the password field and the submitting label", () => {
-    act(() => useAuthStore.setState({ error: "登录失败", isLoading: true }));
     renderAt(<LoginPage />);
+    act(() => useAuthStore.setState({ error: "登录失败", isLoading: true }));
     expect(screen.getByRole("alert").textContent).toBe("登录失败");
     expect(screen.getByTestId("auth-login-submit").textContent).toBe("登录中…");
   });
