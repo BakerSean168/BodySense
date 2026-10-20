@@ -55,12 +55,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(page.getByRole("heading", { name: "我的身体" })).toBeVisible();
   // Body-first: no business window is open on a bare consultation route.
   await expect(page.getByTestId("diagnosis-window")).toBeHidden();
-  // Penpot Home: no app bar; pose 1 of the motion ribbon is exploration.
+  // Penpot Home: no app bar; the pose bar is hidden and the body stands.
   const ribbon = page.getByRole("group", { name: "参考动作" });
-  await expect(ribbon.getByRole("button", { name: "站立" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(ribbon).toHaveCount(0);
   await expect(page.getByRole("button", { name: "开始一次提问" })).toHaveCount(
     0,
   );
@@ -140,45 +137,23 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
     page.getByRole("button", { name: "旋转与点选", includeHidden: true }),
   ).toHaveAttribute("aria-pressed", "true");
 
-  await ribbon.getByRole("button", { name: "跑步" }).click();
-  await expect(ribbon.getByRole("button", { name: "跑步" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.getByRole("slider", { name: "动作进度" })).toBeVisible();
+  // With the pose bar hidden, the motion shortcuts leave the body standing.
+  await page.keyboard.press("2");
+  await expect(page.getByRole("slider", { name: "动作进度" })).toHaveCount(0);
+  await expect(ribbon).toHaveCount(0);
 
-  // The V2 Dock is a persistent floating navigation surface. A motion player
-  // must never cover it, including on short desktop viewports.
-  const assertMotionDockClearance = async (minGap = 8) => {
-    const player = await page.locator(".bc-playback").boundingBox();
-    const dock = await page.locator(".bc-dock").boundingBox();
-    expect(player).not.toBeNull();
-    expect(dock).not.toBeNull();
-    expect(player!.y + player!.height + minGap).toBeLessThanOrEqual(dock!.y);
-  };
-  await assertMotionDockClearance();
-  await page.setViewportSize({ width: 1024, height: 650 });
-  await assertMotionDockClearance();
-  await page.setViewportSize({ width: 1280, height: 720 });
-
-  await page.getByRole("button", { name: "询问当前动作" }).click();
-  await expect(chatWindow).toBeVisible();
-  await expect(
-    page
-      .getByRole("button", { name: "移除身体区域上下文" })
-      .locator("xpath=.."),
-  ).toContainText("跑步");
-
-  await chatWindow.getByRole("button", { name: "关闭对话" }).click();
+  // The Region scene is still docked, so the rail is hidden; keys still work.
   await page.keyboard.press("b");
-  await expect(page.getByRole("button", { name: "涂抹选区" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("button", { name: "涂抹选区", includeHidden: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("button", { name: "旋转与点选" }),
+    page.getByRole("button", { name: "旋转与点选", includeHidden: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  // Without a motion question to hand the region off, clear it explicitly.
+  await page.getByRole("button", { name: "清除选区" }).click();
+  await expect(brushSelection).toBeHidden();
 
   // V2 TrainingPlan: plan selector belongs to the shared header, no duplicate
   // content selector/title and no local action mutates an unaccepted plan.
@@ -259,27 +234,16 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await assertMotionDockClearance();
-  // The mobile motion ribbon stays clear of the playback bar and the rail.
-  const motionRibbon = await ribbon.boundingBox();
-  const playback = await page.locator(".bc-playback").boundingBox();
-  const rail = await page
-    .getByRole("toolbar", { name: "身体画布工具" })
-    .boundingBox();
-  expect(motionRibbon).not.toBeNull();
-  expect(motionRibbon!.y + motionRibbon!.height).toBeLessThanOrEqual(
-    playback!.y,
-  );
-  expect(playback!.y + playback!.height).toBeLessThanOrEqual(rail!.y);
+  // Mobile: no pose bar and no motion playback bar.
+  await expect(ribbon).toHaveCount(0);
+  await expect(page.locator(".bc-playback")).toHaveCount(0);
   // V2 mobile retains all four module entrances, including Training.
   await expect(page.locator(".bc-dock .bc-dock-item")).toHaveCount(4);
   await expect(
     page.locator(".bc-dock").getByRole("button", { name: "训练计划" }),
   ).toBeVisible();
-  // The persistent body stage survives the window close above; motion mode is
-  // still active from the earlier demonstration steps.
+  // The persistent body stage survives the window close above.
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await expect(page.getByRole("slider", { name: "动作进度" })).toBeVisible();
   await page.getByRole("button", { name: "快捷键" }).click();
   await page.getByRole("button", { name: "按名称选择身体区域" }).click();
   await expect(
