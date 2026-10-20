@@ -37,6 +37,7 @@ import {
 import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
 import {
   selectIsComposerLocked,
+  selectLiveAnsweredInteractions,
   shouldApplyInitialActiveTurn,
 } from "../runtime/activeTurnSelectors";
 import { useUploadStore } from "@/stores/uploadStore";
@@ -846,20 +847,29 @@ function CustomAssistantMessage() {
     setIsRedFlagDismissed(false);
   }, [content]);
 
-  const isMessageActive =
-    isLast &&
-    (activeTurn.status === "streaming" || activeTurn.status === "interrupted");
-
-  if (isMessageActive) {
-    return null;
-  }
+  const isTurnActive =
+    activeTurn.status === "streaming" || activeTurn.status === "interrupted";
 
   const historicalInteraction =
     customMetadata.interaction_history === true
       ? readHistoricalInteraction(customMetadata.interaction)
       : null;
   if (historicalInteraction) {
-    return <AskUserStatusCard interaction={historicalInteraction} />;
+    // An answered question stays in the thread while the Run resumes (Penpot
+    // Chat / Running). Skip it only when the live turn already renders it.
+    const shownLive =
+      isTurnActive &&
+      (activeTurn.pendingInteraction?.id === historicalInteraction.id ||
+        selectLiveAnsweredInteractions(activeTurn).some(
+          (item) => item.id === historicalInteraction.id,
+        ));
+    return shownLive ? null : (
+      <AskUserStatusCard interaction={historicalInteraction} />
+    );
+  }
+
+  if (isLast && isTurnActive) {
+    return null;
   }
 
   const consultationStatus =

@@ -153,8 +153,45 @@ describe("StreamingAssistantTurn", () => {
         },
       }),
     );
-    expect(screen.getByText("问诊追问")).toBeDefined();
-    expect(screen.getByText("你的回答：无")).toBeDefined();
+    const card = screen.getByRole("region", { name: "问诊追问（已回答）" });
+    expect(card.textContent).toContain("是否感觉到颈部或肩部不适？");
+    expect(card.textContent).toContain("你的回答：无");
+  });
+
+  it("keeps the answered open question above 继续分析 after the Run resumes", () => {
+    renderWithState(
+      stateWith({
+        status: "streaming",
+        pendingInteraction: null,
+        answeredInteractions: [
+          {
+            id: "ia-1",
+            run_id: "run-1",
+            conversation_id: "conv-1",
+            tool_call_id: "tc-1",
+            tool_name: "ask_user",
+            question: {
+              question: "这次和上次是一直持续，还是结束后又出现？",
+              answer_type: "single_choice",
+              options: ["一直持续到现在", "曾经结束，之后再次出现", "暂不确定"],
+            },
+            status: "answered",
+            answer: {
+              text: "曾经结束，之后再次出现",
+              selected: ["曾经结束，之后再次出现"],
+            },
+            created_at: "Mon 2026-10-20 9:00 AM CST (UTC+08:00)",
+          },
+        ],
+      }),
+    );
+    const card = screen.getByRole("region", { name: "问诊追问（已回答）" });
+    const pill = screen.getByRole("status", { name: "BodySense 正在思考" });
+    expect(card.textContent).toContain("曾经结束，之后再次出现");
+    expect(pill.textContent).toContain("继续分析");
+    expect(
+      card.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps an answered BodyState suggestion visible after the Run resumes", () => {
@@ -163,7 +200,7 @@ describe("StreamingAssistantTurn", () => {
         status: "streaming",
         text: "好的，继续。",
         pendingInteraction: null,
-        answeredSuggestions: [
+        answeredInteractions: [
           {
             id: "int-s",
             run_id: "run-1",

@@ -680,7 +680,11 @@ function buildCompletedSnapshot(
     return null;
   }
 
-  const suggestions = state.answeredSuggestions ?? [];
+  // Only suggestions ride on the message; open questions come back with the
+  // thread's interaction history.
+  const suggestions = (state.answeredInteractions ?? []).filter(
+    (item) => item.question.purpose === "body_state_suggestion",
+  );
   // The answered suggestions (with Go's receipts) stay on the completed
   // message, so "saved" survives the active turn being reset.
   const metadata =

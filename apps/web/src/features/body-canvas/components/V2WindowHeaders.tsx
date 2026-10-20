@@ -240,7 +240,7 @@ export function TrainerWindowHeader({
 /**
  * Penpot "Window / Title Chat": 💬 对话 / 今天 ▾. The picker lists the days the
  * user actually wrote something in their single Conversation; choosing one
- * scrolls the thread there. With no earlier day it reads 今天 without a menu.
+ * scrolls the thread there. With no earlier day the menu holds only 今天.
  */
 export function ChatWindowHeader({
   history,
@@ -264,7 +264,7 @@ export function ChatWindowHeader({
       </span>
     </>
   );
-  if (!history || earlier.length === 0 || !onSelectDay)
+  if (!history || !onSelectDay)
     return (
       <div className="bc-window-context bc-chat-context">
         {title}

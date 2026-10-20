@@ -109,7 +109,7 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
     expect(screen.getByText("左肩病情")).toBeVisible();
   });
 
-  it("shows 今天 alone when the conversation has no earlier day", () => {
+  it("keeps the 今天 ▾ picker when the conversation has no earlier day", () => {
     render(
       <ChatWindowHeader
         history={{ todayKey: "2026-10-20", days: [] }}
@@ -117,8 +117,9 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
       />,
     );
     expect(screen.getByText("对话")).toBeVisible();
-    expect(screen.getByTestId("chat-day")).toHaveTextContent("今天");
-    expect(screen.queryByRole("combobox")).toBeNull();
+    const picker = screen.getByRole("combobox", { name: "跳到某天的对话" });
+    expect(picker).toHaveDisplayValue("今天");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
   });
 
   it("jumps to a day the user wrote in from the 今天 picker", async () => {

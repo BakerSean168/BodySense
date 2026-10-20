@@ -61,11 +61,12 @@ export interface ActiveTurnState {
   /** Pending ask_user interaction. */
   pendingInteraction: PendingInteraction | null;
   /**
-   * BodyState suggestions answered in this turn, with Go's receipt. They
-   * outlive run.resumed (which clears pendingInteraction) so the turn can
-   * show "saved" exactly when Go committed.
+   * Ask User interactions answered in this turn (open questions and BodyState
+   * suggestions with Go's receipt). They outlive run.resumed, which clears
+   * pendingInteraction, so the answered card stays in the thread above the
+   * running pill and a suggestion shows "saved" exactly when Go committed.
    */
-  answeredSuggestions: PendingInteraction[];
+  answeredInteractions: PendingInteraction[];
   /** Extracted info keyed by body_part. */
   extractedInfoByBodyPart: Record<string, ExtractedInfo>;
   /** Final message parts generated on completion, compatible with assistant-ui. */
@@ -88,7 +89,7 @@ export const INITIAL_ACTIVE_TURN_STATE: ActiveTurnState = {
   knowledgeGapsByKey: {},
   redFlag: null,
   pendingInteraction: null,
-  answeredSuggestions: [],
+  answeredInteractions: [],
   extractedInfoByBodyPart: {},
   finalParts: [],
   sequenceRunId: null,
@@ -175,10 +176,10 @@ export function reduceActiveTurnEvent(
         pendingInteraction:
           event.type === "run.resumed" ? null : current.pendingInteraction,
         // A new Run is a new turn; a resumed Run keeps this turn's answers.
-        answeredSuggestions:
+        answeredInteractions:
           event.type === "run.started"
             ? []
-            : (current.answeredSuggestions ?? []),
+            : (current.answeredInteractions ?? []),
         error: undefined,
       };
       break;
@@ -417,15 +418,15 @@ export function reduceActiveTurnEvent(
                 : {}),
             }
           : null;
-      const answeredSuggestions = current.answeredSuggestions ?? [];
+      const answeredInteractions = current.answeredInteractions ?? [];
       next = {
         ...current,
         pendingInteraction: answered ?? current.pendingInteraction,
-        answeredSuggestions:
-          answered?.question.purpose === "body_state_suggestion" &&
-          !answeredSuggestions.some((item) => item.id === answered.id)
-            ? [...answeredSuggestions, answered]
-            : answeredSuggestions,
+        answeredInteractions:
+          answered &&
+          !answeredInteractions.some((item) => item.id === answered.id)
+            ? [...answeredInteractions, answered]
+            : answeredInteractions,
       };
       effects.push({
         type: "interaction_answered",
