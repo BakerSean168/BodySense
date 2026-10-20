@@ -426,8 +426,12 @@ export async function loadPinnedReferenceAtlasSurface(options: {
  * coordinate space as Atlas 1.4.0 (whose own `muscular` bundle has no limb
  * muscles). Nodes are named `<structure>__muscle` / `<structure>__tendon`.
  * Loaded after the skin so the body paints first.
+ *
+ * Served same-origin from the Web image (`apps/web/public/anatomy/`). Only the
+ * hashed `dist/assets/` files are published to the static CDN under BASE_URL,
+ * so a BASE_URL-relative path 404s when the CDN base is configured.
  */
-export const REFERENCE_MUSCLES_URL = `${import.meta.env.BASE_URL ?? "/"}anatomy/z-anatomy-muscles-v1.glb`;
+export const REFERENCE_MUSCLES_URL = "/anatomy/z-anatomy-muscles-v1.glb";
 
 export async function loadPinnedReferenceMuscles(options: {
   signal?: AbortSignal;
