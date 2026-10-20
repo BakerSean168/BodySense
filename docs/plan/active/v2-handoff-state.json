@@ -57,9 +57,12 @@
     {
       "id": "F-PENPOT",
       "name": "Editable UI source and flow inventory",
-      "state": "blocked",
-      "next": "PD-BASE-01",
-      "details": "Implementation follows the Penpot boards (UI-001, UI-DX-001, UI-TP-001, window dock #382/#384). Awaiting the user's visual sign-off Q-19; never marked ready without it."
+      "state": "ready",
+      "details": "User visual sign-off Q-19 given on staging (b9903b6d2) on 2026-10-20 23:34 CST together with final V2 release approval; recorded in REL-001 'User sign-off'.",
+      "proof": [
+        "docs/plan/tickets/v2/REL-001.md",
+        "docs/runbooks/v2-release-cutover.md"
+      ]
     },
     {
       "id": "F-ACCEPTANCE",
@@ -71,9 +74,12 @@
     {
       "id": "F-RELEASE",
       "name": "V2 release qualification",
-      "state": "blocked",
-      "next": "IR-FINAL-01",
-      "details": "Candidate main da14c3435ea3b70bd63bb3a845519722b40a159f. pnpm release:v2:dry-run passes local preconditions; awaiting the user's F-PENPOT Q-19 and human approvals A1 staging wipe, A2 production wipe, A3 canary promote (REL-001 #317). No staging or production action taken."
+      "state": "ready",
+      "details": "Candidate b9903b6d2 qualified on staging (simplified A1, 2026-10-19). User approved A2 production wipe and A3 promote on 2026-10-20 23:34 CST: old production data deleted, no backup, no canary.",
+      "proof": [
+        "docs/plan/tickets/v2/REL-001.md",
+        "docs/runbooks/v2-release-cutover.md"
+      ]
     }
   ],
   "domains": [
@@ -671,7 +677,7 @@
       ]
     }
   ],
-  "updatedAtUtc": "2026-10-19T05:11:46Z",
+  "updatedAtUtc": "2026-10-20T15:40:00Z",
   "latestExecution": {
     "owner": "Hark V2 final closeout (QA-001 #316); user request 2026-10-18",
     "baselineHead": "da14c3435ea3b70bd63bb3a845519722b40a159f",

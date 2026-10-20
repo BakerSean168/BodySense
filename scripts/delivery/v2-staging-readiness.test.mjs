@@ -32,8 +32,8 @@ function accepted() {
 const evaluate = (enabled, handoff) =>
   evaluateV2StagingReadiness({ enabled, handoff });
 
-test("current unapproved V2 must never promote staging", () => {
-  assert.equal(evaluate("true", current).eligible, false);
+test("current signed-off V2 promotes staging only with the operator opt-in", () => {
+  assert.equal(evaluate("true", current).eligible, true);
   assert.equal(evaluate(undefined, current).eligible, false);
 });
 test("operator variable is false by default even if all gates are approved", () => {
