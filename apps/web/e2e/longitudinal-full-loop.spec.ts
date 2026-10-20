@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { conversationIdFor } from "./support/consultation";
 import { completeStructuredSafetyIntake } from "./support/safety";
 import {
   finishTrainerSessionWithFeedback,
@@ -72,40 +73,9 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> feedback review closes 
     "Content-Type": "application/json",
   };
 
-  const runResponse = await request.post(
-    `${apiBase}/api/v1/consultation-runs`,
-    {
-      headers: authHeaders,
-      data: {
-        conversationId: null,
-        clientMessageId: `client-${Date.now()}`,
-        requestId: crypto.randomUUID(),
-        message: {
-          role: "user",
-          parts: [
-            { type: "text", text: "我久坐后颈肩酸胀，想先记录当前情况。" },
-          ],
-        },
-      },
-      timeout: 60_000,
-    },
-  );
-  const runBody = await runResponse.text();
-  expect(
-    runResponse.ok(),
-    `consultation run failed with ${runResponse.status()}: ${runBody}`,
-  ).toBeTruthy();
-  expect(runBody).toContain("event: stream.done");
-
-  const singleton = await expectJson<{
-    conversation: { id: string };
-  }>(
-    await request.get(`${apiBase}/api/v1/conversation`, {
-      headers: authHeaders,
-    }),
-    "get the single conversation",
-  );
-  const conversationId = singleton.conversation.id;
+  // The single conversation exists before any message; no model reply is
+  // needed (or allowed to hold a Run) before the intake.
+  const conversationId = await conversationIdFor(request, apiBase, authHeaders);
 
   // Capture and screen the same symptom. Screening another symptom must not
   // authorize a separately inserted, unscreened fact.

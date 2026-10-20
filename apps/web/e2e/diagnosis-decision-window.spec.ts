@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { conversationIdFor } from "./support/consultation";
 import { completeStructuredSafetyIntake } from "./support/safety";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
@@ -57,28 +58,7 @@ async function seedDiagnosisRun(
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `e2e-dx-open-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "我想做一次综合诊断。" }],
-      },
-    },
-    timeout: 60_000,
-  });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversationResponse = await request.get(
-    `${apiBase}/api/v1/conversation`,
-    { headers },
-  );
-  expect(conversationResponse.ok()).toBeTruthy();
-  const conversationId = (
-    (await conversationResponse.json()) as { conversation: { id: string } }
-  ).conversation.id;
+  const conversationId = await conversationIdFor(request, apiBase, headers);
 
   const symptom = (await completeStructuredSafetyIntake(
     request,

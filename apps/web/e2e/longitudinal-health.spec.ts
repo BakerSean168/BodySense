@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
+import { conversationIdFor, settleConversation } from "./support/consultation";
 import { completeStructuredSafetyIntake } from "./support/safety";
 import {
   finishTrainerSessionWithFeedback,
@@ -39,34 +40,13 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   });
   expect(profile.ok()).toBeTruthy();
 
-  const run = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    data: {
-      conversationId: null,
-      clientMessageId: `client-${Date.now()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "创建长期健康对话。" }],
-      },
-    },
-    timeout: 60_000,
+  // The single conversation exists before any message, so no model reply
+  // can write BodyState ahead of the user's own record below.
+  const conversationId = await conversationIdFor(request, apiBase, {
+    Authorization: `Bearer ${accessToken}`,
   });
-  expect(run.ok(), await run.text()).toBeTruthy();
 
-  const conversationResponse = await request.get(
-    `${apiBase}/api/v1/conversation`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  );
-  expect(conversationResponse.ok()).toBeTruthy();
-  const conversationData = (await conversationResponse.json()) as {
-    conversation: { id: string };
-  };
-
-  await page.goto(`/consultation/${conversationData.conversation.id}`);
+  await page.goto(`/consultation/${conversationId}`);
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
   // Body-first: no business window is open until the user opens one, and that
   // choice is mirrored into the route.
@@ -180,31 +160,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     ).ok(),
   ).toBeTruthy();
 
-  const run = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `e2e-client-${Date.now()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "E2E create consultation" }],
-      },
-    },
-  });
-  expect(run.ok()).toBeTruthy();
-  await run.text();
-
-  const conversationsResponse = await request.get(
-    `${apiBase}/api/v1/conversation`,
-    { headers },
-  );
-  expect(conversationsResponse.ok()).toBeTruthy();
-  const conversationsPayload = (await conversationsResponse.json()) as {
-    conversation: { id: string };
-  };
-  const conversationId = conversationsPayload.conversation.id;
-  expect(conversationId).toBeTruthy();
+  const conversationId = await conversationIdFor(request, apiBase, headers);
 
   // One original symptom and its own Go-bound checklist provide coverage.
   const symptom = (await completeStructuredSafetyIntake(
@@ -259,6 +215,9 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     concurrentResponses.map((response) => response.status()).sort(),
   ).toEqual([200, 409]);
   await Promise.all(concurrentResponses.map((response) => response.text()));
+  // The accepted Run may end on a model follow-up question; it is not under
+  // test here, so it must not hold the conversation for the next message.
+  await settleConversation(request, apiBase, headers, conversationId);
 
   // Nothing is adopted yet: plan generation is gated on the native Diagnosis.
   const prematureGeneration = await request.post(
@@ -378,6 +337,17 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   );
   expect(clearanceRun.ok()).toBeTruthy();
   await clearanceRun.text();
+  await settleConversation(request, apiBase, headers, conversationId);
+  // A model reply to the clearance message may itself commit BodyState, so
+  // resolve against the revision current after that turn.
+  const afterClearance = await request.get(
+    `${apiBase}/api/v1/body-state/safety/restrictions`,
+    { headers },
+  );
+  expect(afterClearance.ok()).toBeTruthy();
+  const clearanceRevision = (
+    (await afterClearance.json()) as { current_revision: number }
+  ).current_revision;
   const conversationResponse = await request.get(
     `${apiBase}/api/v1/conversation`,
     { headers },
@@ -403,7 +373,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
     {
       headers,
       data: {
-        expected_revision: safety.current_revision,
+        expected_revision: clearanceRevision,
         expected_restriction_version: active[0].created_revision,
         basis_kind: "professional_clearance",
         source_version: 1,

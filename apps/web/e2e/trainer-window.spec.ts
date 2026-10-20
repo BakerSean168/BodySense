@@ -8,6 +8,7 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
+import { conversationIdFor } from "./support/consultation";
 import { completeStructuredSafetyIntake } from "./support/safety";
 import { fillRegisterPassword } from "./support/register";
 
@@ -133,26 +134,11 @@ async function register(
 
 /** The structured Safety screening, so the Go TrainerGate permits training. */
 async function screenSafety(request: APIRequestContext, headers: Headers) {
-  const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `o-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: { role: "user", parts: [{ type: "text", text: "你好" }] },
-    },
-    timeout: 60_000,
-  });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversation = await json<{ conversation: { id: string } }>(
-    await request.get(`${apiBase}/api/v1/conversation`, { headers }),
-    "read conversation",
-  );
   await completeStructuredSafetyIntake(
     request,
     apiBase,
     headers,
-    conversation.conversation.id,
+    await conversationIdFor(request, apiBase, headers),
   );
 }
 
