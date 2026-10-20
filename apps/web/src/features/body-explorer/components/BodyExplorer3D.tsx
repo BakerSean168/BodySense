@@ -1,11 +1,16 @@
 import {
+  Component,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
+import { useGLTF } from "@react-three/drei";
+import { Mesh, MeshLambertMaterial, type Object3D } from "three";
 import type { VanatomeViewerAtlas } from "@vixotic/vanatome-atlas";
 import {
   VanatomeViewer,
@@ -39,6 +44,75 @@ import {
 } from "@/lib/clientDiagnostics";
 
 const REGION_MODE_LAYERS = ["muscular"] as const;
+const BODY_SHELL_ID = "body-shell";
+const TRANSLUCENT_SKIN_FLAG = "bodysenseTranslucentSkin";
+
+function anatomyIdOf(object: Object3D | null): string | null {
+  for (let current = object; current; current = current.parent) {
+    const id: unknown = current.userData?.anatomyId;
+    if (typeof id === "string") return id;
+  }
+  return null;
+}
+
+function atlasHasBodyShell(atlas: VanatomeViewerAtlas): boolean {
+  return atlas.structures.some((structure) => structure.id === BODY_SHELL_ID);
+}
+
+/**
+ * Default look: muscles over a translucent paper skin. Vanatome 0.1.6 restyles
+ * every MeshStandardMaterial (the body shell is forced to an opaque/wireframe
+ * look), so before the viewer clones the cached GLB scene the shell meshes get
+ * a Lambert material it leaves alone. Skin detail stays unreadable; visibility,
+ * picking and layer controls are unchanged.
+ */
+function TranslucentShellPrep({
+  url,
+  onReady,
+}: {
+  url: string;
+  onReady: (url: string) => void;
+}) {
+  const gltf = useGLTF(url);
+  useEffect(() => {
+    gltf.scene.traverse((object) => {
+      if (!(object instanceof Mesh) || object.userData[TRANSLUCENT_SKIN_FLAG])
+        return;
+      if (anatomyIdOf(object) !== BODY_SHELL_ID) return;
+      const previous = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      object.material = new MeshLambertMaterial({
+        color: "#f4f1e8",
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+      });
+      previous.forEach((material) => material.dispose());
+      object.renderOrder = 10;
+      object.userData[TRANSLUCENT_SKIN_FLAG] = true;
+    });
+    onReady(url);
+  }, [gltf, url, onReady]);
+  return null;
+}
+
+/** A prep failure must not block the viewer; it reports its own load errors. */
+class ShellPrepBoundary extends Component<
+  { url: string; onReady: (url: string) => void; children: ReactNode },
+  { failed: boolean }
+> {
+  override state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  override componentDidCatch() {
+    this.props.onReady(this.props.url);
+  }
+  override render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 const WEBGL_RECOVERY_GRACE_MS = 1800;
 const MODEL_READY_SLOW_MS = 8_000;
 const MODEL_READY_STALLED_MS = 20_000;
@@ -588,6 +662,35 @@ export default function BodyExplorer3D({
     [],
   );
 
+  const [preparedShells, setPreparedShells] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const markShellPrepared = useCallback((url: string) => {
+    setPreparedShells((current) =>
+      current.has(url) ? current : new Set(current).add(url),
+    );
+  }, []);
+  const viewerAtlases = useMemo(
+    () =>
+      loadedAtlases.filter(
+        (atlas) =>
+          !atlasHasBodyShell(atlas) || preparedShells.has(atlas.modelUrl),
+      ),
+    [loadedAtlases, preparedShells],
+  );
+  const pendingShellUrls = loadedAtlases
+    .filter(
+      (atlas) =>
+        atlasHasBodyShell(atlas) && !preparedShells.has(atlas.modelUrl),
+    )
+    .map((atlas) => atlas.modelUrl);
+
+  // Region mode shows the muscular layer by default; fetch it once the shell is up.
+  useEffect(() => {
+    if (mode !== "region" || !loaded || !viewerAtlases.length) return;
+    void ensureSystem("muscular");
+  }, [ensureSystem, loaded, mode, viewerAtlases.length]);
+
   const structureIndex = useMemo(() => {
     const map = new Map<string, AnatomyStructureSummary>();
     for (const structure of loadedAtlases.flatMap(
@@ -637,151 +740,167 @@ export default function BodyExplorer3D({
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="relative min-h-[430px] flex-1 overflow-hidden rounded-[18px] bg-black/5">
-          <VanatomeViewer
-            atlases={loadedAtlases}
-            selectedId={controller.selectedId}
-            hoveredId={hoveredId}
-            isolation={controller.isolation}
-            visibleLayers={controller.visibleLayers}
-            alwaysVisibleIds={["body-shell"]}
-            displayMode={displayMode}
-            focusRequestKey={controller.focusRequestKey}
-            resetViewKey={controller.resetViewKey}
-            onSelect={handleSelection}
-            onHover={handleHover}
-            onEscape={() => {
-              controller.clear();
-              onSelectedAnatomyIdChange(null);
-            }}
-            onLoadStart={(modelUrl) => {
-              const startedAt = diagnosticNow();
-              lastModelUrlRef.current = modelUrl;
-              modelStartedAtRef.current.set(modelUrl, startedAt);
-              loaderCompleteReportedRef.current.delete(modelUrl);
-              networkCompleteReportedRef.current.delete(modelUrl);
-              longTaskMetricsRef.current = { count: 0, totalMs: 0, maxMs: 0 };
-              reportViewerDiagnostic({
-                event: "model_load_started",
-                severity: "info",
-                phase: "model_download",
-                resource: modelUrl,
-                attributes: {
-                  "model.expected_bytes": expectedModelBytes(loaded, modelUrl),
-                  "viewer.model_count": loadedAtlases.length,
-                  "document.visibility_state": document.visibilityState,
-                },
-              });
-              armModelWatchdogs(modelUrl);
-              setLoadState("loading");
-              setViewerError(null);
-            }}
-            onLoadProgress={({
-              loaded: loadedResources,
-              total,
-              percentage,
-            }) => {
-              loadProgressRef.current = percentage;
-              setLoadProgress(percentage);
-              const modelUrl = lastModelUrlRef.current;
-              if (
-                modelUrl &&
-                percentage >= 100 &&
-                !loaderCompleteReportedRef.current.has(modelUrl)
-              ) {
-                loaderCompleteReportedRef.current.add(modelUrl);
-                const startedAt = modelStartedAtRef.current.get(modelUrl);
+          {pendingShellUrls.map((url) => (
+            <ShellPrepBoundary key={url} url={url} onReady={markShellPrepared}>
+              <Suspense fallback={null}>
+                <TranslucentShellPrep url={url} onReady={markShellPrepared} />
+              </Suspense>
+            </ShellPrepBoundary>
+          ))}
+          {viewerAtlases.length === 0 ? (
+            <div className="grid" style={{ height: viewerHeight }}>
+              <BodyExplorerLoadingState label="正在加载人体模型" />
+            </div>
+          ) : (
+            <VanatomeViewer
+              atlases={viewerAtlases}
+              selectedId={controller.selectedId}
+              hoveredId={hoveredId}
+              isolation={controller.isolation}
+              visibleLayers={controller.visibleLayers}
+              alwaysVisibleIds={["body-shell"]}
+              displayMode={displayMode}
+              focusRequestKey={controller.focusRequestKey}
+              resetViewKey={controller.resetViewKey}
+              onSelect={handleSelection}
+              onHover={handleHover}
+              onEscape={() => {
+                controller.clear();
+                onSelectedAnatomyIdChange(null);
+              }}
+              onLoadStart={(modelUrl) => {
+                const startedAt = diagnosticNow();
+                lastModelUrlRef.current = modelUrl;
+                modelStartedAtRef.current.set(modelUrl, startedAt);
+                loaderCompleteReportedRef.current.delete(modelUrl);
+                networkCompleteReportedRef.current.delete(modelUrl);
+                longTaskMetricsRef.current = { count: 0, totalMs: 0, maxMs: 0 };
                 reportViewerDiagnostic({
-                  event: "model_loader_complete",
+                  event: "model_load_started",
                   severity: "info",
-                  phase: "gltf_loader",
+                  phase: "model_download",
                   resource: modelUrl,
                   attributes: {
-                    "loader.from_model_start_ms":
+                    "model.expected_bytes": expectedModelBytes(
+                      loaded,
+                      modelUrl,
+                    ),
+                    "viewer.model_count": loadedAtlases.length,
+                    "document.visibility_state": document.visibilityState,
+                  },
+                });
+                armModelWatchdogs(modelUrl);
+                setLoadState("loading");
+                setViewerError(null);
+              }}
+              onLoadProgress={({
+                loaded: loadedResources,
+                total,
+                percentage,
+              }) => {
+                loadProgressRef.current = percentage;
+                setLoadProgress(percentage);
+                const modelUrl = lastModelUrlRef.current;
+                if (
+                  modelUrl &&
+                  percentage >= 100 &&
+                  !loaderCompleteReportedRef.current.has(modelUrl)
+                ) {
+                  loaderCompleteReportedRef.current.add(modelUrl);
+                  const startedAt = modelStartedAtRef.current.get(modelUrl);
+                  reportViewerDiagnostic({
+                    event: "model_loader_complete",
+                    severity: "info",
+                    phase: "gltf_loader",
+                    resource: modelUrl,
+                    attributes: {
+                      "loader.from_model_start_ms":
+                        startedAt == null
+                          ? 0
+                          : roundMetric(diagnosticNow() - startedAt),
+                      "loader.loaded_resources": loadedResources,
+                      "loader.total_resources": total,
+                      ...resourceTimingAttributes(modelUrl),
+                    },
+                  });
+                }
+              }}
+              onModelReady={(modelUrl) => {
+                clearModelWatchdogs(modelUrl);
+                const startedAt = modelStartedAtRef.current.get(modelUrl);
+                reportViewerDiagnostic({
+                  event: "model_ready",
+                  severity: "info",
+                  phase: "model_parse_gpu",
+                  resource: modelUrl,
+                  attributes: {
+                    "model.ready_duration_ms":
                       startedAt == null
                         ? 0
                         : roundMetric(diagnosticNow() - startedAt),
-                    "loader.loaded_resources": loadedResources,
-                    "loader.total_resources": total,
+                    "viewer.progress_pct": loadProgressRef.current ?? 100,
+                    ...longTaskAttributes(longTaskMetricsRef.current),
                     ...resourceTimingAttributes(modelUrl),
                   },
                 });
+              }}
+              onReady={() => {
+                reportViewerDiagnostic({
+                  event: "viewer_ready",
+                  severity: "info",
+                  phase: "first_ready",
+                  resource: lastModelUrlRef.current,
+                  attributes: {
+                    "viewer.model_count": loadedAtlases.length,
+                    "viewer.progress_pct": 100,
+                    ...longTaskAttributes(longTaskMetricsRef.current),
+                    ...resourceTimingAttributes(lastModelUrlRef.current),
+                  },
+                });
+                setLoadState("ready");
+                setLoadProgress(100);
+                setViewerError(null);
+                setWebglState("ready");
+              }}
+              onError={handleViewerError}
+              loadingFallback={
+                <BodyExplorerLoadingState
+                  label="正在加载人体模型"
+                  progress={loadProgress}
+                />
               }
-            }}
-            onModelReady={(modelUrl) => {
-              clearModelWatchdogs(modelUrl);
-              const startedAt = modelStartedAtRef.current.get(modelUrl);
-              reportViewerDiagnostic({
-                event: "model_ready",
-                severity: "info",
-                phase: "model_parse_gpu",
-                resource: modelUrl,
-                attributes: {
-                  "model.ready_duration_ms":
-                    startedAt == null
-                      ? 0
-                      : roundMetric(diagnosticNow() - startedAt),
-                  "viewer.progress_pct": loadProgressRef.current ?? 100,
-                  ...longTaskAttributes(longTaskMetricsRef.current),
-                  ...resourceTimingAttributes(modelUrl),
-                },
-              });
-            }}
-            onReady={() => {
-              reportViewerDiagnostic({
-                event: "viewer_ready",
-                severity: "info",
-                phase: "first_ready",
-                resource: lastModelUrlRef.current,
-                attributes: {
-                  "viewer.model_count": loadedAtlases.length,
-                  "viewer.progress_pct": 100,
-                  ...longTaskAttributes(longTaskMetricsRef.current),
-                  ...resourceTimingAttributes(lastModelUrlRef.current),
-                },
-              });
-              setLoadState("ready");
-              setLoadProgress(100);
-              setViewerError(null);
-              setWebglState("ready");
-            }}
-            onError={handleViewerError}
-            loadingFallback={
-              <BodyExplorerLoadingState
-                label="正在加载人体模型"
-                progress={loadProgress}
-              />
-            }
-            errorFallback={
-              <p className="px-5 text-center text-xs text-muted-foreground">
-                3D 身体视图正在恢复；身体记录仍然可用。
-              </p>
-            }
-            modelPosition={[...FULL_BODY_MODEL_POSITION]}
-            initialCameraPosition={[...FULL_BODY_CAMERA_POSITION]}
-            initialCameraTarget={[...FULL_BODY_CAMERA_TARGET]}
-            focusDistance={0.65}
-            focusPadding={1.35}
-            cameraAnimationDuration={420}
-            respectReducedMotion
-            enablePan
-            minDistance={0.35}
-            maxDistance={10}
-            appearance={{
-              bodyShellId: null,
-              skeletonId: null,
-              defaultOpacity: 0.7,
-              xrayOpacity: 0.24,
-              ghostOpacity: 0.08,
-              parentContextOpacity: 0.14,
-              hoverEmissiveIntensity: 0.35,
-              selectedDescendantEmissiveIntensity: 0.5,
-              selectedEmissiveIntensity: 0.85,
-              pulseSelection: false,
-            }}
-            ariaLabel="BodySense 交互式 3D 身体探索视图"
-            className="w-full"
-            style={{ height: viewerHeight }}
-          />
+              errorFallback={
+                <p className="px-5 text-center text-xs text-muted-foreground">
+                  3D 身体视图正在恢复；身体记录仍然可用。
+                </p>
+              }
+              modelPosition={[...FULL_BODY_MODEL_POSITION]}
+              initialCameraPosition={[...FULL_BODY_CAMERA_POSITION]}
+              initialCameraTarget={[...FULL_BODY_CAMERA_TARGET]}
+              focusDistance={0.65}
+              focusPadding={1.35}
+              cameraAnimationDuration={420}
+              respectReducedMotion
+              enablePan
+              minDistance={0.35}
+              maxDistance={10}
+              appearance={{
+                bodyShellId: null,
+                skeletonId: null,
+                defaultOpacity: 0.7,
+                xrayOpacity: 0.24,
+                ghostOpacity: 0.08,
+                parentContextOpacity: 0.14,
+                hoverEmissiveIntensity: 0.35,
+                selectedDescendantEmissiveIntensity: 0.5,
+                selectedEmissiveIntensity: 0.85,
+                pulseSelection: false,
+              }}
+              ariaLabel="BodySense 交互式 3D 身体探索视图"
+              className="w-full"
+              style={{ height: viewerHeight }}
+            />
+          )}
 
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
             <div className="pointer-events-auto rounded-lg bg-background/72 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">

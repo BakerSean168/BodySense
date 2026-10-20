@@ -6,15 +6,25 @@ import {
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { getBodyRegionDefinition, type BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
-import { getReferenceMotion, type CanvasTool, type MotionId } from "../model/bodyCanvas";
-import { applyReferencePose, buildReferenceRig, type ReferenceRig } from "../scene/referenceRig";
+import { DEFAULT_BODY_LAYERS, getReferenceMotion, type BodyCanvasLayers, type CanvasTool, type MotionId } from "../model/bodyCanvas";
+import {
+  applyReferencePose, attachReferenceMuscles, attachReferenceSkeleton, buildReferenceRig,
+  SKIN_COLOR, SKIN_OPACITY, SKIN_SELECTED_OPACITY,
+  type ReferenceLayer, type ReferenceMuscles, type ReferenceRig,
+} from "../scene/referenceRig";
 import {
   loadPinnedReferenceAtlasSurface,
+  loadPinnedReferenceMuscles,
+  loadPinnedReferenceSkeleton,
   type ReferenceAtlasSurface,
 } from "../scene/referenceAtlasLoader";
 import { SurfacePicker } from "../scene/surfacePicker";
 
+export type SkeletonLayerStatus = "idle" | "loading" | "ready" | "error";
+
 export interface BodyCanvasSceneProps {
+  layers?: BodyCanvasLayers;
+  onSkeletonStatus?: (status: SkeletonLayerStatus) => void;
   tool: CanvasTool;
   selectedRegions: readonly BodyRegionId[];
   motion: MotionId;
@@ -38,7 +48,7 @@ class SceneBoundary extends Component<{ children: ReactNode; fallback: ReactNode
 
 interface SurfaceAnchor { mesh: ReferenceRig["meshes"][number]; triangle: [number, number, number]; barycentric: Vector3 }
 
-function SceneContents(props: BodyCanvasSceneProps & { rig: ReferenceRig; cursor: HTMLDivElement | null; box: HTMLDivElement | null; onHover: (id: BodyRegionId | null) => void; onContextLost: () => void }) {
+function SceneContents(props: BodyCanvasSceneProps & { rig: ReferenceRig; muscles: ReferenceMuscles | null; skeleton: ReferenceLayer | null; cursor: HTMLDivElement | null; box: HTMLDivElement | null; onHover: (id: BodyRegionId | null) => void; onContextLost: () => void }) {
   const { rig } = props;
   const { camera, gl, invalidate, size } = useThree();
   const latest = useRef(props);
@@ -88,17 +98,26 @@ function SceneContents(props: BodyCanvasSceneProps & { rig: ReferenceRig; cursor
   useEffect(() => { if (controls.current) controls.current.enabled = props.tool === "orbit"; }, [props.tool]);
   useEffect(() => { phase.current = props.seek.phase; applyReferencePose(rig, props.motion, phase.current); invalidate(); }, [props.seek.revision, props.seek.phase, props.motion, rig, invalidate]);
   useEffect(() => { anchors.current = []; if (marks.current) marks.current.count = 0; invalidate(); }, [props.annotationEpoch, invalidate]);
+  const layers = props.layers ?? DEFAULT_BODY_LAYERS;
+  useEffect(() => {
+    if (props.muscles) props.muscles.mesh.visible = layers.muscles;
+    if (props.skeleton) props.skeleton.mesh.visible = layers.skeleton;
+    invalidate();
+  }, [props.muscles, props.skeleton, layers.muscles, layers.skeleton, invalidate]);
   useEffect(() => {
     const selected = new Set(props.selectedRegions);
     rig.meshes.forEach((mesh) => {
       const active = selected.has(mesh.userData.bodyRegionId as BodyRegionId);
-      mesh.material.color.set(active ? (props.dark ? "#85bb9a" : "#78a48b") : (props.dark ? "#adbeb0" : "#b5c5b9"));
+      // With the skin layer off, a selected region keeps its skin so the pick stays visible.
+      mesh.visible = layers.skin || active;
+      mesh.material.color.set(active ? (props.dark ? "#85bb9a" : "#78a48b") : (props.dark ? "#c9d6cc" : SKIN_COLOR));
+      mesh.material.opacity = active ? SKIN_SELECTED_OPACITY : SKIN_OPACITY;
       mesh.material.emissive.set(active ? "#244c36" : "#000000");
       mesh.material.emissiveIntensity = active ? .18 : 0;
     });
     anchors.current = anchors.current.filter((anchor) => selected.has(anchor.mesh.userData.bodyRegionId as BodyRegionId));
     invalidate();
-  }, [props.selectedRegions, props.dark, rig, invalidate]);
+  }, [props.selectedRegions, props.dark, layers.skin, rig, invalidate]);
 
   useEffect(() => {
     const idPicker = new SurfacePicker(gl, rig); picker.current = idPicker;
@@ -202,12 +221,62 @@ export default function BodyCanvasScene(props: BodyCanvasSceneProps) {
   const [hover, setHover] = useState<BodyRegionId | null>(null);
   const [cursor, setCursor] = useState<HTMLDivElement | null>(null);
   const [box, setBox] = useState<HTMLDivElement | null>(null);
+  const [muscles, setMuscles] = useState<ReferenceMuscles | null>(null);
+  const [skeleton, setSkeleton] = useState<ReferenceLayer | null>(null);
+  const [skeletonStatus, setSkeletonStatus] = useState<SkeletonLayerStatus>("idle");
+  const wantsSkeleton = props.layers?.skeleton ?? false;
+  const onSkeletonStatus = useRef(props.onSkeletonStatus);
+  onSkeletonStatus.current = props.onSkeletonStatus;
+  useEffect(() => { onSkeletonStatus.current?.(skeletonStatus); }, [skeletonStatus]);
+  // The skeletal layer is fetched once per rig, the first time 骨骼 is turned on,
+  // and skinned to the same rig as the muscles. Toggling only hides it.
+  const skeletonJob = useRef<{ rig: ReferenceRig; controller: AbortController; layer: ReferenceLayer | null } | null>(null);
+  useEffect(() => {
+    if (!rig || !wantsSkeleton || skeletonJob.current?.rig === rig) return;
+    const job = { rig, controller: new AbortController(), layer: null as ReferenceLayer | null };
+    skeletonJob.current = job;
+    setSkeletonStatus("loading");
+    void (async () => {
+      let surface: ReferenceAtlasSurface | null = null;
+      try {
+        surface = await loadPinnedReferenceSkeleton({ signal: job.controller.signal });
+        if (job.controller.signal.aborted) return;
+        job.layer = attachReferenceSkeleton(rig, surface.group);
+        setSkeleton(job.layer);
+        setSkeletonStatus("ready");
+      } catch {
+        if (job.controller.signal.aborted) return;
+        if (skeletonJob.current === job) skeletonJob.current = null;
+        setSkeletonStatus("error");
+      } finally {
+        surface?.dispose();
+      }
+    })();
+  }, [rig, wantsSkeleton]);
+  useEffect(() => () => {
+    const job = skeletonJob.current;
+    if (!job || job.rig !== rig) return;
+    job.controller.abort();
+    job.layer?.dispose();
+    skeletonJob.current = null;
+    setSkeleton(null);
+    setSkeletonStatus("idle");
+  }, [rig]);
   useEffect(() => {
     const controller = new AbortController();
     let owned: ReferenceRig | null = null;
+    let ownedMuscles: ReferenceMuscles | null = null;
     let surface: ReferenceAtlasSurface | null = null;
+    let muscleSurface: ReferenceAtlasSurface | null = null;
     setError(null);
     setRig(null);
+    setMuscles(null);
+    // The 6.6 MB Z-Anatomy muscle layer downloads in parallel but never blocks the
+    // skin: the body is interactive first and the muscles appear when ready.
+    let skinReady: () => void = () => undefined;
+    const skinBuilt = new Promise<void>((resolve) => { skinReady = resolve; });
+    const musclesPending = loadPinnedReferenceMuscles({ signal: controller.signal, parseAfter: skinBuilt });
+    musclesPending.catch(() => undefined);
     void (async () => {
       surface = await loadPinnedReferenceAtlasSurface({
         signal: controller.signal,
@@ -215,13 +284,30 @@ export default function BodyCanvasScene(props: BodyCanvasSceneProps) {
       if (controller.signal.aborted) {
         surface.dispose();
         surface = null;
+        void musclesPending.then((unused) => unused.dispose(), () => undefined);
         return;
       }
       owned = buildReferenceRig(surface.group);
       surface.dispose();
       surface = null;
       setRig(owned);
+      // Give React a frame to paint the skin before parsing the muscles.
+      setTimeout(skinReady, 50);
+      const rigForMuscles = owned;
+      try {
+        muscleSurface = await musclesPending;
+        if (controller.signal.aborted) return;
+        ownedMuscles = attachReferenceMuscles(rigForMuscles, muscleSurface.group);
+        setMuscles(ownedMuscles);
+      } catch {
+        // Optional layer: the translucent skin alone stays fully usable.
+      } finally {
+        muscleSurface?.dispose();
+        muscleSurface = null;
+      }
     })().catch((cause: unknown) => {
+      skinReady();
+      void musclesPending.then((unused) => unused.dispose(), () => undefined);
       surface?.dispose();
       surface = null;
       if (!controller.signal.aborted) {
@@ -232,17 +318,20 @@ export default function BodyCanvasScene(props: BodyCanvasSceneProps) {
     });
     return () => {
       controller.abort();
+      skinReady();
       surface?.dispose();
+      muscleSurface?.dispose();
+      ownedMuscles?.dispose();
       owned?.dispose();
     };
   }, [attempt]);
   const fallback = <div className="bc-scene-status" role="status"><h2>3D 暂时无法显示</h2><p>你的身体记录与对话仍然可以使用。</p><div className="bc-actions"><button className="bc-button" onClick={() => setAttempt((value) => value + 1)}>重试 3D</button><button className="bc-button bc-primary" onClick={props.onTextFallback}>按名称选择区域</button></div>{error && <details><summary>查看加载信息</summary><p>{error}</p></details>}</div>;
   if (error) return fallback;
   if (!rig) return <div className="bc-scene-status" role="status"><span className="bc-loading-orbit" aria-hidden="true" /><h2>正在准备身体视图</h2><p>精细参考模型按需加载，你也可以先查看记录。</p><button className="bc-button" onClick={props.onTextFallback}>先使用文本区域</button></div>;
-  return <div className="bc-scene" data-tool={props.tool} data-viewer-state="ready" aria-label="交互式参考人体：拖动旋转，点击选择部位">
+  return <div className="bc-scene" data-tool={props.tool} data-viewer-state="ready" data-muscles={muscles ? "ready" : "loading"} data-skeleton={skeletonStatus} aria-label="交互式参考人体：拖动旋转，点击选择部位">
     <SceneBoundary key={attempt} fallback={fallback}>
       <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ position: [.36, .94, 3.12], fov: 33, near: .02, far: 20 }} gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.setClearColor(new Color(0, 0, 0), 0); gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.22; }}>
-        <SceneContents {...props} rig={rig} cursor={cursor} box={box} onHover={setHover} onContextLost={() => setError("图形上下文已中断，可重试或切换文本模式。")} />
+        <SceneContents {...props} rig={rig} muscles={muscles} skeleton={skeleton} cursor={cursor} box={box} onHover={setHover} onContextLost={() => setError("图形上下文已中断，可重试或切换文本模式。")} />
       </Canvas>
     </SceneBoundary>
     <div ref={setCursor} className="bc-brush-cursor" aria-hidden="true" /><div ref={setBox} className="bc-selection-box" aria-hidden="true" />
