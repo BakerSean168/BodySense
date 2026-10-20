@@ -3,7 +3,6 @@
 from src.models.diagnosis import DiagnosisCandidateDraft
 from src.services.diagnosis_formal_proposals import (
     FORMAL_PROPOSALS_SCHEMA_REVISION,
-    UNRESOLVED_EVIDENCE_TYPE,
     build_formal_proposals,
 )
 
@@ -66,23 +65,49 @@ def test_projects_create_proposals_without_durable_identity():
         assert forbidden not in flat
 
 
-def test_counterevidence_is_typed_from_frozen_state_or_left_unresolved():
+def test_counterevidence_is_typed_from_frozen_state_and_unknown_refs_are_dropped():
     out = build_formal_proposals(
-        _payload([_candidate(counterevidence_ids=[OBS, "kb-citation-7"])]), BODY_STATE
+        _payload(
+            [_candidate(counterevidence_ids=[OBS, "kb-citation-7"], basis_fact_ids=[FACT, "x"])]
+        ),
+        BODY_STATE,
     )
-    counter = [e for e in out["proposals"][0]["evidence"] if e["role"] == "counter"]
-    assert counter[0]["evidenceType"] == "body_observation"
-    # Unknown references are not dropped or guessed: Go rejects the whole output.
-    assert counter[1]["evidenceType"] == UNRESOLVED_EVIDENCE_TYPE
+    evidence = out["proposals"][0]["evidence"]
+    assert [(e["evidenceId"], e["role"]) for e in evidence] == [
+        (FACT, "supporting"),
+        (OBS, "supporting"),
+        (OBS, "counter"),
+    ]
+    assert evidence[2]["evidenceType"] == "body_observation"
 
 
-def test_missing_native_fields_are_not_repaired():
+def test_recoverable_native_gaps_are_repaired():
     out = build_formal_proposals(
-        _payload([_candidate(assessment_level=None, handling_summary="")]), BODY_STATE
+        _payload([_candidate(assessment_level=None, cause_summary="", handling_summary=" ")]),
+        BODY_STATE,
     )
     proposal = out["proposals"][0]
-    assert proposal["assessment"]["level"] == ""
-    assert proposal["handlingPlan"]["summary"] == ""
+    assert proposal["assessment"]["level"] == "suspected"
+    assert proposal["causeAnalysis"]["summary"]
+    assert proposal["handlingPlan"]["summary"]
+    high = build_formal_proposals(
+        _payload([_candidate(assessment_level=None, confidence="高")]), BODY_STATE
+    )
+    assert high["proposals"][0]["assessment"]["level"] == "likely"
+
+
+def test_candidates_without_resolvable_support_are_dropped():
+    out = build_formal_proposals(
+        _payload(
+            [_candidate(basis_fact_ids=["unknown"], basis_observation_ids=[]), _candidate(name="B")]
+        ),
+        BODY_STATE,
+    )
+    assert [p["medicalName"] for p in out["proposals"]] == ["B"]
+    none_left = build_formal_proposals(
+        _payload([_candidate(basis_fact_ids=["unknown"], basis_observation_ids=[])]), BODY_STATE
+    )
+    assert none_left["outcome"] == "insufficient_evidence" and none_left["proposals"] == []
 
 
 def test_non_proposal_outcomes_emit_zero_proposals():
