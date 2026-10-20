@@ -22,7 +22,12 @@ export async function readRunEvents(
   {
     afterSeq = 0,
     until,
-  }: { afterSeq?: number; until: (events: StreamEvent[]) => boolean },
+    timeout = 30_000,
+  }: {
+    afterSeq?: number;
+    until: (events: StreamEvent[]) => boolean;
+    timeout?: number;
+  },
 ): Promise<StreamEvent[]> {
   let events: StreamEvent[] = [];
   await expect
@@ -48,7 +53,7 @@ export async function readRunEvents(
         );
         return until(events);
       },
-      { timeout: 30_000 },
+      { timeout },
     )
     .toBe(true);
   return events;
