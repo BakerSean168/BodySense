@@ -17,7 +17,7 @@ export const ConversationRun = /*#__PURE__*/ zod.strictObject({
   "conversation_id": /*#__PURE__*/ zod.uuid(),
   "turn_id": /*#__PURE__*/ zod.uuid(),
   "request_id": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
-  "status": /*#__PURE__*/ zod.enum(['running', 'completed', 'failed', 'cancelled']),
+  "status": /*#__PURE__*/ zod.enum(['running', 'waiting_user', 'completed', 'failed', 'cancelled']),
   "model": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "provider": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "started_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),

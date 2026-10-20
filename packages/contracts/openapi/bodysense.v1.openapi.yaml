@@ -7236,7 +7236,7 @@ components:
           minLength: 1
         status:
           type: string
-          enum: [running, completed, failed, cancelled]
+          enum: [running, waiting_user, completed, failed, cancelled]
         model:
           type: string
           minLength: 1
