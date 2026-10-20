@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.15.0](https://github.com/BakerSean168/BodySense/compare/v0.14.0...v0.15.0) (2026-10-20)
+
+### ⚠ BREAKING CHANGES
+
+* BodySense V2 big-bang release: production starts on a fresh `000001_vnext_baseline`
+  database (volume `bodysense-postgres-v2`); data from earlier releases is not migrated.
+
+### Features
+
+* V2 product domains: BodyState / BodyFact / Episode, Conversation / Ask User / Person Profile,
+  Diagnosis decision window, TrainingPlan / Trainer with Safety, Person assets (#301-#316, #341)
+* V2 desktop workspace UI with muscle layer and in-place anatomy layers (#393-#420)
+
+### Bug Fixes
+
+* includes the unreleased 0.14.1 fix (persist diagnosis v10 serving default)
+* **web:** muted tendon colour so hands and feet are no longer white (#421)
+* **ai:** repair recoverable Diagnosis Agent output (#422)
+* **api:** waiting_user in ConversationRun status enum (#423)
+
 ## [0.14.1](https://github.com/BakerSean168/BodySense/compare/v0.14.0...v0.14.1) (2026-09-30)
 
 

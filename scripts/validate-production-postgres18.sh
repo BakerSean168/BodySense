@@ -22,7 +22,7 @@ reject_path() {
 bash -n scripts/production-postgres18-reset.sh scripts/production-deploy-watch.sh scripts/setup-server.sh scripts/setup-postgres18-client-wrappers.sh
 
 grep -q '^POSTGRES_MAJOR=18$' .env.production
-grep -q '^POSTGRES_DATA_VOLUME=bodysense-postgres-vnext$' .env.production
+grep -q '^POSTGRES_DATA_VOLUME=bodysense-postgres-v2$' .env.production
 grep -q 'pgvector:pg18' docker/docker-compose.prod.yml
 reject_match 'pgvector:pg16' docker/docker-compose.prod.yml
 grep -q 'postgres-prod-data-pg18:/var/lib/postgresql$' docker/docker-compose.prod.yml
