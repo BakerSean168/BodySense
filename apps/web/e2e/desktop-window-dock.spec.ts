@@ -6,7 +6,6 @@ import {
 } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
-import { completeStructuredSafetyIntake } from "./support/safety";
 import { fillRegisterPassword } from "./support/register";
 
 // Desktop business windows dock like the Penpot "Desktop / <Window> / …"
@@ -55,43 +54,48 @@ async function register(page: Page, request: APIRequestContext) {
   return headers;
 }
 
-/**
- * Answers the structured Safety screening in a fresh conversation. A new
- * account has no screening yet, so the workspace starts with a safety review
- * (and the global banner); "none of the above" clears it.
- */
-async function screenSafety(
+async function safetyReviewPending(
   request: APIRequestContext,
   headers: Record<string, string>,
-  signals?: string[],
-  statement?: string,
 ) {
-  const opening = await request.post(`${api}/api/v1/consultation-runs`, {
+  const workspace = await request.get(`${api}/api/v1/health-workspace`, {
+    headers,
+  });
+  expect(workspace.ok(), await workspace.text()).toBeTruthy();
+  const body = (await workspace.json()) as {
+    capabilities: { requires_safety_review: boolean };
+  };
+  return body.capabilities.requires_safety_review;
+}
+
+/**
+ * Records an unscreened symptom straight into BodyState. No consultation Run
+ * is started, so the spec does not depend on how the model answers (a real
+ * model may ask a follow-up question and keep the Run open). An unscreened
+ * symptom owes a Safety review, which shows the global banner everywhere.
+ */
+async function recordUnscreenedSymptom(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+) {
+  const write = await request.post(`${api}/api/v1/body-state/records`, {
     headers,
     data: {
-      conversationId: null,
-      clientMessageId: `e2e-dock-open-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: { role: "user", parts: [{ type: "text", text: "你好" }] },
+      idempotency_key: `e2e-dock-symptom-${crypto.randomUUID()}`,
+      expected_revision: 0,
+      facts: [
+        {
+          kind: "symptom",
+          statement: "我今天肩膀不舒服。",
+          body_region_ids: [],
+          temporal: { precision: "unknown" },
+          details: {},
+        },
+      ],
     },
-    timeout: 60_000,
   });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversation = await request.get(`${api}/api/v1/conversation`, {
-    headers,
-  });
-  expect(conversation.ok()).toBeTruthy();
-  const { id } = (
-    (await conversation.json()) as { conversation: { id: string } }
-  ).conversation;
-  await completeStructuredSafetyIntake(
-    request,
-    api,
-    headers,
-    id,
-    signals,
-    statement,
-  );
+  expect(write.ok(), await write.text()).toBeTruthy();
+  expect(await safetyReviewPending(request, headers)).toBe(true);
 }
 
 /** Opens one window by its deep link and returns its desktop element. */
@@ -130,7 +134,8 @@ test("desktop windows dock at the Penpot geometry and leave the body visible", a
 }) => {
   await page.setViewportSize(VIEWPORT);
   const headers = await register(page, request);
-  await screenSafety(request, headers);
+  // A never-written BodyState owes no Safety review, so no chat is needed.
+  expect(await safetyReviewPending(request, headers)).toBe(false);
   for (const id of Object.keys(PENPOT_DOCK) as DockedWindow[]) {
     const window = await openWindow(page, id);
     await expect(page.getByTestId("safety-banner")).toHaveCount(0);
@@ -158,9 +163,9 @@ test("the desktop safety banner never covers a window header", async ({
 }) => {
   await page.setViewportSize(VIEWPORT);
   const headers = await register(page, request);
-  // A positive red-flag answer leaves the workspace safety review pending,
-  // which shows the global banner on every surface.
-  await screenSafety(request, headers, ["麻木"], "我今天肩膀不舒服。");
+  // An unscreened symptom leaves the workspace safety review pending, which
+  // shows the global banner on every surface.
+  await recordUnscreenedSymptom(request, headers);
 
   for (const id of Object.keys(PENPOT_DOCK) as DockedWindow[]) {
     const window = await openWindow(page, id);
@@ -194,7 +199,8 @@ test("desktop chrome follows the Penpot window boards", async ({
 }) => {
   await page.setViewportSize(VIEWPORT);
   const headers = await register(page, request);
-  await screenSafety(request, headers);
+  // A never-written BodyState owes no Safety review, so no chat is needed.
+  expect(await safetyReviewPending(request, headers)).toBe(false);
 
   // Home: motion ribbon, Tools rail and the icon-only Dock (/ D P M).
   await page.goto("/consultation");
