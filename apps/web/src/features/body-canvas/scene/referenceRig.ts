@@ -83,9 +83,9 @@ export function skinInfluence(x: number, y: number): [number, number, number] {
 export const SKIN_COLOR = "#f4f1e8";
 export const SKIN_OPACITY = .22;
 export const SKIN_SELECTED_OPACITY = .58;
-/** Classic anatomical-chart red; tendons and aponeuroses stay a pale ivory. */
+/** Classic anatomical-chart red; tendons and aponeuroses a muted rose so hands/feet do not read white. */
 const MUSCLE_COLOR = "#a3271f";
-const TENDON_COLOR = "#eadfcd";
+const TENDON_COLOR = "#b86259";
 const BONE_COLOR = "#e8dfc8";
 
 /** Bakes an atlas mesh into rig space with the deterministic reference skinning. */
