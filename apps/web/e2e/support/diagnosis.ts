@@ -1,6 +1,7 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./auth";
 import { profileReplacement } from "./profile";
+import { conversationIdFor } from "./consultation";
 import { completeStructuredSafetyIntake } from "./safety";
 import { fillRegisterPassword } from "./register";
 
@@ -147,9 +148,9 @@ export interface SeededUser {
 }
 
 /**
- * Real Go API + deterministic Python stub: register, open a conversation and
- * record one user-message symptom through the Go-bound safety intake. No
- * Diagnosis exists yet.
+ * Register, take the user's conversation and record one user-message symptom
+ * through the Go-bound safety intake. No chat message is sent before the
+ * intake, so no model reply can hold the conversation. No Diagnosis exists yet.
  */
 export async function seedUserWithSymptom(
   page: Page,
@@ -173,27 +174,7 @@ export async function seedUserWithSymptom(
     data: profileReplacement({ gender: "female", birth_date: "1994-03-12" }),
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
-  const opening = await request.post(`${apiBase}/api/v1/consultation-runs`, {
-    headers,
-    data: {
-      conversationId: null,
-      clientMessageId: `e2e-dxh-open-${crypto.randomUUID()}`,
-      requestId: crypto.randomUUID(),
-      message: {
-        role: "user",
-        parts: [{ type: "text", text: "我想做一次综合诊断。" }],
-      },
-    },
-    timeout: 60_000,
-  });
-  expect(opening.ok(), await opening.text()).toBeTruthy();
-  const conversation = await request.get(`${apiBase}/api/v1/conversation`, {
-    headers,
-  });
-  expect(conversation.ok()).toBeTruthy();
-  const conversationId = (
-    (await conversation.json()) as { conversation: { id: string } }
-  ).conversation.id;
+  const conversationId = await conversationIdFor(request, apiBase, headers);
   const symptom = (await completeStructuredSafetyIntake(
     request,
     apiBase,
