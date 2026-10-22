@@ -1,0 +1,50 @@
+# DEV-ONLY opt-in overlay: route the GCP local LiteLLM gateway to Oracle2.
+#
+# This file is appended by scripts/dev-infra.sh and scripts/dev-runtime.sh only
+# when BODYSENSE_LITELLM_DEV_ORACLE2=1. It is never referenced by
+# docker-compose.prod.yml, docker-compose.staging.yml, or the default dev path,
+# so production and staging keep docker/litellm/config.yaml and their own
+# networks untouched.
+#
+# The Oracle2 Virtual Key is injected as an environment variable only. No key
+# value is stored in this repository. Compose fails closed with
+# "required variable ORACLE2_BODYSENSE_API_KEY is missing a value" when the
+# opt-in is enabled without a key.
+services:
+  litellm-gateway:
+    environment:
+      # Physical upstream for the isolated dev config. The os.environ/ references
+      # in config.dev-oracle2.yaml resolve from these two variables only.
+      ORACLE2_BODYSENSE_BASE_URL: ${ORACLE2_BODYSENSE_BASE_URL:-https://oracle.taile92a8e.ts.net:10446/v1}
+      ORACLE2_BODYSENSE_API_KEY: ${ORACLE2_BODYSENSE_API_KEY:?set ORACLE2_BODYSENSE_API_KEY (dev-only Oracle2 Virtual Key; never commit it)}
+    # ── Root cause and why extra_hosts, not network_mode: host ─────────────
+    # The Oracle2 endpoint is a Tailscale MagicDNS name. Docker's embedded
+    # resolver answers that name with Oracle2's PUBLIC addresses
+    # (103.84.155.153 / 103.84.155.217) plus IPv6, which this GCP host cannot
+    # route — a container sees "OSError [Errno 101] Network is unreachable".
+    # The host's systemd-resolved + Tailscale MagicDNS answers with the tailnet
+    # CGNAT address (100.68.237.116), which the container CAN reach over the
+    # ordinary Docker bridge.
+    #
+    # Pinning the name to the tailnet address therefore fixes connectivity
+    # without touching the network boundary: the service keeps the project
+    # bridge network, the existing 127.0.0.1:20112 publish, and its normal
+    # in-container bind. `network_mode: host` was rejected — it would require
+    # resetting ports/networks and would change the dev network contract for a
+    # single opt-in feature.
+    #
+    # scripts/dev-env.sh resolves the tailnet address on the host at opt-in time
+    # and only accepts 100.64.0.0/10. Verified 2026-10-22: a container on
+    # bodysense-dev-infra_bodysense-network reaches
+    # https://oracle.taile92a8e.ts.net:10446/health/liveliness with HTTP 200 and
+    # valid TLS through this mapping.
+    #
+    # Residual risk: if Oracle2's tailnet address changes, the pinned mapping
+    # goes stale. dev-env.sh re-resolves per invocation; a long-running container
+    # must be recreated after `scripts/dev-infra.sh restart`.
+    extra_hosts:
+      - '${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}:${ORACLE2_BODYSENSE_TAILSCALE_IP:-100.68.237.116}'
+    volumes:
+      # Same container target as the base service, so this replaces (not
+      # appends) the default docker/litellm/config.yaml mount.
+      - ./litellm/config.dev-oracle2.yaml:/app/config.yaml:ro

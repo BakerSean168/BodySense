@@ -14,8 +14,12 @@ compose=(
   docker compose
   -f docker/docker-compose.yml
   -f docker/docker-compose.dev-infra.yml
-  --profile dev
 )
+# DEV-ONLY: append the Oracle2 overlay only when the opt-in resolved it.
+if [[ -n "${BODYSENSE_DEV_COMPOSE_OVERLAY:-}" ]]; then
+  compose+=(-f "$BODYSENSE_DEV_COMPOSE_OVERLAY")
+fi
+compose+=(--profile dev)
 
 mkdir -p "$RUNTIME_DIR"
 
@@ -105,7 +109,7 @@ down() {
 }
 
 status() {
-  echo "BodySense dev ports: web=${WEB_PORT} api=${API_PORT} ai=${AI_SERVICE_PORT} document=${DOCUMENT_SERVICE_PORT} postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT}"
+  echo "BodySense dev ports: web=${WEB_PORT} api=${API_PORT} ai=${AI_SERVICE_PORT} document=${DOCUMENT_SERVICE_PORT} postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT} oracle2_dev_opt_in=${BODYSENSE_LITELLM_DEV_ORACLE2}"
   for name in web api ai document; do
     if is_running "$name"; then
       echo "$name=RUNNING pid=$(cat "$(pid_file "$name")")"

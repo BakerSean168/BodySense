@@ -37,6 +37,78 @@ export JWT_REFRESH_TTL_HOURS=${JWT_REFRESH_TTL_HOURS:-720}
 export TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1,::1}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
+
+# ── DEV-ONLY Oracle2 gateway opt-in ────────────────────────
+# BODYSENSE_LITELLM_DEV_ORACLE2=1 routes the local dev LiteLLM gateway to the
+# Oracle2 upstream through docker/docker-compose.dev-oracle2.yml. Default 0
+# keeps docker/litellm/config.yaml, so production/staging and ordinary dev are
+# unaffected. The Virtual Key is only ever read from the environment/local env
+# file; it is never written into the repository.
+export BODYSENSE_LITELLM_DEV_ORACLE2=${BODYSENSE_LITELLM_DEV_ORACLE2:-0}
+export ORACLE2_BODYSENSE_BASE_URL=${ORACLE2_BODYSENSE_BASE_URL:-https://oracle.taile92a8e.ts.net:10446/v1}
+export ORACLE2_BODYSENSE_HOSTNAME=${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}
+export BODYSENSE_DEV_COMPOSE_OVERLAY=
+
+# Resolve the Oracle2 MagicDNS name to its Tailscale CGNAT address.
+#
+# Docker's embedded resolver answers a Tailscale MagicDNS name with the remote
+# node's PUBLIC addresses, which this GCP host cannot route (measured from a
+# container: "OSError [Errno 101] Network is unreachable"). The host's
+# systemd-resolved + Tailscale MagicDNS answers with the 100.64.0.0/10 tailnet
+# address, which the container reaches over the ordinary Docker bridge once the
+# name is pinned through extra_hosts. Only a CGNAT address is accepted, so a DNS
+# change fails loudly instead of silently routing dev traffic over the public
+# internet. Nothing here changes ports or the Docker network boundary.
+#
+# Tailscale allocates from 100.64.0.0/10. Validation applies to the host resolver
+# result AND to an explicit ORACLE2_BODYSENSE_TAILSCALE_IP override, so a typo or
+# a stale manual value fails the same way a bad DNS answer does.
+oracle2_is_tailscale_ipv4() {
+  local ip=$1 a b c d
+  [[ "$ip" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] || return 1
+  a=${BASH_REMATCH[1]}
+  b=${BASH_REMATCH[2]}
+  c=${BASH_REMATCH[3]}
+  d=${BASH_REMATCH[4]}
+  (( a <= 255 && b <= 255 && c <= 255 && d <= 255 )) || return 1
+  (( a == 100 && b >= 64 && b <= 127 ))
+}
+
+oracle2_tailscale_ip() {
+  local host=${ORACLE2_BODYSENSE_HOSTNAME}
+  local ip
+  ip=$(getent ahostsv4 "$host" 2>/dev/null | awk '$2 == "STREAM" {print $1; exit}')
+  if [[ -z "$ip" ]]; then
+    ip=$(getent hosts "$host" 2>/dev/null | awk '{print $1; exit}')
+  fi
+  [[ -n "$ip" ]] || return 1
+  oracle2_is_tailscale_ipv4 "$ip" || return 1
+  printf '%s\n' "$ip"
+}
+
+case "${BODYSENSE_LITELLM_DEV_ORACLE2,,}" in
+  1 | true | yes | on)
+    if [[ -z "${ORACLE2_BODYSENSE_API_KEY:-}" ]]; then
+      echo "BODYSENSE_LITELLM_DEV_ORACLE2 is enabled but ORACLE2_BODYSENSE_API_KEY is empty." >&2
+      echo "Set it in $ENV_FILE (git-ignored) or the environment; never commit the key." >&2
+      return 1 2>/dev/null || exit 1
+    fi
+    if [[ -z "${ORACLE2_BODYSENSE_TAILSCALE_IP:-}" ]]; then
+      if ! ORACLE2_BODYSENSE_TAILSCALE_IP=$(oracle2_tailscale_ip); then
+        echo "Could not resolve ${ORACLE2_BODYSENSE_HOSTNAME} to a Tailscale 100.64.0.0/10 address." >&2
+        echo "Confirm 'tailscale status' is up, or set ORACLE2_BODYSENSE_TAILSCALE_IP explicitly." >&2
+        return 1 2>/dev/null || exit 1
+      fi
+    elif ! oracle2_is_tailscale_ipv4 "${ORACLE2_BODYSENSE_TAILSCALE_IP}"; then
+      # An explicit override is validated too: a typo or a stale public address
+      # must not silently become the dev upstream pin.
+      echo "ORACLE2_BODYSENSE_TAILSCALE_IP=${ORACLE2_BODYSENSE_TAILSCALE_IP} is not a Tailscale 100.64.0.0/10 IPv4 address." >&2
+      return 1 2>/dev/null || exit 1
+    fi
+    export ORACLE2_BODYSENSE_TAILSCALE_IP
+    export BODYSENSE_DEV_COMPOSE_OVERLAY=$ROOT/docker/docker-compose.dev-oracle2.yml
+    ;;
+esac
 export LITELLM_API_KEY=${LITELLM_API_KEY:-$LITELLM_MASTER_KEY}
 export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-http://127.0.0.1:${AI_SERVICE_PORT}}
@@ -53,8 +125,8 @@ export BODYSENSE_VITE_BUNDLED_DEV=${BODYSENSE_VITE_BUNDLED_DEV:-true}
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ $# -eq 0 ]]; then
-    printf 'BodySense direct-dev env: web=%s api=%s ai=%s document=%s postgres=%s redis=%s litellm=%s\n' \
-      "$WEB_PORT" "$API_PORT" "$AI_SERVICE_PORT" "$DOCUMENT_SERVICE_PORT" "$DB_PORT" "$REDIS_PORT" "$LITELLM_PORT"
+    printf 'BodySense direct-dev env: web=%s api=%s ai=%s document=%s postgres=%s redis=%s litellm=%s oracle2_dev_opt_in=%s oracle2_tailscale_ip=%s\n' \
+      "$WEB_PORT" "$API_PORT" "$AI_SERVICE_PORT" "$DOCUMENT_SERVICE_PORT" "$DB_PORT" "$REDIS_PORT" "$LITELLM_PORT" "$BODYSENSE_LITELLM_DEV_ORACLE2" "${ORACLE2_BODYSENSE_TAILSCALE_IP:-}"
     exit 0
   fi
   cd "$ROOT"

@@ -11,8 +11,12 @@ compose=(
   docker compose
   -f "$ROOT/docker/docker-compose.yml"
   -f "$ROOT/docker/docker-compose.dev-infra.yml"
-  --profile dev
 )
+# DEV-ONLY: append the Oracle2 overlay only when the opt-in resolved it.
+if [[ -n "${BODYSENSE_DEV_COMPOSE_OVERLAY:-}" ]]; then
+  compose+=(-f "$BODYSENSE_DEV_COMPOSE_OVERLAY")
+fi
+compose+=(--profile dev)
 services=(postgres-dev redis-dev litellm-gateway)
 
 up() {
@@ -21,7 +25,7 @@ up() {
 }
 
 status() {
-  echo "BodySense persistent dev infra: postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT}"
+  echo "BodySense persistent dev infra: postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT} oracle2_dev_opt_in=${BODYSENSE_LITELLM_DEV_ORACLE2}"
   "${compose[@]}" ps "${services[@]}"
 }
 
