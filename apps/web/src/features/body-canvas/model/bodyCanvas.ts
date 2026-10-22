@@ -216,7 +216,16 @@ export type CanvasShortcut =
   | { type: "tool"; tool: CanvasTool }
   | { type: "panel"; panel: CanvasPanel }
   | { type: "motion"; motion: MotionId }
-  | { type: "pause" | "reset" | "chat" | "escape" | "undo" };
+  | { type: "pause" | "reset" | "chat" | "escape" | "undo" | "palette" };
+
+/** The region palette shortcut as the platform writes it. */
+export function regionPaletteShortcut(): string {
+  const platform =
+    typeof navigator === "undefined"
+      ? ""
+      : `${navigator.platform} ${navigator.userAgent}`;
+  return /Mac|iPhone|iPad/.test(platform) ? "⌘K" : "Ctrl K";
+}
 
 export function canvasShortcut(
   event: Pick<
@@ -231,17 +240,18 @@ export function canvasShortcut(
     | "defaultPrevented"
   >,
 ): CanvasShortcut | null {
+  if (event.defaultPrevented || event.isComposing || event.repeat) return null;
+  const key = event.key.toLowerCase();
+  // ⌘K / Ctrl+K is global and still works while a text field has focus.
+  if (key === "k" && (event.metaKey || event.ctrlKey) && !event.altKey)
+    return { type: "palette" };
   if (
-    event.defaultPrevented ||
-    event.isComposing ||
-    event.repeat ||
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
     isEditingTarget(event.target)
   )
     return null;
-  const key = event.key.toLowerCase();
   if (key === "escape") return { type: "escape" };
   if (key === " " || key === "f") return { type: "pause" };
   if (key === "r") return { type: "reset" };

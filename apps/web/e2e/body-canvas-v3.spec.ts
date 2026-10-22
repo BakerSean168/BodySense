@@ -63,7 +63,7 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   );
   await expect(
     page.getByRole("toolbar", { name: "身体画布工具" }).getByRole("button"),
-  ).toHaveCount(5);
+  ).toHaveCount(6);
 
   // The Trainer shortcut is navigation, never an implicit plan execution.
   await page.keyboard.press("t");
@@ -82,13 +82,18 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await page.keyboard.press("Escape");
   await expect(shortcutPerson).toBeHidden();
 
-  // The region-by-name list lives in the help overlay (Penpot rail has 4 tools).
-  await page.getByRole("button", { name: "快捷键" }).click();
-  await page.getByRole("button", { name: "按名称选择身体区域" }).click();
-  const regionSelect = page.getByRole("combobox", { name: "选择身体区域" });
-  await expect(regionSelect).toBeVisible();
-  await regionSelect.selectOption("shoulder.right");
-  await page.getByRole("button", { name: "查看已选区域" }).click();
+  // Region-by-name is its own ⌘K palette, opened from the tools rail.
+  await page.getByRole("button", { name: "按名称选择区域" }).click();
+  const regionPalette = page.getByRole("dialog", {
+    name: "按名称选择身体区域",
+  });
+  await expect(regionPalette).toBeVisible();
+  const regionSearch = regionPalette.getByRole("combobox", {
+    name: "搜索身体区域",
+  });
+  await regionSearch.fill("右肩");
+  await regionSearch.press("Enter");
+  await expect(regionPalette).toBeHidden();
 
   const selectedRegionPanel = page.getByRole("complementary", {
     name: "已选区域当前状况",
@@ -245,10 +250,9 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   ).toBeVisible();
   // The persistent body stage survives the window close above.
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await page.getByRole("button", { name: "快捷键" }).click();
-  await page.getByRole("button", { name: "按名称选择身体区域" }).click();
+  await page.getByRole("button", { name: "按名称选择区域" }).click();
   await expect(
-    page.getByRole("complementary", { name: "区域名称选择" }),
+    page.getByRole("dialog", { name: "按名称选择身体区域" }),
   ).toBeVisible();
   expect(
     await page.evaluate(

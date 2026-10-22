@@ -166,9 +166,6 @@
 .bc-reopen-selection {
   top: 26px;
 }
-.bc-region-picker {
-  top: 96px;
-}
 @media (min-width: 761px) {
   .bc-region-card {
     top: 92px;

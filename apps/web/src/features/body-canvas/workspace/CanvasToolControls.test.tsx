@@ -10,6 +10,7 @@ function defaults() {
     onSelectTool: vi.fn(),
     onExitTool: vi.fn(),
     onReset: vi.fn(),
+    onOpenRegionPalette: vi.fn(),
     anatomyMode: false,
     onToggleAnatomy: vi.fn(),
     bodyLayers: DEFAULT_BODY_LAYERS,
@@ -34,6 +35,8 @@ describe("Canvas tool controls", () => {
     const brush = screen.getByRole("button", { name: "标注 · 涂抹选区" });
     await user.click(brush);
     expect(props.onSelectTool).toHaveBeenCalledWith("brush");
+    await user.click(screen.getByRole("button", { name: "按名称选择区域" }));
+    expect(props.onOpenRegionPalette).toHaveBeenCalledOnce();
   });
 
   it("routes anatomy layer toggles through the caller without changing the selection", async () => {
