@@ -1,5 +1,5 @@
 # ── Build stage ─────────────────────────────────────────
-FROM golang:1.26-alpine@sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c AS builder
+FROM golang:1.26.10-alpine@sha256:5cb67f19c5e7994dcb80c074f7cfca8aeeada45bbdca035f73df269cefdcce61 AS builder
 
 # Parameterized Go proxy — default is goproxy.cn for China-based CI,
 # override with --build-arg GOPROXY=https://proxy.golang.org,direct on GHA runners.
