@@ -62,8 +62,14 @@ describe("Body Canvas reference rig", () => {
           expect(n(i).dot(p(i).sub(center))).toBeGreaterThan(0);
         }
         for (let t = 0; t < index.count; t += 3) {
-          const [a, b, c] = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
-          const face = p(b).sub(p(a)).cross(p(c).sub(p(a)));
+          const [a, b, c] = [
+            index.getX(t),
+            index.getX(t + 1),
+            index.getX(t + 2),
+          ];
+          const face = p(b)
+            .sub(p(a))
+            .cross(p(c).sub(p(a)));
           expect(face.dot(n(a))).toBeGreaterThan(0);
         }
       } finally {

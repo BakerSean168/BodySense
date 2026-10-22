@@ -6,7 +6,11 @@ import type { StatementErasureReceipt } from "@/features/profile/services/statem
  * cites); it is never shown as a full erasure.
  */
 export type StatementErasurePhase =
-  "in_progress" | "outstanding" | "review" | "erased" | "retained";
+  | "in_progress"
+  | "outstanding"
+  | "review"
+  | "erased"
+  | "retained";
 
 export interface StatementErasureLine {
   target: string;

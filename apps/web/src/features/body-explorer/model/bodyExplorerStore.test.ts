@@ -33,10 +33,7 @@ describe("BodyExplorerStore", () => {
     store.selectRegion("shoulder.right");
     store.hoverRegion("shoulder.left");
     store.setMode("anatomy");
-    useBodyExplorerStore.getState().selectAnatomy(
-      anatomyId,
-      "shoulder.right",
-    );
+    useBodyExplorerStore.getState().selectAnatomy(anatomyId, "shoulder.right");
     useBodyExplorerStore.getState().isolateAnatomy(anatomyId);
 
     const state = useBodyExplorerStore.getState();

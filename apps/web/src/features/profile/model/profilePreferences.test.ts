@@ -15,7 +15,10 @@ describe("profile preferences", () => {
     });
     expect(effectiveTimeZone(null).isDefault).toBe(true);
     expect(effectiveTimeZone({ time_zone: "Local" }).isDefault).toBe(true);
-    expect(effectiveUnitPreference({})).toEqual({ unit: "metric", isDefault: true });
+    expect(effectiveUnitPreference({})).toEqual({
+      unit: "metric",
+      isDefault: true,
+    });
   });
 
   it("formats the same instant on the preferred clock without changing it", () => {

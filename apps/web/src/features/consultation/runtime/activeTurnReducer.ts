@@ -41,7 +41,12 @@ export const EXECUTION_LOST_USER_MESSAGE =
   "本次执行因服务实例中断而停止，系统已安全回收。你可以继续输入，发起一次新的执行。";
 
 export type StreamStatus =
-  "idle" | "streaming" | "interrupted" | "completed" | "failed" | "cancelled";
+  | "idle"
+  | "streaming"
+  | "interrupted"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface ActiveTurnState {
   runId: string | null;

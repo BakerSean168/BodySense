@@ -11,13 +11,7 @@
       "parent": "body",
       "group": "head",
       "side": null,
-      "aliases": [
-        "头",
-        "头部",
-        "头面部",
-        "head",
-        "head region"
-      ]
+      "aliases": ["头", "头部", "头面部", "head", "head region"]
     },
     {
       "id": "neck",
@@ -28,13 +22,7 @@
       "parent": "body",
       "group": "neck",
       "side": null,
-      "aliases": [
-        "颈部",
-        "脖子",
-        "颈椎区域",
-        "neck",
-        "neck region"
-      ]
+      "aliases": ["颈部", "脖子", "颈椎区域", "neck", "neck region"]
     },
     {
       "id": "shoulder.left",
@@ -81,11 +69,7 @@
       "parent": "upper_limb.left",
       "group": "upper_limb",
       "side": "left",
-      "aliases": [
-        "左上臂",
-        "左侧上臂",
-        "left upper arm"
-      ]
+      "aliases": ["左上臂", "左侧上臂", "left upper arm"]
     },
     {
       "id": "elbow.left",
@@ -96,12 +80,7 @@
       "parent": "upper_limb.left",
       "group": "upper_limb",
       "side": "left",
-      "aliases": [
-        "左肘",
-        "左肘部",
-        "左肘关节区域",
-        "left elbow"
-      ]
+      "aliases": ["左肘", "左肘部", "左肘关节区域", "left elbow"]
     },
     {
       "id": "forearm.left",
@@ -112,11 +91,7 @@
       "parent": "upper_limb.left",
       "group": "upper_limb",
       "side": "left",
-      "aliases": [
-        "左前臂",
-        "左侧前臂",
-        "left forearm"
-      ]
+      "aliases": ["左前臂", "左侧前臂", "left forearm"]
     },
     {
       "id": "wrist.left",
@@ -127,12 +102,7 @@
       "parent": "upper_limb.left",
       "group": "upper_limb",
       "side": "left",
-      "aliases": [
-        "左腕",
-        "左手腕",
-        "左腕部",
-        "left wrist"
-      ]
+      "aliases": ["左腕", "左手腕", "左腕部", "left wrist"]
     },
     {
       "id": "hand.left",
@@ -143,11 +113,7 @@
       "parent": "upper_limb.left",
       "group": "upper_limb",
       "side": "left",
-      "aliases": [
-        "左手",
-        "左手部",
-        "left hand"
-      ]
+      "aliases": ["左手", "左手部", "left hand"]
     },
     {
       "id": "shoulder.right",
@@ -194,11 +160,7 @@
       "parent": "upper_limb.right",
       "group": "upper_limb",
       "side": "right",
-      "aliases": [
-        "右上臂",
-        "右侧上臂",
-        "right upper arm"
-      ]
+      "aliases": ["右上臂", "右侧上臂", "right upper arm"]
     },
     {
       "id": "elbow.right",
@@ -209,12 +171,7 @@
       "parent": "upper_limb.right",
       "group": "upper_limb",
       "side": "right",
-      "aliases": [
-        "右肘",
-        "右肘部",
-        "右肘关节区域",
-        "right elbow"
-      ]
+      "aliases": ["右肘", "右肘部", "右肘关节区域", "right elbow"]
     },
     {
       "id": "forearm.right",
@@ -225,11 +182,7 @@
       "parent": "upper_limb.right",
       "group": "upper_limb",
       "side": "right",
-      "aliases": [
-        "右前臂",
-        "右侧前臂",
-        "right forearm"
-      ]
+      "aliases": ["右前臂", "右侧前臂", "right forearm"]
     },
     {
       "id": "wrist.right",
@@ -240,12 +193,7 @@
       "parent": "upper_limb.right",
       "group": "upper_limb",
       "side": "right",
-      "aliases": [
-        "右腕",
-        "右手腕",
-        "右腕部",
-        "right wrist"
-      ]
+      "aliases": ["右腕", "右手腕", "右腕部", "right wrist"]
     },
     {
       "id": "hand.right",
@@ -256,11 +204,7 @@
       "parent": "upper_limb.right",
       "group": "upper_limb",
       "side": "right",
-      "aliases": [
-        "右手",
-        "右手部",
-        "right hand"
-      ]
+      "aliases": ["右手", "右手部", "right hand"]
     },
     {
       "id": "chest",
@@ -271,13 +215,7 @@
       "parent": "torso",
       "group": "torso",
       "side": null,
-      "aliases": [
-        "胸部",
-        "胸前",
-        "胸廓",
-        "chest",
-        "thorax"
-      ]
+      "aliases": ["胸部", "胸前", "胸廓", "chest", "thorax"]
     },
     {
       "id": "abdomen",
@@ -288,13 +226,7 @@
       "parent": "torso",
       "group": "torso",
       "side": null,
-      "aliases": [
-        "腹部",
-        "腹",
-        "肚子",
-        "abdomen",
-        "abdominal region"
-      ]
+      "aliases": ["腹部", "腹", "肚子", "abdomen", "abdominal region"]
     },
     {
       "id": "upper_back",
@@ -305,13 +237,7 @@
       "parent": "torso",
       "group": "torso",
       "side": null,
-      "aliases": [
-        "上背部",
-        "背上部",
-        "胸椎区域",
-        "upper back",
-        "thoracic back"
-      ]
+      "aliases": ["上背部", "背上部", "胸椎区域", "upper back", "thoracic back"]
     },
     {
       "id": "lower_back",
@@ -343,13 +269,7 @@
       "parent": "torso",
       "group": "torso",
       "side": null,
-      "aliases": [
-        "骨盆",
-        "骨盆区域",
-        "骨盆中央",
-        "pelvis",
-        "pelvic region"
-      ]
+      "aliases": ["骨盆", "骨盆区域", "骨盆中央", "pelvis", "pelvic region"]
     },
     {
       "id": "hip.left",
@@ -360,12 +280,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左髋",
-        "左髋部",
-        "左侧髋关节区域",
-        "left hip"
-      ]
+      "aliases": ["左髋", "左髋部", "左侧髋关节区域", "left hip"]
     },
     {
       "id": "gluteal.left",
@@ -394,11 +309,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左大腿",
-        "左侧大腿",
-        "left thigh"
-      ]
+      "aliases": ["左大腿", "左侧大腿", "left thigh"]
     },
     {
       "id": "knee.left",
@@ -409,12 +320,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左膝",
-        "左膝盖",
-        "左膝关节区域",
-        "left knee"
-      ]
+      "aliases": ["左膝", "左膝盖", "左膝关节区域", "left knee"]
     },
     {
       "id": "calf.left",
@@ -425,12 +331,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左小腿",
-        "左侧小腿",
-        "left calf",
-        "left lower leg"
-      ]
+      "aliases": ["左小腿", "左侧小腿", "left calf", "left lower leg"]
     },
     {
       "id": "ankle.left",
@@ -441,12 +342,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左踝",
-        "左脚踝",
-        "左踝关节区域",
-        "left ankle"
-      ]
+      "aliases": ["左踝", "左脚踝", "左踝关节区域", "left ankle"]
     },
     {
       "id": "foot.left",
@@ -457,12 +353,7 @@
       "parent": "lower_limb.left",
       "group": "lower_limb",
       "side": "left",
-      "aliases": [
-        "左足",
-        "左脚",
-        "左足部",
-        "left foot"
-      ]
+      "aliases": ["左足", "左脚", "左足部", "left foot"]
     },
     {
       "id": "hip.right",
@@ -473,12 +364,7 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右髋",
-        "右髋部",
-        "右侧髋关节区域",
-        "right hip"
-      ]
+      "aliases": ["右髋", "右髋部", "右侧髋关节区域", "right hip"]
     },
     {
       "id": "gluteal.right",
@@ -507,11 +393,7 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右大腿",
-        "右侧大腿",
-        "right thigh"
-      ]
+      "aliases": ["右大腿", "右侧大腿", "right thigh"]
     },
     {
       "id": "knee.right",
@@ -522,12 +404,7 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右膝",
-        "右膝盖",
-        "右膝关节区域",
-        "right knee"
-      ]
+      "aliases": ["右膝", "右膝盖", "右膝关节区域", "right knee"]
     },
     {
       "id": "calf.right",
@@ -538,12 +415,7 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右小腿",
-        "右侧小腿",
-        "right calf",
-        "right lower leg"
-      ]
+      "aliases": ["右小腿", "右侧小腿", "right calf", "right lower leg"]
     },
     {
       "id": "ankle.right",
@@ -554,12 +426,7 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右踝",
-        "右脚踝",
-        "右踝关节区域",
-        "right ankle"
-      ]
+      "aliases": ["右踝", "右脚踝", "右踝关节区域", "right ankle"]
     },
     {
       "id": "foot.right",
@@ -570,407 +437,253 @@
       "parent": "lower_limb.right",
       "group": "lower_limb",
       "side": "right",
-      "aliases": [
-        "右足",
-        "右脚",
-        "右足部",
-        "right foot"
-      ]
+      "aliases": ["右足", "右脚", "右足部", "right foot"]
     }
   ],
   "ambiguousAliases": [
     {
       "alias": "肩颈",
-      "candidates": [
-        "neck",
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["neck", "shoulder.left", "shoulder.right"],
       "reason": "cross_region_scope"
     },
     {
       "alias": "颈肩",
-      "candidates": [
-        "neck",
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["neck", "shoulder.left", "shoulder.right"],
       "reason": "cross_region_scope"
     },
     {
       "alias": "肩",
-      "candidates": [
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["shoulder.left", "shoulder.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肩部",
-      "candidates": [
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["shoulder.left", "shoulder.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肩膀",
-      "candidates": [
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["shoulder.left", "shoulder.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "shoulder",
-      "candidates": [
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["shoulder.left", "shoulder.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "shoulder region",
-      "candidates": [
-        "shoulder.left",
-        "shoulder.right"
-      ],
+      "candidates": ["shoulder.left", "shoulder.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肩胛",
-      "candidates": [
-        "scapular.left",
-        "scapular.right"
-      ],
+      "candidates": ["scapular.left", "scapular.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肩胛区",
-      "candidates": [
-        "scapular.left",
-        "scapular.right"
-      ],
+      "candidates": ["scapular.left", "scapular.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "shoulder blade",
-      "candidates": [
-        "scapular.left",
-        "scapular.right"
-      ],
+      "candidates": ["scapular.left", "scapular.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "scapular region",
-      "candidates": [
-        "scapular.left",
-        "scapular.right"
-      ],
+      "candidates": ["scapular.left", "scapular.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "上臂",
-      "candidates": [
-        "upper_arm.left",
-        "upper_arm.right"
-      ],
+      "candidates": ["upper_arm.left", "upper_arm.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "upper arm",
-      "candidates": [
-        "upper_arm.left",
-        "upper_arm.right"
-      ],
+      "candidates": ["upper_arm.left", "upper_arm.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肘",
-      "candidates": [
-        "elbow.left",
-        "elbow.right"
-      ],
+      "candidates": ["elbow.left", "elbow.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "肘部",
-      "candidates": [
-        "elbow.left",
-        "elbow.right"
-      ],
+      "candidates": ["elbow.left", "elbow.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "elbow",
-      "candidates": [
-        "elbow.left",
-        "elbow.right"
-      ],
+      "candidates": ["elbow.left", "elbow.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "前臂",
-      "candidates": [
-        "forearm.left",
-        "forearm.right"
-      ],
+      "candidates": ["forearm.left", "forearm.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "forearm",
-      "candidates": [
-        "forearm.left",
-        "forearm.right"
-      ],
+      "candidates": ["forearm.left", "forearm.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "手腕",
-      "candidates": [
-        "wrist.left",
-        "wrist.right"
-      ],
+      "candidates": ["wrist.left", "wrist.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "腕",
-      "candidates": [
-        "wrist.left",
-        "wrist.right"
-      ],
+      "candidates": ["wrist.left", "wrist.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "wrist",
-      "candidates": [
-        "wrist.left",
-        "wrist.right"
-      ],
+      "candidates": ["wrist.left", "wrist.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "手",
-      "candidates": [
-        "hand.left",
-        "hand.right"
-      ],
+      "candidates": ["hand.left", "hand.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "手部",
-      "candidates": [
-        "hand.left",
-        "hand.right"
-      ],
+      "candidates": ["hand.left", "hand.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "hand",
-      "candidates": [
-        "hand.left",
-        "hand.right"
-      ],
+      "candidates": ["hand.left", "hand.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "髋",
-      "candidates": [
-        "hip.left",
-        "hip.right"
-      ],
+      "candidates": ["hip.left", "hip.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "髋部",
-      "candidates": [
-        "hip.left",
-        "hip.right"
-      ],
+      "candidates": ["hip.left", "hip.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "hip",
-      "candidates": [
-        "hip.left",
-        "hip.right"
-      ],
+      "candidates": ["hip.left", "hip.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "臀",
-      "candidates": [
-        "gluteal.left",
-        "gluteal.right"
-      ],
+      "candidates": ["gluteal.left", "gluteal.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "臀部",
-      "candidates": [
-        "gluteal.left",
-        "gluteal.right"
-      ],
+      "candidates": ["gluteal.left", "gluteal.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "buttock",
-      "candidates": [
-        "gluteal.left",
-        "gluteal.right"
-      ],
+      "candidates": ["gluteal.left", "gluteal.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "gluteal region",
-      "candidates": [
-        "gluteal.left",
-        "gluteal.right"
-      ],
+      "candidates": ["gluteal.left", "gluteal.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "大腿",
-      "candidates": [
-        "thigh.left",
-        "thigh.right"
-      ],
+      "candidates": ["thigh.left", "thigh.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "thigh",
-      "candidates": [
-        "thigh.left",
-        "thigh.right"
-      ],
+      "candidates": ["thigh.left", "thigh.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "膝",
-      "candidates": [
-        "knee.left",
-        "knee.right"
-      ],
+      "candidates": ["knee.left", "knee.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "膝盖",
-      "candidates": [
-        "knee.left",
-        "knee.right"
-      ],
+      "candidates": ["knee.left", "knee.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "knee",
-      "candidates": [
-        "knee.left",
-        "knee.right"
-      ],
+      "candidates": ["knee.left", "knee.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "小腿",
-      "candidates": [
-        "calf.left",
-        "calf.right"
-      ],
+      "candidates": ["calf.left", "calf.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "calf",
-      "candidates": [
-        "calf.left",
-        "calf.right"
-      ],
+      "candidates": ["calf.left", "calf.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "lower leg",
-      "candidates": [
-        "calf.left",
-        "calf.right"
-      ],
+      "candidates": ["calf.left", "calf.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "踝",
-      "candidates": [
-        "ankle.left",
-        "ankle.right"
-      ],
+      "candidates": ["ankle.left", "ankle.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "脚踝",
-      "candidates": [
-        "ankle.left",
-        "ankle.right"
-      ],
+      "candidates": ["ankle.left", "ankle.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "ankle",
-      "candidates": [
-        "ankle.left",
-        "ankle.right"
-      ],
+      "candidates": ["ankle.left", "ankle.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "脚",
-      "candidates": [
-        "foot.left",
-        "foot.right"
-      ],
+      "candidates": ["foot.left", "foot.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "足",
-      "candidates": [
-        "foot.left",
-        "foot.right"
-      ],
+      "candidates": ["foot.left", "foot.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "foot",
-      "candidates": [
-        "foot.left",
-        "foot.right"
-      ],
+      "candidates": ["foot.left", "foot.right"],
       "reason": "laterality_or_region_scope_missing"
     },
     {
       "alias": "背",
-      "candidates": [
-        "upper_back",
-        "lower_back"
-      ],
+      "candidates": ["upper_back", "lower_back"],
       "reason": "vertical_scope_missing"
     },
     {
       "alias": "背部",
-      "candidates": [
-        "upper_back",
-        "lower_back"
-      ],
+      "candidates": ["upper_back", "lower_back"],
       "reason": "vertical_scope_missing"
     },
     {
       "alias": "back",
-      "candidates": [
-        "upper_back",
-        "lower_back"
-      ],
+      "candidates": ["upper_back", "lower_back"],
       "reason": "vertical_scope_missing"
     },
     {
       "alias": "back region",
-      "candidates": [
-        "upper_back",
-        "lower_back"
-      ],
+      "candidates": ["upper_back", "lower_back"],
       "reason": "vertical_scope_missing"
     }
   ]

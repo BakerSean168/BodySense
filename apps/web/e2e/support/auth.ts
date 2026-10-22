@@ -10,12 +10,11 @@ export async function refreshBrowserAccessToken(
   apiBase: string,
 ): Promise<string> {
   const origin = new URL(page.url()).origin;
-  const response = await page.context().request.post(
-    `${apiBase}/api/v1/auth/refresh`,
-    {
+  const response = await page
+    .context()
+    .request.post(`${apiBase}/api/v1/auth/refresh`, {
       headers: { Origin: origin },
-    },
-  );
+    });
   const body = await response.text();
   expect(
     response.ok(),

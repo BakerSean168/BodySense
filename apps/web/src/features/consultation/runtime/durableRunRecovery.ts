@@ -24,11 +24,7 @@ interface RecoverDurableRunOptions {
 
 export interface DurableRunRecoveryResult {
   maxSeq: number;
-  terminalType:
-    | "stream.done"
-    | "stream.error"
-    | "run.failed"
-    | "run.cancelled";
+  terminalType: "stream.done" | "stream.error" | "run.failed" | "run.cancelled";
 }
 
 const TERMINAL_TYPES = new Set<StreamEvent["type"]>([
@@ -109,9 +105,7 @@ export async function recoverDurableRunEvents({
     }
   }
 
-  const detail = lastFetchError?.message
-    ? `：${lastFetchError.message}`
-    : "";
+  const detail = lastFetchError?.message ? `：${lastFetchError.message}` : "";
   throw new Error(
     `恢复本次执行超时。服务可能仍在恢复中，请稍后继续输入或重新加载${detail}`,
   );

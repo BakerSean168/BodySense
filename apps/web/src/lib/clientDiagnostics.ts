@@ -2,7 +2,9 @@ import { recordClientDiagnostic } from "@/generated/api/bodysense";
 import { openApiAuthFetch } from "@/lib/openapi-client";
 
 export type ClientDiagnosticCategory =
-  "chat.transport" | "body3d.viewer" | "app.runtime";
+  | "chat.transport"
+  | "body3d.viewer"
+  | "app.runtime";
 
 export type ClientDiagnosticAttributeValue = string | number | boolean | null;
 

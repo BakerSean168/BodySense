@@ -31,7 +31,11 @@ import {
 
 export type ProposalChoice = "accept" | "reject";
 export type ProposalUiState =
-  "undecided" | "pending" | "rejected" | "changed" | "committed";
+  | "undecided"
+  | "pending"
+  | "rejected"
+  | "changed"
+  | "committed";
 
 export const PROPOSAL_STATE_LABELS: Record<ProposalUiState, string> = {
   undecided: "待你决定",

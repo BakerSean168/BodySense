@@ -71,7 +71,8 @@ export function PrivacyPanel({ onErasureAccepted }: PrivacyPanelProps) {
           <div>
             <h2 className="font-semibold text-slate-900">数据边界说明</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              删除会话只会清除聊天历史和对应分享，不会删除 BodyState、诊断分析、治疗方案、训练记录、结果或上传文件。
+              删除会话只会清除聊天历史和对应分享，不会删除
+              BodyState、诊断分析、治疗方案、训练记录、结果或上传文件。
               如需清除全部 BodySense 数据与账号，请使用下面的完整数据删除流程。
             </p>
           </div>
@@ -113,7 +114,8 @@ export function PrivacyPanel({ onErasureAccepted }: PrivacyPanelProps) {
           {plan && (
             <div className="space-y-4 text-sm">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-700">
-                当前 dry-run 识别到 {directRecordCount} 条直接归属记录；其级联子记录和用户上传对象也会一并删除。
+                当前 dry-run 识别到 {directRecordCount}{" "}
+                条直接归属记录；其级联子记录和用户上传对象也会一并删除。
               </div>
               <ul className="list-disc space-y-1 pl-5 text-slate-600">
                 <li>账号、身体档案和 BodyState</li>

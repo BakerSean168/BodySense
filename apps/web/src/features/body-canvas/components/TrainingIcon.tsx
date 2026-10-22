@@ -1,7 +1,10 @@
 import type { SVGProps } from "react";
 
 /** Penpot "Icon / Training": a level dumbbell (lucide's is diagonal). */
-export function TrainingIcon({ size = 18, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
+export function TrainingIcon({
+  size = 18,
+  ...props
+}: SVGProps<SVGSVGElement> & { size?: number }) {
   return (
     <svg
       width={size}

@@ -157,7 +157,9 @@ describe("recoverDurableRunEvents", () => {
       handlers: {},
       timeoutMs: 100,
       now: () => now,
-      sleep: async (ms) => { now += ms; },
+      sleep: async (ms) => {
+        now += ms;
+      },
     });
     expect(result).toEqual({ maxSeq: 7, terminalType: "run.cancelled" });
   });
@@ -179,8 +181,6 @@ describe("recoverDurableRunEvents", () => {
           now += ms;
         },
       }),
-    ).rejects.toThrow(
-      "恢复本次执行超时",
-    );
+    ).rejects.toThrow("恢复本次执行超时");
   });
 });

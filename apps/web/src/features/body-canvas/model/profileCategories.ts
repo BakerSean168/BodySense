@@ -16,7 +16,11 @@
  * or generic explanation.
  */
 export type ProfileCategoryId =
-  "records" | "equipment" | "media" | "reports" | "habits";
+  | "records"
+  | "equipment"
+  | "media"
+  | "reports"
+  | "habits";
 
 export interface ProfileCategoryMeta {
   id: ProfileCategoryId;
@@ -96,7 +100,12 @@ export function formatOcrStatus(status: string): string {
 
 /** Habits reuses the lifestyle API sections; each section is user-editable. */
 export type HabitSectionKey =
-  "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
+  | "activity"
+  | "sleep"
+  | "exercise"
+  | "nutrition"
+  | "substances"
+  | "recovery";
 
 export interface HabitSectionMeta {
   key: HabitSectionKey;

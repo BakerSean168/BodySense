@@ -59,11 +59,19 @@ export function BodyMetricsPanel() {
     if (!snapshot) return;
     const heightValue = Number(height);
     const weightValue = Number(weight);
-    if (!Number.isFinite(heightValue) || heightValue < 50 || heightValue > 250) {
+    if (
+      !Number.isFinite(heightValue) ||
+      heightValue < 50 ||
+      heightValue > 250
+    ) {
       setError("身高必须在 50-250 cm 之间");
       return;
     }
-    if (!Number.isFinite(weightValue) || weightValue < 20 || weightValue > 300) {
+    if (
+      !Number.isFinite(weightValue) ||
+      weightValue < 20 ||
+      weightValue > 300
+    ) {
       setError("体重必须在 20-300 kg 之间");
       return;
     }
@@ -85,7 +93,11 @@ export function BodyMetricsPanel() {
   };
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">正在读取身体测量…</div>;
+    return (
+      <div className="py-10 text-center text-sm text-muted-foreground">
+        正在读取身体测量…
+      </div>
+    );
   }
 
   return (
@@ -94,7 +106,9 @@ export function BodyMetricsPanel() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">身体测量</h2>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            身高、体重属于 BodyState Observation，而不是身份字段。更新后会保留上一条测量记录，BMI 由当前测量即时计算。
+            身高、体重属于 BodyState
+            Observation，而不是身份字段。更新后会保留上一条测量记录，BMI
+            由当前测量即时计算。
           </p>
         </div>
         {!editing ? (
@@ -140,7 +154,11 @@ export function BodyMetricsPanel() {
             </label>
           </div>
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" disabled={saving} onClick={() => setEditing(false)}>
+            <Button
+              variant="ghost"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+            >
               取消
             </Button>
             <Button isLoading={saving} onClick={() => void save()}>
@@ -152,11 +170,15 @@ export function BodyMetricsPanel() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">身高</div>
-            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.height, unit)}</div>
+            <div className="mt-2 text-base font-semibold text-foreground">
+              {metricLabel(snapshot?.height, unit)}
+            </div>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">体重</div>
-            <div className="mt-2 text-base font-semibold text-foreground">{metricLabel(snapshot?.weight, unit)}</div>
+            <div className="mt-2 text-base font-semibold text-foreground">
+              {metricLabel(snapshot?.weight, unit)}
+            </div>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             <div className="text-xs text-muted-foreground">BMI</div>

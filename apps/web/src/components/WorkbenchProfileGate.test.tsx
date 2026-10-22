@@ -58,7 +58,11 @@ describe("WorkbenchProfileGate", () => {
 
   it("routes first-time users to onboarding without a dashboard hop", async () => {
     const fetchProfile = vi.fn(async () => {
-      useProfileStore.setState({ profile: null, error: null, isLoading: false });
+      useProfileStore.setState({
+        profile: null,
+        error: null,
+        isLoading: false,
+      });
     });
     act(() => useProfileStore.setState({ fetchProfile }));
 

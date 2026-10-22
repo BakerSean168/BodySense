@@ -2,7 +2,10 @@ import type { AssetErasureReceipt } from "@/features/profile/services/assetErasu
 
 /** Receipt phases the user sees; `erased` is shown only for a fully verified receipt. */
 export type AssetErasurePhase =
-  "in_progress" | "outstanding" | "review" | "erased";
+  | "in_progress"
+  | "outstanding"
+  | "review"
+  | "erased";
 
 export interface AssetErasureLine {
   target: string;

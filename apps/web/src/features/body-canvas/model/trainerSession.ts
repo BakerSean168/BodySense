@@ -94,17 +94,28 @@ export interface TrainerSessionView {
 
 /** Effective receipts: corrections and the receipts they retract drop out. */
 export function effectiveActions(actions: readonly Action[]): Action[] {
-  const retracted = new Set(actions.flatMap((action) => (action.correctsActionId ? [action.correctsActionId] : [])));
-  return actions.filter((action) => action.kind !== "corrected" && !retracted.has(action.actionId));
+  const retracted = new Set(
+    actions.flatMap((action) =>
+      action.correctsActionId ? [action.correctsActionId] : [],
+    ),
+  );
+  return actions.filter(
+    (action) => action.kind !== "corrected" && !retracted.has(action.actionId),
+  );
 }
 
 function secondsBetween(from: string, to: number): number {
   const start = Date.parse(from);
-  return Number.isFinite(start) ? Math.max(0, Math.floor((to - start) / 1000)) : 0;
+  return Number.isFinite(start)
+    ? Math.max(0, Math.floor((to - start) / 1000))
+    : 0;
 }
 
 /** Paused time is derivable from the pause/resume receipts. */
-export function elapsedTrainingSeconds(session: TrainingSessionRecord, now: Date): number {
+export function elapsedTrainingSeconds(
+  session: TrainingSessionRecord,
+  now: Date,
+): number {
   const end = session.endedAt ? Date.parse(session.endedAt) : now.getTime();
   let paused = 0;
   let pausedAt: number | null = null;
@@ -119,7 +130,9 @@ export function elapsedTrainingSeconds(session: TrainingSessionRecord, now: Date
   }
   if (pausedAt !== null) paused += end - pausedAt;
   const started = Date.parse(session.startedAt);
-  return Number.isFinite(started) ? Math.max(0, Math.floor((end - started - paused) / 1000)) : 0;
+  return Number.isFinite(started)
+    ? Math.max(0, Math.floor((end - started - paused) / 1000))
+    : 0;
 }
 
 export function formatClock(seconds: number): string {
@@ -144,7 +157,9 @@ export function projectTrainerSession(
   session: TrainingSessionRecord,
   now: Date,
 ): TrainerSessionView {
-  const template = pinned?.sessions.find((item) => item.templateId === session.templateId);
+  const template = pinned?.sessions.find(
+    (item) => item.templateId === session.templateId,
+  );
   const effective = effectiveActions(session.actions);
   const exercises: TrainerExerciseView[] = [];
   const byId = new Map<string, Exercise>();
@@ -152,7 +167,9 @@ export function projectTrainerSession(
     stage.exercises.forEach((exercise, index) => {
       byId.set(exercise.planExerciseId, exercise);
       const wholeSkip = effective.find(
-        (action) => action.planExerciseId === exercise.planExerciseId && action.scope === "exercise",
+        (action) =>
+          action.planExerciseId === exercise.planExerciseId &&
+          action.scope === "exercise",
       );
       const receipts = Array.from({ length: exercise.sets }, (_, setIndex) =>
         effective.find(
@@ -165,7 +182,11 @@ export function projectTrainerSession(
       // A whole-exercise skip covers the sets still open; recorded sets keep
       // their own receipts.
       const sets: SetState[] = receipts.map((receipt) =>
-        receipt ? (receipt.kind as "performed" | "skipped") : wholeSkip ? "skipped" : "pending",
+        receipt
+          ? (receipt.kind as "performed" | "skipped")
+          : wholeSkip
+            ? "skipped"
+            : "pending",
       );
       const pending = sets.filter((state) => state === "pending").length;
       exercises.push({
@@ -180,21 +201,37 @@ export function projectTrainerSession(
         sets,
         setActionIds: receipts.map((receipt) => receipt?.actionId ?? null),
         exerciseSkipActionId: wholeSkip?.actionId ?? null,
-        progress: pending === 0 ? "done" : pending === sets.length ? "pending" : "partial",
+        progress:
+          pending === 0
+            ? "done"
+            : pending === sets.length
+              ? "pending"
+              : "partial",
         performedCount: sets.filter((state) => state === "performed").length,
       });
     });
   }
 
-  const currentIndex = exercises.findIndex((exercise) => exercise.sets.includes("pending"));
+  const currentIndex = exercises.findIndex((exercise) =>
+    exercise.sets.includes("pending"),
+  );
   let current: TrainerCurrentSet | null = null;
   if (currentIndex >= 0) {
     const exercise = exercises[currentIndex]!;
     const { target } = exercise;
     const setNumber = exercise.sets.indexOf("pending") + 1;
-    const actualUnit = target.kind === "repetitions" ? "reps" : target.kind === "duration" ? "seconds" : null;
+    const actualUnit =
+      target.kind === "repetitions"
+        ? "reps"
+        : target.kind === "duration"
+          ? "seconds"
+          : null;
     // The newest retracted receipt of this very set, if the user corrected it.
-    const retracted = new Set(session.actions.flatMap((action) => (action.correctsActionId ? [action.correctsActionId] : [])));
+    const retracted = new Set(
+      session.actions.flatMap((action) =>
+        action.correctsActionId ? [action.correctsActionId] : [],
+      ),
+    );
     const previous = [...session.actions]
       .filter(
         (action) =>
@@ -229,8 +266,12 @@ export function projectTrainerSession(
 
   // The newest receipt of any kind: a correction is shown as such, and an
   // effective receipt can be corrected from its banner.
-  const lastAction = [...session.actions].sort((a, b) => b.sessionRevision - a.sessionRevision)[0];
-  const lastExercise = lastAction ? byId.get(lastAction.planExerciseId) : undefined;
+  const lastAction = [...session.actions].sort(
+    (a, b) => b.sessionRevision - a.sessionRevision,
+  )[0];
+  const lastExercise = lastAction
+    ? byId.get(lastAction.planExerciseId)
+    : undefined;
   const last: TrainerLastRecord | null =
     lastAction && lastExercise
       ? {
@@ -247,8 +288,14 @@ export function projectTrainerSession(
         }
       : null;
   const restRemainingSeconds =
-    session.state === "in_progress" && last?.kind === "performed" && last.restSeconds && current
-      ? Math.max(0, last.restSeconds - secondsBetween(last.recordedAt, now.getTime()))
+    session.state === "in_progress" &&
+    last?.kind === "performed" &&
+    last.restSeconds &&
+    current
+      ? Math.max(
+          0,
+          last.restSeconds - secondsBetween(last.recordedAt, now.getTime()),
+        )
       : 0;
 
   const gate = projectGate(plan.executionGate);
@@ -258,16 +305,21 @@ export function projectTrainerSession(
     endedReason: session.endedReason ?? null,
     templateTitle: template?.title ?? "",
     gate,
-    canRecord: session.state === "in_progress" && gate.permits && template !== undefined,
+    canRecord:
+      session.state === "in_progress" && gate.permits && template !== undefined,
     exercises,
     current,
     next:
       currentIndex >= 0
-        ? (exercises.slice(currentIndex + 1).find((exercise) => exercise.progress !== "done") ?? null)
+        ? (exercises
+            .slice(currentIndex + 1)
+            .find((exercise) => exercise.progress !== "done") ?? null)
         : null,
     last,
     allRecorded: exercises.length > 0 && currentIndex < 0,
-    feedback: session.feedback ? { text: session.feedback.text, recordedAt: session.feedback.recordedAt } : null,
+    feedback: session.feedback
+      ? { text: session.feedback.text, recordedAt: session.feedback.recordedAt }
+      : null,
     elapsedSeconds: elapsedTrainingSeconds(session, now),
     restRemainingSeconds,
   };

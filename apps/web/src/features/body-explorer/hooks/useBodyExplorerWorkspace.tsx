@@ -1,8 +1,6 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { useCallback, useMemo } from "react";
-import type {
-  ConsultationSpatialContext,
-} from "@/features/consultation/types/consultation";
+import type { ConsultationSpatialContext } from "@/features/consultation/types/consultation";
 import type { BodyExplorerSemanticBridge } from "../components/BodyExplorer";
 import { BodyRegionNavigator } from "../components/BodyRegionNavigator";
 import { BodyRegionStatusSummary } from "../components/BodyRegionStatusSummary";

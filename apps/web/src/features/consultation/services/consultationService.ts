@@ -1,7 +1,4 @@
-import {
-  parseExtractedInfo,
-  parseStreamEvent,
-} from "@bodysense/contracts";
+import { parseExtractedInfo, parseStreamEvent } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import {
   cancelConsultationRun as cancelConsultationRunOpenApi,

@@ -1,8 +1,5 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
-import {
-  selectBodyZoneSummaries,
-  type BodyZone,
-} from "../../model/bodyMap";
+import { selectBodyZoneSummaries, type BodyZone } from "../../model/bodyMap";
 import { cn } from "@/lib/utils";
 
 interface BodyOverviewProps {
@@ -34,7 +31,6 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
       <h2 id="body-overview-title" className="sr-only">
         身体区域状态
       </h2>
-
 
       <div className="relative mx-auto mt-2 w-full max-w-[252px]">
         <svg
@@ -117,7 +113,9 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
             {snapshot ? "还没有关联区域的陈述" : "身体记录尚未读取"}
           </p>
           <p className="mx-auto mt-1 max-w-[240px] text-xs leading-[1.55] text-muted-foreground">
-            {snapshot ? "和 BodySense 说说最近的真实感受，保存区域关联后会显示在这里。" : "暂时不能判断是否存在关联记录。"}
+            {snapshot
+              ? "和 BodySense 说说最近的真实感受，保存区域关联后会显示在这里。"
+              : "暂时不能判断是否存在关联记录。"}
           </p>
         </div>
       ) : (
@@ -136,9 +134,7 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
                   · {summary.count} 项
                 </span>
               </span>
-              <span className="font-medium">
-                有陈述
-              </span>
+              <span className="font-medium">有陈述</span>
             </li>
           ))}
         </ul>

@@ -3,10 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/web/src",
   "projectType": "application",
-  "tags": [
-    "scope:web",
-    "type:app"
-  ],
+  "tags": ["scope:web", "type:app"],
   "targets": {
     "typecheck": {
       "executor": "nx:run-commands",

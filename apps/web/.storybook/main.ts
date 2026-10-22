@@ -10,8 +10,14 @@ const config: StorybookConfig = {
     ...viteConfig,
     // Stories have independent entry/chunk graphs; application budgets remain
     // enforced by the unchanged production Vite build.
-    plugins: viteConfig.plugins?.filter((plugin) =>
-      !(plugin && typeof plugin === "object" && "name" in plugin && plugin.name === "bodysense-web-chunk-budgets"),
+    plugins: viteConfig.plugins?.filter(
+      (plugin) =>
+        !(
+          plugin &&
+          typeof plugin === "object" &&
+          "name" in plugin &&
+          plugin.name === "bodysense-web-chunk-budgets"
+        ),
     ),
   }),
   framework: {

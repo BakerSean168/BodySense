@@ -75,7 +75,9 @@ const FALLBACK_TIME_ZONES = [
 ];
 
 /** IANA zones the browser can format, with the given zones always included. */
-export function selectableTimeZones(...include: Array<string | undefined>): string[] {
+export function selectableTimeZones(
+  ...include: Array<string | undefined>
+): string[] {
   let zones: string[] = FALLBACK_TIME_ZONES;
   const intl = Intl as typeof Intl & {
     supportedValuesOf?: (key: "timeZone") => string[];
@@ -109,9 +111,10 @@ export function formatInstantInZone(
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("zh-CN", { ...options, timeZone: zone }).format(
-    date,
-  );
+  return new Intl.DateTimeFormat("zh-CN", {
+    ...options,
+    timeZone: zone,
+  }).format(date);
 }
 
 export interface MeasurementDisplay {
@@ -150,7 +153,10 @@ export function formatMeasurement(
     return { text: `${feet} ft ${inches} in`, original: recorded };
   }
   if (normalized === "kg") {
-    return { text: `${trimNumber(value * 2.20462262, 1)} lb`, original: recorded };
+    return {
+      text: `${trimNumber(value * 2.20462262, 1)} lb`,
+      original: recorded,
+    };
   }
   return { text: recorded, original: null };
 }

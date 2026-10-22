@@ -51,16 +51,31 @@ function enforceChunkBudgets(): Plugin {
           const onlyThreeModules = Object.keys(output.modules).every((id) =>
             /node_modules[\\/]three[\\/]/.test(id),
           );
-          const staticallyReachableFromEntry = (fileName: string, seen = new Set<string>()): boolean => {
+          const staticallyReachableFromEntry = (
+            fileName: string,
+            seen = new Set<string>(),
+          ): boolean => {
             if (seen.has(fileName)) return false;
             seen.add(fileName);
             return Object.values(bundle).some((candidate) => {
-              if (candidate.type !== "chunk" || !candidate.imports.includes(fileName)) return false;
-              return candidate.isEntry || staticallyReachableFromEntry(candidate.fileName, seen);
+              if (
+                candidate.type !== "chunk" ||
+                !candidate.imports.includes(fileName)
+              )
+                return false;
+              return (
+                candidate.isEntry ||
+                staticallyReachableFromEntry(candidate.fileName, seen)
+              );
             });
           };
           const gzipBytes = gzipSync(output.code).byteLength;
-          if (!onlyThreeModules || staticallyReachableFromEntry(output.fileName) || rawBytes > body3DThreeRawLimit || gzipBytes > body3DThreeGzipLimit) {
+          if (
+            !onlyThreeModules ||
+            staticallyReachableFromEntry(output.fileName) ||
+            rawBytes > body3DThreeRawLimit ||
+            gzipBytes > body3DThreeGzipLimit
+          ) {
             this.error(
               `Body3DThreeRuntime must remain Three-only, lazy-only, and within its explicit budget: ` +
                 `${rawBytes} raw / ${gzipBytes} gzip bytes.`,

@@ -20,7 +20,9 @@ export interface Outcome {
   notes: string;
   association_statement: string;
   causality_level:
-    "association_only" | "user_attributed" | "clinician_attributed";
+    | "association_only"
+    | "user_attributed"
+    | "clinician_attributed";
   occurred_at: string;
   body_state_revision?: number | null;
   created_at: string;

@@ -24,8 +24,8 @@ export function ProfileView({ profile, onEdit }: ProfileViewProps) {
         <div>
           <h2 className="text-lg font-semibold text-foreground">基本身份</h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里只保存相对稳定、不会频繁变化的身份背景。身体测量、生活方式、伤病与症状由 BodyState
-            持续记录并保留变化历史。
+            这里只保存相对稳定、不会频繁变化的身份背景。身体测量、生活方式、伤病与症状由
+            BodyState 持续记录并保留变化历史。
           </p>
         </div>
         <button
@@ -39,19 +39,27 @@ export function ProfileView({ profile, onEdit }: ProfileViewProps) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
-          <div className="text-xs font-medium text-muted-foreground">自报性别</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            自报性别
+          </div>
           <div className="mt-2 text-base font-semibold text-foreground">
-            {profile.gender ? GENDER_LABELS[profile.gender] || profile.gender : "未填写"}
+            {profile.gender
+              ? GENDER_LABELS[profile.gender] || profile.gender
+              : "未填写"}
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
-          <div className="text-xs font-medium text-muted-foreground">出生日期</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            出生日期
+          </div>
           <div className="mt-2 text-base font-semibold text-foreground">
             {formatBirthDate(profile.birth_date)}
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
-          <div className="text-xs font-medium text-muted-foreground">当前年龄</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            当前年龄
+          </div>
           <div className="mt-2 text-base font-semibold text-foreground">
             {profile.age_years != null ? `${profile.age_years} 岁` : "未计算"}
           </div>

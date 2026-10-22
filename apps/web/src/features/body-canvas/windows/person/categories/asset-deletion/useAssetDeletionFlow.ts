@@ -12,7 +12,11 @@ import { useUploadStore } from "@/stores/uploadStore";
 import type { ProfileUploadLike } from "../../../../model/profileCategories";
 
 export type AssetDeletionScene =
-  "scope" | "confirm-source" | "confirm-erase" | "source-removed" | "receipt";
+  | "scope"
+  | "confirm-source"
+  | "confirm-erase"
+  | "source-removed"
+  | "receipt";
 
 /**
  * Keep erasure commands and the single idempotency key mounted across all

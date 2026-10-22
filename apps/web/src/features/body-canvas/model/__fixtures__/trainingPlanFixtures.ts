@@ -11,9 +11,13 @@ export const CREATE_PROPOSAL_ID = "55555555-5555-4555-8555-555555555555";
 export const NOW = new Date("2026-10-18T12:00:00+08:00");
 
 type Content = TrainingPlanRecord["currentContent"];
-type Exercise = Content["sessions"][number]["stages"][number]["exercises"][number];
+type Exercise =
+  Content["sessions"][number]["stages"][number]["exercises"][number];
 
-export function exercise(overrides: Partial<Exercise> & Pick<Exercise, "planExerciseId" | "nameSnapshot">): Exercise {
+export function exercise(
+  overrides: Partial<Exercise> &
+    Pick<Exercise, "planExerciseId" | "nameSnapshot">,
+): Exercise {
   return {
     exerciseId: overrides.planExerciseId,
     sets: 3,
@@ -22,11 +26,28 @@ export function exercise(overrides: Partial<Exercise> & Pick<Exercise, "planExer
   };
 }
 
-export function makeContent(main: Exercise[] = [
-  exercise({ planExerciseId: "bridge", nameSnapshot: "臀桥", restSeconds: 45 }),
-  exercise({ planExerciseId: "wall-sit", nameSnapshot: "靠墙静蹲", target: { kind: "duration", seconds: 30 }, restSeconds: 60 }),
-  exercise({ planExerciseId: "band-walk", nameSnapshot: "弹力带侧走", sets: 2, restSeconds: 45, side: "alternating" }),
-]): Content {
+export function makeContent(
+  main: Exercise[] = [
+    exercise({
+      planExerciseId: "bridge",
+      nameSnapshot: "臀桥",
+      restSeconds: 45,
+    }),
+    exercise({
+      planExerciseId: "wall-sit",
+      nameSnapshot: "靠墙静蹲",
+      target: { kind: "duration", seconds: 30 },
+      restSeconds: 60,
+    }),
+    exercise({
+      planExerciseId: "band-walk",
+      nameSnapshot: "弹力带侧走",
+      sets: 2,
+      restSeconds: 45,
+      side: "alternating",
+    }),
+  ],
+): Content {
   return {
     sessions: [
       {
@@ -35,19 +56,41 @@ export function makeContent(main: Exercise[] = [
         stages: [
           {
             phase: "warmup",
-            exercises: [exercise({ planExerciseId: "cat-cow", nameSnapshot: "猫牛式", sets: 1, target: { kind: "repetitions", min: 10 } })],
+            exercises: [
+              exercise({
+                planExerciseId: "cat-cow",
+                nameSnapshot: "猫牛式",
+                sets: 1,
+                target: { kind: "repetitions", min: 10 },
+              }),
+            ],
           },
           { phase: "main", exercises: main },
           {
             phase: "cooldown",
-            exercises: [exercise({ planExerciseId: "quad", nameSnapshot: "股四头肌拉伸", sets: 1, target: { kind: "duration", seconds: 30 }, side: "both" })],
+            exercises: [
+              exercise({
+                planExerciseId: "quad",
+                nameSnapshot: "股四头肌拉伸",
+                sets: 1,
+                target: { kind: "duration", seconds: 30 },
+                side: "both",
+              }),
+            ],
           },
         ],
       },
       {
         templateId: "b",
         title: "B · 进阶课",
-        stages: [{ phase: "main", exercises: [exercise({ planExerciseId: "lunge", nameSnapshot: "弓步蹲" })] }],
+        stages: [
+          {
+            phase: "main",
+            exercises: [
+              exercise({ planExerciseId: "lunge", nameSnapshot: "弓步蹲" }),
+            ],
+          },
+        ],
       },
     ],
     frequency: { sessionsPerWeek: 3 },
@@ -56,7 +99,9 @@ export function makeContent(main: Exercise[] = [
   };
 }
 
-export function makePlan(overrides: Partial<TrainingPlanRecord> = {}): TrainingPlanRecord {
+export function makePlan(
+  overrides: Partial<TrainingPlanRecord> = {},
+): TrainingPlanRecord {
   return {
     planId: PLAN_ID,
     title: "日常活动计划",
@@ -85,14 +130,38 @@ export function makePlan(overrides: Partial<TrainingPlanRecord> = {}): TrainingP
 /** The Penpot Proposal board: 臀桥 3×12 → 3×15, add 死虫式. */
 export function updatedContent(): Content {
   return makeContent([
-    exercise({ planExerciseId: "bridge", nameSnapshot: "臀桥", target: { kind: "repetitions", min: 15 }, restSeconds: 45 }),
-    exercise({ planExerciseId: "dead-bug", nameSnapshot: "死虫式", sets: 2, target: { kind: "repetitions", min: 10 }, restSeconds: 30 }),
-    exercise({ planExerciseId: "wall-sit", nameSnapshot: "靠墙静蹲", target: { kind: "duration", seconds: 30 }, restSeconds: 60 }),
-    exercise({ planExerciseId: "band-walk", nameSnapshot: "弹力带侧走", sets: 2, restSeconds: 45, side: "alternating" }),
+    exercise({
+      planExerciseId: "bridge",
+      nameSnapshot: "臀桥",
+      target: { kind: "repetitions", min: 15 },
+      restSeconds: 45,
+    }),
+    exercise({
+      planExerciseId: "dead-bug",
+      nameSnapshot: "死虫式",
+      sets: 2,
+      target: { kind: "repetitions", min: 10 },
+      restSeconds: 30,
+    }),
+    exercise({
+      planExerciseId: "wall-sit",
+      nameSnapshot: "靠墙静蹲",
+      target: { kind: "duration", seconds: 30 },
+      restSeconds: 60,
+    }),
+    exercise({
+      planExerciseId: "band-walk",
+      nameSnapshot: "弹力带侧走",
+      sets: 2,
+      restSeconds: 45,
+      side: "alternating",
+    }),
   ]);
 }
 
-export function makeProposal(overrides: Partial<PlanProposalRecord> = {}): PlanProposalRecord {
+export function makeProposal(
+  overrides: Partial<PlanProposalRecord> = {},
+): PlanProposalRecord {
   return {
     proposalId: PROPOSAL_ID,
     kind: "update",

@@ -16,11 +16,7 @@
   "regions": {
     "head": {
       "preferredFocusAnatomyId": "brainstem",
-      "anatomyIds": [
-        "brainstem",
-        "cerebrum",
-        "facial-expression-muscles"
-      ],
+      "anatomyIds": ["brainstem", "cerebrum", "facial-expression-muscles"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -30,10 +26,7 @@
     },
     "neck": {
       "preferredFocusAnatomyId": "skeleton-vertebra-c4",
-      "anatomyIds": [
-        "skeleton-vertebra-c4",
-        "neck-muscles"
-      ],
+      "anatomyIds": ["skeleton-vertebra-c4", "neck-muscles"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -95,9 +88,7 @@
     },
     "upper_arm.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-humerus-left",
-      "anatomyIds": [
-        "appendicular-skeleton-humerus-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-humerus-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -107,9 +98,7 @@
     },
     "upper_arm.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-humerus-right",
-      "anatomyIds": [
-        "appendicular-skeleton-humerus-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-humerus-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -119,9 +108,7 @@
     },
     "elbow.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-ulna-left",
-      "anatomyIds": [
-        "appendicular-skeleton-ulna-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-ulna-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -131,9 +118,7 @@
     },
     "elbow.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-ulna-right",
-      "anatomyIds": [
-        "appendicular-skeleton-ulna-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-ulna-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -143,9 +128,7 @@
     },
     "forearm.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-radius-left",
-      "anatomyIds": [
-        "appendicular-skeleton-radius-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-radius-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -155,9 +138,7 @@
     },
     "forearm.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-radius-right",
-      "anatomyIds": [
-        "appendicular-skeleton-radius-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-radius-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -248,10 +229,7 @@
     },
     "upper_back": {
       "preferredFocusAnatomyId": "skeleton-vertebra-t4",
-      "anatomyIds": [
-        "skeleton-vertebra-t4",
-        "skeleton-vertebra-t7"
-      ],
+      "anatomyIds": ["skeleton-vertebra-t4", "skeleton-vertebra-t7"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -275,10 +253,7 @@
     },
     "pelvis": {
       "preferredFocusAnatomyId": "skeleton-sacrum",
-      "anatomyIds": [
-        "skeleton-sacrum",
-        "skeleton-coccyx"
-      ],
+      "anatomyIds": ["skeleton-sacrum", "skeleton-coccyx"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -288,9 +263,7 @@
     },
     "hip.left": {
       "preferredFocusAnatomyId": "skeleton-hip-bone-left",
-      "anatomyIds": [
-        "skeleton-hip-bone-left"
-      ],
+      "anatomyIds": ["skeleton-hip-bone-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -300,9 +273,7 @@
     },
     "hip.right": {
       "preferredFocusAnatomyId": "skeleton-hip-bone-right",
-      "anatomyIds": [
-        "skeleton-hip-bone-right"
-      ],
+      "anatomyIds": ["skeleton-hip-bone-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -340,9 +311,7 @@
     },
     "thigh.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-femur-left",
-      "anatomyIds": [
-        "appendicular-skeleton-femur-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-femur-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -352,9 +321,7 @@
     },
     "thigh.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-femur-right",
-      "anatomyIds": [
-        "appendicular-skeleton-femur-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-femur-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -364,9 +331,7 @@
     },
     "knee.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-patella-left",
-      "anatomyIds": [
-        "appendicular-skeleton-patella-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-patella-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -376,9 +341,7 @@
     },
     "knee.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-patella-right",
-      "anatomyIds": [
-        "appendicular-skeleton-patella-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-patella-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -414,9 +377,7 @@
     },
     "ankle.left": {
       "preferredFocusAnatomyId": "appendicular-skeleton-talus-left",
-      "anatomyIds": [
-        "appendicular-skeleton-talus-left"
-      ],
+      "anatomyIds": ["appendicular-skeleton-talus-left"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",
@@ -426,9 +387,7 @@
     },
     "ankle.right": {
       "preferredFocusAnatomyId": "appendicular-skeleton-talus-right",
-      "anatomyIds": [
-        "appendicular-skeleton-talus-right"
-      ],
+      "anatomyIds": ["appendicular-skeleton-talus-right"],
       "verification": {
         "registry_verified": true,
         "visual_review": "pending",

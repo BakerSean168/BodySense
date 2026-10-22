@@ -7,11 +7,18 @@
  */
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useUploadStore } from "@/stores/uploadStore";
-import type { FileType, PostureAnalysis, UserUpload } from "../../../types/upload.types";
+import type {
+  FileType,
+  PostureAnalysis,
+  UserUpload,
+} from "../../../types/upload.types";
 import { FILE_TYPE_LABELS } from "../../../types/upload.types";
 import { PostureAnalysisView } from "../../uploads/PostureAnalysisView";
 
-type UploadKind = Extract<FileType, "photo_front" | "photo_side" | "photo_back" | "report">;
+type UploadKind = Extract<
+  FileType,
+  "photo_front" | "photo_side" | "photo_back" | "report"
+>;
 
 const PHOTO_KINDS = ["photo_front", "photo_side", "photo_back"] as const;
 const KIND_CHOICES: { value: UploadKind; label: string }[] = [
@@ -49,9 +56,16 @@ function statusText(file: UserUpload): string {
 }
 
 export function UploadStep() {
-  const { uploads: allUploads, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
+  const {
+    uploads: allUploads,
+    fetchUploads,
+    uploadFile,
+    deleteUpload,
+  } = useUploadStore();
   // Chat photos live in the same store; onboarding only lists reports and posture photos.
-  const uploads = allUploads.filter((u) => u.file_type !== "consultation_photo");
+  const uploads = allUploads.filter(
+    (u) => u.file_type !== "consultation_photo",
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -75,7 +89,9 @@ export function UploadStep() {
   }, [inFlight, fetchUploads]);
 
   const usedPhotoKinds = new Set(
-    uploads.filter((u) => u.file_type.startsWith("photo_")).map((u) => u.file_type),
+    uploads
+      .filter((u) => u.file_type.startsWith("photo_"))
+      .map((u) => u.file_type),
   );
 
   const send = async (file: File, kind: UploadKind) => {
@@ -149,13 +165,18 @@ export function UploadStep() {
         onDrop={onDrop}
         aria-describedby="onboarding-upload-hint"
         className={`flex h-[168px] w-full flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed px-6 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] lg:h-[200px] ${
-          dragging ? "border-[#2C694F] bg-[#E8F0EA]" : "border-[#E5E7EB] bg-[#F6F8F7] hover:border-[#C9D3CC]"
+          dragging
+            ? "border-[#2C694F] bg-[#E8F0EA]"
+            : "border-[#E5E7EB] bg-[#F6F8F7] hover:border-[#C9D3CC]"
         }`}
       >
         <span className="text-[15px] text-[#6B7280]">
           {uploading ? "上传中…" : "点击上传或拖拽文件到这里"}
         </span>
-        <span id="onboarding-upload-hint" className="text-[13px] text-[#9CA3AF]">
+        <span
+          id="onboarding-upload-hint"
+          className="text-[13px] text-[#9CA3AF]"
+        >
           支持体检报告 PDF、体态照片（选填）
         </span>
       </button>
@@ -167,11 +188,13 @@ export function UploadStep() {
           className="rounded-[14px] bg-[#F7F7F7] p-4"
         >
           <p className="truncate text-sm text-[#1A1A1A]">
-            这张图片是？<span className="text-[#6B7280]">{pendingImage.name}</span>
+            这张图片是？
+            <span className="text-[#6B7280]">{pendingImage.name}</span>
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {KIND_CHOICES.map((choice) => {
-              const taken = choice.value !== "report" && usedPhotoKinds.has(choice.value);
+              const taken =
+                choice.value !== "report" && usedPhotoKinds.has(choice.value);
               return (
                 <button
                   key={choice.value}
@@ -209,18 +232,30 @@ export function UploadStep() {
               className="flex items-center justify-between gap-3 rounded-[10px] bg-[#F7F7F7] px-4 py-3 text-sm"
             >
               <span className="min-w-0 truncate">
-                <span className="text-[#6B7280]">{FILE_TYPE_LABELS[file.file_type] ?? "资料"} · </span>
+                <span className="text-[#6B7280]">
+                  {FILE_TYPE_LABELS[file.file_type] ?? "资料"} ·{" "}
+                </span>
                 {file.original_name}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="text-[13px] text-[#2C694F]">{statusText(file)}</span>
+                <span className="text-[13px] text-[#2C694F]">
+                  {statusText(file)}
+                </span>
                 <button
                   type="button"
                   onClick={() => void remove(file.id)}
                   aria-label={`删除 ${file.original_name}`}
                   className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#B42318] focus-visible:outline-2 focus-visible:outline-[#2C694F]"
                 >
-                  <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 16"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                  >
                     <path d="m4 4 8 8M12 4l-8 8" />
                   </svg>
                 </button>
@@ -230,7 +265,9 @@ export function UploadStep() {
         </ul>
       )}
 
-      {postureAnalyses.length > 0 && <PostureAnalysisView analyses={postureAnalyses} />}
+      {postureAnalyses.length > 0 && (
+        <PostureAnalysisView analyses={postureAnalyses} />
+      )}
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, LoaderCircle, ShieldCheck, Stethoscope, X } from "lucide-react";
+import {
+  ArrowRight,
+  LoaderCircle,
+  ShieldCheck,
+  Stethoscope,
+  X,
+} from "lucide-react";
 import { nativeDiagnosisKeys } from "@/features/consultation/hooks/useDiagnosisActions";
 import {
   nativeDiagnosisService as api,
@@ -32,7 +38,10 @@ function startError(error: unknown): string {
     if (error.status === 400)
       return "这条消息不能作为分析请求（例如它是对提问的回答）。请直接写下想分析的内容再发送。";
     if (error.status === 404) return "没有找到这条消息，请稍后重试。";
-    if (error.code === "AGENT_OUTPUT_REJECTED" || error.code === "AI_SERVICE_ERROR")
+    if (
+      error.code === "AGENT_OUTPUT_REJECTED" ||
+      error.code === "AI_SERVICE_ERROR"
+    )
       return "分析服务暂时不可用，没有保存任何内容。";
   }
   return errorMessage(error, "暂时无法开始正式分析，请稍后重试。");
@@ -93,7 +102,9 @@ export default function DiagnosisRequestEntry({
       className="bc-dx bc-dx-request"
       aria-label="正式分析"
       data-testid="diagnosis-request"
-      data-state={run ? (stopped ? "stopped" : "started") : busy ? "starting" : "idle"}
+      data-state={
+        run ? (stopped ? "stopped" : "started") : busy ? "starting" : "idle"
+      }
     >
       <header className="bc-dx-request-head">
         <span className="bc-dx-request-title">
@@ -118,22 +129,34 @@ export default function DiagnosisRequestEntry({
         stopped ? (
           <div className="bc-dx-banner" data-tone="bad" role="alert">
             <ShieldCheck size={15} aria-hidden="true" />
-            <span className="bc-dx-banner-text">分析已暂停：需要先处理一条安全提示，提案不会写入诊断</span>
-            <button type="button" className="bc-dx-text-button" onClick={onOpenSafety}>
+            <span className="bc-dx-banner-text">
+              分析已暂停：需要先处理一条安全提示，提案不会写入诊断
+            </span>
+            <button
+              type="button"
+              className="bc-dx-text-button"
+              onClick={onOpenSafety}
+            >
               查看限制
             </button>
           </div>
         ) : (
           <>
             {proposals.length === 0 ? (
-              <p className="bc-dx-note">这次分析没有提出新的病情提案，诊断保持不变。</p>
+              <p className="bc-dx-note">
+                这次分析没有提出新的病情提案，诊断保持不变。
+              </p>
             ) : (
               <ul className="bc-dx-request-list">
                 {proposals.map((item) => {
-                  const entry = (item.content as { proposedEntry?: { medicalName?: unknown } })
-                    .proposedEntry;
+                  const entry = (
+                    item.content as {
+                      proposedEntry?: { medicalName?: unknown };
+                    }
+                  ).proposedEntry;
                   const name =
-                    typeof entry?.medicalName === "string" && entry.medicalName.trim()
+                    typeof entry?.medicalName === "string" &&
+                    entry.medicalName.trim()
                       ? entry.medicalName
                       : "现有病情的调整";
                   return (
@@ -148,9 +171,15 @@ export default function DiagnosisRequestEntry({
               </ul>
             )}
             <div className="bc-dx-request-actions">
-              <span className="bc-dx-note">提案只是 AI 建议；在诊断窗口逐项决定并提交后才会写入。</span>
+              <span className="bc-dx-note">
+                提案只是 AI 建议；在诊断窗口逐项决定并提交后才会写入。
+              </span>
               {proposals.length > 0 ? (
-                <button type="button" className="bc-dx-primary" onClick={onOpenDiagnosis}>
+                <button
+                  type="button"
+                  className="bc-dx-primary"
+                  onClick={onOpenDiagnosis}
+                >
                   去决定
                   <ArrowRight size={15} aria-hidden="true" />
                 </button>
@@ -160,11 +189,15 @@ export default function DiagnosisRequestEntry({
         )
       ) : message ? (
         <>
-          <blockquote className="bc-dx-request-quote" data-testid="diagnosis-request-quote">
+          <blockquote
+            className="bc-dx-request-quote"
+            data-testid="diagnosis-request-quote"
+          >
             “{message.text}”
           </blockquote>
           <p className="bc-dx-note">
-            以你的这条原话作为请求，开始一次正式分析。AI 只会给出提案，你决定前不会写入诊断。
+            以你的这条原话作为请求，开始一次正式分析。AI
+            只会给出提案，你决定前不会写入诊断。
           </p>
           {error ? (
             <div className="bc-dx-banner" data-tone="bad" role="alert">
@@ -179,7 +212,11 @@ export default function DiagnosisRequestEntry({
               onClick={() => void start()}
             >
               {busy ? (
-                <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+                <LoaderCircle
+                  size={15}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : null}
               {busy ? "正在分析" : "开始正式分析"}
             </button>
