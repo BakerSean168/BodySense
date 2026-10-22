@@ -57,7 +57,11 @@ export function CanvasReferenceRibbon({
                 ? !motionMode
                 : motionMode && motion === item.id;
             return (
-              <IconTip key={item.id} label={item.label} shortcut={index + 1}>
+              <IconTip
+                key={item.id}
+                label={item.label}
+                shortcut={String(index + 1)}
+              >
                 <button
                   type="button"
                   className="bc-motion-pose"
