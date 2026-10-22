@@ -106,7 +106,7 @@ export function BodyEpisodeEditor({
           {showList ? (
             <BodyEpisodeList
               episodes={view.episodes}
-              hasNextPage={Boolean(episodesQuery.hasNextPage)}
+              hasNextPage={episodesQuery.hasNextPage}
               isFetchingNextPage={episodesQuery.isFetchingNextPage}
               onLoadMore={() => void episodesQuery.fetchNextPage()}
             />
@@ -151,7 +151,7 @@ export function BodyEpisodeEditor({
               submitting={saving}
               retry={replay}
               canSubmit={canSubmit}
-              factsHasNextPage={Boolean(factsQuery.hasNextPage)}
+              factsHasNextPage={factsQuery.hasNextPage}
               fetchingMoreFacts={factsQuery.isFetchingNextPage}
               hasUnloadedPages={view.factsHaveMore || view.episodesHaveMore}
               onModeChange={(next) => {

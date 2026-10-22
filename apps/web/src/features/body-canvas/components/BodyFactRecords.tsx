@@ -444,7 +444,7 @@ export function BodyFactRecords({
                     setNotice(null);
                     setErasing({
                       recordId: selected.record.id,
-                      statementId: selected.record.source_evidence_id!,
+                      statementId: selected.record.source_evidence_id,
                       ownerId: selected.record.user_id,
                     });
                   }}

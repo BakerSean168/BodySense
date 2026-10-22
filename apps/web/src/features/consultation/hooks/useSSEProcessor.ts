@@ -397,7 +397,7 @@ export function dispatchReplayEvents(
   handlers: SSEHandlers,
   state: SSEParseState = { currentEvent: "", maxSeq: 0 },
 ): SSEParseState {
-  const sorted = [...events].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+  const sorted = events.toSorted((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
   for (const event of sorted) {
     if (typeof event.seq === "number" && event.seq <= state.maxSeq) {
       continue; // de-dupe

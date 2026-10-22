@@ -1,3 +1,4 @@
+import { assertNever } from "@/lib/assertNever";
 import type {
   BodyFactRecord,
   BodyFactRecordsPage,
@@ -131,7 +132,8 @@ export function episodeDisplayState(
 export function episodeStateLabel(episode: BodyEpisode): string {
   if (episode.identity_status === "superseded") return "经历身份已被替代";
   if (episode.identity_status === "invalidated") return "经历身份已失效";
-  switch (episodeDisplayState(episode)) {
+  const displayState = episodeDisplayState(episode);
+  switch (displayState) {
     case "ongoing":
       return "截至明确报告时仍在持续";
     case "ended":
@@ -139,4 +141,5 @@ export function episodeStateLabel(episode: BodyEpisode): string {
     case "unknown":
       return "持续状态尚未确认";
   }
+  return assertNever(displayState);
 }

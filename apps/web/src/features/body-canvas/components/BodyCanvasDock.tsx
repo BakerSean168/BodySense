@@ -83,7 +83,7 @@ export function BodyCanvasDock({
   return (
     <nav className="bc-dock" aria-label="身体工作区导航">
       {(mobile
-        ? [...BODY_CANVAS_DOCK_ITEMS].reverse()
+        ? BODY_CANVAS_DOCK_ITEMS.toReversed()
         : BODY_CANVAS_DOCK_ITEMS
       ).map(({ id, icon: Icon }) => {
         const { title, dockLabel, key: shortcut } = getBusinessWindowMeta(id);

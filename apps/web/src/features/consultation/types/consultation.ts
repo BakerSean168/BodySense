@@ -224,8 +224,8 @@ export interface ProjectedToolCall {
   tool_name: string;
   arguments: unknown;
   status: "running" | "succeeded" | "failed";
-  result: unknown | null;
-  error: unknown | null;
+  result: unknown;
+  error: unknown;
   created_at: string;
   started_at: string;
   finished_at: string | null;
@@ -261,7 +261,7 @@ export interface AskUserQuestion {
    * Go-owned binding (symptom intake safety screen or source-cited BodyState
    * suggestion). Never authored by ordinary UI input.
    */
-  purpose?: "symptom_intake" | "body_state_suggestion" | string;
+  purpose?: "symptom_intake" | "body_state_suggestion" | (string & {});
   state_binding?: InteractionQuestion["state_binding"];
   /** Go-copied excerpt of the user's own message for a bound suggestion. */
   quote?: string;

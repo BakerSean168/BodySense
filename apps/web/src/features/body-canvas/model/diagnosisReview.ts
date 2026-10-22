@@ -56,7 +56,7 @@ function reviewTitle(reasons: readonly FreshnessReason[]): string {
   if (facts.size > 0 && facts.size === reasons.length)
     return `${facts.size} 条新记录可能相关`;
   if (reasons.length === 1)
-    return `${REASON_LABELS[reasons[0]!.code]}，建议复核`;
+    return `${REASON_LABELS[reasons[0].code]}，建议复核`;
   return `${reasons.length} 项新变化可能相关`;
 }
 

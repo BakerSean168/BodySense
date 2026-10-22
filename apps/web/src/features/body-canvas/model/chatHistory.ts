@@ -49,7 +49,7 @@ function dayKey(instant: Date, zone: string | undefined): string | null {
 
 function previousDay(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
-  const date = new Date(Date.UTC(y!, m! - 1, d! - 1));
+  const date = new Date(Date.UTC(y, m - 1, d - 1));
   return date.toISOString().slice(0, 10);
 }
 
@@ -78,7 +78,7 @@ export function groupChatHistory(
 ): ChatHistory {
   const todayKey = dayKey(now, zone) ?? now.toISOString().slice(0, 10);
   const byDay = new Map<string, ChatHistoryDay>();
-  const ordered = [...messages].sort(
+  const ordered = messages.toSorted(
     (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
   );
   for (const message of ordered) {
@@ -99,6 +99,8 @@ export function groupChatHistory(
         firstMessageId: message.id,
       });
   }
-  const days = [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+  const days = [...byDay.values()].toSorted((a, b) =>
+    b.day.localeCompare(a.day),
+  );
   return { todayKey, days };
 }

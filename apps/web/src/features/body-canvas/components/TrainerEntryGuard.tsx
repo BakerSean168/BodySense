@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight } from "lucide-react";
 
 // The Trainer and its dependencies must not join the main
 // ConsultationPage chunk or load until Go permission, plan and Safety gates pass.
-const TrainingExecutionPanel = lazy(() =>
+const LazyTrainingExecutionPanel = lazy(() =>
   import("@/features/training/components/TrainingExecutionPanel").then(
     ({ TrainingExecutionPanel }) => ({ default: TrainingExecutionPanel }),
   ),
@@ -95,12 +95,12 @@ export function TrainerEntryGuard({
             </p>
           }
         >
-          <TrainingExecutionPanel
-            key={launch!.key}
+          <LazyTrainingExecutionPanel
+            key={launch.key}
             planId={planId}
-            templateId={launch!.templateId}
-            launchKey={launch!.key}
-            sessionId={launch!.sessionId ?? null}
+            templateId={launch.templateId}
+            launchKey={launch.key}
+            sessionId={launch.sessionId ?? null}
             onOpenPlan={onOpenTraining}
           />
         </Suspense>

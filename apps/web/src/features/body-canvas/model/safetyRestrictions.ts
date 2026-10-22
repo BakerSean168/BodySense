@@ -45,7 +45,7 @@ export function projectSafetyRestrictions(
   const rank = { urgent: 0, restricted: 1, advisory: 2 } as const;
   return restrictions
     .filter((item) => item.active)
-    .sort(
+    .toSorted(
       (a, b) =>
         rank[a.risk_level] - rank[b.risk_level] ||
         Date.parse(b.valid_from) - Date.parse(a.valid_from),

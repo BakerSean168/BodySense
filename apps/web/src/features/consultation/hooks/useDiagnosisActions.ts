@@ -170,7 +170,7 @@ export function useDiagnosisActions({
       (row) => row.selectable && choices[row.proposalId],
     );
     for (const row of chosen) {
-      const decision = choices[row.proposalId]!;
+      const decision = choices[row.proposalId];
       const expectedRevision = target.expectedRevision;
       const ids = identity(
         decisionAttemptContent(target.runId, row, decision, expectedRevision),

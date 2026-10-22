@@ -44,7 +44,7 @@ export function suggestionHistoryItem(
   return {
     ...rest,
     metadata: {
-      ...(interaction.metadata ?? {}),
+      ...interaction.metadata,
       ...(receipt ? { body_state_receipt: receipt } : {}),
     },
   };

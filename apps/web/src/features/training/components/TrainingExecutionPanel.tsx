@@ -563,7 +563,7 @@ function InProgressScene({
   correction: ReactNode;
 }) {
   const current = view.current;
-  const exercise = current ? view.exercises[current.exerciseIndex]! : null;
+  const exercise = current ? view.exercises[current.exerciseIndex] : null;
   const resting = view.restRemainingSeconds > 0;
   const step = current?.actualUnit === "seconds" ? 5 : 1;
   const max = current?.actualUnit === "seconds" ? 86_400 : 1000;

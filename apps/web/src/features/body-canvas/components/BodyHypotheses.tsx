@@ -77,8 +77,10 @@ function HypothesisPanel({
     returnFocus.current = trigger.id;
     open(next);
   }
-  const toggle = (ids: string[], id: string) =>
-    ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
+  const toggle = (ids: string[], targetId: string) =>
+    ids.includes(targetId)
+      ? ids.filter((value) => value !== targetId)
+      : [...ids, targetId];
   return (
     <section
       ref={root}
@@ -320,38 +322,44 @@ function HypothesisPanel({
                 <Link2 size={13} aria-hidden="true" />
                 {group.display_title}
               </h5>
-              {group.related_hypothesis_ids.map((id) => (
-                <p key={id}>
+              {group.related_hypothesis_ids.map((hypothesisId) => (
+                <p key={hypothesisId}>
                   用户猜测：
-                  {data.hypotheses.find((row) => row.id === id)?.statement ??
-                    "当前记录不可用"}
+                  {data.hypotheses.find((row) => row.id === hypothesisId)
+                    ?.statement ?? "当前记录不可用"}
                 </p>
               ))}
-              {group.related_fact_ids.map((id) => (
-                <p key={id}>
+              {group.related_fact_ids.map((factId) => (
+                <p key={factId}>
                   来源事实：
-                  {data.facts.find((row) => row.id === id)?.statement ??
+                  {data.facts.find((row) => row.id === factId)?.statement ??
                     "当前记录不可用"}
                 </p>
               ))}
-              {group.related_observation_ids.map((id) => {
-                const row = data.observations.find((row) => row.id === id);
+              {group.related_observation_ids.map((observationId) => {
+                const observation = data.observations.find(
+                  (row) => row.id === observationId,
+                );
                 return (
-                  <p key={id}>
+                  <p key={observationId}>
                     来源观察：
-                    {row
-                      ? [row.statement, row.raw_value, row.raw_unit]
+                    {observation
+                      ? [
+                          observation.statement,
+                          observation.raw_value,
+                          observation.raw_unit,
+                        ]
                           .filter(Boolean)
                           .join(" · ")
                       : "当前记录不可用"}
                   </p>
                 );
               })}
-              {group.related_episode_ids.map((id) => (
-                <p key={id}>
+              {group.related_episode_ids.map((episodeId) => (
+                <p key={episodeId}>
                   相关经历：
-                  {data.episodes.find((row) => row.id === id)?.symptom_type ??
-                    "当前记录不可用"}
+                  {data.episodes.find((row) => row.id === episodeId)
+                    ?.symptom_type ?? "当前记录不可用"}
                 </p>
               ))}
             </article>

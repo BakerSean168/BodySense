@@ -55,7 +55,7 @@ export interface AssessmentObservation {
   body_region: string;
   label: string;
   description: string;
-  method: "assessment_evidence" | string;
+  method: "assessment_evidence" | (string & {});
   evidence_refs: [string];
 }
 
