@@ -13,6 +13,8 @@ async function expectPersonFits(page: Page) {
         ),
       )
         .filter((node) => node.getClientRects().length > 0)
+        // Base UI's hidden form inputs are 1px, clipped and fixed at 0,0.
+        .filter((node) => getComputedStyle(node).clipPath !== "inset(50%)")
         .filter((node) => {
           const rect = node.getBoundingClientRect();
           return rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
