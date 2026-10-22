@@ -102,7 +102,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
     demonstrationRequest: props.demonstrationRequest,
   });
   const sceneRef = useRef<HTMLDivElement>(null);
-  const selectRef = useRef<HTMLSelectElement>(null);
   const { stageRef, safetyBannerHeight, dockReserve, measureSafetyBanner } =
     useCanvasStageLayout();
   const business = useCanvasBusinessWindowController({
@@ -167,7 +166,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
   const onTextFallback = useCallback(() => {
     setTextOnly(true);
     setRegionListOpen(true);
-    requestAnimationFrame(() => selectRef.current?.focus());
   }, []);
 
   useEffect(() => {
@@ -189,9 +187,16 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         event.preventDefault();
         return;
       }
-      // Base UI owns keyboard input in menus/dialogs and form fields.
-      if (target?.closest("[role='dialog'], [role='menu']")) return;
+      // ⌘K / Ctrl+K opens the region palette anywhere; Base UI owns other
+      // keys in menus/dialogs and form fields.
       const action = canvasShortcut(event);
+      if (action?.type === "palette") {
+        setCanvasOverlay(null);
+        setRegionListOpen(true);
+        event.preventDefault();
+        return;
+      }
+      if (target?.closest("[role='dialog'], [role='menu']")) return;
       if (!action) return;
       // Pose bar hidden: 1-4 and F / Space do nothing, the body stays standing.
       if (
@@ -364,6 +369,10 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           }}
           onExitTool={() => setTool("orbit")}
           onReset={() => setResetKey((value) => value + 1)}
+          onOpenRegionPalette={() => {
+            setCanvasOverlay(null);
+            setRegionListOpen(true);
+          }}
           anatomyMode={anatomyMode}
           onToggleAnatomy={toggleAnatomy}
           bodyLayers={bodyLayers}
@@ -375,8 +384,7 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
         <CanvasRegionPicker
           visible={regionListOpen}
           selection={selection}
-          primary={primary}
-          selectRef={selectRef}
+          themeClass={themeClass}
           onSelect={select}
           onVisibleChange={setRegionListOpen}
           onCardOpenChange={setRegionCardOpen}
@@ -443,7 +451,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
       <CanvasWorkspaceDialogs
         canvasOverlay={canvasOverlay}
         onCanvasOverlayChange={setCanvasOverlay}
-        onOpenRegionPicker={() => setRegionListOpen(true)}
         accountDialog={accountDialog}
         onAccountDialogChange={setAccountDialog}
         themePreference={themePreference}

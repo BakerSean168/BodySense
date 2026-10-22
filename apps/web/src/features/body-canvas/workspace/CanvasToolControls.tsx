@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   MousePointer2,
   RotateCcw,
+  Search,
   X,
 } from "lucide-react";
 import type {
@@ -15,11 +16,11 @@ import type {
   CanvasTool,
 } from "../model/bodyCanvas";
 import type { SkeletonLayerStatus } from "../components/BodyCanvasScene";
+import { regionPaletteShortcut } from "../model/bodyCanvas";
 
 /**
- * Penpot Home tools rail: 视角 R, 图层 L, 标注 B, 选择 V (top to bottom). Box
- * select keeps its S shortcut and the region-by-name list lives in the help
- * overlay, so neither capability is lost with the slimmer rail.
+ * Penpot Home tools rail: 视角 R, 图层 L, 标注 B, 选择 V (top to bottom), then
+ * the region-by-name palette. Box select keeps its S shortcut.
  */
 const SELECT_TOOLS = [
   ["brush", "标注 · 涂抹选区", "标注", "B", Brush],
@@ -39,6 +40,7 @@ export function CanvasToolControls({
   onSelectTool,
   onExitTool,
   onReset,
+  onOpenRegionPalette,
   anatomyMode,
   onToggleAnatomy,
   bodyLayers,
@@ -49,6 +51,7 @@ export function CanvasToolControls({
   onSelectTool: (tool: CanvasTool) => void;
   onExitTool: () => void;
   onReset: () => void;
+  onOpenRegionPalette: () => void;
   anatomyMode: boolean;
   onToggleAnatomy: () => void;
   bodyLayers: BodyCanvasLayers;
@@ -122,6 +125,16 @@ export function CanvasToolControls({
               <kbd aria-hidden="true">{key}</kbd>
             </button>
           ))}
+          <button
+            className="bc-icon-button"
+            aria-label="按名称选择区域"
+            title={`按名称选择区域 · ${regionPaletteShortcut()}`}
+            onClick={onOpenRegionPalette}
+          >
+            <Search size={20} strokeWidth={1.7} />
+            <span className="bc-tool-caption">区域</span>
+            <kbd aria-hidden="true">{regionPaletteShortcut()}</kbd>
+          </button>
           <button
             ref={toolsToggleRef}
             type="button"

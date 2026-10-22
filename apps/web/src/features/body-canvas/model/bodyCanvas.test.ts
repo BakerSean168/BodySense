@@ -73,18 +73,27 @@ describe("Body Canvas reference demonstrations", () => {
   });
 });
 
-describe("Body Canvas keyboard contract", () => {
-  const event = (key: string, target: EventTarget | null = null) => ({
-    key,
-    target,
-    ctrlKey: false,
-    metaKey: false,
-    altKey: false,
-    isComposing: false,
-    repeat: false,
-    defaultPrevented: false,
-  });
+const event = (
+  key: string,
+  target: EventTarget | null = null,
+  modifiers: Partial<{
+    ctrlKey: boolean;
+    metaKey: boolean;
+    altKey: boolean;
+  }> = {},
+) => ({
+  key,
+  target,
+  ctrlKey: false,
+  metaKey: false,
+  altKey: false,
+  isComposing: false,
+  repeat: false,
+  defaultPrevented: false,
+  ...modifiers,
+});
 
+describe("Body Canvas keyboard contract", () => {
   it("maps visible single-key commands", () => {
     expect(canvasShortcut(event("b"))).toEqual({ type: "tool", tool: "brush" });
     expect(canvasShortcut(event("2"))).toEqual({
@@ -114,8 +123,23 @@ describe("Body Canvas keyboard contract", () => {
     expect(canvasShortcut(event("Escape"))).toEqual({ type: "escape" });
   });
 
+  it("opens the region palette from ⌘K / Ctrl+K; / still asks", () => {
+    expect(canvasShortcut(event("/"))).toEqual({ type: "chat" });
+    expect(canvasShortcut(event("k", null, { metaKey: true }))).toEqual({
+      type: "palette",
+    });
+    expect(canvasShortcut(event("k", null, { ctrlKey: true }))).toEqual({
+      type: "palette",
+    });
+  });
+
   it("does not trigger commands while typing", () => {
     const input = document.createElement("input");
     expect(canvasShortcut(event("p", input))).toBeNull();
+    expect(canvasShortcut(event("/", input))).toBeNull();
+    // ⌘K stays global even while a text field has focus.
+    expect(canvasShortcut(event("k", input, { metaKey: true }))).toEqual({
+      type: "palette",
+    });
   });
 });

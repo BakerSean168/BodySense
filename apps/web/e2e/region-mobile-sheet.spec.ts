@@ -48,12 +48,15 @@ test("390 region detail is the near-full-height card from Penpot", async ({
 
   await page.goto("/consultation");
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await page.getByRole("button", { name: "快捷键" }).click();
-  await page.getByRole("button", { name: "按名称选择身体区域" }).click();
   await page
-    .getByRole("combobox", { name: "选择身体区域" })
-    .selectOption("shoulder.right");
-  await page.getByRole("button", { name: "查看已选区域" }).click();
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "按名称选择区域" })
+    .click();
+  const regionSearch = page.getByRole("combobox", {
+    name: "搜索身体区域",
+  });
+  await regionSearch.fill("右肩");
+  await regionSearch.press("Enter");
 
   const card = page.getByRole("complementary", { name: "已选区域当前状况" });
   await expect(card).toContainText("右肩");

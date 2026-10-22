@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { List, LoaderCircle, X } from "lucide-react";
+import { LoaderCircle, X } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SHOW_POSE_BAR } from "../model/bodyCanvas";
+import { regionPaletteShortcut, SHOW_POSE_BAR } from "../model/bodyCanvas";
 import type { ThemePreference } from "./useCanvasAppearance";
 
 const THEME_OPTIONS: ReadonlyArray<[ThemePreference, string]> = [
@@ -17,20 +17,15 @@ const THEME_OPTIONS: ReadonlyArray<[ThemePreference, string]> = [
   ["system", "跟随系统"],
 ];
 
-const CANVAS_OVERLAY_META: Record<
-  "help",
-  { title: string; description: string }
-> = {
+const CANVAS_OVERLAY_META: Record<"help", { title: string }> = {
   help: {
-    title: "让操作顺手一点",
-    description: "每个快捷操作都有可见按钮，也支持按名称选择区域。",
+    title: "快捷键",
   },
 };
 
 export function CanvasWorkspaceDialogs({
   canvasOverlay,
   onCanvasOverlayChange,
-  onOpenRegionPicker,
   accountDialog,
   onAccountDialogChange,
   themePreference,
@@ -39,7 +34,6 @@ export function CanvasWorkspaceDialogs({
 }: {
   canvasOverlay: "help" | null;
   onCanvasOverlayChange: (value: "help" | null) => void;
-  onOpenRegionPicker: () => void;
   accountDialog: "settings" | "logout" | null;
   onAccountDialogChange: (value: "settings" | "logout" | null) => void;
   themePreference: ThemePreference;
@@ -50,9 +44,6 @@ export function CanvasWorkspaceDialogs({
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const setCanvasOverlay = onCanvasOverlayChange;
-  const setRegionListOpen = (open: boolean) => {
-    if (open) onOpenRegionPicker();
-  };
   const setAccountDialog = onAccountDialogChange;
   const setThemePreference = onThemePreferenceChange;
   return (
@@ -79,11 +70,6 @@ export function CanvasWorkspaceDialogs({
                   ? CANVAS_OVERLAY_META[canvasOverlay].title
                   : "画布工具"}
               </DialogTitle>
-              <DialogDescription>
-                {canvasOverlay
-                  ? CANVAS_OVERLAY_META[canvasOverlay].description
-                  : ""}
-              </DialogDescription>
             </div>
             <button
               className="bc-icon-button"
@@ -97,6 +83,7 @@ export function CanvasWorkspaceDialogs({
             {canvasOverlay === "help" && (
               <div className="bc-keyboard-help">
                 {[
+                  [regionPaletteShortcut(), "按名称选择身体区域"],
                   ["V / B / S", "选择、标注涂抹、框选"],
                   ...(SHOW_POSE_BAR
                     ? [
@@ -104,7 +91,6 @@ export function CanvasWorkspaceDialogs({
                         ["F / Space", "暂停或继续动作"],
                       ]
                     : []),
-                  ["/", "打开对话窗口"],
                   ["M / P / D / T", "个人档案、训练计划、诊断、训练执行"],
                   ["L / R", "精细解剖图层、复位视角"],
                   ["Z / Esc", "撤销选区、逐层返回"],
@@ -114,20 +100,6 @@ export function CanvasWorkspaceDialogs({
                     <span>{label}</span>
                   </div>
                 ))}
-                <p>
-                  输入文字、使用输入法或打开模态面板时，不触发背景单键命令。涂抹标记跟随模型表面；清除选区不会删除身体记录。窗口关闭或通过
-                  Dock 切换不会丢失选区、对话或未完成操作。
-                </p>
-                <button
-                  className="bc-button"
-                  onClick={() => {
-                    setCanvasOverlay(null);
-                    setRegionListOpen(true);
-                  }}
-                >
-                  按名称选择身体区域
-                  <List size={17} />
-                </button>
               </div>
             )}
           </div>
@@ -153,7 +125,6 @@ export function CanvasWorkspaceDialogs({
               </DialogTitle>
               <DialogDescription className="bc-account-dialog-text">
                 确定要退出当前账号吗？
-                <small>退出后将回到登录页。</small>
               </DialogDescription>
               <div className="bc-account-dialog-actions">
                 <button
@@ -191,14 +162,10 @@ export function CanvasWorkspaceDialogs({
               <DialogTitle className="bc-account-dialog-title">
                 设置
               </DialogTitle>
-              <DialogDescription className="bc-account-dialog-text">
-                外观与应用偏好。
-              </DialogDescription>
               <div className="bc-theme-field">
                 <span id="bc-theme-label" className="bc-theme-label">
                   主题
                 </span>
-                <span className="bc-theme-hint">浅色 / 深色 / 跟随系统</span>
                 <div
                   className="bc-theme-options"
                   role="radiogroup"
