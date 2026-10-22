@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
+      "**/storybook-static/**",
       "**/node_modules/**",
       "**/.nx/**",
       "**/coverage/**",
@@ -38,6 +39,15 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/no-explicit-any": "error",
+    },
+  },
+  {
+    files: ["apps/web/**/*.stories.{ts,tsx}", "apps/web/.storybook/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./apps/web/tsconfig.storybook.json",
+      },
     },
   },
   {

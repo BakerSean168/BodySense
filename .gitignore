@@ -104,3 +104,6 @@ apps/ai-service/models/
 
 # Locally installed exact-version contract CLI tools
 .tools/contracts/
+
+
+storybook-static

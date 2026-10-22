@@ -2,17 +2,17 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "parallel": 2,
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*",
-      "sharedGlobals"
-    ],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
       "default",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/vitest.config.[jt]s",
       "!{projectRoot}/src/test-setup.[jt]s",
-      "!{projectRoot}/eslint.config.{js,mjs,cjs,ts,mts,cts}"
+      "!{projectRoot}/eslint.config.{js,mjs,cjs,ts,mts,cts}",
+      "!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+      "!{projectRoot}/.storybook/**/*",
+      "!{projectRoot}/tsconfig.storybook.json"
     ],
     "sharedGlobals": [
       "{workspaceRoot}/tsconfig.base.json",
@@ -22,68 +22,41 @@
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
       "cache": true
     },
     "serve": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "cache": false
     },
     "test": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "lint": {
-      "inputs": [
-        "default",
-        "{workspaceRoot}/eslint.config.mjs"
-      ],
+      "inputs": ["default", "{workspaceRoot}/eslint.config.mjs"],
       "cache": true
     },
     "typecheck": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
       "cache": true
     },
     "test:watch": {
       "cache": false
     },
     "test:coverage": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "test:integration": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": false,
       "parallelism": false
     },
     "e2e": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": false
     }
   },
@@ -102,6 +75,17 @@
         "serveTargetName": "serve",
         "previewTargetName": "preview",
         "typecheckTargetName": "typecheck"
+      }
+    },
+    {
+      "plugin": "@nx/storybook/plugin",
+      "options": {
+        "serveStorybookTargetName": "storybook",
+        "buildStorybookTargetName": "build-storybook",
+        "testStorybookTargetName": "test-storybook",
+        "staticStorybookTargetName": "static-storybook",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps"
       }
     }
   ],
