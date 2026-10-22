@@ -123,7 +123,8 @@ test("statement erasure asks for review, withdraws on confirmation and verifies 
 
   // Penpot Records: erasure lives in the statement's detail scene.
   await records.getByRole("button", { name: `查看记录：${text}` }).click();
-  await records.getByRole("button", { name: "彻底删除" }).click();
+  await records.getByRole("button", { name: "更多操作" }).click();
+  await page.getByRole("menuitem", { name: "彻底删除" }).click();
   const panel = page.getByTestId("statement-erasure");
   await expect(panel).toHaveAttribute("data-phase", "confirm");
   await panel.getByRole("button", { name: "确认彻底删除" }).click();
@@ -220,7 +221,8 @@ test("statement erasure receipt shows in progress, retrying and policy-retained 
 
   // Penpot Records: erasure lives in the statement's detail scene.
   await records.getByRole("button", { name: `查看记录：${text}` }).click();
-  await records.getByRole("button", { name: "彻底删除" }).click();
+  await records.getByRole("button", { name: "更多操作" }).click();
+  await page.getByRole("menuitem", { name: "彻底删除" }).click();
   const panel = page.getByTestId("statement-erasure");
   await panel.getByRole("button", { name: "确认彻底删除" }).click();
   await expect(panel).toHaveAttribute("data-phase", "in_progress");

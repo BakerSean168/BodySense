@@ -270,9 +270,12 @@ describe("BodyFact Records and Habits", () => {
     expect(screen.getByTestId("body-fact-detail")).toHaveTextContent(
       "“我昨天肩膀不舒服”",
     );
-    await userEvent.click(screen.getByRole("button", { name: "撤回陈述" }));
-    await userEvent.click(screen.getByRole("button", { name: "确认撤回" }));
-    expect(await screen.findByText(/陈述已撤回，历史保留/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "更多操作" }));
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "撤回陈述" }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "撤回" }));
+    expect(await screen.findByText("已撤回")).toBeVisible();
     expect(screen.getByText(/正在同步已保存的记录/)).toBeVisible();
     expect(screen.queryByText("我昨天肩膀不舒服")).not.toBeInTheDocument();
     expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();

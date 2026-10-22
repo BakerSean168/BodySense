@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Undo2 } from "lucide-react";
+import {
+  LoaderCircle,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import {
   bodyFactRecordsService,
   type BodyFactRecord,
@@ -13,24 +19,92 @@ import {
 } from "../model/bodyFactPresentation";
 import { SelectField } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PersonConfirmDialog } from "../windows/person/PersonConfirmDialog";
 
 type Pending =
   | { mode: "correct"; text: string; command: BodyFactCorrectionInput }
   | { mode: "withdraw"; command: BodyFactWithdrawalInput };
 
-/** Exact-target user amendment. Withdrawal is deliberately not a Delete action. */
-export function BodyFactAmendment({
-  record,
-  revision,
-  onCommitted,
-  onRefresh,
+export type BodyFactAmendMode = "correct" | "withdraw" | null;
+
+/**
+ * The statement's ⋯ menu: 更正, then the red 撤回陈述 and (when the statement
+ * has a private source) 彻底删除.
+ */
+export function BodyFactActionsMenu({
+  onCorrect,
+  onWithdraw,
+  onErase,
+  disabled,
 }: {
+  onCorrect: () => void;
+  onWithdraw: () => void;
+  onErase?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="bc-icon-button bc-record-menu"
+        aria-label="更多操作"
+        title="更多"
+        disabled={disabled}
+      >
+        <MoreHorizontal size={17} aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bc-account-menu">
+        <DropdownMenuItem onClick={onCorrect}>
+          <Pencil />
+          更正
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={onWithdraw}>
+          <Undo2 />
+          撤回陈述
+        </DropdownMenuItem>
+        {onErase ? (
+          <DropdownMenuItem variant="destructive" onClick={onErase}>
+            <Trash2 />
+            彻底删除
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Exact-target user amendment, opened from BodyFactActionsMenu. Correction is
+ * an inline form; withdrawal cannot be taken back, so it asks once in a
+ * Dialog. Withdrawal is deliberately not a Delete action.
+ */
+export function BodyFactAmendment(props: AmendmentProps) {
+  // Every opening starts fresh from the record as it is now.
+  return props.mode ? <Amendment key={props.mode} {...props} /> : null;
+}
+
+interface AmendmentProps {
   record: BodyFactRecord;
   revision: number;
+  mode: BodyFactAmendMode;
+  onModeChange: (mode: BodyFactAmendMode) => void;
   onCommitted: (message: string, committedRevision: number) => void;
   onRefresh: () => void;
-}) {
-  const [mode, setMode] = useState<"correct" | "withdraw" | null>(null);
+}
+
+function Amendment({
+  record,
+  revision,
+  mode,
+  onModeChange: setMode,
+  onCommitted,
+  onRefresh,
+}: AmendmentProps) {
   const [text, setText] = useState(record.statement);
   const [kind, setKind] = useState<BodyFactKind>(record.kind);
   const [saving, setSaving] = useState(false);
@@ -96,9 +170,7 @@ export function BodyFactAmendment({
       pending.current = null;
       setMode(null);
       onCommitted(
-        attempt.mode === "correct"
-          ? "更正已保存，原陈述保留在历史中。"
-          : "陈述已撤回，历史保留；这不表示隐私数据已删除。",
+        attempt.mode === "correct" ? "已更正" : "已撤回",
         receipt.revision,
       );
     } catch (cause) {
@@ -118,88 +190,62 @@ export function BodyFactAmendment({
     }
   }
 
-  if (!mode)
+  if (mode === "withdraw")
     return (
-      <div className="bc-record-actions">
-        <button
-          type="button"
-          className="bc-text-button"
-          onClick={() => {
-            setMode("correct");
-            setText(record.statement);
-            setKind(record.kind);
-            setError(null);
-            pending.current = null;
-          }}
-        >
-          <Pencil size={13} />
-          更正
-        </button>
-        <button
-          type="button"
-          className="bc-text-button"
-          onClick={() => {
-            setMode("withdraw");
-            setError(null);
-            pending.current = null;
-          }}
-        >
-          <Undo2 size={13} />
-          撤回陈述
-        </button>
-      </div>
+      <PersonConfirmDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) setMode(null);
+        }}
+        title="撤回这条陈述？"
+        description="它不再作为当前记录，原内容和更正历史会保留。"
+        confirmLabel="撤回"
+        working={saving}
+        error={error}
+        onConfirm={() => void submit()}
+      />
     );
   return (
     <form
       className="bc-equipment-form"
-      aria-label={mode === "correct" ? "更正此记录" : "撤回此记录"}
+      aria-label="更正此记录"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      {mode === "correct" ? (
-        <>
-          <label htmlFor={`correct-kind-${record.id}`}>更正后的类别</label>
-          <SelectField
-            id={`correct-kind-${record.id}`}
-            value={kind}
-            onValueChange={(next) => setKind(next as BodyFactKind)}
-            options={Object.entries(BODY_FACT_KIND_LABELS).map(
-              ([value, label]) => ({ value, label }),
-            )}
-            disabled={saving}
-          />
-          <label htmlFor={`correct-${record.id}`}>更正后的完整陈述</label>
-          <Textarea
-            id={`correct-${record.id}`}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            rows={3}
-            maxLength={2000}
-            disabled={saving}
-            required
-          />
-          <p className="bc-window-note">用于纠正原来说错的内容。</p>
-        </>
-      ) : (
-        <p className="bc-window-note">
-          确认撤回这条陈述？它将不再作为当前有效记录；原始内容及更正历史仍保留。这不是隐私数据删除，也不表示症状已经结束。
-        </p>
-      )}
+      <label htmlFor={`correct-kind-${record.id}`}>更正后的类别</label>
+      <SelectField
+        id={`correct-kind-${record.id}`}
+        value={kind}
+        onValueChange={(next) => setKind(next as BodyFactKind)}
+        options={Object.entries(BODY_FACT_KIND_LABELS).map(
+          ([value, label]) => ({ value, label }),
+        )}
+        disabled={saving}
+      />
+      <label htmlFor={`correct-${record.id}`}>更正后的完整陈述</label>
+      <Textarea
+        id={`correct-${record.id}`}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        rows={3}
+        maxLength={2000}
+        disabled={saving}
+        required
+      />
       <div className="bc-record-actions">
         <button
           type="submit"
           className="bc-button"
           disabled={
             saving ||
-            (mode === "correct" &&
-              (!text.trim() ||
-                (text.trim() === record.statement && kind === record.kind)))
+            !text.trim() ||
+            (text.trim() === record.statement && kind === record.kind)
           }
         >
           {saving ? <LoaderCircle size={14} className="animate-spin" /> : null}
-          {saving ? "正在提交" : mode === "correct" ? "保存更正" : "确认撤回"}
+          {saving ? "正在提交" : "保存更正"}
         </button>
         <button
           type="button"
