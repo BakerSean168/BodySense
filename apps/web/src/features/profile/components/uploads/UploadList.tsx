@@ -1,17 +1,32 @@
 import { useState, type ReactNode } from "react";
+import { FileX2, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUploadStore } from "@/stores/uploadStore";
 import type { UserUpload } from "../../types/upload.types";
 import { FILE_TYPE_LABELS, OCR_STATUS_LABELS } from "../../types/upload.types";
 import { OCRResultView } from "./OCRResultView";
 import { AssetErasure } from "./AssetErasure";
 
-const SOURCE_REMOVAL_CONFIRM =
-  "移除原件只删除原始文件。由它整理出的记录和已作出的决定会保留，并标注来源不可用。确定移除原件吗？";
+/** Removing the original cannot be undone, so it keeps one confirmation. */
+const SOURCE_REMOVAL_NOTE = "整理出的记录和决定会保留，并标注来源不可用。";
 
 export function UploadList() {
   const { uploads, deleteUpload, forgetUpload } = useUploadStore();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [erasingId, setErasingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   if (uploads.length === 0) {
     return (
@@ -37,8 +52,7 @@ export function UploadList() {
   // Source removal (PC-D7): only the private original goes; derived evidence
   // stays readable with a source-unavailable marker.
   const handleRemoveSource = async (id: string) => {
-    if (!confirm(SOURCE_REMOVAL_CONFIRM)) return;
-
+    setConfirmingId(null);
     setDeletingId(id);
     try {
       await deleteUpload(id);
@@ -51,11 +65,40 @@ export function UploadList() {
 
   return (
     <div className="space-y-4">
+      <Dialog
+        open={confirmingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmingId(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogTitle>移除原件？</DialogTitle>
+          <DialogDescription>{SOURCE_REMOVAL_NOTE}</DialogDescription>
+          <DialogFooter>
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => setConfirmingId(null)}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
+              onClick={() =>
+                confirmingId && void handleRemoveSource(confirmingId)
+              }
+            >
+              移除原件
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {uploads.map((upload) => (
         <UploadItem
           key={upload.id}
           upload={upload}
-          onRemoveSource={handleRemoveSource}
+          onRemoveSource={(id) => setConfirmingId(id)}
           onErase={(id) => setErasingId(id)}
           isDeleting={deletingId === upload.id}
           erasure={
@@ -166,26 +209,31 @@ function UploadItem({
           {/* OCR status */}
           {isReport && <OCRStatusBadge status={upload.ocr_status} />}
 
-          {!sourceRemoved ? (
-            <button
-              type="button"
-              onClick={() => onRemoveSource(upload.id)}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="grid size-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+              aria-label={`管理“${upload.original_name}”`}
+              title="更多"
               disabled={isDeleting || erasure !== null}
-              className="rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-              title="只删除原始文件，保留整理出的记录"
             >
-              {isDeleting ? "正在移除" : "移除原件"}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => onErase(upload.id)}
-            disabled={isDeleting || erasure !== null}
-            className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
-            title="删除原始文件和它的所有副本"
-          >
-            彻底删除
-          </button>
+              <MoreHorizontal size={16} aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {!sourceRemoved ? (
+                <DropdownMenuItem onClick={() => onRemoveSource(upload.id)}>
+                  <FileX2 />
+                  移除原件
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onErase(upload.id)}
+              >
+                <Trash2 />
+                彻底删除
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

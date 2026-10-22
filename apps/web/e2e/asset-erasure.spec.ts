@@ -98,21 +98,23 @@ test("source removal keeps the record listed; erasure verifies every copy and dr
 
   const removed = item(page, "source-removal.png");
   await expect(removed).toBeVisible();
-  page.once("dialog", (dialog) => {
-    expect(dialog.message()).toContain("只删除原始文件");
-    void dialog.accept();
-  });
-  await removed.getByRole("button", { name: "移除原件" }).click();
+  // Removing the original keeps one confirmation (a dialog, not confirm()).
+  await removed.getByRole("button", { name: /^管理/ }).click();
+  await page.getByRole("menuitem", { name: "移除原件" }).click();
+  const confirmRemoval = page.getByRole("dialog", { name: "移除原件？" });
+  await expect(confirmRemoval).toContainText("整理出的记录");
+  await confirmRemoval.getByRole("button", { name: "移除原件" }).click();
   await expect(
     removed.getByText("原件已移除 · 整理出的记录保留"),
   ).toBeVisible();
-  await expect(removed.getByRole("button", { name: "移除原件" })).toHaveCount(
-    0,
-  );
-  await expect(removed.getByRole("button", { name: "彻底删除" })).toBeVisible();
+  await removed.getByRole("button", { name: /^管理/ }).click();
+  await expect(page.getByRole("menuitem", { name: "移除原件" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "彻底删除" })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   const erased = item(page, "full-erasure.png");
-  await erased.getByRole("button", { name: "彻底删除" }).click();
+  await erased.getByRole("button", { name: /^管理/ }).click();
+  await page.getByRole("menuitem", { name: "彻底删除" }).click();
   const panel = erased.getByTestId("asset-erasure");
   await expect(panel).toHaveAttribute("data-phase", "confirm");
   await panel.getByRole("button", { name: "确认彻底删除" }).click();
@@ -233,7 +235,8 @@ test("asset erasure receipt shows retrying and review states and never claims do
   await openFiles(page);
 
   const pinned = item(page, "pinned-report.png");
-  await pinned.getByRole("button", { name: "彻底删除" }).click();
+  await pinned.getByRole("button", { name: /^管理/ }).click();
+  await page.getByRole("menuitem", { name: "彻底删除" }).click();
   const panel = pinned.getByTestId("asset-erasure");
   await panel.getByRole("button", { name: "确认彻底删除" }).click();
   await expect(panel).toHaveAttribute("data-phase", "outstanding");
