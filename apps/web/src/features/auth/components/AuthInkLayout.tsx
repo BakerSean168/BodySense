@@ -70,7 +70,8 @@ export function AuthInkLayout({
         </h1>
 
         {/* Rice-paper card (desktop) / sheet (mobile) */}
-        <main className={`relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[#E4E0D3] bg-[#FBFAF5] px-6 pt-8 ${compactMobile ? "pb-10" : "pb-[51px]"} shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]`}
+        <main
+          className={`relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[#E4E0D3] bg-[#FBFAF5] px-6 pt-8 ${compactMobile ? "pb-10" : "pb-[51px]"} shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]`}
         >
           <div
             aria-hidden="true"

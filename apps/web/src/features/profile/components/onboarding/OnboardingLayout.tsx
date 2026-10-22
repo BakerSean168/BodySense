@@ -135,7 +135,11 @@ interface FooterButtonProps {
   disabled?: boolean;
 }
 
-export function OnboardingPrimaryButton({ children, onClick, disabled }: FooterButtonProps) {
+export function OnboardingPrimaryButton({
+  children,
+  onClick,
+  disabled,
+}: FooterButtonProps) {
   return (
     <button
       type="button"

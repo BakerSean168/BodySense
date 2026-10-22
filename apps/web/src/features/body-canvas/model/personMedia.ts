@@ -11,7 +11,10 @@ import type { ProfileUploadLike } from "./profileCategories";
 export type PersonMediaUpload = ProfileUploadLike;
 
 export type PersonMediaState =
-  "ready" | "processing" | "failed" | "source_unavailable";
+  | "ready"
+  | "processing"
+  | "failed"
+  | "source_unavailable";
 
 export interface PersonMediaTile {
   upload: PersonMediaUpload;

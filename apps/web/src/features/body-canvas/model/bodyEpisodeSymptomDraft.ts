@@ -2,7 +2,11 @@ import type { BodyFactRecordInput } from "@/features/profile/services/bodyFactRe
 
 export type SymptomPresence = "present" | "absent";
 export type SymptomSide =
-  "unknown" | "left" | "right" | "bilateral" | "not_applicable";
+  | "unknown"
+  | "left"
+  | "right"
+  | "bilateral"
+  | "not_applicable";
 export interface EpisodeSymptomDraft {
   statement: string;
   symptomType: string;

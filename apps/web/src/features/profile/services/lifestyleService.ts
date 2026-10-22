@@ -2,7 +2,12 @@ import { getLifestyle, updateLifestyle } from "@/generated/api/bodysense";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
 export type LifestyleSectionKey =
-  "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
+  | "activity"
+  | "sleep"
+  | "exercise"
+  | "nutrition"
+  | "substances"
+  | "recovery";
 
 export interface LifestyleSection {
   kind: string;

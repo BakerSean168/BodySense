@@ -27,12 +27,18 @@ vi.mock("../services/trainingService", () => ({
 }));
 
 import { projectTrainingWindow } from "@/features/body-canvas/model/trainingPlans";
-import { useTrainingPlanActions, type TrainingPlanActions } from "./useTrainingPlanActions";
+import {
+  useTrainingPlanActions,
+  type TrainingPlanActions,
+} from "./useTrainingPlanActions";
 
-const view = (actions: TrainingPlanActions) => projectTrainingWindow(actions.state);
+const view = (actions: TrainingPlanActions) =>
+  projectTrainingWindow(actions.state);
 
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -62,7 +68,10 @@ function setup(onPlanAccepted = vi.fn()) {
 
 describe("useTrainingPlanActions", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true, now: new Date("2026-10-18T12:00:00+08:00") });
+    vi.useFakeTimers({
+      shouldAdvanceTime: true,
+      now: new Date("2026-10-18T12:00:00+08:00"),
+    });
     Object.values(api).forEach((fn) => fn.mockReset());
     api.listPlanRecords.mockResolvedValue([makePlan()]);
     api.listProposals.mockResolvedValue([makeProposal()]);
@@ -77,9 +86,14 @@ describe("useTrainingPlanActions", () => {
 
     api.acceptProposal.mockResolvedValue(receipt);
     api.listPlanRecords.mockResolvedValue([
-      makePlan({ currentAcceptedRevisionId: NEXT_REVISION_ID, currentContent: updatedContent() }),
+      makePlan({
+        currentAcceptedRevisionId: NEXT_REVISION_ID,
+        currentContent: updatedContent(),
+      }),
     ]);
-    api.listProposals.mockResolvedValue([makeProposal({ state: "accepted", decisionId: receipt.decisionId })]);
+    api.listProposals.mockResolvedValue([
+      makeProposal({ state: "accepted", decisionId: receipt.decisionId }),
+    ]);
     await act(async () => result.current.accept(PROPOSAL_ID));
 
     await waitFor(() => expect(view(result.current).scene).toBe("updated"));
@@ -93,7 +107,9 @@ describe("useTrainingPlanActions", () => {
   it("reuses one decision identity when the same decision is retried", async () => {
     const { result } = setup();
     await waitFor(() => expect(view(result.current).scene).toBe("plan"));
-    api.acceptProposal.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce(receipt);
+    api.acceptProposal
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(receipt);
     await act(async () => result.current.accept(PROPOSAL_ID));
     expect(result.current.error).toBe("network");
     await act(async () => result.current.accept(PROPOSAL_ID));
@@ -119,11 +135,17 @@ describe("useTrainingPlanActions", () => {
   it("turns a stale 409 into the Expired board and keeps the plan unchanged", async () => {
     const { result } = setup();
     await waitFor(() => expect(view(result.current).scene).toBe("plan"));
-    api.acceptProposal.mockRejectedValue(new ApiRequestError("stale", 409, "REVISION_CONFLICT"));
+    api.acceptProposal.mockRejectedValue(
+      new ApiRequestError("stale", 409, "REVISION_CONFLICT"),
+    );
     await act(async () => result.current.accept(PROPOSAL_ID));
     await waitFor(() => expect(view(result.current).scene).toBe("expired"));
-    expect(view(result.current).proposal!.expiredReason).toBe("base_revision_changed");
-    expect(view(result.current).selected!.revisionId).toBe(makePlan().currentAcceptedRevisionId);
+    expect(view(result.current).proposal!.expiredReason).toBe(
+      "base_revision_changed",
+    );
+    expect(view(result.current).selected!.revisionId).toBe(
+      makePlan().currentAcceptedRevisionId,
+    );
     expect(api.listPlanRecords.mock.calls.length).toBeGreaterThan(1);
   });
 

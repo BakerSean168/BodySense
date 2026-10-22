@@ -33,8 +33,16 @@ describe("Diagnosis freshness review prompt", () => {
     const review = projectConditionReview(
       makeCondition({
         freshness: freshness("review_recommended", [
-          { code: "related_fact_recorded", bodyStateRevision: 3, evidenceId: FACT_1 },
-          { code: "related_fact_recorded", bodyStateRevision: 4, evidenceId: FACT_2 },
+          {
+            code: "related_fact_recorded",
+            bodyStateRevision: 3,
+            evidenceId: FACT_1,
+          },
+          {
+            code: "related_fact_recorded",
+            bodyStateRevision: 4,
+            evidenceId: FACT_2,
+          },
         ]),
       }),
     );
@@ -60,31 +68,56 @@ describe("Diagnosis freshness review prompt", () => {
         },
       }),
     );
-    expect(dismissed).toMatchObject({ prompt: false, dismissed: true, canDismiss: false });
+    expect(dismissed).toMatchObject({
+      prompt: false,
+      dismissed: true,
+      canDismiss: false,
+    });
 
     const stale = projectConditionReview(
       makeCondition({
         freshness: freshness("stale", [
-          { code: "cited_evidence_withdrawn", bodyStateRevision: 3, evidenceId: FACT_1 },
+          {
+            code: "cited_evidence_withdrawn",
+            bodyStateRevision: 3,
+            evidenceId: FACT_1,
+          },
         ]),
       }),
     );
-    expect(stale).toMatchObject({ prompt: true, canDismiss: false, title: "依据有变化，需要重新分析" });
+    expect(stale).toMatchObject({
+      prompt: true,
+      canDismiss: false,
+      title: "依据有变化，需要重新分析",
+    });
     expect(stale.details).toEqual(["引用的记录已被撤回"]);
     expect(projectConditionReview(makeCondition()).prompt).toBe(false);
   });
 
   it("makes a stale open run read-only and keeps the receipt rule", () => {
     const run = makeRun({
-      freshness: freshness("stale", [{ code: "condition_changed", conditionId: CONDITION_ID, diagnosisRevision: 2 }]),
+      freshness: freshness("stale", [
+        {
+          code: "condition_changed",
+          conditionId: CONDITION_ID,
+          diagnosisRevision: 2,
+        },
+      ]),
     });
     expect(projectRunReview(run)?.state).toBe("stale");
-    const view = projectNativeDiagnosisWindow({ diagnosis: makeDiagnosis(), run });
+    const view = projectNativeDiagnosisWindow({
+      diagnosis: makeDiagnosis(),
+      run,
+    });
     expect(view.run?.changed).toBe(true);
     expect(view.run?.canDecide).toBe(false);
     const recommended = projectNativeDiagnosisWindow({
       diagnosis: makeDiagnosis(),
-      run: makeRun({ freshness: freshness("review_recommended", [{ code: "safety_changed", bodyStateRevision: 3 }]) }),
+      run: makeRun({
+        freshness: freshness("review_recommended", [
+          { code: "safety_changed", bodyStateRevision: 3 },
+        ]),
+      }),
     });
     expect(recommended.run?.review?.state).toBe("review_recommended");
     expect(recommended.run?.canDecide).toBe(true);
@@ -104,7 +137,11 @@ describe("Diagnosis freshness review prompt", () => {
 
 describe("Diagnosis History", () => {
   it("lists only decided proposals, committed adoption only with its receipt", () => {
-    const decided = (id: string, decision: "accept" | "reject", at: string) => ({
+    const decided = (
+      id: string,
+      decision: "accept" | "reject",
+      at: string,
+    ) => ({
       decisionId: id,
       decision,
       contentFingerprint: "a".repeat(64),
@@ -121,7 +158,10 @@ describe("Diagnosis History", () => {
         settledAt: "2026-10-13T10:00:00+08:00",
       } as never,
       proposals: [
-        makeProposal({ state: "decided", decision: decided(FACT_1, "accept", "2026-10-13T09:00:00+08:00") }),
+        makeProposal({
+          state: "decided",
+          decision: decided(FACT_1, "accept", "2026-10-13T09:00:00+08:00"),
+        }),
         makeProposal({
           proposalId: FACT_2,
           state: "decided",
@@ -134,12 +174,24 @@ describe("Diagnosis History", () => {
     const entries = projectDiagnosisHistory(
       makeDiagnosis({
         conditionEntries: [
-          makeCondition({ conditionId: FACT_2, medicalName: "紧张型头痛", disposition: "inactive", updatedAt: "2026-09-20T10:00:00+08:00" }),
+          makeCondition({
+            conditionId: FACT_2,
+            medicalName: "紧张型头痛",
+            disposition: "inactive",
+            updatedAt: "2026-09-20T10:00:00+08:00",
+          }),
         ],
       }),
       [committed, open],
     );
-    expect(entries.map((entry) => [entry.title, entry.outcomeLabel, entry.levelLabel, entry.note])).toEqual([
+    expect(
+      entries.map((entry) => [
+        entry.title,
+        entry.outcomeLabel,
+        entry.levelLabel,
+        entry.note,
+      ]),
+    ).toEqual([
       ["颈椎病", "未采纳", null, "提案已拒绝"],
       ["上交叉综合征", "采纳", "AI 疑似", null],
       ["紧张型头痛", "停用", null, null],
@@ -153,7 +205,18 @@ describe("Diagnosis History", () => {
       runId: RUN_ID,
       state: "closed_without_change",
       outcome: "safety_blocked",
-      proposals: [makeProposal({ state: "decided", decision: { decisionId: FACT_1, decision: "accept", contentFingerprint: "a".repeat(64), receiptId: FACT_1, decidedAt: "2026-10-13T09:00:00+08:00" } })],
+      proposals: [
+        makeProposal({
+          state: "decided",
+          decision: {
+            decisionId: FACT_1,
+            decision: "accept",
+            contentFingerprint: "a".repeat(64),
+            receiptId: FACT_1,
+            decidedAt: "2026-10-13T09:00:00+08:00",
+          },
+        }),
+      ],
     });
     const entries = projectDiagnosisHistory(makeDiagnosis(), [run]);
     expect(entries.map((entry) => entry.outcome)).toEqual(["stopped"]);
@@ -175,9 +238,39 @@ describe("Safety / Restricted", () => {
       clearance_available: false,
     };
     const views = projectSafetyRestrictions([
-      { ...base, id: FACT_1, concept: "numbness", risk_level: "restricted", scope_kind: "all_training", lift_policy: "professional_clearance", reason: "安全筛查确认“麻木”", valid_from: "2026-10-13T09:00:00+08:00", active: true },
-      { ...base, id: FACT_2, concept: "dizziness", risk_level: "urgent", scope_kind: "all_training", lift_policy: "professional_clearance", reason: "突发剧烈头痛", valid_from: "2026-10-12T09:00:00+08:00", active: true },
-      { ...base, id: CONDITION_ID, concept: "trauma", risk_level: "restricted", scope_kind: "all_training", lift_policy: "on_expiry", reason: "已解除", valid_from: "2026-10-01T09:00:00+08:00", active: false },
+      {
+        ...base,
+        id: FACT_1,
+        concept: "numbness",
+        risk_level: "restricted",
+        scope_kind: "all_training",
+        lift_policy: "professional_clearance",
+        reason: "安全筛查确认“麻木”",
+        valid_from: "2026-10-13T09:00:00+08:00",
+        active: true,
+      },
+      {
+        ...base,
+        id: FACT_2,
+        concept: "dizziness",
+        risk_level: "urgent",
+        scope_kind: "all_training",
+        lift_policy: "professional_clearance",
+        reason: "突发剧烈头痛",
+        valid_from: "2026-10-12T09:00:00+08:00",
+        active: true,
+      },
+      {
+        ...base,
+        id: CONDITION_ID,
+        concept: "trauma",
+        risk_level: "restricted",
+        scope_kind: "all_training",
+        lift_policy: "on_expiry",
+        reason: "已解除",
+        valid_from: "2026-10-01T09:00:00+08:00",
+        active: false,
+      },
     ]);
     expect(views.map((item) => [item.id, item.statusLabel])).toEqual([
       [FACT_2, "建议立即就医"],

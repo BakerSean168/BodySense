@@ -94,7 +94,9 @@ describe("trainingApi generated OpenAPI boundary", () => {
       method: "GET",
     });
     expect(result[0]!.planId).toBe(planId);
-    expect(result[0]!.currentContent.sessions[0]!.stages[0]!.phase).toBe("main");
+    expect(result[0]!.currentContent.sessions[0]!.stages[0]!.phase).toBe(
+      "main",
+    );
   });
 
   it("accepts an update pinned to its base revision and the presented fingerprint", async () => {

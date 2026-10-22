@@ -7,7 +7,12 @@ interface SourcesProps extends HTMLAttributes<HTMLDetailsElement> {
 }
 
 /** Lightweight, project-local AI Elements-style source disclosure. */
-export function Sources({ count, children, className, ...props }: SourcesProps) {
+export function Sources({
+  count,
+  children,
+  className,
+  ...props
+}: SourcesProps) {
   if (count <= 0) return null;
 
   return (

@@ -12,7 +12,10 @@ function SkeletonBlock({ className }: { className: string }) {
 
 function BodyPlaceholder() {
   return (
-    <div className="flex min-h-[360px] items-center justify-center" aria-hidden="true">
+    <div
+      className="flex min-h-[360px] items-center justify-center"
+      aria-hidden="true"
+    >
       <div className="relative h-[310px] w-[150px] animate-pulse opacity-70 motion-reduce:animate-none">
         <div className="absolute left-1/2 top-0 size-14 -translate-x-1/2 rounded-full bg-white/[0.075]" />
         <div className="absolute left-1/2 top-[62px] h-[132px] w-[76px] -translate-x-1/2 rounded-[38px] bg-white/[0.065]" />

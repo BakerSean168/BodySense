@@ -10,7 +10,9 @@ import type {
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
 export type AssessmentEvidenceSource =
-  "body_state" | "report" | "posture_analysis";
+  | "body_state"
+  | "report"
+  | "posture_analysis";
 
 export type AssessmentEvidenceDomain =
   | "posture"

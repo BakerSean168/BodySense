@@ -35,8 +35,7 @@ describe("Vanatome pinned lightweight source", () => {
 
     await expect(
       resolvePinnedVanatomeSystemSource("regional-anatomy", {
-        catalogUrl:
-          "https://atlas.example/releases/1.4.0/catalog.json",
+        catalogUrl: "https://atlas.example/releases/1.4.0/catalog.json",
         fetchImpl,
       }),
     ).resolves.toEqual({
@@ -58,8 +57,7 @@ describe("Vanatome pinned lightweight source", () => {
 
     await expect(
       resolvePinnedVanatomeSystemSource("regional-anatomy", {
-        catalogUrl:
-          "https://atlas.example/releases/1.4.0/catalog.json",
+        catalogUrl: "https://atlas.example/releases/1.4.0/catalog.json",
         fetchImpl,
       }),
     ).rejects.toThrow(/Unexpected Vanatome atlas/);

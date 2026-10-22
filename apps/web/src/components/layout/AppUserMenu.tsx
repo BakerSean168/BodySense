@@ -16,7 +16,10 @@ interface AppUserMenuProps {
   onOpenProfile?: () => void;
 }
 
-export function AppUserMenu({ compact = false, onOpenProfile }: AppUserMenuProps) {
+export function AppUserMenu({
+  compact = false,
+  onOpenProfile,
+}: AppUserMenuProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const initial = user?.email?.charAt(0).toUpperCase() || "U";

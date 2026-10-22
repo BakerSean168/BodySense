@@ -50,7 +50,10 @@ type SingleKey =
   | "nutrition"
   | "substances";
 
-const SINGLE_STEPS: Record<string, { key: SingleKey; options: ChoiceOption[] }> = {
+const SINGLE_STEPS: Record<
+  string,
+  { key: SingleKey; options: ChoiceOption[] }
+> = {
   gender: { key: "gender", options: GENDER_OPTIONS },
   injury: { key: "injury", options: INJURY_OPTIONS },
   activity: { key: "activity_pattern", options: ACTIVITY_OPTIONS },
@@ -58,7 +61,10 @@ const SINGLE_STEPS: Record<string, { key: SingleKey; options: ChoiceOption[] }> 
   break: { key: "break_interval", options: BREAK_OPTIONS },
   exercise_habit: { key: "exercise_habit", options: EXERCISE_HABIT_OPTIONS },
   exercise_type: { key: "exercise_type", options: EXERCISE_TYPE_OPTIONS },
-  exercise_frequency: { key: "exercise_frequency", options: EXERCISE_FREQUENCY_OPTIONS },
+  exercise_frequency: {
+    key: "exercise_frequency",
+    options: EXERCISE_FREQUENCY_OPTIONS,
+  },
   nutrition: { key: "nutrition", options: NUTRITION_OPTIONS },
   substances: { key: "substances", options: SUBSTANCES_OPTIONS },
 };
@@ -81,7 +87,12 @@ function prefersReducedMotion() {
   );
 }
 
-function rangeError(raw: string, range: { min: number; max: number }, name: string, unit: string) {
+function rangeError(
+  raw: string,
+  range: { min: number; max: number },
+  name: string,
+  unit: string,
+) {
   if (raw.trim() === "") return "";
   const num = Number(raw);
   if (!Number.isFinite(num)) return `请输入有效的${name}`;
@@ -114,9 +125,12 @@ export function OnboardingWizard() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isGenerating) return;
@@ -130,10 +144,13 @@ export function OnboardingWizard() {
   const step = STEPS[stepIndex];
   const canProceed = isStepComplete(stepIndex, answers);
 
-  const update = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
-    setAnswers((prev) => ({ ...prev, [key]: value }));
+  const update = <K extends keyof OnboardingAnswers>(
+    key: K,
+    value: OnboardingAnswers[K],
+  ) => setAnswers((prev) => ({ ...prev, [key]: value }));
 
-  const goNext = () => setStepIndex((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
+  const goNext = () =>
+    setStepIndex((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
   const goBack = () => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     setStepIndex((prev) => Math.max(prev - 1, 0));
@@ -162,7 +179,10 @@ export function OnboardingWizard() {
       else
         next = has
           ? prev.discomfort_regions.filter((v) => v !== value)
-          : [...prev.discomfort_regions.filter((v) => v !== NO_DISCOMFORT), value];
+          : [
+              ...prev.discomfort_regions.filter((v) => v !== NO_DISCOMFORT),
+              value,
+            ];
       return { ...prev, discomfort_regions: next };
     });
 
@@ -182,7 +202,11 @@ export function OnboardingWizard() {
   ) => {
     setRaw(raw);
     const num = Number(raw);
-    const valid = raw.trim() !== "" && Number.isFinite(num) && num >= range.min && num <= range.max;
+    const valid =
+      raw.trim() !== "" &&
+      Number.isFinite(num) &&
+      num >= range.min &&
+      num <= range.max;
     update(key, valid ? num : undefined);
   };
 
@@ -200,7 +224,9 @@ export function OnboardingWizard() {
     } catch (err) {
       console.error("Onboarding submission failed:", err);
       setIsGenerating(false);
-      toast.error(err instanceof Error ? err.message : "生成评估报告失败，请稍后重试");
+      toast.error(
+        err instanceof Error ? err.message : "生成评估报告失败，请稍后重试",
+      );
     }
   };
 
@@ -215,7 +241,11 @@ export function OnboardingWizard() {
           className="h-14 w-14 rounded-full border-4 border-[#E8F0EA] border-t-[#2C694F] motion-safe:animate-spin"
         />
         <h1 className="mt-6 text-xl font-bold">正在生成您的健康评估</h1>
-        <p role="status" aria-live="polite" className="mt-2 h-6 text-sm text-[#6B7280]">
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-2 h-6 text-sm text-[#6B7280]"
+        >
           {LOADING_PHRASES[phraseIndex]}
         </p>
       </div>
@@ -245,7 +275,8 @@ export function OnboardingWizard() {
         onChoose={(value) => choose(single.key, value)}
       />
     );
-    if (step.optional) footer = <OnboardingSkipButton onClick={() => skip(single.key)} />;
+    if (step.optional)
+      footer = <OnboardingSkipButton onClick={() => skip(single.key)} />;
   } else if (step.id === "birth_date") {
     body = (
       <ValueBox
@@ -276,7 +307,9 @@ export function OnboardingWizard() {
         step={0.1}
         placeholder="170"
         error={heightError}
-        onChange={(raw) => onMetric(raw, setHeightInput, "height_cm", HEIGHT_RANGE)}
+        onChange={(raw) =>
+          onMetric(raw, setHeightInput, "height_cm", HEIGHT_RANGE)
+        }
         onEnter={nextIfReady}
       />
     );
@@ -293,7 +326,9 @@ export function OnboardingWizard() {
         step={0.1}
         placeholder="65"
         error={weightError}
-        onChange={(raw) => onMetric(raw, setWeightInput, "weight_kg", WEIGHT_RANGE)}
+        onChange={(raw) =>
+          onMetric(raw, setWeightInput, "weight_kg", WEIGHT_RANGE)
+        }
         onEnter={nextIfReady}
       />
     );
@@ -306,7 +341,13 @@ export function OnboardingWizard() {
       />
     );
   } else if (step.id === "sleep") {
-    body = <ChipGrid options={SLEEP_OPTIONS} values={answers.sleep_tags} onToggle={toggleSleep} />;
+    body = (
+      <ChipGrid
+        options={SLEEP_OPTIONS}
+        values={answers.sleep_tags}
+        onToggle={toggleSleep}
+      />
+    );
   } else if (step.id === "upload") {
     body = <UploadStep />;
   }

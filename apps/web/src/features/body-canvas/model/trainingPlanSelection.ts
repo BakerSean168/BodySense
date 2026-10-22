@@ -31,7 +31,8 @@ export function resolveSelectedPlanId(
   preferredPlanId: string | null | undefined,
 ): string | null {
   if (plans.length === 0) return null;
-  if (preferredPlanId && plans.some((plan) => plan.planId === preferredPlanId)) return preferredPlanId;
+  if (preferredPlanId && plans.some((plan) => plan.planId === preferredPlanId))
+    return preferredPlanId;
   return (plans.find((plan) => plan.status === "active") ?? plans[0]!).planId;
 }
 
@@ -43,14 +44,20 @@ export function selectTrainingPlan(
   const id = resolveSelectedPlanId(records, preferredPlanId);
   const record = id ? records.find((plan) => plan.planId === id) : undefined;
   return {
-    plans: records.map(({ planId, title, status }) => ({ planId, title, status })),
+    plans: records.map(({ planId, title, status }) => ({
+      planId,
+      title,
+      status,
+    })),
     selected: record
       ? {
           planId: record.planId,
           title: record.title,
           status: record.status,
           gatePermits: record.executionGate.permitsExecution,
-          templates: record.currentContent.sessions.map(({ templateId, title }) => ({ templateId, title })),
+          templates: record.currentContent.sessions.map(
+            ({ templateId, title }) => ({ templateId, title }),
+          ),
         }
       : null,
   };
@@ -62,8 +69,12 @@ export function selectTrainingPlan(
  */
 export const SELECTED_PLAN_STORAGE_KEY = "bodysense.training.selectedPlanId";
 
-export function readSelectedPlanId(storage?: Pick<Storage, "getItem">): string | null {
-  const target = storage ?? (typeof window === "undefined" ? undefined : window.localStorage);
+export function readSelectedPlanId(
+  storage?: Pick<Storage, "getItem">,
+): string | null {
+  const target =
+    storage ??
+    (typeof window === "undefined" ? undefined : window.localStorage);
   if (!target) return null;
   try {
     const value = target.getItem(SELECTED_PLAN_STORAGE_KEY);
@@ -77,7 +88,9 @@ export function writeSelectedPlanId(
   planId: string | null,
   storage?: Pick<Storage, "setItem"> & Partial<Pick<Storage, "removeItem">>,
 ): void {
-  const target = storage ?? (typeof window === "undefined" ? undefined : window.localStorage);
+  const target =
+    storage ??
+    (typeof window === "undefined" ? undefined : window.localStorage);
   if (!target) return;
   try {
     if (planId) target.setItem(SELECTED_PLAN_STORAGE_KEY, planId);

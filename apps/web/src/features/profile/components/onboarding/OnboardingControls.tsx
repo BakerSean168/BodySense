@@ -88,7 +88,15 @@ function CheckDot() {
       aria-hidden="true"
       className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#2C694F] text-white"
     >
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 16 16"
+        className="h-3.5 w-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="m3.5 8.5 3 3 6-7" />
       </svg>
     </span>

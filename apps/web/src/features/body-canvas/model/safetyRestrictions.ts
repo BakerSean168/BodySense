@@ -24,7 +24,10 @@ const CONCEPT_LABELS: Record<SafetyRestrictionRecord["concept"], string> = {
   dizziness: "头晕",
 };
 
-const LIFT_POLICY_LABELS: Record<SafetyRestrictionRecord["lift_policy"], string> = {
+const LIFT_POLICY_LABELS: Record<
+  SafetyRestrictionRecord["lift_policy"],
+  string
+> = {
   on_expiry: "到期后自动解除",
   user_reverification: "需要你重新确认以下情况",
   professional_clearance: "需要医生或治疗师确认可以恢复训练",
@@ -69,7 +72,11 @@ export function projectSafetyRestrictions(
             : "暂不能执行",
         scopeLabel,
         reason: item.reason,
-        meta: [CONCEPT_LABELS[item.concept], dateLabel(item.valid_from), "需要复核"]
+        meta: [
+          CONCEPT_LABELS[item.concept],
+          dateLabel(item.valid_from),
+          "需要复核",
+        ]
           .filter(Boolean)
           .join(" · "),
         liftConditions: item.lift_conditions,

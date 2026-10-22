@@ -67,10 +67,9 @@ describe("Vite Bundled Dev lane", () => {
     hotUpdate.call(pluginContext, {} as HotUpdateOptions);
     expect(calls).toBe(0);
 
-    hotUpdate.call(
-      pluginContext,
-      { server: {} as HotUpdateOptions["server"] } as HotUpdateOptions,
-    );
+    hotUpdate.call(pluginContext, {
+      server: {} as HotUpdateOptions["server"],
+    } as HotUpdateOptions);
     expect(calls).toBe(1);
   });
 

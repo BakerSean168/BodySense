@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { TrainingIcon } from "@/features/body-canvas/components/TrainingIcon";
 import { trainerKeys } from "../hooks/trainerKeys";
-import { trainingApi, type TrainingSessionRecord } from "../services/trainingService";
+import {
+  trainingApi,
+  type TrainingSessionRecord,
+} from "../services/trainingService";
 
 /**
  * The session the Home chip points at: the one holding the in-progress
@@ -15,7 +18,9 @@ export function pickLiveSession(
   const open = (sessions ?? []).filter((session) => session.state !== "ended");
   return (
     open.find((session) => session.state === "in_progress") ??
-    [...open].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))[0] ??
+    [...open].sort(
+      (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
+    )[0] ??
     null
   );
 }

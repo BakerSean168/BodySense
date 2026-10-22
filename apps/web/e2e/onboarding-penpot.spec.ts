@@ -31,9 +31,14 @@ for (const vp of viewports) {
     await page.waitForURL(/\/onboarding/);
 
     const root = page.getByTestId("onboarding-page");
-    await expect(page.getByRole("heading", { name: "您的性别是？" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "您的性别是？" }),
+    ).toBeVisible();
     await expect(root.getByText("BodySense", { exact: true })).toBeVisible();
-    await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    await expect(page.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "1",
+    );
 
     await completeOnboarding(page, async (step) => {
       // Layout landmarks from the boards: 620px column on desktop, no sideways scroll.
@@ -50,7 +55,9 @@ for (const vp of viewports) {
       );
       expect(overflowX).toBeLessThanOrEqual(0);
       if (step === 2 || step === 16) {
-        const footer = page.getByTestId("onboarding-footer").getByRole("button");
+        const footer = page
+          .getByTestId("onboarding-footer")
+          .getByRole("button");
         const box = await footer.boundingBox();
         expect(box!.y + box!.height).toBeLessThanOrEqual(vp.height);
         if (vp.name === "1440") expect(Math.round(box!.width)).toBe(620);
@@ -67,16 +74,25 @@ for (const vp of viewports) {
     const body = (await profile.json()) as {
       profile?: { gender?: string; birth_date?: string };
     };
-    expect(body.profile).toMatchObject({ gender: "male", birth_date: "1995-06-15" });
+    expect(body.profile).toMatchObject({
+      gender: "male",
+      birth_date: "1995-06-15",
+    });
 
     // Step 05 (颈部 + 腰部) is kept as a self-report, read back from its own endpoint.
-    const discomfort = await request.get(`${apiBase}/api/v1/onboarding/discomfort-areas`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const discomfort = await request.get(
+      `${apiBase}/api/v1/onboarding/discomfort-areas`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     expect(discomfort.ok(), await discomfort.text()).toBeTruthy();
     const reported = (await discomfort.json()) as {
       report?: { area_codes?: string[]; source?: string } | null;
     };
-    expect(reported.report).toMatchObject({ area_codes: ["neck", "lower_back"], source: "onboarding" });
+    expect(reported.report).toMatchObject({
+      area_codes: ["neck", "lower_back"],
+      source: "onboarding",
+    });
   });
 }

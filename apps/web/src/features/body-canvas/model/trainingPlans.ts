@@ -1,4 +1,7 @@
-import { resolveSelectedPlanId, type TrainingPlanSummary } from "./trainingPlanSelection";
+import {
+  resolveSelectedPlanId,
+  type TrainingPlanSummary,
+} from "./trainingPlanSelection";
 import type {
   PlanAcceptanceReceipt,
   PlanProposalRecord,
@@ -85,13 +88,22 @@ export function projectGate(gate: Gate): TrainingGateView {
     ...gate.reasons.map(gateReasonLabel),
     ...(gate.requiresReview ? ["需要先复查安全状态"] : []),
   ].filter((reason, index, all) => all.indexOf(reason) === index);
-  const permits = gate.permitsExecution && (gate.result === "allow" || gate.result === "warn");
+  const permits =
+    gate.permitsExecution &&
+    (gate.result === "allow" || gate.result === "warn");
   return {
     result: gate.result,
     permits,
     tone: !permits ? "bad" : gate.result === "warn" ? "warn" : "ok",
     label: permits ? "可以开始" : "暂不能开始",
-    reasons: permits && gate.result === "allow" ? [] : reasons.length ? reasons : permits ? [] : ["安全检查未通过"],
+    reasons:
+      permits && gate.result === "allow"
+        ? []
+        : reasons.length
+          ? reasons
+          : permits
+            ? []
+            : ["安全检查未通过"],
     safetyRevision: gate.safetyRevision,
   };
 }
@@ -114,7 +126,9 @@ export function formatPrescription(exercise: PlanExerciseRecord): string {
 }
 
 export function formatRest(exercise: PlanExerciseRecord): string | null {
-  return exercise.restSeconds !== undefined ? `休息 ${exercise.restSeconds} 秒` : null;
+  return exercise.restSeconds !== undefined
+    ? `休息 ${exercise.restSeconds} 秒`
+    : null;
 }
 
 export type ExerciseChange = "modified" | "added";
@@ -227,7 +241,8 @@ function flattenExercises(content: PlanContent | null | undefined) {
   for (const template of content?.sessions ?? [])
     for (const stage of template.stages)
       for (const exercise of stage.exercises)
-        if (!map.has(exercise.planExerciseId)) map.set(exercise.planExerciseId, exercise);
+        if (!map.has(exercise.planExerciseId))
+          map.set(exercise.planExerciseId, exercise);
   return map;
 }
 
@@ -265,7 +280,13 @@ export function diffPlanContent(
   for (const [id, exercise] of after) {
     const previous = before.get(id);
     if (!previous)
-      changes.push({ kind: "added", planExerciseId: id, name: exercise.nameSnapshot, before: null, after: describe(exercise) });
+      changes.push({
+        kind: "added",
+        planExerciseId: id,
+        name: exercise.nameSnapshot,
+        before: null,
+        after: describe(exercise),
+      });
     else if (!sameExercise(previous, exercise))
       changes.push({
         kind: "modified",
@@ -277,13 +298,21 @@ export function diffPlanContent(
   }
   for (const [id, exercise] of before)
     if (!after.has(id))
-      changes.push({ kind: "removed", planExerciseId: id, name: exercise.nameSnapshot, before: describe(exercise), after: null });
+      changes.push({
+        kind: "removed",
+        planExerciseId: id,
+        name: exercise.nameSnapshot,
+        before: describe(exercise),
+        after: null,
+      });
   return changes;
 }
 
 const DAY_MS = 86_400_000;
 
-export type ProposalExpiredReason = NonNullable<PlanProposalRecord["expiredReason"]>;
+export type ProposalExpiredReason = NonNullable<
+  PlanProposalRecord["expiredReason"]
+>;
 
 export function projectProposal(
   proposal: PlanProposalRecord,
@@ -292,7 +321,9 @@ export function projectProposal(
   /** A visible 409 on this proposal: it can no longer be accepted. */
   refused?: ProposalExpiredReason,
 ): ProposalView {
-  const plan = proposal.planId ? plans.find((item) => item.planId === proposal.planId) : undefined;
+  const plan = proposal.planId
+    ? plans.find((item) => item.planId === proposal.planId)
+    : undefined;
   const expiresAt = Date.parse(proposal.expiresAt);
   // A pending update whose base revision is no longer current can never be
   // accepted; the server expires it on the next command, the UI says so now.
@@ -307,7 +338,10 @@ export function projectProposal(
         ? "expired"
         : "pending"
       : proposal.state;
-  const base = proposal.kind === "update" && plan && !baseMoved ? plan.currentContent : null;
+  const base =
+    proposal.kind === "update" && plan && !baseMoved
+      ? plan.currentContent
+      : null;
   return {
     proposalId: proposal.proposalId,
     kind: proposal.kind,
@@ -322,7 +356,9 @@ export function projectProposal(
     expiresAt: proposal.expiresAt,
     expiredReason:
       proposal.expiredReason ??
-      (phase === "expired" ? (refused ?? (baseMoved ? "base_revision_changed" : "timeout")) : null),
+      (phase === "expired"
+        ? (refused ?? (baseMoved ? "base_revision_changed" : "timeout"))
+        : null),
     changes: diffPlanContent(base, proposal.draft.content),
   };
 }
@@ -349,13 +385,17 @@ function projectTemplate(
   return {
     templateId: template.templateId,
     title: template.title,
-    exerciseCount: stages.reduce((count, stage) => count + stage.exercises.length, 0),
+    exerciseCount: stages.reduce(
+      (count, stage) => count + stage.exercises.length,
+      0,
+    ),
     stages,
   };
 }
 
 function frequencyLabel(content: PlanContent): string | null {
-  if (content.frequency.sessionsPerWeek) return `每周 ${content.frequency.sessionsPerWeek} 次`;
+  if (content.frequency.sessionsPerWeek)
+    return `每周 ${content.frequency.sessionsPerWeek} 次`;
   return content.frequency.description?.trim() || null;
 }
 
@@ -372,22 +412,40 @@ export interface ProjectTrainingWindowInput {
   now: Date;
 }
 
-export function projectTrainingWindow(input: ProjectTrainingWindowInput): TrainingWindowView {
+export function projectTrainingWindow(
+  input: ProjectTrainingWindowInput,
+): TrainingWindowView {
   const plans = input.plans ?? [];
   const proposals = (input.proposals ?? []).map((proposal) =>
-    projectProposal(proposal, plans, input.now, input.refused?.[proposal.proposalId]),
+    projectProposal(
+      proposal,
+      plans,
+      input.now,
+      input.refused?.[proposal.proposalId],
+    ),
   );
-  const summaries = plans.map((plan) => ({ planId: plan.planId, title: plan.title, status: plan.status }));
+  const summaries = plans.map((plan) => ({
+    planId: plan.planId,
+    title: plan.title,
+    status: plan.status,
+  }));
   const updatedFocus = input.focus.kind === "updated" ? input.focus : null;
   const updated = updatedFocus
     ? {
         created: updatedFocus.created,
-        changes: diffPlanContent(updatedFocus.baseContent, updatedFocus.acceptedContent),
+        changes: diffPlanContent(
+          updatedFocus.baseContent,
+          updatedFocus.acceptedContent,
+        ),
       }
     : null;
 
-  const effectiveId = updatedFocus?.receipt.planId ?? resolveSelectedPlanId(plans, input.selectedPlanId);
-  const record = effectiveId ? plans.find((plan) => plan.planId === effectiveId) : undefined;
+  const effectiveId =
+    updatedFocus?.receipt.planId ??
+    resolveSelectedPlanId(plans, input.selectedPlanId);
+  const record = effectiveId
+    ? plans.find((plan) => plan.planId === effectiveId)
+    : undefined;
   // Update only after receipt: the Updated scene waits for the record that
   // carries exactly the accepted revision before it shows any new content.
   const receiptVisible = updatedFocus
@@ -396,11 +454,14 @@ export function projectTrainingWindow(input: ProjectTrainingWindowInput): Traini
   const marks = new Map<string, ExerciseChange>();
   if (updated && receiptVisible)
     for (const change of updated.changes)
-      if (change.kind !== "removed") marks.set(change.planExerciseId, change.kind);
+      if (change.kind !== "removed")
+        marks.set(change.planExerciseId, change.kind);
 
   let selected: TrainingPlanView | null = null;
   if (record && receiptVisible) {
-    const templates = record.currentContent.sessions.map((template) => projectTemplate(template, marks));
+    const templates = record.currentContent.sessions.map((template) =>
+      projectTemplate(template, marks),
+    );
     const gate = projectGate(record.executionGate);
     selected = {
       planId: record.planId,
@@ -410,31 +471,52 @@ export function projectTrainingWindow(input: ProjectTrainingWindowInput): Traini
       statusTone: STATUS_LABELS[record.status].tone,
       revisionId: record.currentAcceptedRevisionId,
       frequencyLabel: frequencyLabel(record.currentContent),
-      scheduleLabel: record.currentContent.schedule.mode === "frequency_only" ? "仅频率" : "按日程",
+      scheduleLabel:
+        record.currentContent.schedule.mode === "frequency_only"
+          ? "仅频率"
+          : "按日程",
       templates,
       selectedTemplate:
-        templates.find((template) => template.templateId === input.selectedTemplateId) ?? templates[0] ?? null,
+        templates.find(
+          (template) => template.templateId === input.selectedTemplateId,
+        ) ??
+        templates[0] ??
+        null,
       gate,
       canStart: record.status === "active" && gate.permits,
       pendingProposals: proposals.filter(
-        (proposal) => proposal.phase === "pending" && proposal.kind === "update" && proposal.planId === record.planId,
+        (proposal) =>
+          proposal.phase === "pending" &&
+          proposal.kind === "update" &&
+          proposal.planId === record.planId,
       ),
     };
   }
 
-  const pendingCreates = proposals.filter((proposal) => proposal.phase === "pending" && proposal.kind === "create");
+  const pendingCreates = proposals.filter(
+    (proposal) => proposal.phase === "pending" && proposal.kind === "create",
+  );
   const focused =
     input.focus.kind === "proposal"
-      ? (proposals.find((proposal) => proposal.proposalId === (input.focus as { proposalId: string }).proposalId) ?? null)
+      ? (proposals.find(
+          (proposal) =>
+            proposal.proposalId ===
+            (input.focus as { proposalId: string }).proposalId,
+        ) ?? null)
       : null;
   // No plan yet: the newest pending create proposal is the window's content.
-  const proposal = focused ?? (plans.length === 0 && input.focus.kind === "plan" ? (pendingCreates[0] ?? null) : null);
+  const proposal =
+    focused ??
+    (plans.length === 0 && input.focus.kind === "plan"
+      ? (pendingCreates[0] ?? null)
+      : null);
 
   let scene: TrainingScene;
   if (input.error) scene = "error";
   else if (input.loading && !input.plans) scene = "loading";
   else if (updated) scene = receiptVisible && selected ? "updated" : "updating";
-  else if (proposal) scene = proposal.phase === "pending" ? "proposal" : "expired";
+  else if (proposal)
+    scene = proposal.phase === "pending" ? "proposal" : "expired";
   else if (selected) scene = "plan";
   else scene = "empty";
 
@@ -445,7 +527,9 @@ export function projectTrainingWindow(input: ProjectTrainingWindowInput): Traini
     proposal,
     pendingCreates,
     selectedPlanMissing:
-      input.selectedPlanId !== null && plans.length > 0 && !plans.some((plan) => plan.planId === input.selectedPlanId),
+      input.selectedPlanId !== null &&
+      plans.length > 0 &&
+      !plans.some((plan) => plan.planId === input.selectedPlanId),
     updated,
   };
 }

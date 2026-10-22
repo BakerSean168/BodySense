@@ -89,7 +89,10 @@ export function projectDiagnosisHistory(
   for (const run of runs) {
     if (run.state === "open") continue;
     const settlement = run.settlement;
-    if (run.outcome === "safety_blocked" || settlement?.outcome === "safety_blocked") {
+    if (
+      run.outcome === "safety_blocked" ||
+      settlement?.outcome === "safety_blocked"
+    ) {
       const at = settlement?.settledAt ?? run.startedAt;
       entries.push({
         key: `run:${run.runId}`,
@@ -103,7 +106,8 @@ export function projectDiagnosisHistory(
       });
       continue;
     }
-    const committed = run.state === "committed" && settlement?.outcome === "committed";
+    const committed =
+      run.state === "committed" && settlement?.outcome === "committed";
     for (const proposal of run.proposals) {
       const decision = proposal.decision;
       if (!decision) continue;
@@ -143,7 +147,9 @@ export function projectDiagnosisHistory(
         });
         continue;
       }
-      const level = text(record(record(content?.proposedEntry)?.assessment)?.level);
+      const level = text(
+        record(record(content?.proposedEntry)?.assessment)?.level,
+      );
       entries.push({
         ...base,
         outcome: "adopted",
@@ -156,7 +162,10 @@ export function projectDiagnosisHistory(
   // Entries made inactive outside the loaded runs (e.g. the user's direct
   // withdrawal) are still part of the history; their cause is not guessed.
   for (const entry of diagnosis?.conditionEntries ?? []) {
-    if (entry.disposition !== "inactive" || deactivatedByRun.has(entry.conditionId))
+    if (
+      entry.disposition !== "inactive" ||
+      deactivatedByRun.has(entry.conditionId)
+    )
       continue;
     entries.push({
       key: `inactive:${entry.conditionId}`,

@@ -31,5 +31,4 @@ export const workspaceApi = {
       const response = await recordOutcome(input, undefined, openApiAuthFetch);
       return { outcome: response.outcome, created: response.created };
     }),
-
 };

@@ -34,7 +34,10 @@ export function RedFlagBanner({ redFlags, onAcknowledge }: RedFlagBannerProps) {
           </h3>
           <div className="mt-2 space-y-2">
             {redFlags.map((flag, index) => (
-              <div key={index} className="chat-redflag-text text-sm leading-6 text-red-100/70">
+              <div
+                key={index}
+                className="chat-redflag-text text-sm leading-6 text-red-100/70"
+              >
                 <span className="chat-redflag-tag mr-2 inline-block rounded-md bg-red-300/10 px-1.5 py-0.5 text-xs font-medium text-red-200/85">
                   {CATEGORY_LABELS[flag.category] || flag.category}
                 </span>
@@ -43,7 +46,8 @@ export function RedFlagBanner({ redFlags, onAcknowledge }: RedFlagBannerProps) {
             ))}
           </div>
           <p className="chat-redflag-text mt-3 text-xs leading-5 text-red-100/48">
-            这些信息可能需要专业医疗评估。BodySense 的分析仅用于辅助理解身体情况，不构成医疗诊断；如有紧急情况，请及时就医。
+            这些信息可能需要专业医疗评估。BodySense
+            的分析仅用于辅助理解身体情况，不构成医疗诊断；如有紧急情况，请及时就医。
           </p>
           {onAcknowledge ? (
             <button

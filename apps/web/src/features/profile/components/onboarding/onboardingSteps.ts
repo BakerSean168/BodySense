@@ -158,22 +158,121 @@ export interface StepDef {
 }
 
 export const STEPS: StepDef[] = [
-  { id: "gender", section: "基础信息", title: "您的性别是？", subtitle: "性别会作为稳定身份信息保存；它本身不会生成健康结论。", kind: "single" },
-  { id: "birth_date", section: "基础信息", title: "您的出生日期是？", subtitle: "用于计算年龄，个性化健康评估。", kind: "date" },
-  { id: "height", section: "基础信息", title: "您的身高是？", subtitle: "用于计算 BMI，评估体态负荷。", kind: "number" },
-  { id: "weight", section: "基础信息", title: "您的体重是？", subtitle: "用于计算 BMI，评估体态负荷。", kind: "number" },
-  { id: "discomfort", section: "身体状况", title: "目前哪些部位有不适感？", subtitle: "可多选。酸痛、僵硬、麻木都算；这会帮助我们判断体态风险的倾向。", kind: "multi" },
-  { id: "injury", section: "身体状况", title: "有无运动损伤或确诊的脊柱问题？", subtitle: "如椎间盘突出、脊柱侧弯等。选填。", kind: "single", optional: true },
-  { id: "activity", section: "身体状况", title: "您日常的活动模式是？", subtitle: "选择最接近您工作日状态的一项。", kind: "single" },
-  { id: "sitting", section: "生活习惯", title: "工作日平均每天坐着的时间？", subtitle: "含通勤、会议、在家坐着的时间。不用精确计时，按大概选就可以。", kind: "single" },
-  { id: "break", section: "生活习惯", title: "连续坐多久会起身活动一下？", subtitle: "按您平时的习惯选就可以。", kind: "single" },
-  { id: "sleep", section: "生活习惯", title: "睡眠与作息情况", subtitle: "不要求固定时间，描述规律性即可。", kind: "multi" },
-  { id: "exercise_habit", section: "生活习惯", title: "平时有锻炼习惯吗？", subtitle: "按平均情况选就可以。", kind: "single" },
-  { id: "exercise_type", section: "生活习惯", title: "平时主要做什么运动？", subtitle: "选择最接近的一项。", kind: "single" },
-  { id: "exercise_frequency", section: "生活习惯", title: "运动频率是？", subtitle: "按平均情况选就可以。", kind: "single" },
-  { id: "nutrition", section: "生活习惯", title: "饮食习惯是？", subtitle: "选填。", kind: "single", optional: true },
-  { id: "substances", section: "生活习惯", title: "烟酒情况？", subtitle: "选填。", kind: "single", optional: true },
-  { id: "upload", section: "完成", title: "上传体检报告或体态照片", subtitle: "选填。有资料会让评估更准确。", kind: "upload" },
+  {
+    id: "gender",
+    section: "基础信息",
+    title: "您的性别是？",
+    subtitle: "性别会作为稳定身份信息保存；它本身不会生成健康结论。",
+    kind: "single",
+  },
+  {
+    id: "birth_date",
+    section: "基础信息",
+    title: "您的出生日期是？",
+    subtitle: "用于计算年龄，个性化健康评估。",
+    kind: "date",
+  },
+  {
+    id: "height",
+    section: "基础信息",
+    title: "您的身高是？",
+    subtitle: "用于计算 BMI，评估体态负荷。",
+    kind: "number",
+  },
+  {
+    id: "weight",
+    section: "基础信息",
+    title: "您的体重是？",
+    subtitle: "用于计算 BMI，评估体态负荷。",
+    kind: "number",
+  },
+  {
+    id: "discomfort",
+    section: "身体状况",
+    title: "目前哪些部位有不适感？",
+    subtitle: "可多选。酸痛、僵硬、麻木都算；这会帮助我们判断体态风险的倾向。",
+    kind: "multi",
+  },
+  {
+    id: "injury",
+    section: "身体状况",
+    title: "有无运动损伤或确诊的脊柱问题？",
+    subtitle: "如椎间盘突出、脊柱侧弯等。选填。",
+    kind: "single",
+    optional: true,
+  },
+  {
+    id: "activity",
+    section: "身体状况",
+    title: "您日常的活动模式是？",
+    subtitle: "选择最接近您工作日状态的一项。",
+    kind: "single",
+  },
+  {
+    id: "sitting",
+    section: "生活习惯",
+    title: "工作日平均每天坐着的时间？",
+    subtitle: "含通勤、会议、在家坐着的时间。不用精确计时，按大概选就可以。",
+    kind: "single",
+  },
+  {
+    id: "break",
+    section: "生活习惯",
+    title: "连续坐多久会起身活动一下？",
+    subtitle: "按您平时的习惯选就可以。",
+    kind: "single",
+  },
+  {
+    id: "sleep",
+    section: "生活习惯",
+    title: "睡眠与作息情况",
+    subtitle: "不要求固定时间，描述规律性即可。",
+    kind: "multi",
+  },
+  {
+    id: "exercise_habit",
+    section: "生活习惯",
+    title: "平时有锻炼习惯吗？",
+    subtitle: "按平均情况选就可以。",
+    kind: "single",
+  },
+  {
+    id: "exercise_type",
+    section: "生活习惯",
+    title: "平时主要做什么运动？",
+    subtitle: "选择最接近的一项。",
+    kind: "single",
+  },
+  {
+    id: "exercise_frequency",
+    section: "生活习惯",
+    title: "运动频率是？",
+    subtitle: "按平均情况选就可以。",
+    kind: "single",
+  },
+  {
+    id: "nutrition",
+    section: "生活习惯",
+    title: "饮食习惯是？",
+    subtitle: "选填。",
+    kind: "single",
+    optional: true,
+  },
+  {
+    id: "substances",
+    section: "生活习惯",
+    title: "烟酒情况？",
+    subtitle: "选填。",
+    kind: "single",
+    optional: true,
+  },
+  {
+    id: "upload",
+    section: "完成",
+    title: "上传体检报告或体态照片",
+    subtitle: "选填。有资料会让评估更准确。",
+    kind: "upload",
+  },
 ];
 
 export const TOTAL_STEPS = STEPS.length;
@@ -190,25 +289,36 @@ export function formatBirthInput(raw: string): string {
 }
 
 /** Masked input → ISO date when it is a real calendar day inside the bounds. */
-export function parseBirthInput(masked: string, bounds: { min: string; max: string }): string {
+export function parseBirthInput(
+  masked: string,
+  bounds: { min: string; max: string },
+): string {
   const digits = masked.replace(/\D/g, "");
   if (digits.length !== 8) return "";
   const iso = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
   const date = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== iso) return "";
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== iso)
+    return "";
   return iso >= bounds.min && iso <= bounds.max ? iso : "";
 }
 
-const DISCOMFORT_CODES = new Set<string>(DISCOMFORT_OPTIONS.map((option) => option.value));
+const DISCOMFORT_CODES = new Set<string>(
+  DISCOMFORT_OPTIONS.map((option) => option.value),
+);
 
 /**
  * Step 05 chips → the API's coarse area codes in the board order. "都没有不适" stands
  * alone; nothing chosen means the field is omitted (the API leaves it untouched).
  */
-export function toDiscomfortAreas(regions: string[]): DiscomfortAreaCode[] | undefined {
+export function toDiscomfortAreas(
+  regions: string[],
+): DiscomfortAreaCode[] | undefined {
   if (regions.includes(NO_DISCOMFORT)) return [NO_DISCOMFORT];
   const chosen = DISCOMFORT_OPTIONS.map((option) => option.value).filter(
-    (value) => value !== NO_DISCOMFORT && regions.includes(value) && DISCOMFORT_CODES.has(value),
+    (value) =>
+      value !== NO_DISCOMFORT &&
+      regions.includes(value) &&
+      DISCOMFORT_CODES.has(value),
   );
   return chosen.length > 0 ? (chosen as DiscomfortAreaCode[]) : undefined;
 }
@@ -224,7 +334,10 @@ const compact = (record: Record<string, string | string[]>) =>
   );
 
 /** Whether the step's answer allows moving on (single steps advance on choice). */
-export function isStepComplete(stepIndex: number, a: OnboardingAnswers): boolean {
+export function isStepComplete(
+  stepIndex: number,
+  a: OnboardingAnswers,
+): boolean {
   const step = STEPS[stepIndex];
   switch (step?.id) {
     case "gender":
@@ -265,7 +378,9 @@ export function isStepComplete(stepIndex: number, a: OnboardingAnswers): boolean
 }
 
 /** Map the Penpot answers onto the unchanged onboarding-context command. */
-export function buildOnboardingPayload(a: OnboardingAnswers): OnboardingContextPayload {
+export function buildOnboardingPayload(
+  a: OnboardingAnswers,
+): OnboardingContextPayload {
   if (!a.gender || !a.birth_date) {
     throw new Error("请先填写性别和出生日期");
   }
@@ -275,14 +390,23 @@ export function buildOnboardingPayload(a: OnboardingAnswers): OnboardingContextP
 
   const activityParts = [
     labelOf(ACTIVITY_OPTIONS, a.activity_pattern),
-    a.sitting_hours ? `工作日每天坐着约 ${labelOf(SITTING_OPTIONS, a.sitting_hours)}` : "",
-    a.break_interval ? `连续坐 ${labelOf(BREAK_OPTIONS, a.break_interval)}会起身活动` : "",
+    a.sitting_hours
+      ? `工作日每天坐着约 ${labelOf(SITTING_OPTIONS, a.sitting_hours)}`
+      : "",
+    a.break_interval
+      ? `连续坐 ${labelOf(BREAK_OPTIONS, a.break_interval)}会起身活动`
+      : "",
   ].filter(Boolean);
 
-  const sleepLabels = a.sleep_tags.map((tag) => labelOf(SLEEP_OPTIONS, tag)).filter(Boolean);
+  const sleepLabels = a.sleep_tags
+    .map((tag) => labelOf(SLEEP_OPTIONS, tag))
+    .filter(Boolean);
 
   const exerciseType = labelOf(EXERCISE_TYPE_OPTIONS, a.exercise_type);
-  const exerciseFrequency = labelOf(EXERCISE_FREQUENCY_OPTIONS, a.exercise_frequency);
+  const exerciseFrequency = labelOf(
+    EXERCISE_FREQUENCY_OPTIONS,
+    a.exercise_frequency,
+  );
   const exerciseParts = [
     labelOf(EXERCISE_HABIT_OPTIONS, a.exercise_habit),
     exerciseType,

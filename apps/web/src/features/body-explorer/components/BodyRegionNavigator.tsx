@@ -63,7 +63,9 @@ export function BodyRegionNavigator({
           ? getBodyRegionDefinition(selectedRegionId).labels["zh-CN"]
           : activeRegionCount > 0
             ? `${activeRegionCount} 个区域有记录`
-            : snapshot ? "暂无区域记录" : "区域记录尚未读取"}
+            : snapshot
+              ? "暂无区域记录"
+              : "区域记录尚未读取"}
       </p>
     </div>
   );

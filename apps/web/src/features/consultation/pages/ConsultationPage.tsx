@@ -257,7 +257,9 @@ export function ConsultationPage() {
       const message = messages[index]!;
       if (message.role !== "user") continue;
       const metadata = message.metadata as
-        Record<string, unknown> | null | undefined;
+        | Record<string, unknown>
+        | null
+        | undefined;
       if (metadata?.is_interaction_answer === true) continue;
       if (message.status !== "completed") return null;
       const text = (message.parts as Array<{ type?: string; text?: unknown }>)

@@ -13,9 +13,30 @@ export const SHOW_POSE_BAR = false;
 /** Anatomy layers on the Home body. Default view: translucent skin over muscles. */
 export type BodyLayerId = "skin" | "muscles" | "skeleton";
 export type BodyCanvasLayers = Record<BodyLayerId, boolean>;
-export const DEFAULT_BODY_LAYERS: BodyCanvasLayers = { skin: true, muscles: true, skeleton: false };
-export type CanvasPanel = "state" | "diagnosis" | "training" | "trainer" | "progress" | "equipment" | "anatomy" | "help" | "motions";
-export type MotionId = "stand" | "run" | "jump" | "sit" | "arm_raise" | "calf_raise" | "hip_hinge" | "bridge";
+export const DEFAULT_BODY_LAYERS: BodyCanvasLayers = {
+  skin: true,
+  muscles: true,
+  skeleton: false,
+};
+export type CanvasPanel =
+  | "state"
+  | "diagnosis"
+  | "training"
+  | "trainer"
+  | "progress"
+  | "equipment"
+  | "anatomy"
+  | "help"
+  | "motions";
+export type MotionId =
+  | "stand"
+  | "run"
+  | "jump"
+  | "sit"
+  | "arm_raise"
+  | "calf_raise"
+  | "hip_hinge"
+  | "bridge";
 
 export interface ReferenceMotion {
   id: MotionId;
@@ -27,18 +48,73 @@ export interface ReferenceMotion {
 
 /** Reference demonstrations, never prescriptions, observations or diagnoses. */
 export const REFERENCE_MOTIONS: readonly ReferenceMotion[] = [
-  { id: "stand", label: "站立", duration: 5, description: "静立参考位。旋转视角，选择需要查看的区域。", regions: [] },
-  { id: "run", label: "跑步", duration: 1.2, description: "交替摆臂与下肢运动的通用示意，不是你的跑姿评估。", regions: ["hip.left", "hip.right", "knee.left", "knee.right"] },
-  { id: "jump", label: "跳跃", duration: 2.8, description: "准备、起跳与落地阶段示意。可暂停查看任意阶段。", regions: ["thigh.left", "thigh.right", "calf.left", "calf.right"] },
-  { id: "sit", label: "坐姿", duration: 5, description: "坐姿情境参考，不推断组织负荷或个人体态问题。", regions: ["neck", "lower_back", "hip.left", "hip.right"] },
-  { id: "arm_raise", label: "抬臂观察", duration: 6, description: "观察双臂抬起与下降的阶段。执行要求以已接受方案为准。", regions: ["shoulder.left", "shoulder.right", "scapular.left", "scapular.right"] },
-  { id: "calf_raise", label: "提踵", duration: 4, description: "提起与回落的动作示意，不自动给出次数、负重或适用性。", regions: ["calf.left", "calf.right", "ankle.left", "ankle.right"] },
-  { id: "hip_hinge", label: "髋铰链", duration: 5, description: "髋部折叠与恢复站立的参考动作。", regions: ["hip.left", "hip.right", "lower_back"] },
-  { id: "bridge", label: "臀桥", duration: 5, description: "仰卧屈膝与抬髋的通用示意；不是基于你的病历生成的训练建议。", regions: ["gluteal.left", "gluteal.right", "pelvis"] },
+  {
+    id: "stand",
+    label: "站立",
+    duration: 5,
+    description: "静立参考位。旋转视角，选择需要查看的区域。",
+    regions: [],
+  },
+  {
+    id: "run",
+    label: "跑步",
+    duration: 1.2,
+    description: "交替摆臂与下肢运动的通用示意，不是你的跑姿评估。",
+    regions: ["hip.left", "hip.right", "knee.left", "knee.right"],
+  },
+  {
+    id: "jump",
+    label: "跳跃",
+    duration: 2.8,
+    description: "准备、起跳与落地阶段示意。可暂停查看任意阶段。",
+    regions: ["thigh.left", "thigh.right", "calf.left", "calf.right"],
+  },
+  {
+    id: "sit",
+    label: "坐姿",
+    duration: 5,
+    description: "坐姿情境参考，不推断组织负荷或个人体态问题。",
+    regions: ["neck", "lower_back", "hip.left", "hip.right"],
+  },
+  {
+    id: "arm_raise",
+    label: "抬臂观察",
+    duration: 6,
+    description: "观察双臂抬起与下降的阶段。执行要求以已接受方案为准。",
+    regions: [
+      "shoulder.left",
+      "shoulder.right",
+      "scapular.left",
+      "scapular.right",
+    ],
+  },
+  {
+    id: "calf_raise",
+    label: "提踵",
+    duration: 4,
+    description: "提起与回落的动作示意，不自动给出次数、负重或适用性。",
+    regions: ["calf.left", "calf.right", "ankle.left", "ankle.right"],
+  },
+  {
+    id: "hip_hinge",
+    label: "髋铰链",
+    duration: 5,
+    description: "髋部折叠与恢复站立的参考动作。",
+    regions: ["hip.left", "hip.right", "lower_back"],
+  },
+  {
+    id: "bridge",
+    label: "臀桥",
+    duration: 5,
+    description: "仰卧屈膝与抬髋的通用示意；不是基于你的病历生成的训练建议。",
+    regions: ["gluteal.left", "gluteal.right", "pelvis"],
+  },
 ];
 
 export function getReferenceMotion(id: MotionId): ReferenceMotion {
-  return REFERENCE_MOTIONS.find((motion) => motion.id === id) ?? REFERENCE_MOTIONS[0];
+  return (
+    REFERENCE_MOTIONS.find((motion) => motion.id === id) ?? REFERENCE_MOTIONS[0]
+  );
 }
 
 export function demonstrationForTitle(title: string): MotionId | null {
@@ -61,16 +137,36 @@ export type SelectionAction =
   | { type: "undo" };
 export const EMPTY_SELECTION: CanvasSelection = { regions: [], history: [] };
 
-export function selectionReducer(state: CanvasSelection, action: SelectionAction): CanvasSelection {
+export function selectionReducer(
+  state: CanvasSelection,
+  action: SelectionAction,
+): CanvasSelection {
   if (action.type === "undo") {
     const previous = state.history.at(-1);
-    return previous ? { regions: previous, history: state.history.slice(0, -1) } : state;
+    return previous
+      ? { regions: previous, history: state.history.slice(0, -1) }
+      : state;
   }
-  const next = action.type === "clear" ? [] : action.type === "remove"
-    ? state.regions.filter((id) => id !== action.region)
-    : [...new Set([...(action.append ? state.regions : []), ...action.regions])].filter((id) => BODY_REGION_IDS.includes(id));
-  if (next.length === state.regions.length && next.every((id, index) => id === state.regions[index])) return state;
-  return { regions: next, history: [...state.history.slice(-19), state.regions] };
+  const next =
+    action.type === "clear"
+      ? []
+      : action.type === "remove"
+        ? state.regions.filter((id) => id !== action.region)
+        : [
+            ...new Set([
+              ...(action.append ? state.regions : []),
+              ...action.regions,
+            ]),
+          ].filter((id) => BODY_REGION_IDS.includes(id));
+  if (
+    next.length === state.regions.length &&
+    next.every((id, index) => id === state.regions[index])
+  )
+    return state;
+  return {
+    regions: next,
+    history: [...state.history.slice(-19), state.regions],
+  };
 }
 
 export function buildCanvasContext(
@@ -94,13 +190,26 @@ export function buildCanvasContext(
       })()
     : undefined;
   return {
-    ...(primary ? { body_region_id: primary, body_region_label: getBodyRegionDefinition(primary).labels["zh-CN"], body_region_ids: unique } : {}),
+    ...(primary
+      ? {
+          body_region_id: primary,
+          body_region_label: getBodyRegionDefinition(primary).labels["zh-CN"],
+          body_region_ids: unique,
+        }
+      : {}),
     ...(referenceMotion ? { reference_motion: referenceMotion } : {}),
   };
 }
 
 export function isEditingTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], [role='combobox'], [role='slider']"));
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        "input, textarea, select, [contenteditable='true'], [role='textbox'], [role='combobox'], [role='slider']",
+      ),
+    )
+  );
 }
 
 export type CanvasShortcut =
@@ -109,62 +218,126 @@ export type CanvasShortcut =
   | { type: "motion"; motion: MotionId }
   | { type: "pause" | "reset" | "chat" | "escape" | "undo" };
 
-export function canvasShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "isComposing" | "repeat" | "target" | "defaultPrevented">): CanvasShortcut | null {
-  if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey || isEditingTarget(event.target)) return null;
+export function canvasShortcut(
+  event: Pick<
+    KeyboardEvent,
+    | "key"
+    | "ctrlKey"
+    | "metaKey"
+    | "altKey"
+    | "isComposing"
+    | "repeat"
+    | "target"
+    | "defaultPrevented"
+  >,
+): CanvasShortcut | null {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.repeat ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    isEditingTarget(event.target)
+  )
+    return null;
   const key = event.key.toLowerCase();
   if (key === "escape") return { type: "escape" };
   if (key === " " || key === "f") return { type: "pause" };
   if (key === "r") return { type: "reset" };
   if (key === "/") return { type: "chat" };
   if (key === "z") return { type: "undo" };
-  const tools: Record<string, CanvasTool> = { v: "orbit", b: "brush", s: "box" };
+  const tools: Record<string, CanvasTool> = {
+    v: "orbit",
+    b: "brush",
+    s: "box",
+  };
   if (tools[key]) return { type: "tool", tool: tools[key] };
   // Penpot Dock: / D P M (M = Person; I stays as a legacy alias). L = Layers rail tool.
-  const panels: Record<string, CanvasPanel> = { p: "training", d: "diagnosis", m: "state", i: "state", t: "trainer", c: "state", e: "equipment", h: "progress", l: "anatomy", x: "anatomy", "?": "help" };
+  const panels: Record<string, CanvasPanel> = {
+    p: "training",
+    d: "diagnosis",
+    m: "state",
+    i: "state",
+    t: "trainer",
+    c: "state",
+    e: "equipment",
+    h: "progress",
+    l: "anatomy",
+    x: "anatomy",
+    "?": "help",
+  };
   if (panels[key]) return { type: "panel", panel: panels[key] };
-  const motions: Record<string, MotionId> = { "1": "stand", "2": "run", "3": "jump", "4": "sit" };
+  const motions: Record<string, MotionId> = {
+    "1": "stand",
+    "2": "run",
+    "3": "jump",
+    "4": "sit",
+  };
   return motions[key] ? { type: "motion", motion: motions[key] } : null;
 }
 
 /** A mesh's name is an atlas visual hint, not a new durable anatomical ID. */
-export function atlasSurfaceRegion(name: string, center: readonly [number, number, number]): BodyRegionId {
+export function atlasSurfaceRegion(
+  name: string,
+  center: readonly [number, number, number],
+): BodyRegionId {
   const text = name.toLowerCase().replace(/[_-]/g, " ");
   const [x, y, z] = center;
-  const side = /(?:\.l|\.left)$/.test(name) ? "left" : /(?:\.r|\.right)$/.test(name) ? "right" : x >= 0 ? "left" : "right";
+  const side = /(?:\.l|\.left)$/.test(name)
+    ? "left"
+    : /(?:\.r|\.right)$/.test(name)
+      ? "right"
+      : x >= 0
+        ? "left"
+        : "right";
   if (/scapul/.test(text)) return `scapular.${side}`;
   if (/deltoid|shoulder|acromial|axilla/.test(text)) return `shoulder.${side}`;
   if (/elbow|cubital|olecranon/.test(text)) return `elbow.${side}`;
   if (/forearm|antebrach/.test(text)) return `forearm.${side}`;
   if (/wrist|carpal/.test(text)) return `wrist.${side}`;
-  if (/hand|finger|pollex|thumb|digit|minimus|palmar|palm|thenar|metacarp/.test(text) && y > .6) return `hand.${side}`;
+  if (
+    /hand|finger|pollex|thumb|digit|minimus|palmar|palm|thenar|metacarp/.test(
+      text,
+    ) &&
+    y > 0.6
+  )
+    return `hand.${side}`;
   if (/region of arm|brachial/.test(text)) return `upper_arm.${side}`;
   if (/gluteal|gluteus|buttock/.test(text)) return `gluteal.${side}`;
   if (/knee|patell|popliteal/.test(text)) return `knee.${side}`;
   if (/ankle|malleol/.test(text)) return `ankle.${side}`;
-  if (/foot|toe|plantar|calcaneal|tarsal|metatars/.test(text)) return `foot.${side}`;
+  if (/foot|toe|plantar|calcaneal|tarsal|metatars/.test(text))
+    return `foot.${side}`;
   if (/region of leg|sural/.test(text)) return `calf.${side}`;
   if (/thigh|femoral/.test(text)) return `thigh.${side}`;
   if (/hip|trochanter/.test(text)) return `hip.${side}`;
   if (/lumbar|sacral/.test(text)) return "lower_back";
   if (/cervical|neck|carotid/.test(text)) return "neck";
-  if (/thoracic|pectoral|mammary|sternal/.test(text)) return z < -.035 ? "upper_back" : "chest";
+  if (/thoracic|pectoral|mammary|sternal/.test(text))
+    return z < -0.035 ? "upper_back" : "chest";
   if (/abdomin|umbilical|hypochondri/.test(text)) return "abdomen";
   if (y >= 1.51) return "head";
   if (y >= 1.445) return "neck";
-  if (Math.abs(x) > .18 && y > .66) {
-    if (y > 1.30) return `shoulder.${side}`;
+  if (Math.abs(x) > 0.18 && y > 0.66) {
+    if (y > 1.3) return `shoulder.${side}`;
     if (y > 1.15) return `upper_arm.${side}`;
     if (y > 1.065) return `elbow.${side}`;
-    if (y > .885) return `forearm.${side}`;
-    if (y > .82) return `wrist.${side}`;
+    if (y > 0.885) return `forearm.${side}`;
+    if (y > 0.82) return `wrist.${side}`;
     return `hand.${side}`;
   }
-  if (y > 1.16) return z < -.025 ? "upper_back" : "chest";
-  if (y > .96) return z < -.025 ? "lower_back" : "abdomen";
-  if (y > .87) return Math.abs(x) < .065 ? "pelvis" : z < -.035 ? `gluteal.${side}` : `hip.${side}`;
-  if (y > .51) return `thigh.${side}`;
-  if (y > .385) return `knee.${side}`;
-  if (y > .14) return `calf.${side}`;
-  if (y > .075) return `ankle.${side}`;
+  if (y > 1.16) return z < -0.025 ? "upper_back" : "chest";
+  if (y > 0.96) return z < -0.025 ? "lower_back" : "abdomen";
+  if (y > 0.87)
+    return Math.abs(x) < 0.065
+      ? "pelvis"
+      : z < -0.035
+        ? `gluteal.${side}`
+        : `hip.${side}`;
+  if (y > 0.51) return `thigh.${side}`;
+  if (y > 0.385) return `knee.${side}`;
+  if (y > 0.14) return `calf.${side}`;
+  if (y > 0.075) return `ankle.${side}`;
   return `foot.${side}`;
 }

@@ -72,7 +72,9 @@ describe("profileStore OpenAPI boundary", () => {
   });
 
   it("replaces every editable field against the revision it read", async () => {
-    authFetchMock.mockResolvedValueOnce(jsonResponse({ profile: validProfile() }));
+    authFetchMock.mockResolvedValueOnce(
+      jsonResponse({ profile: validProfile() }),
+    );
     await useProfileStore.getState().fetchProfile();
     authFetchMock.mockResolvedValueOnce(
       jsonResponse({ profile: { ...validProfile(), revision: 5 } }),
@@ -102,7 +104,9 @@ describe("profileStore OpenAPI boundary", () => {
   });
 
   it("reloads the newer profile instead of overwriting it on a revision conflict", async () => {
-    authFetchMock.mockResolvedValueOnce(jsonResponse({ profile: validProfile() }));
+    authFetchMock.mockResolvedValueOnce(
+      jsonResponse({ profile: validProfile() }),
+    );
     await useProfileStore.getState().fetchProfile();
     authFetchMock
       .mockResolvedValueOnce(
@@ -113,14 +117,19 @@ describe("profileStore OpenAPI boundary", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse({
-          profile: { ...validProfile(), display_name: "Elsewhere", revision: 6 },
+          profile: {
+            ...validProfile(),
+            display_name: "Elsewhere",
+            revision: 6,
+          },
         }),
       );
 
     await expect(
-      useProfileStore
-        .getState()
-        .saveProfile({ ...editableProfile(validProfileState()), display_name: "Mine" }),
+      useProfileStore.getState().saveProfile({
+        ...editableProfile(validProfileState()),
+        display_name: "Mine",
+      }),
     ).rejects.toBeInstanceOf(ProfileConflictError);
 
     expect(useProfileStore.getState().profile?.display_name).toBe("Elsewhere");

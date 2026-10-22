@@ -1,4 +1,7 @@
-import { bodyRecordsFixture, symptomFact } from "@/features/profile/services/__fixtures__/bodyRecordsFixture";
+import {
+  bodyRecordsFixture,
+  symptomFact,
+} from "@/features/profile/services/__fixtures__/bodyRecordsFixture";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";

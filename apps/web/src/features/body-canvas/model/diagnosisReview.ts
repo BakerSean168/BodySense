@@ -9,7 +9,8 @@ import type {
  * the user adopted. `stale` cannot be put aside; `review_recommended` can be
  * dismissed ("暂不处理") until newer evidence raises it again.
  */
-export type DiagnosisFreshnessState = NativeDiagnosisCondition["freshness"]["state"];
+export type DiagnosisFreshnessState =
+  NativeDiagnosisCondition["freshness"]["state"];
 type FreshnessReason = NativeDiagnosisCondition["freshness"]["reasons"][number];
 
 export interface DiagnosisReviewView {
@@ -54,12 +55,16 @@ function reviewTitle(reasons: readonly FreshnessReason[]): string {
   );
   if (facts.size > 0 && facts.size === reasons.length)
     return `${facts.size} 条新记录可能相关`;
-  if (reasons.length === 1) return `${REASON_LABELS[reasons[0]!.code]}，建议复核`;
+  if (reasons.length === 1)
+    return `${REASON_LABELS[reasons[0]!.code]}，建议复核`;
   return `${reasons.length} 项新变化可能相关`;
 }
 
 export function projectConditionReview(
-  condition: Pick<NativeDiagnosisCondition, "freshness" | "reviewPromptDismissal" | "disposition">,
+  condition: Pick<
+    NativeDiagnosisCondition,
+    "freshness" | "reviewPromptDismissal" | "disposition"
+  >,
 ): DiagnosisReviewView {
   const { freshness } = condition;
   const base = {
@@ -85,7 +90,13 @@ export function projectConditionReview(
       canDismiss: !dismissed && condition.disposition === "adopted",
     };
   }
-  return { ...base, prompt: false, dismissed: false, title: "", canDismiss: false };
+  return {
+    ...base,
+    prompt: false,
+    dismissed: false,
+    title: "",
+    canDismiss: false,
+  };
 }
 
 /** An open run whose sources no longer qualify cannot be settled. */

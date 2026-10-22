@@ -5,7 +5,11 @@ import type { BodyRegionId } from "./bodyRegionOntology";
 export type BodyExplorerMode = "region" | "anatomy";
 export type BodyExplorerDisplayMode = "normal" | "xray" | "ghost";
 export type BodyExplorerCameraPreset =
-  "free" | "front" | "back" | "left" | "right";
+  | "free"
+  | "front"
+  | "back"
+  | "left"
+  | "right";
 
 export type BodyExplorerCameraIntent =
   | { requestId: number; kind: "focus"; anatomyId: AnatomyStructureId }

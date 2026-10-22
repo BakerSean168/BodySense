@@ -9,7 +9,11 @@ vi.mock("../services/trainingService", () => ({ trainingApi: api }));
 
 import { pickLiveSession, TrainerStatusChip } from "./TrainerStatusChip";
 
-function session(id: string, state: TrainingSessionRecord["state"], startedAt: string): TrainingSessionRecord {
+function session(
+  id: string,
+  state: TrainingSessionRecord["state"],
+  startedAt: string,
+): TrainingSessionRecord {
   return {
     sessionId: id,
     planId: "plan-1",
@@ -26,10 +30,13 @@ function session(id: string, state: TrainingSessionRecord["state"], startedAt: s
   };
 }
 
-const t = (minute: number) => new Date(Date.UTC(2026, 9, 19, 1, minute)).toISOString();
+const t = (minute: number) =>
+  new Date(Date.UTC(2026, 9, 19, 1, minute)).toISOString();
 
 function renderChip(onOpen = vi.fn()) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
     <QueryClientProvider client={client}>
       <TrainerStatusChip onOpen={onOpen} />
@@ -44,8 +51,12 @@ describe("Home training chip (Penpot Home / trainer-active · trainer-paused)", 
     const oldPaused = session("p1", "paused", t(1));
     const newPaused = session("p2", "paused", t(5));
     const live = session("l", "in_progress", t(2));
-    expect(pickLiveSession([ended, oldPaused, live, newPaused])?.sessionId).toBe("l");
-    expect(pickLiveSession([ended, oldPaused, newPaused])?.sessionId).toBe("p2");
+    expect(
+      pickLiveSession([ended, oldPaused, live, newPaused])?.sessionId,
+    ).toBe("l");
+    expect(pickLiveSession([ended, oldPaused, newPaused])?.sessionId).toBe(
+      "p2",
+    );
     expect(pickLiveSession([ended])).toBeNull();
     expect(pickLiveSession(undefined)).toBeNull();
   });
@@ -54,7 +65,9 @@ describe("Home training chip (Penpot Home / trainer-active · trainer-paused)", 
     const paused = session("p2", "paused", t(5));
     api.listSessions.mockResolvedValue([paused]);
     const onOpen = renderChip();
-    const chip = await screen.findByRole("button", { name: "回到训练 · 训练已暂停" });
+    const chip = await screen.findByRole("button", {
+      name: "回到训练 · 训练已暂停",
+    });
     expect(chip).toHaveAttribute("data-state", "paused");
     await userEvent.click(chip);
     expect(onOpen).toHaveBeenCalledWith(paused);

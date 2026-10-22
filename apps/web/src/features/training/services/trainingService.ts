@@ -52,7 +52,9 @@ function decisionRequest(
     presentedFingerprint: proposal.contentFingerprint,
     // An update is pinned to the plan revision it was proposed against;
     // create proposals carry neither field.
-    ...(proposal.kind === "update" && proposal.planId && proposal.basedOnRevisionId
+    ...(proposal.kind === "update" &&
+    proposal.planId &&
+    proposal.basedOnRevisionId
       ? {
           targetPlanId: proposal.planId,
           expectedRevisionId: proposal.basedOnRevisionId,

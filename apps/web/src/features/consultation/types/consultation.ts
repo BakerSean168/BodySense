@@ -236,7 +236,12 @@ export interface AskUserField {
   key: string;
   label: string;
   answer_type:
-    "text" | "single_choice" | "multi_choice" | "number" | "date" | "scale";
+    | "text"
+    | "single_choice"
+    | "multi_choice"
+    | "number"
+    | "date"
+    | "scale";
   options?: string[];
   exclusive_options?: string[];
   required?: boolean;

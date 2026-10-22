@@ -20,7 +20,11 @@
  */
 
 export type BusinessWindowId =
-  "chat" | "person" | "diagnosis" | "training" | "trainer";
+  | "chat"
+  | "person"
+  | "diagnosis"
+  | "training"
+  | "trainer";
 
 export interface BusinessWindowMeta {
   id: BusinessWindowId;

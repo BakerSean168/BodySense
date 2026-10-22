@@ -1,6 +1,8 @@
 export type OCRConfidence = "high" | "medium" | "low" | "unknown";
 export type IndicatorAdmissibilityStatus =
-  "admissible" | "needs_review" | "rejected";
+  | "admissible"
+  | "needs_review"
+  | "rejected";
 
 export interface IndicatorEvidenceAdmissibility {
   status: IndicatorAdmissibilityStatus;
@@ -28,7 +30,11 @@ export type Confidence = "high" | "medium" | "low";
 export type Severity = "mild" | "moderate" | "marked";
 export type PostureView = "front" | "side" | "back";
 export type AnalysisStatus =
-  "none" | "pending" | "processing" | "completed" | "failed";
+  | "none"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
 
 export interface PostureMetric {
   name: string;

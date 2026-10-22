@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +24,8 @@ vi.mock("./steps/UploadStep", () => ({
 
 import { useProfileStore } from "@/stores/profileStore";
 import { OnboardingWizard } from "./OnboardingWizard";
-import { toDiscomfortAreas,
+import {
+  toDiscomfortAreas,
   buildOnboardingPayload,
   formatBirthInput,
   INITIAL_ANSWERS,
@@ -55,8 +62,10 @@ function renderWizard() {
 }
 
 const heading = () => screen.getByRole("heading", { level: 1 });
-const choose = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
-const next = () => fireEvent.click(screen.getByRole("button", { name: "继续" }));
+const choose = (name: string) =>
+  fireEvent.click(screen.getByRole("button", { name }));
+const next = () =>
+  fireEvent.click(screen.getByRole("button", { name: "继续" }));
 
 beforeEach(() => {
   setReducedMotion(true);
@@ -78,43 +87,71 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
     expect(heading()).toHaveTextContent("您的性别是？");
     expect(screen.getByText("1/16")).toBeInTheDocument();
     expect(screen.getByText("基础信息")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "上一步" })).not.toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    expect(
+      screen.queryByRole("button", { name: "上一步" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "1",
+    );
     choose("男");
 
     expect(heading()).toHaveTextContent("您的出生日期是？");
     expect(screen.getByRole("button", { name: "继续" })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("出生日期"), { target: { value: "19950231" } });
+    fireEvent.change(screen.getByLabelText("出生日期"), {
+      target: { value: "19950231" },
+    });
     expect(screen.getByRole("alert")).toHaveTextContent("请输入有效的出生日期");
-    fireEvent.change(screen.getByLabelText("出生日期"), { target: { value: "19950615" } });
+    fireEvent.change(screen.getByLabelText("出生日期"), {
+      target: { value: "19950615" },
+    });
     expect(screen.getByLabelText("出生日期")).toHaveValue("1995 / 06 / 15");
     next();
 
     expect(heading()).toHaveTextContent("您的身高是？");
-    fireEvent.change(screen.getByLabelText("身高（cm）"), { target: { value: "300" } });
-    expect(screen.getByRole("alert")).toHaveTextContent("身高必须在 50-250 cm 之间");
+    fireEvent.change(screen.getByLabelText("身高（cm）"), {
+      target: { value: "300" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "身高必须在 50-250 cm 之间",
+    );
     expect(screen.getByRole("button", { name: "继续" })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("身高（cm）"), { target: { value: "170" } });
+    fireEvent.change(screen.getByLabelText("身高（cm）"), {
+      target: { value: "170" },
+    });
     next();
 
     expect(heading()).toHaveTextContent("您的体重是？");
-    fireEvent.change(screen.getByLabelText("体重（kg）"), { target: { value: "65" } });
+    fireEvent.change(screen.getByLabelText("体重（kg）"), {
+      target: { value: "65" },
+    });
     next();
 
     expect(heading()).toHaveTextContent("目前哪些部位有不适感？");
     expect(screen.getByText("身体状况")).toBeInTheDocument();
     choose("颈部");
     choose("腰部");
-    expect(screen.getByRole("button", { name: "颈部" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "颈部" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     choose("都没有不适");
-    expect(screen.getByRole("button", { name: "颈部" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "都没有不适" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "颈部" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "都没有不适" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     next();
 
     expect(heading()).toHaveTextContent("有无运动损伤或确诊的脊柱问题？");
     choose("腰椎问题");
     expect(heading()).toHaveTextContent("您日常的活动模式是？");
-    expect(screen.queryByRole("button", { name: "跳过" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "跳过" }),
+    ).not.toBeInTheDocument();
     choose("久坐办公");
     expect(heading()).toHaveTextContent("工作日平均每天坐着的时间？");
     expect(screen.getByText("生活习惯")).toBeInTheDocument();
@@ -149,17 +186,30 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
       injury_history: "腰椎问题",
     });
     expect(payload.lifestyle.activity).toEqual({
-      summary: "久坐办公；工作日每天坐着约 4–6 小时；连续坐 半小时–1 小时会起身活动",
-      details: { pattern: "sedentary_office", sitting_hours: "4-6", break_interval: "30m-1h" },
+      summary:
+        "久坐办公；工作日每天坐着约 4–6 小时；连续坐 半小时–1 小时会起身活动",
+      details: {
+        pattern: "sedentary_office",
+        sitting_hours: "4-6",
+        break_interval: "30m-1h",
+      },
     });
     expect(payload.lifestyle.sleep).toEqual({
       summary: "经常晚睡；轮班",
       details: { tags: ["late", "shift"] },
     });
-    expect(payload.lifestyle.exercise.summary).toBe("有规律地锻炼；跑步 / 快走；频率：偶尔");
-    expect(payload.lifestyle.exercise.details).toMatchObject({ frequency: "occasional", type: "跑步 / 快走" });
+    expect(payload.lifestyle.exercise.summary).toBe(
+      "有规律地锻炼；跑步 / 快走；频率：偶尔",
+    );
+    expect(payload.lifestyle.exercise.details).toMatchObject({
+      frequency: "occasional",
+      type: "跑步 / 快走",
+    });
     expect(payload.lifestyle.nutrition).toEqual({ summary: "", details: {} });
-    expect(payload.lifestyle.substances).toEqual({ summary: "都不碰", details: { pattern: "none" } });
+    expect(payload.lifestyle.substances).toEqual({
+      summary: "都不碰",
+      details: { pattern: "none" },
+    });
     expect(payload.lifestyle.recovery).toEqual({ summary: "" });
     // Step 05: "都没有不适" replaced the areas picked before it and is sent alone.
     expect(payload.discomfort_areas).toEqual(["none"]);
@@ -173,7 +223,10 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
     expect(heading()).toHaveTextContent("您的出生日期是？");
     fireEvent.click(screen.getByRole("button", { name: "上一步" }));
     expect(heading()).toHaveTextContent("您的性别是？");
-    expect(screen.getByRole("button", { name: "女" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "女" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("waits briefly before advancing when motion is allowed", () => {
@@ -182,7 +235,10 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
     renderWizard();
     choose("男");
     expect(heading()).toHaveTextContent("您的性别是？");
-    expect(screen.getByRole("button", { name: "男" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "男" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     act(() => {
       vi.advanceTimersByTime(250);
     });
@@ -205,17 +261,31 @@ describe("buildOnboardingPayload", () => {
   });
 
   it("sends step 05 areas as coarse codes in board order and omits an unanswered step", () => {
-    const base = { ...INITIAL_ANSWERS, gender: "male" as const, birth_date: "1990-01-01", height_cm: 170, weight_kg: 60 };
+    const base = {
+      ...INITIAL_ANSWERS,
+      gender: "male" as const,
+      birth_date: "1990-01-01",
+      height_cm: 170,
+      weight_kg: 60,
+    };
     expect(
-      buildOnboardingPayload({ ...base, discomfort_regions: ["leg", "neck", "lower_back"] }).discomfort_areas,
+      buildOnboardingPayload({
+        ...base,
+        discomfort_regions: ["leg", "neck", "lower_back"],
+      }).discomfort_areas,
     ).toEqual(["neck", "lower_back", "leg"]);
-    expect(buildOnboardingPayload({ ...base, discomfort_regions: ["neck", "none"] }).discomfort_areas).toEqual(["none"]);
+    expect(
+      buildOnboardingPayload({ ...base, discomfort_regions: ["neck", "none"] })
+        .discomfort_areas,
+    ).toEqual(["none"]);
     expect(buildOnboardingPayload(base)).not.toHaveProperty("discomfort_areas");
     expect(toDiscomfortAreas(["knee"])).toBeUndefined();
   });
 
   it("refuses to build without the required identity and metrics", () => {
-    expect(() => buildOnboardingPayload(INITIAL_ANSWERS)).toThrow("请先填写性别和出生日期");
+    expect(() => buildOnboardingPayload(INITIAL_ANSWERS)).toThrow(
+      "请先填写性别和出生日期",
+    );
   });
 
   it("masks and parses the birth date like the board (1995 / 06 / 15)", () => {
