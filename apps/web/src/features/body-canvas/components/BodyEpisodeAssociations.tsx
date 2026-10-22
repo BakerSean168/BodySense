@@ -115,13 +115,14 @@ export function BodyEpisodeEditor({
             <button
               type="button"
               className="bc-button"
+              aria-label="补充可关联的本人症状"
               disabled={saving || recording || episodeLocked || symptomLocked}
               onClick={() => {
                 setAddingSymptom(true);
                 setRecordError(null);
               }}
             >
-              补充可关联的本人症状
+              补充
             </button>
           ) : null}
           {canEdit && addingSymptom ? (

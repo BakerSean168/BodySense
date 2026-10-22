@@ -65,13 +65,7 @@ export function ProfileEdit({
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">编辑基本身份</h2>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          可变化的身体和生活信息不会在这里编辑；它们分别进入身体测量、生活方式与
-          BodyState。
-        </p>
-      </div>
+      <h2 className="text-lg font-semibold text-foreground">编辑基本身份</h2>
 
       <div>
         <div className="mb-2 text-sm font-medium text-foreground">性别</div>

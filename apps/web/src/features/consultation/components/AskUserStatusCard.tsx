@@ -137,11 +137,7 @@ export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
           <p className="chat-status-answer mt-3 text-xs font-medium text-[#9edbbd]">
             你的回答：{answerText}
           </p>
-        ) : (
-          <p className="chat-muted mt-3 text-xs text-white/48">
-            请直接在追问卡片中完成回答。
-          </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

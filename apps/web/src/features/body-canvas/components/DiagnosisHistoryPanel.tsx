@@ -91,7 +91,7 @@ export function DiagnosisHistoryList({
         </p>
       ) : entries.length === 0 ? (
         <p className="bc-dx-note" data-testid="diagnosis-history-empty">
-          还没有诊断决定。正式分析的每一次采纳、未采纳和停用都会记在这里。
+          还没有诊断决定。
         </p>
       ) : (
         <ol className="bc-dx-timeline" aria-label="诊断决定记录">
@@ -170,7 +170,7 @@ export function DiagnosisHistoryList({
         </section>
       ) : null}
       <p className="bc-dx-note">
-        历史只记录你的决定和回执；未采纳不代表医学上已经排除，停用也不会删除原来的记录。
+        未采纳不代表医学上已经排除，停用也不会删除原来的记录。
       </p>
     </div>
   );

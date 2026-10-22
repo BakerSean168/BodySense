@@ -12,7 +12,7 @@ interface OnboardingLayoutProps {
   totalSteps: number;
   section: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   onBack: () => void;
   children: ReactNode;
   /** Footer contents (继续 / 完成 button or a quiet 跳过); none on choose-to-advance steps. */
@@ -106,12 +106,14 @@ export function OnboardingLayout({
         >
           {title}
         </h1>
-        <p
-          id="onboarding-question-hint"
-          className="mt-2 text-sm leading-[19px] text-[#6B7280]"
-        >
-          {subtitle}
-        </p>
+        {subtitle ? (
+          <p
+            id="onboarding-question-hint"
+            className="mt-2 text-sm leading-[19px] text-[#6B7280]"
+          >
+            {subtitle}
+          </p>
+        ) : null}
         <div className="mt-6 lg:mt-[26px]">{children}</div>
 
         {footer && (

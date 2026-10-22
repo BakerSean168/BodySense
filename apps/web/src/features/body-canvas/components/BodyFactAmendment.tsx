@@ -181,9 +181,7 @@ export function BodyFactAmendment({
             disabled={saving}
             required
           />
-          <p className="bc-window-note">
-            用于纠正原来说错的内容，不是记录身体新变化。以新陈述为准，不沿用旧记录的部位、症状细节或推定时间。
-          </p>
+          <p className="bc-window-note">用于纠正原来说错的内容。</p>
         </>
       ) : (
         <p className="bc-window-note">

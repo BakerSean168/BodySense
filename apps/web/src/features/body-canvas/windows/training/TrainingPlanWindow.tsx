@@ -69,9 +69,6 @@ export function TrainingPlanWindow({
               <TrainingIcon size={22} />
             </span>
             <p className="bc-dx-state-title">还没有训练计划</p>
-            <p className="bc-dx-state-text">
-              确认诊断后，可在对话里生成训练建议
-            </p>
             <button
               type="button"
               className="bc-dx-tonal bc-tp-chat"

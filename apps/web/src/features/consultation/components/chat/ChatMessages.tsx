@@ -228,7 +228,7 @@ export function CustomAssistantMessage() {
               <p className="chat-gap-text mt-1 text-xs leading-5 text-amber-100/48">
                 当前知识库暂未覆盖「
                 {viewModel.knowledgeGaps.map((gap) => gap.query).join("」「")}
-                」，相关建议会保持更谨慎。
+                」。
               </p>
             </div>
           ) : null}

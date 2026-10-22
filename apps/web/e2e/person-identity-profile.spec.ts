@@ -76,7 +76,12 @@ test("Person identity edits optional Profile fields and preferences without touc
   expect(box, "identity popover has a layout box").not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
-  await expect(identity).toContainText("资料缺失不会由 AI 猜测补全");
+  // The empty nickname input previews the account-name fallback.
+  await expect(identity.getByLabel("昵称")).toHaveAttribute(
+    "placeholder",
+    localPart,
+  );
+  await expect(identity).not.toContainText("AI 猜测");
   await expect(identity).not.toContainText(/BMI|身高|体重|revision|修订/);
   await expect(identity.getByLabel("自报性别")).toHaveValue("male");
   await expect(identity.getByLabel("生日")).toHaveValue("1996-08-27");

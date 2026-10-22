@@ -8,12 +8,7 @@ import {
 import { useUploadStore } from "@/stores/uploadStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/Button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ProfileView } from "./ProfileView";
 import { ProfileEdit } from "./ProfileEdit";
 import { BodyMetricsPanel } from "./BodyMetricsPanel";
@@ -58,9 +53,6 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
           <div className="min-w-0">
             <DialogTitle>身体档案</DialogTitle>
-            <DialogDescription className="mt-0.5">
-              稳定身份、身体测量、生活方式、健康历史、上传资料与隐私都在这里管理。
-            </DialogDescription>
           </div>
           <Button
             type="button"

@@ -123,9 +123,10 @@ export function TrainerEntryGuard({
           <button
             type="button"
             className="bc-button bc-primary"
+            aria-label="查看训练计划"
             onClick={onOpenTraining}
           >
-            查看训练计划 <ArrowRight size={15} aria-hidden="true" />
+            训练计划 <ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>
       )}

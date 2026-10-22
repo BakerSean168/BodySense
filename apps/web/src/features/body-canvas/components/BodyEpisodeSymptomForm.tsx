@@ -34,9 +34,7 @@ export function BodyEpisodeSymptomForm({
         onSubmit();
       }}
     >
-      <p className="bc-window-note">
-        请按本人实际陈述填写；症状类型不是诊断，保存陈述后仍需单独确认关联。
-      </p>
+      <p className="bc-window-note">症状类型不是诊断。</p>
       <label>
         本人完整症状陈述
         <textarea

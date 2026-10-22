@@ -56,7 +56,7 @@ export function BodyRegionStatusSummary({
       ) : (
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
           {snapshot
-            ? "选择区域不会生成健康结论。这里没有记录时，可以继续提问或补充真实信息。"
+            ? "选择区域不会生成健康结论。"
             : "当前尚未取得区域记录，请等待或重试读取。"}
         </p>
       )}

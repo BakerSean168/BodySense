@@ -65,13 +65,7 @@ export function HealthHistoryPanel() {
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">健康历史</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里保留对长期身体判断有意义的既往信息。当前先维护重要伤病与手术摘要；它属于
-            BodyState 健康历史，而不是静态身份 Profile。
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">健康历史</h2>
         {!editing ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PencilLine className="h-4 w-4" />
@@ -94,9 +88,6 @@ export function HealthHistoryPanel() {
           >
             既往伤病 / 手术史
           </label>
-          <p className="mt-1 text-xs text-muted-foreground">
-            记录重要、可能影响当前评估或训练建议的历史即可；不需要把短暂小磕碰全部写进来。
-          </p>
           <textarea
             id="injury-history"
             rows={5}

@@ -368,9 +368,6 @@ function FeedbackForm({
         placeholder="比如哪里吃力、哪里有不适，用你自己的话说就好。"
         onChange={(event) => onChange(event.target.value)}
       />
-      <p className="bc-dx-note">
-        会按原话保存，只用于提示你复盘计划，不会自动修改计划。
-      </p>
     </section>
   );
 }
@@ -649,7 +646,7 @@ function InProgressScene({
                 disabled={trainer.busy}
                 onClick={trainer.skipExercise}
               >
-                跳过此动作
+                跳过
               </button>
             ) : null}
           </div>
@@ -948,9 +945,7 @@ function EndedScene({
           <blockquote className="bc-tr-feedback-text">
             {view.feedback.text}
           </blockquote>
-          <p className="bc-dx-note">
-            已按原话记录。训练计划会提示你据此复盘，不会自动修改计划。
-          </p>
+          <p className="bc-dx-note">已按原话记录。</p>
         </section>
       ) : (
         form

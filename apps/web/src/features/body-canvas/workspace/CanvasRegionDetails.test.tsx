@@ -36,7 +36,7 @@ describe("Canvas region details", () => {
     const panel = screen.getByRole("complementary", {
       name: "已选区域当前状况",
     });
-    expect(panel).toHaveTextContent("这里还没有已记录的信息");
+    expect(panel).toHaveTextContent("还没有记录");
     await user.click(screen.getByRole("button", { name: /围绕.*提问/ }));
     expect(props.onAsk).toHaveBeenCalledOnce();
     await user.click(screen.getByRole("button", { name: "身体记录" }));
@@ -49,7 +49,7 @@ describe("Canvas region details", () => {
     const props = { ...defaults(), hasBodyState: false, error: true };
     const { rerender } = render(<CanvasRegionDetails {...props} />);
     expect(screen.getByText(/暂时无法读取记录/)).toBeVisible();
-    expect(screen.queryByText("这里还没有已记录的信息")).toBeNull();
+    expect(screen.queryByText("还没有记录")).toBeNull();
     rerender(<CanvasRegionDetails {...props} regionCardOpen={false} />);
     expect(
       screen.queryByRole("complementary", { name: "已选区域当前状况" }),
