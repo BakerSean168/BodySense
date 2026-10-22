@@ -167,8 +167,7 @@ export function PersonCategoryMenu({
             aria-activedescendant={optionId(active)}
             onKeyDown={onListKey}
             onBlur={(event) => {
-              if (!root.current?.contains(event.relatedTarget as Node))
-                setOpen(false);
+              if (!root.current?.contains(event.relatedTarget)) setOpen(false);
             }}
           >
             {PROFILE_CATEGORIES.map((category) => {

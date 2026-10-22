@@ -1,7 +1,7 @@
 export interface TrainingExecutionPlan {
   id: string;
   consultation_id?: string | null;
-  status: "active" | "superseded" | string;
+  status: "active" | "superseded" | (string & {});
   goal: string;
   duration_weeks: number;
   current_week: number;

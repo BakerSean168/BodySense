@@ -196,8 +196,8 @@ describe("Diagnosis History", () => {
       ["上交叉综合征", "采纳", "AI 疑似", null],
       ["紧张型头痛", "停用", null, null],
     ]);
-    expect(entries[0]!.dateLabel).toBe("10月13日");
-    expect(entries[2]!.dateLabel).toBe("9月20日");
+    expect(entries[0].dateLabel).toBe("10月13日");
+    expect(entries[2].dateLabel).toBe("9月20日");
   });
 
   it("never lists an accepted choice of a run that did not commit", () => {
@@ -276,7 +276,7 @@ describe("Safety / Restricted", () => {
       [FACT_2, "建议立即就医"],
       [FACT_1, "暂不能执行"],
     ]);
-    expect(views[1]!.meta).toBe("麻木 · 10月13日 · 需要复核");
-    expect(views[1]!.liftPolicyLabel).toBe("需要医生或治疗师确认可以恢复训练");
+    expect(views[1].meta).toBe("麻木 · 10月13日 · 需要复核");
+    expect(views[1].liftPolicyLabel).toBe("需要医生或治疗师确认可以恢复训练");
   });
 });

@@ -205,7 +205,7 @@ export default function BodyExplorer3D({
       className="relative flex min-h-[510px] flex-col"
       data-testid="body-explorer-3d"
       data-viewer-state={loadState}
-      data-loaded-systems={[...loadedSystems].sort().join(",")}
+      data-loaded-systems={[...loadedSystems].toSorted().join(",")}
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="relative min-h-[430px] flex-1 overflow-hidden rounded-[18px] bg-black/5">

@@ -167,7 +167,7 @@ export function OnboardingWizard() {
   };
 
   const skip = (key: SingleKey) => {
-    update(key, "" as never);
+    update(key, "");
     goNext();
   };
 

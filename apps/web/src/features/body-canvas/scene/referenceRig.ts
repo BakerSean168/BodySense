@@ -304,7 +304,7 @@ export function attachReferenceLayer(
     if (!(object instanceof Mesh)) return;
     const geometry = bakeSkinnedGeometry(object);
     if (options.muscleChart)
-      addMuscleAttributes(geometry, /__tendon$/.test(object.name));
+      addMuscleAttributes(geometry, object.name.endsWith("__tendon"));
     geometries.push(geometry);
   });
   const geometry = geometries.length

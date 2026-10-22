@@ -18,7 +18,7 @@ export function pickLiveSession(
   const open = (sessions ?? []).filter((session) => session.state !== "ended");
   return (
     open.find((session) => session.state === "in_progress") ??
-    [...open].sort(
+    open.toSorted(
       (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
     )[0] ??
     null

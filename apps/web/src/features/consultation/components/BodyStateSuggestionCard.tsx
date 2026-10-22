@@ -65,9 +65,7 @@ function readBinding(question: AskUserQuestion): SuggestionBinding | null {
   }
   return {
     kind,
-    payload: isRecord(binding.payload)
-      ? (binding.payload as SuggestionBinding["payload"])
-      : undefined,
+    payload: isRecord(binding.payload) ? binding.payload : undefined,
   };
 }
 

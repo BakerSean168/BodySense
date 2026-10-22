@@ -103,7 +103,7 @@ describe("TrainingPlan window view model", () => {
       "主训练",
       "放松",
     ]);
-    expect(plan.selectedTemplate!.stages[1]!.exercises[2]).toMatchObject({
+    expect(plan.selectedTemplate!.stages[1].exercises[2]).toMatchObject({
       name: "弹力带侧走",
       prescription: "2 组 × 12 次",
       rest: "休息 45 秒",
@@ -334,7 +334,7 @@ describe("TrainingPlan window view model", () => {
       focus,
     });
     expect(updated.scene).toBe("updated");
-    const main = updated.selected!.selectedTemplate!.stages[1]!.exercises;
+    const main = updated.selected!.selectedTemplate!.stages[1].exercises;
     expect(main.map((item) => [item.name, item.change])).toEqual([
       ["臀桥", "modified"],
       ["死虫式", "added"],

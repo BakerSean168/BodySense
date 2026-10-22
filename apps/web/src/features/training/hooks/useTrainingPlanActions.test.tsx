@@ -99,7 +99,7 @@ describe("useTrainingPlanActions", () => {
     await waitFor(() => expect(view(result.current).scene).toBe("updated"));
     expect(accepted).toHaveBeenCalledWith(PLAN_ID);
     expect(view(result.current).selected!.revisionId).toBe(NEXT_REVISION_ID);
-    const [record, identity] = api.acceptProposal.mock.calls[0]!;
+    const [record, identity] = api.acceptProposal.mock.calls[0];
     expect(record.proposalId).toBe(PROPOSAL_ID);
     expect(identity.idempotencyKey).toEqual(expect.any(String));
   });
@@ -113,8 +113,8 @@ describe("useTrainingPlanActions", () => {
     await act(async () => result.current.accept(PROPOSAL_ID));
     expect(result.current.error).toBe("network");
     await act(async () => result.current.accept(PROPOSAL_ID));
-    const [, first] = api.acceptProposal.mock.calls[0]!;
-    const [, second] = api.acceptProposal.mock.calls[1]!;
+    const [, first] = api.acceptProposal.mock.calls[0];
+    const [, second] = api.acceptProposal.mock.calls[1];
     expect(second).toEqual(first);
   });
 

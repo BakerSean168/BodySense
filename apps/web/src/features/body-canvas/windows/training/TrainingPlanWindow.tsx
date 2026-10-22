@@ -194,7 +194,7 @@ export function TrainingPlanWindow({
             disabled={!startable}
             onClick={() => {
               if (startable)
-                controls.onStart(plan!.planId, template!.templateId);
+                controls.onStart(plan!.planId, template.templateId);
             }}
           >
             <Play size={16} aria-hidden="true" />

@@ -14,7 +14,7 @@ describe("BodyCanvas ordered CSS manifest", () => {
     );
     expect(names).toHaveLength(9);
     expect(new Set(names).size).toBe(names.length);
-    expect(names).toEqual([...names].sort());
+    expect(names).toEqual(names.toSorted());
     for (const name of names) {
       expect(existsSync(resolve(stylesDir, name))).toBe(true);
     }

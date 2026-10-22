@@ -1,13 +1,11 @@
 import type { InteractionQuestion } from "@bodysense/contracts";
+import { assertNever } from "@/lib/assertNever";
 import type { AskUserQuestion } from "../types/consultation";
 
 type CanonicalAnswerType = InteractionQuestion["answer_type"];
-type CanonicalField = NonNullable<InteractionQuestion["fields"]>[number];
 type UiAnswerType = AskUserQuestion["answer_type"];
 
-function normalizeAnswerType(
-  answerType: CanonicalAnswerType | CanonicalField["answer_type"],
-): UiAnswerType {
+function normalizeAnswerType(answerType: CanonicalAnswerType): UiAnswerType {
   switch (answerType) {
     case "single_choice":
     case "multi_choice":
@@ -22,6 +20,7 @@ function normalizeAnswerType(
     case undefined:
       return "text";
   }
+  return assertNever(answerType);
 }
 
 /**

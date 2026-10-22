@@ -21,21 +21,20 @@ const fact = (
     symptom_type: "右肩疼痛",
     presence: "present",
   },
-): BodyFactRecord =>
-  ({
-    id: factId,
-    user_id: owner,
-    kind: "symptom",
-    subject: "self",
-    assertion_status: "asserted",
-    details,
-    statement: "我昨天右肩疼痛",
-    body_region_ids: [],
-    temporal: { precision: "unknown" },
-    source_evidence_id: factId,
-    created_revision: 3,
-    recorded_at: "2026-10-13T00:00:00Z",
-  }) as BodyFactRecord;
+): BodyFactRecord => ({
+  id: factId,
+  user_id: owner,
+  kind: "symptom",
+  subject: "self",
+  assertion_status: "asserted",
+  details,
+  statement: "我昨天右肩疼痛",
+  body_region_ids: [],
+  temporal: { precision: "unknown" },
+  source_evidence_id: factId,
+  created_revision: 3,
+  recorded_at: "2026-10-13T00:00:00Z",
+});
 const factPage = (
   records: BodyFactRecord[] = [],
   revision = 3,

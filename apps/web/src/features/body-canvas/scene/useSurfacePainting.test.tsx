@@ -43,7 +43,7 @@ function fixture() {
     x: 0,
     y: 0,
     toJSON: () => "",
-  } as DOMRect);
+  });
   canvas.hasPointerCapture = vi.fn(() => false);
   canvas.setPointerCapture = vi.fn();
   canvas.releasePointerCapture = vi.fn();

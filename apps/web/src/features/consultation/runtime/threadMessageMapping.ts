@@ -290,7 +290,7 @@ export function buildActiveTurnSeedFromRuntimeEvents(
   }
 
   let activeTurn = { ...INITIAL_ACTIVE_TURN_STATE };
-  const sortedEvents = [...events].sort((a, b) => a.seq - b.seq);
+  const sortedEvents = events.toSorted((a, b) => a.seq - b.seq);
   for (const event of sortedEvents) {
     activeTurn = reduceActiveTurnEvent(activeTurn, event).state;
   }
@@ -347,7 +347,9 @@ function selectProjectedPendingInteraction(
   if (runId) {
     const byRun = pending
       .filter((interaction) => interaction.run_id === runId)
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+      .toSorted(
+        (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+      )[0];
     if (byRun) {
       return byRun;
     }
@@ -356,7 +358,8 @@ function selectProjectedPendingInteraction(
   return (
     pending
       .filter((interaction) => interaction.status === "pending")
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ??
-    null
+      .toSorted(
+        (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+      )[0] ?? null
   );
 }

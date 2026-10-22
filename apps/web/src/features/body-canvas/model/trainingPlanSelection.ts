@@ -33,7 +33,7 @@ export function resolveSelectedPlanId(
   if (plans.length === 0) return null;
   if (preferredPlanId && plans.some((plan) => plan.planId === preferredPlanId))
     return preferredPlanId;
-  return (plans.find((plan) => plan.status === "active") ?? plans[0]!).planId;
+  return (plans.find((plan) => plan.status === "active") ?? plans[0]).planId;
 }
 
 export function selectTrainingPlan(
