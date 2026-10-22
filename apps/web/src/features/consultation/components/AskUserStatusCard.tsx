@@ -1,4 +1,5 @@
 import { CircleHelp } from "lucide-react";
+import { formatDisplayValue } from "@/lib/displayValue";
 import type { PendingInteraction } from "../types/consultation";
 import {
   BodyStateSuggestionStatus,
@@ -28,16 +29,20 @@ function formatAnswer(answer: unknown): string | null {
       const parts = Object.entries(fields)
         .filter(
           ([, value]) =>
-            value !== undefined && value !== null && String(value).length > 0,
+            value !== undefined &&
+            value !== null &&
+            formatDisplayValue(value).length > 0,
         )
-        .map(([key, value]) => `${key}: ${String(value)}`);
+        .map(([key, value]) => `${key}: ${formatDisplayValue(value)}`);
       if (parts.length > 0) return parts.join("；");
     }
     if (Array.isArray(record.selected) && record.selected.length > 0) {
-      return record.selected.map((value) => String(value)).join("，");
+      return record.selected
+        .map((value) => formatDisplayValue(value))
+        .join("，");
     }
     if (record.value !== undefined && record.value !== null) {
-      return String(record.value);
+      return formatDisplayValue(record.value);
     }
   }
 

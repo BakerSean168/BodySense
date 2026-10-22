@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import { formatDisplayValue } from "@/lib/displayValue";
 import {
   appendHealthDocumentReview,
   fetchHealthDocumentReviewContext,
@@ -224,7 +225,8 @@ export function HealthDocumentReviewPanel({
                       {projection.candidate.name || projection.indicator_id}
                     </div>
                     <div className="mt-1 text-sm text-gray-700">
-                      机器识别：{String(projection.candidate.value ?? "-")}
+                      机器识别：
+                      {formatDisplayValue(projection.candidate.value ?? "-")}
                       {projection.candidate.unit
                         ? ` ${projection.candidate.unit}`
                         : ""}
@@ -264,7 +266,7 @@ export function HealthDocumentReviewPanel({
                     onClick={() => {
                       setEditingIndex(projection.indicator_index);
                       setCorrectedValue(
-                        String(projection.candidate.value ?? ""),
+                        formatDisplayValue(projection.candidate.value ?? ""),
                       );
                       setCorrectedUnit(projection.candidate.unit || "");
                       setCorrectedRange(
@@ -432,5 +434,5 @@ function formatReviewAction(record: DocumentIndicatorReviewRecord): string {
   if (record.action === "reject") return "排除机器候选";
   const value = record.reviewed_payload?.value;
   const unit = record.reviewed_payload?.unit;
-  return `修正为 ${String(value ?? "-")}${unit ? ` ${String(unit)}` : ""}`;
+  return `修正为 ${formatDisplayValue(value ?? "-")}${unit ? ` ${formatDisplayValue(unit)}` : ""}`;
 }
