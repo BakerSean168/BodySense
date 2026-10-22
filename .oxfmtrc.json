@@ -12,6 +12,7 @@
     "**/coverage/**",
     "**/generated/**",
     "apps/web/public/static/anatomy/vanatome/**",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "**/*.generated.json"
   ]
 }
