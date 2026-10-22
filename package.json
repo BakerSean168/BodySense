@@ -80,7 +80,9 @@
     "quality:capacity:test": "bash scripts/quality/test-validation-capacity.sh",
     "quality:verify": "pnpm quality:architecture && pnpm quality:architecture:test && pnpm quality:capacity:test",
     "curriculum:lab:graphql": "node --test scripts/learning/labs/part8-graphql-lab.test.mjs",
-    "test:body-fact-vertical": "bash scripts/validate-body-fact-vertical.sh"
+    "test:body-fact-vertical": "bash scripts/validate-body-fact-vertical.sh",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "devDependencies": {
     "@apollo/client": "4.3.1",
@@ -113,7 +115,7 @@
     "nx": "23.2.1",
     "openapi-to-postmanv2": "6.3.3",
     "orval": "8.37.0",
-    "prettier": "^3.9.9",
+    "oxfmt": "^0.74.0",
     "rxjs": "7.8.2",
     "storybook": "^10.5.0",
     "ts-node": "10.9.1",
