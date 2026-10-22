@@ -1,23 +1,40 @@
-import { Backpack, Check, Dumbbell, LoaderCircle, Plus } from "lucide-react";
+import {
+  Backpack,
+  Dumbbell,
+  LoaderCircle,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { errorMessage } from "@/lib/api-client";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useEquipmentInventory } from "../hooks/useEquipmentInventory";
+import { PersonFormDialog } from "../PersonFormDialog";
 import { PersonEmptyState } from "./PersonEmptyState";
 import { PersonDataError } from "./PersonDataError";
 
 /**
  * Equipment is the user's own EquipmentAsset inventory (PC-D2), read from
- * /api/v1/equipment — not BodyState. The category has no fixed slot ceiling:
- * cards grow with the data (4 columns desktop / 2 columns mobile). Marking an
- * item unavailable or removing it never edits an accepted plan, and the list
- * never asserts that an item is suitable for the user's current condition.
+ * /api/v1/equipment — not BodyState. Cards grow with the data (4 columns
+ * desktop / 2 mobile). Adding happens only from the window header "+", which
+ * opens the add dialog; each card has an availability Switch (an unavailable
+ * card is dimmed) and a "⋯" menu whose 移除 retires the item after an undo
+ * toast. None of this edits an accepted plan.
  */
 export function EquipmentCategory({
   canEdit,
-  onAddEquipment,
+  addOpen = false,
+  onAddOpenChange,
 }: {
   canEdit: boolean;
-  /** Opens the inline add form; there is no separate selector route yet. */
-  onAddEquipment?: () => void;
+  /** Controlled by the window header "+". */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }) {
   const {
     inventory,
@@ -25,8 +42,6 @@ export function EquipmentCategory({
     pending,
     busyId,
     error,
-    adding,
-    setAdding,
     name,
     changeName,
     notes,
@@ -35,61 +50,50 @@ export function EquipmentCategory({
     resetForm,
     add,
     changeAvailability,
+    remove,
   } = useEquipmentInventory(canEdit);
-  const addForm = (
-    <form
-      className="bc-equipment-form bc-person-equipment-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void add();
+
+  const closeAdd = () => {
+    resetForm();
+    onAddOpenChange?.(false);
+  };
+  const dialog = (
+    <PersonFormDialog
+      open={addOpen && canEdit}
+      onOpenChange={(open) => (open ? onAddOpenChange?.(true) : closeAdd())}
+      title="添加器材"
+      submitLabel="添加"
+      submitting={isCreating}
+      canSubmit={canEdit && !pending && Boolean(name.trim())}
+      error={addOpen ? error : null}
+      onSubmit={() => {
+        void add().then((saved) => {
+          if (saved) onAddOpenChange?.(false);
+        });
       }}
     >
-      <label>
-        设备名称
+      <label className="bc-form-dialog-field">
+        名称
         <input
           value={name}
-          onChange={(event) => {
-            changeName(event.target.value);
-          }}
+          onChange={(event) => changeName(event.target.value)}
           maxLength={80}
           placeholder="例如：弹力带"
-          disabled={!canEdit || pending}
+          disabled={isCreating}
           autoFocus
         />
       </label>
-      <label>
-        规格或备注<span className="bc-optional">可选</span>
+      <label className="bc-form-dialog-field">
+        备注<span className="bc-optional">可选</span>
         <input
           value={notes}
-          onChange={(event) => {
-            changeNotes(event.target.value);
-          }}
+          onChange={(event) => changeNotes(event.target.value)}
           maxLength={240}
-          placeholder="阻力、重量或使用限制"
-          disabled={!canEdit || pending}
+          placeholder="阻力、重量等"
+          disabled={isCreating}
         />
       </label>
-      <button
-        type="submit"
-        className="bc-button bc-primary"
-        disabled={!canEdit || pending || !name.trim()}
-      >
-        {isCreating ? (
-          <LoaderCircle size={17} className="animate-spin" />
-        ) : (
-          <Plus size={17} />
-        )}
-        添加设备
-      </button>
-      <button
-        type="button"
-        className="bc-button"
-        disabled={pending}
-        onClick={resetForm}
-      >
-        取消
-      </button>
-    </form>
+    </PersonFormDialog>
   );
 
   if (inventory.isPending) {
@@ -110,103 +114,87 @@ export function EquipmentCategory({
     );
   }
 
-  if (equipment.length === 0 && !adding) {
+  const listError =
+    error && !addOpen ? (
+      <p role="alert" className="bc-error">
+        {error}
+      </p>
+    ) : null;
+
+  if (equipment.length === 0) {
     return (
       <>
         <PersonEmptyState
           icon={<Dumbbell size={24} />}
           title="还没有器材"
-          message="加上家里或健身房能用的器材，训练会按它来安排"
-          actionLabel="添加个人器材"
-          onAction={() => {
-            setAdding(true);
-            onAddEquipment?.();
-          }}
-          disabled={!canEdit}
+          message="训练会按你的器材安排"
         />
-        {error ? (
-          <p role="alert" className="bc-error">
-            {error}
-          </p>
-        ) : null}
+        {listError}
+        {dialog}
       </>
     );
   }
 
   return (
     <div className="bc-person-category">
-      {equipment.length === 0 ? null : (
-        <>
-          <p className="bc-person-count">已登记 {equipment.length} 件器材</p>
-          <ul className="bc-person-equipment">
-            {equipment.map((asset) => {
-              const available = asset.availability === "available";
-              const busy = busyId === asset.id;
-              return (
-                <li key={asset.id}>
-                  <span
-                    className="bc-person-equipment-symbol"
-                    aria-hidden="true"
-                  >
+      <ul className="bc-person-equipment">
+        {equipment.map((asset) => {
+          const available = asset.availability === "available";
+          const busy = busyId === asset.id;
+          return (
+            <li
+              key={asset.id}
+              data-available={available ? "true" : "false"}
+              data-testid="equipment-card"
+            >
+              <div className="bc-person-equipment-head">
+                <span className="bc-person-equipment-symbol" aria-hidden="true">
+                  {busy ? (
+                    <LoaderCircle size={20} className="animate-spin" />
+                  ) : (
                     <Backpack size={20} />
-                  </span>
-                  <strong>{asset.display_name}</strong>
-                  {asset.notes ? <p>{asset.notes}</p> : null}
-                  <span className="bc-status">
-                    {available ? <Check size={13} /> : null}
-                    {available ? "当前可用" : "暂不可用"}
-                  </span>
-                  <button
-                    type="button"
-                    className="bc-text-button"
-                    disabled={!canEdit || pending || busy}
-                    onClick={() =>
-                      void changeAvailability(
-                        asset,
-                        available ? "unavailable" : "available",
-                      )
-                    }
+                  )}
+                </span>
+                <Switch
+                  checked={available}
+                  disabled={!canEdit || pending || busy}
+                  aria-label={`${asset.display_name} 可用`}
+                  title={available ? "可用" : "暂不可用"}
+                  onCheckedChange={(checked) =>
+                    void changeAvailability(
+                      asset,
+                      checked ? "available" : "unavailable",
+                    )
+                  }
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="bc-icon-button bc-person-equipment-menu"
+                    aria-label={`更多操作：${asset.display_name}`}
+                    title="更多"
+                    disabled={!canEdit || busy}
                   >
-                    {busy ? (
-                      <LoaderCircle size={14} className="animate-spin" />
-                    ) : null}
-                    {available ? "标记暂不可用" : "恢复可用"}
-                  </button>
-                  <button
-                    type="button"
-                    className="bc-text-button"
-                    disabled={!canEdit || pending || busy}
-                    onClick={() => void changeAvailability(asset, "retired")}
-                  >
-                    移除
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
-      {adding ? (
-        addForm
-      ) : (
-        <button
-          type="button"
-          className="bc-button"
-          onClick={() => {
-            setAdding(true);
-            onAddEquipment?.();
-          }}
-          disabled={!canEdit}
-        >
-          <Plus size={16} />
-          添加个人器材
-        </button>
-      )}
-      {error ? (
-        <p role="alert" className="bc-error">
-          {error}
-        </p>
-      ) : null}
+                    <MoreHorizontal size={17} aria-hidden="true" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bc-account-menu">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => remove(asset)}
+                    >
+                      <Trash2 />
+                      移除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <strong>{asset.display_name}</strong>
+              {asset.notes ? <p>{asset.notes}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
+      {listError}
+      {dialog}
     </div>
   );
 }

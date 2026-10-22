@@ -1,10 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FileText,
   Image as ImageIcon,
   LoaderCircle,
   RotateCcw,
-  Upload,
   X,
 } from "lucide-react";
 import { useUploadStore } from "@/stores/uploadStore";
@@ -22,10 +21,15 @@ export function UploadsCategory({
   uploads,
   category,
   mobile = false,
+  addOpen = false,
+  onAddOpenChange,
 }: {
   uploads: readonly ProfileUploadLike[];
   category: "media" | "reports";
   mobile?: boolean;
+  /** The window header "+" opens the file picker. */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }) {
   const items = selectUploadsByCategory(uploads, category);
   const uploadFile = useUploadStore((state) => state.uploadFile);
@@ -39,7 +43,6 @@ export function UploadsCategory({
     size: number;
     at: Date;
   } | null>(null);
-  const label = category === "reports" ? "上传报告" : "上传照片";
   // Penpot "Media · Upload failed" keeps the file name and offers a retry.
   const lastFile = useRef<File | null>(null);
   const send = async (file: File) => {
@@ -73,7 +76,13 @@ export function UploadsCategory({
       }}
     />
   );
-  const open = () => inputRef.current?.click();
+  // The header "+" is a request, not a state: open the picker once, then
+  // hand the request back (the click still carries user activation).
+  useEffect(() => {
+    if (!addOpen) return;
+    onAddOpenChange?.(false);
+    if (!uploading) inputRef.current?.click();
+  }, [addOpen, onAddOpenChange, uploading]);
   const status = uploading ? (
     <p role="status" className="bc-person-upload-status">
       <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
@@ -148,12 +157,9 @@ export function UploadsCategory({
           title={category === "reports" ? "还没有报告" : "还没有照片或视频"}
           message={
             category === "reports"
-              ? "上传体检、影像或化验报告，会关联到相关记录"
-              : "上传动作视频或身体照片，方便之后对照"
+              ? "体检、影像或化验报告"
+              : "动作视频或身体照片"
           }
-          actionLabel={label}
-          onAction={open}
-          disabled={uploading}
         />
         {status}
       </>
@@ -162,24 +168,6 @@ export function UploadsCategory({
   return (
     <>
       {picker}
-      <div className="bc-person-uploads-head">
-        <span>
-          {category === "media" ? `${items.length} 个` : `${items.length} 份`}
-        </span>
-        <button
-          type="button"
-          className="bc-person-upload"
-          aria-label={label}
-          title={label}
-          onClick={open}
-          disabled={uploading}
-        >
-          <Upload size={17} aria-hidden="true" />
-          <span className="bc-person-upload-text" aria-hidden="true">
-            上传
-          </span>
-        </button>
-      </div>
       {status}
       {category === "media" ? (
         <PersonMediaGrid uploads={items} initialLimit={mobile ? 6 : 8} />

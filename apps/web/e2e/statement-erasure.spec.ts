@@ -37,9 +37,9 @@ async function saveRecord(page: Page, text: string) {
   await page.goto("/consultation?view=state");
   const records = page.getByTestId("body-fact-records");
   await expect(records).toBeVisible();
-  await records.getByRole("button", { name: "补充记录" }).click();
-  await records.getByLabel("你的描述").fill(text);
-  await records.getByRole("button", { name: "保存记录" }).click();
+  await page.getByTestId("person-add").click();
+  await page.getByLabel("你的描述").fill(text);
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(records.getByText(text, { exact: true })).toBeVisible();
   return records;
 }

@@ -82,12 +82,14 @@ test("person media uploads land in the penpot month grid; failures retry", async
   await expect(tiles).toHaveCount(2, { timeout: 20_000 });
   await expect(person.getByRole("alert")).toHaveCount(0);
 
-  // 390: two columns and the labelled 上传 pill.
+  // 390: two columns; uploading stays in the header "+".
   await page.setViewportSize({ width: 390, height: 844 });
   person = await openMedia(page);
   await expect(tiles).toHaveCount(2);
-  const upload = person.getByRole("button", { name: "上传照片" });
-  await expect(upload).toContainText("上传");
+  await expect(page.getByTestId("person-add")).toHaveAttribute(
+    "aria-label",
+    "上传照片",
+  );
   const [a, b] = [
     await tiles.nth(0).boundingBox(),
     await tiles.nth(1).boundingBox(),

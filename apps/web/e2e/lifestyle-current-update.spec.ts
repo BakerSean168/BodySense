@@ -85,11 +85,11 @@ test("lifestyle temporal change preserves the earlier assertion rather than corr
   await expect(
     records.getByRole("button", { name: "后来恢复", exact: true }),
   ).toHaveCount(0);
-  await records.getByRole("button", { name: "补充记录" }).click();
-  await records.getByLabel("你的描述").fill(currentStatement);
-  await records.getByLabel(/发生时间/).fill("现在");
-  await records.getByRole("button", { name: "保存记录" }).click();
-  await expect(records.getByText("已保存你的陈述。")).toBeVisible();
+  await page.getByTestId("person-add").click();
+  await page.getByLabel("你的描述").fill(currentStatement);
+  await page.getByLabel(/发生时间/).fill("现在");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(records.getByText("已保存", { exact: true })).toBeVisible();
   await expect(
     records.getByText(currentStatement, { exact: true }),
   ).toBeVisible();

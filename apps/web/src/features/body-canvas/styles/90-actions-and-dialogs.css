@@ -1,0 +1,129 @@
+/* UX simplify: one add entry (header "+"), add forms in dialogs, compact
+   equipment cards (Switch + "⋯" menu) and undo toasts instead of confirms. */
+
+/* Header "+" sits before Close and reads as the window's primary action. */
+.bc-business-window-controls .bc-header-add {
+  color: var(--bc-primary);
+}
+.bc-business-window-controls .bc-header-add:hover:not(:disabled) {
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.bc-business-window-controls .bc-header-add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.bc-business-window-controls .bc-header-add:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+
+/* Add dialogs share the account dialog's paper; fields stack. */
+.bc-form-dialog.bc-form-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-width: none;
+  gap: 14px;
+  padding: 20px;
+}
+.bc-form-dialog .bc-account-dialog-title {
+  margin: 0;
+  padding: 0;
+}
+.bc-form-dialog-body,
+.bc-form-dialog .bc-person-record-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+}
+.bc-form-dialog-field,
+.bc-form-dialog .bc-person-record-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--bc-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-form-dialog input,
+.bc-form-dialog textarea,
+.bc-form-dialog select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  outline: none;
+}
+.bc-form-dialog textarea {
+  min-height: 92px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+.bc-form-dialog input:focus-visible,
+.bc-form-dialog textarea:focus-visible,
+.bc-form-dialog select:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 1px;
+}
+.bc-form-dialog-actions,
+.bc-form-dialog .bc-record-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+/* The record form lists 保存 before 取消; show the primary action last. */
+.bc-form-dialog .bc-record-actions {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+.bc-form-dialog-actions .bc-button,
+.bc-form-dialog .bc-record-actions .bc-button {
+  min-width: 84px;
+  font-size: 13px;
+}
+
+/* Equipment card: icon, Switch and "⋯" on one row; name and note below. */
+.bc-person-equipment > li {
+  transition:
+    opacity 0.16s ease,
+    filter 0.16s ease;
+}
+.bc-person-equipment-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.bc-person-equipment-head .bc-person-equipment-symbol {
+  display: inline-grid;
+  margin-right: auto;
+}
+.bc-person-equipment-menu.bc-icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  margin-right: -6px;
+}
+.bc-person-equipment > li[data-available="false"] {
+  background: transparent;
+  border-style: dashed;
+}
+.bc-person-equipment > li[data-available="false"] strong,
+.bc-person-equipment > li[data-available="false"] p,
+.bc-person-equipment > li[data-available="false"] .bc-person-equipment-symbol {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bc-person-equipment > li {
+    transition: none;
+  }
+}

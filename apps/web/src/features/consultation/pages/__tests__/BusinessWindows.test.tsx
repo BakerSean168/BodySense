@@ -645,7 +645,7 @@ describe("body-first business windows", () => {
     ).toHaveAttribute("data-value", "equipment");
   });
 
-  it("uploads a report from the Penpot Reports empty state and offers retry on failure", async () => {
+  it("uploads a report from the header + and offers retry on failure", async () => {
     const user = userEvent.setup();
     const uploadFile = vi
       .fn()
@@ -720,8 +720,9 @@ describe("body-first business windows", () => {
     await openDock("个人档案");
     await screen.findByTestId("person-window");
     await chooseCategory("媒体");
-    expect(await screen.findByText("4 个")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "上传照片" })).toBeEnabled();
+    expect(
+      await screen.findByRole("button", { name: "上传照片" }),
+    ).toBeEnabled();
     const months = within(screen.getByTestId("person-window")).getAllByRole(
       "heading",
       { level: 3 },
@@ -946,19 +947,19 @@ describe("body-first business windows", () => {
     expect(await screen.findByText("还没有报告")).toBeInTheDocument();
   });
 
-  it("shows a centred equipment empty state with a single add action", async () => {
+  it("shows a centred equipment empty state and adds only from the header", async () => {
     renderPage();
     await openDock("个人档案");
     await screen.findByTestId("person-window");
     await chooseCategory("器材");
-    // Penpot "Person / Equipment · Empty": title, one quiet line, round add.
+    // Penpot "Person / Equipment · Empty": icon, title and one short line.
     expect(await screen.findByText("还没有器材")).toBeInTheDocument();
-    expect(
-      screen.getByText("加上家里或健身房能用的器材，训练会按它来安排"),
-    ).toBeInTheDocument();
     expect(mockListEquipment).toHaveBeenCalled();
+    const region = screen.getByRole("region", { name: "器材清单" });
+    expect(within(region).queryAllByRole("button")).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "添加器材" }));
     expect(
-      screen.getByRole("button", { name: /添加个人器材/ }),
+      await screen.findByRole("dialog", { name: "添加器材" }),
     ).toBeInTheDocument();
     // No fixed slot ceiling is displayed.
     expect(screen.queryByText(/\/\s*12/)).not.toBeInTheDocument();
@@ -990,8 +991,9 @@ describe("body-first business windows", () => {
     await chooseCategory("器材");
     expect(await screen.findByText("弹力带")).toBeInTheDocument();
     expect(screen.getByText("中等阻力")).toBeInTheDocument();
-    expect(screen.getByText("当前可用")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "标记暂不可用" }));
+    const available = screen.getByRole("switch", { name: "弹力带 可用" });
+    expect(available).toBeChecked();
+    await userEvent.click(available);
     await waitFor(() =>
       expect(mockUpdateEquipment).toHaveBeenCalledWith("eq-1", {
         expected_revision: 2,

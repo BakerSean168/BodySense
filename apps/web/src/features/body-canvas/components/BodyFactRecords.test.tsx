@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -49,6 +50,30 @@ const receipt = {
   fact_ids: [factId],
   committed_at: "2026-10-13T01:00:00Z",
 };
+/** Stands in for the Person window header "+", which owns the add dialog. */
+function WithHeaderAdd({ habitsOnly }: { habitsOnly: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        补充记录
+      </button>
+      <BodyFactRecords
+        habitsOnly={habitsOnly}
+        canEdit
+        addOpen={open}
+        onAddOpenChange={setOpen}
+      />
+    </>
+  );
+}
+/** Adding is blocked: the dialog opens but 保存 stays disabled. */
+async function expectAddBlocked() {
+  await userEvent.click(screen.getByRole("button", { name: "补充记录" }));
+  await userEvent.type(screen.getByLabelText("你的描述"), "x");
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
+}
 function mount(habitsOnly = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -57,7 +82,7 @@ function mount(habitsOnly = false) {
     client,
     ...render(
       <QueryClientProvider client={client}>
-        <BodyFactRecords habitsOnly={habitsOnly} canEdit />
+        <WithHeaderAdd habitsOnly={habitsOnly} />
       </QueryClientProvider>,
     ),
   };
@@ -158,7 +183,7 @@ describe("BodyFact Records and Habits", () => {
       "翻页期间身体记录发生了变化",
     );
     expect(screen.queryByText("已过时的历史记录")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+    await expectAddBlocked();
   });
 
   it("shows read failure with retry, rather than an empty or fabricated record", async () => {
@@ -179,14 +204,14 @@ describe("BodyFact Records and Habits", () => {
     await screen.findByText(/还没有身体记录/);
     await userEvent.click(screen.getByRole("button", { name: /补充记录/ }));
     await userEvent.type(screen.getByLabelText("你的描述"), "我昨天肩膀不舒服");
-    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("连接中断");
     const original = structuredClone(api.record.mock.calls[0][0]);
     expect(original.expected_revision).toBe(3);
     expect(original.facts[0].temporal).toEqual({ precision: "unknown" });
-    expect(screen.queryByText("已保存你的陈述。")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
-    expect(await screen.findByText("已保存你的陈述。")).toBeVisible();
+    expect(screen.queryByText("已保存")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("已保存")).toBeVisible();
     expect(api.record.mock.calls[1][0]).toEqual(original);
   });
 
@@ -205,11 +230,11 @@ describe("BodyFact Records and Habits", () => {
       screen.getByLabelText("你的描述"),
       "我今天步行二十分钟",
     );
-    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
-    expect(await screen.findByText("已保存你的陈述。")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("已保存")).toBeVisible();
     expect(await screen.findByText(/正在同步已保存的记录/)).toBeVisible();
     expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+    await expectAddBlocked();
     expect(api.record).toHaveBeenCalledTimes(1);
 
     completeRead({
@@ -251,7 +276,7 @@ describe("BodyFact Records and Habits", () => {
     expect(screen.getByText(/正在同步已保存的记录/)).toBeVisible();
     expect(screen.queryByText("我昨天肩膀不舒服")).not.toBeInTheDocument();
     expect(screen.queryByText(/还没有身体记录/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /补充记录/ })).toBeDisabled();
+    await expectAddBlocked();
     finish({ ...page(), current_revision: receipt.revision });
     expect(await screen.findByText(/还没有身体记录/)).toBeVisible();
   });
@@ -263,8 +288,8 @@ describe("BodyFact Records and Habits", () => {
     await userEvent.click(screen.getByRole("button", { name: /补充记录/ }));
     await userEvent.type(screen.getByLabelText("你的描述"), "我今天散步");
     api.list.mockRejectedValue(new Error("read unavailable"));
-    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
-    expect(await screen.findByText("已保存你的陈述。")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    expect(await screen.findByText("已保存")).toBeVisible();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "记录已保存，但列表刷新失败",
     );
@@ -279,7 +304,7 @@ describe("BodyFact Records and Habits", () => {
     await screen.findByText(/还没有身体记录/);
     await userEvent.click(screen.getByRole("button", { name: /补充记录/ }));
     await userEvent.type(screen.getByLabelText("你的描述"), "我今天散步");
-    await userEvent.click(screen.getByRole("button", { name: "保存记录" }));
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "记录已发生变化",
     );
@@ -340,7 +365,7 @@ describe("BodyFact Records and Habits", () => {
         <BodyFactRecords canEdit now={new Date("2026-10-14T08:00:00Z")} />
       </QueryClientProvider>,
     );
-    expect(await screen.findByText("已加载 2 条")).toBeVisible();
+    expect(await screen.findByText("2 条")).toBeVisible();
     // Display clock defaults to the device zone in tests; both days are labelled.
     expect(screen.getAllByRole("heading", { level: 4 }).length).toBe(2);
     expect(screen.getByText(/发生：昨天晚上 · 记录 \d\d:\d\d/)).toBeVisible();
