@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn"
+  ],
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "apps/web/src/features/**/services/**/*.ts",
+        "apps/web/src/features/workspace/api/**/*.ts",
+        "apps/web/src/stores/*.ts",
+        "apps/web/src/lib/clientDiagnostics.ts",
+        "packages/contracts/src/**/*.ts"
+      ],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "error"
+      }
+    },
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/storybook-static/**",
+    "**/coverage/**",
+    "**/generated/**",
+    "apps/web/e2e/**"
+  ]
+}
