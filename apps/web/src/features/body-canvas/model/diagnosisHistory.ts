@@ -178,5 +178,5 @@ export function projectDiagnosisHistory(
       note: null,
     });
   }
-  return entries.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  return entries.toSorted((a, b) => Date.parse(b.at) - Date.parse(a.at));
 }

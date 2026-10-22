@@ -1,3 +1,4 @@
+import { assertNever } from "@/lib/assertNever";
 import type { BodyEpisode } from "@/features/profile/services/bodyEpisodeService";
 import type { BodyFactRecord } from "@/features/profile/services/bodyFactRecordsService";
 import { episodeDisplayState } from "./bodyEpisodeAssociations";
@@ -90,7 +91,8 @@ export function groupByRecordedDay<T>(
 /** Penpot Episode chip: "是否持续 · 未知". Go's projection is the only source. */
 export function episodeContinuityChip(episode: BodyEpisode): string {
   if (episode.identity_status !== "current") return "经历已不再使用";
-  switch (episodeDisplayState(episode)) {
+  const displayState = episodeDisplayState(episode);
+  switch (displayState) {
     case "ongoing":
       return "是否持续 · 仍在持续";
     case "ended":
@@ -98,6 +100,7 @@ export function episodeContinuityChip(episode: BodyEpisode): string {
     case "unknown":
       return "是否持续 · 未知";
   }
+  return assertNever(displayState);
 }
 
 export interface EpisodeGap {

@@ -49,5 +49,7 @@ export function selectBodyZoneSummaries(
       zones.set(zone, summary);
     }
   }
-  return [...zones.values()].sort((left, right) => right.count - left.count);
+  return [...zones.values()].toSorted(
+    (left, right) => right.count - left.count,
+  );
 }

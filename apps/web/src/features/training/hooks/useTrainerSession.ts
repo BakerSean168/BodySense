@@ -113,13 +113,13 @@ export function useTrainerSession({
     plan.data && pinnedRevision === plan.data.currentAcceptedRevisionId;
   const revision = useQuery({
     queryKey: trainerKeys.revision(planId, pinnedRevision),
-    queryFn: () => trainingApi.getRevisionContent(planId, pinnedRevision!),
+    queryFn: () => trainingApi.getRevisionContent(planId, pinnedRevision),
     enabled: !!plan.data && pinnedRevision !== null && !pinnedIsCurrent,
     retry: false,
     staleTime: Infinity,
   });
   const pinned = pinnedIsCurrent
-    ? plan.data!.currentContent
+    ? plan.data.currentContent
     : (revision.data ?? null);
 
   const refresh = useCallback(async () => {
@@ -233,7 +233,7 @@ export function useTrainerSession({
 
   const recordSet = (kind: "performed" | "skipped", actual: number | null) => {
     if (!view?.current) return;
-    const exercise = view.exercises[view.current.exerciseIndex]!;
+    const exercise = view.exercises[view.current.exerciseIndex];
     const { setNumber, actualUnit } = view.current;
     record(`set:${exercise.planExerciseId}:${setNumber}:${kind}:${actual}`, {
       planExerciseId: exercise.planExerciseId,
@@ -252,7 +252,7 @@ export function useTrainerSession({
   /** Skips what is left of the current exercise as one receipt. */
   const skipExercise = () => {
     if (!view?.current) return;
-    const exercise = view.exercises[view.current.exerciseIndex]!;
+    const exercise = view.exercises[view.current.exerciseIndex];
     record(`exercise:${exercise.planExerciseId}:skipped`, {
       planExerciseId: exercise.planExerciseId,
       scope: "exercise",

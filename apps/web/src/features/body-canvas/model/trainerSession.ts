@@ -217,7 +217,7 @@ export function projectTrainerSession(
   );
   let current: TrainerCurrentSet | null = null;
   if (currentIndex >= 0) {
-    const exercise = exercises[currentIndex]!;
+    const exercise = exercises[currentIndex];
     const { target } = exercise;
     const setNumber = exercise.sets.indexOf("pending") + 1;
     const actualUnit =
@@ -240,7 +240,7 @@ export function projectTrainerSession(
           action.scope === "set" &&
           action.setNumber === setNumber,
       )
-      .sort((a, b) => b.sessionRevision - a.sessionRevision)[0];
+      .toSorted((a, b) => b.sessionRevision - a.sessionRevision)[0];
     const previousActual =
       previous?.kind === "performed"
         ? actualUnit === "reps"
@@ -266,7 +266,7 @@ export function projectTrainerSession(
 
   // The newest receipt of any kind: a correction is shown as such, and an
   // effective receipt can be corrected from its banner.
-  const lastAction = [...session.actions].sort(
+  const lastAction = session.actions.toSorted(
     (a, b) => b.sessionRevision - a.sessionRevision,
   )[0];
   const lastExercise = lastAction

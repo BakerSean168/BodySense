@@ -93,7 +93,7 @@ export function selectableTimeZones(
   for (const zone of include) {
     if (zone && isSupportedTimeZone(zone)) set.add(zone);
   }
-  return [...set].sort((a, b) => a.localeCompare(b));
+  return [...set].toSorted((a, b) => a.localeCompare(b));
 }
 
 /** Formats an instant on the preferred clock; the instant itself is unchanged. */

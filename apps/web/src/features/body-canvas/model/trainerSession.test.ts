@@ -314,7 +314,7 @@ describe("Trainer session view model", () => {
 
   it("marks everything recorded once no set is pending", () => {
     const content = plan.currentContent;
-    const actions = content.sessions[0]!.stages.flatMap((stage) =>
+    const actions = content.sessions[0].stages.flatMap((stage) =>
       stage.exercises.flatMap((exercise) =>
         Array.from({ length: exercise.sets }, (_, index) =>
           action(exercise.planExerciseId, index + 1, "performed"),

@@ -80,7 +80,7 @@ export async function recoverDurableRunEvents({
       .filter(
         (event) => typeof event.seq !== "number" || event.seq > state.maxSeq,
       )
-      .sort((left, right) => (left.seq ?? 0) - (right.seq ?? 0));
+      .toSorted((left, right) => (left.seq ?? 0) - (right.seq ?? 0));
 
     state = dispatchReplayEvents(freshEvents, handlers, state);
 

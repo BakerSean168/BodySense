@@ -129,7 +129,7 @@ describe("Penpot Trainer boards", () => {
     renderPanel();
     expect(await screen.findByTestId("trainer-in-progress")).toBeVisible();
     expect(api.startSession).toHaveBeenCalledTimes(1);
-    expect(api.startSession.mock.calls[0]![1]).toBe("a");
+    expect(api.startSession.mock.calls[0][1]).toBe("a");
     expect(screen.getByRole("heading", { name: "猫牛式" })).toBeVisible();
     expect(screen.getByText("热身 · 1 / 1")).toBeVisible();
     expect(screen.getByLabelText("实际次数")).toHaveTextContent("10");
@@ -148,7 +148,7 @@ describe("Penpot Trainer boards", () => {
       expect(screen.getByRole("heading", { name: "臀桥" })).toBeVisible(),
     );
     expect(api.recordAction).toHaveBeenCalledTimes(1);
-    expect(api.recordAction.mock.calls[0]![0]).toMatchObject({
+    expect(api.recordAction.mock.calls[0][0]).toMatchObject({
       planExerciseId: "cat-cow",
       scope: "set",
       setNumber: 1,
@@ -244,7 +244,7 @@ describe("Penpot Trainer boards", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(await screen.findByTestId("trainer-in-progress")).toBeVisible();
-    expect(api.resumeSession.mock.calls[0]![1]).toBe(4);
+    expect(api.resumeSession.mock.calls[0][1]).toBe(4);
   });
 
   it("finishes early when sets remain and shows the Ended board", async () => {
@@ -275,7 +275,7 @@ describe("Penpot Trainer boards", () => {
     expect(await screen.findByTestId("trainer-ended")).toHaveTextContent(
       "提前结束",
     );
-    expect(api.finishSession.mock.calls[0]![1]).toBe("stopped_early");
+    expect(api.finishSession.mock.calls[0][1]).toBe("stopped_early");
     expect(screen.getByTestId("trainer-recorded")).toHaveTextContent(
       "猫牛式1 / 1 组",
     );
@@ -318,7 +318,7 @@ describe("Penpot Trainer boards", () => {
         "第 1 组已撤回 · 请重新记录",
       ),
     );
-    expect(api.recordAction.mock.calls[0]![0]).toMatchObject({
+    expect(api.recordAction.mock.calls[0][0]).toMatchObject({
       planExerciseId: "bridge",
       scope: "set",
       setNumber: 1,
@@ -354,12 +354,12 @@ describe("Penpot Trainer boards", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "靠墙静蹲" })).toBeVisible(),
     );
-    expect(api.recordAction.mock.calls[0]![0]).toMatchObject({
+    expect(api.recordAction.mock.calls[0][0]).toMatchObject({
       planExerciseId: "bridge",
       scope: "exercise",
       kind: "skipped",
     });
-    expect(api.recordAction.mock.calls[0]![0]).not.toHaveProperty("setNumber");
+    expect(api.recordAction.mock.calls[0][0]).not.toHaveProperty("setNumber");
     expect(screen.getByTestId("trainer-last-receipt")).toHaveTextContent(
       "臀桥已跳过",
     );
@@ -400,8 +400,8 @@ describe("Penpot Trainer boards", () => {
       "膝盖有点酸",
     );
     expect(api.recordFeedback).toHaveBeenCalledTimes(1);
-    expect(api.recordFeedback.mock.calls[0]![0]).toBe(SESSION_ID);
-    expect(api.recordFeedback.mock.calls[0]![1]).toBe("  膝盖有点酸 ");
+    expect(api.recordFeedback.mock.calls[0][0]).toBe(SESSION_ID);
+    expect(api.recordFeedback.mock.calls[0][1]).toBe("  膝盖有点酸 ");
     expect(
       screen.queryByRole("button", { name: "说说感受" }),
     ).not.toBeInTheDocument();

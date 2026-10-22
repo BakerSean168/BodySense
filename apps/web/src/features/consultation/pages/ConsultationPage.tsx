@@ -156,7 +156,7 @@ export function ConsultationPage() {
   }, [displayedConversationId, routeConversationId]);
 
   const latestAssistantStatus =
-    [...messages].reverse().find((message) => message.role === "assistant")
+    messages.toReversed().find((message) => message.role === "assistant")
       ?.status ?? null;
 
   useEffect(() => {
@@ -254,7 +254,7 @@ export function ConsultationPage() {
   // never a structured Ask User answer).
   const latestUserMessage = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index]!;
+      const message = messages[index];
       if (message.role !== "user") continue;
       const metadata = message.metadata as
         | Record<string, unknown>

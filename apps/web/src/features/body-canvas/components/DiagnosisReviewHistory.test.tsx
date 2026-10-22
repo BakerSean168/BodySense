@@ -231,7 +231,7 @@ describe("Diagnosis / History", () => {
     const picker = screen.getByRole("combobox", {
       name: "选择已确认病情",
     }) as HTMLSelectElement;
-    expect(picker.selectedOptions[0]!.textContent).toBe("历史");
+    expect(picker.selectedOptions[0].textContent).toBe("历史");
     await userEvent.selectOptions(picker, reviewed.medicalName);
     expect(onSelectCondition).toHaveBeenCalledWith(reviewed.conditionId);
     expect(onCloseHistory).toHaveBeenCalledTimes(1);

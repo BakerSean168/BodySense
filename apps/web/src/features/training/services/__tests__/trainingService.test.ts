@@ -93,10 +93,8 @@ describe("trainingApi generated OpenAPI boundary", () => {
     expect(authFetchMock).toHaveBeenCalledWith("/api/v1/training-plans", {
       method: "GET",
     });
-    expect(result[0]!.planId).toBe(planId);
-    expect(result[0]!.currentContent.sessions[0]!.stages[0]!.phase).toBe(
-      "main",
-    );
+    expect(result[0].planId).toBe(planId);
+    expect(result[0].currentContent.sessions[0].stages[0].phase).toBe("main");
   });
 
   it("accepts an update pinned to its base revision and the presented fingerprint", async () => {
@@ -136,7 +134,7 @@ describe("trainingApi generated OpenAPI boundary", () => {
       idempotencyKey: "key-1",
     });
 
-    const [path, init] = authFetchMock.mock.calls[0]!;
+    const [path, init] = authFetchMock.mock.calls[0];
     expect(path).toBe(`/api/v1/plan-proposals/${proposal.proposalId}/accept`);
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       decisionId: "66666666-6666-4666-8666-666666666666",
@@ -160,7 +158,7 @@ describe("trainingApi generated OpenAPI boundary", () => {
 
     await trainingApi.startSession(planRecord as never, "t1");
 
-    const [path, init] = authFetchMock.mock.calls[0]!;
+    const [path, init] = authFetchMock.mock.calls[0];
     expect(path).toBe("/api/v1/training-sessions");
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body).toMatchObject({
@@ -189,7 +187,7 @@ describe("trainingApi generated OpenAPI boundary", () => {
 
     const result = await trainingApi.recordFeedback(sessionId, text);
 
-    const [path, init] = authFetchMock.mock.calls[0]!;
+    const [path, init] = authFetchMock.mock.calls[0];
     expect(path).toBe(`/api/v1/training-sessions/${sessionId}/feedback`);
     expect(JSON.parse((init as RequestInit).body as string).text).toBe(text);
     expect(result.feedback?.text).toBe(text);

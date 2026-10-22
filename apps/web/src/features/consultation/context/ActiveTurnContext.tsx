@@ -12,6 +12,7 @@
  * - typescript-discriminated-unions-and-exhaustiveness.md
  */
 
+import { assertNever } from "@/lib/assertNever";
 import {
   createContext,
   useContext,
@@ -94,6 +95,7 @@ function turnReducer(
         },
       };
   }
+  return assertNever(action);
 }
 
 // ---------------------------------------------------------------------------

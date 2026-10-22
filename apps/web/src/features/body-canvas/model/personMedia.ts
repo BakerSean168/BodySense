@@ -79,7 +79,7 @@ export function groupMediaByMonth(
   uploads: readonly PersonMediaUpload[],
   now: Date = new Date(),
 ): PersonMediaGroup[] {
-  const sorted = [...uploads].sort(
+  const sorted = uploads.toSorted(
     (a, b) =>
       (validDate(b.created_at)?.getTime() ?? 0) -
       (validDate(a.created_at)?.getTime() ?? 0),

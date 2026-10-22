@@ -24,7 +24,7 @@ function fact(kind: BodyFactRecord["kind"] = "symptom"): BodyFactRecord {
     assertion_status: "asserted",
     created_revision: 3,
     recorded_at: "2026-10-13T00:00:00Z",
-  } as BodyFactRecord;
+  };
 }
 function page(
   facts: BodyFactRecord[],
