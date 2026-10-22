@@ -92,6 +92,36 @@ func TestOnboardingContextCommitsProfileAndV2LedgerPostgres(t *testing.T) {
 	}
 }
 
+func TestOnboardingContextExactReplayLeavesDatabaseVersionsUnchangedPostgres(t *testing.T) {
+	db := openOnboardingContextIntegrationDB(t)
+	owner := seedOnboardingContextUser(t, db)
+	svc := newOnboardingIntegrationService(db)
+	request := validOnboardingContextRequest()
+	initial := int64(0)
+	request.ExpectedBodyStateRevision = &initial
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		result, err := svc.Submit(context.Background(), owner, request)
+		if err != nil || result == nil || result.BodyStateRevision == nil || *result.BodyStateRevision != 3 {
+			t.Fatalf("attempt %d: result=%+v error=%v, want R3", attempt, result, err)
+		}
+	}
+	var profile model.UserProfile
+	if err := db.Where("user_id = ?", owner).Take(&profile).Error; err != nil {
+		t.Fatal(err)
+	}
+	if profile.Revision != 1 {
+		t.Fatalf("exact onboarding replay changed profile revision to %d", profile.Revision)
+	}
+	var revisionCount int64
+	if err := db.Table("body_state_revisions").Where("user_id = ?", owner).Count(&revisionCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if revisionCount != 3 {
+		t.Fatalf("exact onboarding replay created %d BodyState revisions, want 3", revisionCount)
+	}
+}
+
 func TestOnboardingContextRollsBackProfileWhenBodyStateRevisionConflictsPostgres(t *testing.T) {
 	db := openOnboardingContextIntegrationDB(t)
 	ctx := context.Background()
