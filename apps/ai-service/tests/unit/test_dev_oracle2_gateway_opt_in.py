@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -59,16 +60,20 @@ NANLIANG_MODEL = "openai/deepseek-v4.1-flash-1017"
 KUNYOU_MODEL = "openai/gpt-6-luna"
 POSTURE_MODEL = "openrouter/qwen/qwen2.5-vl-72b-instruct"
 
+
 def _load(path: Path) -> dict:
     with path.open(encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
+
 def _groups(config: dict) -> dict[str, dict]:
     return {item["model_name"]: item["litellm_params"] for item in config["model_list"]}
+
 
 def test_dev_oracle2_config_keeps_every_business_logical_group() -> None:
     config = _load(DEV_ORACLE2_CONFIG)
     assert set(_groups(config)) == PUBLIC_GROUPS | FALLBACK_GROUPS | PROBE_GROUPS
+
 
 def test_dev_oracle2_routes_compatible_groups_to_oracle2_and_keeps_posture_vision() -> None:
     groups = _groups(_load(DEV_ORACLE2_CONFIG))
@@ -94,6 +99,7 @@ def test_dev_oracle2_routes_compatible_groups_to_oracle2_and_keeps_posture_visio
     assert groups["bodysense-posture"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
     assert groups["bodysense-posture-fallback"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
 
+
 def test_dev_oracle2_uses_deterministic_ordered_fallback_without_load_balancing() -> None:
     config = _load(DEV_ORACLE2_CONFIG)
     router = config["router_settings"]
@@ -113,6 +119,7 @@ def test_dev_oracle2_uses_deterministic_ordered_fallback_without_load_balancing(
     # One deployment per logical group: no duplicate model_name entries.
     names = [item["model_name"] for item in config["model_list"]]
     assert len(names) == len(set(names))
+
 
 def test_kunyou_is_declared_pending_and_never_in_a_live_fallback_path() -> None:
     config = _load(DEV_ORACLE2_CONFIG)
@@ -134,10 +141,12 @@ def test_kunyou_is_declared_pending_and_never_in_a_live_fallback_path() -> None:
     for name in FALLBACK_GROUPS:
         assert groups[name]["model"] != KUNYOU_MODEL, name
 
+
 def test_probe_groups_have_no_fallback_edge() -> None:
     config = _load(DEV_ORACLE2_CONFIG)
     fallback_keys = {key for entry in config["router_settings"]["fallbacks"] for key in entry}
     assert PROBE_GROUPS.isdisjoint(fallback_keys)
+
 
 def test_production_and_staging_gateway_configs_are_unaffected() -> None:
     production = _load(PROD_CONFIG)
@@ -150,6 +159,7 @@ def test_production_and_staging_gateway_configs_are_unaffected() -> None:
         "os.environ/STAGING_DIAGNOSIS_BASE_URL"
     )
 
+
 def test_only_dev_compose_references_the_oracle2_overlay() -> None:
     for path in (PROD_COMPOSE, STAGING_COMPOSE, BASE_COMPOSE, DEV_INFRA_COMPOSE):
         assert "dev-oracle2" not in path.read_text(encoding="utf-8"), path.name
@@ -157,6 +167,7 @@ def test_only_dev_compose_references_the_oracle2_overlay() -> None:
     for script in (DEV_INFRA, DEV_RUNTIME):
         text = script.read_text(encoding="utf-8")
         assert "BODYSENSE_DEV_COMPOSE_OVERLAY" in text, script.name
+
 
 def test_overlay_injects_key_by_environment_and_fails_closed_without_it() -> None:
     overlay = _load(DEV_ORACLE2_COMPOSE)
@@ -176,6 +187,7 @@ def test_overlay_injects_key_by_environment_and_fails_closed_without_it() -> Non
     # The container config path is replaced, not appended.
     assert gateway["volumes"] == ["./litellm/config.dev-oracle2.yaml:/app/config.yaml:ro"]
 
+
 def test_overlay_pins_tailscale_address_into_extra_hosts() -> None:
     overlay = _load(DEV_ORACLE2_COMPOSE)
     extra_hosts = overlay["services"]["litellm-gateway"]["extra_hosts"]
@@ -183,6 +195,7 @@ def test_overlay_pins_tailscale_address_into_extra_hosts() -> None:
         "${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}"
         ":${ORACLE2_BODYSENSE_TAILSCALE_IP:-100.68.237.116}"
     ]
+
 
 def test_dev_env_opt_in_requires_key_and_validates_tailscale_range() -> None:
     text = DEV_ENV.read_text(encoding="utf-8")
@@ -195,6 +208,7 @@ def test_dev_env_opt_in_requires_key_and_validates_tailscale_range() -> None:
     # Only the tailnet CGNAT range is accepted.
     assert "a == 100 && b >= 64 && b <= 127" in text
     assert "ORACLE2_BODYSENSE_TAILSCALE_IP" in text
+
 
 def test_no_oracle2_secret_material_is_committed() -> None:
     for path in (
@@ -217,6 +231,7 @@ def test_no_oracle2_secret_material_is_committed() -> None:
         for match in re.finditer(r"ORACLE2_BODYSENSE_API_KEY\s*=\s*(\S+)", text):
             assert match.group(1).startswith("<"), (path.name, match.group(1))
 
+
 def test_eval_script_targets_only_fixed_non_fallback_groups() -> None:
     text = EVAL_SCRIPT.read_text(encoding="utf-8")
     assert "bodysense-dev-oracle2-windhub" in text
@@ -228,6 +243,7 @@ def test_eval_script_targets_only_fixed_non_fallback_groups() -> None:
         assert f'"{capability}"' in text, capability
     for metric in ("latency_seconds", "usage", "json_valid", "tool_call_count", "saw_done"):
         assert metric in text, metric
+
 
 def _run_dev_env(
     env_overrides: dict[str, str], *, call: str = ""
@@ -249,6 +265,7 @@ def _run_dev_env(
         check=False,
     )
 
+
 def test_tailscale_ip_validation_accepts_only_cgnat() -> None:
     cases = {
         "100.68.237.116": 0,
@@ -268,6 +285,7 @@ def test_tailscale_ip_validation_accepts_only_cgnat() -> None:
         completed = _run_dev_env({}, call=f'oracle2_is_tailscale_ipv4 "{value}"')
         assert completed.returncode == expected, (value, completed.stderr)
 
+
 def test_opt_in_rejects_explicit_override_outside_tailscale_range() -> None:
     for bad in ("103.84.155.217", "10.0.0.1", "not-an-ip"):
         completed = _run_dev_env(
@@ -280,6 +298,7 @@ def test_opt_in_rejects_explicit_override_outside_tailscale_range() -> None:
         assert completed.returncode != 0, bad
         assert "is not a Tailscale 100.64.0.0/10 IPv4 address" in completed.stderr, completed.stderr
         assert "BODYSENSE_DEV_COMPOSE_OVERLAY=" not in completed.stdout
+
 
 def test_opt_in_accepts_explicit_tailscale_override_and_resolves_overlay() -> None:
     completed = _run_dev_env(
@@ -297,6 +316,7 @@ def test_opt_in_accepts_explicit_tailscale_override_and_resolves_overlay() -> No
     assert "overlay=" + str(DEV_ORACLE2_COMPOSE) in completed.stdout
     assert "ip=100.68.237.116" in completed.stdout
 
+
 def test_opt_in_without_key_fails_closed() -> None:
     completed = _run_dev_env(
         {
@@ -307,6 +327,7 @@ def test_opt_in_without_key_fails_closed() -> None:
     assert completed.returncode != 0
     assert "ORACLE2_BODYSENSE_API_KEY is empty" in completed.stderr
 
+
 def test_opt_in_off_by_default_leaves_overlay_empty() -> None:
     completed = _run_dev_env(
         {"ORACLE2_BODYSENSE_TAILSCALE_IP": "100.68.237.116"},
@@ -315,12 +336,11 @@ def test_opt_in_off_by_default_leaves_overlay_empty() -> None:
     assert completed.returncode == 0, completed.stderr
     assert "overlay=[]" in completed.stdout
 
+
 def test_auto_resolution_ignores_non_tailscale_dns_answer(monkeypatch) -> None:
     """A resolver that answers with a public address must not be accepted."""
     fake_bin = Path(tempfile.mkdtemp())
-    for command, output in (
-        ("getent", "103.84.155.217  STREAM oracle.taile92a8e.ts.net"),
-    ):
+    for command, output in (("getent", "103.84.155.217  STREAM oracle.taile92a8e.ts.net"),):
         script = fake_bin / command
         script.write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\n", encoding="utf-8")
         script.chmod(0o755)
@@ -333,3 +353,211 @@ def test_auto_resolution_ignores_non_tailscale_dns_answer(monkeypatch) -> None:
     )
     assert completed.returncode != 0
     assert "Could not resolve" in completed.stderr
+
+
+# ── Probe verdicts: HTTP 200 is not a pass ───────────────────────────────────
+# A gateway can answer 200 with an empty body, malformed JSON, no tool call, or a
+# truncated stream. Those must be reported as failures.
+
+
+def _eval_module():
+    """Import the eval script as a module (it lives outside the package)."""
+    import importlib.util
+    import sys
+
+    name = "oracle2_gateway_eval_under_test"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, EVAL_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    # dataclasses resolves string annotations through sys.modules, so register
+    # the module before executing it.
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("capability", "probe"),
+    [
+        # 200 but empty assistant content.
+        ("chat", {"http_status": 200, "content_preview": "", "finish_reason": "stop"}),
+        # 200 but no terminal finish reason.
+        ("chat", {"http_status": 200, "content_preview": "PONG", "finish_reason": None}),
+        # 200 but the body was not valid JSON.
+        ("json", {"http_status": 200, "json_valid": False}),
+        # 200 but json_valid was never established.
+        ("json", {"http_status": 200}),
+        # 200 but no tool call was returned.
+        ("tool", {"http_status": 200, "tool_call_count": 0}),
+        # 200 but the wrong tool was called.
+        (
+            "tool",
+            {
+                "http_status": 200,
+                "tool_call_count": 1,
+                "tool_name": "some_other_tool",
+                "tool_arguments_valid_json": True,
+            },
+        ),
+        # 200 with unparseable tool arguments.
+        (
+            "tool",
+            {
+                "http_status": 200,
+                "tool_call_count": 1,
+                "tool_name": "record_synthetic_probe",
+                "tool_arguments_valid_json": False,
+            },
+        ),
+        # 200 but the stream never terminated.
+        ("stream", {"http_status": 200, "saw_done": False, "content_preview": "1\n2\n3"}),
+        # 200, terminated, but no content.
+        ("stream", {"http_status": 200, "saw_done": True, "content_preview": ""}),
+        # Transport/HTTP failures are never passes.
+        ("chat", {"http_status": 0, "content_preview": "PONG", "finish_reason": "stop"}),
+        ("json", {"http_status": 503, "json_valid": True}),
+        ("tool", {"http_status": 401, "tool_call_count": 1}),
+        ("stream", {"http_status": 500, "saw_done": True, "content_preview": "x"}),
+    ],
+)
+def test_http_200_but_invalid_response_is_a_probe_failure(capability: str, probe: dict) -> None:
+    module = _eval_module()
+    assert module.probe_passed(capability, probe) is False
+    assert module.probe_failure_reason(capability, probe)
+
+
+@pytest.mark.parametrize(
+    ("capability", "probe"),
+    [
+        ("chat", {"http_status": 200, "content_preview": "PONG", "finish_reason": "stop"}),
+        ("json", {"http_status": 200, "json_valid": True}),
+        (
+            "tool",
+            {
+                "http_status": 200,
+                "tool_call_count": 1,
+                "tool_name": "record_synthetic_probe",
+                "tool_arguments_valid_json": True,
+            },
+        ),
+        ("stream", {"http_status": 200, "saw_done": True, "content_preview": "1\n2\n3"}),
+    ],
+)
+def test_valid_probe_responses_pass(capability: str, probe: dict) -> None:
+    module = _eval_module()
+    assert module.probe_passed(capability, probe) is True
+
+
+def test_tool_probe_forces_tool_choice_required() -> None:
+    """An optional tool choice would let a model answer in prose and look fine."""
+    text = EVAL_SCRIPT.read_text(encoding="utf-8")
+    assert '"tool_choice": "required"' in text
+    assert '"tool_choice": "auto"' not in text
+
+
+def test_pending_channel_is_never_reported_as_qualified(monkeypatch) -> None:
+    module = _eval_module()
+    # Every probe "passes", including Kunyou's, which is still pending.
+    monkeypatch.setattr(
+        module,
+        "probe_chat",
+        lambda *a, **k: {
+            "http_status": 200,
+            "content_preview": "PONG",
+            "finish_reason": "stop",
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_json",
+        lambda *a, **k: {
+            "http_status": 200,
+            "json_valid": True,
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_tool",
+        lambda *a, **k: {
+            "http_status": 200,
+            "tool_call_count": 1,
+            "tool_name": "record_synthetic_probe",
+            "tool_arguments_valid_json": True,
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_stream",
+        lambda *a, **k: {
+            "http_status": 200,
+            "saw_done": True,
+            "content_preview": "1\n2\n3",
+        },
+    )
+    module.PROBES.update(
+        chat=module.probe_chat,
+        json=module.probe_json,
+        tool=module.probe_tool,
+        stream=module.probe_stream,
+    )
+
+    report = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
+
+    kunyou = report["channels"]["kunyou"]
+    assert kunyou["pending"] is True
+    assert kunyou["qualified"] is False
+    assert any("kunyou" in note for note in report["notes"])
+    assert report["channels"]["windhub"]["qualified"] is True
+    assert report["channels"]["nanliang"]["qualified"] is True
+
+
+def test_failing_capability_fails_the_run_even_when_http_is_200(monkeypatch) -> None:
+    module = _eval_module()
+    monkeypatch.setattr(
+        module,
+        "probe_chat",
+        lambda *a, **k: {
+            "http_status": 200,
+            "content_preview": "",
+            "finish_reason": "stop",
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_json",
+        lambda *a, **k: {
+            "http_status": 200,
+            "json_valid": False,
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_tool",
+        lambda *a, **k: {
+            "http_status": 200,
+            "tool_call_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_stream",
+        lambda *a, **k: {
+            "http_status": 200,
+            "saw_done": False,
+            "content_preview": "",
+        },
+    )
+    module.PROBES.update(
+        chat=module.probe_chat,
+        json=module.probe_json,
+        tool=module.probe_tool,
+        stream=module.probe_stream,
+    )
+
+    report = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
+
+    assert report["passed"] is False
+    assert report["failures"]
+    assert all("HTTP200" not in failure for failure in report["failures"])

@@ -36,6 +36,7 @@ CONFIG = ROOT / "docker" / "litellm" / "config.dev-oracle2.yaml"
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:20112/v1"
 PROBE_TIMEOUT_SECONDS = 150
 
+
 @dataclass(frozen=True)
 class Channel:
     name: str
@@ -45,9 +46,16 @@ class Channel:
     pending: bool = False
     capabilities: tuple[str, ...] = field(default_factory=tuple)
 
+
 CHANNELS: tuple[Channel, ...] = (
-    Channel("windhub", "bodysense-dev-oracle2-windhub", capabilities=("chat", "json", "tool")),
-    Channel("kunyou", "bodysense-dev-oracle2-kunyou", pending=True, capabilities=("chat",)),
+    Channel(
+        "windhub",
+        "bodysense-dev-oracle2-windhub",
+        capabilities=("chat", "json", "tool"),
+    ),
+    Channel(
+        "kunyou", "bodysense-dev-oracle2-kunyou", pending=True, capabilities=("chat",)
+    ),
     Channel(
         "nanliang",
         "bodysense-dev-oracle2-nanliang",
@@ -55,11 +63,13 @@ CHANNELS: tuple[Channel, ...] = (
     ),
 )
 
+EXPECTED_TOOL_NAME = "record_synthetic_probe"
+
 TOOL_SCHEMA = [
     {
         "type": "function",
         "function": {
-            "name": "record_synthetic_probe",
+            "name": EXPECTED_TOOL_NAME,
             "description": "Record a synthetic probe label. No real data.",
             "parameters": {
                 "type": "object",
@@ -69,6 +79,7 @@ TOOL_SCHEMA = [
         },
     }
 ]
+
 
 def _post(
     gateway_url: str,
@@ -92,7 +103,11 @@ def _post(
             status = response.status
             raw = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as error:
-        return error.code, error.read().decode("utf-8", "replace"), time.monotonic() - started
+        return (
+            error.code,
+            error.read().decode("utf-8", "replace"),
+            time.monotonic() - started,
+        )
     except urllib.error.URLError as error:
         return 0, f"transport-error: {error.reason}", time.monotonic() - started
     elapsed = time.monotonic() - started
@@ -103,6 +118,7 @@ def _post(
     except json.JSONDecodeError:
         return status, raw, elapsed
 
+
 def _usage(body: dict[str, Any]) -> dict[str, int]:
     usage = body.get("usage") or {}
     return {
@@ -110,6 +126,7 @@ def _usage(body: dict[str, Any]) -> dict[str, int]:
         "completion_tokens": int(usage.get("completion_tokens") or 0),
         "total_tokens": int(usage.get("total_tokens") or 0),
     }
+
 
 def probe_chat(gateway_url: str, api_key: str, logical_model: str) -> dict[str, Any]:
     status, body, elapsed = _post(
@@ -121,7 +138,10 @@ def probe_chat(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
             "max_tokens": 256,
         },
     )
-    result: dict[str, Any] = {"http_status": status, "latency_seconds": round(elapsed, 2)}
+    result: dict[str, Any] = {
+        "http_status": status,
+        "latency_seconds": round(elapsed, 2),
+    }
     if status != 200 or not isinstance(body, dict):
         result["error"] = str(body)[:300]
         return result
@@ -137,6 +157,7 @@ def probe_chat(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
         }
     )
     return result
+
 
 def probe_json(gateway_url: str, api_key: str, logical_model: str) -> dict[str, Any]:
     status, body, elapsed = _post(
@@ -154,11 +175,16 @@ def probe_json(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
             "response_format": {"type": "json_object"},
         },
     )
-    result: dict[str, Any] = {"http_status": status, "latency_seconds": round(elapsed, 2)}
+    result: dict[str, Any] = {
+        "http_status": status,
+        "latency_seconds": round(elapsed, 2),
+    }
     if status != 200 or not isinstance(body, dict):
         result["error"] = str(body)[:300]
         return result
-    content = ((body.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+    content = ((body.get("choices") or [{}])[0].get("message") or {}).get(
+        "content"
+    ) or ""
     try:
         parsed = json.loads(content)
         result["json_valid"] = isinstance(parsed, dict)
@@ -168,6 +194,7 @@ def probe_json(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
         result["content_preview"] = content[:120]
     result.update({"actual_model": body.get("model"), "usage": _usage(body)})
     return result
+
 
 def probe_tool(gateway_url: str, api_key: str, logical_model: str) -> dict[str, Any]:
     status, body, elapsed = _post(
@@ -183,10 +210,13 @@ def probe_tool(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
             ],
             "max_tokens": 256,
             "tools": TOOL_SCHEMA,
-            "tool_choice": "auto",
+            "tool_choice": "required",
         },
     )
-    result: dict[str, Any] = {"http_status": status, "latency_seconds": round(elapsed, 2)}
+    result: dict[str, Any] = {
+        "http_status": status,
+        "latency_seconds": round(elapsed, 2),
+    }
     if status != 200 or not isinstance(body, dict):
         result["error"] = str(body)[:300]
         return result
@@ -204,20 +234,26 @@ def probe_tool(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
     result.update({"actual_model": body.get("model"), "usage": _usage(body)})
     return result
 
+
 def probe_stream(gateway_url: str, api_key: str, logical_model: str) -> dict[str, Any]:
     status, raw, elapsed = _post(
         gateway_url,
         api_key,
         {
             "model": logical_model,
-            "messages": [{"role": "user", "content": "Count 1 to 3, one number per line."}],
+            "messages": [
+                {"role": "user", "content": "Count 1 to 3, one number per line."}
+            ],
             "max_tokens": 128,
             "stream": True,
             "stream_options": {"include_usage": True},
         },
         stream=True,
     )
-    result: dict[str, Any] = {"http_status": status, "latency_seconds": round(elapsed, 2)}
+    result: dict[str, Any] = {
+        "http_status": status,
+        "latency_seconds": round(elapsed, 2),
+    }
     if status != 200 or not isinstance(raw, str):
         result["error"] = str(raw)[:300]
         return result
@@ -254,12 +290,85 @@ def probe_stream(gateway_url: str, api_key: str, logical_model: str) -> dict[str
     )
     return result
 
+
 PROBES = {
     "chat": probe_chat,
     "json": probe_json,
     "tool": probe_tool,
     "stream": probe_stream,
 }
+
+
+def _chat_ok(probe: dict[str, Any]) -> bool:
+    """A chat reply must carry non-empty text and a terminal finish reason."""
+    return bool(str(probe.get("content_preview") or "").strip()) and bool(
+        probe.get("finish_reason")
+    )
+
+
+def _json_ok(probe: dict[str, Any]) -> bool:
+    return probe.get("json_valid") is True
+
+
+def _tool_ok(probe: dict[str, Any]) -> bool:
+    """A tool probe must return >=1 call with the expected name and object args."""
+    if int(probe.get("tool_call_count") or 0) < 1:
+        return False
+    if probe.get("tool_name") != EXPECTED_TOOL_NAME:
+        return False
+    return probe.get("tool_arguments_valid_json") is True
+
+
+def _stream_ok(probe: dict[str, Any]) -> bool:
+    """A stream must terminate with [DONE] and carry non-empty content."""
+    return probe.get("saw_done") is True and bool(
+        str(probe.get("content_preview") or "").strip()
+    )
+
+
+# HTTP 200 alone is not a pass: a 200 response can still be empty, malformed, or
+# answer without the capability that was asked for. Each capability is judged on
+# its own contract.
+CAPABILITY_VERDICTS = {
+    "chat": _chat_ok,
+    "json": _json_ok,
+    "tool": _tool_ok,
+    "stream": _stream_ok,
+}
+
+
+def probe_passed(capability: str, probe: dict[str, Any]) -> bool:
+    if probe.get("http_status") != 200:
+        return False
+    return CAPABILITY_VERDICTS[capability](probe)
+
+
+def probe_failure_reason(capability: str, probe: dict[str, Any]) -> str:
+    status = probe.get("http_status")
+    if status != 200:
+        return f"HTTP{status}"
+    if capability == "chat":
+        return (
+            "empty chat content"
+            if not str(probe.get("content_preview") or "").strip()
+            else "missing finish_reason"
+        )
+    if capability == "json":
+        return "invalid JSON body"
+    if capability == "tool":
+        if int(probe.get("tool_call_count") or 0) < 1:
+            return "no tool call returned"
+        if probe.get("tool_name") != EXPECTED_TOOL_NAME:
+            return f"unexpected tool name {probe.get('tool_name')!r}"
+        return "tool arguments not a JSON object"
+    if capability == "stream":
+        return (
+            "stream missing [DONE]"
+            if probe.get("saw_done") is not True
+            else "empty stream content"
+        )
+    return "unknown capability"
+
 
 def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
     report: dict[str, Any] = {
@@ -278,24 +387,33 @@ def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
         }
         for capability in channel.capabilities:
             probe = PROBES[capability](gateway_url, api_key, channel.logical_model)
+            passed = probe_passed(capability, probe)
+            probe["passed"] = passed
+            if not passed:
+                probe["failure_reason"] = probe_failure_reason(capability, probe)
             channel_report["probes"][capability] = probe
-            reachable = probe.get("http_status") == 200
+
             if channel.pending:
-                # A pending channel must stay failing until it is qualified. If it
-                # starts answering, the operator must re-run qualification and wire
-                # it deliberately rather than have it appear in a live path.
-                if reachable:
+                # A pending channel is never reported as working. If it starts
+                # answering correctly, that is a signal to re-qualify it
+                # deliberately, not a silent pass.
+                if passed:
                     report["notes"].append(
-                        f"{channel.name} answered HTTP200; it is marked pending — re-qualify "
-                        "before adding it to router_settings.fallbacks"
+                        f"{channel.name} passed {capability} but is marked pending — "
+                        "re-qualify before adding it to router_settings.fallbacks"
                     )
-            elif not reachable:
+            elif not passed:
                 report["failures"].append(
-                    f"{channel.name}/{capability} HTTP{probe.get('http_status')}"
+                    f"{channel.name}/{capability} {probe['failure_reason']}"
                 )
+        channel_report["passed"] = all(
+            probe["passed"] for probe in channel_report["probes"].values()
+        )
+        channel_report["qualified"] = channel_report["passed"] and not channel.pending
         report["channels"][channel.name] = channel_report
     report["passed"] = not report["failures"]
     return report
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -304,10 +422,15 @@ def main() -> int:
         default=os.getenv("LITELLM_BASE_URL", DEFAULT_GATEWAY_URL),
         help="Local dev LiteLLM base URL (default: env LITELLM_BASE_URL or the dev port)",
     )
-    parser.add_argument("--json", type=Path, default=None, help="Write the report to this path")
+    parser.add_argument(
+        "--json", type=Path, default=None, help="Write the report to this path"
+    )
     args = parser.parse_args()
 
-    api_key = os.getenv("LITELLM_MASTER_KEY", "").strip() or os.getenv("LITELLM_API_KEY", "").strip()
+    api_key = (
+        os.getenv("LITELLM_MASTER_KEY", "").strip()
+        or os.getenv("LITELLM_API_KEY", "").strip()
+    )
     if not api_key:
         print("LITELLM_MASTER_KEY or LITELLM_API_KEY is required", file=sys.stderr)
         return 2
@@ -321,11 +444,12 @@ def main() -> int:
 
     for name, channel in report["channels"].items():
         for capability, probe in channel["probes"].items():
-            state = "PASS" if probe.get("http_status") == 200 else "FAIL"
+            state = "PASS" if probe["passed"] else "FAIL"
+            reason = "" if probe["passed"] else f" reason={probe.get('failure_reason')}"
             print(
                 f"ORACLE2_CHANNEL={name} capability={capability} state={state} "
                 f"http={probe.get('http_status')} latency={probe.get('latency_seconds')}s "
-                f"pending={channel['pending']}",
+                f"pending={channel['pending']} qualified={channel['qualified']}{reason}",
                 file=sys.stderr,
             )
     if report["failures"]:
@@ -333,6 +457,7 @@ def main() -> int:
         return 1
     print("ORACLE2_GATEWAY_EVAL=PASS", file=sys.stderr)
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
