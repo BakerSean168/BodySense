@@ -127,3 +127,32 @@
     transition: none;
   }
 }
+
+/* Records detail and hypotheses: the text on the left, its "⋯" on the right. */
+.bc-person-detail-head,
+.bc-person-hypothesis-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.bc-person-detail-head > :first-child,
+.bc-person-hypothesis-head > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.bc-record-menu.bc-icon-button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  margin-right: -6px;
+}
+/* A short confirmation does not need the logout dialog spacer. */
+.bc-confirm-dialog .bc-account-dialog-actions {
+  margin-top: 20px;
+}
+.bc-confirm-dialog .bc-error {
+  margin: 12px 4px 0;
+}

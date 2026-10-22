@@ -345,18 +345,19 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
       panel.getByText("来源观察：我今天称重 · 67 · kg"),
     ).toBeVisible();
     await expectPersonFits(page);
-    await panel.getByRole("button", { name: "更正猜测" }).click();
+    await panel.getByRole("button", { name: /^更多操作/ }).click();
+    await page.getByRole("menuitem", { name: "更正" }).click();
     await expect(panel.getByLabel("我的完整猜测")).toBeFocused();
     await panel.getByLabel("我的完整猜测").fill("我猜与运动有关");
-    await panel.getByRole("button", { name: "保存猜测更正" }).click();
+    await panel.getByRole("button", { name: "保存更正" }).click();
     await expect(
       panel.getByText("我猜与运动有关", { exact: true }),
     ).toBeVisible();
-    await panel.getByRole("button", { name: "撤回猜测" }).click();
-    await expect(
-      panel.getByRole("button", { name: "确认撤回猜测" }),
-    ).toBeFocused();
-    await page.keyboard.press("Enter");
+    await panel.getByRole("button", { name: /^更多操作/ }).click();
+    await page.getByRole("menuitem", { name: "撤回" }).click();
+    const confirm = page.getByRole("dialog", { name: "撤回这条猜测？" });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "撤回" }).click();
     await expect(panel.getByText("还没有你提出的猜测。")).toBeVisible();
     await expectPersonFits(page);
     expect(commands.map((command) => command.body.expected_revision)).toEqual([

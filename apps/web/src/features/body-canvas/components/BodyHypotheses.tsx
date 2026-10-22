@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
-import { Link2, RefreshCw } from "lucide-react";
+import { Link2, MoreHorizontal, Pencil, RefreshCw, Undo2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import {
@@ -9,6 +9,13 @@ import {
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PersonConfirmDialog } from "../windows/person/PersonConfirmDialog";
 
 /** Owner changes discard drafts and prevent late receipts from entering another profile. */
 export function BodyHypotheses({
@@ -109,8 +116,8 @@ function HypothesisPanel({
         : null;
     open({ mode: "record" });
   }, [addRequested, ready, canEdit, draft, open, onAddHandled]);
-  function begin(next: Parameters<typeof open>[0], trigger: HTMLButtonElement) {
-    returnFocus.current = trigger.id;
+  function begin(next: Parameters<typeof open>[0], triggerId: string) {
+    returnFocus.current = triggerId;
     open(next);
   }
   const toggle = (ids: string[], targetId: string) =>
@@ -166,7 +173,50 @@ function HypothesisPanel({
           )}
           {data.hypotheses.map((record) => (
             <article key={record.id} className="bc-person-hypothesis">
-              <p className="bc-record-statement">{record.statement}</p>
+              <div className="bc-person-hypothesis-head">
+                <p className="bc-record-statement">{record.statement}</p>
+                {canEdit && !draft && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      id={`${id}-menu-${record.id}`}
+                      className="bc-icon-button bc-record-menu"
+                      aria-label={`更多操作：${record.statement}`}
+                      title="更多"
+                      disabled={!ready}
+                    >
+                      <MoreHorizontal size={17} aria-hidden="true" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bc-account-menu"
+                    >
+                      <DropdownMenuItem
+                        onClick={() =>
+                          begin(
+                            { mode: "correct", target: record },
+                            `${id}-menu-${record.id}`,
+                          )
+                        }
+                      >
+                        <Pencil />
+                        更正
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() =>
+                          begin(
+                            { mode: "withdraw", target: record },
+                            `${id}-menu-${record.id}`,
+                          )
+                        }
+                      >
+                        <Undo2 />
+                        撤回
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
               <div className="bc-person-chips">
                 <span className="bc-person-chip" title="你本人提出，不代表诊断">
                   本人猜测
@@ -189,43 +239,25 @@ function HypothesisPanel({
                 记录{" "}
                 {formatInstantInZone(record.recorded_at, zone) ?? "时间未知"}
               </p>
-              {canEdit && !draft && (
-                <div className="bc-record-actions">
-                  <button
-                    className="bc-text-button"
-                    type="button"
-                    id={`${id}-correct-${record.id}`}
-                    disabled={!ready}
-                    onClick={(event) =>
-                      begin(
-                        { mode: "correct", target: record },
-                        event.currentTarget,
-                      )
-                    }
-                  >
-                    更正猜测
-                  </button>
-                  <button
-                    className="bc-text-button"
-                    type="button"
-                    id={`${id}-withdraw-${record.id}`}
-                    disabled={!ready}
-                    onClick={(event) =>
-                      begin(
-                        { mode: "withdraw", target: record },
-                        event.currentTarget,
-                      )
-                    }
-                  >
-                    撤回猜测
-                  </button>
-                </div>
-              )}
             </article>
           ))}
         </>
       ) : null}
-      {draft && (
+      {draft?.mode === "withdraw" && (
+        <PersonConfirmDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) cancel();
+          }}
+          title="撤回这条猜测？"
+          description="关联的记录不受影响。"
+          confirmLabel="撤回"
+          working={saving}
+          error={error}
+          onConfirm={() => void submit()}
+        />
+      )}
+      {draft && draft.mode !== "withdraw" && (
         <form
           ref={editor}
           tabIndex={-1}
@@ -251,63 +283,54 @@ function HypothesisPanel({
           >
             {saving ? "正在提交，等待保存回执。" : "尚未保存。"}
           </p>
-          {draft.mode === "withdraw" ? (
-            <p>
-              确认撤回「{statement}
-              」？不会删除关联事实或观察，也不表示症状结束。
-            </p>
-          ) : (
-            <>
-              <label htmlFor={`${id}-statement`}>我的完整猜测</label>
-              <Textarea
-                id={`${id}-statement`}
-                value={statement}
-                maxLength={2000}
-                rows={3}
-                disabled={saving}
-                required
-                onChange={(event) => setStatement(event.target.value)}
-              />
-              <p className="bc-window-note">每类最多选 20 条。</p>
-              <fieldset disabled={saving || !ready}>
-                <legend>相关事实</legend>
-                {data?.facts.map((fact) => (
-                  <label key={fact.id} className="bc-hypothesis-choice">
-                    <Checkbox
-                      checked={facts.includes(fact.id)}
-                      disabled={
-                        saving ||
-                        !ready ||
-                        (!facts.includes(fact.id) && facts.length >= 20)
-                      }
-                      onCheckedChange={() => setFacts(toggle(facts, fact.id))}
-                    />
-                    {fact.statement}
-                  </label>
-                ))}
-              </fieldset>
-              <fieldset disabled={saving || !ready}>
-                <legend>相关观察</legend>
-                {data?.observations.map((observation) => (
-                  <label key={observation.id} className="bc-hypothesis-choice">
-                    <Checkbox
-                      checked={observations.includes(observation.id)}
-                      disabled={
-                        saving ||
-                        !ready ||
-                        (!observations.includes(observation.id) &&
-                          observations.length >= 20)
-                      }
-                      onCheckedChange={() =>
-                        setObservations(toggle(observations, observation.id))
-                      }
-                    />
-                    {observation.statement}
-                  </label>
-                ))}
-              </fieldset>
-            </>
-          )}
+          <label htmlFor={`${id}-statement`}>我的完整猜测</label>
+          <Textarea
+            id={`${id}-statement`}
+            value={statement}
+            maxLength={2000}
+            rows={3}
+            disabled={saving}
+            required
+            onChange={(event) => setStatement(event.target.value)}
+          />
+          <p className="bc-window-note">每类最多选 20 条。</p>
+          <fieldset disabled={saving || !ready}>
+            <legend>相关事实</legend>
+            {data?.facts.map((fact) => (
+              <label key={fact.id} className="bc-hypothesis-choice">
+                <Checkbox
+                  checked={facts.includes(fact.id)}
+                  disabled={
+                    saving ||
+                    !ready ||
+                    (!facts.includes(fact.id) && facts.length >= 20)
+                  }
+                  onCheckedChange={() => setFacts(toggle(facts, fact.id))}
+                />
+                {fact.statement}
+              </label>
+            ))}
+          </fieldset>
+          <fieldset disabled={saving || !ready}>
+            <legend>相关观察</legend>
+            {data?.observations.map((observation) => (
+              <label key={observation.id} className="bc-hypothesis-choice">
+                <Checkbox
+                  checked={observations.includes(observation.id)}
+                  disabled={
+                    saving ||
+                    !ready ||
+                    (!observations.includes(observation.id) &&
+                      observations.length >= 20)
+                  }
+                  onCheckedChange={() =>
+                    setObservations(toggle(observations, observation.id))
+                  }
+                />
+                {observation.statement}
+              </label>
+            ))}
+          </fieldset>
           <div className="bc-record-actions">
             <button
               className="bc-button"
@@ -318,9 +341,7 @@ function HypothesisPanel({
                 ? "正在提交"
                 : draft.mode === "record"
                   ? "保存猜测"
-                  : draft.mode === "correct"
-                    ? "保存猜测更正"
-                    : "确认撤回猜测"}
+                  : "保存更正"}
             </button>
             <button
               className="bc-button"

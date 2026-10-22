@@ -182,10 +182,11 @@ it("shows refreshed list after commit, then corrects and withdraws exact targets
       revision: 5,
     };
   });
-  await user.click(screen.getByRole("button", { name: "更正猜测" }));
+  await user.click(screen.getByRole("button", { name: /^更多操作/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "更正" }));
   await user.clear(screen.getByLabelText("我的完整猜测"));
   await user.type(screen.getByLabelText("我的完整猜测"), "我猜与运动有关");
-  await user.click(screen.getByRole("button", { name: "保存猜测更正" }));
+  await user.click(screen.getByRole("button", { name: "保存更正" }));
   expect(await screen.findByText("我猜与运动有关")).toBeVisible();
   expect(api.correct).toHaveBeenCalledWith(
     id,
@@ -213,8 +214,9 @@ it("shows refreshed list after commit, then corrects and withdraws exact targets
       revision: 6,
     };
   });
-  await user.click(screen.getByRole("button", { name: "撤回猜测" }));
-  await user.click(screen.getByRole("button", { name: "确认撤回猜测" }));
+  await user.click(screen.getByRole("button", { name: /^更多操作/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "撤回" }));
+  await user.click(await screen.findByRole("button", { name: "撤回" }));
   expect(await screen.findByText("还没有你提出的猜测。")).toBeVisible();
   expect(api.withdraw).toHaveBeenCalledWith(
     successorId,
@@ -333,10 +335,7 @@ it("does not expose write controls for a read-only window", async () => {
     screen.queryByRole("button", { name: "添加我的猜测" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "更正猜测" }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "撤回猜测" }),
+    screen.queryByRole("button", { name: /^更多操作/ }),
   ).not.toBeInTheDocument();
 });
 it("keeps committed success while failed refresh blocks another write", async () => {
@@ -418,10 +417,11 @@ it("rejects a correction receipt that does not identify a distinct successor", a
   mount();
   await screen.findByText(hypothesis.statement);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "更正猜测" }));
+  await user.click(screen.getByRole("button", { name: /^更多操作/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "更正" }));
   await user.clear(screen.getByLabelText("我的完整猜测"));
   await user.type(screen.getByLabelText("我的完整猜测"), "我猜与运动有关");
-  await user.click(screen.getByRole("button", { name: "保存猜测更正" }));
+  await user.click(screen.getByRole("button", { name: "保存更正" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("尚未收到匹配");
   expect(screen.queryByText(/猜测更正已保存/)).not.toBeInTheDocument();
 });

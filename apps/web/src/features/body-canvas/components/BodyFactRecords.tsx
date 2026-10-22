@@ -17,7 +17,6 @@ import {
   LoaderCircle,
   RefreshCw,
   Repeat2,
-  Trash2,
   X,
 } from "lucide-react";
 import {
@@ -33,7 +32,11 @@ import {
 } from "@/features/profile/model/profilePreferences";
 import { BodyFactRecordForm } from "./BodyFactRecordForm";
 import { BodyFactRecordList } from "./BodyFactRecordList";
-import { BodyFactAmendment } from "./BodyFactAmendment";
+import {
+  BodyFactActionsMenu,
+  BodyFactAmendment,
+  type BodyFactAmendMode,
+} from "./BodyFactAmendment";
 import type { StatementErasureTarget } from "./StatementErasure";
 
 // Rarely opened; kept out of the ConsultationPage chunk budget.
@@ -142,6 +145,7 @@ export function BodyFactRecords({
   const [erasing, setErasing] = useState<StatementErasureTarget | null>(null);
   // Penpot Records rows open one statement's detail inside the same window.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [amendMode, setAmendMode] = useState<BodyFactAmendMode>(null);
   const pending = useRef<{
     owner: string;
     content: string;
@@ -159,6 +163,7 @@ export function BodyFactRecords({
     setSaving(false);
     setErasing(null);
     setSelectedId(null);
+    setAmendMode(null);
   }, [owner]);
 
   const page = query.data?.pages[0];
@@ -405,6 +410,7 @@ export function BodyFactRecords({
   // places it can be amended. Leaving the list never discards the ledger read.
   if (selected && !erasing) {
     const links = relatedLinks?.(selected.id) ?? [];
+    const sourceId = selected.record.source_evidence_id;
     return (
       <div
         className="bc-person-category bc-person-detail"
@@ -413,7 +419,33 @@ export function BodyFactRecords({
         data-vm-state={boundedVM.state}
       >
         <div className="bc-person-detail-body" data-testid="body-fact-detail">
-          <h3 className="bc-person-detail-title">{selected.label}</h3>
+          <div className="bc-person-detail-head">
+            <h3 className="bc-person-detail-title">{selected.label}</h3>
+            {canEdit && page && !view.pagesDisagree && !amendMode ? (
+              <BodyFactActionsMenu
+                onCorrect={() => {
+                  setNotice(null);
+                  setAmendMode("correct");
+                }}
+                onWithdraw={() => {
+                  setNotice(null);
+                  setAmendMode("withdraw");
+                }}
+                onErase={
+                  sourceId
+                    ? () => {
+                        setNotice(null);
+                        setErasing({
+                          recordId: selected.record.id,
+                          statementId: sourceId,
+                          ownerId: selected.record.user_id,
+                        });
+                      }
+                    : undefined
+                }
+              />
+            ) : null}
+          </div>
           {selected.isCorrection || links.length ? (
             <div className="bc-person-chips">
               {selected.isCorrection ? (
@@ -440,51 +472,37 @@ export function BodyFactRecords({
             </time>
           </p>
           {canEdit && page && !view.pagesDisagree ? (
-            <div className="bc-person-detail-actions">
-              <BodyFactAmendment
-                record={selected.record}
-                revision={page.current_revision}
-                onRefresh={() => void query.refetch()}
-                onCommitted={(message, committedRevision) => {
-                  if (ownerRef.current !== selected.record.user_id) return;
-                  // A correction/withdrawal also invalidates the old live
-                  // ledger snapshot; never display a revoked assertion while
-                  // its authoritative revision is still being fetched.
-                  setSavedRevision((prev) =>
-                    Math.max(prev ?? 0, committedRevision),
-                  );
-                  setNotice(message);
-                  setSelectedId(null);
-                  void queryClient.invalidateQueries({
-                    queryKey: ["workspace"],
-                  });
-                }}
-              />
-              {selected.record.source_evidence_id ? (
-                <button
-                  type="button"
-                  className="bc-text-button bc-person-danger"
-                  onClick={() => {
-                    setNotice(null);
-                    setErasing({
-                      recordId: selected.record.id,
-                      statementId: selected.record.source_evidence_id,
-                      ownerId: selected.record.user_id,
-                    });
-                  }}
-                >
-                  <Trash2 size={13} />
-                  彻底删除
-                </button>
-              ) : null}
-            </div>
+            <BodyFactAmendment
+              record={selected.record}
+              revision={page.current_revision}
+              mode={amendMode}
+              onModeChange={setAmendMode}
+              onRefresh={() => void query.refetch()}
+              onCommitted={(message, committedRevision) => {
+                if (ownerRef.current !== selected.record.user_id) return;
+                // A correction/withdrawal also invalidates the old live
+                // ledger snapshot; never display a revoked assertion while
+                // its authoritative revision is still being fetched.
+                setSavedRevision((prev) =>
+                  Math.max(prev ?? 0, committedRevision),
+                );
+                setNotice(message);
+                setSelectedId(null);
+                void queryClient.invalidateQueries({
+                  queryKey: ["workspace"],
+                });
+              }}
+            />
           ) : null}
         </div>
         <footer className="bc-person-footer">
           <button
             type="button"
             className="bc-person-footer-link"
-            onClick={() => setSelectedId(null)}
+            onClick={() => {
+              setAmendMode(null);
+              setSelectedId(null);
+            }}
           >
             {habitsOnly ? "返回生活习惯" : "返回记录"}
           </button>
@@ -589,6 +607,7 @@ export function BodyFactRecords({
         displayZone={displayZone}
         now={clock}
         onSelect={(id) => {
+          setAmendMode(null);
           setSelectedId(id);
           setNotice(null);
           setAdding(false);

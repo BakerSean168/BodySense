@@ -247,14 +247,13 @@ test("Person Records corrections and withdrawal use exact targets and durable re
   await records
     .getByRole("button", { name: "查看记录：我昨天跑步三十分钟" })
     .click();
-  await records.getByRole("button", { name: "更正", exact: true }).click();
+  await records.getByRole("button", { name: "更多操作" }).click();
+  await page.getByRole("menuitem", { name: "更正" }).click();
   await records
     .getByLabel("更正后的完整陈述")
     .fill("我昨天只是散步十分钟，原来说错了");
   await records.getByRole("button", { name: "保存更正" }).click();
-  await expect(
-    records.getByText("更正已保存，原陈述保留在历史中。"),
-  ).toBeVisible();
+  await expect(records.getByText("已更正", { exact: true })).toBeVisible();
   await expect(
     records.getByText("我昨天只是散步十分钟，原来说错了", { exact: true }),
   ).toBeVisible();
@@ -272,8 +271,10 @@ test("Person Records corrections and withdrawal use exact targets and durable re
     .getByRole("button", { name: "查看记录：我昨天只是散步十分钟，原来说错了" })
     .click();
   await expect(records.getByText("更正后的陈述")).toBeVisible();
-  await records.getByRole("button", { name: "撤回陈述" }).click();
-  await expect(records.getByText(/这不是隐私数据删除/)).toBeVisible();
+  await records.getByRole("button", { name: "更多操作" }).click();
+  await page.getByRole("menuitem", { name: "撤回陈述" }).click();
+  const confirm = page.getByRole("dialog", { name: "撤回这条陈述？" });
+  await expect(confirm).toBeVisible();
   const outgoing = page.waitForRequest(
     (req) =>
       req.url().endsWith(`/records/${currentId}/withdraw`) &&
@@ -284,10 +285,10 @@ test("Person Records corrections and withdrawal use exact targets and durable re
       res.url().endsWith(`/records/${currentId}/withdraw`) &&
       res.request().method() === "POST",
   );
-  await records.getByRole("button", { name: "确认撤回" }).click();
+  await confirm.getByRole("button", { name: "撤回" }).click();
   const originalRequest = await outgoing;
   const originalReceipt = await (await incoming).json();
-  await expect(records.getByText(/陈述已撤回，历史保留/)).toBeVisible();
+  await expect(records.getByText("已撤回", { exact: true })).toBeVisible();
   await expect(records.getByText(/还没有身体记录/)).toBeVisible();
   const replay = await request.post(
     `${api}/api/v1/body-state/records/${currentId}/withdraw`,

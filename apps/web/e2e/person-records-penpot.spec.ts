@@ -163,7 +163,7 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   await expect(
     detail.getByText("“头痛又来了，两边太阳穴胀痛。”"),
   ).toBeVisible();
-  await expect(detail.getByRole("button", { name: "撤回陈述" })).toBeVisible();
+  await expect(detail.getByRole("button", { name: "更多操作" })).toBeVisible();
   await expectFits(page, 390);
   await detail.getByRole("button", { name: "头痛经历" }).click();
 
