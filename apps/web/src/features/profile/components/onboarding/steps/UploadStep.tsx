@@ -59,7 +59,7 @@ export function UploadStep() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUploads();
+    void fetchUploads();
   }, [fetchUploads]);
 
   // Posture analysis and OCR run as async jobs; poll while any is still in flight.
@@ -70,7 +70,7 @@ export function UploadStep() {
   );
   useEffect(() => {
     if (!inFlight) return;
-    const timer = setInterval(() => fetchUploads(), 4000);
+    const timer = setInterval(() => void fetchUploads(), 4000);
     return () => clearInterval(timer);
   }, [inFlight, fetchUploads]);
 

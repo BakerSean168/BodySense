@@ -1,4 +1,5 @@
 import { BarChart3, Clock3 } from "lucide-react";
+import { formatDisplayValue } from "@/lib/displayValue";
 import type { Outcome, WorkspaceTrend } from "../types/workspace";
 
 interface OutcomeTrendsPanelProps {
@@ -74,7 +75,8 @@ export function OutcomeTrendsPanel({
                 </div>
                 <p className="mt-1 text-muted-foreground">
                   {outcome.notes ||
-                    String(outcome.value.description || "记录了一次身体变化")}
+                    formatDisplayValue(outcome.value.description) ||
+                    "记录了一次身体变化"}
                 </p>
                 <p className="mt-1 text-[11px] text-muted-foreground/70">
                   {causalityLabels[outcome.causality_level]}
