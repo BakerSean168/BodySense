@@ -83,7 +83,10 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(shortcutPerson).toBeHidden();
 
   // Region-by-name is its own ⌘K palette, opened from the tools rail.
-  await page.getByRole("button", { name: "按名称选择区域" }).click();
+  await page
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "按名称选择区域" })
+    .click();
   const regionPalette = page.getByRole("dialog", {
     name: "按名称选择身体区域",
   });
@@ -250,7 +253,10 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   ).toBeVisible();
   // The persistent body stage survives the window close above.
   await expect(page.getByTestId("body-canvas-workspace")).toBeVisible();
-  await page.getByRole("button", { name: "按名称选择区域" }).click();
+  await page
+    .getByRole("toolbar", { name: "身体画布工具" })
+    .getByRole("button", { name: "按名称选择区域" })
+    .click();
   await expect(
     page.getByRole("dialog", { name: "按名称选择身体区域" }),
   ).toBeVisible();

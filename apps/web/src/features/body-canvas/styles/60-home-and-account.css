@@ -318,7 +318,9 @@
     width: auto;
     height: 60px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* One equal cell per visible tool (the collapse chevron is hidden). */
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     padding: 4px;
     gap: 4px;
     border-radius: 14px;
