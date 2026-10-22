@@ -33,6 +33,7 @@ vi.mock(
   },
 );
 import DiagnosisRequestEntry from "./DiagnosisRequestEntry";
+import { selectOption } from "@/test/selectOption";
 
 function controls(
   overrides: Partial<DiagnosisDecisionControls> = {},
@@ -213,7 +214,7 @@ describe("Diagnosis / History", () => {
         onCloseHistory={onCloseHistory}
       />,
     );
-    await userEvent.selectOptions(
+    await selectOption(
       screen.getByRole("combobox", { name: "选择已确认病情" }),
       "历史",
     );
@@ -230,9 +231,9 @@ describe("Diagnosis / History", () => {
     );
     const picker = screen.getByRole("combobox", {
       name: "选择已确认病情",
-    }) as HTMLSelectElement;
-    expect(picker.selectedOptions[0].textContent).toBe("历史");
-    await userEvent.selectOptions(picker, reviewed.medicalName);
+    });
+    expect(picker).toHaveTextContent("历史");
+    await selectOption(picker, reviewed.medicalName);
     expect(onSelectCondition).toHaveBeenCalledWith(reviewed.conditionId);
     expect(onCloseHistory).toHaveBeenCalledTimes(1);
   });

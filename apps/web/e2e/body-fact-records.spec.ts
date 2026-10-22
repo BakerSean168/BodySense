@@ -8,6 +8,7 @@ import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
 import { choosePersonCategory } from "./support/person";
+import { selectOption } from "./support/select";
 
 // These cases include registration, real Go/Python/DB calls and full reloads.
 // Keep each expectation's normal timeout; allow a cold 3D/browser startup on
@@ -80,7 +81,10 @@ test("Person Records directly saves real facts and retains them after refresh", 
   await expect(records.getByText(/还没有身体记录/)).toBeVisible();
   await page.getByTestId("person-add").click();
   await page.getByLabel("你的描述").fill("我今天步行二十分钟");
-  await page.getByLabel("记录类别").selectOption("activity");
+  await selectOption(
+    page.getByRole("combobox", { name: "记录类别" }),
+    "activity",
+  );
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(records.getByText("已保存", { exact: true })).toBeVisible();
   await expect(

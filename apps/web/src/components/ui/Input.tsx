@@ -1,51 +1,67 @@
 /**
- * Input —— 用 forwardRef 转发 DOM ref 的受控输入框封装。
+ * Input —— shadcn (base-ui) 输入框，使用应用的 `--ui-*` 纸张主题变量。
  *
- * ===== 值得学的点 =====
- * - `forwardRef<HTMLInputElement, InputProps>` 把原生 DOM 节点 ref 透传给内部
- *   `<input>`，同时保持组件可被父级用 ref 直接操作底层元素。
- * - `InputProps extends InputHTMLAttributes<HTMLInputElement>`：复用原生 input 的
- *   全部合法属性，再叠加 label / error 等自有 props，剩余属性用 `{ ...props }` 透传。
- *
- * 深入笔记（Thought Forest 文件名）：
- * - react-typescript-component-and-hook-types.md
- * - react-typed-wrapper-and-polymorphic-components.md
+ * - `variant`: field（圆角描边，默认）/ underline（下划线）/ bare（无边框，
+ *   由所在行绘制下划线）/ ghost。
+ * - 兼容旧用法：传入 `label` / `error` 时会渲染标签和错误提示。
+ * - ref 直接指向底层 `<input>`。
  */
+import * as React from "react";
+import { Input as InputPrimitive } from "@base-ui/react/input";
 
-import React, { type InputHTMLAttributes, forwardRef } from "react";
+import { cn } from "@/lib/utils";
+import {
+  fieldVariants,
+  type FieldVariant,
+} from "@/components/ui/field-variants";
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<
+  React.ComponentProps<"input">,
+  "size"
+> {
+  variant?: FieldVariant;
   label?: string;
   error?: string;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = "", label, error, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
-
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, variant = "field", label, error, id, type, ...props }, ref) => {
+    const generatedId = React.useId();
+    const inputId =
+      id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+    const control = (
+      <InputPrimitive
+        ref={ref}
+        id={inputId ?? (error ? generatedId : undefined)}
+        type={type}
+        data-slot="input"
+        data-variant={variant}
+        aria-invalid={error ? true : props["aria-invalid"]}
+        className={cn(
+          fieldVariants({ variant }),
+          "py-1.5 file:border-0 file:bg-transparent file:text-sm file:font-medium [&[type=number]]:[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+          className,
+        )}
+        {...props}
+      />
+    );
+    if (!label && !error) return control;
     return (
       <div className="w-full">
-        {label && (
+        {label ? (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold text-[#365d48] uppercase tracking-wider mb-2 ml-1"
+            className="mb-2 ml-1 block text-xs font-semibold tracking-wider text-(--ui-primary) uppercase"
           >
             {label}
           </label>
-        )}
-        <input
-          id={inputId}
-          ref={ref}
-          className={`block w-full rounded-2xl border-[#D6D3CD] shadow-sm transition-all duration-300 focus:border-primary-600 focus:ring-primary-600 focus:bg-white sm:text-sm px-4 py-3 bg-white/40 border outline-none backdrop-blur-sm
-            ${error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "hover:border-[#C5C2BC]"}
-            ${className}`}
-          {...props}
-        />
-        {error && (
-          <p className="mt-1.5 ml-1 text-xs text-red-500 font-medium">
+        ) : null}
+        {control}
+        {error ? (
+          <p className="mt-1.5 ml-1 text-xs font-medium text-(--ui-danger)">
             {error}
           </p>
-        )}
+        ) : null}
       </div>
     );
   },

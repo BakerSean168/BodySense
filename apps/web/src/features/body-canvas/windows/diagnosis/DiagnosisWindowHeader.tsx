@@ -1,4 +1,5 @@
-import { ChevronDown, Stethoscope } from "lucide-react";
+import { Stethoscope } from "lucide-react";
+import { SelectField } from "@/components/ui/select";
 
 export interface DiagnosisWindowHeaderProps {
   /** Only adopted ConditionEntries; proposals never appear in the picker. */
@@ -91,32 +92,30 @@ export function DiagnosisWindowHeader({
     <div className="bc-window-context bc-diagnosis-context">
       <DiagnosisTitle />
       <span className="bc-window-select-wrap">
-        <select
+        <SelectField
+          variant="ghost"
           className="bc-window-context-select"
           aria-label="选择已确认病情"
           value={history ? HISTORY_OPTION : selected}
           disabled={view.confirmed.length === 0}
-          onChange={(event) => {
-            if (event.target.value === HISTORY_OPTION) {
+          options={[
+            ...view.confirmed.map((item) => ({
+              value: item.conditionId,
+              label: item.name,
+            })),
+            ...(onOpenHistory
+              ? [{ value: HISTORY_OPTION, label: "历史" }]
+              : []),
+          ]}
+          onValueChange={(next) => {
+            if (next === HISTORY_OPTION) {
               onOpenHistory?.();
               return;
             }
-            onSelectCondition(event.target.value);
+            onSelectCondition(next);
             onCloseHistory?.();
           }}
-        >
-          {view.confirmed.length === 0 ? (
-            <option value="">暂无已确认病情</option>
-          ) : (
-            view.confirmed.map((item) => (
-              <option key={item.conditionId} value={item.conditionId}>
-                {item.name}
-              </option>
-            ))
-          )}
-          {onOpenHistory ? <option value={HISTORY_OPTION}>历史</option> : null}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
+        />
       </span>
     </div>
   );

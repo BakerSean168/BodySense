@@ -208,7 +208,7 @@ test("TrainingPlan window: proposals change the plan only through receipts, stal
   );
   await expect(
     page.getByRole("combobox", { name: "选择训练计划" }),
-  ).toHaveValue((await onlyPlan(request, headers)).planId);
+  ).toHaveAttribute("data-value", (await onlyPlan(request, headers)).planId);
 
   // A fresh account has no Safety screening: the Go TrainerGate blocks Start.
   await expect(window.getByTestId("training-gate")).toHaveText("暂不能开始");

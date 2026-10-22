@@ -2,6 +2,7 @@ import { expect, test, type APIResponse } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { selectOption } from "./support/select";
 
 // AS-001 #306: the minimal optional Profile is edited in the Person identity
 // popover at phone width. Registration, real Go/DB calls and reloads.
@@ -83,17 +84,23 @@ test("Person identity edits optional Profile fields and preferences without touc
   );
   await expect(identity).not.toContainText("AI 猜测");
   await expect(identity).not.toContainText(/BMI|身高|体重|revision|修订/);
-  await expect(identity.getByLabel("自报性别")).toHaveValue("male");
-  await expect(identity.getByLabel("生日")).toHaveValue("1996-08-27");
+  const gender = identity.getByRole("combobox", { name: "自报性别" });
+  const zone = identity.getByRole("combobox", { name: "显示时区" });
+  const units = identity.getByRole("combobox", { name: "单位" });
+  await expect(gender).toHaveAttribute("data-value", "male");
+  await expect(identity.getByRole("button", { name: "生日" })).toHaveAttribute(
+    "data-value",
+    "1996-08-27",
+  );
   // Unset preferences are shown as identifiable defaults.
-  await expect(identity.getByLabel("显示时区")).toHaveValue("");
-  await expect(identity.getByLabel("显示时区")).toContainText("跟随设备");
-  await expect(identity.getByLabel("单位")).toHaveValue("");
+  await expect(zone).toHaveAttribute("data-value", "");
+  await expect(zone).toContainText("跟随设备");
+  await expect(units).toHaveAttribute("data-value", "");
 
   await identity.getByLabel("昵称").fill("BakerSean");
-  await identity.getByLabel("显示时区").selectOption("Asia/Tokyo");
-  await identity.getByLabel("单位").selectOption("imperial");
-  await identity.getByLabel("自报性别").selectOption("");
+  await selectOption(zone, "Asia/Tokyo");
+  await selectOption(units, "imperial");
+  await selectOption(gender, "");
   await identity.getByRole("button", { name: "保存" }).click();
   await expect(identity.getByRole("status")).toHaveText("已保存");
   await expect(page.getByRole("button", { name: "BakerSean" })).toBeVisible();
@@ -145,7 +152,9 @@ test("Person identity edits optional Profile fields and preferences without touc
   await expect(page.getByTestId("person-window")).toBeVisible();
   await page.getByRole("button", { name: "Elsewhere" }).click();
   await page.getByRole("menuitem", { name: "个人资料" }).click();
-  await expect(identity.getByLabel("显示时区")).toHaveValue("Asia/Tokyo");
+  await expect(
+    identity.getByRole("combobox", { name: "显示时区" }),
+  ).toHaveAttribute("data-value", "Asia/Tokyo");
   await identity.getByLabel("昵称").fill("");
   await identity.getByRole("button", { name: "保存" }).click();
   await expect(identity.getByRole("status")).toHaveText("已保存");

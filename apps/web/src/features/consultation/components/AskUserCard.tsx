@@ -4,6 +4,12 @@ import {
   BodyStateSuggestionCard,
   isBodyStateSuggestion,
 } from "./BodyStateSuggestionCard";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/Input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+const CUSTOM_CHOICE = "__custom__";
 
 interface AskUserCardProps {
   question: AskUserQuestion;
@@ -151,20 +157,21 @@ export function AskUserCard({
 
     if (field.answer_type === "single_choice" && field.options?.length) {
       return (
-        <div className="space-y-1.5">
+        <RadioGroup
+          className="gap-1.5"
+          name={`${questionId}-${field.key}`}
+          aria-label={field.label}
+          value={value}
+          onValueChange={(next) => setValue(String(next))}
+          disabled={isSubmitting}
+        >
           {field.options.map((opt) => (
             <label key={opt} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name={`${questionId}-${field.key}`}
-                checked={value === opt}
-                onChange={() => setValue(opt)}
-                disabled={isSubmitting}
-              />
+              <RadioGroupItem value={opt} />
               {opt}
             </label>
           ))}
-        </div>
+        </RadioGroup>
       );
     }
 
@@ -174,11 +181,10 @@ export function AskUserCard({
         <div className="space-y-1.5">
           {field.options.map((opt) => (
             <label key={opt} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selected.includes(opt)}
-                onChange={(e) => {
-                  const next = e.target.checked
+                onCheckedChange={(checked) => {
+                  const next = checked
                     ? field.exclusive_options?.includes(opt)
                       ? [opt]
                       : [
@@ -206,11 +212,23 @@ export function AskUserCard({
           ? "date"
           : "text";
 
+    if (inputType === "date")
+      return (
+        <DatePicker
+          aria-label={field.label}
+          placeholder={field.label}
+          value={value}
+          onValueChange={setValue}
+          disabled={isSubmitting}
+          yearNavigation
+        />
+      );
+
     return (
-      <input
+      <Input
         type={inputType}
-        className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
         placeholder={field.label}
+        aria-label={field.label}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={isSubmitting}
@@ -269,68 +287,68 @@ export function AskUserCard({
       ) : (
         <>
           {(question.answer_type === "text" ||
-            question.answer_type === "number" ||
-            question.answer_type === "date") && (
-            <input
-              type={
-                question.answer_type === "number"
-                  ? "number"
-                  : question.answer_type === "date"
-                    ? "date"
-                    : "text"
-              }
-              className="mb-3 w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
+            question.answer_type === "number") && (
+            <Input
+              type={question.answer_type === "number" ? "number" : "text"}
+              className="mb-3"
               aria-labelledby={questionId}
               placeholder={
                 question.answer_type === "text"
                   ? "输入你的回答..."
-                  : question.answer_type === "number"
-                    ? "输入数字..."
-                    : "选择日期..."
+                  : "输入数字..."
               }
               value={textAnswer}
               onChange={(e) => setTextAnswer(e.target.value)}
               disabled={isSubmitting}
             />
           )}
+          {question.answer_type === "date" && (
+            <DatePicker
+              className="mb-3"
+              aria-labelledby={questionId}
+              placeholder="选择日期..."
+              value={textAnswer}
+              onValueChange={setTextAnswer}
+              disabled={isSubmitting}
+              yearNavigation
+            />
+          )}
 
           {question.answer_type === "single_choice" && question.options && (
-            <div className="space-y-2 mb-3">
-              {question.options.map((opt) => (
-                <label key={opt} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name={questionId}
-                    value={opt}
-                    checked={selectedSingle === opt}
-                    onChange={() => {
-                      setSelectedSingle(opt);
-                      setCustomSingleEnabled(false);
-                    }}
-                    disabled={isSubmitting}
-                  />
-                  {opt}
-                </label>
-              ))}
-              {allowCustomInput && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name={questionId}
-                    checked={customSingleEnabled}
-                    onChange={() => {
-                      setSelectedSingle("");
-                      setCustomSingleEnabled(true);
-                    }}
-                    disabled={isSubmitting}
-                  />
-                  自定义输入
-                </label>
-              )}
+            <div className="mb-3 space-y-2">
+              <RadioGroup
+                className="gap-2"
+                name={questionId}
+                aria-labelledby={questionId}
+                value={customSingleEnabled ? CUSTOM_CHOICE : selectedSingle}
+                onValueChange={(next) => {
+                  if (next === CUSTOM_CHOICE) {
+                    setSelectedSingle("");
+                    setCustomSingleEnabled(true);
+                    return;
+                  }
+                  setSelectedSingle(String(next));
+                  setCustomSingleEnabled(false);
+                }}
+                disabled={isSubmitting}
+              >
+                {question.options.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value={opt} />
+                    {opt}
+                  </label>
+                ))}
+                {allowCustomInput && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value={CUSTOM_CHOICE} />
+                    自定义输入
+                  </label>
+                )}
+              </RadioGroup>
               {allowCustomInput && customSingleEnabled && (
-                <input
+                <Input
                   type="text"
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
+                  aria-label="自定义回答"
                   placeholder="请输入你的补充回答..."
                   value={customAnswer}
                   onChange={(e) => setCustomAnswer(e.target.value)}
@@ -344,11 +362,10 @@ export function AskUserCard({
             <div className="space-y-2 mb-3">
               {question.options.map((opt) => (
                 <label key={opt} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedMulti.includes(opt)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                    onCheckedChange={(checked) => {
+                      if (checked) {
                         setSelectedMulti([...selectedMulti, opt]);
                       } else {
                         setSelectedMulti(
@@ -363,19 +380,20 @@ export function AskUserCard({
               ))}
               {allowCustomInput && (
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={customMultiEnabled}
-                    onChange={(e) => setCustomMultiEnabled(e.target.checked)}
+                    onCheckedChange={(checked) =>
+                      setCustomMultiEnabled(checked)
+                    }
                     disabled={isSubmitting}
                   />
                   自定义输入
                 </label>
               )}
               {allowCustomInput && customMultiEnabled && (
-                <input
+                <Input
                   type="text"
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
+                  aria-label="自定义回答"
                   placeholder="请输入你的补充回答..."
                   value={customAnswer}
                   onChange={(e) => setCustomAnswer(e.target.value)}

@@ -1,4 +1,20 @@
 import type { EpisodeSymptomDraft } from "../model/bodyEpisodeSymptomDraft";
+import { Input } from "@/components/ui/Input";
+import { SelectField } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+const PRESENCE_OPTIONS = [
+  { value: "present", label: "有症状" },
+  { value: "absent", label: "无症状" },
+];
+
+const LATERALITY_OPTIONS = [
+  { value: "unknown", label: "不确定" },
+  { value: "left", label: "左侧" },
+  { value: "right", label: "右侧" },
+  { value: "bilateral", label: "双侧" },
+  { value: "not_applicable", label: "不适用" },
+];
 
 interface BodyEpisodeSymptomFormProps {
   draft: EpisodeSymptomDraft;
@@ -37,7 +53,7 @@ export function BodyEpisodeSymptomForm({
       <p className="bc-window-note">症状类型不是诊断。</p>
       <label>
         本人完整症状陈述
-        <textarea
+        <Textarea
           value={draft.statement}
           rows={2}
           maxLength={1000}
@@ -50,7 +66,7 @@ export function BodyEpisodeSymptomForm({
       </label>
       <label>
         症状类型（本人描述）
-        <input
+        <Input
           type="text"
           value={draft.symptomType}
           maxLength={120}
@@ -63,39 +79,33 @@ export function BodyEpisodeSymptomForm({
       </label>
       <label>
         当前陈述是否存在症状
-        <select
+        <SelectField
+          aria-label="当前陈述是否存在症状"
           value={draft.presence}
           disabled={disabled}
-          onChange={(event) =>
+          options={PRESENCE_OPTIONS}
+          onValueChange={(next) =>
             onChange({
               ...draft,
-              presence: event.target.value as EpisodeSymptomDraft["presence"],
+              presence: next as EpisodeSymptomDraft["presence"],
             })
           }
-        >
-          <option value="present">有症状</option>
-          <option value="absent">无症状</option>
-        </select>
+        />
       </label>
       <label>
         侧别（不确定可以不指定）
-        <select
+        <SelectField
+          aria-label="侧别（不确定可以不指定）"
           value={draft.laterality}
           disabled={disabled}
-          onChange={(event) =>
+          options={LATERALITY_OPTIONS}
+          onValueChange={(next) =>
             onChange({
               ...draft,
-              laterality: event.target
-                .value as EpisodeSymptomDraft["laterality"],
+              laterality: next as EpisodeSymptomDraft["laterality"],
             })
           }
-        >
-          <option value="unknown">不确定</option>
-          <option value="left">左侧</option>
-          <option value="right">右侧</option>
-          <option value="bilateral">双侧</option>
-          <option value="not_applicable">不适用</option>
-        </select>
+        />
       </label>
       {error ? (
         <p role="alert" className="bc-error">

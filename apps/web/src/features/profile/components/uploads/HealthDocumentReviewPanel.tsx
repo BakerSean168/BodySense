@@ -13,6 +13,8 @@ import type {
   HealthDocumentReviewAction,
   HealthDocumentReviewContext,
 } from "../../types/health-document-review.types";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 interface HealthDocumentReviewPanelProps {
   uploadId: string;
 }
@@ -243,25 +245,28 @@ export function HealthDocumentReviewPanel({
                 <SourceRegions projection={projection} />
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => void openSource(projection)}
                     disabled={sourceIndex === projection.indicator_index}
-                    className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-700 disabled:opacity-50"
                   >
                     {sourceIndex === projection.indicator_index
                       ? "打开中…"
                       : "查看原始位置"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => void submit(projection, "confirm")}
                     disabled={submitting}
-                    className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs text-white disabled:opacity-50"
                   >
                     确认无误
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     type="button"
                     onClick={() => {
                       setEditingIndex(projection.indicator_index);
@@ -275,72 +280,73 @@ export function HealthDocumentReviewPanel({
                       setError(null);
                     }}
                     disabled={submitting}
-                    className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-700 disabled:opacity-50"
                   >
                     修改
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="destructive"
+                    size="sm"
                     onClick={() => void submit(projection, "reject")}
                     disabled={submitting}
-                    className="rounded-md border border-red-200 px-2.5 py-1.5 text-xs text-red-700 disabled:opacity-50"
                   >
                     不是这个指标
-                  </button>
+                  </Button>
                 </div>
 
                 {editing && (
                   <div className="mt-3 grid gap-2 rounded-md bg-gray-50 p-3 sm:grid-cols-3">
                     <label className="text-xs text-gray-700">
                       修正值
-                      <input
+                      <Input
                         aria-label={`${projection.candidate.name} 修正值`}
                         value={correctedValue}
                         onChange={(event) =>
                           setCorrectedValue(event.target.value)
                         }
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                        className="mt-1 min-h-9"
                       />
                     </label>
                     <label className="text-xs text-gray-700">
                       单位
-                      <input
+                      <Input
                         aria-label={`${projection.candidate.name} 修正单位`}
                         value={correctedUnit}
                         onChange={(event) =>
                           setCorrectedUnit(event.target.value)
                         }
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                        className="mt-1 min-h-9"
                       />
                     </label>
                     <label className="text-xs text-gray-700">
                       参考范围
-                      <input
+                      <Input
                         aria-label={`${projection.candidate.name} 修正参考范围`}
                         value={correctedRange}
                         onChange={(event) =>
                           setCorrectedRange(event.target.value)
                         }
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                        className="mt-1 min-h-9"
                       />
                     </label>
                     <div className="flex gap-2 sm:col-span-3">
-                      <button
+                      <Button
                         type="button"
+                        size="sm"
                         onClick={() => void submit(projection, "correct")}
                         disabled={submitting}
-                        className="rounded-md bg-blue-600 px-2.5 py-1.5 text-xs text-white disabled:opacity-50"
                       >
                         保存修正
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setEditingIndex(null)}
                         disabled={submitting}
-                        className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-700 disabled:opacity-50"
                       >
                         取消
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}

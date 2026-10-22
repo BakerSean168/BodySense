@@ -12,6 +12,7 @@ import {
   type UnitPreference,
 } from "../../model/profilePreferences";
 import { useProfileStore } from "@/stores/profileStore";
+import { Input } from "@/components/ui/Input";
 
 /** Display-only conversion; the recorded value and unit stay authoritative. */
 function metricLabel(
@@ -123,26 +124,26 @@ export function BodyMetricsPanel() {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-foreground">
               身高 (cm)
-              <input
+              <Input
                 type="number"
                 min={50}
                 max={250}
                 step={0.1}
                 value={height}
                 onChange={(event) => setHeight(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                className="mt-2"
               />
             </label>
             <label className="text-sm font-medium text-foreground">
               体重 (kg)
-              <input
+              <Input
                 type="number"
                 min={20}
                 max={300}
                 step={0.1}
                 value={weight}
                 onChange={(event) => setWeight(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                className="mt-2"
               />
             </label>
           </div>

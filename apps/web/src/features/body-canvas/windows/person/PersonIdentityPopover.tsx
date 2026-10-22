@@ -11,7 +11,22 @@ import {
   selectableTimeZones,
 } from "@/features/profile/model/profilePreferences";
 import { useAuthStore } from "@/stores/authStore";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/Input";
+import { SelectField } from "@/components/ui/select";
 import { personDisplayName } from "../../model/personIdentity";
+
+const GENDER_OPTIONS = [
+  { value: "", label: "未填写" },
+  { value: "male", label: "男" },
+  { value: "female", label: "女" },
+];
+
+const UNIT_OPTIONS = [
+  { value: "", label: "默认（公制）" },
+  { value: "metric", label: "公制" },
+  { value: "imperial", label: "英制" },
+];
 
 /**
  * Identity popover (Penpot "Overlay / Person / Identity"): the minimal optional
@@ -53,6 +68,13 @@ export function PersonIdentityPopover({
     [stored.time_zone, deviceZone],
   );
   const today = new Date().toISOString().slice(0, 10);
+  const zoneOptions = useMemo(
+    () => [
+      { value: "", label: `跟随设备（${deviceZone}）` },
+      ...zones.map((zone) => ({ value: zone, label: zone })),
+    ],
+    [zones, deviceZone],
+  );
 
   // Outside click closes, matching the prototype behaviour. Escape is handled
   // by the window-level handler so the popover never traps focus.
@@ -60,9 +82,12 @@ export function PersonIdentityPopover({
     const handlePointerDown = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) return;
       if (panelRef.current?.contains(event.target)) return;
+      // Select / date popups are portaled outside the panel.
       if (
         event.target instanceof HTMLElement &&
-        event.target.closest(".bc-person-identity")
+        event.target.closest(
+          '.bc-person-identity, [data-slot="select-content"], [data-slot="popover-content"]',
+        )
       ) {
         return;
       }
@@ -122,8 +147,9 @@ export function PersonIdentityPopover({
       <form className="bc-identity-form" onSubmit={submit} noValidate>
         <div className="bc-identity-row">
           <label htmlFor="identity-nickname">昵称</label>
-          <input
+          <Input
             id="identity-nickname"
+            variant="bare"
             value={draft.display_name ?? ""}
             onChange={(event) =>
               change("display_name", event.target.value || null)
@@ -137,68 +163,53 @@ export function PersonIdentityPopover({
         <fieldset className="bc-identity-row">
           <legend>生日 · 自报性别</legend>
           <div className="bc-identity-pair">
-            <input
-              type="date"
+            <DatePicker
+              variant="bare"
               aria-label="生日"
               value={draft.birth_date ?? ""}
               max={today}
-              onChange={(event) =>
-                change("birth_date", event.target.value || null)
-              }
+              placeholder="未填写"
+              clearable
+              yearNavigation
+              onValueChange={(next) => change("birth_date", next || null)}
               disabled={disabled}
-              data-empty={draft.birth_date ? "false" : "true"}
             />
-            <select
+            <SelectField
+              variant="bare"
               aria-label="自报性别"
               value={draft.gender ?? ""}
-              onChange={(event) =>
-                change(
-                  "gender",
-                  (event.target.value || null) as ProfileEditable["gender"],
-                )
+              options={GENDER_OPTIONS}
+              onValueChange={(next) =>
+                change("gender", (next || null) as ProfileEditable["gender"])
               }
               disabled={disabled}
-            >
-              <option value="">未填写</option>
-              <option value="male">男</option>
-              <option value="female">女</option>
-            </select>
+            />
           </div>
         </fieldset>
         <fieldset className="bc-identity-row">
           <legend>显示时区 · 单位</legend>
           <div className="bc-identity-pair">
-            <select
+            <SelectField
+              variant="bare"
               aria-label="显示时区"
               value={draft.time_zone ?? ""}
-              onChange={(event) =>
-                change("time_zone", event.target.value || null)
-              }
+              options={zoneOptions}
+              onValueChange={(next) => change("time_zone", next || null)}
               disabled={disabled}
-            >
-              <option value="">跟随设备（{deviceZone}）</option>
-              {zones.map((zone) => (
-                <option key={zone} value={zone}>
-                  {zone}
-                </option>
-              ))}
-            </select>
-            <select
+            />
+            <SelectField
+              variant="bare"
               aria-label="单位"
               value={draft.unit_preference ?? ""}
-              onChange={(event) =>
+              options={UNIT_OPTIONS}
+              onValueChange={(next) =>
                 change(
                   "unit_preference",
-                  (event.target.value ||
-                    null) as ProfileEditable["unit_preference"],
+                  (next || null) as ProfileEditable["unit_preference"],
                 )
               }
               disabled={disabled}
-            >
-              <option value="">默认（公制）</option>
-              <option value="metric">公制</option>
-              <option value="imperial">英制</option>
-            </select>
+            />
           </div>
         </fieldset>
         {error ? (

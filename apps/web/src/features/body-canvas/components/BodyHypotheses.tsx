@@ -7,6 +7,8 @@ import {
   formatInstantInZone,
 } from "@/features/profile/model/profilePreferences";
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 
 /** Owner changes discard drafts and prevent late receipts from entering another profile. */
 export function BodyHypotheses({
@@ -257,7 +259,7 @@ function HypothesisPanel({
           ) : (
             <>
               <label htmlFor={`${id}-statement`}>我的完整猜测</label>
-              <textarea
+              <Textarea
                 id={`${id}-statement`}
                 value={statement}
                 maxLength={2000}
@@ -271,11 +273,14 @@ function HypothesisPanel({
                 <legend>相关事实</legend>
                 {data?.facts.map((fact) => (
                   <label key={fact.id} className="bc-hypothesis-choice">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={facts.includes(fact.id)}
-                      disabled={!facts.includes(fact.id) && facts.length >= 20}
-                      onChange={() => setFacts(toggle(facts, fact.id))}
+                      disabled={
+                        saving ||
+                        !ready ||
+                        (!facts.includes(fact.id) && facts.length >= 20)
+                      }
+                      onCheckedChange={() => setFacts(toggle(facts, fact.id))}
                     />
                     {fact.statement}
                   </label>
@@ -285,14 +290,15 @@ function HypothesisPanel({
                 <legend>相关观察</legend>
                 {data?.observations.map((observation) => (
                   <label key={observation.id} className="bc-hypothesis-choice">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={observations.includes(observation.id)}
                       disabled={
-                        !observations.includes(observation.id) &&
-                        observations.length >= 20
+                        saving ||
+                        !ready ||
+                        (!observations.includes(observation.id) &&
+                          observations.length >= 20)
                       }
-                      onChange={() =>
+                      onCheckedChange={() =>
                         setObservations(toggle(observations, observation.id))
                       }
                     />

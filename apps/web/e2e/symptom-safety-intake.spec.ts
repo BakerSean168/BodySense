@@ -157,7 +157,7 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
   const card = page.getByTestId("pending-interaction-composer");
   await expect(card).toBeVisible();
   await expect(composer).toHaveCount(0);
-  await expect(card.getByLabel("以上均无")).toBeVisible();
+  await expect(card.getByRole("checkbox", { name: "以上均无" })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("symptom-safety-screen-pending.png"),
     fullPage: true,
@@ -168,7 +168,7 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
       .url()
       .includes(`/interrupts/${pending.payload.interaction_id}/answers`),
   );
-  await card.getByLabel("以上均无").check();
+  await card.getByRole("checkbox", { name: "以上均无" }).check();
   await card.getByRole("button", { name: "提交", exact: true }).click();
   const answered = await answerResponse;
   const answeredBody = await answered.text();
@@ -177,7 +177,7 @@ test("v3 symptom report asks the bound safety screen; answering it makes Diagnos
   expect(accepted.some((event) => event.type === "stream.error")).toBe(false);
   expect(accepted.some((event) => event.type === "stream.done")).toBe(true);
   // The answered screen leaves the composer.
-  await expect(card.getByLabel("以上均无")).toHaveCount(0);
+  await expect(card.getByRole("checkbox", { name: "以上均无" })).toHaveCount(0);
   // A real model may follow the screen with a question of its own (e.g. a
   // BodyState suggestion). It is not under test: cancel its Run, then the
   // composer must be back.

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { ConfirmedCondition } from "../../model/confirmedConditions";
 import type { NativeDiagnosisWindowView } from "../../model/diagnosisDecisionViewModel";
 import { DiagnosisWindowHeader } from "./DiagnosisWindowHeader";
 import { DiagnosisWindow } from "./DiagnosisWindow";
+import { selectOption } from "@/test/selectOption";
 
 function condition(conditionId: string, name: string): ConfirmedCondition {
   return {
@@ -50,9 +50,9 @@ describe("Penpot V2 Diagnosis, Training and Chat headers", () => {
     );
     expect(
       screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toHaveValue("condition-1");
+    ).toHaveAttribute("data-value", "condition-1");
     expect(screen.queryByText("尚未确认")).not.toBeInTheDocument();
-    await userEvent.selectOptions(
+    await selectOption(
       screen.getByRole("combobox", { name: "选择已确认病情" }),
       "condition-2",
     );

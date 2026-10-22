@@ -16,6 +16,7 @@ import {
 import { TrainingPlanWindow } from "../windows/training/TrainingPlanWindow";
 import { type TrainingPlanControls } from "../windows/training/types";
 import { TrainingWindowHeader } from "../windows/training/TrainingWindowHeader";
+import { selectOption } from "@/test/selectOption";
 
 function view(
   overrides: Partial<ProjectTrainingWindowInput> = {},
@@ -95,7 +96,7 @@ describe("Penpot Training boards", () => {
       />,
     );
     expect(screen.getByText("训练")).toBeVisible();
-    await userEvent.selectOptions(
+    await selectOption(
       screen.getByRole("combobox", { name: "选择训练计划" }),
       "plan-b",
     );
@@ -130,7 +131,7 @@ describe("Penpot Training boards", () => {
     expect(screen.getByTestId("training-gate")).toHaveTextContent("可以开始");
     // Read-only: no inputs other than the template picker.
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    await userEvent.selectOptions(
+    await selectOption(
       screen.getByRole("combobox", { name: "选择训练课" }),
       "b",
     );

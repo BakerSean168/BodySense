@@ -244,6 +244,21 @@ export function createBodySenseViteConfig({
                 test: /packages[\\/]contracts[\\/]generated[\\/]stream-event-validator/,
                 priority: 20,
               },
+              // The shadcn form controls share one base-ui/floating-ui/day-picker
+              // runtime plus their wrappers. Split it out once instead of copying
+              // it into each lazy surface (chat ask cards, records, profile).
+              {
+                name: "BaseUIControls",
+                test: /node_modules[\\/](@base-ui|@floating-ui|react-day-picker|date-fns)[\\/]|src[\\/]components[\\/]ui[\\/](calendar|checkbox|date-picker|field-variants|label|popover|portal-scope|radio-group|select|slider|switch|textarea)\.tsx?$/,
+                priority: 10,
+              },
+              // Markdown rendering for chat replies (remark/micromark/mdast) is a
+              // separate lazy runtime so AssistantChatPanel keeps budget headroom.
+              {
+                name: "ChatMarkdownRuntime",
+                test: /node_modules[\\/](react-markdown|remark-[^\\/]+|mdast-[^\\/]+|micromark[^\\/]*|unified|hast-[^\\/]+|unist-[^\\/]+|vfile[^\\/]*)[\\/]/,
+                priority: 10,
+              },
             ],
           },
         },

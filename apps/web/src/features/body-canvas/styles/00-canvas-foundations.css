@@ -59,7 +59,9 @@
   /* Vertical space kept clear below a floating business window for the Dock. */
   --bc-dock-clearance: 96px;
 }
-.bc-workspace button,
+/* components/ui field triggers keep their own type scale. */
+.bc-workspace
+  button:not([data-slot="select-trigger"], [data-slot="date-picker-trigger"]),
 .bc-inventory-dialog button {
   font: inherit;
 }
@@ -589,22 +591,10 @@
   color: var(--bc-muted);
   font-size: 12px;
 }
-.bc-equipment-form input,
-.bc-speed select {
+/* Fields are components/ui (Input, SelectField, Textarea); only sizing here. */
+.bc-field [data-slot="select-trigger"],
+.bc-equipment-form [data-slot="input"] {
   min-height: 42px;
-  width: 100%;
-  padding: 0 12px;
-  border: 1px solid var(--bc-line);
-  border-radius: 10px;
-  background: var(--bc-subtle);
-  color: var(--bc-ink);
-  outline: none;
-}
-.bc-equipment-form input:focus-visible,
-.bc-speed select:focus-visible,
-.bc-playback input:focus-visible {
-  outline: 2px solid var(--bc-primary);
-  outline-offset: 2px;
 }
 
 .bc-dock kbd,
@@ -672,14 +662,10 @@
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
-.bc-playback-track input {
-  width: 100%;
-  accent-color: var(--bc-primary);
-}
-.bc-speed select {
+.bc-speed [data-slot="select-trigger"] {
   min-height: 36px;
-  width: 65px;
-  padding: 0 7px;
+  width: 72px;
+  padding: 0 8px;
   font-size: 11px;
 }
 .bc-motion-disclaimer {

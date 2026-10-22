@@ -7,6 +7,7 @@ import {
   type LifestyleSectionKey,
   type LifestyleSnapshot,
 } from "../../services/lifestyleService";
+import { Textarea } from "@/components/ui/textarea";
 
 const sections: Array<{
   key: LifestyleSectionKey;
@@ -168,7 +169,7 @@ export function LifestylePanel() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {section.hint}
               </p>
-              <textarea
+              <Textarea
                 id={`lifestyle-${section.key}`}
                 rows={3}
                 value={draft[section.key]}
@@ -179,7 +180,7 @@ export function LifestylePanel() {
                   }))
                 }
                 placeholder={section.placeholder}
-                className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                className="mt-3"
               />
             </div>
           ))}

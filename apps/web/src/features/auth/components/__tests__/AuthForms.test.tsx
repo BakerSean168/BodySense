@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { useAuthStore } from "@/stores/authStore";
+import userEvent from "@testing-library/user-event";
 
 const initial = useAuthStore.getState();
 
@@ -104,7 +105,7 @@ describe("RegisterPage (Penpot ink register)", () => {
     fireEvent.change(screen.getByLabelText("确认密码"), {
       target: { value: "longenough1" },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
@@ -123,7 +124,7 @@ describe("RegisterPage (Penpot ink register)", () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it("shows a mismatch error inline under confirm and does not register", () => {
+  it("shows a mismatch error inline under confirm and does not register", async () => {
     const register = vi.fn();
     act(() => useAuthStore.setState({ register }));
     renderAt(<RegisterPage />);
@@ -136,7 +137,7 @@ describe("RegisterPage (Penpot ink register)", () => {
     fireEvent.change(screen.getByLabelText("确认密码"), {
       target: { value: "longenough2" },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
     fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     const error = screen.getByText("两次输入的密码不一致");
     expect(error.getAttribute("id")).toBe("confirmPassword-error");
@@ -163,7 +164,7 @@ describe("RegisterPage (Penpot ink register)", () => {
     fireEvent.change(screen.getByLabelText("确认密码"), {
       target: { value: "longenough1" },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });

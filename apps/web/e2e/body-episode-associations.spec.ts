@@ -7,6 +7,7 @@ import {
 import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
+import { selectOption } from "./support/select";
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -48,7 +49,10 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   await editor.getByRole("button", { name: "补充可关联的本人症状" }).click();
   await editor.getByLabel("本人完整症状陈述").fill("我右肩有些疼痛");
   await editor.getByLabel("症状类型（本人描述）").fill("右肩疼痛");
-  await editor.getByLabel("侧别（不确定可以不指定）").selectOption("right");
+  await selectOption(
+    editor.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
+    "right",
+  );
   await editor.getByRole("button", { name: "先保存症状陈述" }).click();
   await expect(editor.getByText(/本人症状陈述已保存/)).toBeVisible();
   await person.getByRole("button", { name: "返回记录" }).click();
@@ -67,7 +71,10 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
     laterality: "right",
   });
   const first = { factId: firstLedger.facts[0].id as string };
-  await editor.getByLabel("本人症状陈述").selectOption(first.factId);
+  await selectOption(
+    editor.getByRole("combobox", { name: "本人症状陈述" }),
+    first.factId,
+  );
 
   const createRequest = page.waitForRequest(
     (value) =>
@@ -105,8 +112,14 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   await editor.getByRole("button", { name: "补充可关联的本人症状" }).click();
   await editor.getByLabel("本人完整症状陈述").fill("今天我右肩没有疼痛");
   await editor.getByLabel("症状类型（本人描述）").fill("右肩疼痛");
-  await editor.getByLabel("当前陈述是否存在症状").selectOption("absent");
-  await editor.getByLabel("侧别（不确定可以不指定）").selectOption("right");
+  await selectOption(
+    editor.getByRole("combobox", { name: "当前陈述是否存在症状" }),
+    "absent",
+  );
+  await selectOption(
+    editor.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
+    "right",
+  );
   await editor.getByRole("button", { name: "先保存症状陈述" }).click();
   await expect(editor.getByText(/本人症状陈述已保存/)).toBeVisible();
   const secondLedger = await (
@@ -137,9 +150,18 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   );
   await reopened.getByRole("button", { name: "整理经历" }).click();
   const secondEditor = reopened.getByTestId("body-episode-editor");
-  await secondEditor.getByLabel("操作").selectOption("link");
-  await secondEditor.getByLabel("本人症状陈述").selectOption(second.factId);
-  await secondEditor.getByLabel("目标经历").selectOption(episodeId);
+  await selectOption(
+    secondEditor.getByRole("combobox", { name: "操作" }),
+    "link",
+  );
+  await selectOption(
+    secondEditor.getByRole("combobox", { name: "本人症状陈述" }),
+    second.factId,
+  );
+  await selectOption(
+    secondEditor.getByRole("combobox", { name: "目标经历" }),
+    episodeId,
+  );
   await secondEditor.getByRole("button", { name: "确认关联陈述" }).click();
   await expect(
     secondEditor.getByText(/关联已提交；仅整理本人症状陈述/),

@@ -4,6 +4,12 @@ import type {
   EpisodeAssociationMode,
   EpisodeSourceOption,
 } from "../model/bodyEpisodeAssociations";
+import { SelectField } from "@/components/ui/select";
+
+const MODE_OPTIONS = [
+  { value: "create", label: "新建症状经历" },
+  { value: "link", label: "关联到已有经历" },
+];
 
 interface BodyEpisodeAssociationFormProps {
   mode: EpisodeAssociationMode;
@@ -55,48 +61,42 @@ export function BodyEpisodeAssociationForm({
     >
       <label>
         操作
-        <select
+        <SelectField
+          aria-label="操作"
           value={mode}
           disabled={locked}
-          onChange={(event) =>
-            onModeChange(event.target.value as EpisodeAssociationMode)
-          }
-        >
-          <option value="create">新建症状经历</option>
-          <option value="link">关联到已有经历</option>
-        </select>
+          options={MODE_OPTIONS}
+          onValueChange={(next) => onModeChange(next as EpisodeAssociationMode)}
+        />
       </label>
       <label>
         本人症状陈述
-        <select
+        <SelectField
+          aria-label="本人症状陈述"
           value={factId}
           disabled={locked}
-          onChange={(event) => onFactChange(event.target.value)}
-        >
-          <option value="">选择已保存的症状</option>
-          {sources.map((source) => (
-            <option key={source.id} value={source.id}>
-              {source.statement}
-              {source.presence === "absent" ? "（未出现症状）" : ""}
-            </option>
-          ))}
-        </select>
+          placeholder="选择已保存的症状"
+          options={sources.map((source) => ({
+            value: source.id,
+            label: `${source.statement}${source.presence === "absent" ? "（未出现症状）" : ""}`,
+          }))}
+          onValueChange={onFactChange}
+        />
       </label>
       {mode === "link" ? (
         <label>
           目标经历
-          <select
+          <SelectField
+            aria-label="目标经历"
             value={episodeId}
             disabled={locked}
-            onChange={(event) => onEpisodeChange(event.target.value)}
-          >
-            <option value="">选择已有经历</option>
-            {episodes.map((episode) => (
-              <option key={episode.id} value={episode.id}>
-                {episode.symptom_type}
-              </option>
-            ))}
-          </select>
+            placeholder="选择已有经历"
+            options={episodes.map((episode) => ({
+              value: episode.id,
+              label: episode.symptom_type,
+            }))}
+            onValueChange={onEpisodeChange}
+          />
         </label>
       ) : null}
       {sources.length === 0 ? (

@@ -17,6 +17,7 @@ import { useEquipmentInventory } from "../hooks/useEquipmentInventory";
 import { PersonFormDialog } from "../PersonFormDialog";
 import { PersonEmptyState } from "./PersonEmptyState";
 import { PersonDataError } from "./PersonDataError";
+import { Input } from "@/components/ui/Input";
 
 /**
  * Equipment is the user's own EquipmentAsset inventory (PC-D2), read from
@@ -74,7 +75,7 @@ export function EquipmentCategory({
     >
       <label className="bc-form-dialog-field">
         名称
-        <input
+        <Input
           value={name}
           onChange={(event) => changeName(event.target.value)}
           maxLength={80}
@@ -85,7 +86,7 @@ export function EquipmentCategory({
       </label>
       <label className="bc-form-dialog-field">
         备注<span className="bc-optional">可选</span>
-        <input
+        <Input
           value={notes}
           onChange={(event) => changeNotes(event.target.value)}
           maxLength={240}

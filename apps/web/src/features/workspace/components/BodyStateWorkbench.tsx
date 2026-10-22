@@ -3,6 +3,7 @@ import { BodyFactRecords } from "@/features/body-canvas/components/BodyFactRecor
 import { BodyEpisodeAssociations } from "@/features/body-canvas/components/BodyEpisodeAssociations";
 import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
 import { errorMessage } from "@/lib/api-client";
+import { Button } from "@/components/ui/Button";
 
 /** User statements, measurements and Episode identities keep their native semantics. */
 export function BodyStateWorkbench({ canEdit }: { canEdit: boolean }) {
@@ -17,9 +18,14 @@ export function BodyStateWorkbench({ canEdit }: { canEdit: boolean }) {
       ) : records.isError ? (
         <div role="alert">
           <p>{errorMessage(records.error, "暂时无法读取观察记录")}</p>
-          <button type="button" onClick={() => void records.refetch()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void records.refetch()}
+          >
             重试
-          </button>
+          </Button>
         </div>
       ) : (
         <section aria-label="观察记录">
