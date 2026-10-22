@@ -9,11 +9,12 @@ import {
   type ReactNode,
 } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useThemeClass } from "../windows/person/useThemeClass";
 import {
   Check,
   FileText,
   LoaderCircle,
-  Plus,
   RefreshCw,
   Repeat2,
   Trash2,
@@ -69,8 +70,13 @@ export function BodyFactRecords({
   relatedLinks,
   onOpenRelated,
   now,
+  addOpen,
+  onAddOpenChange,
 }: {
   habitsOnly?: boolean;
+  /** Controlled by the Person window header "+"; uncontrolled when omitted. */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
   canEdit: boolean;
   /** Penpot Body / Region "相关" chips, rendered under the loaded count. */
   related?: ReactNode;
@@ -113,7 +119,14 @@ export function BodyFactRecords({
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-  const [adding, setAdding] = useState(false);
+  const [localAdding, setLocalAdding] = useState(false);
+  const adding = onAddOpenChange ? addOpen === true : localAdding;
+  const setAdding = (open: boolean) => {
+    if (onAddOpenChange) onAddOpenChange(open);
+    else setLocalAdding(open);
+  };
+  const themeAnchor = useRef<HTMLDivElement>(null);
+  const themeClass = useThemeClass(themeAnchor);
   const [kind, setKind] = useState<FactKind>(
     habitsOnly ? "lifestyle" : "symptom",
   );
@@ -229,7 +242,7 @@ export function BodyFactRecords({
       setWhen("");
       setAdding(false);
       setSavedRevision(receipt.revision);
-      setNotice("已保存你的陈述。");
+      setNotice("已保存");
       void queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch (cause) {
       if (ownerRef.current !== submittingOwner) return;
@@ -263,39 +276,50 @@ export function BodyFactRecords({
     ? recordedClock(new Date(query.dataUpdatedAt).toISOString(), displayZone)
     : null;
   const addDisabled = !page || view.pagesDisagree || snapshotBehindCommit;
-  const openAdd = () => {
-    setAdding(true);
-    setNotice(null);
-    setSelectedId(null);
-  };
   const emptyState =
     !query.isError &&
     !query.isPending &&
     !snapshotBehindCommit &&
-    !adding &&
     boundedVM.state === "empty";
 
-  const addForm = adding ? (
-    <BodyFactRecordForm
-      habitsOnly={habitsOnly}
-      kind={kind}
-      statement={statement}
-      when={when}
-      saving={saving}
-      saveError={saveError}
-      onKindChange={(value) => {
-        setKind(value);
-        pending.current = null;
+  const closeAdd = () => {
+    setAdding(false);
+    setSaveError(null);
+  };
+  const addForm = (
+    <Dialog
+      open={adding && canEdit}
+      onOpenChange={(open) => {
+        if (!open && !saving) closeAdd();
       }}
-      onStatementChange={setStatement}
-      onWhenChange={setWhen}
-      onSubmit={() => void submit()}
-      onClose={() => {
-        setAdding(false);
-        setSaveError(null);
-      }}
-    />
-  ) : null;
+    >
+      <DialogContent
+        showCloseButton={false}
+        className={`${themeClass()} bc-account-dialog bc-form-dialog`}
+      >
+        <DialogTitle className="bc-account-dialog-title">
+          {habitsOnly ? "补充生活习惯" : "补充记录"}
+        </DialogTitle>
+        <BodyFactRecordForm
+          habitsOnly={habitsOnly}
+          kind={kind}
+          statement={statement}
+          when={when}
+          saving={saving}
+          blocked={addDisabled}
+          saveError={saveError}
+          onKindChange={(value) => {
+            setKind(value);
+            pending.current = null;
+          }}
+          onStatementChange={setStatement}
+          onWhenChange={setWhen}
+          onSubmit={() => void submit()}
+          onClose={closeAdd}
+        />
+      </DialogContent>
+    </Dialog>
+  );
 
   const erasure =
     erasing && canEdit ? (
@@ -471,6 +495,7 @@ export function BodyFactRecords({
 
   return (
     <div
+      ref={themeAnchor}
       className="bc-person-category bc-person-records"
       data-testid="body-fact-records"
       data-vm-contract={boundedVM.contract}
@@ -522,18 +547,6 @@ export function BodyFactRecords({
               ? "作息、久坐、饮食这些，在对话里说过就会整理到这里"
               : "在对话里说一句身体感受，就会出现在这里"}
           </span>
-          {canEdit ? (
-            <button
-              type="button"
-              className="bc-person-add"
-              aria-label="补充记录"
-              title="补充记录"
-              disabled={addDisabled}
-              onClick={openAdd}
-            >
-              <Plus size={17} />
-            </button>
-          ) : null}
           {notice ? (
             <p role="status" className="bc-record-saved">
               <Check size={15} />
@@ -551,23 +564,9 @@ export function BodyFactRecords({
         <>
           <div className="bc-person-listbar">
             <span className="bc-person-count">
-              {habitsOnly
-                ? `已加载 ${rows.length} 项`
-                : `已加载 ${rows.length} 条`}
-              {view.hasMore ? " · 还有更早记录" : ""}
+              {rows.length}
+              {view.hasMore ? "+" : ""} {habitsOnly ? "项" : "条"}
             </span>
-            {canEdit && !adding ? (
-              <button
-                type="button"
-                className="bc-person-add"
-                aria-label="补充记录"
-                title="补充记录"
-                disabled={addDisabled}
-                onClick={openAdd}
-              >
-                <Plus size={17} />
-              </button>
-            ) : null}
           </div>
           {related}
           {feedback}

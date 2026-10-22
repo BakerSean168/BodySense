@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useState, type ReactNode } from "react";
 import { Clock3, MessageCircle } from "lucide-react";
 import type { BodyCanvasWorkspaceProps } from "./BodyCanvasWorkspace.types";
 import type { BusinessWindowId } from "../model/businessWindows";
@@ -15,6 +15,7 @@ import {
   TrainingWindowHeader,
 } from "../windows/training/TrainingWindowHeader";
 import { PersonWindowHeader } from "../windows/person/PersonWindowHeader";
+import { PersonAddButton } from "../windows/person/PersonAddButton";
 
 import { type PersonProfileIdentity } from "../windows/person/types";
 import { TrainerEntryGuard } from "../components/TrainerEntryGuard";
@@ -90,6 +91,18 @@ export function CanvasBusinessWindows({
     analysisRequest,
     setAnalysisRequest,
   } = business;
+  // Header "+" of the Person window; cleared whenever the category changes.
+  const [personAddOpen, setPersonAddOpen] = useState(false);
+  const [personAddLabel, setPersonAddLabel] = useState<string | null>(null);
+  const changePersonCategory = useCallback(
+    (next: Parameters<typeof setPersonCategory>[0]) => {
+      setPersonAddOpen(false);
+      setPersonCategory(next);
+    },
+    [setPersonCategory],
+  );
+  const canEditBody =
+    props.workspace?.capabilities.can_edit_body_state === true;
   const diagnosisView = diagnosisActions.view;
   const trainingSelection = trainingActions.selection;
 
@@ -124,12 +137,13 @@ export function CanvasBusinessWindows({
           <Suspense fallback={<WindowLoading label="正在读取个人档案" />}>
             <PersonWindow
               category={personCategory}
-              onCategoryChange={setPersonCategory}
+              onCategoryChange={changePersonCategory}
               identityInfoOpen={personInfoOpen}
               onIdentityInfoOpenChange={setPersonInfoOpen}
-              canEdit={
-                props.workspace?.capabilities.can_edit_body_state === true
-              }
+              canEdit={canEditBody}
+              addOpen={personAddOpen}
+              onAddOpenChange={setPersonAddOpen}
+              onAddLabelChange={setPersonAddLabel}
               onOpenRecords={props.onOpenProfile}
             />
           </Suspense>
@@ -262,7 +276,7 @@ export function CanvasBusinessWindows({
             onOpenSettings={() => setAccountDialog("settings")}
             onRequestLogout={() => setAccountDialog("logout")}
             category={personCategory}
-            onCategoryChange={setPersonCategory}
+            onCategoryChange={changePersonCategory}
           />
         );
       case "diagnosis":
@@ -316,6 +330,20 @@ export function CanvasBusinessWindows({
   };
 
   const renderHeaderActions = (window: BusinessWindowId): ReactNode => {
+    if (window === "person") {
+      const upload = personCategory === "media" || personCategory === "reports";
+      return (
+        <PersonAddButton
+          category={personCategory}
+          label={personCategory === "records" ? personAddLabel : null}
+          disabled={!upload && !canEditBody}
+          onAdd={() => {
+            setPersonInfoOpen(false);
+            setPersonAddOpen(true);
+          }}
+        />
+      );
+    }
     if (window === "chat")
       return chatHistory ? (
         <ChatHistoryMenu history={chatHistory} onSelectDay={jumpToChatDay} />

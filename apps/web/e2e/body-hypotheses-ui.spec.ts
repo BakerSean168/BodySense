@@ -298,14 +298,12 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
     await expect(panel.getByText("还没有你提出的猜测。")).toBeVisible();
     const canvas = await page.locator(".bc-scene canvas").elementHandle();
     expect(canvas).not.toBeNull();
-    await panel.getByRole("button", { name: "添加我的猜测" }).focus();
+    await page.getByTestId("person-add").focus();
     await page.keyboard.press("Enter");
     await expect(panel.getByLabel("我的完整猜测")).toBeFocused();
     await panel.getByLabel("我的完整猜测").fill(statement);
     await page.keyboard.press("Escape");
-    await expect(
-      panel.getByRole("button", { name: "添加我的猜测" }),
-    ).toBeFocused();
+    await expect(page.getByTestId("person-add")).toBeFocused();
     await expect(page.getByTestId("person-window")).toBeVisible();
     await page.keyboard.press("Enter");
     await panel.getByLabel("我的完整猜测").fill(statement);
@@ -321,10 +319,8 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
     await panel.getByRole("button", { name: "保存猜测" }).click();
     await expect(panel.getByRole("alert")).toContainText("记录已变化或不可用");
     await expect(panel.getByText("你的猜测已保存。")).toHaveCount(0);
-    await expect(
-      panel.getByRole("button", { name: "添加我的猜测" }),
-    ).toBeEnabled();
-    await panel.getByRole("button", { name: "添加我的猜测" }).click();
+    await expect(page.getByTestId("person-add")).toBeEnabled();
+    await page.getByTestId("person-add").click();
     await panel.getByLabel("我的完整猜测").fill(statement);
     await panel.getByLabel(fact.statement, { exact: true }).check();
     await panel.getByLabel(observation.statement, { exact: true }).check();

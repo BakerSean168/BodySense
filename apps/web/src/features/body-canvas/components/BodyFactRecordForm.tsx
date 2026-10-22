@@ -11,6 +11,7 @@ export function BodyFactRecordForm({
   statement,
   when,
   saving,
+  blocked = false,
   saveError,
   onKindChange,
   onStatementChange,
@@ -23,6 +24,8 @@ export function BodyFactRecordForm({
   statement: string;
   when: string;
   saving: boolean;
+  /** The ledger is mid-sync; the draft stays but cannot be saved yet. */
+  blocked?: boolean;
   saveError: string | null;
   onKindChange: (kind: FactKind) => void;
   onStatementChange: (value: string) => void;
@@ -68,12 +71,12 @@ export function BodyFactRecordForm({
         />
       </label>
       <label>
-        发生时间<span className="bc-optional">可选，保留你的原话</span>
+        发生时间<span className="bc-optional">可选</span>
         <input
           value={when}
           onChange={(event) => onWhenChange(event.target.value)}
           maxLength={500}
-          placeholder="例如：昨天晚上；不清楚可以留空"
+          placeholder="例如：昨天晚上"
           disabled={saving}
         />
       </label>
@@ -81,10 +84,10 @@ export function BodyFactRecordForm({
         <button
           type="submit"
           className="bc-button bc-primary"
-          disabled={saving || !statement.trim()}
+          disabled={saving || blocked || !statement.trim()}
         >
           {saving ? <LoaderCircle size={16} className="animate-spin" /> : null}
-          {saving ? "正在保存" : "保存记录"}
+          {saving ? "正在保存" : "保存"}
         </button>
         <button
           type="button"
@@ -92,7 +95,7 @@ export function BodyFactRecordForm({
           disabled={saving}
           onClick={onClose}
         >
-          收起
+          取消
         </button>
       </div>
       {saveError ? (

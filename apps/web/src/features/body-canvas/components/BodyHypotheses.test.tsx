@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -35,6 +36,31 @@ const receipt = {
   hypothesis_id: id,
   revision: 4,
 };
+/** Stands in for the Person window header "+" (absent when read-only). */
+function WithHeaderAdd({ canEdit }: { canEdit: boolean }) {
+  const [requested, setRequested] = useState(false);
+  return (
+    <>
+      {canEdit ? (
+        <button type="button" onClick={() => setRequested(true)}>
+          添加我的猜测
+        </button>
+      ) : null}
+      <BodyHypotheses
+        canEdit={canEdit}
+        addRequested={requested}
+        onAddHandled={() => setRequested(false)}
+      />
+    </>
+  );
+}
+/** A blocked add opens no draft. */
+async function expectAddBlocked() {
+  await userEvent.click(screen.getByRole("button", { name: "添加我的猜测" }));
+  expect(
+    screen.queryByRole("form", { name: "编辑我的猜测" }),
+  ).not.toBeInTheDocument();
+}
 function mount(canEdit = true) {
   return render(
     <QueryClientProvider
@@ -42,7 +68,7 @@ function mount(canEdit = true) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <BodyHypotheses canEdit={canEdit} />
+      <WithHeaderAdd canEdit={canEdit} />
     </QueryClientProvider>,
   );
 }
@@ -263,7 +289,7 @@ it("blocks writes on inconsistent snapshots and retries reads", async () => {
   });
   mount();
   await screen.findByText(/正在等待一致/);
-  expect(screen.getByRole("button", { name: "添加我的猜测" })).toBeDisabled();
+  await expectAddBlocked();
   api.groups.mockResolvedValue({
     user_id: owner,
     current_revision: 3,
@@ -321,7 +347,7 @@ it("keeps committed success while failed refresh blocks another write", async ()
   await user.click(screen.getByRole("button", { name: "保存猜测" }));
   expect(await screen.findByText("你的猜测已保存。")).toBeVisible();
   expect(await screen.findByRole("alert")).toHaveTextContent("读取失败");
-  expect(screen.getByRole("button", { name: "添加我的猜测" })).toBeDisabled();
+  await expectAddBlocked();
   expect(api.record).toHaveBeenCalledTimes(1);
 });
 it("drops pending results after an owner switch", async () => {
@@ -358,7 +384,7 @@ it("rejects foreign group snapshots", async () => {
   });
   mount();
   expect(await screen.findByRole("alert")).toHaveTextContent("读取失败");
-  expect(screen.getByRole("button", { name: "添加我的猜测" })).toBeDisabled();
+  await expectAddBlocked();
 });
 it("submits only the explicitly selected fact and observation links", async () => {
   api.read.mockResolvedValue({

@@ -194,7 +194,7 @@ describe("Person Records navigation (Penpot Records / Body Episode)", () => {
       await screen.findByTestId("episode-editor-stub"),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "返回记录" }));
-    expect(await screen.findByText("已加载 1 条")).toBeVisible();
+    expect(await screen.findByText("1 条")).toBeVisible();
   });
 
   it("keeps the Episode visible when related groups fail and retries only that read", async () => {

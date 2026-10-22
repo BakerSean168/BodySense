@@ -78,11 +78,11 @@ test("Person Records directly saves real facts and retains them after refresh", 
   const records = page.getByTestId("body-fact-records");
   await expect(records).toBeVisible();
   await expect(records.getByText(/还没有身体记录/)).toBeVisible();
-  await records.getByRole("button", { name: "补充记录" }).click();
-  await records.getByLabel("你的描述").fill("我今天步行二十分钟");
-  await records.getByLabel("记录类别").selectOption("activity");
-  await records.getByRole("button", { name: "保存记录" }).click();
-  await expect(records.getByText("已保存你的陈述。")).toBeVisible();
+  await page.getByTestId("person-add").click();
+  await page.getByLabel("你的描述").fill("我今天步行二十分钟");
+  await page.getByLabel("记录类别").selectOption("activity");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(records.getByText("已保存", { exact: true })).toBeVisible();
   await expect(
     records.getByText("我今天步行二十分钟", { exact: true }),
   ).toBeVisible();
@@ -184,12 +184,12 @@ test("Person Records narrow viewport keeps live form and records inside the shee
   await page.goto("/consultation?view=state");
   const records = page.getByTestId("body-fact-records");
   await expect(records).toBeVisible();
-  await records.getByRole("button", { name: "补充记录" }).click();
+  await page.getByTestId("person-add").click();
   const text =
     "我每天散步二十分钟，并希望完整保留这段较长的本人原始描述而不截断";
-  await records.getByLabel("你的描述").fill(text);
-  await records.getByRole("button", { name: "保存记录" }).click();
-  await expect(records.getByText("已保存你的陈述。")).toBeVisible();
+  await page.getByLabel("你的描述").fill(text);
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(records.getByText("已保存", { exact: true })).toBeVisible();
   const statement = records.getByText(text, { exact: true });
   await expect(statement).toBeVisible();
   const box = await statement.boundingBox();

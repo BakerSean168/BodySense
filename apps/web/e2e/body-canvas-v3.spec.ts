@@ -173,8 +173,8 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await trainingWindow.getByRole("button", { name: "关闭训练计划" }).click();
   await expect(trainingWindow).toBeHidden();
 
-  // Equipment lives in the Person window; the empty state offers one clear CTA
-  // that opens a real persisting form.
+  // Equipment lives in the Person window; adding is only the header "+",
+  // which opens a dialog that persists a real EquipmentAsset.
   await page
     .locator(".bc-dock")
     .getByRole("button", { name: "个人档案", exact: true })
@@ -185,18 +185,19 @@ test("Body Canvas V3 is body-first and preserves explicit spatial/motion context
   await expect(personWindow).toBeVisible();
   await choosePersonCategory(page, "equipment");
   await expect(personWindow.getByText("还没有器材")).toBeVisible();
-  await expect(
-    personWindow.getByText("加上家里或健身房能用的器材，训练会按它来安排"),
-  ).toBeVisible();
   // No fixed slot ceiling is shown anywhere.
   await expect(personWindow.getByText(/\/\s*12/)).toBeHidden();
 
-  await personWindow.getByRole("button", { name: /添加个人器材/ }).click();
-  await personWindow.getByLabel("设备名称").fill("弹力带");
-  await personWindow.getByLabel("规格或备注").fill("中等阻力");
-  await personWindow.getByRole("button", { name: "添加设备" }).click();
+  await personWindow.getByRole("button", { name: "添加器材" }).click();
+  const addDialog = page.getByRole("dialog", { name: "添加器材" });
+  await addDialog.getByLabel("名称").fill("弹力带");
+  await addDialog.getByLabel(/备注/).fill("中等阻力");
+  await addDialog.getByRole("button", { name: "添加", exact: true }).click();
+  await expect(addDialog).toBeHidden();
   await expect(personWindow.getByText("弹力带", { exact: true })).toBeVisible();
-  await expect(personWindow.getByText("当前可用")).toBeVisible();
+  await expect(
+    personWindow.getByRole("switch", { name: "弹力带 可用" }),
+  ).toBeChecked();
 
   // Equipment is its own owner-scoped EquipmentAsset, never a BodyState fact.
   const equipmentResponse = await request.get(`${apiBase}/api/v1/equipment`, {

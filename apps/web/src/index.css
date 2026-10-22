@@ -475,3 +475,40 @@
     transition: none;
   }
 }
+
+/* Form-control tokens for components/ui (Select, DatePicker, Input, Checkbox,
+   Radio, Slider, Textarea). Light defaults are the paper-window palette; the
+   body canvas maps them to its own tokens, so dark mode and popups portaled
+   into the canvas follow it. */
+:root {
+  --ui-ink: #1d2a22;
+  --ui-secondary: #526257;
+  --ui-muted: #718075;
+  --ui-line: #d6ded4;
+  --ui-field: #ffffff;
+  --ui-paper: #fbfaf5;
+  --ui-paper-line: #e4e0d3;
+  --ui-primary: #2c694f;
+  --ui-primary-ink: #ffffff;
+  --ui-highlight: #ddede1;
+  --ui-danger: #a83e3c;
+  --ui-popup-shadow: 0 18px 48px rgba(31, 47, 37, 0.16);
+}
+
+.body-canvas-theme {
+  --ui-ink: var(--bc-ink);
+  --ui-secondary: var(--bc-secondary);
+  --ui-muted: var(--bc-muted);
+  --ui-line: var(--bc-line);
+  --ui-field: var(--bc-paper);
+  --ui-paper: var(--bc-window-paper);
+  --ui-paper-line: var(--bc-window-line);
+  --ui-primary: var(--bc-primary);
+  --ui-primary-ink: var(--bc-paper);
+  --ui-highlight: var(--bc-primary-soft);
+  --ui-danger: var(--bc-danger);
+}
+
+.body-canvas-theme.bc-dark {
+  --ui-popup-shadow: 0 22px 56px rgba(0, 0, 0, 0.42);
+}

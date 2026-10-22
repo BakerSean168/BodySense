@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
 import { effectiveTimeZone } from "@/features/profile/model/profilePreferences";
 import { useAuthStore } from "@/stores/authStore";
@@ -28,11 +28,30 @@ type View =
 export function PersonRecordsView({
   canEdit,
   now,
+  addOpen = false,
+  onAddOpenChange,
+  onAddLabelChange,
 }: {
   canEdit: boolean;
   now?: Date;
+  /** The window header "+": a hypothesis in 我的猜测, a statement elsewhere. */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
+  /** Renames the header "+" while 我的猜测 is open. */
+  onAddLabelChange?: (label: string | null) => void;
 }) {
   const [view, setView] = useState<View>({ kind: "timeline" });
+  // Statements are added from the timeline; other subviews hand back to it.
+  useEffect(() => {
+    if (!addOpen) return;
+    if (view.kind !== "timeline" && view.kind !== "hypotheses")
+      setView({ kind: "timeline" });
+  }, [addOpen, view.kind]);
+  const hypotheses = view.kind === "hypotheses";
+  useEffect(() => {
+    onAddLabelChange?.(hypotheses ? "添加我的猜测" : null);
+    return () => onAddLabelChange?.(null);
+  }, [hypotheses, onAddLabelChange]);
   const owner = useAuthStore((state) => state.user?.id);
   const zone = effectiveTimeZone(
     useProfileStore((state) => state.profile?.preferences),
@@ -94,7 +113,11 @@ export function PersonRecordsView({
   if (view.kind === "hypotheses") {
     return (
       <PersonSubview title="我的猜测" testId="person-hypotheses" onBack={back}>
-        <BodyHypotheses canEdit={canEdit} />
+        <BodyHypotheses
+          canEdit={canEdit}
+          addRequested={addOpen}
+          onAddHandled={() => onAddOpenChange?.(false)}
+        />
       </PersonSubview>
     );
   }
@@ -146,6 +169,8 @@ export function PersonRecordsView({
     <BodyFactRecords
       canEdit={canEdit}
       now={now}
+      addOpen={addOpen}
+      onAddOpenChange={onAddOpenChange}
       related={
         <>
           {records.isError ? (

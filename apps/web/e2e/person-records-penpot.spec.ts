@@ -97,18 +97,18 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   await expect(records.getByText("还没有身体记录")).toBeVisible();
 
   // Records add: saved appears only with the Go receipt, then survives reload.
-  await records.getByRole("button", { name: "补充记录" }).click();
-  await records.getByLabel("记录类别").selectOption("symptom");
-  await records
+  await page.getByTestId("person-add").click();
+  await page.getByLabel("记录类别").selectOption("symptom");
+  await page
     .getByLabel("你的描述")
     .fill("昨天晚上开始头痛，两边太阳穴一跳一跳的。");
-  await records.getByLabel(/发生时间/).fill("昨天晚上");
-  await records.getByRole("button", { name: "保存记录" }).click();
-  await expect(records.getByText("已保存你的陈述。")).toBeVisible();
+  await page.getByLabel(/发生时间/).fill("昨天晚上");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(records.getByText("已保存", { exact: true })).toBeVisible();
   const first = await ledger(request, headers);
   expect(first.facts).toHaveLength(1);
   await page.reload();
-  await expect(records.getByText("已加载 1 条")).toBeVisible();
+  await expect(records.getByText("1 条", { exact: true })).toBeVisible();
   await expect(records.getByRole("heading", { level: 4 })).toContainText(
     /今天 · \d+月\d+日/,
   );
@@ -152,7 +152,7 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   });
   expect(episode.ok(), await episode.text()).toBeTruthy();
   await page.reload();
-  await expect(records.getByText("已加载 2 条")).toBeVisible();
+  await expect(records.getByText("2 条", { exact: true })).toBeVisible();
   await records.getByRole("button", { name: /^查看记录：头痛又来了/ }).click();
   const detail = page.getByTestId("body-fact-detail");
   await expect(detail.getByRole("heading", { name: "身体感受" })).toBeVisible();
@@ -186,7 +186,7 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   // The user's own hypothesis: saved only after the receipt, then derived group.
   await person.getByRole("button", { name: "我的猜测 0 条" }).click();
   const panel = page.getByRole("region", { name: "我的猜测与相关记录" });
-  await panel.getByRole("button", { name: "添加我的猜测" }).click();
+  await page.getByTestId("person-add").click();
   await panel.getByLabel("我的完整猜测").fill("我猜头痛和最近睡得晚有关。");
   await panel
     .getByLabel("头痛又来了，两边太阳穴胀痛。", { exact: true })
@@ -235,7 +235,7 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   await choosePersonCategory(page, "habits");
   await expect(records.getByText("还没有生活习惯")).toBeVisible();
   await choosePersonCategory(page, "records");
-  await expect(records.getByText("已加载 2 条")).toBeVisible();
+  await expect(records.getByText("2 条", { exact: true })).toBeVisible();
   expect(await liveCanvas!.evaluate((node) => node.isConnected)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 844 });
   await expectFits(page, 1280);

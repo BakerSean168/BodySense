@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
-import { Link2, Plus, RefreshCw } from "lucide-react";
+import { Link2, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import {
@@ -9,19 +9,38 @@ import {
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
 
 /** Owner changes discard drafts and prevent late receipts from entering another profile. */
-export function BodyHypotheses({ canEdit }: { canEdit: boolean }) {
+export function BodyHypotheses({
+  canEdit,
+  addRequested = false,
+  onAddHandled,
+}: {
+  canEdit: boolean;
+  /** The Person window header "+" asks for a new hypothesis draft. */
+  addRequested?: boolean;
+  onAddHandled?: () => void;
+}) {
   const owner = useAuthStore((state) => state.user?.id);
   return owner ? (
-    <HypothesisPanel key={owner} owner={owner} canEdit={canEdit} />
+    <HypothesisPanel
+      key={owner}
+      owner={owner}
+      canEdit={canEdit}
+      addRequested={addRequested}
+      onAddHandled={onAddHandled}
+    />
   ) : null;
 }
 
 function HypothesisPanel({
   owner,
   canEdit,
+  addRequested,
+  onAddHandled,
 }: {
   owner: string;
   canEdit: boolean;
+  addRequested: boolean;
+  onAddHandled?: () => void;
 }) {
   const {
     records,
@@ -52,6 +71,7 @@ function HypothesisPanel({
   const root = useRef<HTMLElement>(null);
   const editor = useRef<HTMLFormElement>(null);
   const returnFocus = useRef<string | null>(null);
+  const returnElement = useRef<HTMLElement | null>(null);
   const hadDraft = useRef(false);
   useLayoutEffect(() => {
     if (draft && !hadDraft.current) {
@@ -65,7 +85,9 @@ function HypothesisPanel({
           : null;
       const trigger = returnFocus.current
         ? document.getElementById(returnFocus.current)
-        : null;
+        : returnElement.current?.isConnected
+          ? returnElement.current
+          : null;
       (feedback ?? trigger ?? root.current)?.focus();
     }
     hadDraft.current = Boolean(draft);
@@ -73,6 +95,18 @@ function HypothesisPanel({
   useEffect(() => {
     if (saving) editor.current?.focus();
   }, [saving]);
+  // Header "+": open a draft when writes are allowed, otherwise drop it.
+  useEffect(() => {
+    if (!addRequested) return;
+    onAddHandled?.();
+    if (!canEdit || draft || !ready) return;
+    returnFocus.current = null;
+    returnElement.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    open({ mode: "record" });
+  }, [addRequested, ready, canEdit, draft, open, onAddHandled]);
   function begin(next: Parameters<typeof open>[0], trigger: HTMLButtonElement) {
     returnFocus.current = trigger.id;
     open(next);
@@ -188,18 +222,6 @@ function HypothesisPanel({
           ))}
         </>
       ) : null}
-      {canEdit && !draft && (
-        <button
-          className="bc-button bc-person-add-text"
-          type="button"
-          disabled={!ready}
-          id={`${id}-add`}
-          onClick={(event) => begin({ mode: "record" }, event.currentTarget)}
-        >
-          <Plus size={15} />
-          添加我的猜测
-        </button>
-      )}
       {draft && (
         <form
           ref={editor}

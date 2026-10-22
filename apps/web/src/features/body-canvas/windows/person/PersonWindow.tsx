@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { LoaderCircle } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { BodyFactRecords } from "../../components/BodyFactRecords";
@@ -26,9 +26,9 @@ import type { PersonWindowProps } from "./types";
  *   units); outside click closes it;
  * - exactly five categories; the picker label is the only place the category
  *   name appears — no duplicate H1 and no generic explanation beneath it;
- * - Equipment empty state is a single centred sentence + add action; added
- *   equipment grows naturally (Desktop 4 columns, Mobile 2 columns) with no
- *   fixed slot count.
+ * - adding is only the header "+" (before Close), controlled here by
+ *   `addOpen`; empty states carry no add buttons. Equipment grows naturally
+ *   (Desktop 4 columns, Mobile 2 columns) with no fixed slot count.
  */
 export function PersonWindow({
   canEdit,
@@ -36,16 +36,12 @@ export function PersonWindow({
   identityInfoOpen: infoOpen,
   onIdentityInfoOpenChange,
   category: controlledCategory,
-  onCategoryChange,
+  addOpen = false,
+  onAddOpenChange,
+  onAddLabelChange,
 }: PersonWindowProps) {
   const mobile = useMediaQuery("(max-width: 760px)");
-  const [localCategory, setLocalCategory] =
-    useState<ProfileCategoryId>("records");
-  const category = controlledCategory ?? localCategory;
-  const setCategory = (next: ProfileCategoryId) => {
-    setLocalCategory(next);
-    onCategoryChange?.(next);
-  };
+  const category: ProfileCategoryId = controlledCategory ?? "records";
   const setInfoOpen = onIdentityInfoOpenChange;
   // The window owns its own reads: nothing loads until the window is open, and
   // a failure is surfaced instead of substituted with placeholder values.
@@ -82,13 +78,24 @@ export function PersonWindow({
         data-category={category}
       >
         {category === "records" ? (
-          <PersonRecordsView canEdit={canEdit} />
+          <PersonRecordsView
+            canEdit={canEdit}
+            addOpen={addOpen}
+            onAddOpenChange={onAddOpenChange}
+            onAddLabelChange={onAddLabelChange}
+          />
         ) : category === "habits" ? (
-          <BodyFactRecords habitsOnly canEdit={canEdit} />
+          <BodyFactRecords
+            habitsOnly
+            canEdit={canEdit}
+            addOpen={addOpen}
+            onAddOpenChange={onAddOpenChange}
+          />
         ) : category === "equipment" ? (
           <EquipmentCategory
             canEdit={canEdit}
-            onAddEquipment={() => setCategory("equipment")}
+            addOpen={addOpen}
+            onAddOpenChange={onAddOpenChange}
           />
         ) : data.loading ? (
           <p role="status" className="bc-person-loading">
@@ -105,9 +112,16 @@ export function PersonWindow({
             uploads={data.uploads}
             category="media"
             mobile={mobile}
+            addOpen={addOpen}
+            onAddOpenChange={onAddOpenChange}
           />
         ) : category === "reports" ? (
-          <UploadsCategory uploads={data.uploads} category="reports" />
+          <UploadsCategory
+            uploads={data.uploads}
+            category="reports"
+            addOpen={addOpen}
+            onAddOpenChange={onAddOpenChange}
+          />
         ) : null}
       </div>
     </section>

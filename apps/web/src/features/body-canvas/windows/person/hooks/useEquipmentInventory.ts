@@ -7,6 +7,7 @@ import {
   type EquipmentAsset,
 } from "@/features/profile/services/equipmentService";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
+import { removeWithUndo, usePendingRemovals } from "@/hooks/useUndoableRemoval";
 
 export function useEquipmentInventory(canEdit: boolean) {
   const queryClient = useQueryClient();
@@ -14,12 +15,14 @@ export function useEquipmentInventory(canEdit: boolean) {
     queryKey: equipmentKeys.all,
     queryFn: equipmentService.list,
   });
-  const equipment = inventory.data?.items ?? [];
+  const hidden = usePendingRemovals((state) => state.hidden);
+  const equipment = (inventory.data?.items ?? []).filter(
+    (asset) => !hidden.has(asset.id),
+  );
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: equipmentKeys.all });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   // One key per add attempt, so a network retry replays instead of duplicating.
@@ -68,15 +71,37 @@ export function useEquipmentInventory(canEdit: boolean) {
   };
 
   const resetForm = () => {
-    setAdding(false);
+    setError(null);
     setName("");
     setNotes("");
     createKey.current = null;
   };
 
-  const add = async () => {
+  /** Retire after the undo window; retired assets cannot be revived. */
+  const remove = (asset: EquipmentAsset) => {
+    if (!canEdit) return;
+    setError(null);
+    removeWithUndo({
+      id: asset.id,
+      message: `已移除“${asset.display_name}”`,
+      commit: async () => {
+        await equipmentService.update(
+          asset.id,
+          availabilityChange(asset, "retired"),
+        );
+        await refresh();
+      },
+      onError: (cause) => {
+        onConflict(cause);
+        setError(errorMessage(cause, "器材没有移除，请重试。"));
+      },
+    });
+  };
+
+  /** Resolves true once the asset is saved, so the caller can close its form. */
+  const add = async (): Promise<boolean> => {
     const trimmed = name.trim();
-    if (!canEdit || !trimmed || pending) return;
+    if (!canEdit || !trimmed || pending) return false;
     setError(null);
     if (
       equipment.some(
@@ -85,8 +110,8 @@ export function useEquipmentInventory(canEdit: boolean) {
           trimmed.toLocaleLowerCase(),
       )
     ) {
-      setError("这件器材已经在当前清单中。");
-      return;
+      setError("已经有这件器材");
+      return false;
     }
     createKey.current ??= crypto.randomUUID();
     try {
@@ -98,8 +123,10 @@ export function useEquipmentInventory(canEdit: boolean) {
         availability: "available",
       });
       resetForm();
+      return true;
     } catch (cause) {
       setError(errorMessage(cause, "器材没有保存，请重试。"));
+      return false;
     }
   };
 
@@ -117,8 +144,6 @@ export function useEquipmentInventory(canEdit: boolean) {
     pending,
     busyId,
     error,
-    adding,
-    setAdding,
     name,
     changeName,
     notes,
@@ -127,5 +152,6 @@ export function useEquipmentInventory(canEdit: boolean) {
     resetForm,
     add,
     changeAvailability,
+    remove,
   };
 }

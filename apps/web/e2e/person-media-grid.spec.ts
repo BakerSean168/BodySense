@@ -43,7 +43,7 @@ test("person media uploads land in the penpot month grid; failures retry", async
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
   let person = await openMedia(page);
-  // Empty state upload (the #399 path) still works.
+  // Uploading into an empty Media category (header "+" opens this picker).
   await person.locator('input[type="file"]').setInputFiles({
     name: "体态正面.png",
     mimeType: "image/png",
@@ -51,7 +51,6 @@ test("person media uploads land in the penpot month grid; failures retry", async
   });
   const tiles = person.getByTestId("person-media-tile");
   await expect(tiles).toHaveCount(1, { timeout: 20_000 });
-  await expect(person.getByText("1 个", { exact: true })).toBeVisible();
   const month = `${new Date().getMonth() + 1}月`;
   const group = person.getByRole("region", { name: month });
   await expect(group.getByText("体态正面.png")).toBeVisible();
@@ -82,12 +81,14 @@ test("person media uploads land in the penpot month grid; failures retry", async
   await expect(tiles).toHaveCount(2, { timeout: 20_000 });
   await expect(person.getByRole("alert")).toHaveCount(0);
 
-  // 390: two columns and the labelled 上传 pill.
+  // 390: two columns; uploading stays in the header "+".
   await page.setViewportSize({ width: 390, height: 844 });
   person = await openMedia(page);
   await expect(tiles).toHaveCount(2);
-  const upload = person.getByRole("button", { name: "上传照片" });
-  await expect(upload).toContainText("上传");
+  await expect(page.getByTestId("person-add")).toHaveAttribute(
+    "aria-label",
+    "上传照片",
+  );
   const [a, b] = [
     await tiles.nth(0).boundingBox(),
     await tiles.nth(1).boundingBox(),

@@ -29,4 +29,8 @@ export interface PersonWindowProps {
   /** The header picker owns the category; uncontrolled use keeps local state. */
   category?: ProfileCategoryId;
   onCategoryChange?: (category: ProfileCategoryId) => void;
+  /** Set by the header "+"; the active category opens its add flow. */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
+  onAddLabelChange?: (label: string | null) => void;
 }

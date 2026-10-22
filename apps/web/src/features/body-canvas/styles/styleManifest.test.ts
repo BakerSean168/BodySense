@@ -12,7 +12,7 @@ describe("BodyCanvas ordered CSS manifest", () => {
     const names = [...source.matchAll(/@import "\.\/styles\/([^"]+)";/g)].map(
       (match) => match[1],
     );
-    expect(names).toHaveLength(9);
+    expect(names).toHaveLength(10);
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(names.toSorted());
     for (const name of names) {

@@ -98,12 +98,9 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   // The tab is the only place the category name appears.
   await expect(page.getByRole("heading", { name: "身体记录" })).toBeHidden();
 
-  await page
-    .getByTestId("body-fact-records")
-    .getByRole("button", { name: "补充记录" })
-    .click();
+  await page.getByTestId("person-add").click();
   await page.getByLabel("你的描述").fill("久坐后颈肩酸胀");
-  await page.getByRole("button", { name: "保存记录" }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
 
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
 
