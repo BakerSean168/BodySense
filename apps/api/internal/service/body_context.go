@@ -178,6 +178,7 @@ func applyBodyContextUpdate(ctx context.Context, ledger bodyContextLedger, owner
 	if expectedRevision != nil {
 		revision = *expectedRevision
 	}
+	startingRevision := revision
 	var inputs []model.BodyFactInput
 	var withdrawals []uuid.UUID
 	today := now.UTC().Format("2006-01-02")
@@ -260,6 +261,12 @@ func applyBodyContextUpdate(ctx context.Context, ledger bodyContextLedger, owner
 			return 0, err
 		}
 		revision = commit.Revision
+	}
+	if revision == startingRevision {
+		// An exact no-op replay has no new ledger commit. Return the durable head,
+		// not the caller's stale expected revision (e.g. onboarding retry R0).
+		// Changed inputs still pass through each write's optimistic revision guard.
+		return current.Revision, nil
 	}
 	return revision, nil
 }

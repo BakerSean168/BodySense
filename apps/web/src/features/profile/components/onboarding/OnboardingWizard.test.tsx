@@ -17,11 +17,14 @@ vi.mock("../../services/onboardingContextService", () => ({
 vi.mock("@/features/assessment/services/assessmentService", () => ({
   assessmentApi: { generate: (...args: unknown[]) => generate(...args) },
 }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+}));
 vi.mock("./steps/UploadStep", () => ({
   UploadStep: () => <div data-testid="upload-step-stub">upload</div>,
 }));
 
+import { toast } from "sonner";
 import { useProfileStore } from "@/stores/profileStore";
 import { OnboardingWizard } from "./OnboardingWizard";
 import {
@@ -215,6 +218,46 @@ describe("OnboardingWizard (Penpot 02 Onboarding)", () => {
     expect(payload.discomfort_areas).toEqual(["none"]);
     expect(generate).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("健康工作台")).toBeInTheDocument();
+  });
+
+  it("enters the workbench when AI assessment fails after BodyState was saved", async () => {
+    generate.mockRejectedValueOnce(new Error("LLM provider unavailable"));
+    renderWizard();
+
+    choose("男");
+    fireEvent.change(screen.getByLabelText("出生日期"), {
+      target: { value: "19950615" },
+    });
+    next();
+    fireEvent.change(screen.getByLabelText("身高（cm）"), {
+      target: { value: "170" },
+    });
+    next();
+    fireEvent.change(screen.getByLabelText("体重（kg）"), {
+      target: { value: "65" },
+    });
+    next();
+    choose("都没有不适");
+    next();
+    choose("腰椎问题");
+    choose("久坐办公");
+    choose("4–6 小时");
+    choose("半小时–1 小时");
+    choose("经常晚睡");
+    next();
+    choose("有规律地锻炼");
+    choose("跑步 / 快走");
+    choose("偶尔");
+    fireEvent.click(screen.getByRole("button", { name: "跳过" }));
+    choose("都不碰");
+    choose("完成");
+
+    expect(await screen.findByText("健康工作台")).toBeInTheDocument();
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(toast.warning).toHaveBeenCalledWith(
+      "身体档案已保存，AI 评估暂不可用，可稍后重试",
+    );
   });
 
   it("goes back with the header arrow and keeps earlier answers", () => {

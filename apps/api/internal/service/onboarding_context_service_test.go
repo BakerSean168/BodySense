@@ -90,6 +90,30 @@ func TestOnboardingContextSubmitsStableProfileAndOneBodyStatePatch(t *testing.T)
 	}
 }
 
+// An onboarding retry after a successful save (for example, when Assessment
+// later fails) is a no-op at the BodyState boundary, not revision zero.
+func TestOnboardingContextExactReplayReturnsExistingRevision(t *testing.T) {
+	profiles := &fakeOnboardingProfileWriter{}
+	bodyState := &memoryBodyContextStore{}
+	svc := NewOnboardingContextService(profiles, bodyState, &fakeOnboardingTransactions{})
+	owner := uuid.New()
+	request := validOnboardingContextRequest()
+	initial := int64(0)
+	request.ExpectedBodyStateRevision = &initial
+
+	first, err := svc.Submit(context.Background(), owner, request)
+	if err != nil || first == nil || first.BodyStateRevision == nil || *first.BodyStateRevision != 3 {
+		t.Fatalf("first onboarding result=%+v, err=%v, want R3", first, err)
+	}
+	second, err := svc.Submit(context.Background(), owner, request)
+	if err != nil || second == nil || second.BodyStateRevision == nil || *second.BodyStateRevision != 3 {
+		t.Fatalf("replay result=%+v, err=%v, want existing R3", second, err)
+	}
+	if bodyState.ledger.revision != 3 || bodyState.ledger.commands != 3 {
+		t.Fatalf("replay created ledger writes: revision=%d commands=%d", bodyState.ledger.revision, bodyState.ledger.commands)
+	}
+}
+
 func TestOnboardingContextRejectsInvalidMetricsBeforeTransaction(t *testing.T) {
 	profiles := &fakeOnboardingProfileWriter{}
 	bodyState := &memoryBodyContextStore{}
