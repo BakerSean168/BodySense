@@ -378,6 +378,22 @@ describe("AskUserCard", () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
+  it("disables retry while an answer is pending", async () => {
+    const retry = vi.fn();
+    render(
+      <AskUserCard
+        question={textQuestion}
+        onSubmit={vi.fn()}
+        error="失败"
+        onRetry={retry}
+        isSubmitting
+      />,
+    );
+    expect(screen.getByRole("button", { name: "重试" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "重试" }));
+    expect(retry).not.toHaveBeenCalled();
+  });
+
   it("does not submit empty text", async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();

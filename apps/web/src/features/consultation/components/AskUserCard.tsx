@@ -246,6 +246,7 @@ export function AskUserCard({
             <button
               className="mt-2 text-sm text-red-300 underline hover:text-red-200"
               onClick={onRetry}
+              disabled={isSubmitting}
             >
               重试
             </button>

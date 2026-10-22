@@ -176,3 +176,19 @@ describe("BodyStateSuggestionStatus via AskUserStatusCard", () => {
     expect(screen.getByTestId("body-state-suggestion-expired")).toBeDefined();
   });
 });
+
+it("does not resend a suggestion while the previous response is pending", async () => {
+  const retry = vi.fn();
+  render(
+    <AskUserCard
+      question={suggestionQuestion}
+      onSubmit={vi.fn()}
+      error="失败"
+      onRetry={retry}
+      isSubmitting
+    />,
+  );
+  expect(screen.getByRole("button", { name: "重试" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "重试" }));
+  expect(retry).not.toHaveBeenCalled();
+});

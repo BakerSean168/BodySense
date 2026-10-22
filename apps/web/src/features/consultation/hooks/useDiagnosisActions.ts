@@ -100,6 +100,7 @@ export function useDiagnosisActions({
   const [scene, setScene] = useState<DiagnosisScene>("current");
   const attempts = useRef(new Map<string, CommandIdentity>());
 
+  const readFailed = diagnosis.isError || latest.isError || run.isError;
   const fetching = diagnosis.isFetching || latest.isFetching || run.isFetching;
   const view = useMemo(
     () =>
@@ -108,9 +109,18 @@ export function useDiagnosisActions({
         run: runId ? run.data : null,
         session,
         safetyReview,
-        busy: busy || fetching,
+        busy: busy || fetching || readFailed,
       }),
-    [diagnosis.data, run.data, runId, session, safetyReview, busy, fetching],
+    [
+      diagnosis.data,
+      run.data,
+      runId,
+      session,
+      safetyReview,
+      busy,
+      fetching,
+      readFailed,
+    ],
   );
 
   const identity = (content: string): CommandIdentity => {
@@ -313,7 +323,12 @@ export function useDiagnosisActions({
     if (!review?.canDismiss || expectedRevision === null || busy) return;
     const evaluatedBodyStateRevision = review.evaluatedBodyStateRevision;
     const { idempotencyKey } = identity(
-      JSON.stringify(["dismiss-review", conditionId, expectedRevision, evaluatedBodyStateRevision]),
+      JSON.stringify([
+        "dismiss-review",
+        conditionId,
+        expectedRevision,
+        evaluatedBodyStateRevision,
+      ]),
     );
     setBusy(true);
     setError(null);
@@ -326,7 +341,8 @@ export function useDiagnosisActions({
       if (
         receipt.conditionId !== conditionId ||
         receipt.diagnosisRevision !== expectedRevision ||
-        receipt.dismissedThroughBodyStateRevision !== evaluatedBodyStateRevision ||
+        receipt.dismissedThroughBodyStateRevision !==
+          evaluatedBodyStateRevision ||
         receipt.idempotencyKey !== idempotencyKey
       )
         throw new ReceiptMismatchError();
@@ -366,12 +382,17 @@ export function useDiagnosisActions({
     scene,
     openHistory,
     closeHistory,
-    busy,
+    busy: busy || fetching || readFailed,
     error,
+    partialLoadError:
+      diagnosis.data && loadError
+        ? errorMessage(loadError, "部分诊断资料暂时无法同步。")
+        : null,
     loading: diagnosis.isPending && enabled,
-    loadError: loadError
-      ? errorMessage(loadError, "当前诊断暂时无法同步。")
-      : null,
+    loadError:
+      !diagnosis.data && loadError
+        ? errorMessage(loadError, "当前诊断暂时无法同步。")
+        : null,
     refresh,
   };
 }
