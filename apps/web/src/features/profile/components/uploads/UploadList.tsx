@@ -18,6 +18,7 @@ import type { UserUpload } from "../../types/upload.types";
 import { FILE_TYPE_LABELS, OCR_STATUS_LABELS } from "../../types/upload.types";
 import { OCRResultView } from "./OCRResultView";
 import { AssetErasure } from "./AssetErasure";
+import { IconTip } from "@/components/ui/tooltip";
 
 /** Removing the original cannot be undone, so it keeps one confirmation. */
 const SOURCE_REMOVAL_NOTE = "整理出的记录和决定会保留，并标注来源不可用。";
@@ -210,14 +211,15 @@ function UploadItem({
           {isReport && <OCRStatusBadge status={upload.ocr_status} />}
 
           <DropdownMenu>
-            <DropdownMenuTrigger
-              className="grid size-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-              aria-label={`管理“${upload.original_name}”`}
-              title="更多"
-              disabled={isDeleting || erasure !== null}
-            >
-              <MoreHorizontal size={16} aria-hidden="true" />
-            </DropdownMenuTrigger>
+            <IconTip label="更多">
+              <DropdownMenuTrigger
+                className="grid size-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                aria-label={`管理“${upload.original_name}”`}
+                disabled={isDeleting || erasure !== null}
+              >
+                <MoreHorizontal size={16} aria-hidden="true" />
+              </DropdownMenuTrigger>
+            </IconTip>
             <DropdownMenuContent align="end" className="w-40">
               {!sourceRemoved ? (
                 <DropdownMenuItem onClick={() => onRemoveSource(upload.id)}>
