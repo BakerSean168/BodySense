@@ -44,9 +44,6 @@ export function AppUserMenu({
             <span className="block max-w-44 truncate text-xs font-medium text-foreground">
               {user?.email || "普通用户"}
             </span>
-            <span className="block text-[10px] text-muted-foreground">
-              BodySense member
-            </span>
           </span>
         )}
       </DropdownMenuTrigger>
@@ -55,9 +52,6 @@ export function AppUserMenu({
           <DropdownMenuLabel>
             <span className="block truncate text-foreground">
               {user?.email || "普通用户"}
-            </span>
-            <span className="mt-0.5 block font-normal text-muted-foreground">
-              登录账户
             </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>

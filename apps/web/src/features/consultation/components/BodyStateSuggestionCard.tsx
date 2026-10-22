@@ -156,7 +156,7 @@ export function BodyStateSuggestionCard({
       </blockquote>
       <SuggestionLabels binding={binding} />
       <p className="ask-user-context mb-3 text-xs leading-relaxed text-white/42">
-        只保存你的原话；是否已保存以系统回执为准。
+        只保存你的原话。
       </p>
 
       {error && (

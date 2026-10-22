@@ -31,7 +31,6 @@ export default function BodyCanvasScene(props: BodyCanvasSceneProps) {
   const fallback = (
     <div className="bc-scene-status" role="status">
       <h2>3D 暂时无法显示</h2>
-      <p>你的身体记录与对话仍然可以使用。</p>
       <div className="bc-actions">
         <button
           className="bc-button"
@@ -57,7 +56,6 @@ export default function BodyCanvasScene(props: BodyCanvasSceneProps) {
       <div className="bc-scene-status" role="status">
         <span className="bc-loading-orbit" aria-hidden="true" />
         <h2>正在准备身体视图</h2>
-        <p>精细参考模型按需加载，你也可以先查看记录。</p>
         <button className="bc-button" onClick={props.onTextFallback}>
           先使用文本区域
         </button>

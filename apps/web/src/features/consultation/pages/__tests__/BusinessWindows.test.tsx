@@ -391,9 +391,7 @@ describe("body-first business windows", () => {
     expect(screen.getByText("肩胛控制不足")).toBeInTheDocument();
     expect(screen.getByText("你已确认的分析结果")).toBeInTheDocument();
     expect(screen.getByText("是否做过影像检查")).toBeInTheDocument();
-    expect(
-      screen.getByText(/还没有针对这条病情的已接受处理方案/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/还没有已接受的处理方案/)).toBeInTheDocument();
   });
 
   it("shows a real empty state instead of a demo plan when the user has none", async () => {
@@ -549,11 +547,11 @@ describe("body-first business windows", () => {
     const popover = await screen.findByRole("dialog", { name: "个人资料" });
     // Minimal optional Profile only: no body measurements and no revision.
     expect(popover.textContent).not.toContain("BMI");
-    expect(popover.textContent).toContain("资料缺失不会由 AI 猜测补全");
+    expect(popover.textContent).not.toContain("AI 猜测");
     expect(screen.getByLabelText("昵称")).toHaveValue("");
     expect(screen.getByLabelText("昵称")).toHaveAttribute(
       "placeholder",
-      "未填写 · 显示为 synthetic",
+      "synthetic",
     );
     expect(screen.getByLabelText("自报性别")).toHaveValue("");
     expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);

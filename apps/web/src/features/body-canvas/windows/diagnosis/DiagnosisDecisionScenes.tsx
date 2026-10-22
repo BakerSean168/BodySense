@@ -174,8 +174,7 @@ export function DecidingScene({
         </Banner>
       ) : null}
       <p className="bc-dx-note">
-        以上由 AI
-        分析生成，只是提案；提交并收到回执后才会写入诊断。不采纳不代表医学上已经排除。
+        以上为 AI 提案，提交后才写入。不采纳不代表医学上已经排除。
       </p>
     </section>
   );

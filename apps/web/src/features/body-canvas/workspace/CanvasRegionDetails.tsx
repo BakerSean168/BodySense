@@ -97,9 +97,7 @@ export function CanvasRegionDetails({
               <p>暂时无法读取记录；这不代表这个区域没有问题。</p>
             ) : regionFacts.length ? (
               <>
-                <span className="bc-small-label">
-                  相关描述 {regionFacts.length} 条
-                </span>
+                <span className="bc-small-label">{regionFacts.length} 条</span>
                 {regionFacts.slice(0, 3).map((fact) => (
                   <article key={fact.id}>
                     <Check
@@ -117,10 +115,8 @@ export function CanvasRegionDetails({
               </>
             ) : (
               <>
-                <h3>这里还没有已记录的信息</h3>
-                <p>
-                  可以告诉我你的真实感受。选中一个位置，不代表那里一定存在问题。
-                </p>
+                <h3>还没有记录</h3>
+                <p>选中一个位置，不代表那里一定存在问题。</p>
               </>
             )}
           </div>

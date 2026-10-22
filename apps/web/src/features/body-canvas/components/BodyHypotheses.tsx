@@ -149,11 +149,12 @@ function HypothesisPanel({
         <button
           type="button"
           className="bc-text-button"
+          aria-label="重新读取猜测与分组"
           disabled={saving || records.isFetching || groups.isFetching}
           onClick={refresh}
         >
           <RefreshCw size={14} />
-          重新读取猜测与分组
+          重新读取
         </button>
       ) : null}
       {readable && data ? (
@@ -246,9 +247,7 @@ function HypothesisPanel({
             role={saving ? "status" : undefined}
             className="bc-window-note"
           >
-            {saving
-              ? "正在提交，等待保存回执。"
-              : "尚未保存。收到提交回执后才显示保存成功。"}
+            {saving ? "正在提交，等待保存回执。" : "尚未保存。"}
           </p>
           {draft.mode === "withdraw" ? (
             <p>
@@ -267,10 +266,7 @@ function HypothesisPanel({
                 required
                 onChange={(event) => setStatement(event.target.value)}
               />
-              <p className="bc-window-note">
-                选择你认为相关的记录（每类最多 20
-                条）。更正会以这里明确选择的关联为准。
-              </p>
+              <p className="bc-window-note">每类最多选 20 条。</p>
               <fieldset disabled={saving || !ready}>
                 <legend>相关事实</legend>
                 {data?.facts.map((fact) => (

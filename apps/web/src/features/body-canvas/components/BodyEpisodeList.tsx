@@ -23,7 +23,7 @@ export function BodyEpisodeList({
             <strong>{episode.symptom_type}</strong>
             <BodyEpisodeStatus episode={episode} />
             <span className="bc-window-note">
-              组织关联陈述 {episode.links.length} 条
+              关联 {episode.links.length} 条
             </span>
           </li>
         ))}

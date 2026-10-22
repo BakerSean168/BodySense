@@ -21,13 +21,7 @@ export function ProfileView({ profile, onEdit }: ProfileViewProps) {
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">基本身份</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里只保存相对稳定、不会频繁变化的身份背景。身体测量、生活方式、伤病与症状由
-            BodyState 持续记录并保留变化历史。
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">基本身份</h2>
         <button
           type="button"
           onClick={onEdit}

@@ -306,7 +306,6 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
             <div className="bc-text-scene">
               <PersonStanding size={100} strokeWidth={0.7} />
               <h2>用区域名称，一样能开始。</h2>
-              <p>3D 不是查看身体记录或提问的前提。</p>
               <button className="bc-button" onClick={() => setTextOnly(false)}>
                 恢复 3D 视图
               </button>

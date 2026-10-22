@@ -170,11 +170,8 @@ export default function DiagnosisRequestEntry({
                 })}
               </ul>
             )}
-            <div className="bc-dx-request-actions">
-              <span className="bc-dx-note">
-                提案只是 AI 建议；在诊断窗口逐项决定并提交后才会写入。
-              </span>
-              {proposals.length > 0 ? (
+            {proposals.length > 0 ? (
+              <div className="bc-dx-request-actions">
                 <button
                   type="button"
                   className="bc-dx-primary"
@@ -183,8 +180,8 @@ export default function DiagnosisRequestEntry({
                   去决定
                   <ArrowRight size={15} aria-hidden="true" />
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </>
         )
       ) : message ? (
@@ -195,10 +192,6 @@ export default function DiagnosisRequestEntry({
           >
             “{message.text}”
           </blockquote>
-          <p className="bc-dx-note">
-            以你的这条原话作为请求，开始一次正式分析。AI
-            只会给出提案，你决定前不会写入诊断。
-          </p>
           {error ? (
             <div className="bc-dx-banner" data-tone="bad" role="alert">
               <span className="bc-dx-banner-text">{error}</span>
@@ -208,6 +201,7 @@ export default function DiagnosisRequestEntry({
             <button
               type="button"
               className="bc-dx-primary"
+              aria-label={busy ? undefined : "开始正式分析"}
               disabled={busy || expectedRevision === null}
               onClick={() => void start()}
             >
@@ -218,13 +212,13 @@ export default function DiagnosisRequestEntry({
                   aria-hidden="true"
                 />
               ) : null}
-              {busy ? "正在分析" : "开始正式分析"}
+              {busy ? "正在分析" : "开始分析"}
             </button>
           </div>
         </>
       ) : (
         <p className="bc-dx-note" data-testid="diagnosis-request-empty">
-          先在下面说说想分析什么，比如“帮我正式分析一下头痛”。发送后，就可以从这里开始正式分析。
+          先在对话里说明想分析的问题。
         </p>
       )}
     </section>

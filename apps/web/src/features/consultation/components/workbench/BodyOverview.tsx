@@ -114,7 +114,7 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
           </p>
           <p className="mx-auto mt-1 max-w-[240px] text-xs leading-[1.55] text-muted-foreground">
             {snapshot
-              ? "和 BodySense 说说最近的真实感受，保存区域关联后会显示在这里。"
+              ? "在对话里描述身体感受。"
               : "暂时不能判断是否存在关联记录。"}
           </p>
         </div>

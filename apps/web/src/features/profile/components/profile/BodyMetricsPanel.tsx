@@ -103,14 +103,7 @@ export function BodyMetricsPanel() {
   return (
     <div className="space-y-4 border-t border-border pt-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">身体测量</h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            身高、体重属于 BodyState
-            Observation，而不是身份字段。更新后会保留上一条测量记录，BMI
-            由当前测量即时计算。
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">身体测量</h2>
         {!editing ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PencilLine className="h-4 w-4" />

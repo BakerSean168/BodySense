@@ -334,8 +334,7 @@ export function ChatContent({
                 有什么身体变化想告诉我？
               </h2>
               <p className="chat-empty-text mt-2 max-w-sm text-sm leading-6 text-white/42">
-                描述不适、体态或最近的变化。BodySense
-                会把明确的本人陈述记录到你的身体档案中。
+                描述不适、体态或最近的变化。
               </p>
             </div>
           </ThreadPrimitive.Empty>

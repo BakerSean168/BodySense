@@ -151,9 +151,7 @@ export function ConditionCard({
           </MarkRow>
         ))}
         {handling.state === "not_confirmed" ? (
-          <MarkRow kind="context">
-            还没有针对这条病情的已接受处理方案。可以在对话中一起确定。
-          </MarkRow>
+          <MarkRow kind="context">还没有已接受的处理方案。</MarkRow>
         ) : null}
       </Section>
       {handling.state === "condition_level" ? (

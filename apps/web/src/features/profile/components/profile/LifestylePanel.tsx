@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { errorMessage } from "@/lib/api-client";
@@ -100,11 +100,6 @@ export function LifestylePanel() {
     void load();
   }, []);
 
-  const hasAny = useMemo(
-    () => sections.some(({ key }) => Boolean(snapshot?.[key].summary)),
-    [snapshot],
-  );
-
   const save = async () => {
     if (!snapshot) return;
     setSaving(true);
@@ -142,12 +137,7 @@ export function LifestylePanel() {
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">生活方式</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里记录您提供的生活方式信息。保存编辑后，后续分析会使用这些记录。
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">生活方式</h2>
         {!editing ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PencilLine className="h-4 w-4" />
@@ -230,12 +220,6 @@ export function LifestylePanel() {
               </div>
             );
           })}
-          {!hasAny ? (
-            <p className="sm:col-span-2 text-xs text-muted-foreground">
-              可以先留空；后续直接在对话里自然描述，BodySense
-              也可以逐步补全这里。
-            </p>
-          ) : null}
         </div>
       )}
     </div>

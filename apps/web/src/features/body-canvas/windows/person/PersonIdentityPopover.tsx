@@ -118,7 +118,6 @@ export function PersonIdentityPopover({
     >
       <div className="bc-identity-head">
         <h2>个人资料</h2>
-        <p>这里是基本资料和显示偏好。</p>
       </div>
       <form className="bc-identity-form" onSubmit={submit} noValidate>
         <div className="bc-identity-row">
@@ -130,7 +129,7 @@ export function PersonIdentityPopover({
               change("display_name", event.target.value || null)
             }
             maxLength={40}
-            placeholder={`未填写 · 显示为 ${fallbackName}`}
+            placeholder={fallbackName}
             autoComplete="nickname"
             disabled={disabled}
           />
@@ -202,7 +201,6 @@ export function PersonIdentityPopover({
             </select>
           </div>
         </fieldset>
-        <p className="bc-identity-note">资料缺失不会由 AI 猜测补全。</p>
         {error ? (
           <p role="alert" className="bc-error bc-identity-message">
             {error}
@@ -217,12 +215,13 @@ export function PersonIdentityPopover({
             <button
               type="button"
               className="bc-text-button bc-identity-records"
+              aria-label="身体档案与文件"
               onClick={() => {
                 onClose();
                 onOpenRecords();
               }}
             >
-              身体档案与文件
+              身体档案
             </button>
           ) : null}
           <button type="button" className="bc-text-button" onClick={onClose}>

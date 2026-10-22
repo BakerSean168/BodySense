@@ -46,7 +46,7 @@ export function OutcomeTrendsPanel({
                 </span>
               </div>
               <p className="mt-1 text-muted-foreground">
-                已记录 {trend.points.length} 个时间点
+                {trend.points.length} 个时间点
               </p>
             </div>
           ))}
