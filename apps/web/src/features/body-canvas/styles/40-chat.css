@@ -344,7 +344,7 @@
 /* Ask User options read as Penpot's bordered choice rows. */
 .body-canvas-theme
   .ask-user-card
-  label:has(> input:is([type="radio"], [type="checkbox"])) {
+  label:has(> :is([data-slot="radio-group-item"], [data-slot="checkbox"])) {
   min-height: 40px;
   padding: 8px 12px;
   border: 1px solid var(--bc-line);
@@ -353,7 +353,7 @@
   color: var(--bc-ink);
   cursor: pointer;
 }
-.body-canvas-theme .ask-user-card label:has(> input:checked) {
+.body-canvas-theme .ask-user-card label:has(> [data-checked]) {
   border-color: var(--bc-primary);
   background: color-mix(in srgb, var(--bc-primary-soft) 55%, var(--bc-paper));
   font-weight: 600;
@@ -361,7 +361,7 @@
 @media (max-width: 760px) {
   .body-canvas-theme
     .ask-user-card
-    label:has(> input:is([type="radio"], [type="checkbox"])) {
+    label:has(> :is([data-slot="radio-group-item"], [data-slot="checkbox"])) {
     min-height: 44px;
   }
 }

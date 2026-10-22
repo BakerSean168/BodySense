@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import { InkButton, InkField } from "./InkField";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type RegisterErrors = {
   email?: string;
@@ -115,16 +116,15 @@ export function RegisterForm() {
 
       <div className="mt-[22px] lg:mt-6">
         <label className="flex cursor-pointer items-start gap-[10px] text-[13px] leading-[1.2] text-[#52665A]">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
+            onCheckedChange={(checked) => setConsent(checked)}
             aria-invalid={validationErrors.consent ? true : undefined}
             aria-describedby={
               validationErrors.consent ? "consent-error" : undefined
             }
             data-testid="auth-register-consent"
-            className="mt-px h-4 w-4 shrink-0 cursor-pointer rounded-[4px] border border-[#AEC0B0] bg-white accent-[#2C694F] focus-visible:ring-2 focus-visible:ring-[#2C694F] focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="mt-px size-4 rounded-[4px] border-[#AEC0B0] bg-white focus-visible:ring-offset-[#FBFAF5]"
           />
           <span>同意《服务条款》和《健康数据处理说明》</span>
         </label>

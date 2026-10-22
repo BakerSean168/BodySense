@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { AskUserCard } from "../AskUserCard";
 import type { AskUserQuestion } from "../../types/consultation";
 
+const CHOICE = '[role="radio"], [role="checkbox"]';
+
 const textQuestion: AskUserQuestion = {
   question: "你的年龄是多少？",
   answer_type: "text",
@@ -156,7 +158,7 @@ describe("AskUserCard", () => {
     const user = userEvent.setup();
     render(<AskUserCard question={singleChoiceQuestion} onSubmit={onSubmit} />);
 
-    await user.click(screen.getByLabelText("肩颈"));
+    await user.click(screen.getByLabelText("肩颈", { selector: CHOICE }));
     await user.click(screen.getByText("提交"));
 
     expect(onSubmit).toHaveBeenCalledWith({ text: "肩颈", selected: ["肩颈"] });
@@ -167,8 +169,8 @@ describe("AskUserCard", () => {
     const user = userEvent.setup();
     render(<AskUserCard question={multiChoiceQuestion} onSubmit={onSubmit} />);
 
-    await user.click(screen.getByLabelText("疼痛"));
-    await user.click(screen.getByLabelText("麻木"));
+    await user.click(screen.getByLabelText("疼痛", { selector: CHOICE }));
+    await user.click(screen.getByLabelText("麻木", { selector: CHOICE }));
     await user.click(screen.getByText("提交"));
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -182,7 +184,7 @@ describe("AskUserCard", () => {
     const user = userEvent.setup();
     render(<AskUserCard question={singleChoiceQuestion} onSubmit={onSubmit} />);
 
-    await user.click(screen.getByLabelText("自定义输入"));
+    await user.click(screen.getByLabelText("自定义输入", { selector: CHOICE }));
     await user.type(
       screen.getByPlaceholderText("请输入你的补充回答..."),
       "偶尔胸闷",
@@ -201,8 +203,8 @@ describe("AskUserCard", () => {
     const user = userEvent.setup();
     render(<AskUserCard question={multiChoiceQuestion} onSubmit={onSubmit} />);
 
-    await user.click(screen.getByLabelText("疼痛"));
-    await user.click(screen.getByLabelText("自定义输入"));
+    await user.click(screen.getByLabelText("疼痛", { selector: CHOICE }));
+    await user.click(screen.getByLabelText("自定义输入", { selector: CHOICE }));
     await user.type(
       screen.getByPlaceholderText("请输入你的补充回答..."),
       "头晕",
@@ -246,8 +248,8 @@ describe("AskUserCard", () => {
       />,
     );
 
-    await user.click(screen.getByLabelText("1–4周"));
-    await user.click(screen.getByLabelText("中度"));
+    await user.click(screen.getByLabelText("1–4周", { selector: CHOICE }));
+    await user.click(screen.getByLabelText("中度", { selector: CHOICE }));
     await user.click(screen.getByText("提交"));
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -286,8 +288,8 @@ describe("AskUserCard", () => {
         onSubmit={onSubmit}
       />,
     );
-    await user.click(screen.getByLabelText("放射痛"));
-    await user.click(screen.getByLabelText("麻木"));
+    await user.click(screen.getByLabelText("放射痛", { selector: CHOICE }));
+    await user.click(screen.getByLabelText("麻木", { selector: CHOICE }));
     await user.click(screen.getByText("提交"));
     expect(onSubmit).toHaveBeenCalledWith({
       text: "请选择所有安全信号: 放射痛，麻木",
@@ -322,14 +324,14 @@ describe("AskUserCard", () => {
         />,
       );
       for (const option of order) {
-        await user.click(screen.getByLabelText(option));
+        await user.click(screen.getByLabelText(option, { selector: CHOICE }));
       }
-      expect((screen.getByLabelText("麻木") as HTMLInputElement).checked).toBe(
-        expected.includes("麻木"),
-      );
       expect(
-        (screen.getByLabelText("以上均无") as HTMLInputElement).checked,
-      ).toBe(expected.includes("以上均无"));
+        screen.getByLabelText("麻木", { selector: CHOICE }),
+      ).toHaveAttribute("aria-checked", String(expected.includes("麻木")));
+      expect(
+        screen.getByLabelText("以上均无", { selector: CHOICE }),
+      ).toHaveAttribute("aria-checked", String(expected.includes("以上均无")));
       await user.click(screen.getByText("提交"));
       expect(onSubmit).toHaveBeenCalledWith({
         text: `信号: ${expected.join("，")}`,

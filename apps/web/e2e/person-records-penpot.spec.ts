@@ -8,6 +8,7 @@ import { refreshBrowserAccessToken } from "./support/auth";
 import { profileReplacement } from "./support/profile";
 import { fillRegisterPassword } from "./support/register";
 import { choosePersonCategory, personCategoryTrigger } from "./support/person";
+import { selectOption } from "./support/select";
 
 // UI-001 #309: Penpot Person / Records + Body / Episode scenes on real Go/PG.
 // Registration, real receipts, full reloads and 390px geometry; no fixtures.
@@ -98,7 +99,10 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
 
   // Records add: saved appears only with the Go receipt, then survives reload.
   await page.getByTestId("person-add").click();
-  await page.getByLabel("记录类别").selectOption("symptom");
+  await selectOption(
+    page.getByRole("combobox", { name: "记录类别" }),
+    "symptom",
+  );
   await page
     .getByLabel("你的描述")
     .fill("昨天晚上开始头痛，两边太阳穴一跳一跳的。");
@@ -189,7 +193,10 @@ test("Person Records timeline, Episode scene and hypotheses persist through real
   await page.getByTestId("person-add").click();
   await panel.getByLabel("我的完整猜测").fill("我猜头痛和最近睡得晚有关。");
   await panel
-    .getByLabel("头痛又来了，两边太阳穴胀痛。", { exact: true })
+    .getByRole("checkbox", {
+      name: "头痛又来了，两边太阳穴胀痛。",
+      exact: true,
+    })
     .check();
   await panel.getByRole("button", { name: "保存猜测" }).click();
   await expect(panel.getByText("你的猜测已保存。")).toBeVisible();

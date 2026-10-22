@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ApiRequestError } from "@/lib/api-client";
 import type { BodyFactRecord } from "@/features/profile/services/bodyFactRecordsService";
 import { BodyFactAmendment } from "./BodyFactAmendment";
+import { selectOption } from "@/test/selectOption";
 
 const api = vi.hoisted(() => ({ correct: vi.fn(), withdraw: vi.fn() }));
 vi.mock("@/features/profile/services/bodyFactRecordsService", () => ({
@@ -110,8 +111,8 @@ describe("explicit BodyFact correction and withdrawal", () => {
     api.correct.mockResolvedValue(receipt);
     const { onCommitted } = mount();
     await userEvent.click(screen.getByRole("button", { name: "更正" }));
-    await userEvent.selectOptions(
-      screen.getByLabelText("更正后的类别"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "更正后的类别" }),
       "activity",
     );
     await userEvent.clear(screen.getByLabelText("更正后的完整陈述"));

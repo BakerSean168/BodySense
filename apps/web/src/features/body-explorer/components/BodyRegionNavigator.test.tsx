@@ -6,6 +6,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { BodyRegionNavigator } from "./BodyRegionNavigator";
+import { openOptions, selectOption } from "@/test/selectOption";
 
 const snapshot = bodyRecordsFixture();
 snapshot.facts = [symptomFact()];
@@ -23,12 +24,16 @@ describe("BodyRegionNavigator", () => {
     );
 
     const select = screen.getByRole("combobox", { name: "选择身体区域" });
-    expect(select).toHaveTextContent("右肩 · 有记录 1");
+    expect(select).toHaveTextContent("全身");
     expect(screen.getByText("1 个区域有记录")).toBeInTheDocument();
+    expect(
+      (await openOptions(select, user)).map((option) => option.textContent),
+    ).toContain("右肩 · 有记录 1");
+    await user.keyboard("{Escape}");
 
-    await user.selectOptions(select, "shoulder.right");
+    await selectOption(select, "shoulder.right", user);
     expect(onSelectRegion).toHaveBeenCalledWith("shoulder.right");
-    await user.selectOptions(select, "");
+    await selectOption(select, "", user);
     expect(onSelectRegion).toHaveBeenLastCalledWith(null);
   });
 });

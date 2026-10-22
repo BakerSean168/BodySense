@@ -1,5 +1,13 @@
 import { MessageCircle, Pause, Play } from "lucide-react";
 import type { ReferenceMotion } from "../model/bodyCanvas";
+import { SelectField } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+
+const SPEED_OPTIONS = [
+  { value: "0.5", label: "0.5×" },
+  { value: "1", label: "1×" },
+  { value: "1.5", label: "1.5×" },
+];
 
 /** Reference motion only, not a patient-specific training prescription. */
 export function CanvasPlaybackControls({
@@ -46,27 +54,25 @@ export function CanvasPlaybackControls({
                   {definition.duration.toFixed(2)}s
                 </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.001"
+              <Slider
+                min={0}
+                max={1}
+                step={0.001}
                 value={phase}
                 aria-label="动作进度"
-                onChange={(event) => onSeek(Number(event.target.value))}
+                onValueChange={(next) =>
+                  onSeek(Array.isArray(next) ? next[0] : next)
+                }
               />
             </div>
             <label className="bc-speed">
               <span className="sr-only">播放速度</span>
-              <select
+              <SelectField
                 aria-label="播放速度"
-                value={speed}
-                onChange={(event) => onSpeedChange(Number(event.target.value))}
-              >
-                <option value={0.5}>0.5×</option>
-                <option value={1}>1×</option>
-                <option value={1.5}>1.5×</option>
-              </select>
+                value={String(speed)}
+                options={SPEED_OPTIONS}
+                onValueChange={(next) => onSpeedChange(Number(next))}
+              />
             </label>
             <button
               className="bc-icon-button"

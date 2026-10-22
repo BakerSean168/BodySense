@@ -24,6 +24,7 @@ import {
   useTrainerSession,
   type TrainerNotice,
 } from "../hooks/useTrainerSession";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface TrainingExecutionPanelProps {
   planId: string;
@@ -357,7 +358,7 @@ function FeedbackForm({
       <label className="bc-dx-label" htmlFor="trainer-feedback-text">
         这次训练感觉怎么样？
       </label>
-      <textarea
+      <Textarea
         ref={ref}
         id="trainer-feedback-text"
         className="bc-tr-feedback-input"

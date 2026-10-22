@@ -11,6 +11,8 @@ import {
   BODY_FACT_KIND_LABELS,
   type BodyFactKind,
 } from "../model/bodyFactPresentation";
+import { SelectField } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type Pending =
   | { mode: "correct"; text: string; command: BodyFactCorrectionInput }
@@ -159,20 +161,17 @@ export function BodyFactAmendment({
       {mode === "correct" ? (
         <>
           <label htmlFor={`correct-kind-${record.id}`}>更正后的类别</label>
-          <select
+          <SelectField
             id={`correct-kind-${record.id}`}
             value={kind}
-            onChange={(event) => setKind(event.target.value as BodyFactKind)}
+            onValueChange={(next) => setKind(next as BodyFactKind)}
+            options={Object.entries(BODY_FACT_KIND_LABELS).map(
+              ([value, label]) => ({ value, label }),
+            )}
             disabled={saving}
-          >
-            {Object.entries(BODY_FACT_KIND_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          />
           <label htmlFor={`correct-${record.id}`}>更正后的完整陈述</label>
-          <textarea
+          <Textarea
             id={`correct-${record.id}`}
             value={text}
             onChange={(event) => setText(event.target.value)}

@@ -315,33 +315,40 @@
   outline-offset: 2px;
 }
 .bc-window-context-select {
-  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   width: 100%;
   max-width: 280px;
   min-height: 34px;
-  padding: 0 28px 0 11px;
+  padding: 0 9px 0 11px;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--bc-ink);
   font-size: 12px;
   font-weight: 600;
-  text-overflow: ellipsis;
   cursor: pointer;
 }
-.bc-window-context-select:disabled {
+.bc-window-context-select:hover,
+.bc-window-context-select[data-popup-open] {
+  background: transparent;
+}
+.bc-window-context-select:focus-visible {
+  box-shadow: none;
+}
+.bc-window-context-select [data-slot="select-value"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bc-window-context-select:disabled,
+.bc-window-context-select[data-disabled] {
   color: var(--bc-muted);
   cursor: not-allowed;
 }
-.bc-window-context-select option {
-  color: var(--bc-ink);
-  background: var(--bc-paper);
-}
-.bc-window-select-wrap > svg {
-  position: absolute;
-  right: 9px;
-  pointer-events: none;
+.bc-window-context-select > svg {
   color: var(--bc-secondary);
 }
 .bc-chat-history-menu {
@@ -555,8 +562,9 @@
   color: var(--bc-muted);
   font-size: 12px;
 }
-.bc-identity-row input,
-.bc-identity-row select {
+.bc-identity-row input[data-slot="input"],
+.bc-identity-row [data-slot="select-trigger"],
+.bc-identity-row [data-slot="date-picker-trigger"] {
   width: 100%;
   min-width: 0;
   min-height: 32px;
@@ -572,11 +580,13 @@
   color: var(--bc-ink);
   opacity: 0.9;
 }
+.bc-identity-row [data-slot="date-picker-trigger"][data-empty="true"] {
+  color: var(--bc-ink);
+}
 .bc-identity-row:focus-within {
   border-bottom-color: var(--bc-primary);
 }
-.bc-identity-row input:focus-visible,
-.bc-identity-row select:focus-visible {
+.bc-identity-row :is(input, button):focus-visible {
   box-shadow: 0 2px 0 var(--bc-primary);
 }
 .bc-identity-pair {
@@ -612,9 +622,6 @@
 }
 .bc-identity-actions .bc-identity-records {
   margin-right: auto;
-}
-.bc-identity-row select {
-  margin-left: -4px;
 }
 .bc-person-category {
   display: grid;
@@ -832,16 +839,12 @@
   gap: 6px;
   min-width: 0;
 }
-.bc-episode-editor select,
-.bc-episode-editor input,
+.bc-episode-editor [data-slot="select-trigger"],
+.bc-episode-editor [data-slot="input"],
 .bc-episode-editor textarea {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  color: var(--bc-ink);
-  background: var(--bc-paper);
-  font: inherit;
 }
 .bc-episode-editor textarea {
   overflow-wrap: anywhere;
@@ -851,20 +854,6 @@
   width: 100%;
   resize: vertical;
   min-height: 5rem;
-}
-
-.bc-person-category .bc-equipment-form textarea {
-  border: 1px solid var(--bc-line);
-  border-radius: 9px;
-  padding: 9px 11px;
-  background: var(--bc-paper);
-  color: var(--bc-ink);
-  font: inherit;
-  line-height: 1.5;
-}
-.bc-person-category .bc-equipment-form textarea:focus-visible {
-  outline: 2px solid var(--bc-primary);
-  outline-offset: 2px;
 }
 
 /* Pending Ask User reuses the shared card and the active canvas theme. */
@@ -912,21 +901,6 @@
 .body-canvas-theme .ask-user-card label {
   color: var(--bc-secondary);
 }
-.body-canvas-theme
-  .ask-user-card
-  input:not([type="checkbox"]):not([type="radio"]) {
-  min-width: 0;
-  border-color: var(--bc-line);
-  background: var(--bc-paper);
-  color: var(--bc-ink);
-}
-.body-canvas-theme .ask-user-card input::placeholder {
-  color: var(--bc-muted);
-}
-.body-canvas-theme .ask-user-card input {
-  accent-color: var(--bc-primary);
-}
-.body-canvas-theme .ask-user-card input:focus-visible,
 .body-canvas-theme .ask-user-card button:focus-visible {
   outline: 2px solid var(--bc-primary);
   outline-offset: 2px;
@@ -1021,15 +995,7 @@
   box-sizing: border-box;
 }
 .bc-person-body textarea {
-  width: 100%;
   min-height: 5rem;
-  resize: vertical;
-  border: 1px solid var(--bc-line);
-  border-radius: 9px;
-  padding: 9px 11px;
-  background: var(--bc-paper);
-  color: var(--bc-ink);
-  font: inherit;
 }
 .bc-person-body .bc-record-actions > :is(button, .bc-window-note) {
   min-width: 0;
@@ -1063,13 +1029,8 @@
   padding-block: 6px;
   font-size: 12px;
 }
-.bc-hypothesis-form .bc-hypothesis-choice input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--bc-primary);
+.bc-hypothesis-form .bc-hypothesis-choice [data-slot="checkbox"] {
+  margin-top: 1px;
 }
 .bc-episode-status {
   display: grid;

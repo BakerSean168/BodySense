@@ -6,6 +6,7 @@ import {
   healthHistoryService,
   type InjuryHistorySnapshot,
 } from "../../services/healthHistoryService";
+import { Textarea } from "@/components/ui/textarea";
 
 export function HealthHistoryPanel() {
   const [snapshot, setSnapshot] = useState<InjuryHistorySnapshot | null>(null);
@@ -88,13 +89,13 @@ export function HealthHistoryPanel() {
           >
             既往伤病 / 手术史
           </label>
-          <textarea
+          <Textarea
             id="injury-history"
             rows={5}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="例如：2024 年左膝前交叉韧带轻微拉伤，保守恢复；目前偶尔深蹲后酸胀。"
-            className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            className="mt-3"
           />
           <div className="mt-4 flex justify-end gap-2">
             <Button

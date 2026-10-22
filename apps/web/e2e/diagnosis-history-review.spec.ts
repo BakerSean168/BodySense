@@ -84,7 +84,7 @@ test("Chat request starts a formal analysis; decisions land in History", async (
   await expect(rows.first()).toContainText("采纳");
   await expect(
     page.getByRole("combobox", { name: "选择已确认病情" }),
-  ).toHaveValue("__history__");
+  ).toHaveAttribute("data-value", "__history__");
   await expect(
     page.getByRole("button", { name: "与助手讨论当前诊断" }),
   ).toHaveCount(0);

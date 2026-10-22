@@ -1,5 +1,6 @@
-import { ChevronDown, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import type { ChatHistory } from "@/features/body-canvas/model/chatHistory";
+import { SelectField } from "@/components/ui/select";
 
 /**
  * Penpot "Window / Title Chat": 💬 对话 / 今天 ▾. The picker lists the days the
@@ -44,21 +45,18 @@ export function ChatWindowHeader({
     <div className="bc-window-context bc-chat-context">
       {title}
       <span className="bc-window-select-wrap">
-        <select
+        <SelectField
+          variant="ghost"
           className="bc-window-context-select"
           aria-label="跳到某天的对话"
           data-testid="chat-day"
           value={selectedDay ?? todayKey}
-          onChange={(event) => onSelectDay(event.target.value)}
-        >
-          <option value={todayKey}>今天</option>
-          {earlier.map((day) => (
-            <option key={day.day} value={day.day}>
-              {day.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
+          options={[
+            { value: todayKey, label: "今天" },
+            ...earlier.map((day) => ({ value: day.day, label: day.label })),
+          ]}
+          onValueChange={onSelectDay}
+        />
       </span>
     </div>
   );

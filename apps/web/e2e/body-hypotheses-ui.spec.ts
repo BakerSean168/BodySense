@@ -322,8 +322,12 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
     await expect(page.getByTestId("person-add")).toBeEnabled();
     await page.getByTestId("person-add").click();
     await panel.getByLabel("我的完整猜测").fill(statement);
-    await panel.getByLabel(fact.statement, { exact: true }).check();
-    await panel.getByLabel(observation.statement, { exact: true }).check();
+    await panel
+      .getByRole("checkbox", { name: fact.statement, exact: true })
+      .check();
+    await panel
+      .getByRole("checkbox", { name: observation.statement, exact: true })
+      .check();
     await panel.getByRole("button", { name: "保存猜测" }).click();
     await expect(panel.getByText("正在提交，等待保存回执。")).toBeVisible();
     await expect(panel.getByText("你的猜测已保存。")).toHaveCount(0);

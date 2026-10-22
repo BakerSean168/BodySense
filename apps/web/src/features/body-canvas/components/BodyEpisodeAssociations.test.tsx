@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiRequestError } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/authStore";
 import { BodyEpisodeAssociations } from "./BodyEpisodeAssociations";
+import { openOptions, selectOption } from "@/test/selectOption";
 
 const api = vi.hoisted(() => ({
   facts: { list: vi.fn(), record: vi.fn() },
@@ -95,7 +96,10 @@ function mount(canEdit = true) {
 async function openEditor() {
   await userEvent.click(screen.getByRole("button", { name: "查看与关联经历" }));
   await screen.findByTestId("body-episode-editor");
+  await userEvent.click(screen.getByRole("combobox", { name: "本人症状陈述" }));
   await screen.findByRole("option", { name: "我右肩痛" });
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
 }
 
 beforeEach(() => {
@@ -138,11 +142,17 @@ describe("Person Episode source-backed action surface", () => {
     mount();
     await openEditor();
     expect(screen.getByRole("button", { name: "确认新建经历" })).toBeDisabled();
+    const sourceOptions = await openOptions(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
+    );
     expect(
-      screen.queryByRole("option", { name: /现在没有肩痛/ }),
-    ).not.toBeInTheDocument();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+      sourceOptions.some((option) =>
+        /现在没有肩痛/.test(option.textContent ?? ""),
+      ),
+    ).toBe(false);
+    await userEvent.keyboard("{Escape}");
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
@@ -168,12 +178,15 @@ describe("Person Episode source-backed action surface", () => {
     });
     mount();
     await openEditor();
-    await userEvent.selectOptions(screen.getByLabelText("操作"), "link");
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(screen.getByRole("combobox", { name: "操作" }), "link");
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       negativeID,
     );
-    await userEvent.selectOptions(screen.getByLabelText("目标经历"), episodeID);
+    await selectOption(
+      screen.getByRole("combobox", { name: "目标经历" }),
+      episodeID,
+    );
     await userEvent.click(screen.getByRole("button", { name: "确认关联陈述" }));
     expect(api.episode.linkFact).toHaveBeenCalledWith(
       episodeID,
@@ -201,8 +214,8 @@ describe("Person Episode source-backed action surface", () => {
       .mockResolvedValueOnce(receipt("create"));
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
@@ -227,8 +240,8 @@ describe("Person Episode source-backed action surface", () => {
     );
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
@@ -247,8 +260,8 @@ describe("Person Episode source-backed action surface", () => {
     });
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
@@ -277,8 +290,8 @@ describe("Person Episode source-backed action surface", () => {
     );
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
@@ -325,8 +338,8 @@ describe("Person symptom input to Episode source", () => {
       screen.getByLabelText("症状类型（本人描述）"),
       "右肩疼痛",
     );
-    await userEvent.selectOptions(
-      screen.getByLabelText("侧别（不确定可以不指定）"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
       "right",
     );
     await userEvent.click(
@@ -407,8 +420,8 @@ describe("Person symptom input to Episode source", () => {
       "今天我没有肩痛",
     );
     await userEvent.type(screen.getByLabelText("症状类型（本人描述）"), "肩痛");
-    await userEvent.selectOptions(
-      screen.getByLabelText("当前陈述是否存在症状"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "当前陈述是否存在症状" }),
       "absent",
     );
     await userEvent.click(
@@ -464,8 +477,8 @@ describe("Episode read and ambiguous-write safety regressions", () => {
   it("blocks new Fact or Episode commands when a cached read refresh fails", async () => {
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     api.episode.list.mockRejectedValueOnce(new Error("失去来源连接"));
@@ -490,14 +503,16 @@ describe("Episode read and ambiguous-write safety regressions", () => {
     api.episode.create.mockRejectedValueOnce(new Error("提交状态未确认"));
     mount();
     await openEditor();
-    await userEvent.selectOptions(
-      screen.getByLabelText("本人症状陈述"),
+    await selectOption(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
       positiveID,
     );
     await userEvent.click(screen.getByRole("button", { name: "确认新建经历" }));
     expect(await screen.findByText(/提交状态未确认/)).toBeVisible();
-    expect(screen.getByLabelText("操作")).toBeDisabled();
-    expect(screen.getByLabelText("本人症状陈述")).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "操作" })).toBeDisabled();
+    expect(
+      screen.getByRole("combobox", { name: "本人症状陈述" }),
+    ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "补充可关联的本人症状" }),
     ).toBeDisabled();
@@ -523,7 +538,9 @@ describe("Episode read and ambiguous-write safety regressions", () => {
     expect(await screen.findByText(/症状提交状态未确认/)).toBeVisible();
     expect(screen.getByLabelText("本人完整症状陈述")).toBeDisabled();
     expect(screen.getByLabelText("症状类型（本人描述）")).toBeDisabled();
-    expect(screen.getByLabelText("当前陈述是否存在症状")).toBeDisabled();
+    expect(
+      screen.getByRole("combobox", { name: "当前陈述是否存在症状" }),
+    ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "重试原症状记录" }),
     ).toBeEnabled();

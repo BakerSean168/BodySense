@@ -17,6 +17,7 @@ import type {
 } from "../../model/trainingPlans";
 import type { TrainingPlanControls } from "./types";
 import { Banner, Chip } from "./TrainingPrimitives";
+import { SelectField } from "@/components/ui/select";
 
 function PlanStatusRow({ plan }: { plan: TrainingPlanView }) {
   return (
@@ -89,18 +90,17 @@ function TemplateContent({
       <div className="bc-tp-template-head">
         {plan.templates.length > 1 ? (
           <span className="bc-window-select-wrap bc-tp-template-select">
-            <select
+            <SelectField
+              variant="ghost"
               className="bc-window-context-select"
               aria-label="选择训练课"
               value={template.templateId}
-              onChange={(event) => onSelectTemplate(event.target.value)}
-            >
-              {plan.templates.map((item) => (
-                <option key={item.templateId} value={item.templateId}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
+              options={plan.templates.map((item) => ({
+                value: item.templateId,
+                label: item.title,
+              }))}
+              onValueChange={onSelectTemplate}
+            />
           </span>
         ) : (
           <strong className="bc-tp-template-title">{template.title}</strong>

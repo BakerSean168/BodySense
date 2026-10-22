@@ -137,6 +137,7 @@ import type {
   Conversation,
 } from "../../types/consultation";
 import type { HealthWorkspace } from "@/features/workspace/types/workspace";
+import { openOptions, selectOption } from "@/test/selectOption";
 
 function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
@@ -386,7 +387,7 @@ describe("body-first business windows", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "选择已确认病情" }),
-    ).toHaveValue(makeCondition().conditionId);
+    ).toHaveAttribute("data-value", makeCondition().conditionId);
     expect(screen.getByRole("heading", { name: "肩峰下撞击" })).toBeVisible();
     expect(screen.getByText("肩胛控制不足")).toBeInTheDocument();
     expect(screen.getByText("你已确认的分析结果")).toBeInTheDocument();
@@ -424,11 +425,12 @@ describe("body-first business windows", () => {
       within(trainingWindow).getAllByText("3 组 × 12 次").length,
     ).toBeGreaterThan(0);
     const selector = screen.getByRole("combobox", { name: "选择训练计划" });
-    expect(selector).toHaveValue("plan-2");
+    expect(selector).toHaveAttribute("data-value", "plan-2");
     expect(
-      screen.getByRole("option", { name: "肩胛稳定训练" }),
-    ).toBeInTheDocument();
-    await userEvent.selectOptions(selector, "plan-1");
+      (await openOptions(selector)).map((option) => option.textContent),
+    ).toContain("肩胛稳定训练");
+    await userEvent.keyboard("{Escape}");
+    await selectOption(selector, "plan-1");
     await waitFor(() =>
       expect(localStorage.getItem("bodysense.training.selectedPlanId")).toBe(
         "plan-1",
@@ -553,8 +555,13 @@ describe("body-first business windows", () => {
       "placeholder",
       "synthetic",
     );
-    expect(screen.getByLabelText("自报性别")).toHaveValue("");
-    expect(screen.getByLabelText("显示时区")).toHaveDisplayValue(/^跟随设备/);
+    expect(screen.getByRole("combobox", { name: "自报性别" })).toHaveAttribute(
+      "data-value",
+      "",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "显示时区" }),
+    ).toHaveTextContent(/^跟随设备/);
     expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
     // Files, source removal and erasure stay reachable in the 身体档案 drawer,
     // which loads only once it is first opened.

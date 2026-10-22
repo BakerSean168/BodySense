@@ -4,6 +4,7 @@ import type {
   UserProfile,
 } from "@/stores/profileStore";
 import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface ProfileEditProps {
   profile: UserProfile;
@@ -94,14 +95,15 @@ export function ProfileEdit({
         >
           出生日期
         </label>
-        <input
+        <DatePicker
           id="profile-birth-date"
-          type="date"
           value={birthDate}
-          onChange={(event) => setBirthDate(event.target.value)}
+          onValueChange={setBirthDate}
           min={localDateString(earliestBirthDate)}
           max={localDateString(today)}
-          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+          placeholder="选择出生日期"
+          yearNavigation
+          clearable
         />
         {error ? (
           <p className="mt-2 text-xs text-destructive">{error}</p>

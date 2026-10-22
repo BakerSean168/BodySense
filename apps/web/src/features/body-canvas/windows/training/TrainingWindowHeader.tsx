@@ -1,6 +1,6 @@
-import { ChevronDown } from "lucide-react";
 import { TrainingIcon } from "../../components/TrainingIcon";
 import type { TrainingSelection } from "../../model/trainingPlanSelection";
+import { SelectField } from "@/components/ui/select";
 
 export interface TrainingWindowHeaderProps {
   view: TrainingSelection;
@@ -39,20 +39,18 @@ export function TrainingWindowHeader({
     <div className="bc-window-context bc-training-context">
       {title(true)}
       <span className="bc-window-select-wrap">
-        <select
+        <SelectField
+          variant="ghost"
           className="bc-window-context-select"
           aria-label="选择训练计划"
           value={view.selected?.planId ?? ""}
-          onChange={(event) => onSelectPlan(event.target.value)}
-        >
-          {view.selected === null ? <option value="">选择计划</option> : null}
-          {view.plans.map((item) => (
-            <option key={item.planId} value={item.planId}>
-              {item.title}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
+          placeholder="选择计划"
+          options={view.plans.map((item) => ({
+            value: item.planId,
+            label: item.title,
+          }))}
+          onValueChange={onSelectPlan}
+        />
       </span>
     </div>
   );

@@ -3,6 +3,9 @@ import {
   BODY_FACT_KIND_LABELS as FACT_KINDS,
   type BodyFactKind as FactKind,
 } from "../model/bodyFactPresentation";
+import { Input } from "@/components/ui/Input";
+import { SelectField } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 /** Controlled draft; the ledger owner retains save requests and receipts. */
 export function BodyFactRecordForm({
@@ -44,24 +47,21 @@ export function BodyFactRecordForm({
       {!habitsOnly ? (
         <label>
           记录类别
-          <select
+          <SelectField
+            aria-label="记录类别"
             value={kind}
-            onChange={(event) => {
-              onKindChange(event.target.value as FactKind);
-            }}
+            onValueChange={(next) => onKindChange(next as FactKind)}
+            options={Object.entries(FACT_KINDS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
             disabled={saving}
-          >
-            {Object.entries(FACT_KINDS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       ) : null}
       <label>
         你的描述
-        <textarea
+        <Textarea
           value={statement}
           onChange={(event) => onStatementChange(event.target.value)}
           maxLength={2000}
@@ -72,7 +72,7 @@ export function BodyFactRecordForm({
       </label>
       <label>
         发生时间<span className="bc-optional">可选</span>
-        <input
+        <Input
           value={when}
           onChange={(event) => onWhenChange(event.target.value)}
           maxLength={500}

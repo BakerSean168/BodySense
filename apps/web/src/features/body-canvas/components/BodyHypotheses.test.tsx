@@ -6,6 +6,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/stores/authStore";
 import { BodyHypotheses } from "./BodyHypotheses";
 
+const CHOICE = '[role="radio"], [role="checkbox"]';
+
 const api = vi.hoisted(() => ({
   read: vi.fn(),
   groups: vi.fn(),
@@ -395,8 +397,8 @@ it("submits only the explicitly selected fact and observation links", async () =
   api.record.mockResolvedValue(receipt);
   mount();
   const user = await addDraft();
-  await user.click(screen.getByLabelText("肩膀不舒服"));
-  await user.click(screen.getByLabelText("今天称重"));
+  await user.click(screen.getByLabelText("肩膀不舒服", { selector: CHOICE }));
+  await user.click(screen.getByLabelText("今天称重", { selector: CHOICE }));
   await user.click(screen.getByRole("button", { name: "保存猜测" }));
   await screen.findByText("你的猜测已保存。");
   expect(api.record).toHaveBeenCalledWith(
