@@ -16,7 +16,10 @@ export { trainerKeys };
 
 export type TrainerNotice = "safety_changed" | "blocked" | "changed" | null;
 
-function commandNotice(error: unknown): { notice: TrainerNotice; message: string | null } {
+function commandNotice(error: unknown): {
+  notice: TrainerNotice;
+  message: string | null;
+} {
   if (error instanceof ApiRequestError && error.status === 409) {
     switch (error.code) {
       case "SAFETY_STALE":
@@ -24,16 +27,25 @@ function commandNotice(error: unknown): { notice: TrainerNotice; message: string
       case "TRAINER_GATE_BLOCKED":
         return { notice: "blocked", message: null };
       case "SESSION_IN_PROGRESS":
-        return { notice: null, message: "另一个训练正在进行，先结束它再开始这一个。" };
+        return {
+          notice: null,
+          message: "另一个训练正在进行，先结束它再开始这一个。",
+        };
       case "PLAN_NOT_ACTIVE":
-        return { notice: null, message: "这份计划已不是启用状态，不能开始训练。" };
+        return {
+          notice: null,
+          message: "这份计划已不是启用状态，不能开始训练。",
+        };
       case "FEEDBACK_ALREADY_RECORDED":
         return { notice: null, message: "这次训练的感受已经记录过了。" };
       default:
         return { notice: "changed", message: null };
     }
   }
-  return { notice: null, message: errorMessage(error, "这一步没有被记录，请再试一次。") };
+  return {
+    notice: null,
+    message: errorMessage(error, "这一步没有被记录，请再试一次。"),
+  };
 }
 
 export interface UseTrainerSessionOptions {
@@ -55,7 +67,12 @@ export interface UseTrainerSessionOptions {
  * revision of the gate the user is looking at; a refusal writes nothing,
  * so the window refetches and shows why instead of a stale success.
  */
-export function useTrainerSession({ planId, templateId, launchKey, sessionId: launchSessionId = null }: UseTrainerSessionOptions) {
+export function useTrainerSession({
+  planId,
+  templateId,
+  launchKey,
+  sessionId: launchSessionId = null,
+}: UseTrainerSessionOptions) {
   const client = useQueryClient();
   const plan = useQuery({
     queryKey: trainerKeys.plan(planId),
@@ -80,14 +97,20 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
 
   // This plan's live session: the one holding the in-progress slot first.
   const live = useMemo(() => {
-    const open = sessions.data?.filter((item) => item.planId === planId && item.state !== "ended") ?? [];
+    const open =
+      sessions.data?.filter(
+        (item) => item.planId === planId && item.state !== "ended",
+      ) ?? [];
     return open.find((item) => item.state === "in_progress") ?? open[0] ?? null;
   }, [sessions.data, planId]);
   const session: TrainingSessionRecord | null =
-    (sessionId ? sessions.data?.find((item) => item.sessionId === sessionId) : null) ?? live;
+    (sessionId
+      ? sessions.data?.find((item) => item.sessionId === sessionId)
+      : null) ?? live;
 
   const pinnedRevision = session?.planRevisionId ?? null;
-  const pinnedIsCurrent = plan.data && pinnedRevision === plan.data.currentAcceptedRevisionId;
+  const pinnedIsCurrent =
+    plan.data && pinnedRevision === plan.data.currentAcceptedRevisionId;
   const revision = useQuery({
     queryKey: trainerKeys.revision(planId, pinnedRevision),
     queryFn: () => trainingApi.getRevisionContent(planId, pinnedRevision!),
@@ -95,7 +118,9 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
     retry: false,
     staleTime: Infinity,
   });
-  const pinned = pinnedIsCurrent ? plan.data!.currentContent : (revision.data ?? null);
+  const pinned = pinnedIsCurrent
+    ? plan.data!.currentContent
+    : (revision.data ?? null);
 
   const refresh = useCallback(async () => {
     await Promise.all([
@@ -105,7 +130,12 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
   }, [client]);
 
   const run = useCallback(
-    async (key: string, command: (idempotencyKey: string) => Promise<TrainingSessionRecord | void>) => {
+    async (
+      key: string,
+      command: (
+        idempotencyKey: string,
+      ) => Promise<TrainingSessionRecord | void>,
+    ) => {
       if (inFlight.current) return;
       let idempotencyKey = keys.current.get(key);
       if (!idempotencyKey) {
@@ -127,7 +157,8 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
         setError(message);
         // A refusal is final for that request: the next attempt is a new
         // decision at the then-current revisions.
-        if (caught instanceof ApiRequestError && caught.status === 409) keys.current.delete(key);
+        if (caught instanceof ApiRequestError && caught.status === 409)
+          keys.current.delete(key);
         await refresh();
       } finally {
         inFlight.current = false;
@@ -152,8 +183,18 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
       return;
     }
     const record = plan.data;
-    void run(`start:${launchKey}`, (key) => trainingApi.startSession(record, templateId, key));
-  }, [plan.data, sessions.data, live, templateId, launchKey, launchSessionId, run]);
+    void run(`start:${launchKey}`, (key) =>
+      trainingApi.startSession(record, templateId, key),
+    );
+  }, [
+    plan.data,
+    sessions.data,
+    live,
+    templateId,
+    launchKey,
+    launchSessionId,
+    run,
+  ]);
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -163,19 +204,30 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
   }, [session]);
 
   const view = useMemo(
-    () => (plan.data && session ? projectTrainerSession(plan.data, pinned, session, now) : null),
+    () =>
+      plan.data && session
+        ? projectTrainerSession(plan.data, pinned, session, now)
+        : null,
     [plan.data, pinned, session, now],
   );
 
   /** One gated action at the Safety revision of the gate the user sees. */
   const record = (
     key: string,
-    command: Omit<Parameters<typeof trainingApi.recordAction>[0], "session" | "expectedSafetyRevision" | "idempotencyKey">,
+    command: Omit<
+      Parameters<typeof trainingApi.recordAction>[0],
+      "session" | "expectedSafetyRevision" | "idempotencyKey"
+    >,
   ) => {
     if (!session || !plan.data || !view?.canRecord) return;
     const safetyRevision = plan.data.executionGate.safetyRevision;
     void run(`${session.sessionId}:${key}`, async (idempotencyKey) => {
-      await trainingApi.recordAction({ ...command, session, expectedSafetyRevision: safetyRevision, idempotencyKey });
+      await trainingApi.recordAction({
+        ...command,
+        session,
+        expectedSafetyRevision: safetyRevision,
+        idempotencyKey,
+      });
     });
   };
 
@@ -188,8 +240,12 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
       scope: "set",
       setNumber,
       kind,
-      ...(kind === "performed" && actual !== null && actualUnit === "reps" ? { actualReps: actual } : {}),
-      ...(kind === "performed" && actual !== null && actualUnit === "seconds" ? { actualDurationSeconds: actual } : {}),
+      ...(kind === "performed" && actual !== null && actualUnit === "reps"
+        ? { actualReps: actual }
+        : {}),
+      ...(kind === "performed" && actual !== null && actualUnit === "seconds"
+        ? { actualDurationSeconds: actual }
+        : {}),
     });
   };
 
@@ -209,7 +265,9 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
    * or exercise is then open again to be recorded with the right value.
    */
   const correct = (actionId: string) => {
-    const target = session?.actions.find((action) => action.actionId === actionId);
+    const target = session?.actions.find(
+      (action) => action.actionId === actionId,
+    );
     if (!target || target.kind === "corrected") return;
     record(`correct:${actionId}`, {
       planExerciseId: target.planExerciseId,
@@ -222,13 +280,23 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
 
   /** The user's own words on the ended session; never gated. */
   const sendFeedback = (text: string) => {
-    if (!session || session.state !== "ended" || session.feedback || !text.trim()) return;
-    void run(`feedback:${session.sessionId}:${text}`, (key) => trainingApi.recordFeedback(session.sessionId, text, key));
+    if (
+      !session ||
+      session.state !== "ended" ||
+      session.feedback ||
+      !text.trim()
+    )
+      return;
+    void run(`feedback:${session.sessionId}:${text}`, (key) =>
+      trainingApi.recordFeedback(session.sessionId, text, key),
+    );
   };
 
   const pause = () => {
     if (!session || session.state !== "in_progress") return;
-    void run(`pause:${session.sessionId}:${session.revision}`, (key) => trainingApi.pauseSession(session, key));
+    void run(`pause:${session.sessionId}:${session.revision}`, (key) =>
+      trainingApi.pauseSession(session, key),
+    );
   };
   const resume = () => {
     if (!session || session.state !== "paused" || !plan.data) return;
@@ -240,10 +308,14 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
 
   return {
     view,
+    refresh,
     gate: plan.data ? projectGate(plan.data.executionGate) : null,
     pause,
     resume,
-    loading: plan.isPending || sessions.isPending || (!!session && !pinned && revision.isPending),
+    loading:
+      plan.isPending ||
+      sessions.isPending ||
+      (!!session && !pinned && revision.isPending),
     loadError: plan.isError || sessions.isError || revision.isError,
     busy,
     notice,
@@ -256,7 +328,9 @@ export function useTrainerSession({ planId, templateId, launchKey, sessionId: la
     finish: () => {
       if (!session || session.state === "ended") return;
       const reason = view?.allRecorded ? "finished" : "stopped_early";
-      void run(`finish:${session.sessionId}:${reason}`, (key) => trainingApi.finishSession(session, reason, key));
+      void run(`finish:${session.sessionId}:${reason}`, (key) =>
+        trainingApi.finishSession(session, reason, key),
+      );
     },
   };
 }
