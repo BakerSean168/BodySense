@@ -21,6 +21,7 @@ import { type PersonProfileIdentity } from "../windows/person/types";
 import { TrainerEntryGuard } from "../components/TrainerEntryGuard";
 
 import type { useCanvasBusinessWindowController } from "./useCanvasBusinessWindowController";
+import { IconTip } from "@/components/ui/tooltip";
 // First open loads the Person surface; mountedWindows preserves its drafts thereafter.
 const PersonWindow = lazy(() =>
   import("../windows/person/PersonWindow").then((module) => ({
@@ -355,30 +356,34 @@ export function CanvasBusinessWindows({
       window === "diagnosis" &&
       !diagnosisHeaderMode(diagnosisView) &&
       diagnosisView.confirmed.length + diagnosisView.inactive.length > 0 ? (
-        <button
-          type="button"
-          className="bc-icon-button bc-header-chat-action"
-          aria-label="查看诊断历史"
-          title="查看诊断历史"
-          onClick={diagnosisActions.openHistory}
-        >
-          <Clock3 size={19} strokeWidth={1.8} />
-        </button>
+        <IconTip label="查看诊断历史">
+          <button
+            type="button"
+            className="bc-icon-button bc-header-chat-action"
+            aria-label="查看诊断历史"
+            onClick={diagnosisActions.openHistory}
+          >
+            <Clock3 size={19} strokeWidth={1.8} />
+          </button>
+        </IconTip>
       ) : null;
     return window === "diagnosis" || window === "training" ? (
       <>
         {historyAction}
-        <button
-          type="button"
-          className="bc-icon-button bc-header-chat-action"
-          aria-label={
-            window === "diagnosis" ? "与助手讨论当前诊断" : "与助手调整训练计划"
-          }
-          title={window === "diagnosis" ? "讨论诊断" : "调整训练计划"}
-          onClick={() => openWindow("chat")}
-        >
-          <MessageCircle size={19} strokeWidth={1.8} />
-        </button>
+        <IconTip label={window === "diagnosis" ? "讨论诊断" : "调整训练计划"}>
+          <button
+            type="button"
+            className="bc-icon-button bc-header-chat-action"
+            aria-label={
+              window === "diagnosis"
+                ? "与助手讨论当前诊断"
+                : "与助手调整训练计划"
+            }
+            onClick={() => openWindow("chat")}
+          >
+            <MessageCircle size={19} strokeWidth={1.8} />
+          </button>
+        </IconTip>
       </>
     ) : null;
   };

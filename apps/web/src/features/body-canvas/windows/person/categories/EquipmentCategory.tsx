@@ -18,6 +18,8 @@ import { PersonFormDialog } from "../PersonFormDialog";
 import { PersonEmptyState } from "./PersonEmptyState";
 import { PersonDataError } from "./PersonDataError";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/textarea";
+import { IconTip } from "@/components/ui/tooltip";
 
 /**
  * Equipment is the user's own EquipmentAsset inventory (PC-D2), read from
@@ -86,10 +88,11 @@ export function EquipmentCategory({
       </label>
       <label className="bc-form-dialog-field">
         备注<span className="bc-optional">可选</span>
-        <Input
+        <Textarea
           value={notes}
           onChange={(event) => changeNotes(event.target.value)}
           maxLength={240}
+          rows={2}
           placeholder="阻力、重量等"
           disabled={isCreating}
         />
@@ -169,14 +172,15 @@ export function EquipmentCategory({
                   }
                 />
                 <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="bc-icon-button bc-person-equipment-menu"
-                    aria-label={`更多操作：${asset.display_name}`}
-                    title="更多"
-                    disabled={!canEdit || busy}
-                  >
-                    <MoreHorizontal size={17} aria-hidden="true" />
-                  </DropdownMenuTrigger>
+                  <IconTip label="更多">
+                    <DropdownMenuTrigger
+                      className="bc-icon-button bc-person-equipment-menu"
+                      aria-label={`更多操作：${asset.display_name}`}
+                      disabled={!canEdit || busy}
+                    >
+                      <MoreHorizontal size={17} aria-hidden="true" />
+                    </DropdownMenuTrigger>
+                  </IconTip>
                   <DropdownMenuContent align="end" className="bc-account-menu">
                     <DropdownMenuItem
                       variant="destructive"

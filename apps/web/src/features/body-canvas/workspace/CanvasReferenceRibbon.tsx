@@ -6,6 +6,7 @@ import {
   type MotionId,
 } from "../model/bodyCanvas";
 import { MOTION_ICONS } from "../components/MotionIcons";
+import { IconTip } from "@/components/ui/tooltip";
 
 /** Reference motion picker owns its fold state and focus restoration. */
 export function CanvasReferenceRibbon({
@@ -35,17 +36,18 @@ export function CanvasReferenceRibbon({
   return (
     <>
       {!SHOW_POSE_BAR ? null : ribbonCollapsed ? (
-        <button
-          ref={ribbonToggleRef}
-          type="button"
-          className="bc-motion-ribbon-tab"
-          aria-label="展开参考动作"
-          title="展开参考动作"
-          aria-expanded={false}
-          onClick={toggleRibbon}
-        >
-          <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
-        </button>
+        <IconTip label="展开参考动作">
+          <button
+            ref={ribbonToggleRef}
+            type="button"
+            className="bc-motion-ribbon-tab"
+            aria-label="展开参考动作"
+            aria-expanded={false}
+            onClick={toggleRibbon}
+          >
+            <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        </IconTip>
       ) : (
         <div className="bc-motion-ribbon" role="group" aria-label="参考动作">
           {REFERENCE_MOTIONS.slice(0, 4).map((item, index) => {
@@ -55,31 +57,32 @@ export function CanvasReferenceRibbon({
                 ? !motionMode
                 : motionMode && motion === item.id;
             return (
-              <button
-                key={item.id}
-                type="button"
-                className="bc-motion-pose"
-                aria-label={item.label}
-                title={`${item.label} · ${index + 1}`}
-                aria-pressed={pressed}
-                onClick={() => choosePose(item.id)}
-              >
-                {Icon ? <Icon /> : item.label}
-                <kbd aria-hidden="true">{index + 1}</kbd>
-              </button>
+              <IconTip key={item.id} label={item.label} shortcut={index + 1}>
+                <button
+                  type="button"
+                  className="bc-motion-pose"
+                  aria-label={item.label}
+                  aria-pressed={pressed}
+                  onClick={() => choosePose(item.id)}
+                >
+                  {Icon ? <Icon /> : item.label}
+                  <kbd aria-hidden="true">{index + 1}</kbd>
+                </button>
+              </IconTip>
             );
           })}
-          <button
-            ref={ribbonToggleRef}
-            type="button"
-            className="bc-motion-ribbon-collapse"
-            aria-label="收起参考动作"
-            title="收起参考动作"
-            aria-expanded={true}
-            onClick={toggleRibbon}
-          >
-            <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
-          </button>
+          <IconTip label="收起参考动作">
+            <button
+              ref={ribbonToggleRef}
+              type="button"
+              className="bc-motion-ribbon-collapse"
+              aria-label="收起参考动作"
+              aria-expanded={true}
+              onClick={toggleRibbon}
+            >
+              <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </IconTip>
         </div>
       )}
     </>
