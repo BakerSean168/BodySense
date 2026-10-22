@@ -13,10 +13,13 @@ import {
   updatedContent,
   makeContent,
 } from "../model/__fixtures__/trainingPlanFixtures";
-import { TrainingPlanWindow, type TrainingPlanControls } from "./TrainingPlanWindow";
-import { TrainingWindowHeader } from "./V2WindowHeaders";
+import { TrainingPlanWindow } from "../windows/training/TrainingPlanWindow";
+import { type TrainingPlanControls } from "../windows/training/types";
+import { TrainingWindowHeader } from "../windows/training/TrainingWindowHeader";
 
-function view(overrides: Partial<ProjectTrainingWindowInput> = {}): ProjectTrainingWindowInput {
+function view(
+  overrides: Partial<ProjectTrainingWindowInput> = {},
+): ProjectTrainingWindowInput {
   return {
     plans: [makePlan()],
     proposals: [],
@@ -30,7 +33,9 @@ function view(overrides: Partial<ProjectTrainingWindowInput> = {}): ProjectTrain
   };
 }
 
-function controls(overrides: Partial<TrainingPlanControls> = {}): TrainingPlanControls {
+function controls(
+  overrides: Partial<TrainingPlanControls> = {},
+): TrainingPlanControls {
   return {
     onOpenProposal: vi.fn(),
     onBackToPlan: vi.fn(),
@@ -45,14 +50,62 @@ function controls(overrides: Partial<TrainingPlanControls> = {}): TrainingPlanCo
 }
 
 describe("Penpot Training boards", () => {
+  it("offers a real read retry instead of showing an empty plan after failure", async () => {
+    const retry = vi.fn();
+    render(
+      <TrainingPlanWindow
+        state={view({ error: "offline", plans: undefined })}
+        controls={controls({ onRetry: retry })}
+        canExecute={false}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("暂时无法读取");
+    expect(screen.queryByTestId("training-empty")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a loaded plan visible while disabling Start during partial failure", async () => {
+    const retry = vi.fn();
+    render(
+      <TrainingPlanWindow
+        state={view()}
+        partialError="提案暂时无法读取"
+        controls={controls({ onRetry: retry })}
+        canExecute
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("提案暂时无法读取");
+    expect(screen.getByText("启用中")).toBeVisible();
+    expect(screen.getByRole("button", { name: "开始训练" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it("puts every user plan in the header picker and the title alone when there is none", async () => {
     const select = vi.fn();
-    const plans = [makePlan(), makePlan({ planId: "plan-b", title: "下肢训练", status: "paused" })];
-    const { rerender } = render(<TrainingWindowHeader view={selectTrainingPlan(plans, null)} onSelectPlan={select} />);
+    const plans = [
+      makePlan(),
+      makePlan({ planId: "plan-b", title: "下肢训练", status: "paused" }),
+    ];
+    const { rerender } = render(
+      <TrainingWindowHeader
+        view={selectTrainingPlan(plans, null)}
+        onSelectPlan={select}
+      />,
+    );
     expect(screen.getByText("训练")).toBeVisible();
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "选择训练计划" }), "plan-b");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "选择训练计划" }),
+      "plan-b",
+    );
     expect(select).toHaveBeenCalledWith("plan-b");
-    rerender(<TrainingWindowHeader view={selectTrainingPlan([], null)} onSelectPlan={select} />);
+    rerender(
+      <TrainingWindowHeader
+        view={selectTrainingPlan([], null)}
+        onSelectPlan={select}
+      />,
+    );
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
@@ -68,12 +121,19 @@ describe("Penpot Training boards", () => {
     );
     expect(screen.getByText("启用中")).toBeVisible();
     expect(screen.getByText("每周 3 次")).toBeVisible();
-    expect(screen.getByRole("region", { name: "热身" })).toHaveTextContent("猫牛式1 组 × 10 次");
-    expect(screen.getByRole("region", { name: "主训练" })).toHaveTextContent("弹力带侧走2 组 × 12 次休息 45 秒左右交替");
+    expect(screen.getByRole("region", { name: "热身" })).toHaveTextContent(
+      "猫牛式1 组 × 10 次",
+    );
+    expect(screen.getByRole("region", { name: "主训练" })).toHaveTextContent(
+      "弹力带侧走2 组 × 12 次休息 45 秒左右交替",
+    );
     expect(screen.getByTestId("training-gate")).toHaveTextContent("可以开始");
     // Read-only: no inputs other than the template picker.
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "选择训练课" }), "b");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "选择训练课" }),
+      "b",
+    );
     expect(pickTemplate).toHaveBeenCalledWith("b");
     await userEvent.click(screen.getByRole("button", { name: "开始训练" }));
     expect(start).toHaveBeenCalledWith(PLAN_ID, "a");
@@ -88,7 +148,13 @@ describe("Penpot Training boards", () => {
         reasons: ["safety_screening_incomplete"],
       },
     });
-    render(<TrainingPlanWindow state={view({ plans: [blocked] })} canExecute controls={controls()} />);
+    render(
+      <TrainingPlanWindow
+        state={view({ plans: [blocked] })}
+        canExecute
+        controls={controls()}
+      />,
+    );
     const start = screen.getByRole("button", { name: "开始训练" });
     expect(start).toBeDisabled();
     expect(start).toHaveAccessibleDescription("暂不能开始：还没有完成安全筛查");
@@ -96,13 +162,25 @@ describe("Penpot Training boards", () => {
   });
 
   it("keeps Start disabled while the workspace has no execution capability", () => {
-    render(<TrainingPlanWindow state={view()} canExecute={false} controls={controls()} />);
+    render(
+      <TrainingPlanWindow
+        state={view()}
+        canExecute={false}
+        controls={controls()}
+      />,
+    );
     expect(screen.getByRole("button", { name: "开始训练" })).toBeDisabled();
   });
 
   it("shows the Empty board with a chat entry", async () => {
     const chat = vi.fn();
-    render(<TrainingPlanWindow state={view({ plans: [] })} canExecute controls={controls({ onOpenChat: chat })} />);
+    render(
+      <TrainingPlanWindow
+        state={view({ plans: [] })}
+        canExecute
+        controls={controls({ onOpenChat: chat })}
+      />,
+    );
     expect(screen.getByText("还没有训练计划")).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "去对话" }));
     expect(chat).toHaveBeenCalled();
@@ -111,9 +189,15 @@ describe("Penpot Training boards", () => {
   it("opens a pending proposal from the plan and decides it explicitly", async () => {
     const open = vi.fn();
     const { rerender } = render(
-      <TrainingPlanWindow state={view({ proposals: [makeProposal()] })} canExecute controls={controls({ onOpenProposal: open })} />,
+      <TrainingPlanWindow
+        state={view({ proposals: [makeProposal()] })}
+        canExecute
+        controls={controls({ onOpenProposal: open })}
+      />,
     );
-    expect(screen.getByTestId("training-pending-proposal")).toHaveTextContent("6 天内2 项调整建议待确认");
+    expect(screen.getByTestId("training-pending-proposal")).toHaveTextContent(
+      "6 天内2 项调整建议待确认",
+    );
     await userEvent.click(screen.getByRole("button", { name: "查看调整建议" }));
     expect(open).toHaveBeenCalledWith(PROPOSAL_ID);
 
@@ -121,7 +205,10 @@ describe("Penpot Training boards", () => {
     const reject = vi.fn();
     rerender(
       <TrainingPlanWindow
-        state={view({ proposals: [makeProposal()], focus: { kind: "proposal", proposalId: PROPOSAL_ID } })}
+        state={view({
+          proposals: [makeProposal()],
+          focus: { kind: "proposal", proposalId: PROPOSAL_ID },
+        })}
         canExecute
         controls={controls({ onAccept: accept, onReject: reject })}
       />,
@@ -130,7 +217,9 @@ describe("Penpot Training boards", () => {
     expect(within(scene).getByText("待确认")).toBeVisible();
     expect(within(scene).getByText("6 天后过期")).toBeVisible();
     expect(within(scene).getByText("AI 建议")).toBeVisible();
-    expect(within(scene).getByText("3 组 × 12 次 · 休息 45 秒").tagName).toBe("S");
+    expect(within(scene).getByText("3 组 × 12 次 · 休息 45 秒").tagName).toBe(
+      "S",
+    );
     expect(within(scene).getByText("3 组 × 15 次 · 休息 45 秒")).toBeVisible();
     expect(within(scene).getByText("死虫式")).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "接受" }));
@@ -142,7 +231,10 @@ describe("Penpot Training boards", () => {
   it("disables both decisions while one is in flight", () => {
     render(
       <TrainingPlanWindow
-        state={view({ proposals: [makeProposal()], focus: { kind: "proposal", proposalId: PROPOSAL_ID } })}
+        state={view({
+          proposals: [makeProposal()],
+          focus: { kind: "proposal", proposalId: PROPOSAL_ID },
+        })}
         canExecute
         controls={controls({ busy: true })}
       />,
@@ -166,8 +258,12 @@ describe("Penpot Training boards", () => {
     );
     expect(screen.getByTestId("training-proposal-expired")).toBeVisible();
     expect(screen.getByText("已过期")).toBeVisible();
-    expect(screen.getByTestId("training-proposal-stale")).toHaveTextContent("计划已有新的修订");
-    expect(screen.queryByRole("button", { name: "接受" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("training-proposal-stale")).toHaveTextContent(
+      "计划已有新的修订",
+    );
+    expect(
+      screen.queryByRole("button", { name: "接受" }),
+    ).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "返回计划" }));
     expect(back).toHaveBeenCalled();
   });
@@ -190,17 +286,41 @@ describe("Penpot Training boards", () => {
       acceptedContent: updatedContent(),
       created: false,
     };
-    const { rerender } = render(<TrainingPlanWindow state={view({ focus })} canExecute controls={controls()} />);
-    expect(screen.getByRole("status")).toHaveTextContent("正在读取新的计划修订");
-    expect(screen.queryByText("已采纳调整 · 新修订已生效")).not.toBeInTheDocument();
-    rerender(
+    const { rerender } = render(
       <TrainingPlanWindow
-        state={view({ plans: [makePlan({ currentAcceptedRevisionId: NEXT_REVISION_ID, currentContent: updatedContent() })], focus })}
+        state={view({ focus })}
         canExecute
         controls={controls()}
       />,
     );
-    expect(screen.getByTestId("training-receipt")).toHaveTextContent("已采纳调整 · 新修订已生效");
-    expect(screen.getAllByTestId("training-exercise-change").map((chip) => chip.textContent)).toEqual(["已调整", "新增"]);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "正在读取新的计划修订",
+    );
+    expect(
+      screen.queryByText("已采纳调整 · 新修订已生效"),
+    ).not.toBeInTheDocument();
+    rerender(
+      <TrainingPlanWindow
+        state={view({
+          plans: [
+            makePlan({
+              currentAcceptedRevisionId: NEXT_REVISION_ID,
+              currentContent: updatedContent(),
+            }),
+          ],
+          focus,
+        })}
+        canExecute
+        controls={controls()}
+      />,
+    );
+    expect(screen.getByTestId("training-receipt")).toHaveTextContent(
+      "已采纳调整 · 新修订已生效",
+    );
+    expect(
+      screen
+        .getAllByTestId("training-exercise-change")
+        .map((chip) => chip.textContent),
+    ).toEqual(["已调整", "新增"]);
   });
 });

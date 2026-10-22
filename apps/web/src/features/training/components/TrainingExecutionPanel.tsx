@@ -20,7 +20,10 @@ import {
   type TrainerSessionView,
 } from "@/features/body-canvas/model/trainerSession";
 import type { TrainingGateView } from "@/features/body-canvas/model/trainingPlans";
-import { useTrainerSession, type TrainerNotice } from "../hooks/useTrainerSession";
+import {
+  useTrainerSession,
+  type TrainerNotice,
+} from "../hooks/useTrainerSession";
 
 export interface TrainingExecutionPanelProps {
   planId: string;
@@ -40,19 +43,38 @@ export interface TrainingExecutionPanelProps {
  * A correction retracts one receipt after the user confirms it (the
  * original stays on record) and reopens its set to be recorded again.
  */
-export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionId, onOpenPlan }: TrainingExecutionPanelProps) {
-  const trainer = useTrainerSession({ planId, templateId, launchKey, sessionId });
+export function TrainingExecutionPanel({
+  planId,
+  templateId,
+  launchKey,
+  sessionId,
+  onOpenPlan,
+}: TrainingExecutionPanelProps) {
+  const trainer = useTrainerSession({
+    planId,
+    templateId,
+    launchKey,
+    sessionId,
+  });
   const view = trainer.view;
   // The stepper starts from the prescription for each new set and travels
   // with that set's Complete command.
   const current = view?.current ?? null;
-  const setKey = current ? `${view!.sessionId}:${current.exerciseIndex}:${current.setNumber}` : "none";
-  const [actual, setActual] = useState<{ key: string; value: number | null }>({ key: "none", value: null });
-  const actualValue = actual.key === setKey ? actual.value : (current?.defaultActual ?? null);
+  const setKey = current
+    ? `${view!.sessionId}:${current.exerciseIndex}:${current.setNumber}`
+    : "none";
+  const [actual, setActual] = useState<{ key: string; value: number | null }>({
+    key: "none",
+    value: null,
+  });
+  const actualValue =
+    actual.key === setKey ? actual.value : (current?.defaultActual ?? null);
   const changeActual = (value: number) => setActual({ key: setKey, value });
   // A correction is two explicit steps: pick the receipt, confirm the retraction.
   const [correction, setCorrection] = useState<string | null>(null);
-  const correctionTarget = correction ? (findReceipt(view, correction) ?? null) : null;
+  const correctionTarget = correction
+    ? (findReceipt(view, correction) ?? null)
+    : null;
   const confirmCorrection = () => {
     if (!correction) return;
     trainer.correct(correction);
@@ -69,6 +91,13 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
     body = (
       <Banner tone="bad" icon={<X size={16} aria-hidden="true" />} role="alert">
         训练记录暂时无法读取。
+        <button
+          type="button"
+          className="bc-text-button"
+          onClick={() => void trainer.refresh()}
+        >
+          重新读取
+        </button>
       </Banner>
     );
   } else if (trainer.loading || (!view && trainer.busy)) {
@@ -82,7 +111,11 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
     // Start was refused: say why, nothing was recorded.
     body = (
       <div className="bc-tp-scene" data-testid="trainer-not-started">
-        <Notices notice={trainer.notice} error={trainer.error} gate={trainer.gate} />
+        <Notices
+          notice={trainer.notice}
+          error={trainer.error}
+          gate={trainer.gate}
+        />
         <p className="bc-dx-note">训练没有开始，也没有记录任何内容。</p>
       </div>
     );
@@ -97,13 +130,31 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
     body = (
       <EndedScene
         view={view}
-        notices={<Notices notice={trainer.notice} error={trainer.error} gate={null} />}
-        form={writingFeedback ? <FeedbackForm text={feedbackText} onChange={setFeedbackText} disabled={trainer.busy} /> : null}
+        notices={
+          <Notices notice={trainer.notice} error={trainer.error} gate={null} />
+        }
+        form={
+          writingFeedback ? (
+            <FeedbackForm
+              text={feedbackText}
+              onChange={setFeedbackText}
+              disabled={trainer.busy}
+            />
+          ) : null
+        }
       />
     );
     footer = writingFeedback ? (
-      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
-        <button type="button" className="bc-dx-tonal" disabled={trainer.busy} onClick={() => setFeedbackOpen(false)}>
+      <footer
+        className="bc-window-footer bc-dx-footer"
+        data-testid="trainer-actions"
+      >
+        <button
+          type="button"
+          className="bc-dx-tonal"
+          disabled={trainer.busy}
+          onClick={() => setFeedbackOpen(false)}
+        >
           取消
         </button>
         <button
@@ -113,14 +164,29 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
           aria-busy={trainer.busy || undefined}
           onClick={() => trainer.sendFeedback(feedbackText)}
         >
-          {trainer.busy ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+          {trainer.busy ? (
+            <LoaderCircle
+              size={16}
+              className="animate-spin"
+              aria-hidden="true"
+            />
+          ) : (
+            <Check size={16} aria-hidden="true" />
+          )}
           发送
         </button>
       </footer>
     ) : (
-      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
+      <footer
+        className="bc-window-footer bc-dx-footer"
+        data-testid="trainer-actions"
+      >
         {view.feedback ? null : (
-          <button type="button" className="bc-dx-tonal" onClick={() => setFeedbackOpen(true)}>
+          <button
+            type="button"
+            className="bc-dx-tonal"
+            onClick={() => setFeedbackOpen(true)}
+          >
             说说感受
           </button>
         )}
@@ -133,19 +199,33 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
   } else if (view.state === "paused") {
     body = (
       <RecoveryScene view={view}>
-        <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
+        <Notices
+          notice={trainer.notice}
+          error={trainer.error}
+          gate={view.gate}
+        />
       </RecoveryScene>
     );
     footer = (
-      <footer className="bc-window-footer bc-dx-footer" data-testid="trainer-actions">
-        <button type="button" className="bc-dx-tonal bc-dx-early" disabled={trainer.busy} onClick={trainer.finish}>
+      <footer
+        className="bc-window-footer bc-dx-footer"
+        data-testid="trainer-actions"
+      >
+        <button
+          type="button"
+          className="bc-dx-tonal bc-dx-early"
+          disabled={trainer.busy}
+          onClick={trainer.finish}
+        >
           结束
         </button>
         <button
           type="button"
           className="bc-dx-primary"
           disabled={trainer.busy || !view.gate.permits}
-          aria-describedby={view.gate.permits ? undefined : "trainer-gate-reason"}
+          aria-describedby={
+            view.gate.permits ? undefined : "trainer-gate-reason"
+          }
           onClick={trainer.resume}
         >
           <Play size={16} aria-hidden="true" />
@@ -173,7 +253,9 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
         }
       />
     );
-    footer = <InProgressFooter view={view} trainer={trainer} actual={actualValue} />;
+    footer = (
+      <InProgressFooter view={view} trainer={trainer} actual={actualValue} />
+    );
   }
 
   return (
@@ -192,9 +274,13 @@ export function TrainingExecutionPanel({ planId, templateId, launchKey, sessionI
 }
 
 /** "臀桥 · 第 2 组 · 12 次" for an effective receipt shown in this session. */
-function findReceipt(view: TrainerSessionView | null, actionId: string): string | undefined {
+function findReceipt(
+  view: TrainerSessionView | null,
+  actionId: string,
+): string | undefined {
   for (const exercise of view?.exercises ?? []) {
-    if (exercise.exerciseSkipActionId === actionId) return `${exercise.name} · 跳过此动作`;
+    if (exercise.exerciseSkipActionId === actionId)
+      return `${exercise.name} · 跳过此动作`;
     const index = exercise.setActionIds.indexOf(actionId);
     if (index >= 0) {
       return `${exercise.name} · 第 ${index + 1} 组${exercise.sets[index] === "skipped" ? " · 跳过" : ""}`;
@@ -215,16 +301,32 @@ function CorrectionConfirm({
   onConfirm: () => void;
 }) {
   return (
-    <div className="bc-dx-banner bc-tp-banner bc-tr-correction" data-tone="warn" role="group" aria-label="更正记录" data-testid="trainer-correction">
+    <div
+      className="bc-dx-banner bc-tp-banner bc-tr-correction"
+      data-tone="warn"
+      role="group"
+      aria-label="更正记录"
+      data-testid="trainer-correction"
+    >
       <RotateCcw size={16} aria-hidden="true" />
       <span className="bc-dx-banner-text">
         撤回「{label}」后重新记录？原记录会保留在训练历史中。
       </span>
       <span className="bc-tr-correction-actions">
-        <button type="button" className="bc-dx-link" disabled={busy} onClick={onCancel}>
+        <button
+          type="button"
+          className="bc-dx-link"
+          disabled={busy}
+          onClick={onCancel}
+        >
           取消
         </button>
-        <button type="button" className="bc-dx-tonal" disabled={busy} onClick={onConfirm}>
+        <button
+          type="button"
+          className="bc-dx-tonal"
+          disabled={busy}
+          onClick={onConfirm}
+        >
           撤回重记
         </button>
       </span>
@@ -232,14 +334,26 @@ function CorrectionConfirm({
   );
 }
 
-function FeedbackForm({ text, onChange, disabled }: { text: string; onChange: (text: string) => void; disabled: boolean }) {
+function FeedbackForm({
+  text,
+  onChange,
+  disabled,
+}: {
+  text: string;
+  onChange: (text: string) => void;
+  disabled: boolean;
+}) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     ref.current?.focus();
     ref.current?.scrollIntoView?.({ block: "nearest" });
   }, []);
   return (
-    <section className="bc-dx-section bc-tr-feedback" aria-label="说说感受" data-testid="trainer-feedback-form">
+    <section
+      className="bc-dx-section bc-tr-feedback"
+      aria-label="说说感受"
+      data-testid="trainer-feedback-form"
+    >
       <label className="bc-dx-label" htmlFor="trainer-feedback-text">
         这次训练感觉怎么样？
       </label>
@@ -254,12 +368,26 @@ function FeedbackForm({ text, onChange, disabled }: { text: string; onChange: (t
         placeholder="比如哪里吃力、哪里有不适，用你自己的话说就好。"
         onChange={(event) => onChange(event.target.value)}
       />
-      <p className="bc-dx-note">会按原话保存，只用于提示你复盘计划，不会自动修改计划。</p>
+      <p className="bc-dx-note">
+        会按原话保存，只用于提示你复盘计划，不会自动修改计划。
+      </p>
     </section>
   );
 }
 
-function Chip({ tone, children, dot, icon, testId }: { tone: string; children: ReactNode; dot?: boolean; icon?: ReactNode; testId?: string }) {
+function Chip({
+  tone,
+  children,
+  dot,
+  icon,
+  testId,
+}: {
+  tone: string;
+  children: ReactNode;
+  dot?: boolean;
+  icon?: ReactNode;
+  testId?: string;
+}) {
   return (
     <span className="bc-dx-chip" data-tone={tone} data-testid={testId}>
       {dot ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
@@ -269,9 +397,26 @@ function Chip({ tone, children, dot, icon, testId }: { tone: string; children: R
   );
 }
 
-function Banner({ tone, icon, children, role, testId }: { tone: string; icon?: ReactNode; children: ReactNode; role?: "alert" | "status"; testId?: string }) {
+function Banner({
+  tone,
+  icon,
+  children,
+  role,
+  testId,
+}: {
+  tone: string;
+  icon?: ReactNode;
+  children: ReactNode;
+  role?: "alert" | "status";
+  testId?: string;
+}) {
   return (
-    <div className="bc-dx-banner bc-tp-banner" data-tone={tone} role={role} data-testid={testId}>
+    <div
+      className="bc-dx-banner bc-tp-banner"
+      data-tone={tone}
+      role={role}
+      data-testid={testId}
+    >
       {icon}
       <span className="bc-dx-banner-text">{children}</span>
     </div>
@@ -282,7 +427,13 @@ function GateChip({ gate }: { gate: TrainingGateView }) {
   return (
     <Chip
       tone={gate.tone}
-      icon={gate.permits ? <ShieldCheck size={12} aria-hidden="true" /> : <ShieldAlert size={12} aria-hidden="true" />}
+      icon={
+        gate.permits ? (
+          <ShieldCheck size={12} aria-hidden="true" />
+        ) : (
+          <ShieldAlert size={12} aria-hidden="true" />
+        )
+      }
       testId="trainer-gate"
     >
       {gate.permits ? "可以继续" : "暂不能继续"}
@@ -291,21 +442,43 @@ function GateChip({ gate }: { gate: TrainingGateView }) {
 }
 
 /** Why the last command did not count, and the gate's own reasons. */
-function Notices({ notice, error, gate }: { notice: TrainerNotice; error: string | null; gate: TrainingGateView | null }) {
+function Notices({
+  notice,
+  error,
+  gate,
+}: {
+  notice: TrainerNotice;
+  error: string | null;
+  gate: TrainingGateView | null;
+}) {
   return (
     <>
       {notice === "safety_changed" ? (
-        <Banner tone="warn" icon={<ShieldAlert size={16} aria-hidden="true" />} role="alert" testId="trainer-safety-changed">
+        <Banner
+          tone="warn"
+          icon={<ShieldAlert size={16} aria-hidden="true" />}
+          role="alert"
+          testId="trainer-safety-changed"
+        >
           安全状态刚刚更新，这一步没有记录。请看一下当前提醒，再确认一次。
         </Banner>
       ) : null}
       {notice === "changed" ? (
-        <Banner tone="info" icon={<CircleHelp size={16} aria-hidden="true" />} role="status" testId="trainer-changed">
+        <Banner
+          tone="info"
+          icon={<CircleHelp size={16} aria-hidden="true" />}
+          role="status"
+          testId="trainer-changed"
+        >
           训练记录已在别处更新，已重新读取。
         </Banner>
       ) : null}
       {error ? (
-        <Banner tone="bad" icon={<X size={16} aria-hidden="true" />} role="alert">
+        <Banner
+          tone="bad"
+          icon={<X size={16} aria-hidden="true" />}
+          role="alert"
+        >
           {error}
         </Banner>
       ) : null}
@@ -327,7 +500,9 @@ function Notices({ notice, error, gate }: { notice: TrainerNotice; error: string
 }
 
 function ProgressBar({ exercises }: { exercises: TrainerExerciseView[] }) {
-  const done = exercises.filter((exercise) => exercise.progress === "done").length;
+  const done = exercises.filter(
+    (exercise) => exercise.progress === "done",
+  ).length;
   return (
     <div
       className="bc-tr-progress"
@@ -348,12 +523,19 @@ function StatusRow({ view }: { view: TrainerSessionView }) {
   return (
     <div className="bc-tr-status">
       <div className="bc-dx-status">
-        <Chip tone={view.state === "paused" ? "warn" : "ok"} dot testId="trainer-state">
+        <Chip
+          tone={view.state === "paused" ? "warn" : "ok"}
+          dot
+          testId="trainer-state"
+        >
           {view.state === "paused" ? "已暂停" : "进行中"}
         </Chip>
         <GateChip gate={view.gate} />
       </div>
-      <span className="bc-tr-clock" aria-label={`已训练 ${formatClock(view.elapsedSeconds)}`}>
+      <span
+        className="bc-tr-clock"
+        aria-label={`已训练 ${formatClock(view.elapsedSeconds)}`}
+      >
         {view.state === "paused" ? "已计时 " : ""}
         {formatClock(view.elapsedSeconds)}
       </span>
@@ -389,34 +571,60 @@ function InProgressScene({
   // rest is over the next set is In progress without it; a receipt with no
   // rest stays until the next action, naming its exercise when that moved on.
   const last = view.last;
-  const showLast = last !== null && (resting || !(last.kind === "performed" && last.restSeconds));
-  const lastElsewhere = last !== null && exercise !== null && last.planExerciseId !== exercise.planExerciseId;
+  const showLast =
+    last !== null &&
+    (resting || !(last.kind === "performed" && last.restSeconds));
+  const lastElsewhere =
+    last !== null &&
+    exercise !== null &&
+    last.planExerciseId !== exercise.planExerciseId;
   const correctable = view.canRecord && !trainer.busy;
 
   return (
-    <div className="bc-tp-scene" data-testid={resting ? "trainer-set-recorded" : "trainer-in-progress"}>
+    <div
+      className="bc-tp-scene"
+      data-testid={resting ? "trainer-set-recorded" : "trainer-in-progress"}
+    >
       <StatusRow view={view} />
       <ProgressBar exercises={view.exercises} />
       <Notices notice={trainer.notice} error={trainer.error} gate={view.gate} />
       {correction}
       {showLast && last ? (
         last.kind === "corrected" ? (
-          <Banner tone="info" icon={<RotateCcw size={16} aria-hidden="true" />} role="status" testId="trainer-last-receipt">
-            {last.setNumber ? `${lastElsewhere ? `${last.name} · ` : ""}第 ${last.setNumber} 组` : last.name}
+          <Banner
+            tone="info"
+            icon={<RotateCcw size={16} aria-hidden="true" />}
+            role="status"
+            testId="trainer-last-receipt"
+          >
+            {last.setNumber
+              ? `${lastElsewhere ? `${last.name} · ` : ""}第 ${last.setNumber} 组`
+              : last.name}
             已撤回 · 请重新记录
           </Banner>
         ) : (
-          <div className="bc-dx-banner bc-tp-banner" data-tone="info" role="status" data-testid="trainer-last-receipt">
+          <div
+            className="bc-dx-banner bc-tp-banner"
+            data-tone="info"
+            role="status"
+            data-testid="trainer-last-receipt"
+          >
             <Check size={16} aria-hidden="true" />
             <span className="bc-dx-banner-text">
               {lastElsewhere && last.setNumber ? `${last.name} · ` : ""}
               {last.setNumber ? `第 ${last.setNumber} 组` : last.name}
               {last.kind === "skipped" ? "已跳过" : "已记录"}
               {last.actualReps ? ` · ${last.actualReps} 次` : ""}
-              {last.actualDurationSeconds ? ` · ${last.actualDurationSeconds} 秒` : ""}
+              {last.actualDurationSeconds
+                ? ` · ${last.actualDurationSeconds} 秒`
+                : ""}
             </span>
             {correctable ? (
-              <button type="button" className="bc-dx-link bc-tr-correct" onClick={() => onCorrect(last.actionId)}>
+              <button
+                type="button"
+                className="bc-dx-link bc-tr-correct"
+                onClick={() => onCorrect(last.actionId)}
+              >
                 更正
               </button>
             ) : null}
@@ -424,7 +632,11 @@ function InProgressScene({
         )
       ) : null}
       {exercise && current ? (
-        <section className="bc-tr-card" aria-label="当前动作" data-testid="trainer-current">
+        <section
+          className="bc-tr-card"
+          aria-label="当前动作"
+          data-testid="trainer-current"
+        >
           <div className="bc-tr-card-head">
             <span className="bc-tr-card-stage">
               {exercise.stageLabel} · {exercise.position} / {exercise.stageSize}
@@ -447,7 +659,9 @@ function InProgressScene({
               const actionId = exercise.setActionIds[index];
               const label = (
                 <>
-                  {state !== "pending" ? <span className="bc-dx-chip-dot" aria-hidden="true" /> : null}
+                  {state !== "pending" ? (
+                    <span className="bc-dx-chip-dot" aria-hidden="true" />
+                  ) : null}
                   {setLabel(state, index)}
                 </>
               );
@@ -455,12 +669,21 @@ function InProgressScene({
                 <li
                   key={index}
                   data-set-state={state}
-                  data-current={index + 1 === current.setNumber ? "true" : undefined}
-                  aria-current={index + 1 === current.setNumber ? "step" : undefined}
+                  data-current={
+                    index + 1 === current.setNumber ? "true" : undefined
+                  }
+                  aria-current={
+                    index + 1 === current.setNumber ? "step" : undefined
+                  }
                 >
                   {/* A recorded set opens its correction (confirmed in a second step). */}
                   {actionId && correctable ? (
-                    <button type="button" className="bc-tr-set-button" aria-label={`更正第 ${index + 1} 组`} onClick={() => onCorrect(actionId)}>
+                    <button
+                      type="button"
+                      className="bc-tr-set-button"
+                      aria-label={`更正第 ${index + 1} 组`}
+                      onClick={() => onCorrect(actionId)}
+                    >
                       {label}
                     </button>
                   ) : (
@@ -472,10 +695,16 @@ function InProgressScene({
           </ol>
           <p className="bc-tr-target">
             目标 {exercise.prescription.replace(/^\d+ 组 × /, "")}
-            {exercise.restSeconds && resting ? ` · 休息 ${exercise.restSeconds} 秒` : ""}
+            {exercise.restSeconds && resting
+              ? ` · 休息 ${exercise.restSeconds} 秒`
+              : ""}
           </p>
           {resting ? (
-            <p className="bc-tr-rest" data-testid="trainer-rest" aria-live="off">
+            <p
+              className="bc-tr-rest"
+              data-testid="trainer-rest"
+              aria-live="off"
+            >
               <span className="bc-tr-rest-chip">
                 <Clock3 size={12} aria-hidden="true" />
                 休息中
@@ -493,7 +722,12 @@ function InProgressScene({
               >
                 <Minus size={18} aria-hidden="true" />
               </button>
-              <output className="bc-tr-actual" aria-label={current.actualUnit === "seconds" ? "实际秒数" : "实际次数"}>
+              <output
+                className="bc-tr-actual"
+                aria-label={
+                  current.actualUnit === "seconds" ? "实际秒数" : "实际次数"
+                }
+              >
                 {actual}
               </output>
               <button
@@ -505,7 +739,9 @@ function InProgressScene({
               >
                 <Plus size={18} aria-hidden="true" />
               </button>
-              <span className="bc-tr-actual-label">{current.actualUnit === "seconds" ? "实际秒数" : "实际次数"}</span>
+              <span className="bc-tr-actual-label">
+                {current.actualUnit === "seconds" ? "实际秒数" : "实际次数"}
+              </span>
             </div>
           ) : null}
         </section>
@@ -538,21 +774,45 @@ function InProgressFooter({
   const resting = view.restRemainingSeconds > 0;
   const blocked = !view.canRecord;
   return (
-    <footer className="bc-window-footer bc-dx-footer bc-tr-footer" data-testid="trainer-actions">
-      <button type="button" className="bc-dx-icon-button bc-tr-pause" aria-label="暂停训练" disabled={trainer.busy} onClick={trainer.pause}>
+    <footer
+      className="bc-window-footer bc-dx-footer bc-tr-footer"
+      data-testid="trainer-actions"
+    >
+      <button
+        type="button"
+        className="bc-dx-icon-button bc-tr-pause"
+        aria-label="暂停训练"
+        disabled={trainer.busy}
+        onClick={trainer.pause}
+      >
         <Pause size={18} aria-hidden="true" />
       </button>
       {view.allRecorded || resting || blocked ? (
-        <button type="button" className="bc-dx-link bc-dx-early" disabled={trainer.busy} onClick={trainer.finish}>
+        <button
+          type="button"
+          className="bc-dx-link bc-dx-early"
+          disabled={trainer.busy}
+          onClick={trainer.finish}
+        >
           结束
         </button>
       ) : (
-        <button type="button" className="bc-dx-link bc-dx-early" disabled={trainer.busy} onClick={trainer.skip}>
+        <button
+          type="button"
+          className="bc-dx-link bc-dx-early"
+          disabled={trainer.busy}
+          onClick={trainer.skip}
+        >
           跳过本组
         </button>
       )}
       {view.allRecorded ? (
-        <button type="button" className="bc-dx-primary" disabled={trainer.busy} onClick={trainer.finish}>
+        <button
+          type="button"
+          className="bc-dx-primary"
+          disabled={trainer.busy}
+          onClick={trainer.finish}
+        >
           <Check size={16} aria-hidden="true" />
           结束训练
         </button>
@@ -562,10 +822,20 @@ function InProgressFooter({
           className="bc-dx-primary"
           disabled={trainer.busy || blocked}
           aria-busy={trainer.busy || undefined}
-          aria-describedby={view.gate.reasons.length ? "trainer-gate-reason" : undefined}
+          aria-describedby={
+            view.gate.reasons.length ? "trainer-gate-reason" : undefined
+          }
           onClick={() => trainer.complete(actual)}
         >
-          {trainer.busy ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+          {trainer.busy ? (
+            <LoaderCircle
+              size={16}
+              className="animate-spin"
+              aria-hidden="true"
+            />
+          ) : (
+            <Check size={16} aria-hidden="true" />
+          )}
           完成本组
         </button>
       )}
@@ -579,13 +849,29 @@ function RecordedList({ view }: { view: TrainerSessionView }) {
       <h4 className="bc-dx-label">已记录</h4>
       <ul className="bc-dx-rows" data-testid="trainer-recorded">
         {view.exercises.map((exercise) => (
-          <li key={exercise.planExerciseId} className="bc-dx-row bc-tr-recorded" data-progress={exercise.progress}>
+          <li
+            key={exercise.planExerciseId}
+            className="bc-dx-row bc-tr-recorded"
+            data-progress={exercise.progress}
+          >
             <span
               className="bc-dx-mark"
-              data-mark={exercise.progress === "done" ? "support" : exercise.progress === "partial" ? "gap" : "context"}
+              data-mark={
+                exercise.progress === "done"
+                  ? "support"
+                  : exercise.progress === "partial"
+                    ? "gap"
+                    : "context"
+              }
               aria-hidden="true"
             >
-              {exercise.progress === "done" ? <Check size={13} /> : exercise.progress === "partial" ? <CircleHelp size={13} /> : <Minus size={13} />}
+              {exercise.progress === "done" ? (
+                <Check size={13} />
+              ) : exercise.progress === "partial" ? (
+                <CircleHelp size={13} />
+              ) : (
+                <Minus size={13} />
+              )}
             </span>
             <span className="bc-dx-row-text">
               <span className="bc-dx-row-statement">{exercise.name}</span>
@@ -600,8 +886,16 @@ function RecordedList({ view }: { view: TrainerSessionView }) {
   );
 }
 
-function RecoveryScene({ view, children }: { view: TrainerSessionView; children: ReactNode }) {
-  const exercise = view.current ? view.exercises[view.current.exerciseIndex] : null;
+function RecoveryScene({
+  view,
+  children,
+}: {
+  view: TrainerSessionView;
+  children: ReactNode;
+}) {
+  const exercise = view.current
+    ? view.exercises[view.current.exerciseIndex]
+    : null;
   return (
     <div className="bc-tp-scene" data-testid="trainer-recovery">
       <StatusRow view={view} />
@@ -620,7 +914,15 @@ function RecoveryScene({ view, children }: { view: TrainerSessionView; children:
   );
 }
 
-function EndedScene({ view, notices, form }: { view: TrainerSessionView; notices: ReactNode; form: ReactNode }) {
+function EndedScene({
+  view,
+  notices,
+  form,
+}: {
+  view: TrainerSessionView;
+  notices: ReactNode;
+  form: ReactNode;
+}) {
   const minutes = Math.max(1, Math.round(view.elapsedSeconds / 60));
   return (
     <div className="bc-tp-scene" data-testid="trainer-ended">
@@ -630,16 +932,25 @@ function EndedScene({ view, notices, form }: { view: TrainerSessionView; notices
         </span>
         <p className="bc-dx-state-title">训练已结束</p>
         <p className="bc-dx-state-text">
-          {view.endedReason === "finished" ? "按计划完成" : "提前结束"} · {minutes} 分钟
+          {view.endedReason === "finished" ? "按计划完成" : "提前结束"} ·{" "}
+          {minutes} 分钟
         </p>
       </div>
       {notices}
       <RecordedList view={view} />
       {view.feedback ? (
-        <section className="bc-dx-section bc-tr-feedback" aria-label="你的感受" data-testid="trainer-feedback">
+        <section
+          className="bc-dx-section bc-tr-feedback"
+          aria-label="你的感受"
+          data-testid="trainer-feedback"
+        >
           <h4 className="bc-dx-label">你的感受</h4>
-          <blockquote className="bc-tr-feedback-text">{view.feedback.text}</blockquote>
-          <p className="bc-dx-note">已按原话记录。训练计划会提示你据此复盘，不会自动修改计划。</p>
+          <blockquote className="bc-tr-feedback-text">
+            {view.feedback.text}
+          </blockquote>
+          <p className="bc-dx-note">
+            已按原话记录。训练计划会提示你据此复盘，不会自动修改计划。
+          </p>
         </section>
       ) : (
         form

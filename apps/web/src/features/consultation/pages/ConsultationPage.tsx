@@ -1,15 +1,12 @@
+import { ConsultationPageLayout } from "./ConsultationPageLayout";
 import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
-import {
-  Suspense,
-  lazy,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
+import {
+  ConsultationChatSurface,
+  AssistantChatPanel,
+  loadAssistantChatPanel,
+} from "./ConsultationChatSurface";
 import { useConversationQuery } from "../hooks/useConversationQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
@@ -18,11 +15,8 @@ import {
   buildActiveTurnSeedFromRuntimeEvents,
   toInitialThreadTimeline,
 } from "../runtime/threadMessageMapping";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { BodyCanvasWorkspace } from "@/features/body-canvas/components/BodyCanvasWorkspace";
 import type { MotionId } from "@/features/body-canvas/model/bodyCanvas";
-import { retryDynamicImport } from "@/lib/retryDynamicImport";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { useHealthWorkspaceQuery } from "@/features/workspace/hooks/useHealthWorkspaceQuery";
 import { useBodyExplorerWorkspace } from "@/features/body-explorer";
@@ -37,22 +31,6 @@ import { groupChatHistory } from "@/features/body-canvas/model/chatHistory";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const loadAssistantChatPanel = () =>
-  retryDynamicImport(() => import("../components/AssistantChatPanel")).then(
-    (module) => ({
-      default: module.AssistantChatPanel,
-    }),
-  );
-const AssistantChatPanel = lazy(loadAssistantChatPanel);
-
-// The 身体档案 drawer (files, source removal, erasure) opens on demand, so it
-// is fetched on first open and stays out of the consultation chunk.
-const ProfileDrawer = lazy(() =>
-  retryDynamicImport(
-    () => import("@/features/profile/components/profile/ProfileDrawer"),
-  ).then((module) => ({ default: module.ProfileDrawer })),
-);
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -304,93 +282,56 @@ export function ConsultationPage() {
     : messages;
 
   const chatPanel = (
-    <div className="chat-thread h-full min-h-0 bg-[#171717]">
-      <div className="chat-thread flex h-full min-h-0 flex-col overflow-hidden bg-[#171717]">
-        {hasThreadError || hasThreadSwitchError ? (
-          <div className="flex h-full items-center justify-center p-6">
-            <Card className="chat-status-card max-w-md border border-white/[0.08] bg-white/[0.035] p-8 text-center text-[#ececec] shadow-none">
-              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-destructive/20 bg-destructive/10 text-destructive">
-                <svg
-                  className="size-7"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <p className="chat-status-question mb-2 text-lg font-semibold text-white/90">
-                暂时无法加载对话
-              </p>
-              <p className="chat-muted mb-6 text-sm text-white/45">
-                BodySense 的对话内容暂时无法同步，请稍后重试。
-              </p>
-              <Button onClick={threadActions.retryThread} className="w-full">
-                重新加载
-              </Button>
-            </Card>
-          </div>
-        ) : isThreadLoading ? (
-          <ChatPanelSkeleton />
-        ) : (
-          <div className="relative flex h-full min-h-0 flex-col">
-            <Suspense fallback={<ChatPanelSkeleton />}>
-              <AssistantChatPanel
-                key={chatSessionKey}
-                conversationId={chatConversationId}
-                onConversationCreated={(newId) => {
-                  console.debug(
-                    "[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行",
-                    {
-                      newId,
-                      currentRouteId: id,
-                      currentActiveRef: activeConversationIdRef.current,
-                    },
-                  );
-                  justCreatedRef.current = newId;
-                  activeConversationIdRef.current = newId;
+    <ConsultationChatSurface
+      error={hasThreadError || hasThreadSwitchError}
+      loading={isThreadLoading}
+      switching={isThreadSwitching}
+      onRetry={threadActions.retryThread}
+      panel={
+        <AssistantChatPanel
+          key={chatSessionKey}
+          conversationId={chatConversationId}
+          onConversationCreated={(newId) => {
+            console.debug(
+              "[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行",
+              {
+                newId,
+                currentRouteId: id,
+                currentActiveRef: activeConversationIdRef.current,
+              },
+            );
+            justCreatedRef.current = newId;
+            activeConversationIdRef.current = newId;
 
-                  threadActions.registerConversation(newId);
+            threadActions.registerConversation(newId);
 
-                  navigateToConversation(newId);
-                }}
-                initialMessages={toInitialThreadTimeline(
-                  historicalMessages,
-                  interactionHistory,
-                )}
-                initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
-                initialExtractedInfo={extractedInfo}
-                onExtractedInfoUpdate={threadActions.updateExtractedInfo}
-                onPhaseChange={threadActions.updatePhase}
-                onMessagePersisted={threadActions.reconcileMessageId}
-                spatialContext={chatSpatialContext}
-                onClearSpatialContext={() => setChatSpatialContext(null)}
-                composerFocusKey={composerFocusKey}
-                onStreamFinished={() => {
-                  const terminalConversationId =
-                    activeConversationIdRef.current ??
-                    routeConversationId ??
-                    displayedConversationId;
-                  if (chatSessionKey === "new" && terminalConversationId) {
-                    setPendingTerminalRemountId(terminalConversationId);
-                  }
-                  threadActions.finishStream();
-                }}
-              />
-            </Suspense>
-            {isThreadSwitching ? (
-              <PanelTransitionOverlay label="身体信息正在更新" />
-            ) : null}
-          </div>
-        )}
-      </div>
-    </div>
+            navigateToConversation(newId);
+          }}
+          initialMessages={toInitialThreadTimeline(
+            historicalMessages,
+            interactionHistory,
+          )}
+          initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
+          initialExtractedInfo={extractedInfo}
+          onExtractedInfoUpdate={threadActions.updateExtractedInfo}
+          onPhaseChange={threadActions.updatePhase}
+          onMessagePersisted={threadActions.reconcileMessageId}
+          spatialContext={chatSpatialContext}
+          onClearSpatialContext={() => setChatSpatialContext(null)}
+          composerFocusKey={composerFocusKey}
+          onStreamFinished={() => {
+            const terminalConversationId =
+              activeConversationIdRef.current ??
+              routeConversationId ??
+              displayedConversationId;
+            if (chatSessionKey === "new" && terminalConversationId) {
+              setPendingTerminalRemountId(terminalConversationId);
+            }
+            threadActions.finishStream();
+          }}
+        />
+      }
+    />
   );
 
   // The health workspace is an independent read model. A slow or failed chat
@@ -399,7 +340,11 @@ export function ConsultationPage() {
   const workspaceUnavailable = workspaceQuery.isError && !workspace;
 
   return (
-    <div className="h-dvh overflow-hidden text-foreground">
+    <ConsultationPageLayout
+      profileDrawerMounted={profileDrawerMounted}
+      isProfileOpen={isProfileOpen}
+      onProfileOpenChange={setIsProfileOpen}
+    >
       <BodyCanvasWorkspace
         bodyState={bodyState}
         workspace={workspace}
@@ -433,27 +378,6 @@ export function ConsultationPage() {
           threadActions.retryThread();
         }}
       />
-      {profileDrawerMounted ? (
-        <Suspense fallback={null}>
-          <ProfileDrawer open={isProfileOpen} onOpenChange={setIsProfileOpen} />
-        </Suspense>
-      ) : null}
-    </div>
-  );
-}
-
-function PanelTransitionOverlay({ label }: { label: string }) {
-  return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/72 backdrop-blur-[2px]">
-      <div className="rounded-2xl border border-border bg-popover/95 px-5 py-4 text-center shadow-sm">
-        <div className="mx-auto size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-        <p className="mt-3 text-sm font-semibold text-foreground">
-          正在同步 BodySense
-        </p>
-        <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
-          {label}
-        </p>
-      </div>
-    </div>
+    </ConsultationPageLayout>
   );
 }

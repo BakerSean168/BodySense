@@ -43,7 +43,8 @@ function decisionMessage(error: unknown): string {
       return "建议内容与显示的不一致，已重新读取，请再核对一次。";
     if (error.status === 409 && error.code === "PROPOSAL_NOT_PENDING")
       return "这条建议已经处理过，已重新读取。";
-    if (error.status === 503) return "暂时无法核对当前身体与安全情况，计划保持原样，请稍后再试。";
+    if (error.status === 503)
+      return "暂时无法核对当前身体与安全情况，计划保持原样，请稍后再试。";
   }
   return errorMessage(error, "这次决定没有记录，计划保持原样。");
 }
@@ -91,7 +92,9 @@ export function useTrainingPlanActions({
   });
 
   const [focus, setFocus] = useState<TrainingFocus>({ kind: "plan" });
-  const [refused, setRefused] = useState<Record<string, ProposalExpiredReason>>({});
+  const [refused, setRefused] = useState<Record<string, ProposalExpiredReason>>(
+    {},
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<"rejected" | null>(null);
@@ -110,10 +113,19 @@ export function useTrainingPlanActions({
       focus,
       refused,
       loading,
-      error: loadError,
+      error: (plans.data?.length ?? 0) > 0 ? null : loadError,
       now: new Date(),
     }),
-    [plans.data, proposals.data, selectedPlanId, selectedTemplateId, focus, refused, loading, loadError],
+    [
+      plans.data,
+      proposals.data,
+      selectedPlanId,
+      selectedTemplateId,
+      focus,
+      refused,
+      loading,
+      loadError,
+    ],
   );
   const selection = useMemo(
     () =>
@@ -135,7 +147,9 @@ export function useTrainingPlanActions({
   const decide = useCallback(
     async (proposalId: string, decision: "accept" | "reject") => {
       if (inFlight.current) return;
-      const record = proposals.data?.find((item) => item.proposalId === proposalId);
+      const record = proposals.data?.find(
+        (item) => item.proposalId === proposalId,
+      );
       if (!record) return;
       const key = `${proposalId}:${decision}:${record.contentFingerprint}`;
       let identity = attempts.current.get(key);
@@ -146,7 +160,8 @@ export function useTrainingPlanActions({
       // Snapshot what the user was shown, before the refetch replaces it.
       const base =
         record.kind === "update"
-          ? (plans.data?.find((plan) => plan.planId === record.planId)?.currentContent ?? null)
+          ? (plans.data?.find((plan) => plan.planId === record.planId)
+              ?.currentContent ?? null)
           : null;
       inFlight.current = true;
       setBusy(true);
@@ -154,7 +169,8 @@ export function useTrainingPlanActions({
       try {
         if (decision === "accept") {
           const receipt = await trainingApi.acceptProposal(record, identity);
-          if (receipt.proposalId !== proposalId) throw new ReceiptMismatchError();
+          if (receipt.proposalId !== proposalId)
+            throw new ReceiptMismatchError();
           setFocus({
             kind: "updated",
             receipt,
@@ -165,7 +181,8 @@ export function useTrainingPlanActions({
           onPlanAccepted?.(receipt.planId);
         } else {
           const receipt = await trainingApi.rejectProposal(record, identity);
-          if (receipt.proposalId !== proposalId) throw new ReceiptMismatchError();
+          if (receipt.proposalId !== proposalId)
+            throw new ReceiptMismatchError();
           setFocus({ kind: "plan" });
           setNotice("rejected");
         }
@@ -173,7 +190,9 @@ export function useTrainingPlanActions({
         await refresh();
       } catch (caught) {
         const reason =
-          caught instanceof ApiRequestError && caught.status === 409 && caught.code
+          caught instanceof ApiRequestError &&
+          caught.status === 409 &&
+          caught.code
             ? REFUSED_REASONS[caught.code]
             : undefined;
         if (reason) {
@@ -195,9 +214,12 @@ export function useTrainingPlanActions({
   return {
     state,
     selection,
-    busy,
+    busy:
+      busy || Boolean(loadError) || plans.isFetching || proposals.isFetching,
     error,
     notice,
+    refresh,
+    partialLoadError: (plans.data?.length ?? 0) > 0 ? loadError : null,
     openProposal: (proposal: Pick<PlanProposalRecord, "proposalId">) => {
       setError(null);
       setNotice(null);

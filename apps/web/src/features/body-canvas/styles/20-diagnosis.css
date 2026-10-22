@@ -1,0 +1,574 @@
+/* UI-DX-001: Diagnosis window, matched to the Penpot "03 App" Diagnosis boards
+   (Confirm first/second, First rejected, Receipt, Update receipt, No changes,
+   Safety stopped, Current, Empty, Analyzing). Proposals are AI output; only
+   receipt-backed scenes use the adopted (ok) tone. */
+.bc-dx {
+  --dx-ink: var(--bc-ink);
+  --dx-secondary: #5f7366;
+  --dx-meta: #7c8c81;
+  --dx-label: #8a988e;
+  --dx-desc: #6b7c71;
+  --dx-card-line: #d9e4d9;
+  --dx-soft: #f6f8f5;
+  --dx-ok-bg: #e7f3ec;
+  --dx-ok: #23704f;
+  --dx-idle-bg: #eef2ed;
+  --dx-idle: #7c8c81;
+  --dx-neutral-bg: #f1f4f1;
+  --dx-neutral: #3f5146;
+  --dx-warn-bg: #fbf3e4;
+  --dx-warn: #94622a;
+  --dx-bad-bg: #f8e8e5;
+  --dx-bad: #9a3f35;
+  --dx-info-bg: #eef5f0;
+  --dx-info: #2c694f;
+}
+.body-canvas-theme.bc-dark .bc-dx {
+  --dx-secondary: var(--bc-secondary);
+  --dx-meta: var(--bc-muted);
+  --dx-label: var(--bc-muted);
+  --dx-desc: var(--bc-muted);
+  --dx-card-line: var(--bc-line);
+  --dx-soft: var(--bc-subtle);
+  --dx-ok-bg: var(--bc-primary-soft);
+  --dx-ok: var(--bc-primary);
+  --dx-idle-bg: var(--bc-subtle);
+  --dx-idle: var(--bc-muted);
+  --dx-neutral-bg: var(--bc-subtle);
+  --dx-neutral: var(--bc-secondary);
+  --dx-warn-bg: var(--bc-warning-soft);
+  --dx-warn: var(--bc-warning);
+  --dx-bad-bg: var(--bc-danger-soft);
+  --dx-bad: var(--bc-danger);
+  --dx-info-bg: var(--bc-primary-soft);
+  --dx-info: var(--bc-primary);
+}
+.bc-dx .bc-window-body {
+  min-width: 0;
+  padding: 20px 24px 24px;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+  color: var(--dx-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Chips: Status / ok · idle, Chip / Icon AI, Chip / Neutral. */
+.bc-dx-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--dx-neutral-bg);
+  color: var(--dx-neutral);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.bc-dx-chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.bc-dx-chip[data-tone="ok"] {
+  background: var(--dx-ok-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-chip[data-tone="idle"] {
+  background: var(--dx-idle-bg);
+  color: var(--dx-idle);
+  font-weight: 500;
+}
+.bc-dx-chip[data-tone="idle"] .bc-dx-chip-dot {
+  background: color-mix(in srgb, currentColor 70%, transparent);
+}
+.bc-dx-chip[data-tone="ai"],
+.bc-dx-chip[data-tone="warn"] {
+  background: var(--dx-warn-bg);
+  color: var(--dx-warn);
+}
+.bc-dx-chip[data-tone="bad"] {
+  background: var(--dx-bad-bg);
+  color: var(--dx-bad);
+}
+.bc-dx-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Marks: Support ✓ · Context – · Gap ? · Counter ×. */
+.bc-dx-mark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--dx-ok-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-mark[data-mark="context"] {
+  background: var(--dx-idle-bg);
+  color: var(--dx-secondary);
+}
+.bc-dx-mark[data-mark="gap"] {
+  background: transparent;
+  color: #b27e25;
+}
+.bc-dx-mark[data-mark="counter"] {
+  background: var(--dx-bad-bg);
+  color: var(--dx-bad);
+}
+.bc-dx-rows {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-dx-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.bc-dx-row-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 1px;
+  overflow-wrap: anywhere;
+}
+.bc-dx-row-statement {
+  color: var(--dx-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bc-dx-row[data-strong] .bc-dx-row-statement {
+  color: var(--dx-bad);
+  font-weight: 600;
+}
+.bc-dx-row-meta {
+  color: var(--dx-meta);
+  font-size: 12px;
+}
+.bc-dx-gap {
+  color: var(--dx-warn);
+  font-size: 13px;
+}
+.bc-dx-section {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+.bc-dx-label {
+  margin: 0;
+  color: var(--dx-meta);
+  font-size: 12px;
+  font-weight: 500;
+}
+.bc-dx-note {
+  margin: 18px 0 0;
+  color: var(--dx-label);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Confirm first / second: status row, decided rows, one proposal card. */
+.bc-diagnosis-proposals {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.bc-diagnosis-proposal {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px 18px;
+  border: 1px solid var(--dx-card-line);
+  border-radius: 14px;
+  background: var(--bc-paper);
+}
+.bc-diagnosis-proposal[data-proposal-state="changed"] {
+  border-color: color-mix(in srgb, var(--dx-warn) 40%, var(--dx-card-line));
+}
+.bc-diagnosis-proposal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.bc-diagnosis-proposal-title {
+  min-width: 0;
+  margin: 0;
+  color: var(--dx-ink);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.bc-diagnosis-proposal .bc-dx-rows {
+  gap: 10px;
+}
+.bc-dx-decided .bc-dx-icon-button {
+  margin-left: auto;
+}
+.bc-dx-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dx-secondary);
+  cursor: pointer;
+}
+.bc-dx-icon-button:hover {
+  background: var(--dx-idle-bg);
+  color: var(--dx-ink);
+}
+.bc-dx-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.bc-dx-next-label {
+  color: var(--dx-label);
+  font-size: 12px;
+  font-weight: 600;
+}
+.bc-dx-next-name {
+  color: var(--dx-secondary);
+  font-size: 14px;
+}
+
+/* Banner: review prompt, error, Safety reason. */
+.bc-dx-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 8px 10px 14px;
+  border-radius: 12px;
+  background: var(--dx-warn-bg);
+  color: var(--dx-warn);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.bc-dx-banner[data-tone="bad"] {
+  background: var(--dx-bad-bg);
+  color: var(--dx-bad);
+}
+.bc-dx-banner[data-tone="bad"] .bc-dx-mark {
+  background: transparent;
+}
+.bc-dx-banner[data-tone="info"] {
+  background: var(--dx-info-bg);
+  color: var(--dx-info);
+  font-weight: 500;
+}
+.bc-dx-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bc-dx-text-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bc-paper) 70%, transparent);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Receipt / Update receipt / No changes / Safety stopped / Empty. */
+.bc-dx-outcome {
+  display: grid;
+  gap: 40px;
+  padding-top: 20px;
+}
+.bc-dx-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.bc-dx-state-halo {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--dx-idle-bg);
+  color: var(--dx-secondary);
+}
+.bc-dx-state[data-tone="ok"] .bc-dx-state-halo {
+  background: var(--dx-ok-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-state[data-tone="bad"] .bc-dx-state-halo {
+  background: var(--dx-bad-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-state-title {
+  margin: 0;
+  color: var(--dx-ink);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.bc-dx-state-text {
+  margin: -4px 0 0;
+  color: var(--dx-desc);
+  font-size: 14px;
+}
+.bc-dx-outcome[data-outcome="closed_without_change"] {
+  padding-top: 92px;
+}
+.bc-dx-outcome[data-testid="diagnosis-empty"] {
+  padding: 132px 0 0;
+}
+.bc-dx-receipt {
+  display: grid;
+  gap: 20px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: var(--dx-soft);
+}
+.bc-dx-receipt-list {
+  display: grid;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-dx-receipt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.bc-dx-receipt-row .bc-dx-mark {
+  background: transparent;
+}
+.bc-dx-receipt-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--dx-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.bc-dx-receipt-row .bc-dx-chip[data-tone="neutral"] {
+  background: transparent;
+  color: var(--dx-neutral);
+}
+
+/* Current: adopted ConditionEntry. */
+.bc-dx .bc-condition {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.bc-dx .bc-condition > .bc-dx-section:first-of-type {
+  margin-top: 26px;
+}
+
+/* Analyzing-style loading skeleton. */
+.bc-dx-loading .bc-dx-section:first-child {
+  margin-top: 4px;
+}
+
+/* Footer: Button / Tonal, Button / Link, Button / Primary check. */
+.bc-dx .bc-dx-footer {
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  min-height: 80px;
+  padding: 20px 24px;
+  border-top-color: var(--bc-line);
+}
+.bc-dx-footer > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bc-dx-footer > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.bc-dx-footer > button:focus-visible,
+.bc-dx-icon-button:focus-visible,
+.bc-dx-text-button:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-dx-tonal {
+  min-width: 92px;
+  background: var(--dx-neutral-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-tonal:hover:not(:disabled) {
+  background: var(--dx-idle-bg);
+}
+.bc-dx-link {
+  background: transparent;
+  color: var(--dx-ok);
+}
+.bc-dx-early {
+  margin-right: auto;
+  padding-left: 0;
+  color: var(--dx-secondary);
+  font-weight: 500;
+}
+.bc-dx-primary {
+  min-width: 86px;
+  background: #2f6b4f;
+  color: #fff;
+}
+.bc-dx-primary:hover:not(:disabled) {
+  background: #275c43;
+}
+.body-canvas-theme.bc-dark .bc-dx-primary {
+  background: var(--bc-primary);
+  color: #13201a;
+}
+
+/* 390px Mobile: same scenes in the 358px sheet, 44px touch targets. */
+@media (max-width: 760px) {
+  .bc-dx .bc-window-body {
+    padding: 16px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .bc-dx .bc-dx-footer {
+    min-height: 0;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  }
+  .bc-dx-footer > button {
+    min-height: 44px;
+  }
+  .bc-dx-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .bc-dx-text-button {
+    min-height: 44px;
+  }
+  .bc-dx-outcome[data-outcome="closed_without_change"] {
+    padding-top: 64px;
+  }
+  .bc-dx-outcome[data-testid="diagnosis-empty"] {
+    padding-top: 96px;
+  }
+}
+/* Penpot "Window / Title Chat": 今天 ▾ is a soft pill, not a bordered field. */
+.bc-chat-context .bc-window-select-wrap {
+  border-color: transparent;
+  background: var(--bc-window-control, var(--bc-subtle));
+}
+.bc-chat-context .bc-window-select-wrap:hover {
+  border-color: var(--bc-line);
+}
+.bc-chat-context .bc-window-context-select {
+  min-height: 36px;
+  padding: 0 32px 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.bc-chat-context .bc-window-select-wrap > svg {
+  right: 10px;
+  color: var(--bc-ink);
+}
+.bc-window-context-mode {
+  min-height: 34px;
+  padding: 0 12px;
+  border-color: transparent;
+  color: var(--bc-ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bc-window-context-mode:hover {
+  border-color: transparent;
+}
+.bc-window-context-title {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--bc-ink);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bc-window-context-title > svg {
+  color: var(--bc-primary);
+}
+.bc-window-context-sep {
+  flex: 0 0 auto;
+  margin: 0 -4px;
+  color: var(--bc-line);
+  font-size: 18px;
+}
+.bc-dx-outcome.bc-diagnosis-safety {
+  gap: 72px;
+}
+.bc-dx-state .bc-dx-icon-button {
+  margin-top: 12px;
+  background: var(--dx-idle-bg);
+  color: var(--dx-ok);
+}
+.bc-dx-receipt-ref {
+  margin: 0;
+  color: var(--dx-label);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+.bc-diagnosis-context .bc-window-context-select {
+  font-size: 14px;
+}
+.bc-dx-decided {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 14px;
+  background: var(--dx-soft);
+  flex-wrap: nowrap;
+}
+.bc-dx-decided-name {
+  color: var(--dx-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

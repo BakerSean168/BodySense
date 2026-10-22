@@ -21,10 +21,8 @@ import {
   makeSettlementReceipt,
 } from "../model/__fixtures__/nativeDiagnosisFixtures";
 import { ApiRequestError } from "@/lib/api-client";
-import {
-  DiagnosisWindow,
-  type DiagnosisDecisionControls,
-} from "./DiagnosisWindow";
+import { DiagnosisWindow } from "../windows/diagnosis/DiagnosisWindow";
+import { type DiagnosisDecisionControls } from "../windows/diagnosis/types";
 
 const PROPOSAL_C = "00000000-0000-4000-8000-0000000000b3";
 

@@ -1,0 +1,435 @@
+/* ------------------------------------------------------------------
+   Penpot "Desktop / Home" and "Mobile / Home": no app bar. The stage is
+   the whole viewport; the motion ribbon sits top-centre, the 4-tool rail
+   left (desktop) or above the Dock (mobile), and a mint disc sits behind
+   the reference body. Windows keep the board's y 92 top.
+   ------------------------------------------------------------------ */
+.bc-stage {
+  inset: 0;
+  background: var(--bc-stage);
+}
+.bc-business-window {
+  --bc-window-y: var(--bc-window-top, 92px);
+}
+.bc-backdrop-disc {
+  position: absolute;
+  z-index: 0;
+  left: calc(50% + 73px);
+  top: 54.5%;
+  width: min(770px, 86vh);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bc-paper) 38%, var(--bc-stage));
+  pointer-events: none;
+}
+.bc-motion-ribbon,
+.bc-motion-ribbon-tab {
+  position: absolute;
+  z-index: 22;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--bc-line);
+  background: var(--bc-paper);
+  box-shadow: 0 6px 22px rgba(36, 52, 41, 0.05);
+}
+.bc-motion-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 58px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 20px;
+}
+.bc-motion-pose {
+  position: relative;
+  width: 90px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--bc-subtle);
+  color: var(--bc-secondary);
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.bc-motion-pose:hover {
+  color: var(--bc-ink);
+  border-color: var(--bc-line);
+}
+.bc-motion-pose[aria-pressed="true"] {
+  border-color: var(--bc-primary);
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.bc-motion-pose kbd,
+.bc-tool-rail kbd {
+  position: absolute;
+  right: 7px;
+  bottom: 3px;
+  min-width: 15px;
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 3px;
+  border: 1px solid var(--bc-line);
+  border-radius: 4px;
+  background: var(--bc-paper);
+  color: var(--bc-secondary);
+  font-size: 8px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1;
+}
+.bc-motion-ribbon-collapse,
+.bc-motion-ribbon-tab {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--bc-primary);
+  cursor: pointer;
+}
+.bc-motion-ribbon-collapse {
+  width: 28px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+.bc-motion-ribbon-collapse:hover {
+  background: var(--bc-subtle);
+}
+/* Penpot "Home · Motions collapsed": a 52 x 32 pill at the ribbon top. */
+.bc-motion-ribbon-tab {
+  width: 52px;
+  height: 32px;
+  border-radius: 12px;
+}
+.bc-motion-pose:focus-visible,
+.bc-motion-ribbon-collapse:focus-visible,
+.bc-motion-ribbon-tab:focus-visible,
+.bc-theme-options button:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+/* Penpot rail: 62 px wide, 50 x 46 tool cells with a shortcut badge. */
+.bc-tool-rail {
+  left: 28px;
+  width: 62px;
+  gap: 7px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--bc-paper);
+}
+.bc-tool-rail .bc-icon-button {
+  position: relative;
+  width: 50px;
+  height: 46px;
+  border-radius: 10px;
+}
+.bc-tool-rail .bc-icon-button[aria-pressed="true"] {
+  border-color: var(--bc-primary);
+}
+.bc-tool-rail kbd {
+  right: 3px;
+  bottom: 2px;
+}
+.bc-tool-rail .bc-tool-rail-collapse {
+  height: 22px;
+}
+.bc-hover-label {
+  top: 100px;
+}
+.bc-sync-banner {
+  top: 96px;
+}
+.bc-sync-indicator,
+.bc-safety-banner,
+.bc-stage:has(.bc-business-window:not([hidden])) > .bc-safety-banner {
+  top: 96px;
+}
+.bc-stage:has(> .bc-safety-banner) .bc-business-window {
+  --bc-window-y: max(
+    var(--bc-window-top, 92px),
+    calc(96px + var(--bc-safety-banner-height, 46px) + 8px)
+  );
+}
+.bc-tool-hint {
+  top: 96px;
+}
+.bc-reopen-selection {
+  top: 26px;
+}
+.bc-region-picker {
+  top: 96px;
+}
+@media (min-width: 761px) {
+  .bc-region-card {
+    top: 92px;
+    height: min(700px, calc(100% - 92px - var(--bc-dock-reserve, 108px) - 8px));
+  }
+}
+/* Settings and Logout confirm (Penpot Overlay / Settings, Logout confirm). */
+.bc-account-dialog {
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 22px 18px 18px;
+  border-radius: 14px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.bc-account-dialog-title {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.bc-account-dialog-text {
+  display: grid;
+  gap: 8px;
+  padding: 0 4px;
+  color: var(--bc-secondary);
+  font-size: 13px;
+}
+.bc-account-dialog-text small {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-account-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 96px;
+}
+.bc-account-dialog-actions .bc-button,
+.bc-account-dialog-close {
+  height: 48px;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bc-subtle);
+  font-weight: 700;
+}
+.bc-account-dialog-actions .bc-danger-button {
+  background: #dc2828;
+  color: #fff;
+}
+.bc-theme-field {
+  display: grid;
+  gap: 2px;
+  margin-top: 46px;
+}
+.bc-theme-label {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-about {
+  display: grid;
+  gap: 4px;
+  margin-top: 20px;
+}
+.bc-about-text {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.bc-about-text a {
+  color: inherit;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bc-theme-hint {
+  padding: 0 4px;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 2px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--bc-subtle);
+}
+.bc-theme-options button {
+  height: 36px;
+  border: 1.5px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--bc-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.bc-theme-options button[aria-checked="true"] {
+  border-color: var(--bc-primary);
+  background: var(--bc-paper);
+  color: var(--bc-primary);
+  font-weight: 700;
+}
+.bc-account-dialog-close {
+  width: 100%;
+  margin-top: 56px;
+}
+@media (max-width: 760px) {
+  .bc-backdrop-disc {
+    display: none;
+  }
+  /* Mobile ribbon: 350 x 50 at y 55, equal cells, no shortcut badges. */
+  .bc-motion-ribbon {
+    top: 55px;
+    left: 20px;
+    right: 20px;
+    transform: none;
+    height: 50px;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 16px;
+  }
+  .bc-motion-ribbon-tab {
+    top: 65px;
+  }
+  .bc-motion-pose {
+    flex: 1 1 0;
+    width: auto;
+    height: 38px;
+  }
+  .bc-motion-pose kbd,
+  .bc-tool-rail kbd {
+    display: none;
+  }
+  .bc-motion-ribbon-collapse {
+    width: 22px;
+    height: 38px;
+  }
+  /* Mobile rail: a full-width labelled row just above the Dock. */
+  .bc-tool-rail {
+    left: 14px;
+    right: 14px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    width: auto;
+    height: 60px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 4px;
+    gap: 4px;
+    border-radius: 14px;
+  }
+  .bc-tool-rail .bc-icon-button {
+    width: 100%;
+    height: 50px;
+    display: grid;
+    grid-template-rows: 22px auto;
+    align-content: center;
+    gap: 2px;
+    color: var(--bc-ink);
+  }
+  .bc-tool-rail .bc-icon-button[aria-pressed="true"] {
+    border-color: transparent;
+    background: transparent;
+    color: var(--bc-primary);
+  }
+  .bc-tool-rail .bc-tool-caption {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    overflow: visible;
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .bc-stage-motion .bc-tool-rail {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .bc-playback {
+    bottom: 152px;
+  }
+  .bc-motion-disclaimer {
+    bottom: 212px;
+  }
+  .bc-stage-motion .bc-tool-hint,
+  .bc-tool-hint {
+    bottom: 152px;
+  }
+  /* Penpot mobile Dock: icons only, 64 px, labels kept for AT. */
+  .bc-dock {
+    left: 13px;
+    right: 13px;
+    height: 64px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+    box-shadow: 0 6px 22px rgba(36, 52, 41, 0.06);
+  }
+  .bc-dock-item {
+    min-height: 52px;
+    grid-template-rows: 26px;
+    align-content: center;
+  }
+  .bc-dock-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* 390 safety banner: below the ribbon, never over the stage content. */
+  .bc-safety-banner,
+  .bc-sync-indicator {
+    top: 116px;
+  }
+  .bc-sync-banner {
+    top: 116px;
+  }
+  .bc-stage:has(.bc-business-sheet:not([hidden])) > .bc-safety-banner {
+    top: 12px;
+  }
+  .bc-account-dialog {
+    width: calc(100vw - 20px);
+  }
+  /* Penpot mobile has no help entry, but touch users need the region-by-name
+     list it holds (the non-3D way to pick a region), so keep a quiet "?". */
+  .bc-help-entry {
+    display: grid;
+    right: 16px;
+    bottom: calc(156px + env(safe-area-inset-bottom));
+    width: 36px;
+    height: 36px;
+  }
+  .bc-stage-motion .bc-help-entry {
+    bottom: calc(244px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bc-motion-pose,
+  .bc-theme-options button {
+    transition: none;
+  }
+}
+/* Penpot account menu: 264 px, independent of the trigger width. */
+.bc-account-menu.bc-account-menu {
+  width: 240px;
+  padding: 6px;
+  border-radius: 12px;
+}
+/* Penpot Body / Region footer: 14px bold actions; undo/clear stay quiet.
+   (`.bc-workspace button { font: inherit }` otherwise resets them.) */
+.bc-workspace .bc-region-footer button {
+  font-size: 14px;
+  font-weight: 700;
+}
+.bc-workspace .bc-region-card .bc-actions button {
+  font-size: 12px;
+}

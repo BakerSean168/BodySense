@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   bodyFactRecordsService,
@@ -48,7 +48,10 @@ const initialSymptomDraft: EpisodeSymptomDraft = {
 export function useBodyEpisodeController(canEdit: boolean) {
   const owner = useAuthStore((state) => state.user?.id);
   const ownerRef = useRef(owner);
-  ownerRef.current = owner;
+  // Commit identity before asynchronous receipts can update this surface.
+  useLayoutEffect(() => {
+    ownerRef.current = owner;
+  }, [owner]);
   const queryClient = useQueryClient();
   const factsQuery = useInfiniteQuery({
     queryKey: bodyFactRecordsKey(owner),

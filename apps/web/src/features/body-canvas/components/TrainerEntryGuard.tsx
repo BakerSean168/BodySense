@@ -43,6 +43,7 @@ export interface TrainerEntryGuardProps {
   loading: boolean;
   error: string | null;
   onOpenTraining: () => void;
+  onRetry?: () => void;
 }
 
 export function TrainerEntryGuard({
@@ -54,6 +55,7 @@ export function TrainerEntryGuard({
   loading,
   error,
   onOpenTraining,
+  onRetry,
 }: TrainerEntryGuardProps) {
   const reopening = !!launch?.sessionId;
   const canRenderExecution =
@@ -106,13 +108,18 @@ export function TrainerEntryGuard({
         <div
           className="bc-window-empty bc-trainer-guard"
           data-testid="trainer-entry-guard"
-          role={safetyBlocked ? "alert" : "status"}
+          role={safetyBlocked || error ? "alert" : "status"}
         >
           {safetyBlocked || error ? (
             <AlertTriangle size={24} aria-hidden="true" />
           ) : null}
           <p className="bc-window-empty-title">训练执行尚未就绪</p>
           <p className="bc-window-empty-text">{explanation}</p>
+          {error && onRetry ? (
+            <button type="button" className="bc-button" onClick={onRetry}>
+              重新读取
+            </button>
+          ) : null}
           <button
             type="button"
             className="bc-button bc-primary"
