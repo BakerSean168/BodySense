@@ -374,7 +374,7 @@ export function CanvasBusinessWindows({
           aria-label={
             window === "diagnosis" ? "与助手讨论当前诊断" : "与助手调整训练计划"
           }
-          title="打开对话，不会自动提交或修改记录"
+          title={window === "diagnosis" ? "讨论诊断" : "调整训练计划"}
           onClick={() => openWindow("chat")}
         >
           <MessageCircle size={19} strokeWidth={1.8} />
