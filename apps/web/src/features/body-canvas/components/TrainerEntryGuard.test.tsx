@@ -58,13 +58,18 @@ describe("V2 Trainer entry admission", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("fails closed on loading and transport failure", () => {
+  it("fails closed on loading and transport failure", async () => {
+    const retry = vi.fn();
     const { rerender } = render(<TrainerEntryGuard {...allowed} loading />);
     expect(screen.getByText(/正在核对当前训练计划/)).toBeVisible();
     expect(
       screen.queryByTestId("training-execution-panel"),
     ).not.toBeInTheDocument();
-    rerender(<TrainerEntryGuard {...allowed} error="计划请求超时" />);
+    rerender(
+      <TrainerEntryGuard {...allowed} error="计划请求超时" onRetry={retry} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    expect(retry).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/暂时无法读取/)).toBeVisible();
     expect(
       screen.queryByTestId("training-execution-panel"),
@@ -94,12 +99,29 @@ describe("V2 Trainer entry admission", () => {
   });
 
   it("reopens a live session from Home while the gate blocks, but never another plan's", async () => {
-    const reopen = { planId: "accepted-1", templateId: "a", key: "launch-2", sessionId: "session-1" };
+    const reopen = {
+      planId: "accepted-1",
+      templateId: "a",
+      key: "launch-2",
+      sessionId: "session-1",
+    };
     const { rerender } = render(
-      <TrainerEntryGuard {...allowed} launch={reopen} safetyBlocked canExecute={false} accepted={false} />,
+      <TrainerEntryGuard
+        {...allowed}
+        launch={reopen}
+        safetyBlocked
+        canExecute={false}
+        accepted={false}
+      />,
     );
     expect(await screen.findByTestId("training-execution-panel")).toBeVisible();
-    rerender(<TrainerEntryGuard {...allowed} launch={reopen} planId="different-plan" />);
+    rerender(
+      <TrainerEntryGuard
+        {...allowed}
+        launch={reopen}
+        planId="different-plan"
+      />,
+    );
     expect(screen.getByTestId("trainer-entry-guard")).toBeVisible();
   });
 });

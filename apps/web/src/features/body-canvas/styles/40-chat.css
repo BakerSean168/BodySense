@@ -1,0 +1,408 @@
+/* Penpot Chat boards: a light thread on window paper (UI-001). The shared chat
+   components keep their standalone dark utilities; inside the Body Canvas the
+   semantic chat-* hooks take the active canvas theme (light or .bc-dark). */
+.body-canvas-theme .chat-thread {
+  background: transparent;
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-skeleton {
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-skeleton-block {
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .chat-msg-content,
+.body-canvas-theme .chat-msg-response {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-msg-response :is(h1, h2, h3, h4, strong) {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-msg-response a {
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-msg-response :is(th, td) {
+  border-color: var(--bc-line);
+}
+.body-canvas-theme .chat-msg-response th {
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-msg-response code {
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-empty-icon {
+  border-color: var(--bc-line);
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+  box-shadow: none;
+}
+.body-canvas-theme .chat-empty-title {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-empty-text,
+.body-canvas-theme .chat-muted,
+.body-canvas-theme .chat-thinking,
+.body-canvas-theme .chat-tool-summary {
+  color: var(--bc-muted);
+}
+.body-canvas-theme .chat-thinking {
+  background: color-mix(in srgb, var(--bc-primary-soft) 45%, var(--bc-paper));
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(1) {
+  background: var(--bc-primary);
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(2) {
+  background: color-mix(in srgb, var(--bc-primary) 60%, var(--bc-paper));
+}
+.body-canvas-theme .chat-thinking-dot:nth-child(3) {
+  background: color-mix(in srgb, var(--bc-primary) 30%, var(--bc-paper));
+}
+.body-canvas-theme .chat-tool-label,
+.body-canvas-theme .chat-source {
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-source:hover {
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-source-title {
+  color: var(--bc-ink);
+}
+.body-canvas-theme :is(.chat-tools, .chat-sources) {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .chat-sources-summary {
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-sources-summary:hover {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-sources-body {
+  border-color: var(--bc-line);
+}
+.body-canvas-theme .chat-image {
+  border-color: var(--bc-line);
+}
+.body-canvas-theme :is(.chat-gap, .chat-status-card[data-tone="warning"]) {
+  border-color: color-mix(in srgb, var(--bc-warning) 30%, var(--bc-line));
+  background: var(--bc-warning-soft);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-gap-title,
+.body-canvas-theme .chat-status-card[data-tone="warning"] .chat-status-title,
+.body-canvas-theme .chat-status-warning {
+  color: var(--bc-warning);
+}
+.body-canvas-theme .chat-gap-text {
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-status-card {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-status-card[data-tone="info"] .chat-status-title {
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-status-question {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .chat-status-answer {
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-redflag {
+  border-color: color-mix(in srgb, var(--bc-danger) 35%, var(--bc-line));
+  background: var(--bc-danger-soft);
+  color: var(--bc-ink);
+}
+.body-canvas-theme :is(.chat-redflag-icon, .chat-redflag-title) {
+  color: var(--bc-danger);
+}
+.body-canvas-theme .chat-redflag-text {
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-redflag-tag {
+  background: var(--bc-paper);
+  color: var(--bc-danger);
+}
+.body-canvas-theme .chat-redflag-ack {
+  background: var(--bc-danger);
+  color: var(--bc-paper);
+}
+.body-canvas-theme .chat-redflag-ack:hover {
+  background: color-mix(in srgb, var(--bc-danger) 85%, var(--bc-ink));
+}
+/* Composer: Penpot draws the input on paper with a primary send button. */
+.body-canvas-theme .chat-context-chip {
+  border-color: color-mix(in srgb, var(--bc-primary) 25%, var(--bc-line));
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-context-chip-clear {
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-context-chip-clear:hover {
+  background: var(--bc-paper);
+}
+.body-canvas-theme .chat-pending-image {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+}
+/* Penpot Chat boards, thread text and bubbles (UI audit, chat gap). The shared
+   .conversation-prose rules in index.css paint p/li near-white for the standalone
+   dark chat; inside the canvas the prose takes the theme ink so light and
+   .bc-dark both read. Assistant replies sit in a subtle bubble, the user's in a
+   soft primary one (Penpot #F6F8F5 / #EEF5F0 on #FBFAF5 window paper). */
+.body-canvas-theme .conversation-prose,
+.body-canvas-theme .conversation-prose :is(p, li, h1, h2, h3, h4, strong) {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .conversation-prose a {
+  color: var(--bc-primary);
+  text-decoration-color: color-mix(in srgb, var(--bc-primary) 45%, transparent);
+}
+.body-canvas-theme .chat-thread-viewport > div {
+  gap: 18px;
+}
+.body-canvas-theme [data-role="assistant"] > .chat-msg-content {
+  align-items: flex-start;
+}
+.body-canvas-theme [data-role="assistant"] .chat-msg-response {
+  width: fit-content;
+  max-width: min(100%, 560px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(
+    in srgb,
+    var(--bc-subtle) 70%,
+    var(--bc-primary-soft) 6%
+  );
+  font-size: 14px;
+  line-height: 1.7;
+}
+.body-canvas-theme [data-role="user"] > .chat-msg-content {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-primary-soft) 60%, var(--bc-subtle));
+  color: var(--bc-ink);
+  max-width: 86%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bc-primary-soft) 45%, var(--bc-paper));
+  font-size: 14px;
+  line-height: 1.6;
+}
+/* Composer: ChatGPT-style pill on BodySense paper. One row (+, field, send)
+   until the text wraps; then the field grows upward to a cap and scrolls,
+   with + and send on a bottom row and an expand toggle top-right. */
+.chat-composer {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "tool input send";
+  align-items: center;
+  column-gap: 4px;
+  padding: 7px;
+  border: 1px solid var(--bc-line, #d6ded4);
+  border-radius: 28px;
+  background: var(--bc-paper, #fff);
+  box-shadow: 0 6px 22px rgba(31, 47, 37, 0.07);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-radius 0.15s ease;
+}
+.chat-composer:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--bc-primary, #2c694f) 40%,
+    var(--bc-line, #d6ded4)
+  );
+  box-shadow: 0 8px 26px rgba(31, 47, 37, 0.1);
+}
+.chat-composer[data-multiline="true"] {
+  grid-template-areas:
+    "extras extras extras"
+    "input input input"
+    "tool . send";
+  row-gap: 4px;
+  border-radius: 24px;
+  padding: 8px 8px 7px;
+}
+.chat-composer-extras {
+  grid-area: extras;
+  display: grid;
+  gap: 4px;
+}
+.chat-composer-input {
+  grid-area: input;
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  max-height: 200px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--bc-ink, #1d2a22);
+  font-size: 15px;
+  line-height: 24px;
+  outline: none;
+}
+.chat-composer[data-multiline="true"] .chat-composer-input {
+  padding: 6px 34px 4px 10px;
+}
+.chat-composer[data-expanded="true"] .chat-composer-input {
+  max-height: min(56dvh, 520px);
+}
+.chat-composer-input::placeholder,
+.chat-composer-input:disabled {
+  color: var(--bc-muted, #718075);
+}
+.chat-composer-input:disabled {
+  cursor: not-allowed;
+}
+.chat-composer-tool,
+.chat-composer-send,
+.chat-composer-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+.chat-composer-tool:focus-visible,
+.chat-composer-send:focus-visible,
+.chat-composer-expand:focus-visible {
+  outline: 2px solid
+    color-mix(in srgb, var(--bc-primary, #2c694f) 50%, transparent);
+  outline-offset: 2px;
+}
+.chat-composer-tool {
+  grid-area: tool;
+  width: 36px;
+  height: 36px;
+  color: var(--bc-secondary, #526257);
+}
+.chat-composer-tool:hover:not(:disabled) {
+  background: var(--bc-subtle, #f7f8f5);
+  color: var(--bc-ink, #1d2a22);
+}
+.chat-composer-tool:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.chat-composer-send {
+  grid-area: send;
+  width: 36px;
+  height: 36px;
+  background: color-mix(
+    in srgb,
+    var(--bc-primary, #2c694f) 88%,
+    var(--bc-ink, #1d2a22)
+  );
+  color: var(--bc-paper, #fff);
+}
+.chat-composer-send:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--bc-primary, #2c694f) 75%,
+    var(--bc-ink, #1d2a22)
+  );
+}
+.chat-composer-send:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.chat-composer-send:disabled {
+  cursor: not-allowed;
+  background: var(--bc-line, #d6ded4);
+  color: var(--bc-paper, #fff);
+}
+.chat-composer-expand {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  color: var(--bc-muted, #718075);
+}
+.chat-composer-expand:hover {
+  background: var(--bc-subtle, #f7f8f5);
+  color: var(--bc-ink, #1d2a22);
+}
+.body-canvas-theme.bc-dark .chat-composer-send:not(:disabled) {
+  background: var(--bc-primary);
+  color: var(--bc-canvas);
+}
+/* Ask User options read as Penpot's bordered choice rows. */
+.body-canvas-theme
+  .ask-user-card
+  label:has(> input:is([type="radio"], [type="checkbox"])) {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  cursor: pointer;
+}
+.body-canvas-theme .ask-user-card label:has(> input:checked) {
+  border-color: var(--bc-primary);
+  background: color-mix(in srgb, var(--bc-primary-soft) 55%, var(--bc-paper));
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .body-canvas-theme
+    .ask-user-card
+    label:has(> input:is([type="radio"], [type="checkbox"])) {
+    min-height: 44px;
+  }
+}
+.body-canvas-theme .chat-status-card[data-tone="saved"] {
+  border-color: color-mix(in srgb, var(--bc-primary) 35%, var(--bc-line));
+  background: color-mix(in srgb, var(--bc-primary-soft) 55%, var(--bc-paper));
+}
+.body-canvas-theme .chat-status-card[data-tone="saved"] .chat-status-title,
+.body-canvas-theme .chat-tool-receipt[data-saved="true"] {
+  color: var(--bc-primary);
+}
+/* Penpot Chat / Running: the answered open question above the pill. */
+.body-canvas-theme .chat-status-card[data-tone="answered"] {
+  border-color: var(--bc-window-line, var(--bc-line));
+  background: color-mix(
+    in srgb,
+    var(--bc-paper) 70%,
+    var(--bc-window-paper, var(--bc-paper))
+  );
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .chat-answered-question,
+.body-canvas-theme .chat-answered-card .chat-status-question {
+  color: var(--bc-secondary);
+  font-weight: 400;
+}
+.body-canvas-theme .chat-answered-icon {
+  background: color-mix(in srgb, var(--bc-warning-soft) 70%, var(--bc-paper));
+  color: var(--bc-warning);
+}
+.body-canvas-theme .chat-answered-chip {
+  background: color-mix(in srgb, var(--bc-primary-soft) 70%, var(--bc-paper));
+  color: var(--bc-primary);
+}
+.body-canvas-theme .chat-answered-dot {
+  background: color-mix(in srgb, var(--bc-primary) 75%, #3fbf86);
+}
+.body-canvas-theme .chat-status-card[data-tone="neutral"] .chat-status-title {
+  color: var(--bc-muted);
+}
+.body-canvas-theme :is(.chat-tools, .chat-tool-receipt) {
+  color: var(--bc-secondary);
+}
+

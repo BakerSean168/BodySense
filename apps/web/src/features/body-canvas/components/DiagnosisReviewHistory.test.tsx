@@ -8,10 +8,11 @@ import {
   makeDiagnosis,
   makeRun,
 } from "../model/__fixtures__/nativeDiagnosisFixtures";
-import { DiagnosisWindow, type DiagnosisDecisionControls } from "./DiagnosisWindow";
+import { DiagnosisWindow } from "../windows/diagnosis/DiagnosisWindow";
+import { type DiagnosisDecisionControls } from "../windows/diagnosis/types";
 import { DiagnosisHistoryList } from "./DiagnosisHistoryPanel";
 import { SafetyRestrictedPanel } from "./SafetyRestrictedView";
-import { DiagnosisWindowHeader } from "./V2WindowHeaders";
+import { DiagnosisWindowHeader } from "../windows/diagnosis/DiagnosisWindowHeader";
 
 const api = vi.hoisted(() => ({
   bindRequest: vi.fn(),

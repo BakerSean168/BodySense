@@ -1,0 +1,712 @@
+/* Person Media / Reports upload (Penpot "+" and "Upload failed"). */
+.bc-person-uploads-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  color: var(--bc-muted);
+  font-size: 13px;
+}
+.bc-person-upload-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+/* Penpot "Mobile / Body / Region": the region detail is the same near-full
+   card as the mobile window sheets (16px inset, 18px corners, window paper),
+   ending above the Dock, not a bottom half-sheet over the body. The footer
+   (身体记录 / 围绕…提问) sits on the card's bottom edge; the rail gives way
+   and the safety banner moves to the top edge, as for a sheet. */
+/* Penpot "Person / Media": month groups of thumbnail tiles. Desktop tiles are
+   194 x 128 in four columns; mobile is two columns. The manifest has no image
+   bytes, so the tile is Penpot's mint wash with the image / play glyph. */
+.bc-person-upload {
+  flex: 0 0 auto;
+  min-width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bc-primary);
+  color: var(--bc-paper);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(31, 47, 37, 0.16);
+}
+.bc-person-upload:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bc-primary) 85%, var(--bc-ink));
+}
+.bc-person-upload:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.bc-person-upload:focus-visible,
+.bc-person-media-more:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-person-upload-text {
+  display: none;
+}
+.bc-person-media {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 8px;
+}
+.bc-person-media-month {
+  margin: 0 0 8px;
+  color: var(--bc-secondary, var(--bc-muted));
+  font-size: 11px;
+  font-weight: 650;
+}
+.bc-person-media-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-media-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bc-person-media-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 194 / 128;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #d9e8de 0%, #c6dccf 100%);
+  color: rgba(255, 255, 255, 0.92);
+}
+.bc-person-media-tile:nth-child(3n + 2) .bc-person-media-thumb {
+  background: linear-gradient(135deg, #e3ebe2 0%, #cfdfd2 100%);
+}
+.bc-person-media-tile:nth-child(3n) .bc-person-media-thumb {
+  background: linear-gradient(135deg, #dde9e6 0%, #c4d9d0 100%);
+}
+.bc-person-media-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(36, 52, 41, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.bc-person-media-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 52, 41, 0.46);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-person-media-tile[data-state="failed"] .bc-person-media-overlay {
+  background: color-mix(in srgb, var(--bc-danger) 72%, transparent);
+}
+.bc-person-media-tile[data-state="source_unavailable"]
+  .bc-person-media-overlay {
+  background: rgba(113, 128, 117, 0.72);
+}
+.bc-person-media-tile[data-state="source_unavailable"] .bc-person-media-name {
+  color: var(--bc-muted);
+}
+.bc-person-media-name {
+  margin-top: 8px;
+  overflow: hidden;
+  color: var(--bc-ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bc-person-media-meta {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-workspace .bc-person-media-more {
+  align-self: center;
+  margin-top: 6px;
+  color: var(--bc-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Penpot "Media · Upload failed": the pink row above the grid. */
+.bc-person-upload-failed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bc-danger-soft);
+}
+.bc-person-upload-failed-thumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bc-danger) 14%, var(--bc-paper));
+}
+.bc-person-upload-failed-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bc-person-upload-failed-text strong {
+  overflow: hidden;
+  color: var(--bc-ink);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bc-person-upload-failed-text span {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-person-upload-failed-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bc-danger) 10%, var(--bc-paper));
+  color: var(--bc-danger);
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-person-upload-failed-chip::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+@media (max-width: 760px) {
+  .bc-region-card {
+    --bc-sheet-top: 16px;
+    left: 16px;
+    right: 16px;
+    top: var(--bc-sheet-top);
+    bottom: auto;
+    width: auto;
+    height: min(704px, calc(100% - var(--bc-sheet-top) - 92px));
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--bc-window-line, var(--bc-line));
+    border-radius: 18px;
+    background: var(--bc-window-paper, var(--bc-paper));
+    backdrop-filter: none;
+    box-shadow: 0 18px 60px rgba(31, 47, 37, 0.16);
+  }
+  .bc-stage:has(> .bc-safety-banner) .bc-region-card {
+    --bc-sheet-top: calc(12px + var(--bc-safety-banner-height, 46px) + 8px);
+  }
+  .bc-stage:has(> .bc-region-card) > .bc-safety-banner {
+    top: 12px;
+  }
+  .bc-region-card > .bc-panel-heading {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 18px 12px 0 22px;
+  }
+  .bc-region-card
+    > :is(
+      .bc-selection-chips,
+      .bc-region-facts,
+      .bc-context-note,
+      .bc-panel-actions
+    ) {
+    margin-left: 22px;
+    margin-right: 22px;
+  }
+  .bc-region-card .bc-region-facts {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    border: 0;
+    padding: 0;
+  }
+  .bc-region-card .bc-panel-actions {
+    flex: 0 0 auto;
+    padding-bottom: 8px;
+  }
+  .bc-region-card .bc-region-footer {
+    flex: 0 0 auto;
+    padding: 14px 22px calc(14px + env(safe-area-inset-bottom));
+  }
+  .bc-stage:has(> .bc-region-card) :is(.bc-tool-rail, .bc-tool-rail-tab) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .bc-person-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 14px;
+  }
+  .bc-person-media-thumb {
+    aspect-ratio: 155 / 100;
+  }
+  /* Mobile Penpot: a labelled "上传" pill instead of the round icon. */
+  .bc-person-upload {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+  .bc-person-upload-text {
+    display: inline;
+    font-weight: 700;
+  }
+  .bc-person-upload-failed {
+    flex-wrap: wrap;
+  }
+}
+/* Penpot "Person / Reports" cards and the "Assets / Delete scope, Erasure
+   confirm / retry / completed, Original unavailable" scenes in Person. */
+.bc-person-reports {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-report {
+  display: grid;
+  gap: 0;
+  padding: 0 16px;
+  border: 1px solid var(--bc-window-line, var(--bc-line));
+  border-radius: 12px;
+  background: var(--bc-paper);
+}
+.bc-person-report-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--bc-window-divider, var(--bc-line));
+}
+.bc-person-report-text,
+.bc-asset-file-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bc-person-report-text strong,
+.bc-asset-file-text strong {
+  overflow: hidden;
+  color: var(--bc-ink);
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bc-person-report-text span,
+.bc-asset-file-text span {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-asset-file-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--bc-subtle);
+  color: var(--bc-primary);
+}
+.bc-person-report-menu {
+  align-self: flex-start;
+}
+.bc-person-report-status,
+.bc-asset-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0;
+  padding: 9px 0 10px;
+}
+.bc-person-report-status > div,
+.bc-asset-facts > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bc-person-report-status dt,
+.bc-asset-facts dt {
+  color: var(--bc-muted);
+  font-size: 12px;
+}
+.bc-person-report-status dd,
+.bc-asset-facts dd {
+  margin: 0;
+}
+.bc-asset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--bc-subtle);
+  color: var(--bc-secondary, var(--bc-muted));
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.bc-asset-chip[data-tone]::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.bc-asset-chip[data-tone="keep"] {
+  background: #e7f3ec;
+  color: var(--bc-primary);
+}
+.bc-asset-chip[data-tone="warning"] {
+  background: color-mix(in srgb, var(--bc-warning) 13%, var(--bc-paper));
+  color: var(--bc-warning);
+}
+.bc-asset-chip[data-tone="danger"],
+.bc-asset-chip[data-tone="pending"] {
+  background: var(--bc-danger-soft);
+  color: var(--bc-danger);
+}
+.bc-asset-chip[data-tone="remove"] {
+  background: var(--bc-subtle);
+}
+.bc-asset-chip[data-tone="remove"]::before,
+.bc-asset-chip[data-tone="neutral"]::before {
+  display: none;
+}
+.bc-dark .bc-asset-chip[data-tone="keep"] {
+  background: var(--bc-primary-soft);
+}
+.bc-asset-scene .bc-person-detail-body {
+  gap: 14px;
+}
+.bc-asset-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--bc-window-line, var(--bc-line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bc-paper) 80%, transparent);
+}
+.bc-asset-label {
+  margin: 6px 0 0;
+  color: var(--bc-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.bc-asset-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bc-asset-cancel {
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: transparent;
+  color: var(--bc-muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.bc-asset-cancel:hover {
+  background: var(--bc-subtle);
+  color: var(--bc-ink, inherit);
+}
+.bc-asset-cancel:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 1px;
+}
+.bc-asset-scopes {
+  display: grid;
+  gap: 12px;
+}
+.bc-workspace .bc-asset-scope {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--bc-window-line, var(--bc-line));
+  border-radius: 12px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bc-workspace .bc-asset-scope[aria-checked="true"] {
+  border-color: var(--bc-primary);
+  background: color-mix(in srgb, var(--bc-primary) 6%, var(--bc-paper));
+}
+.bc-asset-scope:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-asset-scope-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.bc-asset-scope-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bc-asset-mark {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bc-subtle);
+  color: var(--bc-secondary, var(--bc-muted));
+}
+.bc-asset-mark[data-tone="keep"] {
+  background: #e7f3ec;
+  color: var(--bc-primary);
+}
+.bc-asset-mark[data-tone="remove"],
+.bc-asset-mark[data-tone="danger"] {
+  background: var(--bc-danger-soft);
+  color: var(--bc-danger);
+}
+.bc-asset-mark[data-tone="pending"] {
+  background: color-mix(in srgb, var(--bc-warning) 13%, var(--bc-paper));
+  color: var(--bc-warning);
+}
+.bc-asset-keep-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.bc-asset-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-asset-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  font-size: 14px;
+}
+.bc-asset-list-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bc-asset-list-text small {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-asset-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 14px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bc-warning) 10%, var(--bc-paper));
+  color: var(--bc-warning);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bc-asset-result {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 24px 0 26px;
+  text-align: center;
+}
+.bc-asset-result strong {
+  margin-top: 12px;
+  font-size: 17px;
+}
+.bc-asset-result > span:last-child {
+  color: var(--bc-muted);
+  font-size: 13px;
+}
+.bc-asset-result-disc {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e7f3ec;
+  color: var(--bc-primary);
+}
+.bc-asset-result[data-tone="warning"] .bc-asset-result-disc {
+  background: color-mix(in srgb, var(--bc-warning) 12%, var(--bc-paper));
+  color: var(--bc-secondary, var(--bc-muted));
+}
+.bc-asset-facts {
+  display: grid;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bc-subtle);
+}
+.bc-asset-facts > div {
+  justify-content: space-between;
+}
+.bc-asset-receipt {
+  margin: 4px 0 0;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-asset-reviews {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 13px;
+}
+.bc-asset-scene-title:focus,
+.bc-asset-scene h3:focus {
+  outline: none;
+}
+.bc-workspace .bc-asset-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bc-primary);
+  color: var(--bc-paper);
+}
+.bc-person-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Penpot "Overlay / Person / Category menu": the header picker opens a 264px
+   "切换分类" card with icon rows and counts (an ARIA listbox). */
+.bc-category-menu {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.bc-workspace .bc-category-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  background: var(--bc-subtle);
+}
+.bc-category-trigger:hover {
+  border-color: var(--bc-secondary);
+}
+.bc-category-trigger:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-category-trigger > svg {
+  flex: 0 0 auto;
+  color: var(--bc-secondary);
+}
+.bc-category-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.bc-category-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 264px;
+  overflow: hidden;
+  border: 1px solid var(--bc-window-line, var(--bc-line));
+  border-radius: 12px;
+  background: var(--bc-paper);
+  box-shadow: 0 18px 48px rgba(31, 47, 37, 0.18);
+}
+.bc-category-popover-title {
+  margin: 0;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--bc-window-divider, var(--bc-line));
+  color: var(--bc-secondary, var(--bc-muted));
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-category-popover [role="listbox"] {
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  outline: none;
+}
+.bc-category-popover
+  [role="listbox"]:focus-visible
+  .bc-category-option[data-active="true"] {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: -2px;
+}
+.bc-category-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 18px;
+  color: var(--bc-ink);
+  cursor: pointer;
+}
+.bc-category-option > svg {
+  flex: 0 0 auto;
+  color: var(--bc-primary);
+}
+.bc-category-option[data-active="true"] {
+  background: var(--bc-subtle);
+}
+.bc-category-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--bc-primary) 8%, var(--bc-paper));
+}
+.bc-category-option-label {
+  flex: 1 1 auto;
+  font-size: 15px;
+  font-weight: 700;
+}
+.bc-category-option-count {
+  color: var(--bc-muted);
+  font-size: 12px;
+}

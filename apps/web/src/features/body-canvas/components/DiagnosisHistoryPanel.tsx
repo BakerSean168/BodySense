@@ -11,11 +11,30 @@ import {
   type DiagnosisHistoryOutcome,
 } from "../model/diagnosisHistory";
 
-const OUTCOME_MARK: Record<DiagnosisHistoryOutcome, { mark: string; icon: ReactNode; tone: string }> = {
-  adopted: { mark: "support", icon: <Check size={12} strokeWidth={2.6} />, tone: "ok" },
-  deactivated: { mark: "context", icon: <Minus size={12} strokeWidth={2.6} />, tone: "idle" },
-  rejected: { mark: "counter", icon: <X size={12} strokeWidth={2.6} />, tone: "bad" },
-  stopped: { mark: "counter", icon: <X size={12} strokeWidth={2.6} />, tone: "bad" },
+const OUTCOME_MARK: Record<
+  DiagnosisHistoryOutcome,
+  { mark: string; icon: ReactNode; tone: string }
+> = {
+  adopted: {
+    mark: "support",
+    icon: <Check size={12} strokeWidth={2.6} />,
+    tone: "ok",
+  },
+  deactivated: {
+    mark: "context",
+    icon: <Minus size={12} strokeWidth={2.6} />,
+    tone: "idle",
+  },
+  rejected: {
+    mark: "counter",
+    icon: <X size={12} strokeWidth={2.6} />,
+    tone: "bad",
+  },
+  stopped: {
+    mark: "counter",
+    icon: <X size={12} strokeWidth={2.6} />,
+    tone: "bad",
+  },
 };
 
 export interface DiagnosisHistoryListProps {
@@ -23,6 +42,7 @@ export interface DiagnosisHistoryListProps {
   inactive: readonly ConfirmedCondition[];
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
   renderCondition: (condition: ConfirmedCondition) => ReactNode;
 }
 
@@ -32,13 +52,17 @@ export function DiagnosisHistoryList({
   inactive,
   loading = false,
   error = null,
+  onRetry,
   renderCondition,
 }: DiagnosisHistoryListProps) {
   const [viewing, setViewing] = useState<string | null>(null);
   const shown = inactive.find((item) => item.conditionId === viewing) ?? null;
   if (shown)
     return (
-      <div className="bc-dx-history-detail" data-testid="diagnosis-history-detail">
+      <div
+        className="bc-dx-history-detail"
+        data-testid="diagnosis-history-detail"
+      >
         <button
           type="button"
           className="bc-dx-text-button bc-dx-history-back"
@@ -55,6 +79,11 @@ export function DiagnosisHistoryList({
       {error ? (
         <p role="alert" className="bc-dx-note">
           {error}
+          {onRetry ? (
+            <button type="button" className="bc-text-button" onClick={onRetry}>
+              重新读取
+            </button>
+          ) : null}
         </p>
       ) : loading ? (
         <p role="status" className="bc-dx-note">
@@ -77,7 +106,11 @@ export function DiagnosisHistoryList({
                 <time className="bc-dx-timeline-date" dateTime={entry.at}>
                   {entry.dateLabel}
                 </time>
-                <span className="bc-dx-mark" data-mark={mark.mark} aria-hidden="true">
+                <span
+                  className="bc-dx-mark"
+                  data-mark={mark.mark}
+                  aria-hidden="true"
+                >
                   {mark.icon}
                 </span>
                 <span className="bc-dx-timeline-body">
@@ -89,7 +122,11 @@ export function DiagnosisHistoryList({
                     </span>
                     {entry.levelLabel ? (
                       <span className="bc-dx-chip" data-tone="ai">
-                        <Sparkle size={11} aria-hidden="true" fill="currentColor" />
+                        <Sparkle
+                          size={11}
+                          aria-hidden="true"
+                          fill="currentColor"
+                        />
                         {entry.levelLabel}
                       </span>
                     ) : null}
@@ -106,7 +143,10 @@ export function DiagnosisHistoryList({
         </ol>
       )}
       {inactive.length > 0 ? (
-        <section className="bc-dx-section bc-dx-history-inactive" aria-label="已停用">
+        <section
+          className="bc-dx-section bc-dx-history-inactive"
+          aria-label="已停用"
+        >
           <h4 className="bc-dx-label">已停用</h4>
           <ul className="bc-dx-rows">
             {inactive.map((item) => (
@@ -163,6 +203,10 @@ export function DiagnosisHistoryPanel({
       inactive={inactive}
       loading={runs.isPending}
       error={failure ? errorMessage(failure, "诊断历史暂时无法读取。") : null}
+      onRetry={() => {
+        void diagnosis.refetch();
+        void runs.refetch();
+      }}
       renderCondition={renderCondition}
     />
   );

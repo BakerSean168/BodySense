@@ -15,6 +15,7 @@ export interface SafetyRestrictedViewProps {
   restrictions: readonly SafetyRestrictionView[];
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
   onBack: () => void;
   /** "补充复核": continue in Chat; nothing is lifted from the web. */
   onAddReview: () => void;
@@ -84,6 +85,7 @@ export function SafetyRestrictedPanel({
   restrictions,
   loading = false,
   error = null,
+  onRetry,
   onBack,
   onAddReview,
 }: SafetyRestrictedViewProps) {
@@ -97,6 +99,15 @@ export function SafetyRestrictedPanel({
         {error ? (
           <div className="bc-dx-banner" data-tone="bad" role="alert">
             <span className="bc-dx-banner-text">{error}</span>
+            {onRetry ? (
+              <button
+                type="button"
+                className="bc-text-button"
+                onClick={onRetry}
+              >
+                重新读取
+              </button>
+            ) : null}
           </div>
         ) : loading ? (
           <p role="status" className="bc-dx-note">
@@ -107,14 +118,20 @@ export function SafetyRestrictedPanel({
             现在没有生效的安全限制。如果对话里刚刚提到新的不适，安全核对完成后会显示在这里。
           </p>
         ) : (
-          restrictions.map((item) => <RestrictionBlock key={item.id} item={item} />)
+          restrictions.map((item) => (
+            <RestrictionBlock key={item.id} item={item} />
+          ))
         )}
         <p className="bc-dx-note">
           安全限制由系统按你的原话和规则确定，不能在这里直接解除；补充复核材料后会重新核对。
         </p>
       </div>
       <div className="bc-window-footer bc-dx-footer">
-        <button type="button" className="bc-dx-link bc-dx-early" onClick={onBack}>
+        <button
+          type="button"
+          className="bc-dx-link bc-dx-early"
+          onClick={onBack}
+        >
           返回计划
         </button>
         <button type="button" className="bc-dx-primary" onClick={onAddReview}>
@@ -144,6 +161,7 @@ export default function SafetyRestrictedView(
       {...props}
       restrictions={restrictions}
       loading={query.isPending}
+      onRetry={() => void query.refetch()}
       error={
         query.error ? errorMessage(query.error, "安全限制暂时无法读取。") : null
       }

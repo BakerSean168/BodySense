@@ -1,0 +1,1139 @@
+/* ==========================================================================
+   Business windows / Penpot V2 Canvas compositions.
+   The desktop canvas stays mounted beside one visible window docked like the
+   Penpot 1440 x 900 boards: 40px from its side (Person/Chat left; Diagnosis,
+   Training, Trainer right), stage top 28 (screen y 92) and 108px kept above
+   the stage bottom for the Dock, so 700px tall at 900. When the real Dock
+   is taller than Penpot's 72px one, the window keeps 8px above its measured
+   top (--bc-dock-reserve) instead of running under it. On narrow screens the
+   same mounted task is displayed in a 358px sheet above the persistent Dock. Fixed header/footer and overflow:auto
+   content do not depend on Penpot's limited prototype scroll API.
+   ========================================================================== */
+.bc-business-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 36;
+  pointer-events: none;
+}
+.bc-business-layer > * {
+  pointer-events: auto;
+}
+/* Penpot ink-wash corner pad (same exported media as the auth card), painted
+   under the header and content; decorative only. */
+.bc-business-window::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto auto;
+  z-index: -1;
+  width: 452px;
+  height: 500px;
+  max-width: 100%;
+  background: var(--bc-window-ink-corner) top right /
+    var(--bc-window-ink-corner-size) no-repeat;
+  pointer-events: none;
+}
+.bc-business-window[data-dock="right"] {
+  left: auto;
+  right: clamp(16px, var(--bc-window-left, 40px), 48px);
+}
+/* Penpot draws Person's detail scenes (Body / Episode, record detail and the
+   Assets delete-scope / erasure scenes) 560 wide; the category lists are 860.
+   The window narrows from its docked side while one is open. */
+.bc-business-window {
+  /* Effective top; it moves down below the safety banner (see below). */
+  --bc-window-y: var(--bc-window-top, 28px);
+  position: absolute;
+  left: clamp(16px, var(--bc-window-left, 40px), 48px);
+  top: var(--bc-window-y);
+  width: min(
+    var(--bc-window-w, var(--bc-window-width, 560px)),
+    calc(100% - 32px)
+  );
+  height: min(
+    var(--bc-window-height, 700px),
+    var(--bc-window-max-height, 700px),
+    calc(
+      100% - var(--bc-window-y) -
+        max(
+          var(--bc-window-bottom, 108px),
+          calc(var(--bc-dock-reserve, 0px) + 8px)
+        )
+    )
+  );
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bc-window-line);
+  border-radius: 18px;
+  background: var(--bc-window-paper);
+  color: var(--bc-ink);
+  box-shadow: var(--bc-shadow);
+  isolation: isolate;
+  transition: width 0.2s ease;
+}
+.bc-business-window:has(.bc-person-detail, .bc-statement-erasure) {
+  --bc-window-w: var(--bc-window-scene-width, var(--bc-window-width));
+}
+/* Penpot "Desktop / Body / Region": the region detail is a 560 x 700 scene
+   docked left like the Person window (x 40, y 92), on window paper with the
+   ink corner; intro and Tools rail give way as for a left window. */
+@media (min-width: 761px) {
+  .bc-region-card {
+    left: 40px;
+    right: auto;
+    top: 28px;
+    width: min(560px, calc(100% - 80px));
+    height: min(700px, calc(100% - 28px - var(--bc-dock-reserve, 108px) - 8px));
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--bc-window-line, var(--bc-line));
+    border-radius: 18px;
+    background: var(--bc-window-paper, var(--bc-paper));
+    backdrop-filter: none;
+  }
+  .bc-region-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto auto;
+    z-index: -1;
+    width: 452px;
+    height: 500px;
+    background: var(--bc-window-ink-corner, none) top right /
+      var(--bc-window-ink-corner-size, 452px 500px) no-repeat;
+    pointer-events: none;
+  }
+  .bc-region-card > .bc-panel-heading {
+    align-items: center;
+    padding: 18px 14px 0 20px;
+  }
+  .bc-region-card
+    > :is(
+      .bc-selection-chips,
+      .bc-region-facts,
+      .bc-context-note,
+      .bc-panel-actions
+    ) {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .bc-region-card .bc-region-facts {
+    border: 0;
+    padding: 0;
+    overflow: auto;
+  }
+  .bc-region-card .bc-panel-actions {
+    margin-top: auto;
+    padding-bottom: 8px;
+  }
+  .bc-stage:has(> .bc-region-card) :is(.bc-tool-rail, .bc-tool-rail-tab) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+.bc-region-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bc-region-card .bc-region-title h2 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.bc-region-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e7f3ec;
+  color: var(--bc-primary);
+  font-size: 10px;
+  font-weight: 650;
+}
+.bc-region-selected::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.bc-dark .bc-region-selected {
+  background: var(--bc-primary-soft);
+}
+.bc-region-facts article {
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 8px;
+}
+.bc-region-facts article > :not(.bc-region-fact-mark) {
+  grid-column: 2;
+}
+.bc-region-fact-mark {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #e7f3ec;
+  color: var(--bc-primary);
+}
+.bc-region-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--bc-window-divider, var(--bc-line));
+}
+.bc-region-card .bc-region-footer {
+  margin-top: 0;
+}
+.bc-region-records {
+  color: var(--bc-primary);
+  font-weight: 700;
+}
+.bc-region-ask {
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bc-window-control, var(--bc-primary-soft));
+  color: var(--bc-primary);
+  font-weight: 700;
+}
+/* Penpot's window boards show neither the canvas intro nor, beside a
+   left-docked window, the Tools rail (it collapses instead of peeking out
+   from under the window). Both fade back when the window closes; reduced
+   motion drops the transition through the theme rule above. */
+.bc-tool-rail {
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    translate 0.2s ease;
+}
+
+.bc-stage:has(.bc-business-window[data-dock="left"]:not([hidden]))
+  :is(.bc-tool-rail, .bc-tool-rail-tab) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  translate: -24px 0;
+}
+/* Desktop twin of the mobile sheet rule: the safety banner (z 45) would sit
+   on the window header at its 70px stage top. While a window is open the
+   banner moves to the stage's top edge and the window starts below its
+   measured height; the bottom edge above the Dock stays where it was. */
+.bc-stage:has(.bc-business-window:not([hidden])) > .bc-safety-banner {
+  top: 12px;
+}
+.bc-stage:has(> .bc-safety-banner) .bc-business-window {
+  --bc-window-y: max(
+    var(--bc-window-top, 28px),
+    calc(12px + var(--bc-safety-banner-height, 46px) + 8px)
+  );
+}
+.bc-business-window[data-active="false"] {
+  box-shadow: 0 12px 34px rgba(31, 47, 37, 0.08);
+}
+.bc-business-window[hidden] {
+  display: none;
+}
+.bc-business-window-header {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-height: 64px;
+  gap: 10px;
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid var(--bc-window-divider);
+  z-index: 2;
+}
+.bc-business-window-title {
+  color: var(--bc-ink);
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.bc-business-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+/* V2 compact context toolbars; header, body scroll and footer are independent. */
+.bc-business-window-controls .bc-icon-button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--bc-secondary);
+}
+.bc-business-window-controls .bc-icon-button:last-child {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bc-window-control);
+  color: var(--bc-ink);
+}
+.bc-business-window-controls .bc-icon-button:hover {
+  background: var(--bc-subtle);
+  color: var(--bc-ink);
+}
+.bc-window-context {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--bc-ink);
+}
+.bc-window-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 280px;
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  background: var(--bc-subtle);
+}
+.bc-window-select-wrap:hover {
+  border-color: var(--bc-secondary);
+}
+.bc-window-select-wrap:focus-within {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-window-context-select {
+  appearance: none;
+  min-width: 0;
+  width: 100%;
+  max-width: 280px;
+  min-height: 34px;
+  padding: 0 28px 0 11px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--bc-ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.bc-window-context-select:disabled {
+  color: var(--bc-muted);
+  cursor: not-allowed;
+}
+.bc-window-context-select option {
+  color: var(--bc-ink);
+  background: var(--bc-paper);
+}
+.bc-window-select-wrap > svg {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  color: var(--bc-secondary);
+}
+.bc-chat-history-menu {
+  min-width: 240px;
+  max-width: 300px;
+  max-height: min(420px, 60dvh);
+  overflow-y: auto;
+}
+.bc-chat-history-item {
+  display: grid;
+  gap: 2px;
+  align-items: start;
+  padding-block: 8px;
+}
+.bc-chat-history-day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.bc-chat-history-day span {
+  color: var(--bc-muted, #6b7280);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.bc-chat-history-preview {
+  overflow: hidden;
+  color: var(--bc-muted, #6b7280);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bc-header-chat-action {
+  flex: 0 0 auto;
+}
+.bc-business-window-header:has(.bc-window-context)
+  .bc-business-window-controls {
+  margin-left: auto;
+}
+
+.bc-business-window-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.bc-business-window-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.bc-window-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 16px 20px;
+}
+.bc-window-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--bc-line);
+  background: transparent;
+}
+.bc-window-footer .bc-button {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bc-window-loading,
+.bc-window-note {
+  margin: 0 0 12px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.bc-window-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bc-window-empty {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 34px 12px;
+  text-align: center;
+}
+.bc-window-empty-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.bc-window-empty-text {
+  margin: 0;
+  max-width: 300px;
+  color: var(--bc-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.bc-error {
+  margin: 0 0 10px;
+  color: var(--bc-danger);
+  font-size: 12px;
+}
+
+/* Person window ---------------------------------------------------------- */
+.bc-person {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent;
+  color: var(--bc-ink);
+}
+.bc-person-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+  color: var(--bc-ink);
+}
+.bc-person-identity:hover {
+  background: var(--bc-subtle);
+}
+.bc-person-avatar {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.bc-person-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.bc-person-dantian {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin: 10px 0 0 -8px;
+  border-radius: 999px;
+  background: #f6c95a;
+  box-shadow: 0 0 6px rgba(246, 201, 90, 0.7);
+}
+.bc-person-name {
+  font-size: 14px;
+  font-weight: 650;
+}
+.bc-person-popover {
+  position: absolute;
+  z-index: 5;
+  left: 20px;
+  top: 70px;
+  width: min(380px, calc(100% - 32px));
+  min-height: 184px;
+  max-height: min(432px, calc(100% - 82px));
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--bc-line);
+  border-radius: 16px;
+  background: var(--bc-paper);
+  box-shadow: var(--bc-shadow);
+}
+/* Identity popover (Penpot Overlay / Person / Identity): labelled hairline rows. */
+.bc-identity {
+  gap: 14px;
+  max-height: min(520px, calc(100% - 82px));
+}
+.bc-identity-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bc-ink);
+}
+.bc-identity-head p {
+  margin: 4px 0 0;
+  color: var(--bc-secondary);
+  font-size: 13px;
+}
+.bc-identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bc-identity-row {
+  min-width: 0;
+  margin: 0;
+  padding: 0 12px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--bc-line);
+}
+.bc-identity-row label,
+.bc-identity-row legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 4px;
+  color: var(--bc-muted);
+  font-size: 12px;
+}
+.bc-identity-row input,
+.bc-identity-row select {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--bc-ink);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+.bc-identity-row input::placeholder {
+  color: var(--bc-ink);
+  opacity: 0.9;
+}
+.bc-identity-row:focus-within {
+  border-bottom-color: var(--bc-primary);
+}
+.bc-identity-row input:focus-visible,
+.bc-identity-row select:focus-visible {
+  box-shadow: 0 2px 0 var(--bc-primary);
+}
+.bc-identity-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.bc-identity-note {
+  margin: 0;
+  color: var(--bc-secondary);
+  font-size: 12px;
+}
+.bc-identity-message {
+  margin: 0;
+  font-size: 12px;
+  color: var(--bc-primary);
+}
+.bc-identity-message.bc-error {
+  color: var(--bc-danger);
+}
+.bc-identity-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.bc-identity-actions .bc-button {
+  min-height: 34px;
+  padding: 0 16px;
+}
+.bc-identity-actions .bc-text-button {
+  font-size: 13px;
+}
+.bc-identity-actions .bc-identity-records {
+  margin-right: auto;
+}
+.bc-identity-row select {
+  margin-left: -4px;
+}
+.bc-person-category {
+  display: grid;
+  gap: 14px;
+}
+.bc-person-count {
+  margin: 0;
+  color: var(--bc-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.bc-person-empty {
+  min-height: 280px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.bc-person-empty-text {
+  margin: 0;
+  max-width: 380px;
+  color: var(--bc-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.bc-person-empty-action {
+  min-height: 40px;
+}
+.bc-person-equipment {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-equipment > li {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 14px;
+  border: 1px solid var(--bc-line);
+  border-radius: 14px;
+  background: var(--bc-subtle);
+}
+.bc-person-equipment-symbol {
+  color: var(--bc-primary);
+}
+.bc-person-equipment strong {
+  font-size: 13px;
+}
+.bc-person-equipment p {
+  margin: 0;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-person-uploads {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bc-person-uploads > li {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--bc-line);
+  border-radius: 12px;
+  background: var(--bc-subtle);
+}
+.bc-person-uploads strong {
+  font-size: 13px;
+}
+.bc-person-uploads span {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-person-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--bc-muted);
+  font-size: 12px;
+}
+.bc-person-group-title {
+  margin: 0;
+  color: var(--bc-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Diagnosis window ------------------------------------------------------- */
+.bc-condition-list {
+  display: grid;
+  gap: 12px;
+}
+.bc-condition {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--bc-line);
+  border-radius: 14px;
+  background: var(--bc-subtle);
+}
+
+/* TrainingPlan window --------------------------------------------------- */
+
+/* Mobile bottom sheet ---------------------------------------------------- */
+.bc-business-sheet {
+  /* 92px below keeps the Dock clear; the top moves down for the safety banner. */
+  --bc-sheet-top: 16px;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: var(--bc-sheet-top);
+  z-index: 36;
+  height: min(704px, calc(100% - var(--bc-sheet-top) - 92px));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--bc-line);
+  border-radius: 18px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  box-shadow: 0 18px 60px rgba(31, 47, 37, 0.16);
+}
+.bc-business-sheet[hidden] {
+  display: none;
+}
+/* The safety banner floats above every sheet (z 45). While one is open the
+   banner moves to the top edge and the sheet starts below its measured
+   height, so the banner never covers the sheet header or its status chips. */
+.bc-stage:has(.bc-business-sheet:not([hidden])) > .bc-safety-banner {
+  top: 12px;
+}
+.bc-stage:has(> .bc-safety-banner) .bc-business-sheet {
+  --bc-sheet-top: calc(12px + var(--bc-safety-banner-height, 46px) + 8px);
+}
+.bc-business-sheet-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bc-business-sheet-content .bc-window-body {
+  padding: 14px 18px;
+}
+.bc-business-sheet-footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--bc-line);
+}
+.bc-business-sheet-footer .bc-button {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Plan authorization: proposals are pending until the user explicitly accepts. */
+
+/* Records keep real add/confirm capabilities inside the Person window. */
+.bc-record-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* BodyFact ledger uses the existing floating-window visual system. */
+.bc-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.bc-record-actions > .bc-window-note {
+  flex: 1;
+  min-width: 10rem;
+}
+.bc-record-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.bc-record-item {
+  border: 1px solid var(--bc-line);
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  min-width: 0;
+}
+.bc-record-statement {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.5rem 0;
+}
+.bc-record-saved {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+/* Minimum functional field sizing; Penpot remains the visual design authority. */
+.bc-episode-editor {
+  min-width: 0;
+}
+.bc-episode-editor label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.bc-episode-editor select,
+.bc-episode-editor input,
+.bc-episode-editor textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  color: var(--bc-ink);
+  background: var(--bc-paper);
+  font: inherit;
+}
+.bc-episode-editor textarea {
+  overflow-wrap: anywhere;
+  resize: vertical;
+}
+.bc-person-category textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.bc-person-category .bc-equipment-form textarea {
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  font: inherit;
+  line-height: 1.5;
+}
+.bc-person-category .bc-equipment-form textarea:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+
+/* Pending Ask User reuses the shared card and the active canvas theme. */
+.body-canvas-theme .bc-chat-composer-area {
+  background: linear-gradient(to top, var(--bc-window-paper) 78%, transparent);
+}
+/* Penpot Chat / Running has no status box: the thread's 正在/继续分析 pill
+   says what is happening. Stop stays reachable as a quiet line. */
+.body-canvas-theme .bc-chat-run-status {
+  border-color: transparent;
+  background: transparent;
+  padding-block: 0;
+  margin-bottom: 4px;
+}
+.body-canvas-theme .bc-chat-run-status p {
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.body-canvas-theme .bc-chat-run-status button {
+  color: var(--bc-muted);
+}
+.body-canvas-theme .bc-chat-run-status button:hover,
+.body-canvas-theme .bc-chat-run-status button:focus-visible {
+  background: var(--bc-danger-soft);
+  color: var(--bc-danger);
+}
+.body-canvas-theme .bc-pending-composer {
+  scrollbar-gutter: stable;
+}
+.body-canvas-theme .ask-user-card {
+  margin: 0;
+  min-width: 0;
+  border-color: color-mix(in srgb, var(--bc-primary) 55%, var(--bc-line));
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  overflow-wrap: anywhere;
+}
+.body-canvas-theme .ask-user-title {
+  color: var(--bc-primary);
+}
+.body-canvas-theme .ask-user-question {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .ask-user-context,
+.body-canvas-theme .ask-user-card label {
+  color: var(--bc-secondary);
+}
+.body-canvas-theme
+  .ask-user-card
+  input:not([type="checkbox"]):not([type="radio"]) {
+  min-width: 0;
+  border-color: var(--bc-line);
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .ask-user-card input::placeholder {
+  color: var(--bc-muted);
+}
+.body-canvas-theme .ask-user-card input {
+  accent-color: var(--bc-primary);
+}
+.body-canvas-theme .ask-user-card input:focus-visible,
+.body-canvas-theme .ask-user-card button:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.body-canvas-theme .ask-user-submit {
+  min-height: 38px;
+  border: 1px solid var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary);
+}
+.body-canvas-theme .ask-user-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bc-primary-soft) 85%, var(--bc-primary));
+}
+.body-canvas-theme .ask-user-error {
+  border-color: color-mix(in srgb, var(--bc-danger) 35%, var(--bc-line));
+  background: var(--bc-danger-soft);
+}
+.body-canvas-theme .ask-user-error p,
+.body-canvas-theme .ask-user-error button {
+  color: var(--bc-danger);
+}
+/* BodyState suggestion: the user's own words, framed by the primary accent. */
+.body-canvas-theme .bss-card {
+  border-color: color-mix(in srgb, var(--bc-primary) 45%, var(--bc-line));
+  background: var(--bc-paper);
+}
+.body-canvas-theme .bss-quote {
+  border-left-color: var(--bc-primary);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .bss-muted {
+  color: var(--bc-muted);
+}
+.body-canvas-theme .bss-ink {
+  color: var(--bc-ink);
+}
+.body-canvas-theme .bss-label {
+  border-color: var(--bc-line);
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .bss-secondary {
+  min-height: 38px;
+  border-color: var(--bc-line);
+  border-radius: 10px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+}
+.body-canvas-theme .bss-secondary:hover:not(:disabled) {
+  background: var(--bc-subtle);
+}
+.body-canvas-theme .bss-tertiary {
+  min-height: 38px;
+  color: var(--bc-secondary);
+}
+.body-canvas-theme .bss-tertiary:hover:not(:disabled) {
+  color: var(--bc-ink);
+}
+
+/* Person keeps one scroll boundary in the existing window/sheet at every width. */
+.bc-person,
+.bc-person-body {
+  min-width: 0;
+}
+.bc-person-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 22px 24px;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+  overflow-wrap: anywhere;
+}
+.bc-person-body > *,
+.bc-person-body .bc-record-editor,
+.bc-person-body .bc-equipment-form > * {
+  min-width: 0;
+}
+.bc-person-body[data-category="records"] .bc-equipment-form,
+.bc-person-body[data-category="habits"] .bc-equipment-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+.bc-person-body
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea,
+    fieldset
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.bc-person-body textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  border: 1px solid var(--bc-line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  font: inherit;
+}
+.bc-person-body .bc-record-actions > :is(button, .bc-window-note) {
+  min-width: 0;
+  max-width: 100%;
+}
+.bc-person-body .bc-record-actions > button {
+  white-space: normal;
+  height: auto;
+}
+.bc-person-body :is(button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 2px;
+}
+.bc-hypotheses {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.bc-hypothesis-form {
+  align-items: stretch;
+}
+.bc-hypothesis-form fieldset {
+  display: grid;
+  gap: 8px;
+}
+.bc-hypothesis-form .bc-hypothesis-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding-block: 6px;
+  font-size: 12px;
+}
+.bc-hypothesis-form .bc-hypothesis-choice input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--bc-primary);
+}
+.bc-episode-status {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-block: 8px;
+}
+.bc-episode-status p {
+  margin: 0;
+}
+.bc-episode-badge {
+  max-width: 100%;
+  border: 1px solid var(--bc-line);
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: var(--bc-secondary);
+  background: var(--bc-subtle);
+  font-size: 11px;
+  font-weight: 600;
+}
+.bc-episode-badge[data-state="ongoing"] {
+  color: var(--bc-primary);
+  background: var(--bc-primary-soft);
+}
+@media (max-width: 760px) {
+  .bc-business-window-header {
+    min-height: 64px;
+    padding: 0 10px 0 16px;
+  }
+  .bc-business-window-title {
+    font-size: 17px;
+  }
+  .bc-person-popover {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    padding: 16px;
+  }
+  .bc-window-select-wrap {
+    max-width: min(230px, 55vw);
+  }
+  .bc-window-context-select {
+    max-width: min(230px, 55vw);
+  }
+  .bc-person-body {
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .bc-person-equipment {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .body-canvas-theme .bc-chat-composer-area {
+    padding-top: 12px;
+  }
+  .body-canvas-theme .ask-user-submit,
+  .body-canvas-theme .bss-secondary,
+  .body-canvas-theme .bss-tertiary {
+    min-height: 44px;
+  }
+  .bc-person-body .bc-record-actions > button {
+    min-height: 44px;
+  }
+  .bc-person-body
+    :is(textarea, select, input:not([type="checkbox"]):not([type="radio"])) {
+    font-size: 16px;
+  }
+}
+

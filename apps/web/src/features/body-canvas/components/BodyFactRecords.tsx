@@ -2,6 +2,7 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -10,7 +11,6 @@ import {
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
-  ChevronRight,
   FileText,
   LoaderCircle,
   Plus,
@@ -30,6 +30,8 @@ import {
   effectiveTimeZone,
   formatInstantInZone,
 } from "@/features/profile/model/profilePreferences";
+import { BodyFactRecordForm } from "./BodyFactRecordForm";
+import { BodyFactRecordList } from "./BodyFactRecordList";
 import { BodyFactAmendment } from "./BodyFactAmendment";
 import type { StatementErasureTarget } from "./StatementErasure";
 
@@ -40,16 +42,10 @@ const StatementErasure = lazy(() =>
   })),
 );
 
-import {
-  BODY_FACT_KIND_LABELS as FACT_KINDS,
-  type BodyFactKind as FactKind,
-} from "../model/bodyFactPresentation";
+import { type BodyFactKind as FactKind } from "../model/bodyFactPresentation";
 import { projectBodyFactSurface } from "../model/bodyFactViewModel";
 import { projectBoundedBodyFactVM } from "../model/bodyFactV2Adapter";
-import {
-  groupByRecordedDay,
-  recordedClock,
-} from "../model/personRecordsTimeline";
+import { recordedClock } from "../model/personRecordsTimeline";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -89,7 +85,10 @@ export function BodyFactRecords({
     useProfileStore((state) => state.profile?.preferences),
   ).zone;
   const ownerRef = useRef(owner);
-  ownerRef.current = owner;
+  // Commit identity before asynchronous receipts can update this surface.
+  useLayoutEffect(() => {
+    ownerRef.current = owner;
+  }, [owner]);
   const queryClient = useQueryClient();
   const query = useInfiniteQuery({
     queryKey: bodyFactRecordsKey(owner),
@@ -269,12 +268,6 @@ export function BodyFactRecords({
     setNotice(null);
     setSelectedId(null);
   };
-  const occurrenceLine = (occurrence: string, recordedAt: string) =>
-    `发生：${occurrence} · 记录 ${
-      habitsOnly
-        ? recordedTime(recordedAt, displayZone)
-        : recordedClock(recordedAt, displayZone)
-    }`;
   const emptyState =
     !query.isError &&
     !query.isPending &&
@@ -283,80 +276,25 @@ export function BodyFactRecords({
     boundedVM.state === "empty";
 
   const addForm = adding ? (
-    <form
-      className="bc-equipment-form bc-person-record-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void submit();
+    <BodyFactRecordForm
+      habitsOnly={habitsOnly}
+      kind={kind}
+      statement={statement}
+      when={when}
+      saving={saving}
+      saveError={saveError}
+      onKindChange={(value) => {
+        setKind(value);
+        pending.current = null;
       }}
-    >
-      {!habitsOnly ? (
-        <label>
-          记录类别
-          <select
-            value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as FactKind);
-              pending.current = null;
-            }}
-            disabled={saving}
-          >
-            {Object.entries(FACT_KINDS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <label>
-        你的描述
-        <textarea
-          value={statement}
-          onChange={(event) => setStatement(event.target.value)}
-          maxLength={2000}
-          rows={3}
-          disabled={saving}
-          required
-        />
-      </label>
-      <label>
-        发生时间<span className="bc-optional">可选，保留你的原话</span>
-        <input
-          value={when}
-          onChange={(event) => setWhen(event.target.value)}
-          maxLength={500}
-          placeholder="例如：昨天晚上；不清楚可以留空"
-          disabled={saving}
-        />
-      </label>
-      <div className="bc-record-actions">
-        <button
-          type="submit"
-          className="bc-button bc-primary"
-          disabled={saving || !statement.trim()}
-        >
-          {saving ? <LoaderCircle size={16} className="animate-spin" /> : null}
-          {saving ? "正在保存" : "保存记录"}
-        </button>
-        <button
-          type="button"
-          className="bc-button"
-          disabled={saving}
-          onClick={() => {
-            setAdding(false);
-            setSaveError(null);
-          }}
-        >
-          收起
-        </button>
-      </div>
-      {saveError ? (
-        <p role="alert" className="bc-error">
-          {saveError}
-        </p>
-      ) : null}
-    </form>
+      onStatementChange={setStatement}
+      onWhenChange={setWhen}
+      onSubmit={() => void submit()}
+      onClose={() => {
+        setAdding(false);
+        setSaveError(null);
+      }}
+    />
   ) : null;
 
   const erasure =
@@ -531,47 +469,6 @@ export function BodyFactRecords({
     );
   }
 
-  const row = ({
-    id,
-    label,
-    statement: statementText,
-    occurrence,
-    recordedAt,
-    isCorrection,
-  }: (typeof rows)[number]) => (
-    <li key={id}>
-      <button
-        type="button"
-        className="bc-person-row"
-        data-habit={habitsOnly ? "true" : undefined}
-        aria-label={`查看记录：${statementText}`}
-        onClick={() => {
-          setSelectedId(id);
-          setNotice(null);
-          setAdding(false);
-        }}
-      >
-        {habitsOnly ? null : (
-          <span className="bc-person-row-kind">{label}</span>
-        )}
-        <span className="bc-person-row-main">
-          <span className="bc-record-statement">{statementText}</span>
-          <span className="bc-person-row-meta">
-            {occurrenceLine(occurrence, recordedAt)}
-          </span>
-        </span>
-        {isCorrection ? (
-          <span className="bc-person-chip">更正后的陈述</span>
-        ) : null}
-        <ChevronRight
-          size={17}
-          className="bc-person-row-chevron"
-          aria-hidden="true"
-        />
-      </button>
-    </li>
-  );
-
   return (
     <div
       className="bc-person-category bc-person-records"
@@ -687,29 +584,17 @@ export function BodyFactRecords({
       ) : null}
       {addForm}
       {erasure}
-      {habitsOnly ? (
-        rows.length ? (
-          <ul className="bc-person-timeline" aria-label="生活习惯">
-            {rows.map(row)}
-          </ul>
-        ) : null
-      ) : (
-        groupByRecordedDay(
-          rows,
-          (item) => item.recordedAt,
-          displayZone,
-          clock,
-        ).map((group) => (
-          <section
-            key={group.key}
-            className="bc-person-day"
-            aria-label={group.label}
-          >
-            <h4 className="bc-person-day-label">{group.label}</h4>
-            <ul className="bc-person-timeline">{group.items.map(row)}</ul>
-          </section>
-        ))
-      )}
+      <BodyFactRecordList
+        rows={rows}
+        habitsOnly={habitsOnly}
+        displayZone={displayZone}
+        now={clock}
+        onSelect={(id) => {
+          setSelectedId(id);
+          setNotice(null);
+          setAdding(false);
+        }}
+      />
       {query.hasNextPage ? (
         <button
           type="button"
