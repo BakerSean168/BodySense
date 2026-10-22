@@ -15,10 +15,9 @@ export async function authFetch(
 
   // Add authorization header if not skipped
   if (!skipAuth && accessToken) {
-    fetchOptions.headers = {
-      ...fetchOptions.headers,
-      Authorization: `Bearer ${accessToken}`,
-    };
+    const headers = new Headers(fetchOptions.headers);
+    headers.set("Authorization", `Bearer ${accessToken}`);
+    fetchOptions.headers = headers;
   }
 
   // Make the request
@@ -32,10 +31,9 @@ export async function authFetch(
     if (refreshed) {
       // Retry with new token
       const newAccessToken = useAuthStore.getState().accessToken;
-      fetchOptions.headers = {
-        ...fetchOptions.headers,
-        Authorization: `Bearer ${newAccessToken}`,
-      };
+      const retryHeaders = new Headers(fetchOptions.headers);
+      retryHeaders.set("Authorization", `Bearer ${newAccessToken}`);
+      fetchOptions.headers = retryHeaders;
       response = await fetch(apiUrl(url), fetchOptions);
     }
   }
