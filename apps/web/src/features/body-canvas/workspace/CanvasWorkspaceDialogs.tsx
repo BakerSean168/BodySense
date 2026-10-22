@@ -2,12 +2,7 @@ import { useState } from "react";
 import { LoaderCircle, X } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { regionPaletteShortcut, SHOW_POSE_BAR } from "../model/bodyCanvas";
 import type { ThemePreference } from "./useCanvasAppearance";
 
@@ -59,18 +54,11 @@ export function CanvasWorkspaceDialogs({
           className={`${themeClass} bc-inventory-dialog`}
         >
           <div className="bc-inventory-heading">
-            <div>
-              <span className="bc-eyebrow">
-                {canvasOverlay
-                  ? `CANVAS TOOL / ${canvasOverlay.toUpperCase()}`
-                  : "CANVAS TOOL"}
-              </span>
-              <DialogTitle className="bc-inventory-title">
-                {canvasOverlay
-                  ? CANVAS_OVERLAY_META[canvasOverlay].title
-                  : "画布工具"}
-              </DialogTitle>
-            </div>
+            <DialogTitle className="bc-inventory-title">
+              {canvasOverlay
+                ? CANVAS_OVERLAY_META[canvasOverlay].title
+                : "画布工具"}
+            </DialogTitle>
             <button
               className="bc-icon-button"
               aria-label="关闭当前面板"
@@ -123,9 +111,6 @@ export function CanvasWorkspaceDialogs({
               <DialogTitle className="bc-account-dialog-title">
                 退出登录
               </DialogTitle>
-              <DialogDescription className="bc-account-dialog-text">
-                确定要退出当前账号吗？
-              </DialogDescription>
               <div className="bc-account-dialog-actions">
                 <button
                   type="button"
