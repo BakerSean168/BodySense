@@ -405,4 +405,3 @@
 .body-canvas-theme :is(.chat-tools, .chat-tool-receipt) {
   color: var(--bc-secondary);
 }
-
