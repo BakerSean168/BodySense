@@ -36,3 +36,10 @@ export type FieldVariant = NonNullable<
 /** Rounded paper popup shared by Select, Popover and the date picker. */
 export const popupSurface =
   "rounded-xl border border-(--ui-paper-line) bg-(--ui-paper) text-(--ui-ink) shadow-(--ui-popup-shadow) outline-none";
+
+/**
+ * Hit area, focus ring and disabled state shared by the small toggles
+ * (Switch, Checkbox, Radio).
+ */
+export const toggleControl =
+  "relative shrink-0 cursor-pointer outline-none after:absolute after:-inset-x-2 after:-inset-y-1.5 focus-visible:ring-2 focus-visible:ring-(--ui-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-(--ui-paper) data-disabled:cursor-not-allowed data-disabled:opacity-50";

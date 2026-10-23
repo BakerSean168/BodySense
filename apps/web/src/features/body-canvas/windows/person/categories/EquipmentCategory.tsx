@@ -163,7 +163,6 @@ export function EquipmentCategory({
                   checked={available}
                   disabled={!canEdit || pending || busy}
                   aria-label={`${asset.display_name} 可用`}
-                  title={available ? "可用" : "暂不可用"}
                   onCheckedChange={(checked) =>
                     void changeAvailability(
                       asset,

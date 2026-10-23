@@ -2,6 +2,7 @@
  * Penpot onboarding controls: full-width choice rows (choose → advance), two-column
  * multi-select chips and the centred value box used for date / height / weight.
  */
+import { Input } from "@/components/ui/Input";
 import type { ChoiceOption } from "./onboardingSteps";
 
 const focusRing =
@@ -143,8 +144,9 @@ export function ValueBox({
   return (
     <div className="flex flex-col items-center">
       <div className="flex h-[76px] w-full max-w-[320px] items-center justify-center gap-3 rounded-2xl bg-[#F7F7F7] px-6 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2C694F]">
-        <input
+        <Input
           id={id}
+          variant="bare"
           type={type === "date" ? "text" : "number"}
           inputMode={inputMode ?? (type === "number" ? "decimal" : "numeric")}
           autoComplete={type === "date" ? "bday" : undefined}
@@ -160,10 +162,8 @@ export function ValueBox({
           onKeyDown={(event) => {
             if (event.key === "Enter" && onEnter) onEnter();
           }}
-          className={`min-w-0 bg-transparent text-center text-[#1A1A1A] outline-none placeholder:text-[#9CA3AF] ${
-            type === "date"
-              ? "w-full text-2xl"
-              : "w-[96px] text-[28px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className={`min-h-0 py-0 text-center font-normal text-[#1A1A1A] placeholder:text-[#9CA3AF] ${
+            type === "date" ? "w-full text-2xl" : "w-[96px] text-[28px]"
           }`}
         />
         {unit && (

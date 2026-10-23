@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Input } from "@/components/ui/Input";
 import inkLine from "../assets/ink-line.webp";
 import inkButton from "../assets/ink-btn.webp";
 
@@ -57,14 +58,15 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
             className="h-6 w-6 shrink-0 text-[#7C8C81] transition-colors group-focus-within:text-[#2C694F]"
             strokeWidth={1.8}
           />
-          <input
+          <Input
             id={id}
             ref={ref}
             type={type}
+            variant="bare"
             aria-label={accessibleLabel}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            className="h-6 min-w-0 flex-1 border-0 bg-transparent pl-[10px] text-[15px] leading-[1.2] text-[#182A21] outline-none placeholder:text-[#9AA89E]"
+            className="h-6 min-h-0 w-auto flex-1 py-0 pl-[10px] text-[15px] leading-[1.2] font-normal text-[#182A21] placeholder:text-[#9AA89E]"
             {...props}
           />
           {kind === "password" && (
