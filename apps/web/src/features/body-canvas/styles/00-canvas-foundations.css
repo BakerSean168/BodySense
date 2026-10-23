@@ -514,7 +514,9 @@
   background: var(--bc-paper) !important;
   color: var(--bc-ink) !important;
   box-shadow: var(--bc-shadow) !important;
-  transform: none !important;
+  /* Only translate: Lightning CSS folds a transform + translate pair into one
+     transform and drops translate, which left Tailwind's -50% -50% centring
+     in place and pushed the palette off the top. */
   translate: -50% 0 !important;
 }
 .bc-region-palette-search {
@@ -920,8 +922,8 @@
   min-height: 0;
 }
 .bc-inventory-dialog {
-  width: min(930px, calc(100vw - 36px)) !important;
-  max-width: 930px !important;
+  width: min(560px, calc(100vw - 36px)) !important;
+  max-width: 560px !important;
   max-height: min(780px, calc(100dvh - 48px));
   display: flex !important;
   grid-template-rows: none !important;
@@ -950,7 +952,7 @@
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
-  padding: 24px;
+  padding: 0 24px 16px;
   color: var(--bc-ink);
 }
 .bc-inventory-content [class*="text-foreground"] {
@@ -975,11 +977,14 @@
 }
 .bc-keyboard-help > div {
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: 136px 1fr;
   gap: 18px;
   align-items: center;
   min-height: 46px;
   border-bottom: 1px solid var(--bc-line);
+}
+.bc-keyboard-help > div:last-child {
+  border-bottom: 0;
 }
 .bc-keyboard-help kbd {
   width: fit-content;
@@ -1156,8 +1161,8 @@
     width: 100% !important;
     max-width: none !important;
     max-height: 88dvh;
-    transform: none !important;
-    /* Tailwind v4 centres with the translate property, not transform. */
+    /* Tailwind v4 centres with the translate property; no transform here, or
+       Lightning CSS merges the two and drops translate. */
     translate: none !important;
     border-right: 0 !important;
     border-bottom: 0 !important;
