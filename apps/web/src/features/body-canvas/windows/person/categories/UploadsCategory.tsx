@@ -16,6 +16,7 @@ import { PersonAssetDeletion } from "./asset-deletion/PersonAssetDeletion";
 import { PersonMediaGrid } from "./PersonMediaGrid";
 import { PersonEmptyState } from "./PersonEmptyState";
 import { ReportCard } from "./ReportCard";
+import { IconTip } from "@/components/ui/tooltip";
 
 export function UploadsCategory({
   uploads,
@@ -106,27 +107,29 @@ export function UploadsCategory({
         </span>
       </span>
       <span className="bc-person-upload-failed-chip">上传失败</span>
-      <button
-        type="button"
-        className="bc-icon-button"
-        aria-label="重试"
-        title="重试"
-        onClick={() => lastFile.current && void send(lastFile.current)}
-      >
-        <RotateCcw size={17} aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="bc-icon-button"
-        aria-label="关闭失败提示"
-        title="关闭"
-        onClick={() => {
-          setFailed(null);
-          lastFile.current = null;
-        }}
-      >
-        <X size={17} aria-hidden="true" />
-      </button>
+      <IconTip label="重试">
+        <button
+          type="button"
+          className="bc-icon-button"
+          aria-label="重试"
+          onClick={() => lastFile.current && void send(lastFile.current)}
+        >
+          <RotateCcw size={17} aria-hidden="true" />
+        </button>
+      </IconTip>
+      <IconTip label="关闭">
+        <button
+          type="button"
+          className="bc-icon-button"
+          aria-label="关闭失败提示"
+          onClick={() => {
+            setFailed(null);
+            lastFile.current = null;
+          }}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
+      </IconTip>
     </div>
   ) : null;
   if (deleting) {
