@@ -1114,7 +1114,8 @@ describe("body-first business windows", () => {
     await user.click(screen.getByRole("button", { name: "synthetic" }));
     await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
     const confirm = await screen.findByRole("dialog", { name: "退出登录" });
-    expect(confirm).toHaveTextContent("确定要退出当前账号吗？");
+    // Title and the two buttons say it all: no extra prompt sentence.
+    expect(confirm).not.toHaveTextContent("确定");
     await user.click(within(confirm).getByRole("button", { name: "取消" }));
     expect(screen.queryByRole("dialog", { name: "退出登录" })).toBeNull();
   });
