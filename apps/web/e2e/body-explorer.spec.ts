@@ -268,10 +268,12 @@ test("Home body stays usable when optional anatomy layers fail", async ({
   await expect(scene).toHaveAttribute("data-skeleton", "error", {
     timeout: 30_000,
   });
-  await expect(skeleton).toHaveAttribute(
-    "title",
-    "骨骼层暂时无法加载，点按重试",
-  );
+  await skeleton.hover();
+  await expect(
+    page
+      .getByRole("tooltip")
+      .filter({ hasText: "骨骼层暂时无法加载，点按重试" }),
+  ).toBeVisible();
   await expect(scene).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("body-layers-fallback.png"),
