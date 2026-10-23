@@ -60,7 +60,7 @@ export function BodyFactActionsMenu({
           <MoreHorizontal size={17} aria-hidden="true" />
         </DropdownMenuTrigger>
       </IconTip>
-      <DropdownMenuContent align="end" className="bc-account-menu">
+      <DropdownMenuContent align="end" className="bc-account-menu bc-row-menu">
         <DropdownMenuItem onClick={onCorrect}>
           <Pencil />
           更正

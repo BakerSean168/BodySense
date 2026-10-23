@@ -423,6 +423,11 @@
   padding: 6px;
   border-radius: 12px;
 }
+/* Row ⋯ menus hold one or two short actions; size them to their items. */
+.bc-account-menu.bc-row-menu {
+  width: auto;
+  min-width: 144px;
+}
 /* Penpot Body / Region footer: 14px bold actions; undo/clear stay quiet.
    (`.bc-workspace button { font: inherit }` otherwise resets them.) */
 .bc-workspace .bc-region-footer button {

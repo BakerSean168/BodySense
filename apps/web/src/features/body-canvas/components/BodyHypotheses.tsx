@@ -190,7 +190,7 @@ function HypothesisPanel({
                     </IconTip>
                     <DropdownMenuContent
                       align="end"
-                      className="bc-account-menu"
+                      className="bc-account-menu bc-row-menu"
                     >
                       <DropdownMenuItem
                         onClick={() =>

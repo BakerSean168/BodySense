@@ -87,7 +87,9 @@ export function EquipmentCategory({
         />
       </label>
       <label className="bc-form-dialog-field">
-        备注<span className="bc-optional">可选</span>
+        <span>
+          备注<span className="bc-optional">可选</span>
+        </span>
         <Textarea
           value={notes}
           onChange={(event) => changeNotes(event.target.value)}
@@ -180,7 +182,10 @@ export function EquipmentCategory({
                       <MoreHorizontal size={17} aria-hidden="true" />
                     </DropdownMenuTrigger>
                   </IconTip>
-                  <DropdownMenuContent align="end" className="bc-account-menu">
+                  <DropdownMenuContent
+                    align="end"
+                    className="bc-account-menu bc-row-menu"
+                  >
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => remove(asset)}
