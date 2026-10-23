@@ -521,7 +521,12 @@ describe("body-first business windows", () => {
   it("opens the Person window with five categories and the identity popover", async () => {
     renderPage();
     await openDock("个人档案");
-    const person = await screen.findByTestId("person-window");
+    // First test to open Person: its lazy chunk loads cold, so allow longer.
+    const person = await screen.findByTestId(
+      "person-window",
+      {},
+      { timeout: 5000 },
+    );
     // Penpot Person header: "nickname / <category picker>" replaces the tabs.
     const picker = screen.getByRole("button", { name: "档案分类 身体记录" });
     expect(picker).toHaveAttribute("aria-haspopup", "listbox");

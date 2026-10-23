@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PersonConfirmDialog } from "../windows/person/PersonConfirmDialog";
+import { IconTip } from "@/components/ui/tooltip";
 
 type Pending =
   | { mode: "correct"; text: string; command: BodyFactCorrectionInput }
@@ -50,14 +51,15 @@ export function BodyFactActionsMenu({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="bc-icon-button bc-record-menu"
-        aria-label="更多操作"
-        title="更多"
-        disabled={disabled}
-      >
-        <MoreHorizontal size={17} aria-hidden="true" />
-      </DropdownMenuTrigger>
+      <IconTip label="更多">
+        <DropdownMenuTrigger
+          className="bc-icon-button bc-record-menu"
+          aria-label="更多操作"
+          disabled={disabled}
+        >
+          <MoreHorizontal size={17} aria-hidden="true" />
+        </DropdownMenuTrigger>
+      </IconTip>
       <DropdownMenuContent align="end" className="bc-account-menu">
         <DropdownMenuItem onClick={onCorrect}>
           <Pencil />

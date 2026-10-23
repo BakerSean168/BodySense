@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Brush,
   ChevronLeft,
@@ -17,6 +17,10 @@ import type {
 } from "../model/bodyCanvas";
 import type { SkeletonLayerStatus } from "../components/BodyCanvasScene";
 import { regionPaletteShortcut } from "../model/bodyCanvas";
+import { IconTip } from "@/components/ui/tooltip";
+
+/** Tooltips are visual-only, so the retry hint is also the button's description. */
+const SKELETON_RETRY_HINT = "骨骼层暂时无法加载，点按重试";
 
 /**
  * Penpot Home tools rail: 视角 R, 图层 L, 标注 B, 选择 V (top to bottom), then
@@ -63,6 +67,7 @@ export function CanvasToolControls({
   const [toolsCollapsed, setToolsCollapsed] = useState(false);
   const toolsToggleRef = useRef<HTMLButtonElement>(null);
   const toolsToggled = useRef(false);
+  const skeletonHintId = useId();
   useEffect(() => {
     if (!toolsToggled.current) return;
     toolsToggled.current = false;
@@ -76,76 +81,85 @@ export function CanvasToolControls({
   return (
     <>
       {toolsCollapsed ? (
-        <button
-          ref={toolsToggleRef}
-          type="button"
-          className="bc-tool-rail-tab"
-          aria-label="展开工具栏"
-          title="展开工具栏"
-          aria-expanded={false}
-          onClick={toggleTools}
-        >
-          <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
-        </button>
-      ) : (
-        <div className="bc-tool-rail" role="toolbar" aria-label="身体画布工具">
-          <button
-            className="bc-icon-button"
-            aria-label="视角 · 重置视角"
-            title="重置视角 · R"
-            onClick={onReset}
-          >
-            <RotateCcw size={20} strokeWidth={1.7} />
-            <span className="bc-tool-caption">视角</span>
-            <kbd aria-hidden="true">R</kbd>
-          </button>
-          <button
-            className="bc-icon-button"
-            aria-label="图层 · 精细解剖"
-            title="精细解剖图层 · L"
-            aria-pressed={anatomyMode}
-            aria-expanded={anatomyMode}
-            onClick={onToggleAnatomy}
-          >
-            <Layers3 size={20} strokeWidth={1.7} />
-            <span className="bc-tool-caption">图层</span>
-            <kbd aria-hidden="true">L</kbd>
-          </button>
-          {SELECT_TOOLS.map(([value, label, caption, key, Icon]) => (
-            <button
-              key={value}
-              className="bc-icon-button"
-              aria-label={label}
-              title={`${label} · ${key}`}
-              aria-pressed={tool === value}
-              onClick={() => onSelectTool(value)}
-            >
-              <Icon size={20} strokeWidth={1.7} />
-              <span className="bc-tool-caption">{caption}</span>
-              <kbd aria-hidden="true">{key}</kbd>
-            </button>
-          ))}
-          <button
-            className="bc-icon-button"
-            aria-label="按名称选择区域"
-            title={`按名称选择区域 · ${regionPaletteShortcut()}`}
-            onClick={onOpenRegionPalette}
-          >
-            <Search size={20} strokeWidth={1.7} />
-            <span className="bc-tool-caption">区域</span>
-            <kbd aria-hidden="true">{regionPaletteShortcut()}</kbd>
-          </button>
+        <IconTip label="展开工具栏" side="right">
           <button
             ref={toolsToggleRef}
             type="button"
-            className="bc-icon-button bc-tool-rail-collapse"
-            aria-label="收起工具栏"
-            title="收起工具栏"
-            aria-expanded={true}
+            className="bc-tool-rail-tab"
+            aria-label="展开工具栏"
+            aria-expanded={false}
             onClick={toggleTools}
           >
-            <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
           </button>
+        </IconTip>
+      ) : (
+        <div className="bc-tool-rail" role="toolbar" aria-label="身体画布工具">
+          <IconTip label="重置视角" shortcut="R" side="right">
+            <button
+              className="bc-icon-button"
+              aria-label="视角 · 重置视角"
+              onClick={onReset}
+            >
+              <RotateCcw size={20} strokeWidth={1.7} />
+              <span className="bc-tool-caption">视角</span>
+              <kbd aria-hidden="true">R</kbd>
+            </button>
+          </IconTip>
+          <IconTip label="精细解剖图层" shortcut="L" side="right">
+            <button
+              className="bc-icon-button"
+              aria-label="图层 · 精细解剖"
+              aria-pressed={anatomyMode}
+              aria-expanded={anatomyMode}
+              onClick={onToggleAnatomy}
+            >
+              <Layers3 size={20} strokeWidth={1.7} />
+              <span className="bc-tool-caption">图层</span>
+              <kbd aria-hidden="true">L</kbd>
+            </button>
+          </IconTip>
+          {SELECT_TOOLS.map(([value, label, caption, key, Icon]) => (
+            <IconTip key={value} label={label} shortcut={key} side="right">
+              <button
+                className="bc-icon-button"
+                aria-label={label}
+                aria-pressed={tool === value}
+                onClick={() => onSelectTool(value)}
+              >
+                <Icon size={20} strokeWidth={1.7} />
+                <span className="bc-tool-caption">{caption}</span>
+                <kbd aria-hidden="true">{key}</kbd>
+              </button>
+            </IconTip>
+          ))}
+          <IconTip
+            label="按名称选择区域"
+            shortcut={regionPaletteShortcut()}
+            side="right"
+          >
+            <button
+              className="bc-icon-button"
+              aria-label="按名称选择区域"
+              onClick={onOpenRegionPalette}
+            >
+              <Search size={20} strokeWidth={1.7} />
+              <span className="bc-tool-caption">区域</span>
+              <kbd aria-hidden="true">{regionPaletteShortcut()}</kbd>
+            </button>
+          </IconTip>
+          <IconTip label="收起工具栏" side="right">
+            <button
+              ref={toolsToggleRef}
+              type="button"
+              className="bc-icon-button bc-tool-rail-collapse"
+              aria-label="收起工具栏"
+              aria-expanded={true}
+              onClick={toggleTools}
+            >
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </IconTip>
         </div>
       )}
       {anatomyMode && (
@@ -158,48 +172,54 @@ export function CanvasToolControls({
           <span className="bc-layer-panel-title" aria-hidden="true">
             图层
           </span>
-          {BODY_LAYER_OPTIONS.map(([id, label, swatch]) => (
+          {BODY_LAYER_OPTIONS.map(([id, label, swatch]) => {
+            const failed = id === "skeleton" && skeletonStatus === "error";
+            return (
+              <IconTip key={id} label={failed ? SKELETON_RETRY_HINT : label}>
+                <button
+                  type="button"
+                  className="bc-layer-toggle"
+                  aria-pressed={bodyLayers[id]}
+                  aria-describedby={failed ? skeletonHintId : undefined}
+                  aria-busy={
+                    id === "skeleton" && skeletonStatus === "loading"
+                      ? true
+                      : undefined
+                  }
+                  onClick={() => onToggleLayer(id)}
+                >
+                  <span
+                    className="bc-layer-swatch"
+                    style={{ background: swatch }}
+                    aria-hidden="true"
+                  />
+                  <span className="bc-layer-label">{label}</span>
+                  {id === "skeleton" && skeletonStatus === "loading" ? (
+                    <LoaderCircle
+                      size={12}
+                      className="animate-spin bc-layer-status"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </button>
+              </IconTip>
+            );
+          })}
+          {skeletonStatus === "error" ? (
+            <span id={skeletonHintId} className="sr-only">
+              {SKELETON_RETRY_HINT}
+            </span>
+          ) : null}
+          <IconTip label="关闭图层" shortcut="Esc">
             <button
-              key={id}
               type="button"
-              className="bc-layer-toggle"
-              aria-pressed={bodyLayers[id]}
-              aria-busy={
-                id === "skeleton" && skeletonStatus === "loading"
-                  ? true
-                  : undefined
-              }
-              title={
-                id === "skeleton" && skeletonStatus === "error"
-                  ? "骨骼层暂时无法加载，点按重试"
-                  : label
-              }
-              onClick={() => onToggleLayer(id)}
+              className="bc-layer-close"
+              aria-label="关闭图层"
+              onClick={onToggleAnatomy}
             >
-              <span
-                className="bc-layer-swatch"
-                style={{ background: swatch }}
-                aria-hidden="true"
-              />
-              <span className="bc-layer-label">{label}</span>
-              {id === "skeleton" && skeletonStatus === "loading" ? (
-                <LoaderCircle
-                  size={12}
-                  className="animate-spin bc-layer-status"
-                  aria-hidden="true"
-                />
-              ) : null}
+              <X size={14} aria-hidden="true" />
             </button>
-          ))}
-          <button
-            type="button"
-            className="bc-layer-close"
-            aria-label="关闭图层"
-            title="关闭图层 · Esc"
-            onClick={onToggleAnatomy}
-          >
-            <X size={14} aria-hidden="true" />
-          </button>
+          </IconTip>
         </div>
       )}
       {tool !== "orbit" && (

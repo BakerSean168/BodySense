@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PersonConfirmDialog } from "../windows/person/PersonConfirmDialog";
+import { IconTip } from "@/components/ui/tooltip";
 
 /** Owner changes discard drafts and prevent late receipts from entering another profile. */
 export function BodyHypotheses({
@@ -177,15 +178,16 @@ function HypothesisPanel({
                 <p className="bc-record-statement">{record.statement}</p>
                 {canEdit && !draft && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger
-                      id={`${id}-menu-${record.id}`}
-                      className="bc-icon-button bc-record-menu"
-                      aria-label={`更多操作：${record.statement}`}
-                      title="更多"
-                      disabled={!ready}
-                    >
-                      <MoreHorizontal size={17} aria-hidden="true" />
-                    </DropdownMenuTrigger>
+                    <IconTip label="更多">
+                      <DropdownMenuTrigger
+                        id={`${id}-menu-${record.id}`}
+                        className="bc-icon-button bc-record-menu"
+                        aria-label={`更多操作：${record.statement}`}
+                        disabled={!ready}
+                      >
+                        <MoreHorizontal size={17} aria-hidden="true" />
+                      </DropdownMenuTrigger>
+                    </IconTip>
                     <DropdownMenuContent
                       align="end"
                       className="bc-account-menu"

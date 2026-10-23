@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import type { ConsultationSpatialContext } from "../../types/consultation";
+import { IconTip } from "@/components/ui/tooltip";
 
 export interface PendingChatImage {
   uploadId: string;
@@ -176,54 +177,57 @@ export function ChatInputArea({
         />
 
         {multiline ? (
-          <button
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-            className="chat-composer-expand"
-            aria-label={expanded ? "收起输入框" : "展开输入框"}
-            title={expanded ? "收起" : "展开"}
-          >
-            {expanded ? (
-              <Minimize2 className="size-3.5" aria-hidden="true" />
-            ) : (
-              <Maximize2 className="size-3.5" aria-hidden="true" />
-            )}
-          </button>
+          <IconTip label={expanded ? "收起" : "展开"}>
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              className="chat-composer-expand"
+              aria-label={expanded ? "收起输入框" : "展开输入框"}
+            >
+              {expanded ? (
+                <Minimize2 className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Maximize2 className="size-3.5" aria-hidden="true" />
+              )}
+            </button>
+          </IconTip>
         ) : null}
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={
-            isComposerLocked || isUploadingImage || pendingImages.length >= 3
-          }
-          className="chat-composer-tool"
-          title="添加图片"
-          aria-label="添加图片"
-        >
-          {isUploadingImage ? (
-            <span className="size-3.5 animate-spin rounded-full border border-current border-t-transparent" />
-          ) : pendingImages.length > 0 ? (
-            <ImagePlus className="size-[18px]" aria-hidden="true" />
-          ) : (
-            <Plus className="size-[18px]" aria-hidden="true" />
-          )}
-        </button>
+        <IconTip label="添加图片">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={
+              isComposerLocked || isUploadingImage || pendingImages.length >= 3
+            }
+            className="chat-composer-tool"
+            aria-label="添加图片"
+          >
+            {isUploadingImage ? (
+              <span className="size-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+            ) : pendingImages.length > 0 ? (
+              <ImagePlus className="size-[18px]" aria-hidden="true" />
+            ) : (
+              <Plus className="size-[18px]" aria-hidden="true" />
+            )}
+          </button>
+        </IconTip>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={isComposerLocked || !canSend || isUploadingImage}
-          className="chat-composer-send"
-          aria-label="发送"
-          title="发送"
-        >
-          <ArrowUp
-            className="size-[18px]"
-            strokeWidth={2.3}
-            aria-hidden="true"
-          />
-        </button>
+        <IconTip label="发送">
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={isComposerLocked || !canSend || isUploadingImage}
+            className="chat-composer-send"
+            aria-label="发送"
+          >
+            <ArrowUp
+              className="size-[18px]"
+              strokeWidth={2.3}
+              aria-hidden="true"
+            />
+          </button>
+        </IconTip>
       </div>
     </div>
   );
