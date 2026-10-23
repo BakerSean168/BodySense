@@ -485,11 +485,16 @@ def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
         )
         channel_report["qualified"] = channel_report["passed"] and not channel.pending
         report["channels"][channel.name] = channel_report
-    # "passed" means every expected-working capability met its exact contract.
-    # "ok" additionally requires that no pending channel silently started
-    # working, because that demands deliberate re-qualification.
-    report["passed"] = not report["failures"]
-    report["ok"] = report["passed"] and not report["requalification_required"]
+    # A run is successful only when BOTH hold:
+    #   1. every expected-working capability met its exact contract, and
+    #   2. no pending channel unexpectedly started working — that demands
+    #      deliberate re-qualification and is a failure, not a success.
+    # `passed` is the single authoritative success signal so a consumer reading
+    # the JSON cannot see a "passed" run that the CLI exits non-zero for.
+    report["passed"] = not report["failures"] and not report["requalification_required"]
+    # `ok` is kept as an explicit alias for consumers that read the older field.
+    # It must never disagree with `passed`.
+    report["ok"] = report["passed"]
     return report
 
 

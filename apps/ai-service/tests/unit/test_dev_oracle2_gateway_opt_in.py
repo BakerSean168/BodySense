@@ -591,6 +591,53 @@ def _patch_all_probes_passing(module, monkeypatch) -> None:
     )
 
 
+def test_report_passed_is_false_when_a_pending_channel_passes(monkeypatch) -> None:
+    """The JSON success flag must agree with the CLI, never report a clean run.
+
+    A pending channel that unexpectedly answers correctly leaves `failures`
+    empty, so a verdict derived only from failures would wrongly claim success.
+    """
+    module = _eval_module()
+    _patch_all_probes_passing(module, monkeypatch)
+
+    report = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
+
+    assert report["failures"] == []
+    assert report["requalification_required"] == ["kunyou/chat passed but the channel is pending"]
+    # The authoritative success flag must be False, not just the CLI exit code.
+    assert report["passed"] is False
+    # `ok` must never disagree with `passed`.
+    assert report["ok"] is False
+    # Kunyou stays unqualified and is still reported as pending.
+    kunyou = report["channels"]["kunyou"]
+    assert kunyou["pending"] is True
+    assert kunyou["qualified"] is False
+
+
+def test_report_passed_and_ok_always_agree(monkeypatch) -> None:
+    """`passed` and `ok` are aliases; no scenario may make them disagree."""
+    module = _eval_module()
+
+    # Case 1: everything correct and no pending channel passing.
+    def only_kunyou_fails(_g, _k, logical_model):
+        if "kunyou" in logical_model:
+            return {"http_status": 503, "error": "no channel"}
+        return {"http_status": 200, "content_exact": "PONG", "finish_reason": "stop"}
+
+    _patch_all_probes_passing(module, monkeypatch)
+    monkeypatch.setattr(module, "probe_chat", only_kunyou_fails)
+    module.PROBES.update(chat=only_kunyou_fails)
+    clean = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
+    assert clean["passed"] is True
+    assert clean["ok"] is True
+
+    # Case 2: a pending channel passes -> both flags must be False.
+    _patch_all_probes_passing(module, monkeypatch)
+    requalify = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
+    assert requalify["passed"] is False
+    assert requalify["ok"] is False
+
+
 def test_pending_channel_passing_forces_a_nonzero_exit(monkeypatch, capsys) -> None:
     """Kunyou passing must re-qualify, not silently succeed: exit code 1."""
     module = _eval_module()
