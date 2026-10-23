@@ -31,6 +31,8 @@
 - [Release 生命周期](./release-lifecycle-v3.md)
 - [交付平台](./delivery-platform-v3.md)
 - [模型网关](./model-gateway-routing.md)
+- [真实业务 LLM 接入调研（Chatwoot / FastGPT / Onyx）](./business-llm-integration-case-studies.md)
+- [OpenRouter / Groq 免费渠道连通性记录](../runbooks/openrouter-groq-free-connectivity.md)
 - [知识库生命周期](./knowledge-lifecycle-architecture.md)
 
 运行细节以真实代码、API 契约和数据库迁移为准。产品规格中的逻辑对象、字段、工具名是要实现和验证的目标。
