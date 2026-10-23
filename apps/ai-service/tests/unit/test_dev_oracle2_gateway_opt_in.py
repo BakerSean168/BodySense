@@ -561,3 +561,168 @@ def test_failing_capability_fails_the_run_even_when_http_is_200(monkeypatch) -> 
     assert report["passed"] is False
     assert report["failures"]
     assert all("HTTP200" not in failure for failure in report["failures"])
+
+
+# ── Authorized upstream endpoint (single allowed destination) ────────────────
+# The dev gateway carries the Oracle2 Virtual Key and real BodySense request
+# content to whatever ORACLE2_BODYSENSE_BASE_URL names. Only the authorized
+# endpoint may be reachable, so anything else must fail closed at env-load time.
+
+AUTHORIZED_BASE_URL = "https://oracle.taile92a8e.ts.net:10446/v1"
+AUTHORIZED_HOSTNAME = "oracle.taile92a8e.ts.net"
+
+
+def _opt_in_env(**overrides: str) -> dict[str, str]:
+    base = {
+        "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+        # Synthetic placeholder only. No real credential is used or required.
+        "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-real-key",
+        "ORACLE2_BODYSENSE_TAILSCALE_IP": "100.68.237.116",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_authorized_endpoint_enables_the_overlay() -> None:
+    for url in (AUTHORIZED_BASE_URL, AUTHORIZED_BASE_URL + "/"):
+        completed = _run_dev_env(
+            _opt_in_env(ORACLE2_BODYSENSE_BASE_URL=url),
+            call=(
+                'printf "overlay=%s\\nbase=%s\\nhost=%s\\n" '
+                '"$BODYSENSE_DEV_COMPOSE_OVERLAY" "$ORACLE2_BODYSENSE_BASE_URL" '
+                '"$ORACLE2_BODYSENSE_HOSTNAME"'
+            ),
+        )
+        assert completed.returncode == 0, (url, completed.stderr)
+        assert "overlay=" + str(DEV_ORACLE2_COMPOSE) in completed.stdout
+        # A tolerated variant is normalized back to the authorized value.
+        assert f"base={AUTHORIZED_BASE_URL}" in completed.stdout
+        assert f"host={AUTHORIZED_HOSTNAME}" in completed.stdout
+
+
+@pytest.mark.parametrize(
+    "unauthorized",
+    [
+        # Different scheme.
+        "http://oracle.taile92a8e.ts.net:10446/v1",
+        # Different host entirely.
+        "https://evil.example.com/v1",
+        # Lookalike suffix host.
+        "https://oracle.taile92a8e.ts.net.evil.com:10446/v1",
+        # Wrong port / default port.
+        "https://oracle.taile92a8e.ts.net/v1",
+        "https://oracle.taile92a8e.ts.net:443/v1",
+        "https://oracle.taile92a8e.ts.net:10446:10446/v1",
+        # Extra or different path.
+        "https://oracle.taile92a8e.ts.net:10446/v1/extra",
+        "https://oracle.taile92a8e.ts.net:10446",
+        "https://oracle.taile92a8e.ts.net:10446/v1//",
+        # Userinfo.
+        "https://user:pass@oracle.taile92a8e.ts.net:10446/v1",
+        "https://oracle.taile92a8e.ts.net:10446@evil.example.com/v1",
+        # Query and fragment.
+        "https://oracle.taile92a8e.ts.net:10446/v1?x=1",
+        "https://oracle.taile92a8e.ts.net:10446/v1#frag",
+        # Internal/metadata targets.
+        "http://127.0.0.1:8000/v1",
+        "http://169.254.169.254/latest/meta-data",
+        # Whitespace and case tricks.
+        " https://oracle.taile92a8e.ts.net:10446/v1",
+        "https://ORACLE.taile92a8e.ts.net:10446/v1",
+    ],
+)
+def test_unauthorized_base_url_fails_closed_without_exporting_overlay(
+    unauthorized: str,
+) -> None:
+    completed = _run_dev_env(
+        _opt_in_env(ORACLE2_BODYSENSE_BASE_URL=unauthorized),
+        call=(
+            'printf "overlay=[%s]\\nkey=[%s]\\n" "$BODYSENSE_DEV_COMPOSE_OVERLAY" '
+            '"${ORACLE2_BODYSENSE_API_KEY:-UNSET}"'
+        ),
+    )
+    assert completed.returncode != 0, unauthorized
+    assert "not the authorized Oracle2 endpoint" in completed.stderr, completed.stderr
+    # Fail closed: the overlay is never exported, so Compose cannot mount the
+    # Oracle2 config, and the key is not left in the environment.
+    assert "overlay=[]" not in completed.stdout
+    assert "overlay=[" + str(DEV_ORACLE2_COMPOSE) + "]" not in completed.stdout
+
+
+@pytest.mark.parametrize(
+    "unauthorized_host",
+    [
+        "evil.example.com",
+        "oracle.taile92a8e.ts.net.evil.com",
+        "oracle.taile92a8e.ts.net:10446",
+        "ORACLE.taile92a8e.ts.net",
+        "*.taile92a8e.ts.net",
+        "oracle",
+        "100.68.237.116",
+    ],
+)
+def test_unauthorized_hostname_fails_closed(unauthorized_host: str) -> None:
+    completed = _run_dev_env(
+        _opt_in_env(ORACLE2_BODYSENSE_HOSTNAME=unauthorized_host),
+        call='printf "overlay=[%s]\\n" "$BODYSENSE_DEV_COMPOSE_OVERLAY"',
+    )
+    assert completed.returncode != 0, unauthorized_host
+    assert "not the authorized Oracle2 MagicDNS name" in completed.stderr, completed.stderr
+    assert "overlay=[" + str(DEV_ORACLE2_COMPOSE) + "]" not in completed.stdout
+
+
+def test_unauthorized_target_is_refused_before_dns_resolution() -> None:
+    """An unauthorized target must not even trigger a MagicDNS lookup."""
+    fake_bin = Path(tempfile.mkdtemp())
+    marker = fake_bin / "getent-was-called"
+    getent = fake_bin / "getent"
+    getent.write_text(f"#!/bin/sh\ntouch {marker}\nexit 0\n", encoding="utf-8")
+    getent.chmod(0o755)
+
+    completed = _run_dev_env(
+        {
+            "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+            "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-real-key",
+            "ORACLE2_BODYSENSE_BASE_URL": "https://evil.example.com/v1",
+            "PATH": f"{fake_bin}:{os.environ.get('PATH', '/usr/bin:/bin')}",
+        }
+    )
+    assert completed.returncode != 0
+    assert "not the authorized Oracle2 endpoint" in completed.stderr
+    assert not marker.exists(), "getent ran for an unauthorized target"
+
+
+def test_authorized_target_still_resolves_tailscale_ip() -> None:
+    """The authorized path keeps the existing CGNAT resolution behaviour."""
+    completed = _run_dev_env(
+        {
+            "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+            "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-real-key",
+        },
+        call='printf "ip=[%s]\\n" "${ORACLE2_BODYSENSE_TAILSCALE_IP:-}"',
+    )
+    # Either it resolved a CGNAT address, or the host has no Tailscale DNS and it
+    # fails closed with the documented message. Never a silent public address.
+    if completed.returncode == 0:
+        assert re.fullmatch(
+            r"100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.\d+\.\d+",
+            completed.stdout.split("ip=[")[1].split("]")[0],
+        )
+    else:
+        assert "Could not resolve" in completed.stderr
+
+
+def test_dev_env_declares_the_single_authorized_endpoint() -> None:
+    text = DEV_ENV.read_text(encoding="utf-8")
+    assert "ORACLE2_AUTHORIZED_HOST='oracle.taile92a8e.ts.net'" in text
+    assert "ORACLE2_AUTHORIZED_PORT='10446'" in text
+    assert (
+        'ORACLE2_AUTHORIZED_BASE_URL="https://${ORACLE2_AUTHORIZED_HOST}:${ORACLE2_AUTHORIZED_PORT}/v1"'
+        in text
+    )
+    # The authorization check must run before the overlay is exported.
+    auth_check = text.index("oracle2_is_authorized_base_url")
+    overlay_export = text.index(
+        "export BODYSENSE_DEV_COMPOSE_OVERLAY=$ROOT/docker/docker-compose.dev-oracle2.yml"
+    )
+    assert auth_check < overlay_export

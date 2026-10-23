@@ -52,6 +52,30 @@ scripts/dev-infra.sh up          # or: scripts/dev-runtime.sh up
 `scripts/dev-env.sh` exits non-zero and Compose also fails closed. Never commit the key; it
 is never written into any repository file.
 
+## Authorized upstream only
+
+The dev gateway sends the Oracle2 Virtual Key **and real BodySense request content** to
+whatever `ORACLE2_BODYSENSE_BASE_URL` names. Only one destination is authorized:
+
+```text
+https://oracle.taile92a8e.ts.net:10446/v1
+```
+
+When `BODYSENSE_LITELLM_DEV_ORACLE2=1`, `scripts/dev-env.sh` refuses to proceed unless the
+base URL matches that endpoint exactly (one trailing slash tolerated, then normalized) and
+`ORACLE2_BODYSENSE_HOSTNAME` is exactly `oracle.taile92a8e.ts.net`. The check is an exact
+string comparison, so it rejects a different scheme (`http`), host, port, path, userinfo
+(`@`), query (`?`), fragment (`#`), lookalike suffix, whitespace, and case variant without
+any URL-parsing gap.
+
+The check runs **before** the overlay is exported and before DNS resolution, so an
+unauthorized target cannot mount the Oracle2 config, cannot resolve a host, and cannot carry
+the key off-host. The authorized values are re-exported verbatim so Compose never receives a
+tolerated variant.
+
+With the opt-in off (the default) these variables are inert: no overlay is exported and
+`docker/litellm/config.yaml` stays in use.
+
 Disable with `BODYSENSE_LITELLM_DEV_ORACLE2=0` (the default) and restart the gateway.
 
 ## Why `extra_hosts`
@@ -119,6 +143,11 @@ fallback instead of surfacing as an error.
 This is an accepted **dev-only** limitation, not a fail-closed auth story. The eval script
 sidesteps it by probing non-fallback groups. Do not promote this topology to staging or
 production without a fail-closed authentication design.
+
+This was **not** addressed by configuration. LiteLLM v1.102.1 introspection shows
+`Router.__init__` has no `fallback_on_unsupported_params` parameter, and no setting was
+invented to emulate one. The measured behaviour above stands; do not read this runbook as
+claiming auth errors are contained.
 
 ## Related
 

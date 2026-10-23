@@ -49,6 +49,30 @@ export ORACLE2_BODYSENSE_BASE_URL=${ORACLE2_BODYSENSE_BASE_URL:-https://oracle.t
 export ORACLE2_BODYSENSE_HOSTNAME=${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}
 export BODYSENSE_DEV_COMPOSE_OVERLAY=
 
+# ── Authorized Oracle2 endpoint (the single allowed upstream) ──────────────
+# Only one destination is authorized for the dev gateway. The Oracle2 Virtual Key
+# and real BodySense request content travel to whatever ORACLE2_BODYSENSE_BASE_URL
+# names, so any other target is refused at env-load time — before the overlay is
+# exported and before anything can be sent off-host.
+#
+# Exact string match is deliberate. It rejects a different scheme (http), host,
+# port, path, userinfo (@), query (?) and fragment (#) without parsing a URL, so
+# there is no normalization or parsing gap to bypass.
+ORACLE2_AUTHORIZED_HOST='oracle.taile92a8e.ts.net'
+ORACLE2_AUTHORIZED_PORT='10446'
+ORACLE2_AUTHORIZED_BASE_URL="https://${ORACLE2_AUTHORIZED_HOST}:${ORACLE2_AUTHORIZED_PORT}/v1"
+
+oracle2_is_authorized_hostname() {
+  [[ "$1" == "$ORACLE2_AUTHORIZED_HOST" ]]
+}
+
+oracle2_is_authorized_base_url() {
+  local url=$1
+  # Tolerate exactly one trailing slash; nothing else is normalized.
+  [[ "$url" == */ ]] && url=${url%/}
+  [[ "$url" == "$ORACLE2_AUTHORIZED_BASE_URL" ]]
+}
+
 # Resolve the Oracle2 MagicDNS name to its Tailscale CGNAT address.
 #
 # Docker's embedded resolver answers a Tailscale MagicDNS name with the remote
@@ -88,6 +112,28 @@ oracle2_tailscale_ip() {
 
 case "${BODYSENSE_LITELLM_DEV_ORACLE2,,}" in
   1 | true | yes | on)
+    # Authorization first: never resolve DNS, never export the overlay, and never
+    # leave a usable key in the environment for an unauthorized destination.
+    if ! oracle2_is_authorized_base_url "${ORACLE2_BODYSENSE_BASE_URL:-}"; then
+      echo "ORACLE2_BODYSENSE_BASE_URL is not the authorized Oracle2 endpoint." >&2
+      echo "  given:      ${ORACLE2_BODYSENSE_BASE_URL:-<unset>}" >&2
+      echo "  authorized: ${ORACLE2_AUTHORIZED_BASE_URL}" >&2
+      echo "https only; no other host, port, path, userinfo, query or fragment is allowed." >&2
+      unset ORACLE2_BODYSENSE_API_KEY
+      return 1 2>/dev/null || exit 1
+    fi
+    if ! oracle2_is_authorized_hostname "${ORACLE2_BODYSENSE_HOSTNAME:-}"; then
+      echo "ORACLE2_BODYSENSE_HOSTNAME is not the authorized Oracle2 MagicDNS name." >&2
+      echo "  given:      ${ORACLE2_BODYSENSE_HOSTNAME:-<unset>}" >&2
+      echo "  authorized: ${ORACLE2_AUTHORIZED_HOST}" >&2
+      unset ORACLE2_BODYSENSE_API_KEY
+      return 1 2>/dev/null || exit 1
+    fi
+    # Export the authorized values verbatim so Compose and the LiteLLM config
+    # cannot receive a tolerated variant (for example a trailing slash).
+    export ORACLE2_BODYSENSE_BASE_URL=$ORACLE2_AUTHORIZED_BASE_URL
+    export ORACLE2_BODYSENSE_HOSTNAME=$ORACLE2_AUTHORIZED_HOST
+
     if [[ -z "${ORACLE2_BODYSENSE_API_KEY:-}" ]]; then
       echo "BODYSENSE_LITELLM_DEV_ORACLE2 is enabled but ORACLE2_BODYSENSE_API_KEY is empty." >&2
       echo "Set it in $ENV_FILE (git-ignored) or the environment; never commit the key." >&2
