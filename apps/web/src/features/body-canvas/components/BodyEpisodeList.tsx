@@ -29,9 +29,7 @@ export function BodyEpisodeList({
         ))}
       </ul>
       {episodes.length === 0 ? (
-        <p className="bc-window-empty-text">
-          当前已读取的记录中没有症状经历；不代表不存在更早的经历。
-        </p>
+        <p className="bc-window-empty-text">还没有症状经历</p>
       ) : null}
       {hasNextPage ? (
         <button
