@@ -43,6 +43,7 @@ import { useCanvasStageLayout } from "../workspace/useCanvasStageLayout";
 import { useCanvasMotionController } from "../workspace/useCanvasMotionController";
 import type { SkeletonLayerStatus } from "./BodyCanvasScene";
 import "../body-canvas.css";
+import { IconTip } from "@/components/ui/tooltip";
 
 const BodyCanvasScene = lazy(() => import("./BodyCanvasScene"));
 // Penpot Home / trainer-active|paused; lazy for the same chunk budget.
@@ -433,14 +434,15 @@ export function BodyCanvasWorkspace(props: BodyCanvasWorkspaceProps) {
           identity={identity}
           safetyReview={safetyReview}
         />
-        <button
-          className="bc-help-entry"
-          aria-label="快捷键"
-          title="快捷键 · ?"
-          onClick={() => setCanvasOverlay("help")}
-        >
-          <CircleHelp size={20} strokeWidth={1.8} aria-hidden="true" />
-        </button>
+        <IconTip label="快捷键" shortcut="?">
+          <button
+            className="bc-help-entry"
+            aria-label="快捷键"
+            onClick={() => setCanvasOverlay("help")}
+          >
+            <CircleHelp size={20} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        </IconTip>
         <BodyCanvasDock
           activeWindow={activeWindow}
           confirmedDiagnosisCount={diagnosisView.confirmed.length}

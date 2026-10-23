@@ -151,7 +151,7 @@ function HypothesisPanel({
         </p>
       ) : null}
       {data && groups.data && !consistent && (
-        <p role="status">记录已更新，正在等待一致的最新记录。请重新读取。</p>
+        <p role="status">记录已更新，请重新读取。</p>
       )}
       {records.isError ||
       groups.isError ||
@@ -220,9 +220,7 @@ function HypothesisPanel({
                 )}
               </div>
               <div className="bc-person-chips">
-                <span className="bc-person-chip" title="你本人提出，不代表诊断">
-                  本人猜测
-                </span>
+                <span className="bc-person-chip">本人猜测</span>
                 {record.supersedes_hypothesis_id ? (
                   <span className="bc-person-chip">更正后的版本</span>
                 ) : null}
@@ -283,7 +281,7 @@ function HypothesisPanel({
             role={saving ? "status" : undefined}
             className="bc-window-note"
           >
-            {saving ? "正在提交，等待保存回执。" : "尚未保存。"}
+            {saving ? "正在保存…" : null}
           </p>
           <label htmlFor={`${id}-statement`}>我的完整猜测</label>
           <Textarea
@@ -360,11 +358,7 @@ function HypothesisPanel({
       {readable && data && groups.data ? (
         groups.data.groups.length ? (
           groups.data.groups.map((group) => (
-            <article
-              key={group.id}
-              className="bc-person-group"
-              title="由你的记录自动整理，不形成新的事实或诊断"
-            >
+            <article key={group.id} className="bc-person-group">
               <h5 className="bc-person-group-title">
                 <Link2 size={13} aria-hidden="true" />
                 {group.display_title}

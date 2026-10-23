@@ -331,7 +331,7 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
       .getByRole("checkbox", { name: observation.statement, exact: true })
       .check();
     await panel.getByRole("button", { name: "保存猜测" }).click();
-    await expect(panel.getByText("正在提交，等待保存回执。")).toBeVisible();
+    await expect(panel.getByText("正在保存…")).toBeVisible();
     await expect(panel.getByText("你的猜测已保存。")).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(

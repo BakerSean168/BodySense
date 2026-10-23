@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { ConsultationSpatialContext } from "../../types/consultation";
 import { IconTip } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface PendingChatImage {
   uploadId: string;
@@ -165,15 +166,16 @@ export function ChatInputArea({
           </div>
         ) : null}
 
-        <textarea
+        <Textarea
           ref={textareaRef}
+          variant="bare"
           value={inputText}
           onChange={(event) => setInputText(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="和 BodySense 说说你的身体感受…"
           disabled={isComposerLocked}
           rows={1}
-          className="chat-composer-input"
+          className="chat-composer-input font-normal"
         />
 
         {multiline ? (

@@ -292,7 +292,7 @@ it("blocks writes on inconsistent snapshots and retries reads", async () => {
     groups: [],
   });
   mount();
-  await screen.findByText(/正在等待一致/);
+  await screen.findByText(/记录已更新，请重新读取/);
   await expectAddBlocked();
   api.groups.mockResolvedValue({
     user_id: owner,
@@ -457,9 +457,7 @@ it("announces pending submission and does not let Escape imply cancellation of a
     "aria-busy",
     "true",
   );
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "正在提交，等待保存回执",
-  );
+  expect(screen.getByRole("status")).toHaveTextContent("正在保存…");
   await user.keyboard("{Escape}");
   expect(
     screen.getByRole("form", { name: "编辑我的猜测" }),

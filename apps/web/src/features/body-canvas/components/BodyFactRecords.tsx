@@ -50,6 +50,7 @@ import { type BodyFactKind as FactKind } from "../model/bodyFactPresentation";
 import { projectBodyFactSurface } from "../model/bodyFactViewModel";
 import { projectBoundedBodyFactVM } from "../model/bodyFactV2Adapter";
 import { recordedClock } from "../model/personRecordsTimeline";
+import { IconTip } from "@/components/ui/tooltip";
 
 export const bodyFactRecordsKey = (owner: string | undefined) =>
   ["workspace", "body-fact-records", owner ?? "signed-out"] as const;
@@ -370,19 +371,20 @@ export function BodyFactRecords({
           {lastSync ? (
             <span className="bc-person-stale-time">上次同步 {lastSync}</span>
           ) : null}
-          <button
-            type="button"
-            className="bc-icon-button"
-            aria-label="重新读取"
-            title="重新读取"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            <RefreshCw
-              size={16}
-              className={query.isFetching ? "animate-spin" : ""}
-            />
-          </button>
+          <IconTip label="重新读取">
+            <button
+              type="button"
+              className="bc-icon-button"
+              aria-label="重新读取"
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              <RefreshCw
+                size={16}
+                className={query.isFetching ? "animate-spin" : ""}
+              />
+            </button>
+          </IconTip>
         </div>
       ) : null}
       {view.pagesDisagree ? (
@@ -542,16 +544,17 @@ export function BodyFactRecords({
               ? "记录已保存，但列表刷新失败。"
               : "网络或服务暂时不可用，已有记录不会丢失"}
           </span>
-          <button
-            type="button"
-            className="bc-icon-button"
-            aria-label="重新读取"
-            title="重新读取"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            <RefreshCw size={16} />
-          </button>
+          <IconTip label="重新读取">
+            <button
+              type="button"
+              className="bc-icon-button"
+              aria-label="重新读取"
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              <RefreshCw size={16} />
+            </button>
+          </IconTip>
         </div>
       ) : null}
       {emptyState ? (

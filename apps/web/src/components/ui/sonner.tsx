@@ -14,6 +14,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme="light"
       className="toaster group"
+      // Phones: sit above the canvas Dock instead of covering it.
+      mobileOffset={{ bottom: 92 }}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
