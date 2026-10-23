@@ -229,7 +229,7 @@
 /* On phones every window is a full-width sheet over the stage, so the
    Tools rail would peek out half-covered under its bottom edge. */
 @media (max-width: 760px) {
-  .bc-stage:has(.bc-business-window:not([hidden]))
+  .bc-stage:has(.bc-business-sheet:not([hidden]))
     :is(.bc-tool-rail, .bc-tool-rail-tab) {
     opacity: 0;
     visibility: hidden;

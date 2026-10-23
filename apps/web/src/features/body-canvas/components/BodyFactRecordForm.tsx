@@ -71,7 +71,9 @@ export function BodyFactRecordForm({
         />
       </label>
       <label>
-        发生时间<span className="bc-optional">可选</span>
+        <span>
+          发生时间<span className="bc-optional">可选</span>
+        </span>
         <Input
           value={when}
           onChange={(event) => onWhenChange(event.target.value)}
