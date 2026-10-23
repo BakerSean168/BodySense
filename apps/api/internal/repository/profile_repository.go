@@ -47,13 +47,18 @@ func (r *ProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (
 }
 
 // CreateOrUpdate records the onboarding identity answers (gender, birth date)
-// only. Display name, avatar and preferences are preserved, and the revision
-// advances so a concurrently open editor sees the change as a conflict.
+// only. Display name, avatar and preferences are preserved. The revision only
+// advances for changed identity fields, so exact retries do not conflict.
 func (r *ProfileRepository) CreateOrUpdate(ctx context.Context, profile *model.UserProfile) error {
 	now := time.Now().UTC()
 	return database.FromContext(ctx, r.db).WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "user_id"}},
+			// Replaying unchanged onboarding identity must not advance the Profile
+			// concurrency token or invalidate an open profile editor.
+			Where: clause.Where{Exprs: []clause.Expression{clause.Expr{
+				SQL: "user_profiles.gender IS DISTINCT FROM EXCLUDED.gender OR user_profiles.birth_date IS DISTINCT FROM EXCLUDED.birth_date",
+			}}},
 			DoUpdates: clause.Set{
 				{Column: clause.Column{Name: "gender"}, Value: profile.Gender},
 				{Column: clause.Column{Name: "birth_date"}, Value: profile.BirthDate},
