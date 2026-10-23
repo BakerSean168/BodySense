@@ -92,7 +92,18 @@ value and an explicit override; anything else aborts the opt-in.
 
 Verified: a container on `bodysense-dev-infra_bodysense-network` reaches
 `https://oracle.taile92a8e.ts.net:10446/health/liveliness` with HTTP 200 and valid TLS.
-This container → Oracle2 HTTPS 200 is the acceptance condition for the opt-in.
+
+**What that proves — and what it does not.** The HTTPS 200 on `/health/liveliness` proves
+only two things: the container can reach the endpoint (Tailscale routing works) and TLS
+verification succeeds. It is **not** evidence of any of the following:
+
+- that `ORACLE2_BODYSENSE_API_KEY` is present, valid, or authorized;
+- that real inference works for any model;
+- that `router_settings.fallbacks` behaves as configured;
+- any business or capability acceptance.
+
+Reachability is a prerequisite for the opt-in, not its acceptance condition. Real
+acceptance requires the per-channel evaluation below to run with a real key.
 
 **Residual risk:** if Oracle2's tailnet address changes, a pinned mapping goes stale. The
 address is re-resolved per `scripts/dev-env.sh` invocation, so recreate the gateway after
@@ -112,7 +123,7 @@ scripts/dev-infra.sh status                       # shows oracle2_dev_opt_in=1
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev-infra.yml \
   -f docker/docker-compose.dev-oracle2.yml --profile dev config | grep -A3 extra_hosts
 
-# Container -> Oracle2 reachability (the acceptance condition)
+# Container -> Oracle2 reachability (proves connectivity + TLS only, not the key)
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev-infra.yml \
   -f docker/docker-compose.dev-oracle2.yml --profile dev exec -T litellm-gateway \
   python -c "import urllib.request;print(urllib.request.urlopen('https://oracle.taile92a8e.ts.net:10446/health/liveliness',timeout=20).status)"
@@ -130,8 +141,27 @@ a result can never be produced by a different provider. Prompts are synthetic; n
 health data is sent and no real key is needed by the script (the local gateway master key
 authenticates it).
 
-Reported per channel: HTTP status, latency, usage, JSON validity, tool-call count, stream
-chunk/done/usage behaviour. Exit code is non-zero when an expected-working channel fails.
+Each capability is judged on an **exact contract**, using the full parsed payload rather
+than a truncated preview:
+
+| Capability | Passes only when |
+| --- | --- |
+| `chat` | the answer is exactly `PONG` (surrounding whitespace allowed) and a `finish_reason` is present |
+| `json` | the body parses to exactly `{"probe": "synthetic", "ok": true}`, with `ok` a real boolean |
+| `tool` | one call to `record_synthetic_probe` with parsed arguments exactly `{"label": "dev-probe"}` |
+| `stream` | the reassembled content lines are exactly `1`, `2`, `3` in order, then `[DONE]` |
+
+So `NOT PONG`, a wrong JSON payload, a wrong tool label, or unrelated SSE text all FAIL even
+though they are non-empty HTTP 200 responses. Reported per channel: HTTP status, latency,
+usage, JSON validity, tool-call count, stream chunk/done/usage behaviour.
+
+Exit codes:
+
+- `0` — every expected-working capability met its exact contract and no pending channel
+  started working (`ORACLE2_GATEWAY_EVAL=PASS`);
+- `1` — an expected-working capability failed (`ORACLE2_GATEWAY_EVAL=FAIL`), **or** a
+  pending channel unexpectedly passed (`ORACLE2_GATEWAY_EVAL=REQUALIFY`), which demands a
+  deliberate re-qualification before anything is wired into a live path.
 
 ## Known limitation: auth errors trigger fallback
 
@@ -140,9 +170,12 @@ Measured on LiteLLM v1.102.1 with a synthetic upstream: `num_retries: 0` disable
 an authentication or business-validation failure on WindHub is answered by the Nanliang
 fallback instead of surfacing as an error.
 
-This is an accepted **dev-only** limitation, not a fail-closed auth story. The eval script
-sidesteps it by probing non-fallback groups. Do not promote this topology to staging or
-production without a fail-closed authentication design.
+This is an accepted **dev-only** limitation and a **known blocker**, not a fail-closed auth
+story. Do not describe this topology as fail-closed: an expired or unauthorized Oracle2 key
+on WindHub is currently masked by a Nanliang fallback answer. The eval script sidesteps the
+masking by probing fixed groups that have no fallback edge, so a capability result always
+comes from the channel it names. Do not promote this topology to staging or production
+without a fail-closed authentication design.
 
 This was **not** addressed by configuration. LiteLLM v1.102.1 introspection shows
 `Router.__init__` has no `fallback_on_unsupported_params` parameter, and no setting was

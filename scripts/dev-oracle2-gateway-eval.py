@@ -63,7 +63,15 @@ CHANNELS: tuple[Channel, ...] = (
     ),
 )
 
+# ── Exact expected probe answers ─────────────────────────────────────────────
+# A capability passes only when it returns exactly this, so a plausible-looking
+# but wrong answer (NOT PONG, wrong JSON, wrong tool label, unrelated SSE text)
+# fails instead of passing on a non-empty preview.
+EXPECTED_CHAT_ANSWER = "PONG"
+EXPECTED_JSON_PAYLOAD: dict[str, Any] = {"probe": "synthetic", "ok": True}
 EXPECTED_TOOL_NAME = "record_synthetic_probe"
+EXPECTED_TOOL_ARGUMENTS: dict[str, Any] = {"label": "dev-probe"}
+EXPECTED_STREAM_LINES = ("1", "2", "3")
 
 TOOL_SCHEMA = [
     {
@@ -147,9 +155,11 @@ def probe_chat(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
         return result
     choice = (body.get("choices") or [{}])[0]
     content = (choice.get("message") or {}).get("content") or ""
+    # content_exact is the full normalized answer and is what the verdict uses.
+    # content_preview is for humans only and must never drive a pass/fail.
     result.update(
         {
-            "ok": bool(content.strip()),
+            "content_exact": content.strip(),
             "content_preview": content.strip()[:60],
             "finish_reason": choice.get("finish_reason"),
             "actual_model": body.get("model"),
@@ -185,13 +195,17 @@ def probe_json(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
     content = ((body.get("choices") or [{}])[0].get("message") or {}).get(
         "content"
     ) or ""
+    result["content_exact"] = content.strip()
     try:
         parsed = json.loads(content)
-        result["json_valid"] = isinstance(parsed, dict)
-        result["json_keys"] = sorted(parsed) if isinstance(parsed, dict) else None
     except json.JSONDecodeError:
         result["json_valid"] = False
         result["content_preview"] = content[:120]
+    else:
+        result["json_valid"] = isinstance(parsed, dict)
+        # The parsed payload (not a preview) is what the verdict inspects.
+        result["json_payload"] = parsed if isinstance(parsed, dict) else None
+        result["json_keys"] = sorted(parsed) if isinstance(parsed, dict) else None
     result.update({"actual_model": body.get("model"), "usage": _usage(body)})
     return result
 
@@ -226,11 +240,19 @@ def probe_tool(gateway_url: str, api_key: str, logical_model: str) -> dict[str, 
     if calls:
         function = (calls[0] or {}).get("function") or {}
         result["tool_name"] = function.get("name")
+        raw_arguments = function.get("arguments")
+        result["tool_arguments_raw"] = raw_arguments
         try:
-            arguments = json.loads(function.get("arguments") or "{}")
-            result["tool_arguments_valid_json"] = isinstance(arguments, dict)
+            arguments = json.loads(raw_arguments or "{}")
         except json.JSONDecodeError:
             result["tool_arguments_valid_json"] = False
+        else:
+            result["tool_arguments_valid_json"] = isinstance(arguments, dict)
+            # Parsed arguments are what the verdict inspects, so a matching
+            # preview can never stand in for the real payload.
+            result["tool_arguments"] = (
+                arguments if isinstance(arguments, dict) else None
+            )
     result.update({"actual_model": body.get("model"), "usage": _usage(body)})
     return result
 
@@ -279,13 +301,18 @@ def probe_stream(gateway_url: str, api_key: str, logical_model: str) -> dict[str
             piece = (choice.get("delta") or {}).get("content")
             if piece:
                 text.append(piece)
+    joined = "".join(text)
+    # Ordered, non-empty lines of the reassembled stream. The verdict requires
+    # exactly ["1", "2", "3"] in this order, so unrelated SSE text cannot pass.
+    stream_lines = [line.strip() for line in joined.splitlines() if line.strip()]
     result.update(
         {
-            "ok": saw_done and bool(text),
             "chunk_count": chunks,
             "saw_done": saw_done,
             "saw_usage": saw_usage,
-            "content_preview": "".join(text).strip()[:60],
+            "content_exact": joined.strip(),
+            "content_preview": joined.strip()[:60],
+            "stream_lines": stream_lines,
         }
     )
     return result
@@ -300,35 +327,57 @@ PROBES = {
 
 
 def _chat_ok(probe: dict[str, Any]) -> bool:
-    """A chat reply must carry non-empty text and a terminal finish reason."""
-    return bool(str(probe.get("content_preview") or "").strip()) and bool(
+    """The chat answer must be exactly PONG, with surrounding whitespace allowed."""
+    return probe.get("content_exact") == EXPECTED_CHAT_ANSWER and bool(
         probe.get("finish_reason")
     )
 
 
 def _json_ok(probe: dict[str, Any]) -> bool:
-    return probe.get("json_valid") is True
+    """The JSON answer must equal the expected object with correct value types."""
+    if probe.get("json_valid") is not True:
+        return False
+    payload = probe.get("json_payload")
+    if not isinstance(payload, dict):
+        return False
+    # Exact key set: extra or missing keys are a failure.
+    if set(payload) != set(EXPECTED_JSON_PAYLOAD):
+        return False
+    # type() is deliberate: in Python True == 1, so `ok` must be a real bool.
+    if payload.get("probe") != EXPECTED_JSON_PAYLOAD["probe"]:
+        return False
+    return (
+        type(payload.get("ok")) is bool and payload["ok"] is EXPECTED_JSON_PAYLOAD["ok"]
+    )
 
 
 def _tool_ok(probe: dict[str, Any]) -> bool:
-    """A tool probe must return >=1 call with the expected name and object args."""
+    """The tool call must use the expected name and the exact expected label."""
     if int(probe.get("tool_call_count") or 0) < 1:
         return False
     if probe.get("tool_name") != EXPECTED_TOOL_NAME:
         return False
-    return probe.get("tool_arguments_valid_json") is True
+    if probe.get("tool_arguments_valid_json") is not True:
+        return False
+    arguments = probe.get("tool_arguments")
+    if not isinstance(arguments, dict):
+        return False
+    if set(arguments) != set(EXPECTED_TOOL_ARGUMENTS):
+        return False
+    label = arguments.get("label")
+    return type(label) is str and label == EXPECTED_TOOL_ARGUMENTS["label"]
 
 
 def _stream_ok(probe: dict[str, Any]) -> bool:
-    """A stream must terminate with [DONE] and carry non-empty content."""
-    return probe.get("saw_done") is True and bool(
-        str(probe.get("content_preview") or "").strip()
-    )
+    """The stream must deliver 1, 2, 3 in order and terminate with [DONE]."""
+    if probe.get("saw_done") is not True:
+        return False
+    return probe.get("stream_lines") == list(EXPECTED_STREAM_LINES)
 
 
 # HTTP 200 alone is not a pass: a 200 response can still be empty, malformed, or
-# answer without the capability that was asked for. Each capability is judged on
-# its own contract.
+# answer something other than what was asked. Each capability is judged on its
+# own exact contract using full parsed values, never a truncated preview.
 CAPABILITY_VERDICTS = {
     "chat": _chat_ok,
     "json": _json_ok,
@@ -348,25 +397,46 @@ def probe_failure_reason(capability: str, probe: dict[str, Any]) -> str:
     if status != 200:
         return f"HTTP{status}"
     if capability == "chat":
-        return (
-            "empty chat content"
-            if not str(probe.get("content_preview") or "").strip()
-            else "missing finish_reason"
-        )
+        if not probe.get("content_exact"):
+            return "empty chat content"
+        if not probe.get("finish_reason"):
+            return "missing finish_reason"
+        return f"answer is not {EXPECTED_CHAT_ANSWER!r}"
     if capability == "json":
-        return "invalid JSON body"
+        if probe.get("json_valid") is not True:
+            return "invalid JSON body"
+        payload = probe.get("json_payload")
+        if not isinstance(payload, dict):
+            return "JSON body is not an object"
+        if set(payload) != set(EXPECTED_JSON_PAYLOAD):
+            return f"unexpected JSON keys {sorted(payload)}"
+        if type(payload.get("ok")) is not bool:
+            return (
+                f"JSON 'ok' is not a boolean (got {type(payload.get('ok')).__name__})"
+            )
+        return "JSON payload does not match the expected probe object"
     if capability == "tool":
         if int(probe.get("tool_call_count") or 0) < 1:
             return "no tool call returned"
         if probe.get("tool_name") != EXPECTED_TOOL_NAME:
             return f"unexpected tool name {probe.get('tool_name')!r}"
-        return "tool arguments not a JSON object"
+        if probe.get("tool_arguments_valid_json") is not True:
+            return "tool arguments are not a JSON object"
+        arguments = probe.get("tool_arguments")
+        if not isinstance(arguments, dict):
+            return "tool arguments are not a JSON object"
+        if set(arguments) != set(EXPECTED_TOOL_ARGUMENTS):
+            return f"unexpected tool argument keys {sorted(arguments)}"
+        if arguments.get("label") != EXPECTED_TOOL_ARGUMENTS["label"]:
+            return f"tool label is not {EXPECTED_TOOL_ARGUMENTS['label']!r}"
+        return "tool arguments do not match the expected probe call"
     if capability == "stream":
-        return (
-            "stream missing [DONE]"
-            if probe.get("saw_done") is not True
-            else "empty stream content"
-        )
+        if probe.get("saw_done") is not True:
+            return "stream missing [DONE]"
+        lines = probe.get("stream_lines") or []
+        if not lines:
+            return "empty stream content"
+        return f"stream content is not {list(EXPECTED_STREAM_LINES)} in order (got {lines[:6]})"
     return "unknown capability"
 
 
@@ -377,6 +447,7 @@ def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
         "gateway_url": gateway_url,
         "channels": {},
         "failures": [],
+        "requalification_required": [],
         "notes": [],
     }
     for channel in CHANNELS:
@@ -396,8 +467,11 @@ def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
             if channel.pending:
                 # A pending channel is never reported as working. If it starts
                 # answering correctly, that is a signal to re-qualify it
-                # deliberately, not a silent pass.
+                # deliberately, not a silent pass — so it fails the run.
                 if passed:
+                    report["requalification_required"].append(
+                        f"{channel.name}/{capability} passed but the channel is pending"
+                    )
                     report["notes"].append(
                         f"{channel.name} passed {capability} but is marked pending — "
                         "re-qualify before adding it to router_settings.fallbacks"
@@ -411,7 +485,11 @@ def evaluate(gateway_url: str, api_key: str) -> dict[str, Any]:
         )
         channel_report["qualified"] = channel_report["passed"] and not channel.pending
         report["channels"][channel.name] = channel_report
+    # "passed" means every expected-working capability met its exact contract.
+    # "ok" additionally requires that no pending channel silently started
+    # working, because that demands deliberate re-qualification.
     report["passed"] = not report["failures"]
+    report["ok"] = report["passed"] and not report["requalification_required"]
     return report
 
 
@@ -454,6 +532,14 @@ def main() -> int:
             )
     if report["failures"]:
         print(f"ORACLE2_GATEWAY_EVAL=FAIL {report['failures']}", file=sys.stderr)
+        return 1
+    if report["requalification_required"]:
+        # A pending channel started answering. That is not a pass: it demands a
+        # deliberate re-qualification before anything is wired into a live path.
+        print(
+            f"ORACLE2_GATEWAY_EVAL=REQUALIFY {report['requalification_required']}",
+            file=sys.stderr,
+        )
         return 1
     print("ORACLE2_GATEWAY_EVAL=PASS", file=sys.stderr)
     return 0

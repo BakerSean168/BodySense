@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -431,8 +432,23 @@ def test_http_200_but_invalid_response_is_a_probe_failure(capability: str, probe
 @pytest.mark.parametrize(
     ("capability", "probe"),
     [
-        ("chat", {"http_status": 200, "content_preview": "PONG", "finish_reason": "stop"}),
-        ("json", {"http_status": 200, "json_valid": True}),
+        (
+            "chat",
+            {
+                "http_status": 200,
+                "content_exact": "PONG",
+                "content_preview": "PONG",
+                "finish_reason": "stop",
+            },
+        ),
+        (
+            "json",
+            {
+                "http_status": 200,
+                "json_valid": True,
+                "json_payload": {"probe": "synthetic", "ok": True},
+            },
+        ),
         (
             "tool",
             {
@@ -440,9 +456,13 @@ def test_http_200_but_invalid_response_is_a_probe_failure(capability: str, probe
                 "tool_call_count": 1,
                 "tool_name": "record_synthetic_probe",
                 "tool_arguments_valid_json": True,
+                "tool_arguments": {"label": "dev-probe"},
             },
         ),
-        ("stream", {"http_status": 200, "saw_done": True, "content_preview": "1\n2\n3"}),
+        (
+            "stream",
+            {"http_status": 200, "saw_done": True, "stream_lines": ["1", "2", "3"]},
+        ),
     ],
 )
 def test_valid_probe_responses_pass(capability: str, probe: dict) -> None:
@@ -459,56 +479,17 @@ def test_tool_probe_forces_tool_choice_required() -> None:
 
 def test_pending_channel_is_never_reported_as_qualified(monkeypatch) -> None:
     module = _eval_module()
-    # Every probe "passes", including Kunyou's, which is still pending.
-    monkeypatch.setattr(
-        module,
-        "probe_chat",
-        lambda *a, **k: {
-            "http_status": 200,
-            "content_preview": "PONG",
-            "finish_reason": "stop",
-        },
-    )
-    monkeypatch.setattr(
-        module,
-        "probe_json",
-        lambda *a, **k: {
-            "http_status": 200,
-            "json_valid": True,
-        },
-    )
-    monkeypatch.setattr(
-        module,
-        "probe_tool",
-        lambda *a, **k: {
-            "http_status": 200,
-            "tool_call_count": 1,
-            "tool_name": "record_synthetic_probe",
-            "tool_arguments_valid_json": True,
-        },
-    )
-    monkeypatch.setattr(
-        module,
-        "probe_stream",
-        lambda *a, **k: {
-            "http_status": 200,
-            "saw_done": True,
-            "content_preview": "1\n2\n3",
-        },
-    )
-    module.PROBES.update(
-        chat=module.probe_chat,
-        json=module.probe_json,
-        tool=module.probe_tool,
-        stream=module.probe_stream,
-    )
+    _patch_all_probes_passing(module, monkeypatch)
 
     report = module.evaluate("http://127.0.0.1:1/v1", "placeholder")
 
     kunyou = report["channels"]["kunyou"]
     assert kunyou["pending"] is True
     assert kunyou["qualified"] is False
+    assert any("kunyou" in item for item in report["requalification_required"])
     assert any("kunyou" in note for note in report["notes"])
+    # A pending channel passing must not read as an overall success.
+    assert report["ok"] is False
     assert report["channels"]["windhub"]["qualified"] is True
     assert report["channels"]["nanliang"]["qualified"] is True
 
@@ -561,6 +542,115 @@ def test_failing_capability_fails_the_run_even_when_http_is_200(monkeypatch) -> 
     assert report["passed"] is False
     assert report["failures"]
     assert all("HTTP200" not in failure for failure in report["failures"])
+
+
+def _patch_all_probes_passing(module, monkeypatch) -> None:
+    monkeypatch.setattr(
+        module,
+        "probe_chat",
+        lambda *a, **k: {
+            "http_status": 200,
+            "content_exact": "PONG",
+            "finish_reason": "stop",
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_json",
+        lambda *a, **k: {
+            "http_status": 200,
+            "json_valid": True,
+            "json_payload": {"probe": "synthetic", "ok": True},
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_tool",
+        lambda *a, **k: {
+            "http_status": 200,
+            "tool_call_count": 1,
+            "tool_name": "record_synthetic_probe",
+            "tool_arguments_valid_json": True,
+            "tool_arguments": {"label": "dev-probe"},
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "probe_stream",
+        lambda *a, **k: {
+            "http_status": 200,
+            "saw_done": True,
+            "stream_lines": ["1", "2", "3"],
+        },
+    )
+    module.PROBES.update(
+        chat=module.probe_chat,
+        json=module.probe_json,
+        tool=module.probe_tool,
+        stream=module.probe_stream,
+    )
+
+
+def test_pending_channel_passing_forces_a_nonzero_exit(monkeypatch, capsys) -> None:
+    """Kunyou passing must re-qualify, not silently succeed: exit code 1."""
+    module = _eval_module()
+    _patch_all_probes_passing(module, monkeypatch)
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-not-real-key")
+    monkeypatch.setattr(sys, "argv", ["dev-oracle2-gateway-eval.py"])
+
+    exit_code = module.main()
+
+    assert exit_code == 1
+    err = capsys.readouterr().err
+    assert "ORACLE2_GATEWAY_EVAL=REQUALIFY" in err
+    assert "kunyou" in err
+    assert "ORACLE2_GATEWAY_EVAL=PASS" not in err
+
+
+def test_all_channels_healthy_exits_zero(monkeypatch, capsys) -> None:
+    """Only non-pending channels are expected to work, so this is a clean pass."""
+    module = _eval_module()
+    _patch_all_probes_passing(module, monkeypatch)
+
+    # Kunyou stays pending and would otherwise pass, so mark only its probe as
+    # failing the way the real Oracle2 HTTP503 currently does.
+    def failing_chat(_gateway_url, _api_key, logical_model):
+        if "kunyou" in logical_model:
+            return {"http_status": 503, "error": "no channel"}
+        return {"http_status": 200, "content_exact": "PONG", "finish_reason": "stop"}
+
+    monkeypatch.setattr(module, "probe_chat", failing_chat)
+    module.PROBES.update(chat=failing_chat)
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-not-real-key")
+    monkeypatch.setattr(sys, "argv", ["dev-oracle2-gateway-eval.py"])
+
+    exit_code = module.main()
+
+    assert exit_code == 0
+    assert "ORACLE2_GATEWAY_EVAL=PASS" in capsys.readouterr().err
+
+
+def test_failing_expected_channel_exits_nonzero(monkeypatch, capsys) -> None:
+    module = _eval_module()
+    _patch_all_probes_passing(module, monkeypatch)
+
+    # WindHub (not pending) answers 200 with the wrong chat text.
+    def wrong_chat(gateway_url, api_key, logical_model):
+        if "windhub" in logical_model:
+            return {"http_status": 200, "content_exact": "NOT PONG", "finish_reason": "stop"}
+        return {"http_status": 503, "error": "no channel"}
+
+    monkeypatch.setattr(module, "probe_chat", wrong_chat)
+    module.PROBES.update(chat=wrong_chat)
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-not-real-key")
+    monkeypatch.setattr(sys, "argv", ["dev-oracle2-gateway-eval.py"])
+
+    exit_code = module.main()
+
+    assert exit_code == 1
+    err = capsys.readouterr().err
+    assert "ORACLE2_GATEWAY_EVAL=FAIL" in err
+    assert "windhub/chat" in err
 
 
 # ── Authorized upstream endpoint (single allowed destination) ────────────────
@@ -726,3 +816,175 @@ def test_dev_env_declares_the_single_authorized_endpoint() -> None:
         "export BODYSENSE_DEV_COMPOSE_OVERLAY=$ROOT/docker/docker-compose.dev-oracle2.yml"
     )
     assert auth_check < overlay_export
+
+
+# ── Exact capability contracts ───────────────────────────────────────────────
+# Verdicts must use the full parsed payload, never a truncated preview, so a
+# plausible-but-wrong answer fails.
+
+
+def _probe_chat_with(content: str, finish_reason: str | None = "stop") -> dict:
+    """Build the probe dict probe_chat would produce for a given content."""
+    return {
+        "http_status": 200,
+        "content_exact": content.strip(),
+        "content_preview": content.strip()[:60],
+        "finish_reason": finish_reason,
+    }
+
+
+def _probe_json_with(content: str) -> dict:
+    import json as _json
+
+    probe: dict = {"http_status": 200, "content_exact": content.strip()}
+    try:
+        parsed = _json.loads(content)
+    except _json.JSONDecodeError:
+        probe["json_valid"] = False
+        return probe
+    probe["json_valid"] = isinstance(parsed, dict)
+    probe["json_payload"] = parsed if isinstance(parsed, dict) else None
+    return probe
+
+
+def _probe_tool_with(name: str, arguments: object, raw: str | None = None) -> dict:
+    probe: dict = {
+        "http_status": 200,
+        "tool_call_count": 1,
+        "tool_name": name,
+        "tool_arguments_raw": raw,
+    }
+    if isinstance(arguments, dict):
+        probe["tool_arguments_valid_json"] = True
+        probe["tool_arguments"] = arguments
+    else:
+        probe["tool_arguments_valid_json"] = False
+    return probe
+
+
+def _probe_stream_with(lines: list[str], saw_done: bool = True) -> dict:
+    return {
+        "http_status": 200,
+        "saw_done": saw_done,
+        "content_exact": "\n".join(lines),
+        "content_preview": "\n".join(lines)[:60],
+        "stream_lines": lines,
+    }
+
+
+def test_chat_passes_only_for_exact_pong() -> None:
+    module = _eval_module()
+    assert module.probe_passed("chat", _probe_chat_with("PONG")) is True
+    # Surrounding whitespace is tolerated.
+    assert module.probe_passed("chat", _probe_chat_with("  PONG\n")) is True
+    # NOT PONG must fail even though the content is non-empty.
+    for wrong in ("NOT PONG", "PONG!", "pong", "PONG PONG", "PONG.", "Sure: PONG"):
+        probe = _probe_chat_with(wrong)
+        assert module.probe_passed("chat", probe) is False, wrong
+        assert "not 'PONG'" in module.probe_failure_reason("chat", probe), wrong
+    # A PONG without a terminal finish reason is still a failure.
+    assert module.probe_passed("chat", _probe_chat_with("PONG", None)) is False
+
+
+def test_json_passes_only_for_the_exact_expected_object() -> None:
+    module = _eval_module()
+    assert module.probe_passed("json", _probe_json_with('{"probe":"synthetic","ok":true}')) is True
+    wrong_payloads = [
+        '{"probe":"synthetic","ok":false}',
+        '{"probe":"synthetic"}',
+        '{"probe":"synthetic","ok":true,"extra":1}',
+        '{"probe":"other","ok":true}',
+        '{"probe":"synthetic","ok":"true"}',
+        '{"probe":"synthetic","ok":1}',
+        "not json at all",
+        '["probe","synthetic"]',
+        "null",
+    ]
+    for content in wrong_payloads:
+        probe = _probe_json_with(content)
+        assert module.probe_passed("json", probe) is False, content
+        assert module.probe_failure_reason("json", probe), content
+
+
+def test_json_rejects_non_boolean_ok_even_when_truthy() -> None:
+    module = _eval_module()
+    # 1 == True in Python, so the verdict must check the type explicitly.
+    probe = _probe_json_with('{"probe":"synthetic","ok":1}')
+    assert module.probe_passed("json", probe) is False
+    assert "not a boolean" in module.probe_failure_reason("json", probe)
+
+
+def test_tool_passes_only_for_expected_name_and_exact_label() -> None:
+    module = _eval_module()
+    assert (
+        module.probe_passed(
+            "tool", _probe_tool_with("record_synthetic_probe", {"label": "dev-probe"})
+        )
+        is True
+    )
+    wrong = [
+        ("record_synthetic_probe", {"label": "prod-probe"}),
+        ("record_synthetic_probe", {"label": "dev-probe-2"}),
+        ("record_synthetic_probe", {"label": ""}),
+        ("record_synthetic_probe", {"label": 123}),
+        ("record_synthetic_probe", {"other": "dev-probe"}),
+        ("record_synthetic_probe", {"label": "dev-probe", "extra": 1}),
+        ("wrong_tool", {"label": "dev-probe"}),
+    ]
+    for name, arguments in wrong:
+        probe = _probe_tool_with(name, arguments)
+        assert module.probe_passed("tool", probe) is False, (name, arguments)
+        assert module.probe_failure_reason("tool", probe), (name, arguments)
+    # No call at all.
+    assert module.probe_passed("tool", {"http_status": 200, "tool_call_count": 0}) is False
+
+
+def test_stream_passes_only_for_ordered_1_2_3_with_done() -> None:
+    module = _eval_module()
+    assert module.probe_passed("stream", _probe_stream_with(["1", "2", "3"])) is True
+    wrong = [
+        (["1", "2"], True),
+        (["1", "2", "3", "4"], True),
+        (["3", "2", "1"], True),
+        (["1", "1", "1"], True),
+        (["hello", "world"], True),
+        ([], True),
+        (["1", "2", "3"], False),
+    ]
+    for lines, saw_done in wrong:
+        probe = _probe_stream_with(lines, saw_done)
+        assert module.probe_passed("stream", probe) is False, (lines, saw_done)
+        assert module.probe_failure_reason("stream", probe), (lines, saw_done)
+
+
+def test_unrelated_sse_text_cannot_pass_the_stream_probe() -> None:
+    """A stream carrying unrelated text must fail even though it is non-empty."""
+    module = _eval_module()
+    probe = _probe_stream_with(["Here", "are", "the", "numbers", "1", "2", "3"])
+    assert module.probe_passed("stream", probe) is False
+    assert "[DONE]" not in module.probe_failure_reason("stream", probe)
+
+
+@pytest.mark.parametrize(
+    "probe",
+    [
+        # A long content preview that starts with PONG but is not PONG.
+        {
+            "http_status": 200,
+            "content_exact": "PONG" + " and here is a long explanation" * 5,
+            "content_preview": "PONG and here is a long explanation"[:60],
+            "finish_reason": "stop",
+        },
+        # A truncated JSON preview that looks right but parses to the wrong thing.
+        {
+            "http_status": 200,
+            "json_valid": True,
+            "json_payload": {"probe": "synthetic", "ok": False},
+            "content_preview": '{"probe":"synthetic","ok":true}'[:60],
+        },
+    ],
+)
+def test_truncated_preview_cannot_rescue_a_wrong_answer(probe: dict) -> None:
+    module = _eval_module()
+    capability = "chat" if "content_exact" in probe and "finish_reason" in probe else "json"
+    assert module.probe_passed(capability, probe) is False
