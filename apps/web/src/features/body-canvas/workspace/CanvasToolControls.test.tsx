@@ -57,4 +57,12 @@ describe("Canvas tool controls", () => {
     await user.click(screen.getByRole("button", { name: "关闭图层" }));
     expect(props.onToggleAnatomy).toHaveBeenCalledOnce();
   });
+  it("describes the skeleton retry without relying on a hover tooltip", () => {
+    render(
+      <CanvasToolControls {...defaults()} anatomyMode skeletonStatus="error" />,
+    );
+    expect(
+      screen.getByRole("button", { name: "骨骼" }),
+    ).toHaveAccessibleDescription("骨骼层暂时无法加载，点按重试");
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Brush,
   ChevronLeft,
@@ -18,6 +18,9 @@ import type {
 import type { SkeletonLayerStatus } from "../components/BodyCanvasScene";
 import { regionPaletteShortcut } from "../model/bodyCanvas";
 import { IconTip } from "@/components/ui/tooltip";
+
+/** Tooltips are visual-only, so the retry hint is also the button's description. */
+const SKELETON_RETRY_HINT = "骨骼层暂时无法加载，点按重试";
 
 /**
  * Penpot Home tools rail: 视角 R, 图层 L, 标注 B, 选择 V (top to bottom), then
@@ -64,6 +67,7 @@ export function CanvasToolControls({
   const [toolsCollapsed, setToolsCollapsed] = useState(false);
   const toolsToggleRef = useRef<HTMLButtonElement>(null);
   const toolsToggled = useRef(false);
+  const skeletonHintId = useId();
   useEffect(() => {
     if (!toolsToggled.current) return;
     toolsToggled.current = false;
@@ -168,42 +172,44 @@ export function CanvasToolControls({
           <span className="bc-layer-panel-title" aria-hidden="true">
             图层
           </span>
-          {BODY_LAYER_OPTIONS.map(([id, label, swatch]) => (
-            <IconTip
-              key={id}
-              label={
-                id === "skeleton" && skeletonStatus === "error"
-                  ? "骨骼层暂时无法加载，点按重试"
-                  : label
-              }
-            >
-              <button
-                type="button"
-                className="bc-layer-toggle"
-                aria-pressed={bodyLayers[id]}
-                aria-busy={
-                  id === "skeleton" && skeletonStatus === "loading"
-                    ? true
-                    : undefined
-                }
-                onClick={() => onToggleLayer(id)}
-              >
-                <span
-                  className="bc-layer-swatch"
-                  style={{ background: swatch }}
-                  aria-hidden="true"
-                />
-                <span className="bc-layer-label">{label}</span>
-                {id === "skeleton" && skeletonStatus === "loading" ? (
-                  <LoaderCircle
-                    size={12}
-                    className="animate-spin bc-layer-status"
+          {BODY_LAYER_OPTIONS.map(([id, label, swatch]) => {
+            const failed = id === "skeleton" && skeletonStatus === "error";
+            return (
+              <IconTip key={id} label={failed ? SKELETON_RETRY_HINT : label}>
+                <button
+                  type="button"
+                  className="bc-layer-toggle"
+                  aria-pressed={bodyLayers[id]}
+                  aria-describedby={failed ? skeletonHintId : undefined}
+                  aria-busy={
+                    id === "skeleton" && skeletonStatus === "loading"
+                      ? true
+                      : undefined
+                  }
+                  onClick={() => onToggleLayer(id)}
+                >
+                  <span
+                    className="bc-layer-swatch"
+                    style={{ background: swatch }}
                     aria-hidden="true"
                   />
-                ) : null}
-              </button>
-            </IconTip>
-          ))}
+                  <span className="bc-layer-label">{label}</span>
+                  {id === "skeleton" && skeletonStatus === "loading" ? (
+                    <LoaderCircle
+                      size={12}
+                      className="animate-spin bc-layer-status"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </button>
+              </IconTip>
+            );
+          })}
+          {skeletonStatus === "error" ? (
+            <span id={skeletonHintId} className="sr-only">
+              {SKELETON_RETRY_HINT}
+            </span>
+          ) : null}
           <IconTip label="关闭图层" shortcut="Esc">
             <button
               type="button"
