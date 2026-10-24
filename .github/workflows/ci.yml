@@ -17,7 +17,7 @@ permissions:
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v2.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v3.json
 
 jobs:
   scope:
@@ -33,6 +33,7 @@ jobs:
       lane_contracts: ${{ steps.manifest.outputs.lane_contracts }}
       lane_database: ${{ steps.manifest.outputs.lane_database }}
       lane_experience: ${{ steps.manifest.outputs.lane_experience }}
+      lane_component: ${{ steps.manifest.outputs.lane_component }}
       lane_full: ${{ steps.manifest.outputs.lane_full }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -55,8 +56,8 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v2
-          path: reports/delivery/delivery-manifest-v2.json
+          name: delivery-manifest-v3
+          path: reports/delivery/delivery-manifest-v3.json
           if-no-files-found: error
           retention-days: 14
 
@@ -80,7 +81,7 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - run: >-
           node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
@@ -118,7 +119,6 @@ jobs:
       (needs.scope.outputs.lane_web == 'true' ||
        needs.scope.outputs.lane_api == 'true' ||
        needs.scope.outputs.lane_ai == 'true' ||
-       needs.scope.outputs.lane_contracts == 'true' ||
        needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -133,7 +133,6 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         if: >-
           needs.scope.outputs.lane_api == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
           needs.scope.outputs.lane_full == 'true'
         with:
           go-version: "1.26"
@@ -141,7 +140,6 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         if: >-
           needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
           needs.scope.outputs.lane_full == 'true'
         with:
           version: "0.12"
@@ -149,13 +147,12 @@ jobs:
       - name: Sync Python environment when selected
         if: >-
           needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
           needs.scope.outputs.lane_full == 'true'
         working-directory: apps/ai-service
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -163,6 +160,45 @@ jobs:
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - name: Execute manifest-selected quality lanes
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
+
+  contracts-child:
+    name: Contract verification child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_contracts == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python environment for contract generation
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra dev --extra ocr
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v3
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute manifest-selected contract verification
+        run: node scripts/delivery/run-contracts.mjs "$DELIVERY_MANIFEST_PATH"
 
   governance-oracle:
     name: Governance Oracle
@@ -173,7 +209,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -186,14 +222,14 @@ jobs:
 
   quality-oracle:
     name: Quality Oracle
-    needs: [scope, quality-child]
+    needs: [scope, quality-child, contracts-child]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -202,7 +238,7 @@ jobs:
           --group quality
           --detector "${{ needs.scope.result }}"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"quality":"${{ needs.quality-child.result }}"}'
+          --children-json '{"quality":"${{ needs.quality-child.result }}","contracts":"${{ needs.contracts-child.result }}"}'
 
   migrations-child:
     name: PostgreSQL 18 vNext baseline child
@@ -340,7 +376,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -468,16 +504,47 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
+  component-child:
+    name: Component browser tests child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_component == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v3
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Storybook component browser tests
+        run: pnpm nx run @bodysense/web:component-test
+
   experience-oracle:
     name: Experience Oracle
-    needs: [scope, e2e-child]
+    needs: [scope, e2e-child, component-child]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -486,7 +553,7 @@ jobs:
           --group experience
           --detector "${{ needs.scope.result }}"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"experience":"${{ needs.e2e-child.result }}"}'
+          --children-json '{"experience":"${{ needs.e2e-child.result }}","component":"${{ needs.component-child.result }}"}'
 
   delivery-observation:
     name: Delivery Observation
@@ -494,6 +561,8 @@ jobs:
       - scope
       - governance-child
       - quality-child
+      - contracts-child
+      - component-child
       - migrations-child
       - recovery-migrations-child
       - e2e-child
@@ -507,7 +576,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v2
+          name: delivery-manifest-v3
           path: reports/delivery
       - name: Materialize execution outcomes
         run: |
@@ -516,6 +585,8 @@ jobs:
           {
             "governance": "${{ needs.governance-child.result }}",
             "quality": "${{ needs.quality-child.result }}",
+            "contracts": "${{ needs.contracts-child.result }}",
+            "component": "${{ needs.component-child.result }}",
             "database-baseline": "${{ needs.migrations-child.result }}",
             "database-recovery": "${{ needs.recovery-migrations-child.result }}",
             "experience": "${{ needs.e2e-child.result }}"

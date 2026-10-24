@@ -29,6 +29,13 @@
     },
     "build": {
       "outputs": ["{projectRoot}/dist"]
+    },
+    "component-test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node scripts/quality/run-component-tests.mjs"
+      }
     }
   }
 }
