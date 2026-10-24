@@ -173,6 +173,32 @@ Exit codes:
 
 ## Known limitation: auth errors trigger fallback
 
+Reproduce with the **pinned LiteLLM v1.102.1 image** and a local synthetic HTTP
+upstream. This requires Docker on WSL but uses `--network none`, no real provider
+keys, no external model calls, and no production or shared Compose containers:
+
+```bash
+docker run --rm --network none --entrypoint python \
+  -e LITELLM_LOCAL_MODEL_COST_MAP=True \
+  -v "$PWD/scripts/dev-oracle2-fallback-negative-smoke.py:/tmp/fallback-smoke.py:ro" \
+  docker.litellm.ai/berriai/litellm:v1.102.1 /tmp/fallback-smoke.py
+```
+
+The script exercises the LiteLLM Router SDK path with the same one-edge fallback
+semantics as this dev config. It expects 400/401/403 to return their original
+errors without invoking the backup; 408/429/500/503 may use a healthy backup.
+The smoke test **deliberately exits 1 while the vulnerability exists**. It is
+not a proxy authentication or end-to-end business acceptance test, and must not
+be mistaken for one.
+
+Observed on WSL 2026-10-24 (job `wsl-local::job_req_44829f0baf7bf9028f48e8e1a09ac16c`):
+200 returned the primary response; 400, 401 and 403 each invoked the fallback
+and returned a successful synthetic response (**FAIL**); 408, 429, 500 and 503
+correctly invoked the fallback (**PASS**). Overall
+`FALLBACK_NEGATIVE_SMOKE=FAIL`. This is independent evidence that the dev gateway
+cannot yet be promoted. Do not disable or weaken the negative check to make CI
+green.
+
 Measured on LiteLLM v1.102.1 with a synthetic upstream: `num_retries: 0` disables
 **retries only**. Ordinary `router_settings.fallbacks` also fires on **400, 401 and 403**, so
 an authentication or business-validation failure on WindHub is answered by the Nanliang
