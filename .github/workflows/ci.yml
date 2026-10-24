@@ -576,8 +576,18 @@ jobs:
       - name: Sync Python E2E environment
         working-directory: apps/ai-service
         run: uv sync --frozen --extra ocr
-      - name: Install Chromium
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium (full, on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install Chromium (cached browsers, on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install chromium
       - name: Start Go API
         working-directory: apps/api
         env:
@@ -717,8 +727,18 @@ jobs:
           node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - run: pnpm install --frozen-lockfile
-      - name: Install Chromium
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium (full, on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install Chromium (cached browsers, on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install chromium
       - name: Run Storybook component browser tests
         run: pnpm nx run @bodysense/web:component-test
 
