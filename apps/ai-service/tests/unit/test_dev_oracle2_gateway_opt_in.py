@@ -1213,6 +1213,51 @@ def test_supplier_route_preflight_rejects_deceptive_structural_pins(
     assert "Traceback" not in result.stderr
 
 
+@pytest.mark.parametrize(
+    "unsafe_case",
+    [
+        "extra_edge",
+        "duplicate_edge",
+        "retarget_to_pending_kunyou",
+        "missing_edge",
+        "context_window_fallback",
+        "default_fallback",
+        "retry_enabled",
+    ],
+)
+def test_supplier_route_preflight_rejects_fallback_graph_bypass(
+    tmp_path: Path, unsafe_case: str
+) -> None:
+    source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8").replace(
+        "model: openai/deepseek-v4.1-flash-1017",
+        "model: openai/synthetic-resource/deepseek-v4.1-flash-1017",
+    )
+    config = yaml.safe_load(source)
+    router = config["router_settings"]
+    edges = router["fallbacks"]
+    if unsafe_case == "extra_edge":
+        edges.append({"bodysense-dev-oracle2-nanliang": ["bodysense-dev-oracle2-kunyou"]})
+    elif unsafe_case == "duplicate_edge":
+        edges.append({"bodysense-diagnosis": ["bodysense-diagnosis-fallback"]})
+    elif unsafe_case == "retarget_to_pending_kunyou":
+        edges[0]["bodysense-diagnosis"] = ["bodysense-dev-oracle2-kunyou"]
+    elif unsafe_case == "missing_edge":
+        edges.pop()
+    elif unsafe_case == "context_window_fallback":
+        router["context_window_fallbacks"] = [
+            {"bodysense-diagnosis": ["bodysense-dev-oracle2-kunyou"]}
+        ]
+    elif unsafe_case == "default_fallback":
+        router["default_fallbacks"] = ["bodysense-dev-oracle2-kunyou"]
+    else:
+        router["num_retries"] = 1
+    path = tmp_path / f"{unsafe_case}.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+
+
 @pytest.mark.parametrize("opt_in", ["0", "1"])
 def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_in: str) -> None:
     """The safe gateway restart must never call Compose down or recreate DB/Redis."""

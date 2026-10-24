@@ -51,6 +51,11 @@ alone is not a provider-identity or runtime-authentication acceptance.
 **Keep the dev-only Oracle2 opt-in disabled until the intended fallback
 supplier is reconciled and a dedicated scoped Virtual Key is available.**
 No shared Oracle2 registry or runtime routing was changed during this audit.
+The qualified `llm-pm-deepseek-0731` binding advertises the upstream
+`openai-responses` protocol (credential metadata is chat-compatible); Oracle2's
+ProviderAdmin explicitly supports Chat Completions to Responses bridging.
+This resolves a superficial protocol-label mismatch, **not** supplier identity,
+client authorization, or actual end-to-end wire compatibility.
 
 **WSL fail-closed start guard (2026-10-24):** `scripts/dev-infra.sh up`,
 `restart`, and `restart-gateway` now run
@@ -61,7 +66,11 @@ fixed-channel probe use supplier-qualified Oracle2 routes, this returns nonzero.
 The guard also rejects duplicate LiteLLM deployments under the same
 `model_name`, mismatched supplier pins across serving fallback and probe,
 non-DeepSeek model substitutions, and unexpected credentials/base URLs.
-These checks prevent a second deployment from hiding behind a matching entry.
+It also enforces the declared five-edge fallback graph with retries disabled,
+rejecting extra/duplicate edges, unexpected targets (including pending Kunyou),
+and alternate fallback maps. A supplier pin alone cannot authorize a new edge.
+These checks prevent a second deployment or fallback path from hiding behind a
+matching entry.
 This is a **local structure check only**, not proof that a qualified supplier
 is the originally intended Nanliang provider, that a Virtual Key permits the
 route, or that its wire protocol/inference works. Do not bypass it by choosing

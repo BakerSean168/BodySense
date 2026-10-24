@@ -24,6 +24,20 @@ PIN_REQUIRED = (
     "bodysense-general-fallback",
     "bodysense-dev-oracle2-nanliang",
 )
+# Prevent a valid supplier pin from being bypassed by an added fallback edge
+# to an unqualified, unauthorized, or known-unavailable model group.
+EXPECTED_FALLBACKS = {
+    "bodysense-diagnosis": "bodysense-diagnosis-fallback",
+    "bodysense-consultation": "bodysense-general-fallback",
+    "bodysense-structured": "bodysense-general-fallback",
+    "bodysense-text": "bodysense-general-fallback",
+    "bodysense-posture": "bodysense-posture-fallback",
+}
+ALTERNATE_FALLBACK_SETTINGS = (
+    "default_fallbacks",
+    "context_window_fallbacks",
+    "content_policy_fallbacks",
+)
 
 
 def has_supplier_qualified_routes(config_path: Path) -> bool:
@@ -67,7 +81,26 @@ def has_supplier_qualified_routes(config_path: Path) -> bool:
             if pinned_model is not None and model != pinned_model:
                 return False
             pinned_model = model
-        return True
+
+        router = config.get("router_settings")
+        if not isinstance(router, dict) or router.get("num_retries") != 0:
+            return False
+        if any(setting in router for setting in ALTERNATE_FALLBACK_SETTINGS):
+            return False
+        edges = router.get("fallbacks")
+        if not isinstance(edges, list) or len(edges) != len(EXPECTED_FALLBACKS):
+            return False
+        seen = set()
+        for edge in edges:
+            if not isinstance(edge, dict) or len(edge) != 1:
+                return False
+            source, targets = next(iter(edge.items()))
+            if source in seen or source not in EXPECTED_FALLBACKS:
+                return False
+            if targets != [EXPECTED_FALLBACKS[source]]:
+                return False
+            seen.add(source)
+        return seen == set(EXPECTED_FALLBACKS)
     except (OSError, ValueError, yaml.YAMLError):
         return False
 
@@ -80,8 +113,9 @@ def main() -> int:
     if not has_supplier_qualified_routes(Path(sys.argv[1])):
         print(
             "Oracle2 dev activation blocked: DeepSeek fallback/probe routes are "
-            "unqualified or the route config is invalid. Pin the verified, "
-            "authorized supplier-qualified model ID before enabling this gateway.",
+            "unqualified or the fallback graph/config is unsafe. Pin the verified, "
+            "authorized supplier-qualified model ID and preserve allowed "
+            "fallback edges before enabling this gateway.",
             file=sys.stderr,
         )
         return 1
