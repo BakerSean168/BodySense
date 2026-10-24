@@ -1,30 +1,30 @@
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
-export const MANIFEST_SCHEMA = 'bodysense.delivery-manifest/v1';
-export const POLICY_VERSION = 'delivery-policy-v1';
-export const SUMMARY_SCHEMA = 'bodysense.delivery-run-summary/v1';
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v1";
+export const POLICY_VERSION = "delivery-policy-v1";
+export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 export const LANE_NAMES = Object.freeze([
-  'governance',
-  'web',
-  'api',
-  'ai',
-  'contracts',
-  'database',
-  'experience',
-  'full',
+  "governance",
+  "web",
+  "api",
+  "ai",
+  "contracts",
+  "database",
+  "experience",
+  "full",
 ]);
 
 export const RISK_NAMES = Object.freeze([
-  'docs',
-  'web',
-  'api',
-  'ai',
-  'contract',
-  'database',
-  'runtime',
-  'release',
-  'root',
+  "docs",
+  "web",
+  "api",
+  "ai",
+  "contract",
+  "database",
+  "runtime",
+  "release",
+  "root",
 ]);
 
 const FULL_LANES = Object.freeze(
@@ -34,7 +34,7 @@ const FULL_LANES = Object.freeze(
 const RISK_PRIORITY = new Map(RISK_NAMES.map((risk, index) => [risk, index]));
 
 function normalizePath(path) {
-  return String(path).replaceAll('\\', '/').replace(/^\.\//, '');
+  return String(path).replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
 export function normalizeChangedPaths(paths) {
@@ -45,7 +45,7 @@ export function canonicalize(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize);
   }
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.keys(value)
         .sort()
@@ -57,7 +57,7 @@ export function canonicalize(value) {
 
 export function sha256Json(value) {
   const canonical = JSON.stringify(canonicalize(value));
-  return `sha256:${crypto.createHash('sha256').update(canonical).digest('hex')}`;
+  return `sha256:${crypto.createHash("sha256").update(canonical).digest("hex")}`;
 }
 
 export function computeManifestDigest(manifest) {
@@ -75,7 +75,9 @@ function allTrueLanes() {
 }
 
 function emptyLanes() {
-  return Object.fromEntries(LANE_NAMES.map((lane) => [lane, lane === 'governance']));
+  return Object.fromEntries(
+    LANE_NAMES.map((lane) => [lane, lane === "governance"]),
+  );
 }
 
 function mergeLanes(target, patch) {
@@ -88,7 +90,7 @@ function mergeLanes(target, patch) {
 }
 
 function highestRisk(risks) {
-  let selected = 'docs';
+  let selected = "docs";
   for (const risk of risks) {
     if ((RISK_PRIORITY.get(risk) ?? -1) > (RISK_PRIORITY.get(selected) ?? -1)) {
       selected = risk;
@@ -100,85 +102,86 @@ function highestRisk(risks) {
 function classifySinglePath(path) {
   // Documentation and prose-only repository metadata are the cheapest class.
   if (
-    path.startsWith('docs/') ||
-    path === 'README.md' ||
-    path === 'CONTRIBUTING.md' ||
-    path.endsWith('.md')
+    path.startsWith("docs/") ||
+    path === "README.md" ||
+    path === "CONTRIBUTING.md" ||
+    path.endsWith(".md")
   ) {
-    return { risk: 'docs', lanes: {}, reason: 'documentation' };
+    return { risk: "docs", lanes: {}, reason: "documentation" };
   }
 
   // Delivery/release/runtime coordinates are intentionally full because a
   // detector bug in its own implementation must never reduce validation.
   if (
-    path.startsWith('.github/') ||
-    path.startsWith('scripts/delivery/') ||
-    path.startsWith('docker/') ||
-    path.startsWith('deploy/') ||
-    path === '.env.production' ||
-    path === 'release-please-config.json' ||
-    path === '.release-please-manifest.json'
+    path.startsWith(".github/") ||
+    path.startsWith("scripts/delivery/") ||
+    path.startsWith("docker/") ||
+    path.startsWith("deploy/") ||
+    path === ".env.production" ||
+    path === "release-please-config.json" ||
+    path === ".release-please-manifest.json"
   ) {
     const risk =
-      path === 'release-please-config.json' || path === '.release-please-manifest.json'
-        ? 'release'
-        : 'runtime';
-    return { risk, lanes: allTrueLanes(), reason: 'delivery-runtime' };
+      path === "release-please-config.json" ||
+      path === ".release-please-manifest.json"
+        ? "release"
+        : "runtime";
+    return { risk, lanes: allTrueLanes(), reason: "delivery-runtime" };
   }
 
   if (
-    path === 'package.json' ||
-    path === 'pnpm-lock.yaml' ||
-    path === 'pnpm-workspace.yaml' ||
-    path === 'nx.json' ||
-    path.startsWith('tsconfig') ||
-    path.startsWith('.npm') ||
-    path.startsWith('.node-version') ||
-    path.startsWith('.python-version') ||
-    path === 'uv.lock'
+    path === "package.json" ||
+    path === "pnpm-lock.yaml" ||
+    path === "pnpm-workspace.yaml" ||
+    path === "nx.json" ||
+    path.startsWith("tsconfig") ||
+    path.startsWith(".npm") ||
+    path.startsWith(".node-version") ||
+    path.startsWith(".python-version") ||
+    path === "uv.lock"
   ) {
-    return { risk: 'root', lanes: allTrueLanes(), reason: 'root-toolchain' };
+    return { risk: "root", lanes: allTrueLanes(), reason: "root-toolchain" };
   }
 
-  if (path.startsWith('apps/api/migrations/')) {
+  if (path.startsWith("apps/api/migrations/")) {
     return {
-      risk: 'database',
+      risk: "database",
       lanes: {
         api: true,
         database: true,
         experience: true,
       },
-      reason: 'database-migration',
+      reason: "database-migration",
     };
   }
 
-  if (path.startsWith('apps/api/')) {
+  if (path.startsWith("apps/api/")) {
     return {
-      risk: 'api',
+      risk: "api",
       lanes: { api: true, experience: true },
-      reason: 'go-api',
+      reason: "go-api",
     };
   }
 
-  if (path.startsWith('apps/ai-service/')) {
+  if (path.startsWith("apps/ai-service/")) {
     return {
-      risk: 'ai',
+      risk: "ai",
       lanes: { ai: true, experience: true },
-      reason: 'ai-service',
+      reason: "ai-service",
     };
   }
 
-  if (path.startsWith('apps/web/')) {
+  if (path.startsWith("apps/web/")) {
     return {
-      risk: 'web',
+      risk: "web",
       lanes: { web: true, experience: true },
-      reason: 'web',
+      reason: "web",
     };
   }
 
-  if (path.startsWith('packages/contracts/')) {
+  if (path.startsWith("packages/contracts/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: {
         web: true,
         api: true,
@@ -186,59 +189,70 @@ function classifySinglePath(path) {
         contracts: true,
         experience: true,
       },
-      reason: 'shared-contract',
+      reason: "shared-contract",
     };
   }
 
-  if (path.startsWith('postman/') || path.startsWith('scripts/postman/')) {
+  if (path.startsWith("postman/") || path.startsWith("scripts/postman/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: { contracts: true },
-      reason: 'postman-contract-view',
+      reason: "postman-contract-view",
     };
   }
 
-  if (path.startsWith('packages/utils/')) {
+  if (path.startsWith("packages/utils/")) {
     return {
-      risk: 'root',
+      risk: "root",
       lanes: allTrueLanes(),
-      reason: 'shared-utility-fail-safe',
+      reason: "shared-utility-fail-safe",
     };
   }
 
-  if (path.startsWith('scripts/static-assets/') || path.startsWith('scripts/anatomy/')) {
+  if (
+    path.startsWith("scripts/static-assets/") ||
+    path.startsWith("scripts/anatomy/")
+  ) {
     return {
-      risk: 'runtime',
+      risk: "runtime",
       lanes: allTrueLanes(),
-      reason: 'public-asset-runtime',
+      reason: "public-asset-runtime",
     };
   }
 
-  if (path.startsWith('scripts/')) {
+  if (path.startsWith("scripts/")) {
     // Operational/test scripts frequently participate in deploy, migration,
     // privacy or release validation. Unknown scripts are therefore full risk.
-    return { risk: 'runtime', lanes: allTrueLanes(), reason: 'repository-script' };
+    return {
+      risk: "runtime",
+      lanes: allTrueLanes(),
+      reason: "repository-script",
+    };
   }
 
-  if (path.startsWith('tests/') || path.startsWith('e2e/')) {
+  if (path.startsWith("tests/") || path.startsWith("e2e/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: { contracts: true, experience: true },
-      reason: 'cross-service-test',
+      reason: "cross-service-test",
     };
   }
 
   // Unknown executable or repository-root content is deliberately safest/full.
-  return { risk: 'root', lanes: allTrueLanes(), reason: 'unknown-path-fail-safe' };
+  return {
+    risk: "root",
+    lanes: allTrueLanes(),
+    reason: "unknown-path-fail-safe",
+  };
 }
 
 export function classifyPaths(paths, { forceFull = false } = {}) {
   const changedPaths = normalizeChangedPaths(paths);
   if (forceFull) {
     return {
-      risk: 'root',
+      risk: "root",
       lanes: allTrueLanes(),
-      reasons: ['full-main-policy'],
+      reasons: ["full-main-policy"],
       changedPaths,
     };
   }
@@ -248,15 +262,15 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
     // interpreted as docs-only. Governance remains active and the manifest
     // records the explicit no-change reason.
     return {
-      risk: 'docs',
+      risk: "docs",
       lanes: emptyLanes(),
-      reasons: ['no-changed-paths'],
+      reasons: ["no-changed-paths"],
       changedPaths,
     };
   }
 
   const lanes = emptyLanes();
-  const risks = new Set(['docs']);
+  const risks = new Set(["docs"]);
   const reasons = new Set();
 
   for (const path of changedPaths) {
@@ -288,7 +302,7 @@ export function createManifest({
   headSha,
   requestedBaseSha = baseSha,
   event,
-  ref = '',
+  ref = "",
   changedPaths,
   forceFull = false,
   generatedAt = new Date().toISOString(),
@@ -314,8 +328,8 @@ export function createManifest({
 
 export function validateManifest(manifest) {
   const errors = [];
-  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
-    return ['manifest must be an object'];
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    return ["manifest must be an object"];
   }
 
   if (manifest.schema !== MANIFEST_SCHEMA) {
@@ -324,12 +338,12 @@ export function validateManifest(manifest) {
   if (manifest.policyVersion !== POLICY_VERSION) {
     errors.push(`policyVersion must be ${POLICY_VERSION}`);
   }
-  if (!['pull_request', 'push', 'workflow_dispatch'].includes(manifest.event)) {
+  if (!["pull_request", "push", "workflow_dispatch"].includes(manifest.event)) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
 
-  for (const field of ['requestedBaseSha', 'baseSha', 'headSha']) {
-    if (!/^[0-9a-f]{40}$/i.test(manifest[field] ?? '')) {
+  for (const field of ["requestedBaseSha", "baseSha", "headSha"]) {
+    if (!/^[0-9a-f]{40}$/i.test(manifest[field] ?? "")) {
       errors.push(`${field} must be a full 40-character Git SHA`);
     }
   }
@@ -339,36 +353,46 @@ export function validateManifest(manifest) {
   }
 
   if (!Array.isArray(manifest.changedPaths)) {
-    errors.push('changedPaths must be an array');
+    errors.push("changedPaths must be an array");
   } else {
     const normalized = normalizeChangedPaths(manifest.changedPaths);
     if (JSON.stringify(normalized) !== JSON.stringify(manifest.changedPaths)) {
-      errors.push('changedPaths must be normalized, unique, and sorted');
+      errors.push("changedPaths must be normalized, unique, and sorted");
     }
   }
 
-  if (!Array.isArray(manifest.reasons) || manifest.reasons.some((value) => typeof value !== 'string')) {
-    errors.push('reasons must be an array of strings');
+  if (
+    !Array.isArray(manifest.reasons) ||
+    manifest.reasons.some((value) => typeof value !== "string")
+  ) {
+    errors.push("reasons must be an array of strings");
   }
 
-  if (!manifest.lanes || typeof manifest.lanes !== 'object' || Array.isArray(manifest.lanes)) {
-    errors.push('lanes must be an object');
+  if (
+    !manifest.lanes ||
+    typeof manifest.lanes !== "object" ||
+    Array.isArray(manifest.lanes)
+  ) {
+    errors.push("lanes must be an object");
   } else {
     const keys = Object.keys(manifest.lanes).sort();
     const expected = [...LANE_NAMES].sort();
     if (JSON.stringify(keys) !== JSON.stringify(expected)) {
-      errors.push(`lanes must contain exactly: ${LANE_NAMES.join(', ')}`);
+      errors.push(`lanes must contain exactly: ${LANE_NAMES.join(", ")}`);
     }
     for (const lane of LANE_NAMES) {
-      if (typeof manifest.lanes[lane] !== 'boolean') {
+      if (typeof manifest.lanes[lane] !== "boolean") {
         errors.push(`lane ${lane} must be boolean`);
       }
     }
     if (manifest.lanes.governance !== true) {
-      errors.push('governance lane must always be enabled');
+      errors.push("governance lane must always be enabled");
     }
-    if (manifest.lanes.full && LANE_NAMES.some((lane) => manifest.lanes[lane] !== true)) {
-      errors.push('full lane requires every lane to be enabled');
+    if (
+      manifest.lanes.full &&
+      LANE_NAMES.some((lane) => manifest.lanes[lane] !== true)
+    ) {
+      errors.push("full lane requires every lane to be enabled");
     }
   }
 
@@ -380,21 +404,27 @@ export function validateManifest(manifest) {
   return errors;
 }
 
-export function evaluateOracle({ detector = 'success', enabled = {}, children = {} }) {
+export function evaluateOracle({
+  detector = "success",
+  enabled = {},
+  children = {},
+}) {
   const failures = [];
-  if (detector !== 'success') {
-    failures.push(`detector=${detector || 'missing'}`);
+  if (detector !== "success") {
+    failures.push(`detector=${detector || "missing"}`);
   }
 
-  const laneNames = [...new Set([...Object.keys(enabled), ...Object.keys(children)])].sort();
+  const laneNames = [
+    ...new Set([...Object.keys(enabled), ...Object.keys(children)]),
+  ].sort();
   for (const lane of laneNames) {
     const shouldRun = enabled[lane] === true;
-    const result = children[lane] ?? 'missing';
-    if (shouldRun && result !== 'success') {
+    const result = children[lane] ?? "missing";
+    if (shouldRun && result !== "success") {
       failures.push(`${lane}: expected success, got ${result}`);
       continue;
     }
-    if (!shouldRun && ['failure', 'cancelled'].includes(result)) {
+    if (!shouldRun && ["failure", "cancelled"].includes(result)) {
       failures.push(`${lane}: unexpected ${result} for disabled lane`);
     }
   }
@@ -405,19 +435,24 @@ export function evaluateOracle({ detector = 'success', enabled = {}, children = 
   };
 }
 
-export function createRunSummary({ manifest, laneResults = {}, oracleResults = {}, generatedAt }) {
+export function createRunSummary({
+  manifest,
+  laneResults = {},
+  oracleResults = {},
+  generatedAt,
+}) {
   const manifestErrors = validateManifest(manifest);
   if (manifestErrors.length > 0) {
-    throw new Error(`invalid delivery manifest: ${manifestErrors.join('; ')}`);
+    throw new Error(`invalid delivery manifest: ${manifestErrors.join("; ")}`);
   }
 
   const enabledLanes = LANE_NAMES.filter((lane) => manifest.lanes[lane]);
   const failedLanes = Object.entries(laneResults)
-    .filter(([, result]) => result !== 'success' && result !== 'skipped')
+    .filter(([, result]) => result !== "success" && result !== "skipped")
     .map(([lane]) => lane)
     .sort();
   const failedOracles = Object.entries(oracleResults)
-    .filter(([, result]) => result !== 'success')
+    .filter(([, result]) => result !== "success")
     .map(([oracle]) => oracle)
     .sort();
 

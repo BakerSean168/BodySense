@@ -4,14 +4,7 @@
   "title": "BodySense StreamEvent v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "version",
-    "seq",
-    "channel",
-    "type",
-    "ids",
-    "payload"
-  ],
+  "required": ["version", "seq", "channel", "type", "ids", "payload"],
   "properties": {
     "version": {
       "const": 1
@@ -44,46 +37,25 @@
       "additionalProperties": false,
       "properties": {
         "conversation_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "run_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "turn_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "message_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "tool_call_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "interaction_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "job_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       }
     },
@@ -104,11 +76,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "last_message_at",
-                "created_at"
-              ],
+              "required": ["status", "last_message_at", "created_at"],
               "properties": {
                 "status": {
                   "const": "active"
@@ -124,11 +92,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -140,10 +104,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "source"
-              ],
+              "required": ["status", "source"],
               "properties": {
                 "status": {
                   "const": "running"
@@ -154,11 +115,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -170,10 +127,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "interaction_id"
-              ],
+              "required": ["status", "interaction_id"],
               "properties": {
                 "status": {
                   "const": "running"
@@ -185,11 +139,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -201,10 +151,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "interaction_id"
-              ],
+              "required": ["status", "interaction_id"],
               "properties": {
                 "status": {
                   "const": "waiting_user"
@@ -216,11 +163,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -232,9 +175,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status"
-              ],
+              "required": ["status"],
               "properties": {
                 "status": {
                   "const": "completed"
@@ -243,11 +184,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -259,9 +196,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status"
-              ],
+              "required": ["status"],
               "properties": {
                 "status": {
                   "const": "failed"
@@ -282,9 +217,7 @@
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "reason"
-                  ]
+                  "required": ["reason"]
                 },
                 {
                   "properties": {
@@ -292,18 +225,12 @@
                       "$ref": "#/$defs/StreamFailureError"
                     }
                   },
-                  "required": [
-                    "error"
-                  ]
+                  "required": ["error"]
                 }
               ]
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -315,10 +242,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "reason"
-              ],
+              "required": ["status", "reason"],
               "properties": {
                 "status": {
                   "const": "cancelled"
@@ -330,11 +254,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -346,10 +266,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "client_message_id",
-                "role"
-              ],
+              "required": ["client_message_id", "role"],
               "properties": {
                 "client_message_id": {
                   "type": "string",
@@ -362,11 +279,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -378,10 +291,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "role",
-                "status"
-              ],
+              "required": ["role", "status"],
               "properties": {
                 "role": {
                   "type": "string",
@@ -394,11 +304,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -410,9 +316,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "delta"
-              ],
+              "required": ["delta"],
               "properties": {
                 "delta": {
                   "type": "string"
@@ -420,11 +324,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -436,10 +336,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "finish_reason"
-              ],
+              "required": ["status", "finish_reason"],
               "properties": {
                 "status": {
                   "const": "completed"
@@ -452,11 +349,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -468,10 +361,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "status",
-                "error"
-              ],
+              "required": ["status", "error"],
               "properties": {
                 "status": {
                   "const": "failed"
@@ -482,11 +372,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -498,10 +384,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "tool",
-                "args"
-              ],
+              "required": ["tool", "args"],
               "properties": {
                 "tool": {
                   "type": "string",
@@ -511,11 +394,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -527,10 +406,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "tool",
-                "result"
-              ],
+              "required": ["tool", "result"],
               "properties": {
                 "tool": {
                   "type": "string",
@@ -540,11 +416,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -556,9 +428,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "info"
-              ],
+              "required": ["info"],
               "properties": {
                 "info": {
                   "$ref": "#/$defs/ExtractedInfo"
@@ -566,11 +436,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -582,9 +448,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "context"
-              ],
+              "required": ["context"],
               "properties": {
                 "context": {
                   "$ref": "#/$defs/LifestyleContext"
@@ -592,11 +456,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -608,17 +468,11 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "to",
-                "reason"
-              ],
+              "required": ["to", "reason"],
               "properties": {
                 "to": {
                   "type": "string",
-                  "enum": [
-                    "collecting",
-                    "ready_for_analysis"
-                  ]
+                  "enum": ["collecting", "ready_for_analysis"]
                 },
                 "reason": {
                   "type": "string",
@@ -626,19 +480,12 @@
                 },
                 "from": {
                   "type": "string",
-                  "enum": [
-                    "collecting",
-                    "ready_for_analysis"
-                  ]
+                  "enum": ["collecting", "ready_for_analysis"]
                 }
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -650,11 +497,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "interaction_id",
-                "question",
-                "created_at"
-              ],
+              "required": ["interaction_id", "question", "created_at"],
               "properties": {
                 "interaction_id": {
                   "type": "string",
@@ -670,11 +513,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -686,10 +525,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "interaction_id",
-                "answer"
-              ],
+              "required": ["interaction_id", "answer"],
               "properties": {
                 "interaction_id": {
                   "type": "string",
@@ -709,11 +545,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -725,10 +557,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "interaction_id",
-                "expired_at"
-              ],
+              "required": ["interaction_id", "expired_at"],
               "properties": {
                 "interaction_id": {
                   "type": "string",
@@ -744,11 +573,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -760,9 +585,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "citation"
-              ],
+              "required": ["citation"],
               "properties": {
                 "citation": {
                   "$ref": "#/$defs/Citation"
@@ -770,11 +593,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -786,9 +605,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "attribution"
-              ],
+              "required": ["attribution"],
               "properties": {
                 "attribution": {
                   "$ref": "#/$defs/ConsultationAnswerAttribution"
@@ -796,11 +613,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -812,10 +625,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "query",
-                "message"
-              ],
+              "required": ["query", "message"],
               "properties": {
                 "query": {
                   "type": "string",
@@ -828,11 +638,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -844,10 +650,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "has_red_flags",
-                "flags"
-              ],
+              "required": ["has_red_flags", "flags"],
               "properties": {
                 "has_red_flags": {
                   "type": "boolean"
@@ -861,11 +664,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -877,10 +676,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "kind",
-                "verdict"
-              ],
+              "required": ["kind", "verdict"],
               "properties": {
                 "kind": {
                   "type": "string",
@@ -888,11 +684,7 @@
                 },
                 "verdict": {
                   "type": "string",
-                  "enum": [
-                    "accepted",
-                    "degraded",
-                    "rejected"
-                  ]
+                  "enum": ["accepted", "degraded", "rejected"]
                 },
                 "reasons": {
                   "type": "array",
@@ -906,11 +698,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -922,10 +710,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "kind",
-                "verdict"
-              ],
+              "required": ["kind", "verdict"],
               "properties": {
                 "kind": {
                   "type": "string",
@@ -946,11 +731,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -962,19 +743,13 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "usage"
-              ],
+              "required": ["usage"],
               "properties": {
                 "usage": {}
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -991,11 +766,7 @@
               "maxProperties": 0
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -1007,9 +778,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "message"
-              ],
+              "required": ["message"],
               "properties": {
                 "message": {
                   "type": "string",
@@ -1018,11 +787,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -1034,9 +799,7 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "job_type"
-              ],
+              "required": ["job_type"],
               "properties": {
                 "job_type": {
                   "type": "string",
@@ -1048,11 +811,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -1078,11 +837,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -1100,11 +855,7 @@
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         },
         {
           "properties": {
@@ -1116,19 +867,13 @@
             },
             "payload": {
               "type": "object",
-              "required": [
-                "error"
-              ],
+              "required": ["error"],
               "properties": {
                 "error": {}
               }
             }
           },
-          "required": [
-            "type",
-            "channel",
-            "payload"
-          ]
+          "required": ["type", "channel", "payload"]
         }
       ]
     }
@@ -1136,9 +881,7 @@
   "$defs": {
     "StreamFailureError": {
       "type": "object",
-      "required": [
-        "message"
-      ],
+      "required": ["message"],
       "properties": {
         "message": {
           "type": "string",
@@ -1152,11 +895,7 @@
     },
     "LifestyleContext": {
       "type": "object",
-      "required": [
-        "section",
-        "summary",
-        "details"
-      ],
+      "required": ["section", "summary", "details"],
       "properties": {
         "section": {
           "type": "string",
@@ -1180,9 +919,7 @@
     },
     "ExtractedInfo": {
       "type": "object",
-      "required": [
-        "body_part"
-      ],
+      "required": ["body_part"],
       "properties": {
         "body_part": {
           "type": "string",
@@ -1229,10 +966,7 @@
     },
     "InteractionQuestionField": {
       "type": "object",
-      "required": [
-        "key",
-        "label"
-      ],
+      "required": ["key", "label"],
       "properties": {
         "key": {
           "type": "string",
@@ -1267,12 +1001,7 @@
     },
     "InteractionStateBinding": {
       "type": "object",
-      "required": [
-        "revision",
-        "capture_id",
-        "body_fact_id",
-        "field_map"
-      ],
+      "required": ["revision", "capture_id", "body_fact_id", "field_map"],
       "properties": {
         "revision": {
           "type": "string",
@@ -1331,22 +1060,13 @@
       "description": "Go-written binding of a source-cited BodyState suggestion (BS-AGENT-001). Only Go writes it after resolving the cited user message; the quote is display-only and re-derived from the message on commit. Payload labels are verbatim words of the quote; an episode's fact_id is the symptom fact Go resolved from the same words.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "revision",
-        "kind",
-        "source",
-        "base_body_state_revision"
-      ],
+      "required": ["revision", "kind", "source", "base_body_state_revision"],
       "properties": {
         "revision": {
           "const": "body-state-suggestion-v1"
         },
         "kind": {
-          "enum": [
-            "hypothesis",
-            "observation",
-            "episode"
-          ]
+          "enum": ["hypothesis", "observation", "episode"]
         },
         "source": {
           "$ref": "#/$defs/BodyStateSuggestionSource"
@@ -1523,9 +1243,7 @@
     },
     "InteractionQuestion": {
       "type": "object",
-      "required": [
-        "question"
-      ],
+      "required": ["question"],
       "properties": {
         "question": {
           "type": "string",
@@ -1589,9 +1307,7 @@
     },
     "Citation": {
       "type": "object",
-      "required": [
-        "title"
-      ],
+      "required": ["title"],
       "properties": {
         "title": {
           "type": "string"
@@ -1766,11 +1482,7 @@
         },
         "grounding_status": {
           "type": "string",
-          "enum": [
-            "supported",
-            "degraded",
-            "rejected"
-          ]
+          "enum": ["supported", "degraded", "rejected"]
         },
         "reason_codes": {
           "type": "array",
@@ -1818,11 +1530,7 @@
         },
         "grounding_status": {
           "type": "string",
-          "enum": [
-            "supported",
-            "degraded",
-            "rejected"
-          ]
+          "enum": ["supported", "degraded", "rejected"]
         },
         "reason_codes": {
           "type": "array",
@@ -1842,10 +1550,7 @@
     },
     "RedFlag": {
       "type": "object",
-      "required": [
-        "category",
-        "message"
-      ],
+      "required": ["category", "message"],
       "properties": {
         "category": {
           "type": "string",

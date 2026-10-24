@@ -2,7 +2,7 @@ name: Delivery Platform Audit
 
 on:
   schedule:
-    - cron: '31 3 * * 1'
+    - cron: "31 3 * * 1"
   workflow_dispatch:
 
 permissions:

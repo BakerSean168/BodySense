@@ -1,9 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn"
-  ],
+  "plugins": ["typescript", "unicorn"],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn"
@@ -33,10 +30,7 @@
       }
     },
     {
-      "files": [
-        "**/*.test.ts",
-        "**/*.test.tsx"
-      ],
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": {
         "typescript/no-unsafe-type-assertion": "off"
       }

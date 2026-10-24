@@ -1,13 +1,8 @@
 {
   "name": "bodysense",
-  "private": true,
   "version": "0.15.0",
+  "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.27.1",
-  "engines": {
-    "node": ">=24.0.0",
-    "pnpm": ">=11.0.0"
-  },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
@@ -86,6 +81,10 @@
     "format": "oxfmt apps/web packages/contracts/src",
     "format:check": "oxfmt --check apps/web packages/contracts/src"
   },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "devDependencies": {
     "@apollo/client": "4.3.1",
     "@apollo/server": "5.5.1",
@@ -131,8 +130,9 @@
     "yaml": "2.9.0",
     "zod": "4.5.4"
   },
-  "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  }
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "packageManager": "pnpm@11.27.1"
 }

@@ -19,7 +19,10 @@ if (ontology.schemaVersion !== 1 || ontology.ontologyVersion !== 1) {
 const ids = ontology.regions.map((region) => region.id);
 if (new Set(ids).size !== ids.length) throw new Error("duplicate BodyRegionId");
 
-const normalize = (value) => String(value ?? "").trim().toLowerCase();
+const normalize = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 const ambiguousAliases = new Set(
   (ontology.ambiguousAliases ?? []).map((item) => normalize(item.alias)),
 );
