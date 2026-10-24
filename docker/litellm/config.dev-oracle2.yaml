@@ -1,4 +1,4 @@
-# DEV-ONLY isolated LiteLLM topology for the GCP local gateway.
+# DEV-ONLY isolated LiteLLM topology for the WSL local gateway.
 #
 # This file is never mounted by production or staging. It is only activated by
 # docker/docker-compose.dev-oracle2.yml, which scripts/dev-infra.sh and
