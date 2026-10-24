@@ -139,18 +139,18 @@ production .deploy-state     actually deployed revision/release identity
 
 ### 4.1 Manifest
 
-The detector writes `delivery-manifest-v2.json` once per run.
+The detector writes `delivery-manifest-v3.json` once per run.
 
 Minimum shape:
 
 ```json
 {
-  "schema": "bodysense.delivery-manifest/v2",
+  "schema": "bodysense.delivery-manifest/v3",
   "baseSha": "...",
   "headSha": "...",
   "event": "pull_request",
   "risk": "runtime",
-  "policyVersion": "delivery-policy-v1",
+  "policyVersion": "delivery-policy-v2",
   "changedPaths": [],
   "lanes": {
     "governance": true,
@@ -160,6 +160,7 @@ Minimum shape:
     "contracts": true,
     "database": false,
     "experience": true,
+    "component": true,
     "full": false
   },
   "laneDetails": {
@@ -197,15 +198,20 @@ field itself, and `laneDetails` is inside the digest. Validators additionally
 cross-check `laneDetails` against `lanes` and `changedPaths`, so recomputing
 a digest after tampering does not launder an inconsistent contract.
 
-Version compatibility: `validateManifest` accepts both
+Version compatibility: `validateManifest` accepts
 `bodysense.delivery-manifest/v1` (validated under the v1 rules, without
-`laneDetails`) and v2. Generators only emit v2; `laneDetails` on a v1
+`laneDetails`), v2, and v3. Lane sets and lane target policies are pinned
+per schema version: v1/v2 manifests validate against the eight-lane set and
+the v1-era target policy (`LANE_TARGETS_V2`), while v3 adds the `component`
+lane, moves contract verification into `contracts-child`, and carries
+`delivery-policy-v2`. Generators only emit v3; `laneDetails` on a v1
 manifest is rejected. Consumers that re-validate stored manifests (candidate
 publication, platform audit) therefore keep working across the transition.
 
 The Scope job publishes the manifest digest as a job output. Every consumer
-that downloads the manifest artifact (governance child, quality child, the
-four Oracles, Delivery Observation) verifies the artifact against that output
+that downloads the manifest artifact (governance child, quality child,
+contracts child, component child, the four Oracles, Delivery Observation)
+verifies the artifact against that output
 with `--expect-digest`, and each Oracle derives its expected child outcomes
 from the digest-validated manifest (`ORACLE_GROUPS` in
 `scripts/delivery/lib.mjs`) instead of re-deriving lane expressions in
@@ -229,8 +235,8 @@ If any path selects the `full` lane, every lane is enabled.
 | `apps/api/migrations/**` | `database` | api, database, experience |
 | `apps/api/**` | `api` | api, experience |
 | `apps/ai-service/**` | `ai` | ai, experience |
-| `apps/web/**` | `web` | web, experience |
-| `packages/contracts/**` | `contract` | web, api, ai, contracts, experience |
+| `apps/web/**` | `web` | web, experience, component |
+| `packages/contracts/**` | `contract` | web, api, ai, contracts, experience, component |
 | `postman/**`, `scripts/postman/**` | `contract` | contracts |
 | `packages/utils/**` | `root` | all (shared-utility fail-safe) |
 | `scripts/static-assets/**`, `scripts/anatomy/**` | `runtime` | all (public-asset runtime) |
@@ -267,8 +273,16 @@ quality-contracts
 database-current-history
 database-production-baseline
 experience-e2e
+experience-component
 candidate-build
 ```
+
+Physical mapping: `quality-contracts` runs as its own CI job
+(`contracts-child`) with an independent Quality Oracle receipt, separate
+from the web/api/ai unit lanes in `quality-child`; `experience-component`
+runs as `component-child` (static Storybook build + test-runner, no API/AI/
+database services) under the Experience Oracle, separate from the
+full-stack `experience-e2e` child.
 
 The implementation may combine lanes on one runner when that is cheaper. Logical lane identity must remain observable even if physical jobs are consolidated.
 
