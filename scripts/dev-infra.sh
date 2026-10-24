@@ -44,11 +44,21 @@ logs() {
   "${compose[@]}" logs -f --tail "${1:-120}" "${services[@]}"
 }
 
+# Supplier identity preflight is read-only and runs before any Compose mutation.
+# A shared, unqualified upstream could silently select a different supplier.
+# Status/down/logs remain available for recovering already-running dev services.
+oracle2_route_preflight() {
+  if [[ -n "${BODYSENSE_DEV_COMPOSE_OVERLAY:-}" ]]; then
+    python3 "$ROOT/scripts/dev-oracle2-route-preflight.py" \
+      "$ROOT/docker/litellm/config.dev-oracle2.yaml"
+  fi
+}
+
 case "${1:-status}" in
-  up) up ;;
+  up) oracle2_route_preflight; up ;;
   status) status ;;
-  restart) down; up ;;
-  restart-gateway) restart_gateway ;;
+  restart) oracle2_route_preflight; down; up ;;
+  restart-gateway) oracle2_route_preflight; restart_gateway ;;
   down) down ;;
   logs) shift; logs "${1:-120}" ;;
   *)

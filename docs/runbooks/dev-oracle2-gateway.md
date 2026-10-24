@@ -52,6 +52,17 @@ alone is not a provider-identity or runtime-authentication acceptance.
 supplier is reconciled and a dedicated scoped Virtual Key is available.**
 No shared Oracle2 registry or runtime routing was changed during this audit.
 
+**WSL fail-closed start guard (2026-10-24):** `scripts/dev-infra.sh up`,
+`restart`, and `restart-gateway` now run
+`python3 scripts/dev-oracle2-route-preflight.py docker/litellm/config.dev-oracle2.yaml`
+before any Compose changes. `scripts/dev-runtime.sh restart` also checks
+before stopping services. Until both serving DeepSeek fallback groups and the
+fixed-channel probe use supplier-qualified Oracle2 routes, this returns nonzero.
+This is a **local structure check only**, not proof that a qualified supplier
+is the originally intended Nanliang provider, that a Virtual Key permits the
+route, or that its wire protocol/inference works. Do not bypass it by choosing
+an arbitrary qualified route. Ordinary dev and staging/production are unchanged.
+
 `bodysense-posture` keeps its pre-existing OpenRouter vision configuration; Oracle2 has no
 qualified vision channel.
 

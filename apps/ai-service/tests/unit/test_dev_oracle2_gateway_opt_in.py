@@ -1076,6 +1076,99 @@ def test_truncated_preview_cannot_rescue_a_wrong_answer(probe: dict) -> None:
     assert module.probe_passed(capability, probe) is False
 
 
+@pytest.mark.parametrize(
+    ("entrypoint", "action"),
+    [
+        (DEV_INFRA, "up"),
+        (DEV_INFRA, "restart"),
+        (DEV_INFRA, "restart-gateway"),
+        (DEV_RUNTIME, "up"),
+        (DEV_RUNTIME, "restart"),
+    ],
+)
+def test_unqualified_route_blocks_all_mutating_start_paths_before_docker(
+    tmp_path: Path, entrypoint: Path, action: str
+) -> None:
+    fake_docker = tmp_path / "docker"
+    fake_docker.write_text(
+        '#!/bin/sh\\nprintf "%s\\n" "$*" >> "$DOCKER_TRACE"\\n',
+        encoding="utf-8",
+    )
+    fake_docker.chmod(0o755)
+    trace = tmp_path / "docker-trace"
+    env = {
+        **os.environ,
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "DOCKER_TRACE": str(trace),
+        "BODYSENSE_DEV_ENV_FILE": str(tmp_path / "missing"),
+        "BODYSENSE_DEV_RUNTIME_DIR": str(tmp_path / "runtime"),
+        "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+        "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-a-real-key",
+        "ORACLE2_BODYSENSE_TAILSCALE_IP": "100.68.237.116",
+        "ORACLE2_BODYSENSE_BASE_URL": AUTHORIZED_BASE_URL,
+        "ORACLE2_BODYSENSE_HOSTNAME": AUTHORIZED_HOSTNAME,
+    }
+    result = subprocess.run(
+        ["bash", str(entrypoint), action],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "supplier-qualified" in result.stderr
+    assert not trace.exists(), "start or restart reached Docker before route validation"
+
+
+def _supplier_route_preflight(path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts/dev-oracle2-route-preflight.py"), str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_supplier_route_preflight_blocks_current_ambiguous_deepseek() -> None:
+    result = _supplier_route_preflight(DEV_ORACLE2_CONFIG)
+    assert result.returncode == 1
+    assert "supplier-qualified" in result.stderr
+    assert "deepseek-v4.1-flash-1017" not in result.stderr
+
+
+def test_supplier_route_preflight_accepts_only_structural_pin(tmp_path: Path) -> None:
+    source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8")
+    old = "model: openai/deepseek-v4.1-flash-1017"
+    assert source.count(old) == 3
+    synthetic = source.replace(
+        old,
+        "model: openai/synthetic-resource/deepseek-v4.1-flash-1017",
+    )
+    path = tmp_path / "qualified-only.yaml"
+    path.write_text(synthetic, encoding="utf-8")
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 0, result.stderr
+    assert "remain unverified" in result.stdout
+
+
+def test_supplier_route_preflight_rejects_partial_pin_and_invalid_config(tmp_path: Path) -> None:
+    source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8")
+    path = tmp_path / "unsafe.yaml"
+    path.write_text(
+        source.replace(
+            "model: openai/deepseek-v4.1-flash-1017",
+            "model: openai/synthetic-resource/deepseek-v4.1-flash-1017",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    assert _supplier_route_preflight(path).returncode == 1
+    path.write_text("model_list: [", encoding="utf-8")
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+
+
 @pytest.mark.parametrize("opt_in", ["0", "1"])
 def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_in: str) -> None:
     """The safe gateway restart must never call Compose down or recreate DB/Redis."""
@@ -1106,6 +1199,14 @@ def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_i
         text=True,
         check=False,
     )
+    if opt_in == "1":
+        # Shared, unqualified DeepSeek currently blocks all Oracle2 start/restart
+        # actions, before any Docker invocation or shared infra mutation.
+        assert result.returncode != 0
+        assert "supplier-qualified" in result.stderr
+        assert not trace.exists()
+        return
+
     assert result.returncode == 0, (result.stdout, result.stderr)
     commands = trace.read_text(encoding="utf-8").splitlines()
     assert len(commands) == 2

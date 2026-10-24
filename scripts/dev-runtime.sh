@@ -125,7 +125,13 @@ status() {
 case "${1:-status}" in
   up) up ;;
   down) down ;;
-  restart) down; up ;;
+  restart)
+    # Refuse an ambiguous Oracle2 fallback before stopping existing services.
+    if [[ -n "${BODYSENSE_DEV_COMPOSE_OVERLAY:-}" ]]; then
+      python3 "$ROOT/scripts/dev-oracle2-route-preflight.py" \
+        "$ROOT/docker/litellm/config.dev-oracle2.yaml"
+    fi
+    down; up ;;
   infra-down) down; "$ROOT/scripts/dev-infra.sh" down ;;
   status) status ;;
   logs) tail -n "${2:-120}" "$RUNTIME_DIR"/*.log 2>/dev/null || true ;;
