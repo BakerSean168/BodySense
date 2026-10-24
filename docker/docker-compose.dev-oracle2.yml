@@ -1,4 +1,4 @@
-# DEV-ONLY opt-in overlay: route the GCP local LiteLLM gateway to Oracle2.
+# DEV-ONLY opt-in overlay: route the WSL local LiteLLM gateway to Oracle2.
 #
 # This file is appended by scripts/dev-infra.sh and scripts/dev-runtime.sh only
 # when BODYSENSE_LITELLM_DEV_ORACLE2=1. It is never referenced by
@@ -17,31 +17,17 @@ services:
       # in config.dev-oracle2.yaml resolve from these two variables only.
       ORACLE2_BODYSENSE_BASE_URL: ${ORACLE2_BODYSENSE_BASE_URL:-https://oracle.taile92a8e.ts.net:10446/v1}
       ORACLE2_BODYSENSE_API_KEY: ${ORACLE2_BODYSENSE_API_KEY:?set ORACLE2_BODYSENSE_API_KEY (dev-only Oracle2 Virtual Key; never commit it)}
-    # ── Root cause and why extra_hosts, not network_mode: host ─────────────
-    # The Oracle2 endpoint is a Tailscale MagicDNS name. Docker's embedded
-    # resolver answers that name with Oracle2's PUBLIC addresses
-    # (103.84.155.153 / 103.84.155.217) plus IPv6, which this GCP host cannot
-    # route — a container sees "OSError [Errno 101] Network is unreachable".
-    # The host's systemd-resolved + Tailscale MagicDNS answers with the tailnet
-    # CGNAT address (100.68.237.116), which the container CAN reach over the
-    # ordinary Docker bridge.
-    #
-    # Pinning the name to the tailnet address therefore fixes connectivity
-    # without touching the network boundary: the service keeps the project
-    # bridge network, the existing 127.0.0.1:20112 publish, and its normal
-    # in-container bind. `network_mode: host` was rejected — it would require
-    # resetting ports/networks and would change the dev network contract for a
-    # single opt-in feature.
-    #
-    # scripts/dev-env.sh resolves the tailnet address on the host at opt-in time
-    # and only accepts 100.64.0.0/10. Verified 2026-10-22: a container on
-    # bodysense-dev-infra_bodysense-network reaches
-    # https://oracle.taile92a8e.ts.net:10446/health/liveliness with HTTP 200 and
-    # valid TLS through this mapping.
-    #
-    # Residual risk: if Oracle2's tailnet address changes, the pinned mapping
-    # goes stale. dev-env.sh re-resolves per invocation; a long-running container
-    # must be recreated after `scripts/dev-infra.sh restart`.
+    # ── Preserve Docker bridge networking and pin the approved Tailnet target ──
+    # Retired GCP DNS failure evidence is historical, not WSL validation.
+    # On wsl-local, scripts/dev-env.sh resolves the approved MagicDNS name and
+    # accepts only Tailscale 100.64.0.0/10 IPv4 addresses. extra_hosts ensures
+    # the container uses that destination while verifying Oracle2's TLS name.
+    # Keep the project bridge, existing 127.0.0.1:20112 publish and normal
+    # in-container bind. Do NOT use network_mode: host.
+    # A temporary WSL Docker bridge independently reached Oracle2 HTTPS with
+    # valid TLS on 2026-10-24; that is not inference/authentication acceptance.
+    # If Oracle2's Tailnet IP changes, rerun dev-env.sh and recreate ONLY the
+    # gateway with scripts/dev-infra.sh restart-gateway (not full restart).
     extra_hosts:
       - '${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}:${ORACLE2_BODYSENSE_TAILSCALE_IP:-100.68.237.116}'
     volumes:

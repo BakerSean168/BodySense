@@ -75,14 +75,12 @@ oracle2_is_authorized_base_url() {
 
 # Resolve the Oracle2 MagicDNS name to its Tailscale CGNAT address.
 #
-# Docker's embedded resolver answers a Tailscale MagicDNS name with the remote
-# node's PUBLIC addresses, which this GCP host cannot route (measured from a
-# container: "OSError [Errno 101] Network is unreachable"). The host's
-# systemd-resolved + Tailscale MagicDNS answers with the 100.64.0.0/10 tailnet
-# address, which the container reaches over the ordinary Docker bridge once the
-# name is pinned through extra_hosts. Only a CGNAT address is accepted, so a DNS
-# change fails loudly instead of silently routing dev traffic over the public
-# internet. Nothing here changes ports or the Docker network boundary.
+# The retired GCP host previously had Docker MagicDNS resolve to an
+# unreachable public address. That historical error does not prove WSL behavior.
+# On wsl-local the approved Tailnet address is resolved by the host, validated
+# as 100.64.0.0/10, and pinned through extra_hosts for the gateway container.
+# A different DNS result must fail closed rather than use a public route.
+# Nothing here changes ports or the Docker bridge network boundary.
 #
 # Tailscale allocates from 100.64.0.0/10. Validation applies to the host resolver
 # result AND to an explicit ORACLE2_BODYSENSE_TAILSCALE_IP override, so a typo or

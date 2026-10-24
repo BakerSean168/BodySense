@@ -1,8 +1,8 @@
-# Dev-Only Oracle2 Gateway (GCP)
+# Dev-Only Oracle2 Gateway (WSL)
 
 Status: dev-only opt-in, **not qualified for staging or production**.
 
-This runbook covers routing the GCP local dev LiteLLM gateway (`127.0.0.1:20112`) to the
+This runbook covers routing the `wsl-local` dev LiteLLM gateway (`127.0.0.1:20112`) to the
 Oracle2 gateway at `https://oracle.taile92a8e.ts.net:10446/v1` for compatible non-vision
 logical groups. Production and staging are unaffected: they keep
 `docker/litellm/config.yaml` and `docker/litellm/config.staging.yaml`.
@@ -41,7 +41,7 @@ qualified vision channel.
 ## Enable
 
 ```bash
-cd /home/dev/projects/bodysense
+cd /home/baker/projects/_bodysense_oracle2_gateway  # existing feature worktree
 printf '%s\n' 'BODYSENSE_LITELLM_DEV_ORACLE2=1' \
   'ORACLE2_BODYSENSE_API_KEY=<dev-only Virtual Key>' >> .env.dev.local   # git-ignored
 chmod 600 .env.dev.local
@@ -76,22 +76,30 @@ tolerated variant.
 With the opt-in off (the default) these variables are inert: no overlay is exported and
 `docker/litellm/config.yaml` stays in use.
 
-Disable with `BODYSENSE_LITELLM_DEV_ORACLE2=0` (the default) and restart the gateway.
+Disable with `BODYSENSE_LITELLM_DEV_ORACLE2=0` (the default), then use
+`scripts/dev-infra.sh restart-gateway` after verifying the intended Compose project.
+Avoid `scripts/dev-infra.sh restart`: it performs a full Compose down/up including DB/Redis.
+The main and feature worktrees default to the same `COMPOSE_PROJECT_NAME`; do not run
+either against existing containers without verifying ownership and bind mounts.
 
 ## Why `extra_hosts`
 
-Docker's embedded resolver answers the Tailscale MagicDNS name with Oracle2's **public**
-addresses (`103.84.155.153` / `.217`), which the GCP host cannot route — a container sees
-`OSError [Errno 101] Network is unreachable`. The host's systemd-resolved + Tailscale
-MagicDNS answers with the tailnet address (`100.68.237.116`), which the container reaches
-over the ordinary Docker bridge.
+The retired GCP host previously observed Docker resolving Oracle2 MagicDNS to public
+addresses (`103.84.155.153` / `.217`) that its container could not route. This historical
+observation is **not** WSL acceptance evidence. On `wsl-local`, pin the authorized Oracle2
+Tailnet address using Compose `extra_hosts` to retain bridge networking and TLS hostname
+verification. WSL host-level HTTPS health was checked on 2026-10-24; it does not establish
+model authentication or inference.
 
 `scripts/dev-env.sh` resolves the name on the host at opt-in time and exports
 `ORACLE2_BODYSENSE_TAILSCALE_IP`. Only `100.64.0.0/10` is accepted, for both the resolved
 value and an explicit override; anything else aborts the opt-in.
 
-Verified: a container on `bodysense-dev-infra_bodysense-network` reaches
-`https://oracle.taile92a8e.ts.net:10446/health/liveliness` with HTTP 200 and valid TLS.
+Historical 2026-10-22 GCP evidence: a container on `bodysense-dev-infra_bodysense-network`
+reached Oracle2 health with HTTP 200 and valid TLS. GCP was retired on 2026-10-23.
+Independently, a WSL temporary Docker bridge reached Oracle2 with valid TLS on
+2026-10-24. Neither result proves that the current gateway service is running or
+authenticated, and they must not be combined as a single end-to-end test.
 
 **What that proves — and what it does not.** The HTTPS 200 on `/health/liveliness` proves
 only two things: the container can reach the endpoint (Tailscale routing works) and TLS
@@ -110,7 +118,7 @@ address is re-resolved per `scripts/dev-env.sh` invocation, so recreate the gate
 an address change:
 
 ```bash
-scripts/dev-infra.sh restart
+scripts/dev-infra.sh restart-gateway  # only litellm-gateway, not PostgreSQL/Redis
 ```
 
 Override manually when needed: `ORACLE2_BODYSENSE_TAILSCALE_IP=100.x.y.z` (must still be

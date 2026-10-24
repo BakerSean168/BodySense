@@ -1035,3 +1035,47 @@ def test_truncated_preview_cannot_rescue_a_wrong_answer(probe: dict) -> None:
     module = _eval_module()
     capability = "chat" if "content_exact" in probe and "finish_reason" in probe else "json"
     assert module.probe_passed(capability, probe) is False
+
+
+@pytest.mark.parametrize("opt_in", ["0", "1"])
+def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_in: str) -> None:
+    """The safe gateway restart must never call Compose down or recreate DB/Redis."""
+    fake_docker = tmp_path / "docker"
+    fake_docker.write_text(
+        '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$DOCKER_TRACE"\n',
+        encoding="utf-8",
+    )
+    fake_docker.chmod(0o755)
+    trace = tmp_path / "docker-trace"
+    env = {
+        **os.environ,
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "DOCKER_TRACE": str(trace),
+        "BODYSENSE_DEV_ENV_FILE": str(tmp_path / "not-present"),
+        "COMPOSE_PROJECT_NAME": "bodysense-oracle2-test",
+        "BODYSENSE_LITELLM_DEV_ORACLE2": opt_in,
+        "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-a-real-key",
+        "ORACLE2_BODYSENSE_TAILSCALE_IP": "100.68.237.116",
+        "ORACLE2_BODYSENSE_BASE_URL": "https://oracle.taile92a8e.ts.net:10446/v1",
+        "ORACLE2_BODYSENSE_HOSTNAME": "oracle.taile92a8e.ts.net",
+    }
+
+    result = subprocess.run(
+        ["bash", str(DEV_INFRA), "restart-gateway"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    commands = trace.read_text(encoding="utf-8").splitlines()
+    assert len(commands) == 2
+    restart, status = commands
+    assert "up -d --no-deps --force-recreate --wait --wait-timeout 120 litellm-gateway" in restart
+    assert "postgres-dev" not in restart
+    assert "redis-dev" not in restart
+    assert " down " not in f" {restart} "
+    assert "--remove-orphans" not in restart
+    assert "ps postgres-dev redis-dev litellm-gateway" in status
+    assert ("docker-compose.dev-oracle2.yml" in restart) is (opt_in == "1")
+    assert "synthetic-not-a-real-key" not in "\n".join(commands)

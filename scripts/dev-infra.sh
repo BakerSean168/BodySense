@@ -33,6 +33,13 @@ down() {
   "${compose[@]}" down --remove-orphans
 }
 
+# Recreate only the local LiteLLM gateway (for example after a Tailnet IP change).
+# Never down the shared dev Compose project or recreate postgres-dev/redis-dev.
+restart_gateway() {
+  "${compose[@]}" up -d --no-deps --force-recreate --wait --wait-timeout 120 litellm-gateway
+  status
+}
+
 logs() {
   "${compose[@]}" logs -f --tail "${1:-120}" "${services[@]}"
 }
@@ -41,10 +48,11 @@ case "${1:-status}" in
   up) up ;;
   status) status ;;
   restart) down; up ;;
+  restart-gateway) restart_gateway ;;
   down) down ;;
   logs) shift; logs "${1:-120}" ;;
   *)
-    echo "usage: $0 {up|status|restart|down|logs [lines]}" >&2
+    echo "usage: $0 {up|status|restart|restart-gateway|down|logs [lines]}" >&2
     exit 2
     ;;
 esac
