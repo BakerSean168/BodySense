@@ -229,6 +229,21 @@ GitHub Issues，不处理外部 PRs。使用 `gh` CLI 操作。See `docs/agents/
 
 Single-context 布局，`CONTEXT.md` + `docs/adr/` 在仓库根目录。See `docs/agents/domain.md`.
 
+## 格式化与 Lint 门禁
+
+格式化与 Lint 各有唯一权威工具，不并行维护两套规则：
+
+| 范围 | 格式化 | Lint |
+| --- | --- | --- |
+| JS/TS/JSON/CSS/HTML/YAML（Git 受管理文件） | Oxfmt（`.oxfmtrc.json`） | ESLint（门禁）+ Oxlint（门禁，含 type-aware） |
+| Go（apps/api） | gofmt | go vet + staticcheck（Nx `api:lint`） |
+| Python（apps/ai-service） | ruff format | ruff check（Nx `ai-service:lint`） |
+
+- JS/TS 侧命令：`pnpm format` / `pnpm format:check`（文件清单取自 `git ls-files`，排除规则在 `.oxfmtrc.json`）；`pnpm lint:oxlint`、`pnpm lint:oxlint:types`；Go 格式：`pnpm format:check:go`；Python 格式：`pnpm nx run ai-service:format:check`。
+- 格式门禁的排除边界：Markdown 散文（含 release-please 维护的 CHANGELOG.md）、`apps/api` 与 `apps/ai-service`（各由本语言格式化工具负责）、`tools/contracts` 契约基线、fixtures/testdata、postman 生成集合、showcase 静态页不进入 Oxfmt 范围。
+- CI 落点：PR 与 main 推送都由 governance-child 执行 Oxfmt/Oxlint/gofmt 检查，结果汇入 Governance Oracle（required check）；ruff format 在 quality 的 ai lane 检查；`scripts/validate-repo.sh`（full 验证）包含同一组检查。
+- 本地：husky pre-commit 对暂存文件跑 Oxfmt --check 与 Oxlint（仅 apps/web/src），提交前先 `pnpm format` 可避免往返。
+
 ## 最小验证
 
 - 文档和治理相关改动：检查文档格式和链接有效性

@@ -68,6 +68,13 @@
         "command": "uv run ruff format ."
       }
     },
+    "format:check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run ruff format --check ."
+      }
+    },
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,

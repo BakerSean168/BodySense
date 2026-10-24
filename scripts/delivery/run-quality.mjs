@@ -56,6 +56,7 @@ try {
 
   if (manifest.lanes.ai) {
     executed += 1;
+    nx("ai-service", "format:check");
     nx("ai-service", "lint");
     nx("ai-service", "typecheck");
     nx("ai-service", "test");
