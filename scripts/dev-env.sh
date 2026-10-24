@@ -114,7 +114,8 @@ case "${BODYSENSE_LITELLM_DEV_ORACLE2,,}" in
     # leave a usable key in the environment for an unauthorized destination.
     if ! oracle2_is_authorized_base_url "${ORACLE2_BODYSENSE_BASE_URL:-}"; then
       echo "ORACLE2_BODYSENSE_BASE_URL is not the authorized Oracle2 endpoint." >&2
-      echo "  given:      ${ORACLE2_BODYSENSE_BASE_URL:-<unset>}" >&2
+      # Do not echo user-supplied URLs: they may embed credentials in userinfo
+      # or query strings even though such destinations are rejected.
       echo "  authorized: ${ORACLE2_AUTHORIZED_BASE_URL}" >&2
       echo "https only; no other host, port, path, userinfo, query or fragment is allowed." >&2
       unset ORACLE2_BODYSENSE_API_KEY
@@ -122,7 +123,7 @@ case "${BODYSENSE_LITELLM_DEV_ORACLE2,,}" in
     fi
     if ! oracle2_is_authorized_hostname "${ORACLE2_BODYSENSE_HOSTNAME:-}"; then
       echo "ORACLE2_BODYSENSE_HOSTNAME is not the authorized Oracle2 MagicDNS name." >&2
-      echo "  given:      ${ORACLE2_BODYSENSE_HOSTNAME:-<unset>}" >&2
+      # A rejected hostname may also contain sensitive untrusted text.
       echo "  authorized: ${ORACLE2_AUTHORIZED_HOST}" >&2
       unset ORACLE2_BODYSENSE_API_KEY
       return 1 2>/dev/null || exit 1

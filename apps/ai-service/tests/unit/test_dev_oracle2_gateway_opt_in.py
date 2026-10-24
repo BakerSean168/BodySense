@@ -791,6 +791,25 @@ def test_unauthorized_base_url_fails_closed_without_exporting_overlay(
     assert "overlay=[" + str(DEV_ORACLE2_COMPOSE) + "]" not in completed.stdout
 
 
+def test_rejected_upstream_values_are_never_echoed_to_logs() -> None:
+    """Reject credential-looking inputs without logging untrusted content."""
+    canary = "synthetic-sensitive-marker-not-a-key"
+    attempts = (
+        {
+            "ORACLE2_BODYSENSE_BASE_URL": (
+                f"https://user:{canary}@oracle.taile92a8e.ts.net:10446/v1"
+            )
+        },
+        {"ORACLE2_BODYSENSE_HOSTNAME": f"{canary}.example.invalid"},
+    )
+    for overrides in attempts:
+        completed = _run_dev_env(_opt_in_env(**overrides))
+        assert completed.returncode != 0
+        assert canary not in completed.stderr
+        assert canary not in completed.stdout
+        assert "authorized" in completed.stderr
+
+
 @pytest.mark.parametrize(
     "unauthorized_host",
     [

@@ -69,7 +69,8 @@ base URL matches that endpoint exactly (one trailing slash tolerated, then norma
 `ORACLE2_BODYSENSE_HOSTNAME` is exactly `oracle.taile92a8e.ts.net`. The check is an exact
 string comparison, so it rejects a different scheme (`http`), host, port, path, userinfo
 (`@`), query (`?`), fragment (`#`), lookalike suffix, whitespace, and case variant without
-any URL-parsing gap.
+any URL-parsing gap. Rejected user-supplied URLs and hostnames are not echoed to
+stderr because they may contain userinfo or other sensitive text.
 
 The check runs **before** the overlay is exported and before DNS resolution, so an
 unauthorized target cannot mount the Oracle2 config, cannot resolve a host, and cannot carry
