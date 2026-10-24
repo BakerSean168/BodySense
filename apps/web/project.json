@@ -17,7 +17,8 @@
       "cache": true,
       "options": {
         "command": "pnpm exec vitest run --config apps/web/vite.config.ts"
-      }
+      },
+      "inputs": ["unitTest", "^production"]
     },
     "e2e": {
       "executor": "nx:run-commands",
@@ -25,6 +26,9 @@
       "options": {
         "command": "pnpm exec playwright test"
       }
+    },
+    "build": {
+      "outputs": ["{projectRoot}/dist"]
     }
   }
 }

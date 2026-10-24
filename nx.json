@@ -12,22 +12,37 @@
       "!{projectRoot}/eslint.config.{js,mjs,cjs,ts,mts,cts}",
       "!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
       "!{projectRoot}/.storybook/**/*",
-      "!{projectRoot}/tsconfig.storybook.json"
+      "!{projectRoot}/tsconfig.storybook.json",
+      "!{projectRoot}/**/*.md"
     ],
     "sharedGlobals": [
       "{workspaceRoot}/tsconfig.base.json",
       "{workspaceRoot}/package.json",
       "{workspaceRoot}/pnpm-workspace.yaml"
+    ],
+    "typechecked": [
+      "default",
+      "!{projectRoot}/**/*.md",
+      "!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+      "!{projectRoot}/.storybook/**/*",
+      "!{projectRoot}/tsconfig.storybook.json",
+      "!{projectRoot}/e2e/**/*"
+    ],
+    "unitTest": [
+      "default",
+      "!{projectRoot}/**/*.md",
+      "!{projectRoot}/e2e/**/*",
+      "!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+      "!{projectRoot}/.storybook/**/*",
+      "!{projectRoot}/tsconfig.storybook.json"
     ]
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": ["^build"],
       "inputs": ["production", "^production"],
       "cache": true
     },
     "serve": {
-      "dependsOn": ["^build"],
       "cache": false
     },
     "test": {
@@ -39,8 +54,7 @@
       "cache": true
     },
     "typecheck": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "inputs": ["typechecked", "^typechecked"],
       "cache": true
     },
     "test:watch": {

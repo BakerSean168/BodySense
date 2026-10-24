@@ -14,7 +14,12 @@
           "cd apps/api && go test ./internal/dto -count=1 -run 'Fixture|StreamEvent|Schema'"
         ],
         "parallel": false
-      }
+      },
+      "inputs": [
+        "unitTest",
+        "^production",
+        "{workspaceRoot}/apps/api/internal/dto/**/*"
+      ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
