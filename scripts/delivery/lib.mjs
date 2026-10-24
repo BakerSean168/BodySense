@@ -1,13 +1,29 @@
 import crypto from "node:crypto";
 
 export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v2";
+export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v3";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
+  MANIFEST_SCHEMA_V2,
   MANIFEST_SCHEMA,
 ]);
-export const POLICY_VERSION = "delivery-policy-v1";
+export const POLICY_VERSION_V1 = "delivery-policy-v1";
+export const POLICY_VERSION = "delivery-policy-v2";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
+
+// Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
+// v1/v2 manifests keep validating against the set they were generated with.
+export const LANE_NAMES_V2 = Object.freeze([
+  "governance",
+  "web",
+  "api",
+  "ai",
+  "contracts",
+  "database",
+  "experience",
+  "full",
+]);
 
 export const LANE_NAMES = Object.freeze([
   "governance",
@@ -17,6 +33,7 @@ export const LANE_NAMES = Object.freeze([
   "contracts",
   "database",
   "experience",
+  "component",
   "full",
 ]);
 
@@ -37,9 +54,23 @@ export const LANE_SKIP_REASONS = Object.freeze([
   "no-matching-paths",
 ]);
 
+export function laneNamesForSchema(schema) {
+  return schema === MANIFEST_SCHEMA ? LANE_NAMES : LANE_NAMES_V2;
+}
+
+export function laneTargetsForSchema(schema) {
+  return schema === MANIFEST_SCHEMA ? LANE_TARGETS : LANE_TARGETS_V2;
+}
+
+export function policyVersionForSchema(schema) {
+  return schema === MANIFEST_SCHEMA ? POLICY_VERSION : POLICY_VERSION_V1;
+}
+
 // Executable units each lane gates. Recorded in the manifest so the contract
 // states not only which lanes are required, but exactly what will run.
-export const LANE_TARGETS = Object.freeze({
+// Target policy for schema v1/v2 manifests. Kept frozen so stored laneDetails
+// keep validating after the v3 policy moved contracts into its own child job.
+export const LANE_TARGETS_V2 = Object.freeze({
   governance: Object.freeze(["job:governance-child"]),
   web: Object.freeze([
     "job:quality-child",
@@ -89,13 +120,41 @@ export const LANE_TARGETS = Object.freeze({
   ]),
 });
 
+// Target policy for schema v3 manifests: contracts execute in
+// contracts-child (not quality-child), and the component lane gates the
+// Storybook browser tests in component-child.
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V2,
+  contracts: Object.freeze([
+    "job:contracts-child",
+    "nx:@bodysense/contracts:lint",
+    "nx:@bodysense/contracts:typecheck",
+    "nx:@bodysense/contracts:test",
+    "pnpm:contracts:verify",
+  ]),
+  component: Object.freeze([
+    "job:component-child",
+    "nx:@bodysense/web:component-test",
+  ]),
+  full: Object.freeze([
+    "job:quality-child",
+    "job:contracts-child",
+    "job:component-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
 // Which manifest lanes make each Oracle child required. Oracles derive their
 // expectations from the digest-validated manifest through this table instead
 // of re-deriving lane expressions in workflow YAML.
 export const ORACLE_GROUPS = Object.freeze({
   governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
   quality: Object.freeze({
-    quality: Object.freeze(["web", "api", "ai", "contracts", "full"]),
+    quality: Object.freeze(["web", "api", "ai", "full"]),
+    contracts: Object.freeze(["contracts", "full"]),
   }),
   database: Object.freeze({
     "database-baseline": Object.freeze(["database", "full"]),
@@ -103,6 +162,7 @@ export const ORACLE_GROUPS = Object.freeze({
   }),
   experience: Object.freeze({
     experience: Object.freeze(["experience", "full"]),
+    component: Object.freeze(["component", "full"]),
   }),
 });
 
@@ -253,7 +313,7 @@ function classifySinglePath(path) {
   if (path.startsWith("apps/web/")) {
     return {
       risk: "web",
-      lanes: { web: true, experience: true },
+      lanes: { web: true, experience: true, component: true },
       reason: "web",
     };
   }
@@ -267,6 +327,7 @@ function classifySinglePath(path) {
         ai: true,
         contracts: true,
         experience: true,
+        component: true,
       },
       reason: "shared-contract",
     };
@@ -441,8 +502,9 @@ export function validateManifest(manifest) {
   if (!MANIFEST_SCHEMAS.includes(manifest.schema)) {
     errors.push(`schema must be one of: ${MANIFEST_SCHEMAS.join(", ")}`);
   }
-  if (manifest.policyVersion !== POLICY_VERSION) {
-    errors.push(`policyVersion must be ${POLICY_VERSION}`);
+  const expectedPolicy = policyVersionForSchema(manifest.schema);
+  if (manifest.policyVersion !== expectedPolicy) {
+    errors.push(`policyVersion must be ${expectedPolicy}`);
   }
   if (!["pull_request", "push", "workflow_dispatch"].includes(manifest.event)) {
     errors.push(`unsupported event: ${manifest.event}`);
@@ -481,12 +543,13 @@ export function validateManifest(manifest) {
   ) {
     errors.push("lanes must be an object");
   } else {
+    const schemaLanes = laneNamesForSchema(manifest.schema);
     const keys = Object.keys(manifest.lanes).sort();
-    const expected = [...LANE_NAMES].sort();
+    const expected = [...schemaLanes].sort();
     if (JSON.stringify(keys) !== JSON.stringify(expected)) {
-      errors.push(`lanes must contain exactly: ${LANE_NAMES.join(", ")}`);
+      errors.push(`lanes must contain exactly: ${schemaLanes.join(", ")}`);
     }
-    for (const lane of LANE_NAMES) {
+    for (const lane of schemaLanes) {
       if (typeof manifest.lanes[lane] !== "boolean") {
         errors.push(`lane ${lane} must be boolean`);
       }
@@ -496,16 +559,21 @@ export function validateManifest(manifest) {
     }
     if (
       manifest.lanes.full &&
-      LANE_NAMES.some((lane) => manifest.lanes[lane] !== true)
+      schemaLanes.some((lane) => manifest.lanes[lane] !== true)
     ) {
       errors.push("full lane requires every lane to be enabled");
     }
   }
 
-  if (manifest.schema === MANIFEST_SCHEMA) {
+  if (
+    manifest.schema === MANIFEST_SCHEMA ||
+    manifest.schema === MANIFEST_SCHEMA_V2
+  ) {
     errors.push(...validateLaneDetails(manifest));
   } else if (manifest.laneDetails !== undefined) {
-    errors.push(`laneDetails requires schema ${MANIFEST_SCHEMA}`);
+    errors.push(
+      `laneDetails requires schema ${MANIFEST_SCHEMA_V2} or ${MANIFEST_SCHEMA}`,
+    );
   }
 
   const expectedDigest = computeManifestDigest(manifest);
@@ -522,16 +590,18 @@ function validateLaneDetails(manifest) {
   if (!details || typeof details !== "object" || Array.isArray(details)) {
     return ["laneDetails must be an object"];
   }
+  const schemaLanes = laneNamesForSchema(manifest.schema);
+  const schemaTargets = laneTargetsForSchema(manifest.schema);
   const keys = Object.keys(details).sort();
-  const expectedKeys = [...LANE_NAMES].sort();
+  const expectedKeys = [...schemaLanes].sort();
   if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
-    return [`laneDetails must contain exactly: ${LANE_NAMES.join(", ")}`];
+    return [`laneDetails must contain exactly: ${schemaLanes.join(", ")}`];
   }
 
   const changed = new Set(
     Array.isArray(manifest.changedPaths) ? manifest.changedPaths : [],
   );
-  for (const lane of LANE_NAMES) {
+  for (const lane of schemaLanes) {
     const entry = details[lane];
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       errors.push(`laneDetails.${lane} must be an object`);
@@ -569,7 +639,7 @@ function validateLaneDetails(manifest) {
       }
     }
     if (
-      JSON.stringify(entry.targets) !== JSON.stringify([...LANE_TARGETS[lane]])
+      JSON.stringify(entry.targets) !== JSON.stringify([...schemaTargets[lane]])
     ) {
       errors.push(
         `laneDetails.${lane}.targets must equal the policy targets for lane ${lane}`,

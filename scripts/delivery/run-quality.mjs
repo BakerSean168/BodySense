@@ -5,7 +5,7 @@ import { validateManifest } from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
-  console.error("usage: run-quality.mjs <delivery-manifest-v2.json>");
+  console.error("usage: run-quality.mjs <delivery-manifest-v3.json>");
   process.exit(2);
 }
 
@@ -73,14 +73,6 @@ try {
     run("bash", ["scripts/validate-litellm-gateway.sh"]);
   }
 
-  if (manifest.lanes.contracts) {
-    executed += 1;
-    nx("@bodysense/contracts", "lint");
-    nx("@bodysense/contracts", "typecheck");
-    nx("@bodysense/contracts", "test");
-    run("pnpm", ["contracts:verify"]);
-  }
-
   if (executed === 0) {
     console.log("DELIVERY_QUALITY=SKIP reason=no-quality-lanes-selected");
   } else {
@@ -90,7 +82,6 @@ try {
         manifest.lanes.web && "web",
         manifest.lanes.api && "api",
         manifest.lanes.ai && "ai",
-        manifest.lanes.contracts && "contracts",
       ]
         .filter(Boolean)
         .join(",")}`,

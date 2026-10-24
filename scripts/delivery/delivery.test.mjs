@@ -11,8 +11,11 @@ import {
   createRunSummary,
   evaluateManifestOracle,
   evaluateOracle,
+  LANE_TARGETS_V2,
   MANIFEST_SCHEMA_V1,
+  MANIFEST_SCHEMA_V2,
   oracleEnabledFromManifest,
+  POLICY_VERSION_V1,
   validateManifest,
 } from "./lib.mjs";
 import { createCandidate, validateCandidate } from "./candidate-manifest.mjs";
@@ -93,6 +96,7 @@ test("docs-only changes select governance only", () => {
     contracts: false,
     database: false,
     experience: false,
+    component: false,
     full: false,
   });
 });
@@ -104,6 +108,7 @@ test("Web changes select Web and experience lanes without forcing full", () => {
     governance: true,
     web: true,
     experience: true,
+    component: true,
     contracts: false,
     api: false,
     ai: false,
@@ -117,6 +122,7 @@ test("Web E2E changes remain in the Web + experience policy", () => {
     web: true,
     contracts: false,
     experience: true,
+    component: true,
   });
 });
 
@@ -163,6 +169,7 @@ test("shared contract changes select every application surface and experience", 
     ai: true,
     contracts: true,
     experience: true,
+    component: true,
     database: false,
     full: false,
   });
@@ -186,16 +193,28 @@ test("generated Postman assets select contract validation without forcing full",
   });
 });
 
-test("contracts delivery lane runs canonical contract verification", () => {
-  const contents = fs.readFileSync("scripts/delivery/run-quality.mjs", "utf8");
-  const contractLane = contents.slice(
-    contents.indexOf("if (manifest.lanes.contracts)"),
+test("contract verification runs in its own child, not inside run-quality", () => {
+  const quality = fs.readFileSync("scripts/delivery/run-quality.mjs", "utf8");
+  assert.ok(
+    !quality.includes("manifest.lanes.contracts"),
+    "run-quality must not execute the contracts lane after the split",
   );
-  assert.ok(contractLane.startsWith("if (manifest.lanes.contracts)"));
-  assert.match(
-    contractLane,
-    /run\(["']pnpm["'], \[["']contracts:verify["']\]\)/,
+  const contracts = fs.readFileSync(
+    "scripts/delivery/run-contracts.mjs",
+    "utf8",
   );
+  assert.ok(contracts.includes('"contracts:verify"'));
+  for (const target of ["lint", "typecheck", "test"]) {
+    assert.ok(
+      contracts.includes(`nx("@bodysense/contracts", "${target}")`),
+      `run-contracts must run the contracts ${target} target`,
+    );
+  }
+  const ci = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+  assert.ok(ci.includes("contracts-child:"));
+  assert.ok(ci.includes("run-contracts.mjs"));
+  assert.ok(ci.includes("component-child:"));
+  assert.ok(ci.includes("@bodysense/web:component-test"));
 });
 
 test("every selected delivery quality lane runs architecture boundaries", () => {
@@ -294,9 +313,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v2 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v3 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v2");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v3");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -316,6 +335,43 @@ test("v2 manifest records per-lane required, files, targets, and skip reasons", 
   assert.equal(api.required, false);
   assert.deepEqual(api.files, []);
   assert.equal(api.skipReason, "no-matching-paths");
+
+  const component = manifest.laneDetails.component;
+  assert.equal(component.required, true);
+  assert.deepEqual(component.files, ["apps/web/src/features/foo.tsx"]);
+  assert.equal(component.skipReason, null);
+  assert.ok(component.targets.includes("nx:@bodysense/web:component-test"));
+});
+
+test("v2 manifests remain valid under the v2 lane set and target policy", () => {
+  const current = manifestFor(["apps/web/src/features/foo.tsx"]);
+  const { component: _componentLane, ...lanesV2 } = current.lanes;
+  const { component: _componentDetail, ...detailsV2 } = current.laneDetails;
+  detailsV2.contracts = {
+    ...detailsV2.contracts,
+    targets: [...LANE_TARGETS_V2.contracts],
+  };
+  detailsV2.full = { ...detailsV2.full, targets: [...LANE_TARGETS_V2.full] };
+  const v2 = {
+    ...current,
+    schema: MANIFEST_SCHEMA_V2,
+    policyVersion: POLICY_VERSION_V1,
+    lanes: lanesV2,
+    laneDetails: detailsV2,
+  };
+  v2.digest = computeManifestDigest(v2);
+  assert.deepEqual(validateManifest(v2), []);
+
+  // A v2 manifest carrying the v3-only component lane is rejected: lane
+  // sets are pinned to the schema version that generated the manifest.
+  const widened = structuredClone(v2);
+  widened.lanes.component = false;
+  widened.digest = computeManifestDigest(widened);
+  assert.ok(
+    validateManifest(widened).some((error) =>
+      error.includes("lanes must contain exactly"),
+    ),
+  );
 });
 
 test("empty diff records no-changed-paths skip reasons", () => {
@@ -338,13 +394,19 @@ test("force-full manifests require every lane with the full change set", () => {
 });
 
 test("v1 manifests remain valid without laneDetails", () => {
-  const v2 = manifestFor(["apps/web/src/features/foo.tsx"]);
-  const { laneDetails: _dropped, ...rest } = v2;
-  const v1 = { ...rest, schema: MANIFEST_SCHEMA_V1 };
+  const v3 = manifestFor(["apps/web/src/features/foo.tsx"]);
+  const { laneDetails: _dropped, ...rest } = v3;
+  const { component: _componentLane, ...lanesV1 } = rest.lanes;
+  const v1 = {
+    ...rest,
+    schema: MANIFEST_SCHEMA_V1,
+    policyVersion: POLICY_VERSION_V1,
+    lanes: lanesV1,
+  };
   v1.digest = computeManifestDigest(v1);
   assert.deepEqual(validateManifest(v1), []);
 
-  const v1WithDetails = { ...v1, laneDetails: v2.laneDetails };
+  const v1WithDetails = { ...v1, laneDetails: v3.laneDetails };
   v1WithDetails.digest = computeManifestDigest(v1WithDetails);
   assert.ok(
     validateManifest(v1WithDetails).some((error) =>
@@ -418,6 +480,14 @@ test("oracle group enablement follows the manifest lanes", () => {
   });
   assert.deepEqual(oracleEnabledFromManifest(dbManifest, "experience"), {
     experience: true,
+    component: false,
+  });
+  const contractManifest = manifestFor([
+    "postman/collections/BodySense Public API.postman_collection.json",
+  ]);
+  assert.deepEqual(oracleEnabledFromManifest(contractManifest, "quality"), {
+    quality: false,
+    contracts: true,
   });
   const docsManifest = manifestFor(["docs/guide.md"]);
   assert.deepEqual(oracleEnabledFromManifest(docsManifest, "database"), {
