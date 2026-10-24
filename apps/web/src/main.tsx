@@ -8,3 +8,5 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+
+// CI smoke: lane-selection verification for VNext B5 (no behavior change).
