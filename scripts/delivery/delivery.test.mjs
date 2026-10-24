@@ -12,10 +12,13 @@ import {
   evaluateManifestOracle,
   evaluateOracle,
   LANE_TARGETS_V2,
+  LANE_TARGETS_V3,
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
+  MANIFEST_SCHEMA_V3,
   oracleEnabledFromManifest,
   POLICY_VERSION_V1,
+  POLICY_VERSION_V2,
   validateManifest,
 } from "./lib.mjs";
 import { createCandidate, validateCandidate } from "./candidate-manifest.mjs";
@@ -313,9 +316,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v3 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v4 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v3");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v4");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -347,11 +350,12 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
   const current = manifestFor(["apps/web/src/features/foo.tsx"]);
   const { component: _componentLane, ...lanesV2 } = current.lanes;
   const { component: _componentDetail, ...detailsV2 } = current.laneDetails;
-  detailsV2.contracts = {
-    ...detailsV2.contracts,
-    targets: [...LANE_TARGETS_V2.contracts],
-  };
-  detailsV2.full = { ...detailsV2.full, targets: [...LANE_TARGETS_V2.full] };
+  for (const lane of ["web", "api", "ai", "contracts", "experience", "full"]) {
+    detailsV2[lane] = {
+      ...detailsV2[lane],
+      targets: [...LANE_TARGETS_V2[lane]],
+    };
+  }
   const v2 = {
     ...current,
     schema: MANIFEST_SCHEMA_V2,
@@ -370,6 +374,36 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
   assert.ok(
     validateManifest(widened).some((error) =>
       error.includes("lanes must contain exactly"),
+    ),
+  );
+});
+
+test("v3 manifests remain valid under the v3 target policy and policy version", () => {
+  const current = manifestFor(["apps/web/src/features/foo.tsx"]);
+  const detailsV3 = { ...current.laneDetails };
+  for (const lane of ["web", "api", "ai", "experience", "full"]) {
+    detailsV3[lane] = {
+      ...detailsV3[lane],
+      targets: [...LANE_TARGETS_V3[lane]],
+    };
+  }
+  const v3 = {
+    ...current,
+    schema: MANIFEST_SCHEMA_V3,
+    policyVersion: POLICY_VERSION_V2,
+    laneDetails: detailsV3,
+  };
+  v3.digest = computeManifestDigest(v3);
+  assert.deepEqual(validateManifest(v3), []);
+
+  // A v3 manifest carrying v4 targets is rejected: target policy is
+  // pinned to the schema version that generated the manifest.
+  const widened = structuredClone(v3);
+  widened.laneDetails.web.targets = [...current.laneDetails.web.targets];
+  widened.digest = computeManifestDigest(widened);
+  assert.ok(
+    validateManifest(widened).some((error) =>
+      error.includes("targets must equal"),
     ),
   );
 });
@@ -486,7 +520,31 @@ test("oracle group enablement follows the manifest lanes", () => {
     "postman/collections/BodySense Public API.postman_collection.json",
   ]);
   assert.deepEqual(oracleEnabledFromManifest(contractManifest, "quality"), {
-    quality: false,
+    "quality-full": false,
+    "quality-web": false,
+    "quality-api": false,
+    "quality-ai": false,
+    "quality-arch": false,
+    contracts: true,
+  });
+  const webManifest = manifestFor(["apps/web/src/features/foo.tsx"]);
+  assert.deepEqual(oracleEnabledFromManifest(webManifest, "quality"), {
+    "quality-full": false,
+    "quality-web": true,
+    "quality-api": false,
+    "quality-ai": false,
+    "quality-arch": true,
+    contracts: false,
+  });
+  // In a full run the per-lane children stand down (noneOf full): the
+  // validate-repo.sh monolith child is the single quality execution.
+  const fullManifest = manifestFor(["docs/guide.md"], { forceFull: true });
+  assert.deepEqual(oracleEnabledFromManifest(fullManifest, "quality"), {
+    "quality-full": true,
+    "quality-web": false,
+    "quality-api": false,
+    "quality-ai": false,
+    "quality-arch": false,
     contracts: true,
   });
   const docsManifest = manifestFor(["docs/guide.md"]);

@@ -2,14 +2,17 @@ import crypto from "node:crypto";
 
 export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
 export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v3";
+export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v4";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
+  MANIFEST_SCHEMA_V3,
   MANIFEST_SCHEMA,
 ]);
 export const POLICY_VERSION_V1 = "delivery-policy-v1";
-export const POLICY_VERSION = "delivery-policy-v2";
+export const POLICY_VERSION_V2 = "delivery-policy-v2";
+export const POLICY_VERSION = "delivery-policy-v3";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 // Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
@@ -55,15 +58,26 @@ export const LANE_SKIP_REASONS = Object.freeze([
 ]);
 
 export function laneNamesForSchema(schema) {
-  return schema === MANIFEST_SCHEMA ? LANE_NAMES : LANE_NAMES_V2;
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return LANE_NAMES_V2;
+  }
+  return LANE_NAMES;
 }
 
 export function laneTargetsForSchema(schema) {
-  return schema === MANIFEST_SCHEMA ? LANE_TARGETS : LANE_TARGETS_V2;
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return LANE_TARGETS_V2;
+  }
+  if (schema === MANIFEST_SCHEMA_V3) return LANE_TARGETS_V3;
+  return LANE_TARGETS;
 }
 
 export function policyVersionForSchema(schema) {
-  return schema === MANIFEST_SCHEMA ? POLICY_VERSION : POLICY_VERSION_V1;
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return POLICY_VERSION_V1;
+  }
+  if (schema === MANIFEST_SCHEMA_V3) return POLICY_VERSION_V2;
+  return POLICY_VERSION;
 }
 
 // Executable units each lane gates. Recorded in the manifest so the contract
@@ -123,7 +137,7 @@ export const LANE_TARGETS_V2 = Object.freeze({
 // Target policy for schema v3 manifests: contracts execute in
 // contracts-child (not quality-child), and the component lane gates the
 // Storybook browser tests in component-child.
-export const LANE_TARGETS = Object.freeze({
+export const LANE_TARGETS_V3 = Object.freeze({
   ...LANE_TARGETS_V2,
   contracts: Object.freeze([
     "job:contracts-child",
@@ -147,13 +161,90 @@ export const LANE_TARGETS = Object.freeze({
   ]),
 });
 
+// Target policy for schema v4 manifests: quality lanes execute in
+// per-lane children (quality-web/api/ai-child) with quality:architecture
+// gated by quality-arch-child, the full lane keeps the validate-repo.sh
+// monolith in quality-full-child, and the experience lane adds the
+// e2e-report-child merged-report receipt next to the sharded e2e-child.
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V3,
+  web: Object.freeze([
+    "job:quality-web-child",
+    "nx:@bodysense/web:lint",
+    "nx:@bodysense/web:typecheck",
+    "nx:@bodysense/web:test",
+    "nx:@bodysense/web:build",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  api: Object.freeze([
+    "job:quality-api-child",
+    "nx:api:lint",
+    "nx:api:test",
+    "nx:api:build",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  ai: Object.freeze([
+    "job:quality-ai-child",
+    "nx:ai-service:format:check",
+    "nx:ai-service:lint",
+    "nx:ai-service:typecheck",
+    "nx:ai-service:test",
+    "nx:ai-service:eval:diagnosis",
+    "nx:ai-service:eval:diagnosis-evidence-policy",
+    "nx:ai-service:eval:diagnosis-promotion",
+    "nx:ai-service:eval:treatment",
+    "nx:ai-service:eval:treatment-evidence-gap",
+    "nx:ai-service:eval:treatment-promotion",
+    "script:validate-litellm-gateway.sh",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  experience: Object.freeze([
+    "job:e2e-child",
+    "job:e2e-report-child",
+    "playwright:apps/web/e2e",
+  ]),
+  full: Object.freeze([
+    "job:quality-full-child",
+    "job:contracts-child",
+    "job:component-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "job:e2e-report-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
 // Which manifest lanes make each Oracle child required. Oracles derive their
 // expectations from the digest-validated manifest through this table instead
 // of re-deriving lane expressions in workflow YAML.
 export const ORACLE_GROUPS = Object.freeze({
   governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
   quality: Object.freeze({
-    quality: Object.freeze(["web", "api", "ai", "full"]),
+    // The full lane keeps the validate-repo.sh monolith child; per-lane
+    // children are required only when their lane is selected without the
+    // full lane (their jobs are skipped in full runs to avoid executing
+    // the same checks twice).
+    "quality-full": Object.freeze(["full"]),
+    "quality-web": Object.freeze({
+      anyOf: Object.freeze(["web"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-api": Object.freeze({
+      anyOf: Object.freeze(["api"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-ai": Object.freeze({
+      anyOf: Object.freeze(["ai"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-arch": Object.freeze({
+      anyOf: Object.freeze(["web", "api", "ai"]),
+      noneOf: Object.freeze(["full"]),
+    }),
     contracts: Object.freeze(["contracts", "full"]),
   }),
   database: Object.freeze({
@@ -565,15 +656,13 @@ export function validateManifest(manifest) {
     }
   }
 
-  if (
-    manifest.schema === MANIFEST_SCHEMA ||
-    manifest.schema === MANIFEST_SCHEMA_V2
-  ) {
+  // laneDetails exist on every schema from v2 onward; only v1 predates
+  // them. (Pinning this to "current or v2" would reject stored v3
+  // manifests the moment the current schema moves to v4.)
+  if (manifest.schema !== MANIFEST_SCHEMA_V1) {
     errors.push(...validateLaneDetails(manifest));
   } else if (manifest.laneDetails !== undefined) {
-    errors.push(
-      `laneDetails requires schema ${MANIFEST_SCHEMA_V2} or ${MANIFEST_SCHEMA}`,
-    );
+    errors.push(`laneDetails requires schema ${MANIFEST_SCHEMA_V2} or later`);
   }
 
   const expectedDigest = computeManifestDigest(manifest);
@@ -695,10 +784,21 @@ export function oracleEnabledFromManifest(manifest, group) {
   const mapping = ORACLE_GROUPS[group];
   if (!mapping) throw new Error(`unknown oracle group: ${group}`);
   return Object.fromEntries(
-    Object.entries(mapping).map(([child, lanes]) => [
-      child,
-      lanes.some((lane) => manifest.lanes[lane] === true),
-    ]),
+    Object.entries(mapping).map(([child, rule]) => {
+      // A rule is either a lane list (child required when any listed lane
+      // is selected) or { anyOf, noneOf } (required when any anyOf lane is
+      // selected and no noneOf lane is).
+      if (Array.isArray(rule)) {
+        return [child, rule.some((lane) => manifest.lanes[lane] === true)];
+      }
+      const anyOf = rule.anyOf ?? [];
+      const noneOf = rule.noneOf ?? [];
+      return [
+        child,
+        anyOf.some((lane) => manifest.lanes[lane] === true) &&
+          !noneOf.some((lane) => manifest.lanes[lane] === true),
+      ];
+    }),
   );
 }
 
