@@ -17,7 +17,7 @@ permissions:
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v1.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v2.json
 
 jobs:
   scope:
@@ -55,8 +55,8 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v1
-          path: reports/delivery/delivery-manifest-v1.json
+          name: delivery-manifest-v2
+          path: reports/delivery/delivery-manifest-v2.json
           if-no-files-found: error
           retention-days: 14
 
@@ -80,9 +80,11 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v1
+          name: delivery-manifest-v2
           path: reports/delivery
-      - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+      - run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - run: pnpm install --frozen-lockfile
       - name: Check formatting (Oxfmt, git-managed files)
         run: pnpm format:check
@@ -153,8 +155,12 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v1
+          name: delivery-manifest-v2
           path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - name: Execute manifest-selected quality lanes
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
 
@@ -165,10 +171,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"governance":true},"children":{"governance":"${{ needs.governance-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v2
+          path: reports/delivery
+      - name: Verify child outcomes against the delivery manifest
+        run: >-
+          node scripts/delivery/oracle.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --group governance
+          --detector "${{ needs.scope.result }}"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          --children-json '{"governance":"${{ needs.governance-child.result }}"}'
 
   quality-oracle:
     name: Quality Oracle
@@ -177,10 +191,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"quality":${{ (needs.scope.outputs.lane_web == 'true' || needs.scope.outputs.lane_api == 'true' || needs.scope.outputs.lane_ai == 'true' || needs.scope.outputs.lane_contracts == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"quality":"${{ needs.quality-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v2
+          path: reports/delivery
+      - name: Verify child outcomes against the delivery manifest
+        run: >-
+          node scripts/delivery/oracle.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --group quality
+          --detector "${{ needs.scope.result }}"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          --children-json '{"quality":"${{ needs.quality-child.result }}"}'
 
   migrations-child:
     name: PostgreSQL 18 vNext baseline child
@@ -316,10 +338,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"database-baseline":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }},"database-recovery":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v2
+          path: reports/delivery
+      - name: Verify child outcomes against the delivery manifest
+        run: >-
+          node scripts/delivery/oracle.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --group database
+          --detector "${{ needs.scope.result }}"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          --children-json '{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}'
 
   e2e-child:
     name: Browser longitudinal health E2E child
@@ -445,10 +475,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"experience":${{ (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"experience":"${{ needs.e2e-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v2
+          path: reports/delivery
+      - name: Verify child outcomes against the delivery manifest
+        run: >-
+          node scripts/delivery/oracle.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --group experience
+          --detector "${{ needs.scope.result }}"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          --children-json '{"experience":"${{ needs.e2e-child.result }}"}'
 
   delivery-observation:
     name: Delivery Observation
@@ -469,7 +507,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v1
+          name: delivery-manifest-v2
           path: reports/delivery
       - name: Materialize execution outcomes
         run: |

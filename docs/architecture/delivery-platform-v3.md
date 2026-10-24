@@ -139,13 +139,13 @@ production .deploy-state     actually deployed revision/release identity
 
 ### 4.1 Manifest
 
-The detector writes `delivery-manifest-v1.json` once per run.
+The detector writes `delivery-manifest-v2.json` once per run.
 
 Minimum shape:
 
 ```json
 {
-  "schema": "bodysense.delivery-manifest/v1",
+  "schema": "bodysense.delivery-manifest/v2",
   "baseSha": "...",
   "headSha": "...",
   "event": "pull_request",
@@ -162,29 +162,91 @@ Minimum shape:
     "experience": true,
     "full": false
   },
+  "laneDetails": {
+    "web": {
+      "required": true,
+      "files": ["apps/web/src/example.tsx"],
+      "targets": ["job:quality-child", "nx:@bodysense/web:test"],
+      "skipReason": null
+    },
+    "api": {
+      "required": false,
+      "files": [],
+      "targets": ["job:quality-child", "nx:api:test"],
+      "skipReason": "no-matching-paths"
+    }
+  },
   "digest": "sha256:..."
 }
 ```
 
-The digest is computed over a canonical representation excluding the `digest` field itself.
+Since schema v2, every lane carries a `laneDetails` entry:
+
+- `required` mirrors `lanes.<lane>`;
+- `files` lists the changed paths that require the lane (governance inspects
+  the whole diff, so its `files` is the full change set);
+- `targets` lists the executable units the lane gates (CI jobs, Nx targets,
+  scripts), fixed by policy in `scripts/delivery/lib.mjs`;
+- `skipReason` is `null` for a required lane and a machine-readable code
+  otherwise: `no-changed-paths` (empty diff) or `no-matching-paths` (no
+  changed path selects the lane). An Oracle can therefore distinguish a
+  legitimately skipped lane from a required lane that never ran.
+
+The digest is computed over a canonical representation excluding the `digest`
+field itself, and `laneDetails` is inside the digest. Validators additionally
+cross-check `laneDetails` against `lanes` and `changedPaths`, so recomputing
+a digest after tampering does not launder an inconsistent contract.
+
+Version compatibility: `validateManifest` accepts both
+`bodysense.delivery-manifest/v1` (validated under the v1 rules, without
+`laneDetails`) and v2. Generators only emit v2; `laneDetails` on a v1
+manifest is rejected. Consumers that re-validate stored manifests (candidate
+publication, platform audit) therefore keep working across the transition.
+
+The Scope job publishes the manifest digest as a job output. Every consumer
+that downloads the manifest artifact (governance child, quality child, the
+four Oracles, Delivery Observation) verifies the artifact against that output
+with `--expect-digest`, and each Oracle derives its expected child outcomes
+from the digest-validated manifest (`ORACLE_GROUPS` in
+`scripts/delivery/lib.mjs`) instead of re-deriving lane expressions in
+workflow YAML.
 
 ### 4.2 Risk classes
 
-Initial policy classes:
+Each changed path is classified by the first matching rule below (the table
+mirrors `classifySinglePath` in `scripts/delivery/lib.mjs`, in evaluation
+order). Governance always runs. The manifest risk is the highest-priority
+risk across all paths, with priority
+`docs < web < api < ai < contract < database < runtime < release < root`.
+If any path selects the `full` lane, every lane is enabled.
 
-| Risk       | Typical changes                                  | PR policy                                     |
-| ---------- | ------------------------------------------------ | --------------------------------------------- |
-| `docs`     | `docs/**`, prose-only metadata                   | governance only                               |
-| `web`      | React/UI/static frontend code                    | Web + contracts as required                   |
-| `api`      | Go service/application/domain                    | API + contracts                               |
-| `ai`       | Python Agent/runtime/prompts/evals               | AI + contracts/eval                           |
-| `database` | migrations, durable schemas, storage semantics   | API + database + required cross-service tests |
-| `runtime`  | Docker, deployment, model gateway, shared config | full                                          |
-| `contract` | shared API/SSE/tool/domain contracts             | Web + API + AI + experience                   |
-| `root`     | lockfiles, Nx/toolchain, CI control plane        | full                                          |
-| `release`  | release/deploy/runtime packaging                 | full + release contract validation            |
+| Path pattern | Risk | Lanes enabled |
+| ------------ | ---- | ------------- |
+| `docs/**`, any `*.md`, `README.md`, `CONTRIBUTING.md` | `docs` | governance only |
+| `.github/**`, `scripts/delivery/**`, `docker/**`, `deploy/**`, `.env.production` | `runtime` | all |
+| `release-please-config.json`, `.release-please-manifest.json` | `release` | all |
+| `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `nx.json`, `tsconfig*`, `.npm*`, `.node-version`, `.python-version`, `uv.lock` | `root` | all |
+| `apps/api/migrations/**` | `database` | api, database, experience |
+| `apps/api/**` | `api` | api, experience |
+| `apps/ai-service/**` | `ai` | ai, experience |
+| `apps/web/**` | `web` | web, experience |
+| `packages/contracts/**` | `contract` | web, api, ai, contracts, experience |
+| `postman/**`, `scripts/postman/**` | `contract` | contracts |
+| `packages/utils/**` | `root` | all (shared-utility fail-safe) |
+| `scripts/static-assets/**`, `scripts/anatomy/**` | `runtime` | all (public-asset runtime) |
+| any other `scripts/**` | `runtime` | all (repository script) |
+| `tests/**`, `e2e/**` | `contract` | contracts, experience |
+| anything else | `root` | all (unknown-path fail-safe) |
 
-Multiple categories collapse upward to the safest applicable risk.
+Special cases:
+
+- Empty diff: risk `docs`, governance only, reason `no-changed-paths`. An
+  empty diff is never interpreted as docs-only beyond governance, and the
+  manifest records the explicit reason.
+- Forced full (push to `main`, `workflow_dispatch`, or
+  `DELIVERY_FORCE_FULL=1`): risk `root`, every lane enabled, reason
+  `full-main-policy`, and every lane's `laneDetails.files` is the full
+  change set.
 
 ### 4.3 Full-main override
 

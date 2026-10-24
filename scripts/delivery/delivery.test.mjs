@@ -9,7 +9,10 @@ import {
   computeManifestDigest,
   createManifest,
   createRunSummary,
+  evaluateManifestOracle,
   evaluateOracle,
+  MANIFEST_SCHEMA_V1,
+  oracleEnabledFromManifest,
   validateManifest,
 } from "./lib.mjs";
 import { createCandidate, validateCandidate } from "./candidate-manifest.mjs";
@@ -289,6 +292,138 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
       error.includes("lanes must contain exactly"),
     ),
   );
+});
+
+test("v2 manifest records per-lane required, files, targets, and skip reasons", () => {
+  const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v2");
+  assert.deepEqual(validateManifest(manifest), []);
+
+  const web = manifest.laneDetails.web;
+  assert.equal(web.required, true);
+  assert.deepEqual(web.files, ["apps/web/src/features/foo.tsx"]);
+  assert.equal(web.skipReason, null);
+  assert.ok(web.targets.includes("nx:@bodysense/web:test"));
+
+  const governance = manifest.laneDetails.governance;
+  assert.equal(governance.required, true);
+  assert.deepEqual(governance.files, [
+    "README.md",
+    "apps/web/src/features/foo.tsx",
+  ]);
+
+  const api = manifest.laneDetails.api;
+  assert.equal(api.required, false);
+  assert.deepEqual(api.files, []);
+  assert.equal(api.skipReason, "no-matching-paths");
+});
+
+test("empty diff records no-changed-paths skip reasons", () => {
+  const manifest = manifestFor([]);
+  assert.deepEqual(validateManifest(manifest), []);
+  assert.equal(manifest.laneDetails.governance.required, true);
+  assert.deepEqual(manifest.laneDetails.governance.files, []);
+  assert.equal(manifest.laneDetails.web.required, false);
+  assert.equal(manifest.laneDetails.web.skipReason, "no-changed-paths");
+});
+
+test("force-full manifests require every lane with the full change set", () => {
+  const manifest = manifestFor(["docs/guide.md"], { forceFull: true });
+  assert.deepEqual(validateManifest(manifest), []);
+  for (const detail of Object.values(manifest.laneDetails)) {
+    assert.equal(detail.required, true);
+    assert.deepEqual(detail.files, ["docs/guide.md"]);
+    assert.equal(detail.skipReason, null);
+  }
+});
+
+test("v1 manifests remain valid without laneDetails", () => {
+  const v2 = manifestFor(["apps/web/src/features/foo.tsx"]);
+  const { laneDetails: _dropped, ...rest } = v2;
+  const v1 = { ...rest, schema: MANIFEST_SCHEMA_V1 };
+  v1.digest = computeManifestDigest(v1);
+  assert.deepEqual(validateManifest(v1), []);
+
+  const v1WithDetails = { ...v1, laneDetails: v2.laneDetails };
+  v1WithDetails.digest = computeManifestDigest(v1WithDetails);
+  assert.ok(
+    validateManifest(v1WithDetails).some((error) =>
+      error.includes("laneDetails requires schema"),
+    ),
+  );
+});
+
+test("tampered laneDetails are rejected even with a recomputed digest", () => {
+  const manifest = manifestFor(["apps/web/src/features/foo.tsx"]);
+  manifest.laneDetails.web.required = false;
+  manifest.laneDetails.web.skipReason = "no-matching-paths";
+  manifest.laneDetails.web.files = [];
+  // Recomputing the digest after tampering must not launder the contract:
+  // structural validation cross-checks laneDetails against the lanes map.
+  manifest.digest = computeManifestDigest(manifest);
+  const errors = validateManifest(manifest);
+  assert.ok(errors.some((error) => error.includes("laneDetails.web.required")));
+});
+
+test("manifest oracle fails when a required lane is skipped or missing", () => {
+  const manifest = manifestFor(["apps/web/src/features/foo.tsx"]);
+
+  const skipped = evaluateManifestOracle({
+    manifest,
+    group: "quality",
+    detector: "success",
+    children: { quality: "skipped" },
+  });
+  assert.equal(skipped.ok, false);
+  assert.ok(skipped.failures.some((failure) => failure.includes("quality")));
+
+  const missing = evaluateManifestOracle({
+    manifest,
+    group: "quality",
+    detector: "success",
+    children: {},
+  });
+  assert.equal(missing.ok, false);
+  assert.ok(missing.failures.some((failure) => failure.includes("missing")));
+
+  const notRequired = evaluateManifestOracle({
+    manifest: manifestFor(["docs/guide.md"]),
+    group: "quality",
+    detector: "success",
+    children: { quality: "skipped" },
+  });
+  assert.equal(notRequired.ok, true);
+});
+
+test("manifest oracle rejects a tampered manifest instead of trusting it", () => {
+  const manifest = manifestFor(["apps/web/src/features/foo.tsx"]);
+  manifest.lanes.api = true;
+  const result = evaluateManifestOracle({
+    manifest,
+    group: "quality",
+    detector: "success",
+    children: { quality: "success" },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.failures.some((failure) => failure.includes("digest mismatch")),
+  );
+});
+
+test("oracle group enablement follows the manifest lanes", () => {
+  const dbManifest = manifestFor(["apps/api/migrations/0001_init.sql"]);
+  assert.deepEqual(oracleEnabledFromManifest(dbManifest, "database"), {
+    "database-baseline": true,
+    "database-recovery": true,
+  });
+  assert.deepEqual(oracleEnabledFromManifest(dbManifest, "experience"), {
+    experience: true,
+  });
+  const docsManifest = manifestFor(["docs/guide.md"]);
+  assert.deepEqual(oracleEnabledFromManifest(docsManifest, "database"), {
+    "database-baseline": false,
+    "database-recovery": false,
+  });
 });
 
 test("manifest validation rejects unsupported events and short SHAs", () => {

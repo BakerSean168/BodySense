@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v1";
+export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v2";
+export const MANIFEST_SCHEMAS = Object.freeze([
+  MANIFEST_SCHEMA_V1,
+  MANIFEST_SCHEMA,
+]);
 export const POLICY_VERSION = "delivery-policy-v1";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
@@ -26,6 +31,80 @@ export const RISK_NAMES = Object.freeze([
   "release",
   "root",
 ]);
+
+export const LANE_SKIP_REASONS = Object.freeze([
+  "no-changed-paths",
+  "no-matching-paths",
+]);
+
+// Executable units each lane gates. Recorded in the manifest so the contract
+// states not only which lanes are required, but exactly what will run.
+export const LANE_TARGETS = Object.freeze({
+  governance: Object.freeze(["job:governance-child"]),
+  web: Object.freeze([
+    "job:quality-child",
+    "nx:@bodysense/web:lint",
+    "nx:@bodysense/web:typecheck",
+    "nx:@bodysense/web:test",
+    "nx:@bodysense/web:build",
+  ]),
+  api: Object.freeze([
+    "job:quality-child",
+    "nx:api:lint",
+    "nx:api:test",
+    "nx:api:build",
+  ]),
+  ai: Object.freeze([
+    "job:quality-child",
+    "nx:ai-service:format:check",
+    "nx:ai-service:lint",
+    "nx:ai-service:typecheck",
+    "nx:ai-service:test",
+    "nx:ai-service:eval:diagnosis",
+    "nx:ai-service:eval:diagnosis-evidence-policy",
+    "nx:ai-service:eval:diagnosis-promotion",
+    "nx:ai-service:eval:treatment",
+    "nx:ai-service:eval:treatment-evidence-gap",
+    "nx:ai-service:eval:treatment-promotion",
+    "script:validate-litellm-gateway.sh",
+  ]),
+  contracts: Object.freeze([
+    "job:quality-child",
+    "nx:@bodysense/contracts:lint",
+    "nx:@bodysense/contracts:typecheck",
+    "nx:@bodysense/contracts:test",
+    "pnpm:contracts:verify",
+  ]),
+  database: Object.freeze([
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+  ]),
+  experience: Object.freeze(["job:e2e-child", "playwright:apps/web/e2e"]),
+  full: Object.freeze([
+    "job:quality-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
+// Which manifest lanes make each Oracle child required. Oracles derive their
+// expectations from the digest-validated manifest through this table instead
+// of re-deriving lane expressions in workflow YAML.
+export const ORACLE_GROUPS = Object.freeze({
+  governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
+  quality: Object.freeze({
+    quality: Object.freeze(["web", "api", "ai", "contracts", "full"]),
+  }),
+  database: Object.freeze({
+    "database-baseline": Object.freeze(["database", "full"]),
+    "database-recovery": Object.freeze(["database", "full"]),
+  }),
+  experience: Object.freeze({
+    experience: Object.freeze(["experience", "full"]),
+  }),
+});
 
 const FULL_LANES = Object.freeze(
   Object.fromEntries(LANE_NAMES.map((lane) => [lane, true])),
@@ -254,6 +333,9 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
       lanes: allTrueLanes(),
       reasons: ["full-main-policy"],
       changedPaths,
+      laneFiles: Object.fromEntries(
+        LANE_NAMES.map((lane) => [lane, [...changedPaths]]),
+      ),
     };
   }
 
@@ -266,10 +348,12 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
       lanes: emptyLanes(),
       reasons: ["no-changed-paths"],
       changedPaths,
+      laneFiles: Object.fromEntries(LANE_NAMES.map((lane) => [lane, []])),
     };
   }
 
   const lanes = emptyLanes();
+  const laneFileSets = new Map(LANE_NAMES.map((lane) => [lane, new Set()]));
   const risks = new Set(["docs"]);
   const reasons = new Set();
 
@@ -277,24 +361,45 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
     const classification = classifySinglePath(path);
     risks.add(classification.risk);
     reasons.add(classification.reason);
+    // Governance inspects the whole diff, so every path triggers it.
+    laneFileSets.get("governance").add(path);
+    for (const [lane, enabled] of Object.entries(classification.lanes)) {
+      if (enabled) laneFileSets.get(lane).add(path);
+    }
     mergeLanes(lanes, classification.lanes);
-  }
-
-  if (lanes.full) {
-    return {
-      risk: highestRisk(risks),
-      lanes: allTrueLanes(),
-      reasons: [...reasons].sort(),
-      changedPaths,
-    };
   }
 
   return {
     risk: highestRisk(risks),
-    lanes,
+    lanes: lanes.full ? allTrueLanes() : lanes,
     reasons: [...reasons].sort(),
     changedPaths,
+    laneFiles: Object.fromEntries(
+      LANE_NAMES.map((lane) => [lane, [...laneFileSets.get(lane)].sort()]),
+    ),
   };
+}
+
+function buildLaneDetails(classification) {
+  const { lanes, laneFiles, changedPaths } = classification;
+  return Object.fromEntries(
+    LANE_NAMES.map((lane) => {
+      const required = lanes[lane] === true;
+      return [
+        lane,
+        {
+          required,
+          files: [...(laneFiles[lane] ?? [])],
+          targets: [...LANE_TARGETS[lane]],
+          skipReason: required
+            ? null
+            : changedPaths.length === 0
+              ? "no-changed-paths"
+              : "no-matching-paths",
+        },
+      ];
+    }),
+  );
 }
 
 export function createManifest({
@@ -320,6 +425,7 @@ export function createManifest({
     reasons: classification.reasons,
     changedPaths: classification.changedPaths,
     lanes: classification.lanes,
+    laneDetails: buildLaneDetails(classification),
     generatedAt,
   };
   manifest.digest = computeManifestDigest(manifest);
@@ -332,8 +438,8 @@ export function validateManifest(manifest) {
     return ["manifest must be an object"];
   }
 
-  if (manifest.schema !== MANIFEST_SCHEMA) {
-    errors.push(`schema must be ${MANIFEST_SCHEMA}`);
+  if (!MANIFEST_SCHEMAS.includes(manifest.schema)) {
+    errors.push(`schema must be one of: ${MANIFEST_SCHEMAS.join(", ")}`);
   }
   if (manifest.policyVersion !== POLICY_VERSION) {
     errors.push(`policyVersion must be ${POLICY_VERSION}`);
@@ -396,11 +502,91 @@ export function validateManifest(manifest) {
     }
   }
 
+  if (manifest.schema === MANIFEST_SCHEMA) {
+    errors.push(...validateLaneDetails(manifest));
+  } else if (manifest.laneDetails !== undefined) {
+    errors.push(`laneDetails requires schema ${MANIFEST_SCHEMA}`);
+  }
+
   const expectedDigest = computeManifestDigest(manifest);
   if (manifest.digest !== expectedDigest) {
     errors.push(`manifest digest mismatch: expected ${expectedDigest}`);
   }
 
+  return errors;
+}
+
+function validateLaneDetails(manifest) {
+  const errors = [];
+  const details = manifest.laneDetails;
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
+    return ["laneDetails must be an object"];
+  }
+  const keys = Object.keys(details).sort();
+  const expectedKeys = [...LANE_NAMES].sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
+    return [`laneDetails must contain exactly: ${LANE_NAMES.join(", ")}`];
+  }
+
+  const changed = new Set(
+    Array.isArray(manifest.changedPaths) ? manifest.changedPaths : [],
+  );
+  for (const lane of LANE_NAMES) {
+    const entry = details[lane];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`laneDetails.${lane} must be an object`);
+      continue;
+    }
+    const required = manifest.lanes?.[lane] === true;
+    if (entry.required !== required) {
+      errors.push(`laneDetails.${lane}.required must match lanes.${lane}`);
+    }
+    if (!Array.isArray(entry.files)) {
+      errors.push(`laneDetails.${lane}.files must be an array`);
+    } else {
+      const normalized = normalizeChangedPaths(entry.files);
+      if (JSON.stringify(normalized) !== JSON.stringify(entry.files)) {
+        errors.push(
+          `laneDetails.${lane}.files must be normalized, unique, and sorted`,
+        );
+      }
+      for (const file of entry.files) {
+        if (!changed.has(file)) {
+          errors.push(
+            `laneDetails.${lane}.files contains ${file} which is not in changedPaths`,
+          );
+        }
+      }
+      if (required && changed.size > 0 && entry.files.length === 0) {
+        errors.push(
+          `laneDetails.${lane}.files must record the paths that require the lane`,
+        );
+      }
+      if (!required && entry.files.length > 0) {
+        errors.push(
+          `laneDetails.${lane}.files must be empty for a lane that is not required`,
+        );
+      }
+    }
+    if (
+      JSON.stringify(entry.targets) !== JSON.stringify([...LANE_TARGETS[lane]])
+    ) {
+      errors.push(
+        `laneDetails.${lane}.targets must equal the policy targets for lane ${lane}`,
+      );
+    }
+    if (required) {
+      if (entry.skipReason !== null) {
+        errors.push(
+          `laneDetails.${lane}.skipReason must be null for a required lane`,
+        );
+      }
+    } else if (!LANE_SKIP_REASONS.includes(entry.skipReason)) {
+      errors.push(
+        `laneDetails.${lane}.skipReason must be one of: ${LANE_SKIP_REASONS.join(", ")}`,
+      );
+    }
+  }
   return errors;
 }
 
@@ -433,6 +619,37 @@ export function evaluateOracle({
     ok: failures.length === 0,
     failures,
   };
+}
+
+export function oracleEnabledFromManifest(manifest, group) {
+  const mapping = ORACLE_GROUPS[group];
+  if (!mapping) throw new Error(`unknown oracle group: ${group}`);
+  return Object.fromEntries(
+    Object.entries(mapping).map(([child, lanes]) => [
+      child,
+      lanes.some((lane) => manifest.lanes[lane] === true),
+    ]),
+  );
+}
+
+export function evaluateManifestOracle({
+  manifest,
+  group,
+  detector = "success",
+  children = {},
+}) {
+  const manifestErrors = validateManifest(manifest);
+  if (manifestErrors.length > 0) {
+    return {
+      ok: false,
+      failures: manifestErrors.map((error) => `manifest: ${error}`),
+    };
+  }
+  return evaluateOracle({
+    detector,
+    enabled: oracleEnabledFromManifest(manifest, group),
+    children,
+  });
 }
 
 export function createRunSummary({

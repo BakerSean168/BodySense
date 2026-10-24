@@ -5,7 +5,7 @@ import { validateManifest } from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
-  console.error("usage: run-quality.mjs <delivery-manifest-v1.json>");
+  console.error("usage: run-quality.mjs <delivery-manifest-v2.json>");
   process.exit(2);
 }
 
