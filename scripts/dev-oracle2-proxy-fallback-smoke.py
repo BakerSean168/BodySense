@@ -21,11 +21,14 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-STUB = runpy.run_path(
+SDK_SMOKE = runpy.run_path(
     str(Path(__file__).with_name("dev-oracle2-fallback-negative-smoke.py"))
-)["StubUpstream"]
+)
+STUB = SDK_SMOKE["StubUpstream"]
+NON_FALLBACK_STATUSES = SDK_SMOKE["NON_FALLBACK_STATUSES"]
+FALLBACK_STATUSES = SDK_SMOKE["FALLBACK_STATUSES"]
 AUTH = "sk-synthetic-proxy-smoke"
-CASES = (200, 400, 401, 403, 408, 429, 500, 503)
+CASES = (200, *NON_FALLBACK_STATUSES, *FALLBACK_STATUSES)
 
 
 def free_port() -> int:
@@ -34,7 +37,7 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def proxy_call(url: str) -> tuple[int, str | None]:
+def proxy_call(url: str, *, auth: str = AUTH) -> tuple[int, str | None]:
     payload = json.dumps(
         {
             "model": "synthetic-primary",
@@ -46,7 +49,7 @@ def proxy_call(url: str) -> tuple[int, str | None]:
         method="POST",
         data=payload,
         headers={
-            "Authorization": f"Bearer {AUTH}",
+            "Authorization": f"Bearer {auth}",
             "Content-Type": "application/json",
         },
     )
@@ -132,7 +135,32 @@ general_settings:
                             "synthetic LiteLLM proxy did not become healthy"
                         )
 
-                    ok_all = True
+                    # Reject an invalid local gateway key before any upstream
+                    # request. LiteLLM v1.102.1 may return HTTP 400 rather than
+                    # 401 for a syntactically valid but unrecognized dev key.
+                    STUB.attempts = []
+                    bad_auth_status, bad_auth_answer = proxy_call(
+                        f"http://127.0.0.1:{port}/v1/chat/completions",
+                        auth="sk-synthetic-invalid-local-key",
+                    )
+                    bad_auth_attempts = list(STUB.attempts)
+                    ok_all = (
+                        bad_auth_status in (400, 401, 403)
+                        and bad_auth_answer is None
+                        and bad_auth_attempts == []
+                    )
+                    print(
+                        json.dumps(
+                            {
+                                "case": "invalid_local_gateway_key",
+                                "http_status": bad_auth_status,
+                                "attempts": bad_auth_attempts,
+                                "pass": ok_all,
+                            },
+                            sort_keys=True,
+                        ),
+                        flush=True,
+                    )
                     for upstream_status in CASES:
                         STUB.primary_status = upstream_status
                         STUB.attempts = []
@@ -146,7 +174,7 @@ general_settings:
                                 and answer == "PRIMARY_OK"
                                 and attempts == ["primary"]
                             )
-                        elif upstream_status in (400, 401, 403):
+                        elif upstream_status in NON_FALLBACK_STATUSES:
                             ok = (
                                 status == upstream_status
                                 and answer is None

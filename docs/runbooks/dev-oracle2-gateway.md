@@ -213,8 +213,14 @@ docker run --rm --network none --entrypoint python \
 
 WSL evidence (2026-10-24): Router SDK 14/14 synthetic status cases passed,
 `FALLBACK_NEGATIVE_SMOKE=PASS` (job `job_req_df3e24297e208aae23830cca6f5b6231`).
-The local HTTP proxy passed 8/8 cases, `PROXY_FALLBACK_NEGATIVE_SMOKE=PASS`
-(job `job_req_c1d159685bd4328f97026f79d3aa5f79`). The proxy smoke disables
+The local HTTP proxy initially passed 8/8 cases, `PROXY_FALLBACK_NEGATIVE_SMOKE=PASS`
+(job `job_req_c1d159685bd4328f97026f79d3aa5f79`). Expanded WSL HTTP proxy
+regression passed **15/15 synthetic checks** on 2026-10-24 (job
+`job_req_40367ac0b084789cc20b3ad9fd8cce33`): all 14 SDK status cases plus
+an invalid local gateway key rejected without any upstream attempt. LiteLLM
+v1.102.1 returned HTTP 400 (not 401) for that synthetic invalid key; this
+client-facing status detail remains a separate compatibility consideration.
+The proxy smoke disables
 cooldowns **only in its own synthetic config** so one test does not suppress a
 subsequent upstream call. The real gateway settings remain unchanged. The
 unpatched upstream v1.102.1 image should still **FAIL** the Router smoke.
