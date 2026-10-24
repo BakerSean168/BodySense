@@ -17,7 +17,7 @@ permissions:
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v3.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v4.json
 
 jobs:
   scope:
@@ -56,8 +56,8 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v3
-          path: reports/delivery/delivery-manifest-v3.json
+          name: delivery-manifest-v4
+          path: reports/delivery/delivery-manifest-v4.json
           if-no-files-found: error
           retention-days: 14
 
@@ -81,7 +81,7 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - run: >-
           node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
@@ -97,6 +97,8 @@ jobs:
         run: pnpm lint:oxlint:types
       - name: Validate delivery policy contracts
         run: node --test scripts/delivery/*.test.mjs
+      - name: Validate E2E shard partition completeness
+        run: node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json
       - name: Validate V2 active plans and handoff evidence
         run: |
           node scripts/plan/validate-v2-parallel.mjs
@@ -111,15 +113,42 @@ jobs:
           git cat-file -e "${head_sha}^{commit}"
           git diff --check "${base_sha}...${head_sha}"
 
-  quality-child:
-    name: Affected quality child
+  quality-web-child:
+    name: Web quality child
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
-      (needs.scope.outputs.lane_web == 'true' ||
-       needs.scope.outputs.lane_api == 'true' ||
-       needs.scope.outputs.lane_ai == 'true' ||
-       needs.scope.outputs.lane_full == 'true')
+      needs.scope.outputs.lane_web == 'true' &&
+      needs.scope.outputs.lane_full != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v4
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute web quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane web
+
+  quality-api-child:
+    name: API quality child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_api == 'true' &&
+      needs.scope.outputs.lane_full != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -131,35 +160,128 @@ jobs:
           node-version: 24
           cache: pnpm
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        if: >-
-          needs.scope.outputs.lane_api == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        if: >-
-          needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
-        with:
-          version: "0.12"
       - run: pnpm install --frozen-lockfile
-      - name: Sync Python environment when selected
-        if: >-
-          needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
-        working-directory: apps/ai-service
-        run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
           node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-      - name: Execute manifest-selected quality lanes
-        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
+      - name: Execute api quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane api
+
+  quality-ai-child:
+    name: AI quality child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_ai == 'true' &&
+      needs.scope.outputs.lane_full != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python environment
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra dev --extra ocr
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v4
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute ai quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane ai
+
+  quality-arch-child:
+    name: Architecture quality child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_web == 'true' ||
+       needs.scope.outputs.lane_api == 'true' ||
+       needs.scope.outputs.lane_ai == 'true') &&
+      needs.scope.outputs.lane_full != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v4
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute architecture boundary checks
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane arch
+
+  quality-full-child:
+    name: Full quality child (validate-repo)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python environment
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra dev --extra ocr
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v4
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute full repository validation
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane full
 
   contracts-child:
     name: Contract verification child
@@ -191,7 +313,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -209,7 +331,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -222,14 +344,23 @@ jobs:
 
   quality-oracle:
     name: Quality Oracle
-    needs: [scope, quality-child, contracts-child]
+    needs:
+      [
+        scope,
+        quality-web-child,
+        quality-api-child,
+        quality-ai-child,
+        quality-arch-child,
+        quality-full-child,
+        contracts-child,
+      ]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -238,7 +369,7 @@ jobs:
           --group quality
           --detector "${{ needs.scope.result }}"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"quality":"${{ needs.quality-child.result }}","contracts":"${{ needs.contracts-child.result }}"}'
+          --children-json '{"quality-full":"${{ needs.quality-full-child.result }}","quality-web":"${{ needs.quality-web-child.result }}","quality-api":"${{ needs.quality-api-child.result }}","quality-ai":"${{ needs.quality-ai-child.result }}","quality-arch":"${{ needs.quality-arch-child.result }}","contracts":"${{ needs.contracts-child.result }}"}'
 
   migrations-child:
     name: PostgreSQL 18 vNext baseline child
@@ -376,7 +507,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -388,13 +519,21 @@ jobs:
           --children-json '{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}'
 
   e2e-child:
-    name: Browser longitudinal health E2E child
+    name: Browser longitudinal health E2E child (shard ${{ matrix.shard }})
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
     env:
       BODYSENSE_E2E_STUB_AI: "1"
+      E2E_BLOB: "1"
+    # The shard count must match apps/web/e2e/shards.json: a missing shard
+    # fails the merged-report verification in e2e-report-child, and an
+    # extra shard fails plan-shards --files-for below.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -484,19 +623,67 @@ jobs:
           done
           cat /tmp/bodysense-ai.log
           exit 1
-      - name: Run browser E2E
+      - name: Resolve shard spec files
+        id: shard-files
+        run: |
+          files="$(node scripts/e2e/plan-shards.mjs --files-for ${{ matrix.shard }} --partition apps/web/e2e/shards.json)"
+          echo "Shard ${{ matrix.shard }} specs: ${files}"
+          echo "files=${files}" >> "$GITHUB_OUTPUT"
+      - name: Run browser E2E shard
         env:
           CI: "true"
           E2E_BASE_URL: http://127.0.0.1:5173
           E2E_API_BASE_URL: http://127.0.0.1:8080
           VITE_BODYSENSE_ANATOMY_CATALOG_URL: https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json
-        run: pnpm e2e
+        run: pnpm exec playwright test ${{ steps.shard-files.outputs.files }}
       - name: Print service logs on failure
         if: failure()
         run: |
           cat /tmp/bodysense-api.log || true
           cat /tmp/bodysense-ai.log || true
-      - name: Upload Playwright report
+      - name: Upload E2E blob report for this shard
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: e2e-blob-shard-${{ matrix.shard }}
+          path: blob-report/
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e-report-child:
+    name: E2E merged report child
+    needs: [scope, e2e-child]
+    if: >-
+      always() &&
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download every shard blob report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: e2e-blob-shard-*
+          path: blob-reports
+          merge-multiple: true
+      - name: Merge shard reports
+        run: |
+          mkdir -p reports/e2e
+          pnpm exec playwright merge-reports --reporter html blob-reports
+          pnpm exec playwright merge-reports --reporter json blob-reports > reports/e2e/merged-results.json
+      - name: Verify merged report covers the whole shard partition
+        if: always()
+        run: >-
+          node scripts/e2e/verify-merged-report.mjs
+          --merged reports/e2e/merged-results.json
+          --partition apps/web/e2e/shards.json
+      - name: Upload merged Playwright report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -523,7 +710,7 @@ jobs:
           cache: pnpm
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -537,14 +724,14 @@ jobs:
 
   experience-oracle:
     name: Experience Oracle
-    needs: [scope, e2e-child, component-child]
+    needs: [scope, e2e-report-child, component-child]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -553,19 +740,24 @@ jobs:
           --group experience
           --detector "${{ needs.scope.result }}"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"experience":"${{ needs.e2e-child.result }}","component":"${{ needs.component-child.result }}"}'
+          --children-json '{"experience":"${{ needs.e2e-report-child.result }}","component":"${{ needs.component-child.result }}"}'
 
   delivery-observation:
     name: Delivery Observation
     needs:
       - scope
       - governance-child
-      - quality-child
+      - quality-web-child
+      - quality-api-child
+      - quality-ai-child
+      - quality-arch-child
+      - quality-full-child
       - contracts-child
       - component-child
       - migrations-child
       - recovery-migrations-child
       - e2e-child
+      - e2e-report-child
       - governance-oracle
       - quality-oracle
       - database-oracle
@@ -576,20 +768,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v3
+          name: delivery-manifest-v4
           path: reports/delivery
       - name: Materialize execution outcomes
+        env:
+          QUALITY_RESULTS: >-
+            ${{ needs.quality-web-child.result }}
+            ${{ needs.quality-api-child.result }}
+            ${{ needs.quality-ai-child.result }}
+            ${{ needs.quality-arch-child.result }}
+            ${{ needs.quality-full-child.result }}
         run: |
           mkdir -p reports/delivery
-          cat > reports/delivery/lane-results.json <<'JSON'
+          quality="skipped"
+          for result in $QUALITY_RESULTS; do
+            case "$result" in
+              failure|cancelled) quality="failure" ;;
+              success) if [ "$quality" != "failure" ]; then quality="success"; fi ;;
+            esac
+          done
+          cat > reports/delivery/lane-results.json <<JSON
           {
             "governance": "${{ needs.governance-child.result }}",
-            "quality": "${{ needs.quality-child.result }}",
+            "quality": "${quality}",
             "contracts": "${{ needs.contracts-child.result }}",
             "component": "${{ needs.component-child.result }}",
             "database-baseline": "${{ needs.migrations-child.result }}",
             "database-recovery": "${{ needs.recovery-migrations-child.result }}",
-            "experience": "${{ needs.e2e-child.result }}"
+            "experience": "${{ needs.e2e-report-child.result }}"
           }
           JSON
           cat > reports/delivery/oracle-results.json <<'JSON'

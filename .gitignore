@@ -86,6 +86,7 @@ check_wsl.bat
 coverage/
 .nyc_output/
 playwright-report/
+blob-report/
 test-results/
 
 # Secrets

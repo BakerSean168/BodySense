@@ -13,7 +13,14 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  // CI shard jobs set E2E_BLOB=1: each shard emits a blob report and the
+  // e2e-report-child merges them into the single HTML report (plus a JSON
+  // completeness check against apps/web/e2e/shards.json).
+  reporter: process.env.CI
+    ? process.env.E2E_BLOB === "1"
+      ? [["blob"], ["github"]]
+      : [["github"], ["html", { open: "never" }]]
+    : "list",
   use: {
     baseURL: webBase,
     trace: "retain-on-failure",
