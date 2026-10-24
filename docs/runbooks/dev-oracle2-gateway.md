@@ -17,6 +17,7 @@ logical groups. Production and staging are unaffected: they keep
 | `scripts/dev-env.sh` | Opt-in switch, key presence check, Tailscale IP resolution/validation |
 | `scripts/dev-infra.sh`, `scripts/dev-runtime.sh` | Append the overlay only when the opt-in is on |
 | `scripts/dev-oracle2-gateway-eval.py` | Per-channel fixed-model measurement (deferred) |
+| `scripts/dev-oracle2-route-preflight.py` | Fail-closed complete dev topology check before Compose mutation |
 | `scripts/dev-oracle2-fallback-negative-smoke.py` | Local synthetic Router SDK fail-closed regression |
 | `scripts/dev-oracle2-proxy-fallback-smoke.py` | Local synthetic proxy HTTP regression (no provider network) |
 | `apps/ai-service/tests/unit/test_dev_oracle2_gateway_opt_in.py` | Structural/schema guard (no network) |
@@ -54,8 +55,16 @@ No shared Oracle2 registry or runtime routing was changed during this audit.
 The qualified `llm-pm-deepseek-0731` binding advertises the upstream
 `openai-responses` protocol (credential metadata is chat-compatible); Oracle2's
 ProviderAdmin explicitly supports Chat Completions to Responses bridging.
-This resolves a superficial protocol-label mismatch, **not** supplier identity,
-client authorization, or actual end-to-end wire compatibility.
+A 2026-10-24 read-only `--inspect-resource` reconfirmed that the qualified
+`llm-pm-deepseek-0731/deepseek-v4.1-flash-1017` binding is unblocked and
+marked FREE, while `kunyou-free` also has an unblocked binding to the shared
+unqualified DeepSeek group. Neither fact identifies `llm-pm-deepseek-0731`
+as the originally intended Nanliang account. Exact resource IDs
+`openrouter-free` and `groq-free` returned zero bindings; this is **not**
+an exhaustive search of differently named resources, and is not an upstream
+OpenRouter/Groq authorization result.
+These facts resolve a superficial protocol-label mismatch, **not** supplier
+identity, client authorization, or actual end-to-end wire compatibility.
 
 **WSL fail-closed start guard (2026-10-24):** `scripts/dev-infra.sh up`,
 `restart`, and `restart-gateway` now run
@@ -68,13 +77,26 @@ The guard also rejects duplicate LiteLLM deployments under the same
 non-DeepSeek model substitutions, and unexpected credentials/base URLs.
 It also enforces the declared five-edge fallback graph with retries disabled,
 rejecting extra/duplicate edges, unexpected targets (including pending Kunyou),
-and alternate fallback maps. A supplier pin alone cannot authorize a new edge.
-These checks prevent a second deployment or fallback path from hiding behind a
-matching entry.
+and alternate fallback maps. The guard validates **all** eleven declared
+deployments against the existing static model/provider contracts, requiring the
+original WindHub primary and probe routes, pending Kunyou probe, and unchanged
+OpenRouter Posture routes. It rejects new groups, unreviewed model parameters,
+credential/base-URL substitutions, unexpected root/router settings, and invalid
+timeouts; an apparently safe DeepSeek pin cannot hide a different primary,
+extra model, or diverted vision request. A supplier pin alone cannot authorize
+a new edge. These checks prevent a second deployment or fallback path from
+hiding behind a matching entry.
 This is a **local structure check only**, not proof that a qualified supplier
 is the originally intended Nanliang provider, that a Virtual Key permits the
 route, or that its wire protocol/inference works. Do not bypass it by choosing
 an arbitrary qualified route. Ordinary dev and staging/production are unchanged.
+
+WSL 2026-10-24 verification: the dedicated structural/security test module
+passed **134 tests**, including 13 new negative cases for non-fallback route
+substitutions. Ruff lint and format, Python syntax, and Git diff checks passed.
+The checked-in config still fails the preflight intentionally because the
+DeepSeek route remains supplier-ambiguous; no Oracle2 opt-in was started.
+This verification is synthetic and does not cover real provider authentication.
 
 `bodysense-posture` keeps its pre-existing OpenRouter vision configuration; Oracle2 has no
 qualified vision channel.

@@ -24,6 +24,22 @@ PIN_REQUIRED = (
     "bodysense-general-fallback",
     "bodysense-dev-oracle2-nanliang",
 )
+# A qualified DeepSeek name alone is insufficient: every other deployment
+# must also retain its existing provider, credentials, and transport boundary.
+# These are structural invariants, not a model-quality or supplier approval.
+EXPECTED_STATIC_MODELS = {
+    "bodysense-diagnosis": "openai/windhub-free/glm-5.3",
+    "bodysense-consultation": "openai/windhub-free/glm-5.3",
+    "bodysense-structured": "openai/windhub-free/glm-5.3",
+    "bodysense-text": "openai/windhub-free/glm-5.3",
+    "bodysense-dev-oracle2-windhub": "openai/windhub-free/glm-5.3",
+    "bodysense-dev-oracle2-kunyou": "openai/gpt-6-luna",
+    "bodysense-posture": "openrouter/qwen/qwen2.5-vl-72b-instruct",
+    "bodysense-posture-fallback": "openrouter/google/gemini-2.0-flash-001",
+}
+POSTURE_GROUPS = {"bodysense-posture", "bodysense-posture-fallback"}
+ORACLE2_PARAMS = {"model", "api_base", "api_key", "timeout"}
+POSTURE_PARAMS = {"model", "api_key", "timeout"}
 # Prevent a valid supplier pin from being bypassed by an added fallback edge
 # to an unqualified, unauthorized, or known-unavailable model group.
 EXPECTED_FALLBACKS = {
@@ -33,18 +49,17 @@ EXPECTED_FALLBACKS = {
     "bodysense-text": "bodysense-general-fallback",
     "bodysense-posture": "bodysense-posture-fallback",
 }
-ALTERNATE_FALLBACK_SETTINGS = (
-    "default_fallbacks",
-    "context_window_fallbacks",
-    "content_policy_fallbacks",
-)
 
 
 def has_supplier_qualified_routes(config_path: Path) -> bool:
     try:
         config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-        if not isinstance(config, dict) or not isinstance(
-            config.get("model_list"), list
+        if (
+            not isinstance(config, dict)
+            or set(config) != {"model_list", "router_settings", "general_settings"}
+            or not isinstance(config.get("model_list"), list)
+            or config.get("general_settings")
+            != {"master_key": "os.environ/LITELLM_MASTER_KEY"}
         ):
             return False
 
@@ -58,13 +73,35 @@ def has_supplier_qualified_routes(config_path: Path) -> bool:
             name = entry.get("model_name")
             params = entry.get("litellm_params")
             if (
-                not isinstance(name, str)
+                set(entry) != {"model_name", "litellm_params"}
+                or not isinstance(name, str)
                 or not name
                 or name in groups
                 or not isinstance(params, dict)
             ):
                 return False
             groups[name] = params
+
+        if set(groups) != set(EXPECTED_STATIC_MODELS) | set(PIN_REQUIRED):
+            return False
+        for name, params in groups.items():
+            is_posture = name in POSTURE_GROUPS
+            if set(params) != (POSTURE_PARAMS if is_posture else ORACLE2_PARAMS):
+                return False
+            if type(params["timeout"]) is not int or not 1 <= params["timeout"] <= 120:
+                return False
+            if is_posture:
+                if (
+                    params["api_key"] != "os.environ/OPENROUTER_API_KEY"
+                    or params["model"] != EXPECTED_STATIC_MODELS[name]
+                ):
+                    return False
+            elif params["api_base"] != ORACLE2_BASE or params["api_key"] != ORACLE2_KEY:
+                return False
+            if name in EXPECTED_STATIC_MODELS and (
+                params["model"] != EXPECTED_STATIC_MODELS[name]
+            ):
+                return False
 
         pinned_model = None
         for name in PIN_REQUIRED:
@@ -83,9 +120,14 @@ def has_supplier_qualified_routes(config_path: Path) -> bool:
             pinned_model = model
 
         router = config.get("router_settings")
-        if not isinstance(router, dict) or router.get("num_retries") != 0:
-            return False
-        if any(setting in router for setting in ALTERNATE_FALLBACK_SETTINGS):
+        if (
+            not isinstance(router, dict)
+            or set(router) != {"num_retries", "retry_after", "fallbacks"}
+            or type(router["num_retries"]) is not int
+            or router["num_retries"] != 0
+            or type(router["retry_after"]) is not int
+            or router["retry_after"] != 1
+        ):
             return False
         edges = router.get("fallbacks")
         if not isinstance(edges, list) or len(edges) != len(EXPECTED_FALLBACKS):

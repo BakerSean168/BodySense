@@ -1258,6 +1258,73 @@ def test_supplier_route_preflight_rejects_fallback_graph_bypass(
     assert "Traceback" not in result.stderr
 
 
+@pytest.mark.parametrize(
+    "unsafe_case",
+    [
+        "primary_model",
+        "primary_key",
+        "primary_base",
+        "probe_model",
+        "posture_model",
+        "posture_key",
+        "posture_base",
+        "extra_group",
+        "extra_model_param",
+        "extra_router_setting",
+        "extra_top_level",
+        "master_key",
+        "invalid_timeout",
+    ],
+)
+def test_supplier_route_preflight_rejects_non_fallback_route_bypass(
+    tmp_path: Path, unsafe_case: str
+) -> None:
+    """A valid DeepSeek pin cannot hide another deployment or redirected request."""
+    source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8").replace(
+        "model: openai/deepseek-v4.1-flash-1017",
+        "model: openai/synthetic-resource/deepseek-v4.1-flash-1017",
+    )
+    config = yaml.safe_load(source)
+    models = config["model_list"]
+    groups = {item["model_name"]: item["litellm_params"] for item in models}
+    if unsafe_case == "primary_model":
+        groups["bodysense-diagnosis"]["model"] = "openai/unreviewed/paid"
+    elif unsafe_case == "primary_key":
+        groups["bodysense-consultation"]["api_key"] = "os.environ/UNREVIEWED_KEY"
+    elif unsafe_case == "primary_base":
+        groups["bodysense-structured"]["api_base"] = "https://unreviewed.invalid/v1"
+    elif unsafe_case == "probe_model":
+        groups["bodysense-dev-oracle2-windhub"]["model"] = "openai/unreviewed/paid"
+    elif unsafe_case == "posture_model":
+        groups["bodysense-posture"]["model"] = "openai/unreviewed/paid"
+    elif unsafe_case == "posture_key":
+        groups["bodysense-posture-fallback"]["api_key"] = "os.environ/UNREVIEWED_KEY"
+    elif unsafe_case == "posture_base":
+        groups["bodysense-posture"]["api_base"] = "https://unreviewed.invalid/v1"
+    elif unsafe_case == "extra_group":
+        models.append(
+            {
+                "model_name": "bodysense-unreviewed",
+                "litellm_params": groups["bodysense-diagnosis"].copy(),
+            }
+        )
+    elif unsafe_case == "extra_model_param":
+        groups["bodysense-text"]["model_info"] = {"unreviewed": True}
+    elif unsafe_case == "extra_router_setting":
+        config["router_settings"]["routing_strategy"] = "simple-shuffle"
+    elif unsafe_case == "extra_top_level":
+        config["litellm_settings"] = {"unreviewed": True}
+    elif unsafe_case == "master_key":
+        config["general_settings"]["master_key"] = "os.environ/UNREVIEWED_KEY"
+    else:
+        groups["bodysense-text"]["timeout"] = 0
+    path = tmp_path / f"{unsafe_case}.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 1, (unsafe_case, result.stdout, result.stderr)
+    assert "Traceback" not in result.stderr
+
+
 @pytest.mark.parametrize("opt_in", ["0", "1"])
 def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_in: str) -> None:
     """The safe gateway restart must never call Compose down or recreate DB/Redis."""
