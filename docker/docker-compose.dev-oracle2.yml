@@ -12,6 +12,12 @@
 # opt-in is enabled without a key.
 services:
   litellm-gateway:
+    # Dev-only derived image fails the build if upstream LiteLLM Router changes.
+    # No normal dev, staging or production image is replaced.
+    build:
+      context: ./litellm
+      dockerfile: Dockerfile.dev-oracle2-gateway
+    image: bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback
     environment:
       # Physical upstream for the isolated dev config. The os.environ/ references
       # in config.dev-oracle2.yaml resolve from these two variables only.

@@ -4,14 +4,14 @@
 Dev-only security regression, NOT a model-quality evaluation. No external API,
 credentials, production database or real model request is used.
 
-Run inside the existing pinned LiteLLM image:
+Run inside the WSL-only pinned and patched LiteLLM image:
   docker run --rm --network none --entrypoint python \
     -e LITELLM_LOCAL_MODEL_COST_MAP=True \
     -v "$PWD/scripts/dev-oracle2-fallback-negative-smoke.py:/tmp/fallback-smoke.py:ro" \
-    docker.litellm.ai/berriai/litellm:v1.102.1 /tmp/fallback-smoke.py
+    bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback /tmp/fallback-smoke.py
 
-Exit 0 only when 4xx fail closed and transient errors can use the configured
-fallback. An expected FAIL on an unpatched image is a real release blocker.
+Exit 0 only when non-transient errors fail closed and eligible transient errors
+can use fallback. The unpatched upstream v1.102.1 image must FAIL.
 """
 
 from __future__ import annotations
@@ -20,18 +20,19 @@ import asyncio
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import ClassVar
 
 from litellm import Router
 
 # Auth/business invalidity must not be masked by another model's answer.
-NON_FALLBACK_STATUSES = (400, 401, 403)
+NON_FALLBACK_STATUSES = (400, 401, 402, 403, 404, 409, 422)
 # Provider failures eligible for fallback, if the fallback is healthy.
-FALLBACK_STATUSES = (408, 429, 500, 503)
+FALLBACK_STATUSES = (408, 429, 500, 502, 503, 504)
 
 
 class StubUpstream(BaseHTTPRequestHandler):
     primary_status = 200
-    attempts: list[str] = []
+    attempts: ClassVar[list[str]] = []
 
     def do_POST(self) -> None:
         if self.path != "/v1/chat/completions":
@@ -56,11 +57,17 @@ class StubUpstream(BaseHTTPRequestHandler):
                         "finish_reason": "stop",
                         "message": {
                             "role": "assistant",
-                            "content": "FALLBACK_OK" if model == "fallback" else "PRIMARY_OK",
+                            "content": "FALLBACK_OK"
+                            if model == "fallback"
+                            else "PRIMARY_OK",
                         },
                     }
                 ],
-                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "usage": {
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                    "total_tokens": 2,
+                },
             }
         else:
             payload = {
@@ -113,10 +120,11 @@ async def check_case(base_url: str, status: int) -> tuple[bool, dict]:
     error_status = None
     try:
         response = await router.acompletion(
-            model="synthetic-primary", messages=[{"role": "user", "content": "synthetic"}]
+            model="synthetic-primary",
+            messages=[{"role": "user", "content": "synthetic"}],
         )
         result = response.choices[0].message.content
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 - inspect every Router failure as test data
         error_status = getattr(error, "status_code", None)
     finally:
         close = getattr(router, "close", None)
@@ -149,7 +157,9 @@ async def run_tests() -> bool:
             ok, outcome = await check_case(base_url, status)
             print(json.dumps(outcome, sort_keys=True), flush=True)
             passed_all &= ok
-        print("FALLBACK_NEGATIVE_SMOKE=" + ("PASS" if passed_all else "FAIL"), flush=True)
+        print(
+            "FALLBACK_NEGATIVE_SMOKE=" + ("PASS" if passed_all else "FAIL"), flush=True
+        )
         return passed_all
     finally:
         server.shutdown()

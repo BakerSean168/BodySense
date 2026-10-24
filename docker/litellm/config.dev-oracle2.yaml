@@ -112,16 +112,13 @@ model_list:
       timeout: 60
 
 router_settings:
-  # num_retries: 0 disables RETRIES only. It does NOT stop fallbacks: measured
-  # on LiteLLM v1.102.1 with a synthetic upstream, ordinary `fallbacks` also
-  # fires on 400, 401 and 403, so an authentication or business-validation
-  # failure on WindHub is answered by the Nanliang fallback instead of surfacing
-  # as an error. That is a known, accepted DEV-ONLY limitation of this file, not
-  # a claim of fail-closed auth handling. The eval script therefore measures
-  # each channel through the fixed `bodysense-dev-oracle2-*` groups below, which
-  # have no fallback edge, so a probe can never be silently answered by another
-  # provider. Do not promote this topology to staging/production without a
-  # fail-closed auth story.
+  # num_retries: 0 disables RETRIES only. Unpatched LiteLLM v1.102.1
+  # falls back on 400/401/403. The WSL dev-only derived image applies a
+  # source-SHA-verified fail-closed patch before fallback dispatch: only
+  # 408/429/500/502/503/504 or transport failures may use the next group.
+  # Never use this config with the unpatched upstream image. Fixed probe groups
+  # still have no fallback and always test the named physical channel.
+  # Staging/production are unchanged and need independent acceptance.
   num_retries: 0
   retry_after: 1
   # Ordered capability fallback. Deterministic, single edge per group. The

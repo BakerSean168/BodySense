@@ -181,6 +181,11 @@ def test_overlay_injects_key_by_environment_and_fails_closed_without_it() -> Non
     assert gateway["environment"]["ORACLE2_BODYSENSE_BASE_URL"] == (
         "${ORACLE2_BODYSENSE_BASE_URL:-https://oracle.taile92a8e.ts.net:10446/v1}"
     )
+    assert gateway["image"] == "bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback"
+    assert gateway["build"] == {
+        "context": "./litellm",
+        "dockerfile": "Dockerfile.dev-oracle2-gateway",
+    }
     # The overlay must not touch the network boundary or port publishing.
     assert "network_mode" not in gateway
     assert "ports" not in gateway
@@ -1071,7 +1076,10 @@ def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_i
     commands = trace.read_text(encoding="utf-8").splitlines()
     assert len(commands) == 2
     restart, status = commands
-    assert "up -d --no-deps --force-recreate --wait --wait-timeout 120 litellm-gateway" in restart
+    assert (
+        "up -d --no-deps --build --force-recreate --wait --wait-timeout 120 litellm-gateway"
+        in restart
+    )
     assert "postgres-dev" not in restart
     assert "redis-dev" not in restart
     assert " down " not in f" {restart} "

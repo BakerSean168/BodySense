@@ -20,7 +20,7 @@ compose+=(--profile dev)
 services=(postgres-dev redis-dev litellm-gateway)
 
 up() {
-  "${compose[@]}" up -d --wait --wait-timeout 120 "${services[@]}"
+  "${compose[@]}" up -d --build --wait --wait-timeout 120 "${services[@]}"
   status
 }
 
@@ -36,7 +36,7 @@ down() {
 # Recreate only the local LiteLLM gateway (for example after a Tailnet IP change).
 # Never down the shared dev Compose project or recreate postgres-dev/redis-dev.
 restart_gateway() {
-  "${compose[@]}" up -d --no-deps --force-recreate --wait --wait-timeout 120 litellm-gateway
+  "${compose[@]}" up -d --no-deps --build --force-recreate --wait --wait-timeout 120 litellm-gateway
   status
 }
 

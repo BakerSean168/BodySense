@@ -12,10 +12,13 @@ logical groups. Production and staging are unaffected: they keep
 | File | Role |
 | --- | --- |
 | `docker/litellm/config.dev-oracle2.yaml` | Isolated dev gateway topology (Oracle2 upstream) |
+| `docker/litellm/Dockerfile.dev-oracle2-gateway`, `patch-dev-oracle2-fallback.py` | WSL dev-only pinned Router fail-closed image |
 | `docker/docker-compose.dev-oracle2.yml` | Opt-in overlay: config mount, key env, `extra_hosts` |
 | `scripts/dev-env.sh` | Opt-in switch, key presence check, Tailscale IP resolution/validation |
 | `scripts/dev-infra.sh`, `scripts/dev-runtime.sh` | Append the overlay only when the opt-in is on |
-| `scripts/dev-oracle2-gateway-eval.py` | Per-channel fixed-model measurement |
+| `scripts/dev-oracle2-gateway-eval.py` | Per-channel fixed-model measurement (deferred) |
+| `scripts/dev-oracle2-fallback-negative-smoke.py` | Local synthetic Router SDK fail-closed regression |
+| `scripts/dev-oracle2-proxy-fallback-smoke.py` | Local synthetic proxy HTTP regression (no provider network) |
 | `apps/ai-service/tests/unit/test_dev_oracle2_gateway_opt_in.py` | Structural/schema guard (no network) |
 
 Nothing here changes the Docker network boundary: the gateway keeps the project bridge
@@ -171,50 +174,57 @@ Exit codes:
   pending channel unexpectedly passed (`ORACLE2_GATEWAY_EVAL=REQUALIFY`), which demands a
   deliberate re-qualification before anything is wired into a live path.
 
-## Known limitation: auth errors trigger fallback
+## Dev-only fail-closed fallback (WSL)
 
-Reproduce with the **pinned LiteLLM v1.102.1 image** and a local synthetic HTTP
-upstream. This requires Docker on WSL but uses `--network none`, no real provider
-keys, no external model calls, and no production or shared Compose containers:
+LiteLLM v1.102.1 **upstream** has a reproduced regression: ordinary Router
+`fallbacks` send 400/401/403 to another model group. The baseline synthetic
+smoke on WSL (2026-10-24, execution `job_req_44829f0baf7bf9028f48e8e1a09ac16c`)
+recorded `FALLBACK_NEGATIVE_SMOKE=FAIL`. `num_retries: 0` does not prevent
+this behavior.
+
+The **opt-in WSL dev overlay only** builds
+`bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback` from the immutable
+v1.102.1 upstream digest. The small build-time source patch requires an
+exact SHA256 match on `router.py` and aborts the image build on an upstream
+change. The patched Router permits cross-group fallback only for HTTP
+408/429/500/502/503/504 and known transport failures. Every other status,
+including HTTP 400/401/402/403/404/409/422, fails closed with no fallback.
+No fallback ordering, logical model names or authentication environment
+variables were changed.
+
+Build **without accessing providers** and verify with synthetic local HTTP
+responses; `--network none` does not disable container loopback:
 
 ```bash
+docker build --network none -t bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback \
+  -f docker/litellm/Dockerfile.dev-oracle2-gateway docker/litellm
 docker run --rm --network none --entrypoint python \
   -e LITELLM_LOCAL_MODEL_COST_MAP=True \
   -v "$PWD/scripts/dev-oracle2-fallback-negative-smoke.py:/tmp/fallback-smoke.py:ro" \
-  docker.litellm.ai/berriai/litellm:v1.102.1 /tmp/fallback-smoke.py
+  bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback /tmp/fallback-smoke.py
+
+# Independently exercise the HTTP proxy, not only the Router SDK:
+docker run --rm --network none --entrypoint python \
+  -e LITELLM_LOCAL_MODEL_COST_MAP=True \
+  -v "$PWD/scripts:/tmp/bodysense-scripts:ro" \
+  bodysense/litellm-dev-oracle2:v1.102.1-safe-fallback \
+  /tmp/bodysense-scripts/dev-oracle2-proxy-fallback-smoke.py
 ```
 
-The script exercises the LiteLLM Router SDK path with the same one-edge fallback
-semantics as this dev config. It expects 400/401/403 to return their original
-errors without invoking the backup; 408/429/500/503 may use a healthy backup.
-The smoke test **deliberately exits 1 while the vulnerability exists**. It is
-not a proxy authentication or end-to-end business acceptance test, and must not
-be mistaken for one.
+WSL evidence (2026-10-24): Router SDK 14/14 synthetic status cases passed,
+`FALLBACK_NEGATIVE_SMOKE=PASS` (job `job_req_df3e24297e208aae23830cca6f5b6231`).
+The local HTTP proxy passed 8/8 cases, `PROXY_FALLBACK_NEGATIVE_SMOKE=PASS`
+(job `job_req_c1d159685bd4328f97026f79d3aa5f79`). The proxy smoke disables
+cooldowns **only in its own synthetic config** so one test does not suppress a
+subsequent upstream call. The real gateway settings remain unchanged. The
+unpatched upstream v1.102.1 image should still **FAIL** the Router smoke.
 
-Observed on WSL 2026-10-24 (job `wsl-local::job_req_44829f0baf7bf9028f48e8e1a09ac16c`):
-200 returned the primary response; 400, 401 and 403 each invoked the fallback
-and returned a successful synthetic response (**FAIL**); 408, 429, 500 and 503
-correctly invoked the fallback (**PASS**). Overall
-`FALLBACK_NEGATIVE_SMOKE=FAIL`. This is independent evidence that the dev gateway
-cannot yet be promoted. Do not disable or weaken the negative check to make CI
-green.
-
-Measured on LiteLLM v1.102.1 with a synthetic upstream: `num_retries: 0` disables
-**retries only**. Ordinary `router_settings.fallbacks` also fires on **400, 401 and 403**, so
-an authentication or business-validation failure on WindHub is answered by the Nanliang
-fallback instead of surfacing as an error.
-
-This is an accepted **dev-only** limitation and a **known blocker**, not a fail-closed auth
-story. Do not describe this topology as fail-closed: an expired or unauthorized Oracle2 key
-on WindHub is currently masked by a Nanliang fallback answer. The eval script sidesteps the
-masking by probing fixed groups that have no fallback edge, so a capability result always
-comes from the channel it names. Do not promote this topology to staging or production
-without a fail-closed authentication design.
-
-This was **not** addressed by configuration. LiteLLM v1.102.1 introspection shows
-`Router.__init__` has no `fallback_on_unsupported_params` parameter, and no setting was
-invented to emulate one. The measured behaviour above stands; do not read this runbook as
-claiming auth errors are contained.
+Run `scripts/dev-infra.sh restart-gateway` (it rebuilds **only** the gateway
+when the opt-in is active) after checking Compose project/container ownership.
+Do not use the unpatched upstream image with `config.dev-oracle2.yaml`.
+This dev-only patch does not establish real API authentication, Oracle2
+end-to-end model inference, independent security review or staging/production
+acceptance.
 
 ## Related
 
