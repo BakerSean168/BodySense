@@ -34,14 +34,32 @@ Intended order for compatible non-vision groups: **WindHub → Kunyou → Nanlia
 | Kunyou | `gpt-6-luna` | **PENDING** — HTTP 503 "no channel" |
 | Nanliang | `deepseek-v4.1-flash-1017` | chat/JSON/tool/SSE HTTP 200 |
 
-Active serving edges: WindHub primary, Nanliang fallback. Kunyou is declared as
-`bodysense-dev-oracle2-kunyou` for measurement only and is deliberately **not** in
-`router_settings.fallbacks`. Do not add it until it answers HTTP 200.
+Active configured edges: WindHub primary, a DeepSeek fallback previously described
+as Nanliang. Kunyou is declared as `bodysense-dev-oracle2-kunyou` for measurement
+only and is deliberately **not** in `router_settings.fallbacks`. Do not add it
+until it answers HTTP 200.
+
+**New upstream identity blocker (Oracle2 read-only inventory, 2026-10-24):**
+`deepseek-v4.1-flash-1017` is now a **shared, unqualified** LiteLLM model group
+with at least two FREE supplier bindings: `llm-pm-deepseek-0731` and
+`kunyou-free`. The WSL fallback currently names this unqualified group, so
+its traffic is **not guaranteed to stay on the previously labeled Nanliang
+channel** and may instead select Kunyou. A separate supplier-qualified route
+`llm-pm-deepseek-0731/deepseek-v4.1-flash-1017` exists but has not yet been
+independently authorized as a substitute for Nanliang. The FREE designation
+alone is not a provider-identity or runtime-authentication acceptance.
+**Keep the dev-only Oracle2 opt-in disabled until the intended fallback
+supplier is reconciled and a dedicated scoped Virtual Key is available.**
+No shared Oracle2 registry or runtime routing was changed during this audit.
 
 `bodysense-posture` keeps its pre-existing OpenRouter vision configuration; Oracle2 has no
 qualified vision channel.
 
 ## Enable
+
+**Blocked pending supplier identity and scoped key:** the commands below are
+retained for future acceptance, not an instruction to activate this configuration
+while the unqualified fallback described above remains unresolved.
 
 ```bash
 cd /home/baker/projects/_bodysense_oracle2_gateway  # existing feature worktree
@@ -126,7 +144,8 @@ scripts/dev-infra.sh restart-gateway  # only litellm-gateway, not PostgreSQL/Red
 ```
 
 Override manually when needed: `ORACLE2_BODYSENSE_TAILSCALE_IP=100.x.y.z` (must still be
-inside `100.64.0.0/10`).
+inside `100.64.0.0/10`). Invalid override values are rejected without echoing
+untrusted input into stderr, even if it resembles a secret.
 
 ## Verify
 

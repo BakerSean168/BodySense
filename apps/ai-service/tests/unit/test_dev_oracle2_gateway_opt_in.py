@@ -306,6 +306,21 @@ def test_opt_in_rejects_explicit_override_outside_tailscale_range() -> None:
         assert "BODYSENSE_DEV_COMPOSE_OVERLAY=" not in completed.stdout
 
 
+def test_invalid_tailscale_override_never_leaks_input_to_logs() -> None:
+    marker = "synthetic-sensitive-value-not-a-real-key"
+    completed = _run_dev_env(
+        {
+            "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+            "ORACLE2_BODYSENSE_API_KEY": "placeholder-not-a-real-key",
+            "ORACLE2_BODYSENSE_TAILSCALE_IP": marker,
+        }
+    )
+    assert completed.returncode != 0
+    assert "is not a Tailscale 100.64.0.0/10 IPv4 address" in completed.stderr
+    assert marker not in completed.stdout + completed.stderr
+    assert "BODYSENSE_DEV_COMPOSE_OVERLAY=" not in completed.stdout
+
+
 def test_opt_in_accepts_explicit_tailscale_override_and_resolves_overlay() -> None:
     completed = _run_dev_env(
         {

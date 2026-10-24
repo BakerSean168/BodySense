@@ -147,7 +147,8 @@ case "${BODYSENSE_LITELLM_DEV_ORACLE2,,}" in
     elif ! oracle2_is_tailscale_ipv4 "${ORACLE2_BODYSENSE_TAILSCALE_IP}"; then
       # An explicit override is validated too: a typo or a stale public address
       # must not silently become the dev upstream pin.
-      echo "ORACLE2_BODYSENSE_TAILSCALE_IP=${ORACLE2_BODYSENSE_TAILSCALE_IP} is not a Tailscale 100.64.0.0/10 IPv4 address." >&2
+      # Do not reflect an untrusted override into logs; it may contain sensitive text.
+      echo "ORACLE2_BODYSENSE_TAILSCALE_IP is not a Tailscale 100.64.0.0/10 IPv4 address." >&2
       return 1 2>/dev/null || exit 1
     fi
     export ORACLE2_BODYSENSE_TAILSCALE_IP
