@@ -29,12 +29,50 @@ import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "docker" / "litellm" / "config.dev-oracle2.yaml"
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:20112/v1"
 PROBE_TIMEOUT_SECONDS = 150
+
+
+def local_gateway_url(raw: str) -> str:
+    """Reject non-loopback endpoints before using the local gateway credential.
+
+    IP literals avoid DNS rebinding. Exact matching also refuses URL userinfo,
+    query strings, fragments, nonstandard paths and embedded whitespace.
+    """
+    try:
+        parts = urlsplit(raw)
+        port = parts.port
+    except ValueError as exc:
+        raise ValueError("invalid gateway URL") from exc
+
+    if parts.scheme != "http" or parts.hostname not in ("127.0.0.1", "::1"):
+        raise ValueError("gateway must be a literal loopback HTTP endpoint")
+    if port is None or not 1 <= port <= 65535:
+        raise ValueError("gateway requires an explicit TCP port")
+    host = "127.0.0.1" if parts.hostname == "127.0.0.1" else "[::1]"
+    canonical = f"http://{host}:{port}/v1"
+    if raw not in (canonical, canonical + "/"):
+        raise ValueError("noncanonical local gateway URL")
+    return canonical
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never forward a Bearer key from the loopback gateway to a Location."""
+
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+# No environment-provided HTTP proxy or cross-host redirect may receive the
+# local gateway's Authorization header, even during a synthetic acceptance run.
+LOCAL_GATEWAY_OPENER = urllib.request.build_opener(
+    urllib.request.ProxyHandler({}), _NoRedirect()
+)
 
 
 @dataclass(frozen=True)
@@ -96,8 +134,9 @@ def _post(
     *,
     stream: bool = False,
 ) -> tuple[int, dict[str, Any] | str, float]:
+    gateway_url = local_gateway_url(gateway_url)
     request = urllib.request.Request(
-        f"{gateway_url.rstrip('/')}/chat/completions",
+        f"{gateway_url}/chat/completions",
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
@@ -107,7 +146,9 @@ def _post(
     )
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=PROBE_TIMEOUT_SECONDS) as response:
+        with LOCAL_GATEWAY_OPENER.open(
+            request, timeout=PROBE_TIMEOUT_SECONDS
+        ) as response:
             status = response.status
             raw = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as error:
@@ -510,6 +551,16 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    try:
+        gateway_url = local_gateway_url(args.gateway_url)
+    except ValueError:
+        # Never echo an untrusted URL: it can contain embedded credentials.
+        print(
+            "Gateway URL must be http://127.0.0.1:<port>/v1 or http://[::1]:<port>/v1.",
+            file=sys.stderr,
+        )
+        return 2
+
     api_key = (
         os.getenv("LITELLM_MASTER_KEY", "").strip()
         or os.getenv("LITELLM_API_KEY", "").strip()
@@ -518,7 +569,7 @@ def main() -> int:
         print("LITELLM_MASTER_KEY or LITELLM_API_KEY is required", file=sys.stderr)
         return 2
 
-    report = evaluate(args.gateway_url.rstrip("/"), api_key)
+    report = evaluate(gateway_url, api_key)
     rendered = json.dumps(report, indent=2, sort_keys=True)
     print(rendered)
     if args.json:

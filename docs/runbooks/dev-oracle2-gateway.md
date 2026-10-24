@@ -143,6 +143,14 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev-infra.y
 
 ## Per-channel evaluation
 
+**Deferred:** do not execute live channel/model evaluation in this integration pass. This
+helper remains documented for a separately authorized qualification run. Before any
+future use, it now accepts only a literal loopback gateway URL
+(`http://127.0.0.1:<port>/v1` or `http://[::1]:<port>/v1`), disables HTTP
+proxies and refuses redirects so a gateway master key cannot be forwarded to an
+untrusted endpoint. These protections were tested with synthetic local HTTP
+servers and no upstream model calls.
+
 ```bash
 source scripts/dev-env.sh
 python3 scripts/dev-oracle2-gateway-eval.py --json /tmp/oracle2-eval.json

@@ -1106,3 +1106,114 @@ def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_i
     assert "ps postgres-dev redis-dev litellm-gateway" in status
     assert ("docker-compose.dev-oracle2.yml" in restart) is (opt_in == "1")
     assert "synthetic-not-a-real-key" not in "\n".join(commands)
+
+
+# Local gateway master keys must never be sent to another host by the
+# deferred channel-acceptance helper, even if a CLI URL or redirect is hostile.
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "http://127.0.0.1:20112/v1",
+        "http://127.0.0.1:20112/v1/",
+        "http://[::1]:20112/v1",
+    ],
+)
+def test_oracle2_eval_accepts_only_literal_loopback_gateway(raw: str) -> None:
+    module = _eval_module()
+    assert module.local_gateway_url(raw) == raw.rstrip("/")
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://127.0.0.1:20112/v1",
+        "http://localhost:20112/v1",
+        "http://127.0.0.2:20112/v1",
+        "http://example.invalid:20112/v1",
+        "http://127.0.0.1:20112/v1?access=secret-marker",
+        "http://127.0.0.1:20112/v1#secret-marker",
+        "http://user:secret-marker@127.0.0.1:20112/v1",
+        "http://127.0.0.1:20112/v1/../v1",
+        "http://127.0.0.1:20112/v1//",
+        "http://127.0.0.1:0/v1",
+        "http://127.0.0.1/v1",
+        "http://[::1:20112/v1",
+        "http://127.0.0.1:20112/v1\n",
+    ],
+)
+def test_oracle2_eval_rejects_untrusted_or_noncanonical_urls(raw: str) -> None:
+    module = _eval_module()
+    with pytest.raises(ValueError):
+        module.local_gateway_url(raw)
+
+
+def test_oracle2_eval_refuses_untrusted_url_without_logging_secret(monkeypatch, capsys) -> None:
+    module = _eval_module()
+    marker = "secret-marker-must-not-log"
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-not-a-real-key")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "dev-oracle2-gateway-eval.py",
+            "--gateway-url",
+            f"https://user:{marker}@example.invalid/v1",
+        ],
+    )
+    calls = []
+    monkeypatch.setattr(module, "evaluate", lambda *args: calls.append(args))
+
+    assert module.main() == 2
+    captured = capsys.readouterr()
+    assert marker not in captured.err + captured.out
+    assert calls == []
+
+
+def test_oracle2_eval_does_not_follow_redirect_with_local_bearer_key() -> None:
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from threading import Thread
+
+    module = _eval_module()
+    redirected_requests: list[str] = []
+
+    class TargetHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            redirected_requests.append(self.headers.get("Authorization", ""))
+            self.send_response(200)
+            self.end_headers()
+
+        def do_POST(self):
+            self.do_GET()
+
+        def log_message(self, *_args):
+            pass
+
+    target = HTTPServer(("127.0.0.1", 0), TargetHandler)
+
+    class OriginHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{target.server_port}/capture")
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    origin = HTTPServer(("127.0.0.1", 0), OriginHandler)
+    threads = [Thread(target=server.serve_forever, daemon=True) for server in (target, origin)]
+    for thread in threads:
+        thread.start()
+    try:
+        status, _body, _elapsed = module._post(
+            f"http://127.0.0.1:{origin.server_port}/v1",
+            "synthetic-not-a-real-key",
+            {"model": "synthetic-only", "messages": []},
+        )
+        assert status == 302
+        assert redirected_requests == []
+    finally:
+        for server in (origin, target):
+            server.shutdown()
+            server.server_close()
+        for thread in threads:
+            thread.join(timeout=3)
