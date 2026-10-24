@@ -4,7 +4,7 @@
   "javascript": {
     "@redocly/cli": "2.54.2",
     "orval": "8.37.0",
-    "zod": "4.5.4",
+    "zod": "4.6.7",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "json-schema-to-typescript": "16.0.0"
