@@ -1,0 +1,9 @@
+# Only the opt-in BodySense WSL dev gateway uses this derived image.
+# Base is immutable; the patch script also verifies router.py's source SHA256.
+# No staging or production Compose file references this image.
+FROM docker.litellm.ai/berriai/litellm:v1.102.1@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+
+COPY patch-dev-oracle2-fallback.py /tmp/patch-dev-oracle2-fallback.py
+RUN python /tmp/patch-dev-oracle2-fallback.py \
+    && python -m py_compile /app/.venv/lib/python3.13/site-packages/litellm/router.py \
+    && rm /tmp/patch-dev-oracle2-fallback.py
