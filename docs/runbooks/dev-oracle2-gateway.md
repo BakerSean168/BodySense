@@ -58,6 +58,10 @@ No shared Oracle2 registry or runtime routing was changed during this audit.
 before any Compose changes. `scripts/dev-runtime.sh restart` also checks
 before stopping services. Until both serving DeepSeek fallback groups and the
 fixed-channel probe use supplier-qualified Oracle2 routes, this returns nonzero.
+The guard also rejects duplicate LiteLLM deployments under the same
+`model_name`, mismatched supplier pins across serving fallback and probe,
+non-DeepSeek model substitutions, and unexpected credentials/base URLs.
+These checks prevent a second deployment from hiding behind a matching entry.
 This is a **local structure check only**, not proof that a qualified supplier
 is the originally intended Nanliang provider, that a Virtual Key permits the
 route, or that its wire protocol/inference works. Do not bypass it by choosing

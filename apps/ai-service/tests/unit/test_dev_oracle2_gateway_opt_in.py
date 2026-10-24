@@ -1169,6 +1169,50 @@ def test_supplier_route_preflight_rejects_partial_pin_and_invalid_config(tmp_pat
     assert "Traceback" not in result.stderr
 
 
+@pytest.mark.parametrize(
+    "unsafe_case",
+    ["duplicate", "mixed_supplier", "other_model", "other_key", "invalid_entry"],
+)
+def test_supplier_route_preflight_rejects_deceptive_structural_pins(
+    tmp_path: Path, unsafe_case: str
+) -> None:
+    source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8").replace(
+        "model: openai/deepseek-v4.1-flash-1017",
+        "model: openai/synthetic-resource/deepseek-v4.1-flash-1017",
+    )
+    config = yaml.safe_load(source)
+    assert isinstance(config, dict)
+    models = config["model_list"]
+    fallback = next(
+        group for group in models if group["model_name"] == "bodysense-general-fallback"
+    )
+    if unsafe_case == "duplicate":
+        # A dictionary-based check would hide one deployment in this group.
+        models.append(
+            {
+                "model_name": fallback["model_name"],
+                "litellm_params": {
+                    **fallback["litellm_params"],
+                    "model": "openai/deepseek-v4.1-flash-1017",
+                },
+            }
+        )
+    elif unsafe_case == "mixed_supplier":
+        fallback["litellm_params"]["model"] = "openai/synthetic-other/deepseek-v4.1-flash-1017"
+    elif unsafe_case == "other_model":
+        fallback["litellm_params"]["model"] = "openai/synthetic-resource/paid-model"
+    elif unsafe_case == "other_key":
+        fallback["litellm_params"]["api_key"] = "os.environ/UNRELATED_KEY"
+    else:
+        models.append(None)
+
+    path = tmp_path / f"{unsafe_case}.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+
+
 @pytest.mark.parametrize("opt_in", ["0", "1"])
 def test_restart_gateway_never_restarts_other_dev_services(tmp_path: Path, opt_in: str) -> None:
     """The safe gateway restart must never call Compose down or recreate DB/Redis."""
