@@ -1455,7 +1455,7 @@ test("stacked pull requests receive CI without broadening main candidate promoti
   assert.doesNotMatch(ci, /  pull_request:\n    branches:/);
   assert.match(
     ci,
-    /DELIVERY_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.event\.before \}\}/,
+    /DELIVERY_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \|\| github\.event\.before \|\| github\.sha \}\}/,
   );
   assert.match(
     ci,
