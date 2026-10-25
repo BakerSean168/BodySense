@@ -166,8 +166,9 @@ and alternate fallback maps. The guard validates **all** eleven declared
 deployments against the existing static model/provider contracts, requiring the
 original WindHub primary and probe routes, pending Kunyou probe, and unchanged
 OpenRouter Posture routes. It rejects new groups, unreviewed model parameters,
-credential/base-URL substitutions, unexpected root/router settings, and invalid
-timeouts; an apparently safe DeepSeek pin cannot hide a different primary,
+credential/base-URL substitutions, unexpected root/router settings, and
+**any per-deployment timeout change** (not just out-of-range values); an
+apparently safe DeepSeek pin cannot hide a different primary,
 extra model, or diverted vision request. A supplier pin alone cannot authorize
 a new edge. These checks prevent a second deployment or fallback path from
 hiding behind a matching entry.

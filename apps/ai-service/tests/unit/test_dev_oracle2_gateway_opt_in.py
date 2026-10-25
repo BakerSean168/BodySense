@@ -1333,6 +1333,43 @@ def test_supplier_route_preflight_rejects_fallback_graph_bypass(
 
 
 @pytest.mark.parametrize(
+    ("group_name", "unreviewed_timeout"),
+    [
+        ("bodysense-diagnosis", 120),
+        ("bodysense-general-fallback", 45),
+        ("bodysense-posture", 90),
+        ("bodysense-dev-oracle2-kunyou", 60),
+        ("bodysense-dev-oracle2-windhub", 60),
+    ],
+)
+def test_supplier_route_preflight_rejects_in_range_timeout_drift(
+    tmp_path: Path, group_name: str, unreviewed_timeout: int
+) -> None:
+    """Only reviewed per-deployment timeouts pass, even within the old valid range."""
+    config = _load(DEV_ORACLE2_CONFIG)
+    for entry in config["model_list"]:
+        params = entry["litellm_params"]
+        if params["model"] == NANLIANG_MODEL:
+            params["model"] = "openai/synthetic-resource/deepseek-v4.1-flash-1017"
+
+    path = tmp_path / "qualified.yaml"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    preflight = runpy.run_path(str(ROOT / "scripts/dev-oracle2-route-preflight.py"))
+    assert preflight["has_supplier_qualified_routes"](path)
+    assert set(preflight["EXPECTED_TIMEOUTS"]) == set(_groups(config))
+
+    for entry in config["model_list"]:
+        if entry["model_name"] == group_name:
+            entry["litellm_params"]["timeout"] = unreviewed_timeout
+            break
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    assert not preflight["has_supplier_qualified_routes"](path)
+    result = _supplier_route_preflight(path)
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize(
     "unsafe_case",
     [
         "primary_model",

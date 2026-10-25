@@ -43,6 +43,21 @@ EXPECTED_STATIC_MODELS = {
     "bodysense-posture-fallback": "openrouter/google/gemini-2.0-flash-001",
 }
 POSTURE_GROUPS = {"bodysense-posture", "bodysense-posture-fallback"}
+# Keep the exact reviewed latency ceilings: otherwise a supplier pin could hide
+# an unreviewed timeout change while every other routing invariant still passes.
+EXPECTED_TIMEOUTS = {
+    "bodysense-diagnosis": 90,
+    "bodysense-diagnosis-fallback": 60,
+    "bodysense-consultation": 90,
+    "bodysense-structured": 90,
+    "bodysense-text": 90,
+    "bodysense-general-fallback": 60,
+    "bodysense-posture": 60,
+    "bodysense-posture-fallback": 60,
+    "bodysense-dev-oracle2-windhub": 90,
+    "bodysense-dev-oracle2-kunyou": 20,
+    "bodysense-dev-oracle2-nanliang": 60,
+}
 ORACLE2_PARAMS = {"model", "api_base", "api_key", "timeout"}
 POSTURE_PARAMS = {"model", "api_key", "timeout"}
 # Prevent a valid supplier pin from being bypassed by an added fallback edge
@@ -93,7 +108,10 @@ def has_supplier_qualified_routes(config_path: Path) -> bool:
             is_posture = name in POSTURE_GROUPS
             if set(params) != (POSTURE_PARAMS if is_posture else ORACLE2_PARAMS):
                 return False
-            if type(params["timeout"]) is not int or not 1 <= params["timeout"] <= 120:
+            if (
+                type(params["timeout"]) is not int
+                or params["timeout"] != EXPECTED_TIMEOUTS[name]
+            ):
                 return False
             if is_posture:
                 if (
