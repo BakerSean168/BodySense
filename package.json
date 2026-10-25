@@ -22,7 +22,7 @@
     "test": "pnpm nx run-many -t test --all --exclude=bodysense",
     "e2e": "pnpm exec playwright test",
     "verify:release": "bash scripts/validate-repo.sh",
-    "verify:pr": "pnpm format:check && pnpm format:check:go && pnpm lint:oxlint && pnpm lint:oxlint:types && node --test scripts/delivery/*.test.mjs && node scripts/plan/validate-v2-parallel.mjs && node --test scripts/plan/*.test.mjs && node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json && pnpm nx affected -t lint,typecheck,test --base=origin/main --head=HEAD",
+    "verify:pr": "pnpm format:check && pnpm format:check:go && pnpm lint:oxlint && pnpm lint:oxlint:types && node --test scripts/delivery/*.test.mjs && node scripts/plan/validate-v2-parallel.mjs && node --test scripts/plan/*.test.mjs && node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json && pnpm nx affected -t lint,typecheck,test --base=origin/main --head=HEAD --exclude=bodysense",
     "validate:local-deploy": "bash scripts/local-deploy-validate.sh",
     "test:watch": "pnpm nx run-many -t test:watch --all --exclude=bodysense",
     "test:coverage": "pnpm nx run-many -t test:coverage --all --exclude=bodysense",
