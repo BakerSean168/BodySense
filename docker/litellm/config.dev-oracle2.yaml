@@ -11,13 +11,14 @@
 # Intended provider order for compatible NON-VISION logical groups:
 #   1. WindHub    windhub-free/glm-5.3            (measured: chat/JSON/tool OK)
 #   2. Kunyou     gpt-6-luna                      (PENDING: HTTP503 no channel)
-#   3. Nanliang   deepseek-v4.1-flash-1017        (measured: chat/JSON/tool/SSE OK)
+#   3. Nanliang   deepseek-v4.1-flash-1017        (HISTORICAL identity, NOT verified)
 #
-# The active fallback edge is WindHub -> Nanliang. Kunyou is declared so the
-# intended order is reviewable, but it is deliberately NOT wired into
-# router_settings.fallbacks until it is qualified: a known-503 upstream must not
-# be part of a live request path. Enable it by appending its group name to the
-# relevant fallback list after qualification.
+# IMPORTANT: the declared WindHub -> shared DeepSeek fallback is NOT cleared
+# for activation. Oracle2 binds this unqualified model group to multiple
+# suppliers; the WSL preflight deliberately blocks this topology until the
+# original supplier is identified and a scoped Virtual Key is authorized.
+# Kunyou is a pending fixed probe, not part of any serving fallback path.
+# Model evaluation and preferred-channel selection remain out of scope.
 #
 # No logical group has more than one deployment, and no weight/load-balancing
 # settings exist here: routing is deterministic ordered fallback, never random

@@ -1,6 +1,33 @@
 # Dev-Only Oracle2 Gateway (WSL)
 
-Status: dev-only opt-in, **not qualified for staging or production**.
+Status: dev-only opt-in, **blocked for activation; not qualified for staging or production**.
+
+**WSL independent checkpoint (2026-10-25):** `wsl-local` recovered and the
+existing clean feature worktree at `/home/baker/projects/_bodysense_oracle2_gateway`
+was verified at `df6e10142f2ea0e377a3f3ee23833e8f8c14c29f`.
+There was no BodySense T3 thread or running BodySense Writer, and the normal
+`/home/baker/projects/bodysense` worktree remained on `main`.
+The feature worktree's `.env.dev.local`, `.env.local`, `.env`, and `.env.dev`
+were absent; no dedicated Virtual Key or OpenRouter/Groq API credential was
+available through those files. No keys were read or created.
+The WSL host independently reached Oracle2 `/health/liveliness` with HTTPS 200,
+verified TLS (`ssl_verify_result=0`), and Tailnet IP `100.68.237.116`;
+anonymous `/v1/models` returned 401 with verified TLS. This is **network and
+authentication-boundary evidence only**, not inference acceptance.
+`python3 scripts/dev-oracle2-route-preflight.py docker/litellm/config.dev-oracle2.yaml`
+correctly returned exit 1 for the unqualified DeepSeek routes. The isolated
+structural test module passed **134/134**, with one pytest configuration warning
+(`asyncio_mode` unknown in the installed test environment). No opt-in container
+was started; no real model calls were made. GitHub PR #432 remains Draft.
+
+**Pending independent acceptance:** reconcile the supplier identity without
+substituting another unapproved channel; obtain an authorized, restricted
+BodySense Virtual Key; verify OpenRouter/Groq **free-only** authentication and
+synthetic business requests from WSL; and separately verify Posture Vision only
+if its exact route has been confirmed authorized at no unapproved cost.
+The existing Posture OpenRouter model IDs are **not evidence of free pricing**.
+Prior GCP results are historical and never count as WSL execution evidence.
+Model evaluation/ranking and active-model optimization are deferred.
 
 This runbook covers routing the `wsl-local` dev LiteLLM gateway (`127.0.0.1:20112`) to the
 Oracle2 gateway at `https://oracle.taile92a8e.ts.net:10446/v1` for compatible non-vision
@@ -29,11 +56,11 @@ network, its existing `127.0.0.1:20112:4000` publish, and its in-container bind.
 
 Intended order for compatible non-vision groups: **WindHub → Kunyou → Nanliang**.
 
-| Channel | Physical model | Measured status (2026-10-22) |
+| Historically named channel | Physical model | Historical GCP observations (2026-10-22; **not WSL acceptance**) |
 | --- | --- | --- |
 | WindHub | `windhub-free/glm-5.3` | chat/JSON/tool HTTP 200; chat ~42 s, JSON ~28 s, tool ~27 s |
 | Kunyou | `gpt-6-luna` | **PENDING** — HTTP 503 "no channel" |
-| Nanliang | `deepseek-v4.1-flash-1017` | chat/JSON/tool/SSE HTTP 200 |
+| Nanliang (original identity not independently established) | `deepseek-v4.1-flash-1017` | chat/JSON/tool/SSE HTTP 200 |
 
 Active configured edges: WindHub primary, a DeepSeek fallback previously described
 as Nanliang. Kunyou is declared as `bodysense-dev-oracle2-kunyou` for measurement
@@ -99,7 +126,9 @@ DeepSeek route remains supplier-ambiguous; no Oracle2 opt-in was started.
 This verification is synthetic and does not cover real provider authentication.
 
 `bodysense-posture` keeps its pre-existing OpenRouter vision configuration; Oracle2 has no
-qualified vision channel.
+qualified vision channel. Its pre-existing model IDs are not established as
+`:free` routes; do not send vision requests under a free-only authorization
+until pricing, exact model route, and credentials are independently verified.
 
 ## Enable
 
