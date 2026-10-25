@@ -618,3 +618,130 @@ Phase 6 audit/cleanup
 Production behavior is unchanged until its dedicated cutover phase.
 
 The pilot completed on v0.9.0. Transitional shadow CI, legacy required-context aliases, and the old manual production-image fallback were removed only after exact-SHA candidate, staging, Published Release, and explicit production-deploy evidence were all green. Immutable releases are never rewritten as a rollback mechanism.
+
+## 15. VNext acceptance (B7, 2026-10-25)
+
+Batches B1–B6 reworked the test and CI/CD system batch by batch (issues
+#446/#448/#450/#452/#454/#457, PRs #447/#449/#451/#453/#455/#458). This
+section is the consolidated acceptance record: what changed, that no check
+was lost, how the pipeline behaves under injected faults, what it costs,
+and what is known to remain open.
+
+### 15.1 Batch inventory
+
+| Batch | Change |
+| --- | --- |
+| B1 | Format and lint become gates: Oxfmt full-repo check (58-file debt cleared), Oxlint + type-aware Oxlint, gofmt, Ruff format, husky pre-commit; pre-existing zod supply-chain failure fixed |
+| B2 | Manifest contract v2: per-lane `required`/`files`/`targets`/`skipReason`, digest verified by every consumer, Oracle expectations derived from the validated manifest instead of hand-written expressions |
+| B3 | Nx graph honesty: fake `^build` edges removed, typecheck cache-input false-green fixed, outputs/inputs corrected, ai-service coverage target repaired |
+| B4 | Component browser lane (Storybook test-runner) and contracts child split out of the quality monolith with independent Oracle receipts; manifest v3 |
+| B5 | E2E sharded by measured duration (3 shards, per-shard databases, merged-report completeness check), quality lanes split into parallel children; manifest v4 |
+| B6 | Stage matrix (section 5.3), nightly full-run safety net on `schedule`, `pnpm verify:pr` local preflight, root `verify` false-green vector removed, shared Nx cache measured at zero task hits and reverted |
+| B7 | This acceptance: end-to-end fault-injection drill, performance comparison, release-evidence audit, child-receipt evaluation |
+
+### 15.2 Check reconciliation
+
+The 23 checks inventoried in B4 are all retained 1:1 (per-check table in
+issue #452); no batch dropped, merged away, or downgraded a check. Pure
+additions since that inventory: the four format gates and two Oxlint gates
+(B1), the component browser lane with 41 story tests (B4), the E2E
+merged-report completeness check (B5), the nightly full run (B6), and the
+local `verify:pr` preflight (B6). Required checks are unchanged throughout:
+commit-lint, the four Oracles, and Delivery Observation.
+
+### 15.3 Performance comparison (same scope: full safety set)
+
+Medians of three runs per side, from the GitHub Actions API. Baseline:
+main pushes at the pre-VNext architecture (runs 39910452549, 39905968499,
+39900065797; main force-selects every lane). Current: full-scope runs on
+the B5/B6 branches (runs 40143436887, 40149500738, 40150801347; the
+manifest selected the full lane set because CI/delivery paths changed).
+
+| Metric (median) | Baseline | Current | Change |
+| --- | ---: | ---: | --- |
+| Whole-run wall | 961s | 456s | −53% |
+| Critical path | E2E child 928s | Full quality child 421s | E2E no longer dominates |
+| E2E longest shard | 928s (single job) | 362s (+33s merged report) | −57% |
+| E2E total job time | 928s | ≈1049s (3 shards) | +13% job time buys the wall win |
+| Quality execution | 513s (one monolith child) | 421s full child, or per-lane children in parallel on scoped runs | split in B4/B5 |
+| Contracts child | (inside quality monolith) | 174s | independent receipt |
+| Component child | (did not exist) | 67s | new lane |
+| Governance child | 11s | 43s | now carries the B1 format/lint gates for four stacks |
+| PG baseline child | 176s | 176s | unchanged |
+| Jobs per run | 12 | 21 | more parallelism, same required checks |
+
+### 15.4 Fault-injection drill (CI, end to end)
+
+Each fault was injected as a single commit on the B7 acceptance branch,
+observed in a real PR run, and reverted before the next injection. The
+injection commits are not part of this PR's net diff.
+
+| # | Injected fault | Expected | Observed (run, jobs) |
+| --- | --- | --- | --- |
+| a | `any` in production web code | Lint gates fail | pending |
+| b | Type error in a web test file | Typecheck fails (B3 probe, CI form) | pending |
+| c | contracts-child forced to skip while its lane is enabled | Quality Oracle fails | pending |
+| d | Deterministic failure in one E2E spec | Its shard fails, merged-report check fails, Experience Oracle fails | pending |
+| e | Format violation in one source file | Governance format gate fails | pending |
+
+### 15.5 Release-evidence audit (read-only)
+
+| Link in the chain | Verdict | Evidence |
+| --- | --- | --- |
+| Exact-SHA binding | Complete | candidate-publish triggers only on a successful `push` CI run on `main` and checks out `workflow_run.head_sha`; release-publish revalidates candidate `gitSha` == checkout HEAD, source CI run `head_sha` == candidate `gitSha`, candidate SHA is an ancestor of `origin/main`, and the release tag points at the release SHA |
+| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v4` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
+| Image digest verification | Complete | Every component verifies existing-vs-built digest equality and the OCI revision label at build time, promotes by digest without rebuilding, and re-verifies registry and pulled `RepoDigests` after promotion; immutable-tag collisions fail closed |
+| Release-health retention | Gap (low) | The weekly release-health job writes only to the run's step summary and emits a soft-threshold `::warning::`; nothing is uploaded as an artifact or filed, so the signal survives only within Actions run retention. It is advisory (backlog/lag), never a gate |
+| Candidate artifact lifetime | Gap (low) | release-publish downloads the `candidate-set-*` artifact (90-day retention) from the candidate run; a release cut more than 90 days after candidate publication would first need candidate-publish re-dispatched for that SHA |
+
+No release-chain code was changed in this batch; both gaps are advisory
+and recorded here for a future decision.
+
+### 15.6 Child-receipt evaluation (B2 leftover)
+
+Question: is the platform's `needs.*.result` a sufficient truth source
+for the Oracles, or must each child also produce its own signed receipt
+file?
+
+Conclusion: the platform result is sufficient as the gating truth, and a
+separate child-receipt system is not required. Reasoning:
+
+- The result value is produced by the Actions scheduler, not by the
+  child; a child cannot forge it. It can only exit non-zero (fail) or
+  exit zero. The manifest side of the contract — which lanes must run —
+  is independently digest-bound and re-validated by every Oracle (B2),
+  so "lane should have run" and "lane result" come from two independent
+  sources and are cross-checked.
+- The truth table (section 6) fails closed on skipped, cancelled, and
+  missing children. Across B1–B6 there is no recorded instance of a
+  child reporting success while its lane did not execute; the failures
+  that did occur (B2 manifest/format interaction, B3 oracle mapping,
+  B5 schema gate) were all caught precisely because child results and
+  Oracle expectations disagreed.
+- The residual risk a receipt file would address is a child that exits
+  zero without doing its work (a runner script swallowing its own
+  errors). That is a runner-correctness risk, not a receipt-forgery
+  risk, and the delivery test suites already pin the runners' fail-loud
+  behavior. If it is ever addressed, the minimal step is to have the
+  Oracles also verify the existing `delivery-run-summary` artifact's
+  lane coverage; that design note is recorded here and intentionally
+  not implemented in this batch.
+
+### 15.7 Known limitations
+
+- The nightly full run (B6) is verified locally and by contract tests;
+  its first real `schedule` execution can only happen after the batch
+  chain merges to main, and is tracked as an open item in issue #457.
+- Oxlint warnings stand at 29 (plain) / 98 (type-aware) with zero
+  errors; warnings remain warn-level and are burned down individually,
+  never by disabling rules.
+- The shared Nx cache was measured at zero task-level hits in CI and
+  reverted (B6); local Nx caching is unaffected.
+- E2E sharding trades +13% total job time for a −57% longest-shard
+  wall; shard balance depends on the duration table in
+  `apps/web/e2e/shards.json`, which must be regenerated when the
+  distribution drifts materially.
+- Full-scope runs are now bounded below by the full quality child
+  (validate-repo.sh, median 421s); splitting it further is possible
+  (B5 scoped runs already use per-lane children) but was not needed
+  to meet the acceptance targets.
