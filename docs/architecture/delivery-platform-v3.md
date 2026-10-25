@@ -747,3 +747,113 @@ separate child-receipt system is not required. Reasoning:
   (validate-repo.sh, median 421s); splitting it further is possible
   (B5 scoped runs already use per-lane children) but was not needed
   to meet the acceptance targets.
+
+## 16. Oxc evaluation and lint-gate decision (B8, 2026-10-25)
+
+Question (the Q8 analogue): can Oxlint replace ESLint as this repo's lint
+gate? Method: the effective ESLint configuration was dumped per project
+(`eslint --print-config`, 474 files across `apps/web`, `packages/contracts`,
+`packages/utils`), and a temporary probe suite (13 files, ~90 deliberate
+violations, including the scoped cases: data-boundary assertion, test-file
+exemption, `^_` unused exemptions) was run under the old ESLint, the
+then-current Oxlint config, and a candidate config with every mapped rule
+raised to `error`. Every verdict below is a probe result, not
+documentation. The probe files were deleted after the experiment; the
+suite is reproducible from the recipe in issue #461.
+
+### 16.1 Equivalence verdict (70 checks)
+
+| Class | Count | Detail |
+| --- | ---: | --- |
+| Oxlint equivalent at `error` | 67 | Identical probe hits rule for rule (core eslint rules plus typescript-eslint rules, incl. `no-unused-vars` with the `^_` exemptions and `no-unused-expressions`) |
+| Scoped `no-unsafe-type-assertion` | 1 | Equivalent via the existing override + `--type-aware`: boundary files error, test files exempt. One asymmetry: outside the boundary Oxlint additionally *warns* where ESLint is silent — warn-only, gate unaffected |
+| `no-delete-var` | 1 | The oxc parser rejects `delete <identifier>` in strict mode as a hard error — equal or stronger than the rule. Side effect: a parse error suppresses the file's other diagnostics |
+| `preserve-caught-error` | 1 | **Gap.** Oxlint 1.89 ships the rule but never fires under this repo's options (`{ requireCatchParameter: false }`), verified on both probe variants; ESLint fires. The only genuine non-equivalence found |
+
+`no-octal` is not a configured rule; octal literals and `\8` escapes are
+parse errors under both parsers (probe-verified). In the other direction,
+the new Oxlint config enables no error rule beyond this mapping, so no
+unaccounted gate was added.
+
+### 16.2 Decision: B — Oxlint primary, ESLint as single-rule residual
+
+Not C (full retirement): the `preserve-caught-error` gap has no
+equivalent carrier. Not A (unchanged dual track): with 69 of 70 checks
+equivalent, the full type-aware ESLint pass is pure duplication.
+
+Landed changes:
+
+- `.oxlintrc.json` now lists the 68 mapped rules explicitly at `error`
+  (categories stay `warn` for the incremental warning programme) and adds
+  one scoped override: `no-unsafe-optional-chaining` is `warn` in test
+  files. Reason: Oxlint sees through `as` assertions where the ESLint
+  core rule is blind; the only three hits are test files whose patterns
+  are guarded by call-count assertions (re-verified from the 2022
+  review). Production code stays `error`, so the gate is at least
+  ESLint-strict everywhere ESLint could see.
+- `lint:oxlint` / `lint:oxlint:types` widened from `apps/web/src` to the
+  former ESLint scope: plain run over `apps/web` + `packages` (474
+  files), type-aware over the three `src` trees (471 files). Governance
+  (the always-on lane) carries Oxlint; `validate-repo.sh` picks the same
+  scripts up unchanged.
+- `eslint.config.mjs` reduced to the residual rule only, without type
+  information (no `projectService`): the Nx `lint` targets now run a
+  syntactic single-rule pass. The `@nx` plugin block was dropped — it
+  contributed no enabled rules.
+- `packages/utils/tsconfig.json` gained an explicit `"rootDir": "src"`:
+  tsgolint could not build a program for the stub package (its single
+  file is comment-only) and emitted a `tsconfig-error`; `tsc` itself was
+  always green.
+- Five `no-unnecessary-type-assertion` warnings in real code were removed
+  as a separate commit (portal-scope, popover, select x2,
+  BodyRegionNavigator); web typecheck and the 716 web tests pass, and
+  the rule now reports 0.
+
+Check reconciliation: the former 70 ESLint-carried checks are now
+carried by Oxlint (68), the residual ESLint config (1), and the parser
+(1). No check was dropped or downgraded in production code. Required
+checks and lane semantics are unchanged; the probe suite was re-run
+against the landed configuration as a regression test (Oxlint: 77 plain
++ 3 boundary errors across the probes, each mapped; residual ESLint:
+exactly the one `preserve-caught-error` hit).
+
+### 16.3 Performance (Oracle2, medians of 3, same tree)
+
+| Pass | Before | After |
+| --- | ---: | ---: |
+| ESLint full (474 files, type-aware config) | 28.9s | 9.0s (residual single rule, no type info) |
+| Oxlint plain | 0.3s (`apps/web/src` only) | 2.4s (full scope, via pnpm) |
+| Oxlint `--type-aware` | 3.6s (`apps/web/src` only) | 7.5s (three `src` trees, via pnpm) |
+| **Total lint wall** | **~32.8s** | **~18.9s (-42%)** |
+
+In CI terms the quality web lane's lint segment shrinks by roughly 20s
+gross, about 13s net after the wider Oxlint runs in Governance. Oxfmt was
+re-verified in passing: `format:check` exit 0 over 677 files, median
+2.81s — the formatter migration remains complete and is not reopened.
+
+### 16.4 Warning stock (after the change: 33 plain / 96 type-aware)
+
+All remaining diagnostics are `warn` by design; none was silenced by
+disabling a rule. Classification (locations in issue #461):
+
+| Category | Count | Verdict |
+| --- | ---: | --- |
+| `consistent-function-scoping` | 19 | Style noise (React component-scope helpers) |
+| `no-unsafe-type-assertion` (type-aware) | 33 | By-design scope signal: assertions outside the data boundary, individually reviewed in 2022; boundary stays `error` |
+| `consistent-return` | 15 | Framework idiom / exhaustive-switch false positives |
+| `no-floating-promises` | 10 | Event-handler and router `navigate()` idiom; callee-side error handling verified in 2022 — remains the standing review item when this count *changes* |
+| `no-base-to-string` | 4 | Test-only false positives (string bodies) |
+| Plain remainder (`no-unsafe-optional-chaining` 3, `no-unmodified-loop-condition` 2, `no-shadow` 2, misc 4) | 11 | Guarded test patterns and 2022-verified false positives |
+| Type-aware remainder (`await-thenable` 1, `no-unnecessary-type-parameters` 1, misc) | ~15 | Known harmless idioms, itemised in #461 |
+
+Digestion path: categories stay at `warn`; new warnings in a PR are
+reviewed against this table, and any category whose count grows gets a
+fresh per-item review (the B8 method), not a config exemption.
+
+### 16.5 Exit condition for the residual ESLint
+
+When an Oxlint release enforces `preserve-caught-error` under
+`{ requireCatchParameter: false }` (re-run the #461 probe recipe to
+confirm), delete `eslint.config.mjs`, point the Nx lint targets at the
+Oxlint scripts, and this section's decision collapses to full retirement
+(option C) with no other changes.
