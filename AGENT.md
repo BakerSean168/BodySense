@@ -246,6 +246,8 @@ Single-context 布局，`CONTEXT.md` + `docs/adr/` 在仓库根目录。See `doc
 
 ## 最小验证
 
+- 提交前一键预检（与 PR 必跑的 governance + affected quality 子集对齐）：`pnpm verify:pr`（Oxfmt/gofmt 格式门禁、Oxlint 两档、delivery/plan 契约测试、E2E 分片完整性、对 `origin/main` 的 Nx affected lint/typecheck/test）。根 `bodysense:verify` / `verify:full` 为全量 lint/typecheck（full 含 test），根 target 不缓存，每次真实执行。
+
 - 文档和治理相关改动：检查文档格式和链接有效性
 - 前端改动：`pnpm nx run web:lint && pnpm nx run web:typecheck`
 - 后端改动：`cd apps/api && go vet ./... && go test ./...`

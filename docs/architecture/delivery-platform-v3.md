@@ -346,6 +346,19 @@ CI/Docker/release/root
 
 Every main push runs the complete existing production safety set, including migration scenarios and browser E2E. Candidate publication is downstream of those gates.
 
+### 5.3 Stage matrix
+
+Every stage reuses the same manifest, lane, and Oracle machinery; stages
+differ in trigger, lane selection, and which evidence they consume.
+
+| Stage | Trigger | What runs | Evidence | What does not run, and why |
+| --- | --- | --- | --- | --- |
+| Local | husky hooks on commit; `pnpm verify:pr` before push | commit-msg: commitlint. pre-commit: Oxfmt `--check` + Oxlint on staged files. `verify:pr`: governance format/lint gates, delivery + plan contract tests, E2E shard-partition check, and `nx affected` lint/typecheck/test against `origin/main` | Local exit codes only; nothing is uploaded | E2E, database migrations, and the full validate-repo.sh set: they need CI services and are covered by the PR stage on the same diff |
+| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v4` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
+| Main | `ci.yml` on push to `main` | The complete production safety set: the manifest force-selects every lane, including the full validate-repo.sh child, migration baseline + recovery, sharded browser E2E, and the component lane | Same artifacts as PR, bound to the exact main SHA | Nothing in the lane set is skipped; path scoping does not apply to main |
+| Nightly | `ci.yml` on `schedule` (daily 18:23 UTC) or manual `workflow_dispatch` | Identical to a main push: base == head, the `schedule` event force-selects every lane, same children, Oracles, and observation | Same artifacts as a main run, retained 30 days for the run summary | Not a required check and never gates a merge. It exists to catch drift that path-scoped PR selection and quiet main periods would hide (toolchain or upstream changes, flaky lanes). Failures surface as a red run plus the Delivery Observation summary, matching the release-health reporting style |
+| Release | release-please PR, then `release-publish`; production deploy is an explicit operator action | Candidate publication runs downstream of a successful main CI run, bound to the exact SHA: it downloads that run's delivery manifest, validates it, and embeds its digest in the candidate set | Candidate set + image digests trace back to the source CI run and its manifest digest | Lint/test/typecheck/E2E are **not** re-run: the exact SHA was already verified by the main run, and re-running could only test a different tree. Promotion consumes evidence; it does not recreate it |
+
 ## 6. Stable Oracle model
 
 Target protected checks:
@@ -575,6 +588,8 @@ A non-production-mutating scheduled audit validates delivery mechanics such as:
 - release identity mismatch rejection.
 
 The audit reports platform health but does not automatically deploy or repair production.
+
+This weekly audit is complementary to the nightly CI run in section 5.3: the audit exercises delivery *mechanics* (fail-closed negative paths), while the nightly run exercises the product lanes themselves on current main.
 
 ## 13. Security boundaries
 
