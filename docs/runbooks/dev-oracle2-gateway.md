@@ -162,6 +162,27 @@ This remains a **local configuration/approval check**, not proof that a Virtual
 Key permits the route or that its wire protocol/inference works. Ordinary dev
 and staging/production are unchanged.
 
+### Keyless Posture billing audit (WSL only)
+
+Before any separately authorized Posture vision request, run:
+
+```bash
+apps/ai-service/.venv/bin/python scripts/dev-oracle2-posture-free-audit.py
+```
+
+The audit reads the two **exact** currently configured dev Posture OpenRouter
+model IDs and performs a public, unauthenticated `GET` to the official OpenRouter
+model catalog. It rejects either model if missing, ambiguous, unpriced or priced
+above zero in **any** published pricing field, including image charges. It never
+sends an image, inference prompt, API key or personal data. It does not select
+replacement models. On 2026-10-25 WSL the current primary was rejected for its
+nonzero prompt price (`POSTURE_FREE_PRICE_AUDIT=BLOCKED`, exit 1); the fallback
+must also pass an independent check before vision usage. A future metadata-only
+PASS is **not** upstream authorization, a price guarantee or business-flow
+acceptance; valid free-only credentials and explicit approval are still required.
+The script is a read-only acceptance aid, not a prerequisite for non-vision
+synthetic validation and not part of the deferred model evaluation.
+
 WSL 2026-10-24 verification: the dedicated structural/security test module
 passed **134 tests**, including 13 new negative cases for non-fallback route
 substitutions. Ruff lint and format, Python syntax, and Git diff checks passed.
