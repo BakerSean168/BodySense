@@ -673,16 +673,18 @@ manifest selected the full lane set because CI/delivery paths changed).
 ### 15.4 Fault-injection drill (CI, end to end)
 
 Each fault was injected as a single commit on the B7 acceptance branch,
-observed in a real PR run, and reverted before the next injection. The
-injection commits are not part of this PR's net diff.
+observed in a real PR run, and reverted before the next injection. All
+five faults failed exactly the gates listed below and nothing else; no
+defect was found by the drill. The injection commits are not part of
+this PR's net diff (branch history was reset after the drill).
 
 | # | Injected fault | Expected | Observed (run, jobs) |
 | --- | --- | --- | --- |
-| a | `any` in production web code | Lint gates fail | pending |
-| b | Type error in a web test file | Typecheck fails (B3 probe, CI form) | pending |
-| c | contracts-child forced to skip while its lane is enabled | Quality Oracle fails | pending |
-| d | Deterministic failure in one E2E spec | Its shard fails, merged-report check fails, Experience Oracle fails | pending |
-| e | Format violation in one source file | Governance format gate fails | pending |
+| a | `any` in production web code (`apps/web/src/lib/utils.ts`) | Lint gates fail | Run [40152143094](https://github.com/BakerSean168/BodySense/actions/runs/40152143094): Governance child + Governance Oracle + Web quality child + Quality Oracle all failed; unrelated jobs green. The same commit was first stopped locally by the B1 pre-commit hook; the drill used `--no-verify` because CI, not the local hook, was the system under test |
+| b | Type error in a web test file (`displayValue.test.ts`) | Typecheck fails (B3 probe, CI form) | Run [40152712708](https://github.com/BakerSean168/BodySense/actions/runs/40152712708): Web quality child + Quality Oracle failed; Governance stayed green, isolating the failure to typecheck |
+| c | contracts-child forced to skip (`if: … && false && …`) while its lane is enabled | Quality Oracle fails | Run [40153188328](https://github.com/BakerSean168/BodySense/actions/runs/40153188328): Contract verification child skipped, Quality Oracle failed with `contracts: expected success, got skipped`; every other job green |
+| d | Deterministic failure in one E2E spec (`legacy-share-retired.spec.ts`, shard 1) | Its shard fails, merged-report check fails, Experience Oracle fails | Run [40153828687](https://github.com/BakerSean168/BodySense/actions/runs/40153828687): shard 1 + E2E merged report child + Experience Oracle failed; shards 2/3 and all other jobs green |
+| e | Format violation in one source file (`api-url.ts`, single quotes) | Governance format gate fails | Run [40154338364](https://github.com/BakerSean168/BodySense/actions/runs/40154338364): Governance child + Governance Oracle failed; Quality Oracle green, isolating the failure to the format gate |
 
 ### 15.5 Release-evidence audit (read-only)
 
