@@ -23,6 +23,10 @@ correctly returned exit 1 for the unqualified DeepSeek routes. The isolated
 structural test module passed **134/134**, with one pytest configuration warning
 (`asyncio_mode` unknown in the installed test environment). No opt-in container
 was started; no real model calls were made. GitHub PR #432 remains Draft.
+A fresh 2026-10-25 GitHub check independently confirmed that PR #432 HEAD
+`ff8e31fc34288f6a6002942b8bc250f3340e8dd6` passed all **12/12 CI jobs**
+(run `40165182364`); the WSL feature worktree matched this exact SHA and
+was clean. This is still code/CI evidence, not live upstream authorization.
 
 **Pending independent acceptance:** reconcile the supplier identity without
 substituting another unapproved channel; obtain an authorized, restricted
@@ -106,6 +110,25 @@ an exhaustive search of differently named resources, and is not an upstream
 OpenRouter/Groq authorization result.
 These facts resolve a superficial protocol-label mismatch, **not** supplier
 identity, client authorization, or actual end-to-end wire compatibility.
+
+**Supplier-label provenance found (Oracle2 read-only, 2026-10-25):** The clean,
+versioned `personal-infrastructure` tree at `e7db5c2` explicitly maps the
+resource prefix `llm-pm-deepseek-0731` to T3 provider `llm-pm` in
+`etc/server/oracle2/t3code/project_models.py`, and displays `llm-pm` as
+**南梁 API** in both that file and `etc/server/oracle2/t3code/pi-t3`.
+`project_dsh_gateway.py` also binds that provider alias to the exact qualified
+route `llm-pm-deepseek-0731/deepseek-v4.1-flash-1017`. `git blame` dates the
+current display-name mapping to commit `68c75324` (2026-10-12), predating
+this integration PR. The current ProviderAdmin read-only `--inspect` returns
+a FREE `llm-pm-deepseek-0731` credential and an unblocked qualified
+`deepseek-v4.1-flash-1017` binding. **This narrows the naming ambiguity:** the
+existing infrastructure intentionally labels this *resource alias* as 南梁 API.
+However, a T3 display label is not independent evidence of the underlying
+account/endpoint identity or of a BodySense-scoped client authorization. Do
+not set `APPROVED_DEEPSEEK_RESOURCE_ID`, replace the checked-in DeepSeek route,
+or enable the opt-in on this evidence alone; upstream ownership, dedicated
+client policy and exact-wire acceptance still require authorized verification.
+No key material was inspected, and no provider or production policy was changed.
 
 **WSL fail-closed start guard (2026-10-24):** `scripts/dev-infra.sh up`,
 `restart`, and `restart-gateway` now run
