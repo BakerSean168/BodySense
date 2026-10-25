@@ -10,6 +10,10 @@ There was no BodySense T3 thread or running BodySense Writer, and the normal
 The feature worktree's `.env.dev.local`, `.env.local`, `.env`, and `.env.dev`
 were absent; no dedicated Virtual Key or OpenRouter/Groq API credential was
 available through those files. No keys were read or created.
+The preceding PR #432 commit `7a6ac6817d7523603b4e5de300aace304732db98`
+completed CI successfully with **12/12 jobs** (run `40157739444`); this is
+static/CI evidence, not model-inference acceptance. Newer commits require
+independent exact-SHA CI verification.
 The WSL host independently reached Oracle2 `/health/liveliness` with HTTPS 200,
 verified TLS (`ssl_verify_result=0`), and Tailnet IP `100.68.237.116`;
 anonymous `/v1/models` returned 401 with verified TLS. This is **network and
@@ -26,6 +30,16 @@ BodySense Virtual Key; verify OpenRouter/Groq **free-only** authentication and
 synthetic business requests from WSL; and separately verify Posture Vision only
 if its exact route has been confirmed authorized at no unapproved cost.
 The existing Posture OpenRouter model IDs are **not evidence of free pricing**.
+A WSL read-only query to OpenRouter's public `/api/v1/models` catalog on
+2026-10-25 (467 listed models) found that the exact configured primary
+`qwen/qwen2.5-vl-72b-instruct` has **nonzero prompt and completion prices**
+(`0.0000008` and `0.000001` in the catalog's respective price fields).
+The configured fallback `google/gemini-2.0-flash-001` had **no exact match**
+in that public catalog. These findings do not establish account-specific
+availability or billing, but neither route meets the present free-only
+acceptance requirement. **Do not make Posture Vision requests** without
+separate explicit pricing and credential authorization. This was a public
+metadata lookup only: no key was used, and no inference was sent.
 Prior GCP results are historical and never count as WSL execution evidence.
 Model evaluation/ranking and active-model optimization are deferred.
 
@@ -214,8 +228,12 @@ verification succeeds. It is **not** evidence of any of the following:
 - that `router_settings.fallbacks` behaves as configured;
 - any business or capability acceptance.
 
-Reachability is a prerequisite for the opt-in, not its acceptance condition. Real
-acceptance requires the per-channel evaluation below to run with a real key.
+Reachability is a prerequisite for the opt-in, not its acceptance condition.
+Once the reviewed supplier and scoped free-only credentials are available,
+real acceptance requires an independent, minimal **synthetic business-flow
+smoke** from WSL through the local dev gateway to the authorized Oracle2
+route. The separate per-channel evaluation below is deferred and is **not**
+a prerequisite for this integration acceptance.
 
 **Residual risk:** if Oracle2's tailnet address changes, a pinned mapping goes stale. The
 address is re-resolved per `scripts/dev-env.sh` invocation, so recreate the gateway after
