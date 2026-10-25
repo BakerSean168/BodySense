@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import re
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -1136,7 +1137,7 @@ def test_supplier_route_preflight_blocks_current_ambiguous_deepseek() -> None:
     assert "deepseek-v4.1-flash-1017" not in result.stderr
 
 
-def test_supplier_route_preflight_accepts_only_structural_pin(tmp_path: Path) -> None:
+def test_supplier_route_preflight_rejects_unapproved_structural_pin(tmp_path: Path) -> None:
     source = DEV_ORACLE2_CONFIG.read_text(encoding="utf-8")
     old = "model: openai/deepseek-v4.1-flash-1017"
     assert source.count(old) == 3
@@ -1146,9 +1147,19 @@ def test_supplier_route_preflight_accepts_only_structural_pin(tmp_path: Path) ->
     )
     path = tmp_path / "qualified-only.yaml"
     path.write_text(synthetic, encoding="utf-8")
+
+    # A syntactically qualified supplier must not authorize a dev deployment.
+    preflight = runpy.run_path(str(ROOT / "scripts/dev-oracle2-route-preflight.py"))
+    assert preflight["has_supplier_qualified_routes"](path)
+    assert preflight["matches_approved_supplier"](path, "synthetic-resource")
+    assert not preflight["matches_approved_supplier"](path, "kunyou-free")
+    assert not preflight["matches_approved_supplier"](path, None)
+    assert preflight["APPROVED_DEEPSEEK_RESOURCE_ID"] is None
+
     result = _supplier_route_preflight(path)
-    assert result.returncode == 0, result.stderr
-    assert "remain unverified" in result.stdout
+    assert result.returncode == 1
+    assert "not been explicitly approved" in result.stderr
+    assert "synthetic-resource" not in result.stderr
 
 
 def test_supplier_route_preflight_rejects_partial_pin_and_invalid_config(tmp_path: Path) -> None:

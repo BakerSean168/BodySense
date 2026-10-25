@@ -113,10 +113,17 @@ timeouts; an apparently safe DeepSeek pin cannot hide a different primary,
 extra model, or diverted vision request. A supplier pin alone cannot authorize
 a new edge. These checks prevent a second deployment or fallback path from
 hiding behind a matching entry.
-This is a **local structure check only**, not proof that a qualified supplier
-is the originally intended Nanliang provider, that a Virtual Key permits the
-route, or that its wire protocol/inference works. Do not bypass it by choosing
-an arbitrary qualified route. Ordinary dev and staging/production are unchanged.
+The guard additionally requires a **reviewed supplier-identity pin** in
+`scripts/dev-oracle2-route-preflight.py` (`APPROVED_DEEPSEEK_RESOURCE_ID`).
+It is intentionally unset until the original Nanliang resource and dedicated
+client scope are independently verified. Merely replacing all three DeepSeek
+model strings with any syntactically supplier-qualified route will still block
+activation; no environment variable can override the approval. A future
+reviewed source change must explicitly approve the verified resource.
+
+This remains a **local configuration/approval check**, not proof that a Virtual
+Key permits the route or that its wire protocol/inference works. Ordinary dev
+and staging/production are unchanged.
 
 WSL 2026-10-24 verification: the dedicated structural/security test module
 passed **134 tests**, including 13 new negative cases for non-fallback route

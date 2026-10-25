@@ -24,6 +24,11 @@ PIN_REQUIRED = (
     "bodysense-general-fallback",
     "bodysense-dev-oracle2-nanliang",
 )
+# Reviewed supplier identity is still unresolved. A qualified route name alone
+# must not make this opt-in deployable: once the original Nanliang resource and
+# dedicated client permission are independently verified, explicitly pin that
+# resource here in a reviewed change. Do not supply this value from an env var.
+APPROVED_DEEPSEEK_RESOURCE_ID: str | None = None
 # A qualified DeepSeek name alone is insufficient: every other deployment
 # must also retain its existing provider, credentials, and transport boundary.
 # These are structural invariants, not a model-quality or supplier approval.
@@ -147,6 +152,22 @@ def has_supplier_qualified_routes(config_path: Path) -> bool:
         return False
 
 
+def matches_approved_supplier(config_path: Path, resource_id: str | None) -> bool:
+    """Require all fallback/probe routes to match an explicitly reviewed resource."""
+    if not resource_id or not re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", resource_id):
+        return False
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        models = {
+            entry["model_name"]: entry["litellm_params"]["model"]
+            for entry in config["model_list"]
+        }
+        expected = f"openai/{resource_id}/{DEEPSEEK_MODEL}"
+        return all(models[name] == expected for name in PIN_REQUIRED)
+    except (OSError, ValueError, TypeError, KeyError, yaml.YAMLError):
+        return False
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("usage: dev-oracle2-route-preflight.py CONFIG_PATH", file=sys.stderr)
@@ -162,9 +183,18 @@ def main() -> int:
         )
         return 1
 
+    if not matches_approved_supplier(Path(sys.argv[1]), APPROVED_DEEPSEEK_RESOURCE_ID):
+        print(
+            "Oracle2 dev activation blocked: the fallback supplier identity "
+            "has not been explicitly approved in reviewed source policy. "
+            "A supplier-qualified route alone is insufficient.",
+            file=sys.stderr,
+        )
+        return 1
+
     print(
-        "Oracle2 route structure PASS (supplier identity, client authorization, "
-        "and real inference remain unverified)."
+        "Oracle2 route structure and reviewed supplier pin PASS (client "
+        "authorization and real inference remain unverified)."
     )
     return 0
 
