@@ -7,10 +7,20 @@ on:
   # Without this, a PR targeting a non-main branch silently has no CI checks.
   # Candidate/release publication remains restricted to successful main push.
   pull_request:
+  workflow_dispatch:
+  # Nightly full-set safety net: a schedule run checks out main HEAD with
+  # base == head, and the manifest generator force-selects every lane for
+  # the schedule event, so path-scoped PR selection cannot hide a broken
+  # lane for long. Nightly runs are not required checks and never gate a
+  # merge; failures surface as a red run plus the Delivery Observation
+  # summary artifact, matching the release-health reporting style.
+  schedule:
+    - cron: "23 18 * * *"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  # A main push must not cancel an in-flight nightly full run.
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 permissions:
   contents: read
@@ -45,7 +55,7 @@ jobs:
       - id: manifest
         name: Generate one versioned delivery manifest
         env:
-          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
           DELIVERY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           node scripts/delivery/generate-manifest.mjs
