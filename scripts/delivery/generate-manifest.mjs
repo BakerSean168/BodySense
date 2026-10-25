@@ -50,7 +50,9 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const event = args.event ?? process.env.GITHUB_EVENT_NAME;
   const ref = args.ref ?? process.env.GITHUB_REF ?? "";
-  if (!["pull_request", "push", "workflow_dispatch"].includes(event)) {
+  if (
+    !["pull_request", "push", "workflow_dispatch", "schedule"].includes(event)
+  ) {
     throw new Error(`unsupported event: ${event || "missing"}`);
   }
 
@@ -71,7 +73,8 @@ function main() {
     args.forceFull === true ||
     process.env.DELIVERY_FORCE_FULL === "1" ||
     (event === "push" && ref === "refs/heads/main") ||
-    event === "workflow_dispatch";
+    event === "workflow_dispatch" ||
+    event === "schedule";
 
   const manifest = createManifest({
     requestedBaseSha,

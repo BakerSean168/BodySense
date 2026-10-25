@@ -556,12 +556,31 @@ test("oracle group enablement follows the manifest lanes", () => {
 
 test("manifest validation rejects unsupported events and short SHAs", () => {
   const manifest = manifestFor(["docs/foo.md"]);
-  manifest.event = "schedule";
+  manifest.event = "merge_group";
   manifest.headSha = "abc";
   manifest.digest = computeManifestDigest(manifest);
   const errors = validateManifest(manifest);
   assert.ok(errors.some((error) => error.includes("unsupported event")));
   assert.ok(errors.some((error) => error.includes("headSha")));
+});
+
+test("schedule manifests validate and force the full lane set", () => {
+  // Nightly runs carry no PR diff (base == head); the schedule event plus
+  // forceFull must still select every lane and pass validation, so the
+  // nightly run is a true full-set safety net rather than an empty pass.
+  const manifest = manifestFor([], {
+    event: "schedule",
+    ref: "refs/heads/main",
+    forceFull: true,
+  });
+  assert.deepEqual(validateManifest(manifest), []);
+  for (const [lane, enabled] of Object.entries(manifest.lanes)) {
+    assert.equal(
+      enabled,
+      true,
+      "lane " + lane + " must be enabled for nightly",
+    );
+  }
 });
 
 test("Oracle fail-closed matrix", () => {

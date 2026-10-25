@@ -597,7 +597,11 @@ export function validateManifest(manifest) {
   if (manifest.policyVersion !== expectedPolicy) {
     errors.push(`policyVersion must be ${expectedPolicy}`);
   }
-  if (!["pull_request", "push", "workflow_dispatch"].includes(manifest.event)) {
+  if (
+    !["pull_request", "push", "workflow_dispatch", "schedule"].includes(
+      manifest.event,
+    )
+  ) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
 
