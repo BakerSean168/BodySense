@@ -47,6 +47,27 @@ metadata lookup only: no key was used, and no inference was sent.
 Prior GCP results are historical and never count as WSL execution evidence.
 Model evaluation/ranking and active-model optimization are deferred.
 
+**WSL keyless provider-catalog checkpoint (2026-10-25 21:13 CST):** the
+official OpenRouter public `GET /api/v1/models` returned 467 entries, without
+using an API key or sending an inference request. In addition to the Posture
+pricing block above, the **existing non-vision OpenRouter route**
+`deepseek/deepseek-chat` in `config.yaml` and `config.staging.yaml` has
+nonzero catalog prices (`prompt=0.0000002574`,
+`completion=0.0000010287`); the guessed exact
+`deepseek/deepseek-chat:free` variant was absent. These are **not** routes
+in this Oracle2 dev overlay, and no staging/production configuration was
+changed. Do not silently treat the existing direct OpenRouter route as
+free or substitute a `:free` suffix without fresh, exact approval and
+account-specific authentication. Separately, official
+[Groq vision documentation](https://console.groq.com/docs/vision) lists the
+already configured staging model `qwen/qwen3.8-27b`, but this establishes
+neither a WSL credential nor free-account authorization. The GCP-based
+commands in the unmerged historical research PR #442 are **not valid current
+verification instructions**; equivalent WSL keyless catalog inspection and
+the existing local Posture audit are the only completed checks in this run.
+OpenRouter/Groq real-account verification and synthetic inference remain
+blocked pending authorized credentials.
+
 This runbook covers routing the `wsl-local` dev LiteLLM gateway (`127.0.0.1:20112`) to the
 Oracle2 gateway at `https://oracle.taile92a8e.ts.net:10446/v1` for compatible non-vision
 logical groups. Production and staging are unaffected: they keep
