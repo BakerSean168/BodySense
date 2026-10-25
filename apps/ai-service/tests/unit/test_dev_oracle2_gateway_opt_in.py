@@ -1121,6 +1121,69 @@ def test_unqualified_route_blocks_all_mutating_start_paths_before_docker(
     assert not trace.exists(), "start or restart reached Docker before route validation"
 
 
+@pytest.mark.parametrize(
+    ("entrypoint", "action"),
+    [
+        (DEV_INFRA, "up"),
+        (DEV_INFRA, "restart"),
+        (DEV_INFRA, "restart-gateway"),
+        (DEV_RUNTIME, "up"),
+        (DEV_RUNTIME, "restart"),
+    ],
+)
+def test_nonfree_posture_blocks_mutating_start_before_docker(
+    tmp_path: Path, entrypoint: Path, action: str
+) -> None:
+    """Simulate supplier approval, then reject paid metadata before side effects.
+
+    Both checks are shims: no network, credential, container or real model use.
+    This verifies the audit is mandatory, not just a documented manual step.
+    """
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    trace = tmp_path / "preflight-trace"
+    fake_python = bin_dir / "python3"
+    fake_python.write_text(
+        "#!/bin/sh\n"
+        'case "$1" in\n'
+        '  */dev-oracle2-route-preflight.py) echo supplier >> "$AUDIT_TRACE"; exit 0 ;;\n'
+        "  */dev-oracle2-posture-free-audit.py)\n"
+        '    echo price >> "$AUDIT_TRACE"\n'
+        '    echo "POSTURE_FREE_PRICE_AUDIT=BLOCKED: synthetic nonzero price" >&2\n'
+        "    exit 47 ;;\n"
+        "  *) exit 100 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_python.chmod(0o755)
+    fake_docker = bin_dir / "docker"
+    fake_docker.write_text('#!/bin/sh\necho docker >> "$AUDIT_TRACE"\n', encoding="utf-8")
+    fake_docker.chmod(0o755)
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}:{os.environ['PATH']}",
+        "AUDIT_TRACE": str(trace),
+        "BODYSENSE_DEV_ENV_FILE": str(tmp_path / "missing"),
+        "BODYSENSE_DEV_RUNTIME_DIR": str(tmp_path / "runtime"),
+        "BODYSENSE_LITELLM_DEV_ORACLE2": "1",
+        "ORACLE2_BODYSENSE_API_KEY": "synthetic-not-a-real-key",
+        "ORACLE2_BODYSENSE_TAILSCALE_IP": "100.68.237.116",
+        "ORACLE2_BODYSENSE_BASE_URL": AUTHORIZED_BASE_URL,
+        "ORACLE2_BODYSENSE_HOSTNAME": AUTHORIZED_HOSTNAME,
+    }
+    result = subprocess.run(
+        ["bash", str(entrypoint), action],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=12,
+    )
+    assert result.returncode != 0
+    assert "POSTURE_FREE_PRICE_AUDIT=BLOCKED" in result.stderr
+    assert trace.read_text(encoding="utf-8").splitlines() == ["supplier", "price"]
+
+
 def _supplier_route_preflight(path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts/dev-oracle2-route-preflight.py"), str(path)],

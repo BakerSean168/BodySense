@@ -130,6 +130,9 @@ case "${1:-status}" in
     if [[ -n "${BODYSENSE_DEV_COMPOSE_OVERLAY:-}" ]]; then
       python3 "$ROOT/scripts/dev-oracle2-route-preflight.py" \
         "$ROOT/docker/litellm/config.dev-oracle2.yaml"
+      # Validate zero-priced exact Posture routes before stopping services.
+      # The following infra up path also rechecks before Compose mutations.
+      python3 "$ROOT/scripts/dev-oracle2-posture-free-audit.py"
     fi
     down; up ;;
   infra-down) down; "$ROOT/scripts/dev-infra.sh" down ;;

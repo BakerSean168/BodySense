@@ -180,8 +180,17 @@ nonzero prompt price (`POSTURE_FREE_PRICE_AUDIT=BLOCKED`, exit 1); the fallback
 must also pass an independent check before vision usage. A future metadata-only
 PASS is **not** upstream authorization, a price guarantee or business-flow
 acceptance; valid free-only credentials and explicit approval are still required.
-The script is a read-only acceptance aid, not a prerequisite for non-vision
-synthetic validation and not part of the deferred model evaluation.
+The script is not a model evaluation, and it is **not** required to run
+independent non-vision synthetic tests. However, because the opt-in gateway
+currently includes both Posture routes, the free-only **dev gateway activation**
+now runs this audit automatically after supplier approval preflight but **before
+any Compose up/restart or dev runtime shutdown**. Missing/paid/unknown pricing
+or unavailable public catalog data blocks activation, preserving existing
+services. This intentionally keeps the whole opt-in inactive while its exact
+vision routes cannot be used within the existing free-only authorization.
+The gate is not a per-request billing guarantee: catalog data could change
+after startup, so separate real Posture requests still require fresh price,
+credential, and account-level authorization. No replacement models are chosen.
 
 WSL 2026-10-24 verification: the dedicated structural/security test module
 passed **134 tests**, including 13 new negative cases for non-fallback route
