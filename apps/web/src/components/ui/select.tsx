@@ -56,9 +56,7 @@ function SelectTrigger({
   ref,
   ...props
 }: SelectPrimitive.Trigger.Props & { variant?: FieldVariant }) {
-  const triggerRef = useScopeTriggerRef<HTMLButtonElement>(
-    ref as React.Ref<HTMLButtonElement>,
-  );
+  const triggerRef = useScopeTriggerRef<HTMLButtonElement>(ref);
   return (
     <SelectPrimitive.Trigger
       ref={triggerRef}
@@ -279,7 +277,7 @@ function SelectField<V extends string = string>({
     <Select<V>
       value={value}
       onValueChange={(next) => {
-        if (next !== null && next !== undefined) onValueChange(next as V);
+        if (next !== null && next !== undefined) onValueChange(next);
       }}
       items={items}
       name={name}
