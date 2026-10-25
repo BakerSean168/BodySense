@@ -826,6 +826,14 @@ exactly the one `preserve-caught-error` hit).
 | Oxlint `--type-aware` | 3.6s (`apps/web/src` only) | 7.5s (three `src` trees, via pnpm) |
 | **Total lint wall** | **~32.8s** | **~18.9s (-42%)** |
 
+Measurement note: the timing script was run twice (two independent
+sets of 3, same machine and tree). Set medians differ within shared-host
+load noise — ESLint full 28.9s vs 27.6s, Oxlint plain 0.30s vs 0.19s,
+type-aware 3.6s vs 4.5s (widest spread, 3.1–5.3s), Oxfmt 2.81s vs 2.87s.
+Read the table values as ranges (ESLint full ≈27.6–28.9s, type-aware
+≈3.6–4.5s); the total-lint conclusion (~32–33s → ~18.9s, about −42%)
+holds under both sets.
+
 In CI terms the quality web lane's lint segment shrinks by roughly 20s
 gross, about 13s net after the wider Oxlint runs in Governance. Oxfmt was
 re-verified in passing: `format:check` exit 0 over 677 files, median
