@@ -37,7 +37,7 @@ function workflows() {
 }
 
 test("Main v7 requires all independent quality owners, never the old serial full child", () => {
-  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v8");
+  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v9");
   const main = selected("push", ["docs/a.md"], true);
   assert.deepEqual(validateManifest(main), []);
   assert.equal(main.stage, "main-full");
@@ -101,7 +101,6 @@ test("Main and Nightly quality runners are flat and the exact Digest is required
     "quality-web-child",
     "quality-api-child",
     "quality-ai-child",
-    "quality-arch-child",
     "quality-release-child",
     "contracts-child",
     "db-integration-child",
@@ -113,13 +112,9 @@ test("Main and Nightly quality runners are flat and the exact Digest is required
     jobs["quality-release-child"].if,
     /github.event_name != 'pull_request'/,
   );
-  assert.ok(jobs["quality-oracle"].needs.includes("quality-release-child"));
-  assert.ok(
-    jobs["delivery-observation"].needs.includes("quality-release-child"),
-  );
-  const oracleCommand = jobs["quality-oracle"].steps.at(-1).run;
-  assert.match(oracleCommand, /quality-release/);
-  assert.doesNotMatch(oracleCommand, /quality-full/);
+  assert.ok(jobs["ci-check"].needs.includes("quality-release-child"));
+  assert.equal(jobs["quality-oracle"], undefined);
+  assert.equal(jobs["delivery-observation"], undefined);
   const releaseCommands = jobs["quality-release-child"].steps
     .filter((step) => step.run)
     .map((step) => step.run)
@@ -130,7 +125,7 @@ test("Main and Nightly quality runners are flat and the exact Digest is required
   assert.match(releaseCommands, /run-release-safety\.sh/);
   const child = jobs["quality-release-child"];
   assert.ok(
-    child.steps.some((step) => step.with?.name === "delivery-manifest-v8"),
+    child.steps.some((step) => step.with?.name === "delivery-manifest-v9"),
   );
 });
 
@@ -203,8 +198,13 @@ test("old release, supply-chain, migration and disaster-recovery checks have a n
   assert.match(quality, /if \(full\)/);
   assert.ok(contracts.includes('"contracts:verify"'));
   assert.ok(
-    jobs["governance-child"].steps.some((step) =>
+    jobs.lint.steps.some((step) =>
       (step.run ?? "").includes("node --test scripts/delivery/*.test.mjs"),
+    ),
+  );
+  assert.ok(
+    jobs.lint.steps.some((step) =>
+      (step.run ?? "").includes("pnpm quality:verify"),
     ),
   );
   const lint = jobs.lint.steps.map((step) => step.run ?? "").join("\n");

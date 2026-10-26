@@ -12,8 +12,8 @@ on:
   # base == head, and the manifest generator force-selects every lane for
   # the schedule event, so path-scoped PR selection cannot hide a broken
   # lane for long. Nightly runs are not required checks and never gate a
-  # merge; failures surface as a red run plus the Delivery Observation
-  # summary artifact, matching the release-health reporting style.
+  # merge; failures surface as a red run plus the final Check
+  # receipt artifact, matching the release-health reporting style.
   schedule:
     - cron: "23 18 * * *"
 
@@ -27,36 +27,11 @@ permissions:
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v8.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v9.json
 
 jobs:
-  # Start full static checks in parallel with Changes (T3 Code pattern).
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version: "1.26"
-          cache-dependency-path: apps/api/go.sum
-      - run: pnpm install --frozen-lockfile
-      - name: Format (OXFmt)
-        run: pnpm format:check
-      - name: Format (Go)
-        run: pnpm format:check:go
-      - name: Lint (OXlint)
-        run: pnpm lint:oxlint
-      - name: Lint (OXlint type-aware)
-        run: pnpm lint:oxlint:types
-
   scope:
-    name: Delivery Scope
+    name: Changes
     runs-on: ubuntu-latest
     outputs:
       manifest_digest: ${{ steps.manifest.outputs.manifest_digest }}
@@ -91,16 +66,14 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v8
-          path: reports/delivery/delivery-manifest-v8.json
+          name: delivery-manifest-v9
+          path: reports/delivery/delivery-manifest-v9.json
           overwrite: true
           if-no-files-found: error
           retention-days: 14
 
-  governance-child:
-    name: Governance child
-    needs: scope
-    if: needs.scope.result == 'success'
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -111,33 +84,44 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - run: >-
-          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
       - run: pnpm install --frozen-lockfile
-      - name: Validate delivery policy contracts
-        run: node --test scripts/delivery/*.test.mjs
-      - name: Validate E2E shard partition completeness
-        run: node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json
-      - name: Verify Go database runner rejects silent Skip and missing tests
-        run: python3 -m unittest discover -s scripts/quality -p 'test_run_go_db_tests.py' -v
-      - name: Validate V2 active plans and handoff evidence
-        run: |
-          node scripts/plan/validate-v2-parallel.mjs
-          node --test scripts/plan/*.test.mjs
-      - name: Validate committed repository diff hygiene
-        shell: bash
+      - name: Format (OXFmt)
+        run: pnpm format:check
+      - name: Format (Go)
+        run: pnpm format:check:go
+      - name: Lint (OXlint)
+        run: pnpm lint:oxlint
+      - name: Lint (OXlint type-aware)
+        run: pnpm lint:oxlint:types
+
+      - name: Commitlint authored PR commits
+        if: github.event_name == 'pull_request'
+        run: >-
+          bash scripts/quality/lint-commit-range.sh
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+      - name: Delivery, plan, shard and database runner contracts
         run: |
           set -euo pipefail
-          base_sha="$(jq -r .baseSha "$DELIVERY_MANIFEST_PATH")"
-          head_sha="$(jq -r .headSha "$DELIVERY_MANIFEST_PATH")"
-          git cat-file -e "${base_sha}^{commit}"
-          git cat-file -e "${head_sha}^{commit}"
-          git diff --check "${base_sha}...${head_sha}"
+          node --test scripts/delivery/*.test.mjs scripts/plan/*.test.mjs
+          node scripts/plan/validate-v2-parallel.mjs
+          node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json
+          python3 -m unittest discover -s scripts/quality -p 'test_run_go_db_tests.py' -v
+      - name: Architecture and validation capacity contracts
+        run: pnpm quality:verify
+      - name: Verify committed diff hygiene
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          git diff --check "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$HEAD_SHA"
 
   quality-web-child:
     name: Test Web (Unit + Build)
@@ -158,7 +142,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -190,7 +174,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -224,7 +208,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -232,72 +216,6 @@ jobs:
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - name: Execute ai quality lane
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane ai
-
-  quality-arch-child:
-    name: Architecture quality child
-    needs: scope
-    if: >-
-      needs.scope.result == 'success' &&
-      (needs.scope.outputs.lane_web == 'true' ||
-       needs.scope.outputs.lane_api == 'true' ||
-       needs.scope.outputs.lane_ai == 'true')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version: "1.26"
-          cache-dependency-path: apps/api/go.sum
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Validate manifest digest binding
-        run: >-
-          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-      - name: Execute architecture boundary checks
-        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane arch
-
-  quality-release-child:
-    name: Release Safety (Main / Nightly)
-    needs: scope
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.scope.result == 'success' &&
-      needs.scope.outputs.lane_full == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version: "1.26"
-          cache-dependency-path: apps/api/go.sum
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Validate Main / Nightly manifest digest and exact stage
-        run: |
-          set -euo pipefail
-          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"             --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          jq -e --arg event "${{ github.event_name }}"             '.event == $event and .stage != "pr-fast" and .lanes.full == true'             "$DELIVERY_MANIFEST_PATH"
-      - name: Verify release, supply chain, platform and DR scripts
-        run: bash scripts/quality/run-release-safety.sh
 
   contracts-child:
     name: Test Contracts
@@ -329,7 +247,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -338,54 +256,51 @@ jobs:
       - name: Execute manifest-selected contract verification
         run: node scripts/delivery/run-contracts.mjs "$DELIVERY_MANIFEST_PATH"
 
-  governance-oracle:
-    name: Governance Oracle
-    needs: [scope, lint, governance-child]
-    if: always()
+  component-child:
+    name: Test Web (Browser)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_component == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
-      - name: Verify child outcomes against the delivery manifest
+      - name: Validate manifest digest binding
         run: >-
-          node scripts/delivery/oracle.mjs
-          --manifest "$DELIVERY_MANIFEST_PATH"
-          --group governance
-          --detector "${{ needs.scope.result }}"
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"governance":"${{ needs.governance-child.result }}","lint":"${{ needs.lint.result }}"}'
-
-  quality-oracle:
-    name: Quality Oracle
-    needs:
-      [
-        scope,
-        quality-web-child,
-        quality-api-child,
-        quality-ai-child,
-        quality-arch-child,
-        quality-release-child,
-        contracts-child,
-      ]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve Playwright browser version
+        id: playwright-version
+        run: |
+          version="$(node -p 'require("./node_modules/@playwright/test/package.json").version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Verify child outcomes against the delivery manifest
-        run: >-
-          node scripts/delivery/oracle.mjs
-          --manifest "$DELIVERY_MANIFEST_PATH"
-          --group quality
-          --detector "${{ needs.scope.result }}"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"quality-web":"${{ needs.quality-web-child.result }}","quality-api":"${{ needs.quality-api-child.result }}","quality-ai":"${{ needs.quality-ai-child.result }}","quality-arch":"${{ needs.quality-arch-child.result }}","quality-release":"${{ needs.quality-release-child.result }}","contracts":"${{ needs.contracts-child.result }}"}'
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}-headless
+      - name: Install Chromium (full, on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Install Chromium (cached browsers, on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install --only-shell chromium
+      - name: Run Storybook component browser tests
+        run: pnpm nx run @bodysense/web:component-test
 
   migrations-child:
     name: Test Server (PostgreSQL baseline)
@@ -439,6 +354,47 @@ jobs:
         env:
           BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
         run: go test -race ./internal/service -run '^TestIndependentTraining.*Postgres$' -count=1 -v
+
+  db-integration-child:
+    name: Test Server (PostgreSQL Integration)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_api == 'true' ||
+       needs.scope.outputs.lane_database == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
+        env:
+          POSTGRES_USER: bodysense
+          POSTGRES_PASSWORD: bodysense123
+          POSTGRES_DB: bodysense_migration_validator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodysense -d bodysense_migration_validator"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - name: Apply actual PostgreSQL 18 schema before integration tests
+        working-directory: apps/api
+        run: >-
+          go run ./cmd/migration-validator
+          -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+          -migrations 'file://migrations'
+      - name: Test Server - PostgreSQL assertions without Skip
+        env:
+          BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
+          BODYSENSE_DB_TEST_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
+        run: python3 scripts/quality/run-go-db-tests.py --profile "$BODYSENSE_DB_TEST_PROFILE"
 
   recovery-migrations-child:
     name: Test Server (PostgreSQL recovery / Main)
@@ -517,67 +473,37 @@ jobs:
 
   # Real Go DB integration: no fake Playwright smoke. The Go runner verifies
   # every required test returned pass in go test -json; skip/missing is red.
-  db-integration-child:
-    name: Test Server (PostgreSQL Integration)
+  quality-release-child:
+    name: Release Safety (Main / Nightly)
     needs: scope
     if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
-      (needs.scope.outputs.lane_api == 'true' ||
-       needs.scope.outputs.lane_database == 'true' ||
-       needs.scope.outputs.lane_full == 'true')
+      needs.scope.outputs.lane_full == 'true'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
-        env:
-          POSTGRES_USER: bodysense
-          POSTGRES_PASSWORD: bodysense123
-          POSTGRES_DB: bodysense_migration_validator
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U bodysense -d bodysense_migration_validator"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - name: Apply actual PostgreSQL 18 schema before integration tests
-        working-directory: apps/api
-        run: >-
-          go run ./cmd/migration-validator
-          -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
-          -migrations 'file://migrations'
-      - name: Test Server - PostgreSQL assertions without Skip
-        env:
-          BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
-          BODYSENSE_DB_TEST_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
-        run: python3 scripts/quality/run-go-db-tests.py --profile "$BODYSENSE_DB_TEST_PROFILE"
-
-  database-oracle:
-    name: Database Oracle
-    needs:
-      [scope, migrations-child, recovery-migrations-child, db-integration-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
-      - name: Verify child outcomes against the delivery manifest
-        run: >-
-          node scripts/delivery/oracle.mjs
-          --manifest "$DELIVERY_MANIFEST_PATH"
-          --group database
-          --detector "${{ needs.scope.result }}"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}","database-integration":"${{ needs.db-integration-child.result }}"}'
+      - name: Validate Main / Nightly manifest digest and exact stage
+        run: |
+          set -euo pipefail
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"             --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          jq -e --arg event "${{ github.event_name }}"             '.event == $event and .stage != "pr-fast" and .lanes.full == true'             "$DELIVERY_MANIFEST_PATH"
+      - name: Verify release, supply chain, platform and DR scripts
+        run: bash scripts/quality/run-release-safety.sh
 
   e2e-child:
     name: Test Web (Full E2E shard ${{ matrix.shard }})
@@ -638,18 +564,23 @@ jobs:
       - name: Sync Python E2E environment
         working-directory: apps/ai-service
         run: uv sync --frozen --extra ocr
+      - name: Resolve Playwright browser version
+        id: playwright-version
+        run: |
+          version="$(node -p 'require("./node_modules/@playwright/test/package.json").version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}-headless
       - name: Install Chromium (full, on cache miss)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium
       - name: Install Chromium (cached browsers, on cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install chromium
+        run: pnpm exec playwright install --only-shell chromium
       - name: Start Go API
         working-directory: apps/api
         env:
@@ -764,161 +695,16 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
-  component-child:
-    name: Test Web (Browser)
-    needs: scope
-    if: >-
-      needs.scope.result == 'success' &&
-      (needs.scope.outputs.lane_component == 'true' ||
-       needs.scope.outputs.lane_full == 'true')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Validate manifest digest binding
-        run: >-
-          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-      - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install Chromium (full, on cache miss)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Install Chromium (cached browsers, on cache hit)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install chromium
-      - name: Run Storybook component browser tests
-        run: pnpm nx run @bodysense/web:component-test
-
-  experience-oracle:
-    name: Experience Oracle
-    needs: [scope, e2e-report-child, component-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Verify child outcomes against the delivery manifest
-        run: >-
-          node scripts/delivery/oracle.mjs
-          --manifest "$DELIVERY_MANIFEST_PATH"
-          --group experience
-          --detector "${{ needs.scope.result }}"
-          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"experience":"${{ needs.e2e-report-child.result }}","component":"${{ needs.component-child.result }}"}'
-
-  delivery-observation:
-    name: Delivery Observation
-    needs:
-      - scope
-      - lint
-      - governance-child
-      - quality-web-child
-      - quality-api-child
-      - quality-ai-child
-      - quality-arch-child
-      - quality-release-child
-      - contracts-child
-      - component-child
-      - migrations-child
-      - recovery-migrations-child
-      - db-integration-child
-      - e2e-child
-      - e2e-report-child
-      - governance-oracle
-      - quality-oracle
-      - database-oracle
-      - experience-oracle
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v8
-          path: reports/delivery
-      - name: Materialize execution outcomes
-        env:
-          QUALITY_RESULTS: >-
-            ${{ needs.quality-web-child.result }}
-            ${{ needs.quality-api-child.result }}
-            ${{ needs.quality-ai-child.result }}
-            ${{ needs.quality-arch-child.result }}
-            ${{ needs.quality-release-child.result }}
-        run: |
-          mkdir -p reports/delivery
-          quality="skipped"
-          for result in $QUALITY_RESULTS; do
-            case "$result" in
-              failure|cancelled) quality="failure" ;;
-              success) if [ "$quality" != "failure" ]; then quality="success"; fi ;;
-            esac
-          done
-          cat > reports/delivery/lane-results.json <<JSON
-          {
-            "governance": "${{ needs.governance-child.result }}",
-            "lint": "${{ needs.lint.result }}",
-            "quality": "${quality}",
-            "contracts": "${{ needs.contracts-child.result }}",
-            "component": "${{ needs.component-child.result }}",
-            "database-baseline": "${{ needs.migrations-child.result }}",
-            "database-recovery": "${{ needs.recovery-migrations-child.result }}",
-            "database-integration": "${{ needs.db-integration-child.result }}",
-            "experience": "${{ needs.e2e-report-child.result }}"
-          }
-          JSON
-          cat > reports/delivery/oracle-results.json <<'JSON'
-          {
-            "governance": "${{ needs.governance-oracle.result }}",
-            "quality": "${{ needs.quality-oracle.result }}",
-            "database": "${{ needs.database-oracle.result }}",
-            "experience": "${{ needs.experience-oracle.result }}"
-          }
-          JSON
-      - name: Build versioned delivery observation
-        run: >-
-          node scripts/delivery/observe-run.mjs
-          --manifest "$DELIVERY_MANIFEST_PATH"
-          --lanes reports/delivery/lane-results.json
-          --oracles reports/delivery/oracle-results.json
-          --output reports/delivery/delivery-run-summary-v1.json
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: delivery-run-summary-${{ github.run_id }}-${{ github.run_attempt }}
-          path: reports/delivery/delivery-run-summary-v1.json
-          if-no-files-found: error
-          retention-days: 30
-
-  # One new digest-bound check; old required contexts stay until safe migration.
+  # Single fail-closed fan-in: no independent Oracles or Observation runners.
   ci-check:
-    name: CI Check
+    name: Check
+    if: always()
     needs:
       - scope
-      - commit-lint
       - lint
-      - governance-child
       - quality-web-child
       - quality-api-child
       - quality-ai-child
-      - quality-arch-child
       - quality-release-child
       - contracts-child
       - migrations-child
@@ -927,24 +713,14 @@ jobs:
       - component-child
       - e2e-child
       - e2e-report-child
-      - governance-oracle
-      - quality-oracle
-      - database-oracle
-      - experience-oracle
-      - delivery-observation
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/delivery
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-run-summary-${{ github.run_id }}-${{ github.run_attempt }}
-          path: reports/delivery
-      - name: Verify exact SHA, run attempt, Manifest, summary and every job
+      - name: Verify exact run, SHA, Digest and selected jobs
         env:
           CI_MANIFEST_DIGEST: ${{ needs.scope.outputs.manifest_digest }}
           CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -955,13 +731,10 @@ jobs:
           CI_RESULTS_JSON: >-
             {
               "scope": "${{ needs.scope.result }}",
-              "commit-lint": "${{ needs.commit-lint.result }}",
               "lint": "${{ needs.lint.result }}",
-              "governance-child": "${{ needs.governance-child.result }}",
               "quality-web-child": "${{ needs.quality-web-child.result }}",
               "quality-api-child": "${{ needs.quality-api-child.result }}",
               "quality-ai-child": "${{ needs.quality-ai-child.result }}",
-              "quality-arch-child": "${{ needs.quality-arch-child.result }}",
               "quality-release-child": "${{ needs.quality-release-child.result }}",
               "contracts-child": "${{ needs.contracts-child.result }}",
               "migrations-child": "${{ needs.migrations-child.result }}",
@@ -969,42 +742,17 @@ jobs:
               "db-integration-child": "${{ needs.db-integration-child.result }}",
               "component-child": "${{ needs.component-child.result }}",
               "e2e-child": "${{ needs.e2e-child.result }}",
-              "e2e-report-child": "${{ needs.e2e-report-child.result }}",
-              "governance-oracle": "${{ needs.governance-oracle.result }}",
-              "quality-oracle": "${{ needs.quality-oracle.result }}",
-              "database-oracle": "${{ needs.database-oracle.result }}",
-              "experience-oracle": "${{ needs.experience-oracle.result }}",
-              "delivery-observation": "${{ needs.delivery-observation.result }}"
+              "e2e-report-child": "${{ needs.e2e-report-child.result }}"
             }
         run: >-
           node scripts/delivery/ci-check.mjs
           --manifest "$DELIVERY_MANIFEST_PATH"
-          --summary reports/delivery/delivery-run-summary-v1.json
-          --output reports/delivery/ci-check-receipt-v1.json
-      - name: Upload machine-verifiable CI Check receipt
+          --output reports/delivery/ci-check-receipt-v2.json
+      - name: Upload CI Check receipt
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ci-check-receipt-${{ github.run_id }}-${{ github.run_attempt }}
-          path: reports/delivery/ci-check-receipt-v1.json
+          path: reports/delivery/ci-check-receipt-v2.json
           if-no-files-found: warn
           retention-days: 30
-
-  commit-lint:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Lint authored PR commits
-        run: >-
-          bash scripts/quality/lint-commit-range.sh
-          "${{ github.event.pull_request.base.sha }}"
-          "${{ github.event.pull_request.head.sha }}"

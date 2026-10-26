@@ -29,7 +29,7 @@ function m(files, event = "pull_request", forceFull = false) {
 }
 
 test("new v8 manifest requires Go DB integration on API, database and all Main runs", () => {
-  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v8");
+  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v9");
   for (const files of [
     ["apps/api/internal/service/episode.go"],
     ["apps/api/migrations/000061_body.up.sql"],
@@ -109,12 +109,9 @@ test("workflow's PostgreSQL integration Job is a real database job with a strict
   assert.match(steps, /run-go-db-tests\.py --profile/);
   assert.match(job.if, /lane_api/);
   assert.match(job.if, /lane_database/);
-  const oracle = jobs["database-oracle"];
-  assert.ok(oracle.needs.includes("db-integration-child"));
-  assert.match(oracle.steps.at(-1).run, /database-integration/);
-  assert.ok(
-    jobs["delivery-observation"].needs.includes("db-integration-child"),
-  );
+  assert.ok(jobs["ci-check"].needs.includes("db-integration-child"));
+  assert.equal(jobs["database-oracle"], undefined);
+  assert.equal(jobs["delivery-observation"], undefined);
 });
 
 test("PR never runs a full-stack Browser E2E and full Main still requires all results", () => {

@@ -950,3 +950,30 @@ place while the stacked Draft PRs are under validation. Do **not** replace
 them with CI Check until the full integrated workflow is merged into main
 and the new context is verified against genuine green/red PRs. Existing
 Candidate/Stable/Production gates remain unchanged.
+
+## VNext v2 flat CI (Issue #476)
+
+This is the correction to the intermediate v8 Oracle hierarchy.
+The v9 Manifest retains SHA / run / attempt / task-policy identity and
+keeps earlier v1-v8 manifests readable. A PR uses:
+
+**Changes + Lint** → selected parallel **Test Web / Test Server / Test AI
+Service / Test Contracts / Browser** → one final **Check**.
+
+Lint now owns OXFmt, Oxlint, GoFmt, PR Commitlint, all delivery/plan
+contracts, architecture and capacity checks, plus Git diff hygiene.
+The four separate Oracles, Governance child, Architecture child,
+Delivery Observation and standalone Commitlint runners are removed.
+The **Check** evaluates every selected job result directly against the
+digest-bound manifest and generates a per-attempt receipt, rejecting missing,
+failed, cancelled and illegally skipped jobs. It is an integrity checksum,
+not a digital signature.
+
+The PostgreSQL baseline, non-Skip DB integration, full Main PG recovery,
+all three full E2E shards plus their merged-coverage report, and
+Main/Nightly Release Safety still execute in parallel as before.
+PRs do **not** run full-stack E2E. Browser caches now key on the installed
+Playwright version, not unrelated package-lock changes, and install only
+headless Chromium shell. Real GitHub PR and Main Full acceptance is required
+before retiring the old branch-protection contexts; the repository's manual
+governance workflow is updated to declare only \`Check\`.

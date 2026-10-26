@@ -174,8 +174,8 @@ test("workflow runs Lint without Changes dependency and never runs PR E2E or mon
   const jobs = workflow.jobs;
   assert.ok(jobs.lint);
   assert.equal(jobs.lint.needs, undefined);
-  assert.ok(jobs["governance-oracle"].needs.includes("lint"));
-  assert.ok(jobs["delivery-observation"].needs.includes("lint"));
+  assert.ok(jobs["ci-check"].needs.includes("lint"));
+  assert.ok(jobs["ci-check"].needs.includes("scope"));
   for (const job of [
     "quality-release-child",
     "e2e-child",
@@ -189,14 +189,12 @@ test("workflow runs Lint without Changes dependency and never runs PR E2E or mon
   const lintCommands = formatCmds(jobs.lint.steps).join("\n");
   assert.match(lintCommands, /pnpm format:check/);
   assert.match(lintCommands, /pnpm lint:oxlint:types/);
-  const governanceCommands = formatCmds(jobs["governance-child"].steps).join(
-    "\n",
-  );
-  assert.doesNotMatch(governanceCommands, /pnpm format:check|pnpm lint:oxlint/);
+  assert.match(lintCommands, /scripts\/delivery\/\*\.test\.mjs/);
+  assert.match(lintCommands, /pnpm quality:verify/);
   const candidate = readFileSync(
     ".github/workflows/candidate-publish.yml",
     "utf8",
   );
-  assert.match(candidate, /name: delivery-manifest-v8/);
-  assert.match(candidate, /delivery-manifest-v8.json/);
+  assert.match(candidate, /name: delivery-manifest-v9/);
+  assert.match(candidate, /delivery-manifest-v9.json/);
 });

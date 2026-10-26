@@ -526,7 +526,7 @@ jobs:
           ref: ${{ needs.resolve.outputs.revision }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v8
+          name: delivery-manifest-v9
           path: reports/candidate/source-ci
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -546,7 +546,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source_manifest="reports/candidate/source-ci/delivery-manifest-v8.json"
+          source_manifest="reports/candidate/source-ci/delivery-manifest-v9.json"
           node scripts/delivery/validate-manifest.mjs "$source_manifest"
           delivery_digest="$(jq -r .digest "$source_manifest")"
           jq -n \

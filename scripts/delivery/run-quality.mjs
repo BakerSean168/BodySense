@@ -4,13 +4,14 @@ import { spawnSync } from "node:child_process";
 import {
   MANIFEST_SCHEMA,
   MANIFEST_SCHEMA_V7,
+  MANIFEST_SCHEMA_V8,
   validateManifest,
 } from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
   console.error(
-    "usage: run-quality.mjs <delivery-manifest-v8.json> [--lane web|api|ai|arch|full]",
+    "usage: run-quality.mjs <delivery-manifest-v9.json> [--lane web|api|ai|arch|full]",
   );
   process.exit(2);
 }
@@ -98,7 +99,9 @@ try {
   // architecture and release-safety owners.
   if (
     manifest.lanes.full &&
-    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V7].includes(manifest.schema)
+    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V8, MANIFEST_SCHEMA_V7].includes(
+      manifest.schema,
+    )
   ) {
     // Archived v1-v6 manifests ran the serial monolith. V7 Main uses the
     // parallel per-runtime owners instead of repeating full validation.

@@ -35,6 +35,7 @@ function round(value, digits = 1) {
 }
 function requiredNames(run) {
   const all = run.jobs ?? [];
+  if (all.some((job) => job.name === "Check")) return ["Check"];
   if (all.some((job) => job.name === "CI Check")) return ["CI Check"];
   return [
     ...REQUIRED_LEGACY,
@@ -94,7 +95,12 @@ export function analyzeRun(run, category = "root") {
     wallSeconds: completed ? round(duration(start, end)) : null,
     queueSeconds: round(duration(created, start)),
     observedRunnerMinutes: round(observedSeconds / 60, 2),
-    gateName: required.includes("CI Check") ? "CI Check" : "legacy required",
+    gateName:
+      required[0] === "Check"
+        ? "Check"
+        : required.includes("CI Check")
+          ? "CI Check"
+          : "legacy required",
     longestJobs: jobCosts
       .filter((job) => job.seconds !== null)
       .sort((a, b) => b.seconds - a.seconds)

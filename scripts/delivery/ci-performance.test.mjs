@@ -131,3 +131,13 @@ test("historical B8 reference is separate from new-version P95 samples", () => {
   assert.match(markdown, /excluded from the new P95 sample/);
   assert.equal(summarize(current).root.count, 1);
 });
+
+test("new flattened Check is the only required gate for the performance interval", () => {
+  const current = run(300, true);
+  const check = current.jobs.find((job) => job.name === "CI Check");
+  check.name = "Check";
+  const result = analyzeRun(current);
+  assert.equal(result.complete, true);
+  assert.equal(result.gateName, "Check");
+  assert.equal(result.gateSeconds, 77);
+});

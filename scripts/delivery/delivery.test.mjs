@@ -231,21 +231,13 @@ test("every selected delivery quality lane runs architecture boundaries", () => 
   );
 });
 
-test("CI governance validates the committed manifest base-to-head diff", () => {
+test("Lint validates authored PR commits and the base-to-head Git diff", () => {
   const contents = fs.readFileSync(".github/workflows/ci.yml", "utf8");
-  assert.match(contents, /governance-child:[\s\S]*fetch-depth: 0/);
-  assert.match(
-    contents,
-    /base_sha="\$\(jq -r \.baseSha "\$DELIVERY_MANIFEST_PATH"\)"/,
-  );
-  assert.match(
-    contents,
-    /head_sha="\$\(jq -r \.headSha "\$DELIVERY_MANIFEST_PATH"\)"/,
-  );
-  assert.match(
-    contents,
-    /git diff --check "\$\{base_sha\}\.\.\.\$\{head_sha\}"/,
-  );
+  assert.match(contents, /lint:[\s\S]*fetch-depth: 0/);
+  assert.match(contents, /git cat-file -e/);
+  assert.match(contents, /git merge-base/);
+  assert.match(contents, /git diff --check/);
+  assert.match(contents, /lint-commit-range.sh/);
 });
 
 test("PR commit lint keeps merge type tied to real Git merge topology", () => {
@@ -321,7 +313,7 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
 
 test("v8 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v8");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v9");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
