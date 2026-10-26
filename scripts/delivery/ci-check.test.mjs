@@ -280,6 +280,34 @@ test("Browser caches track Playwright version instead of the whole lockfile", ()
   }
 });
 
+test("Contract Runner caches only exact pinned tool binaries", () => {
+  const jobs = YAML.parseDocument(
+    readFileSync(".github/workflows/ci.yml", "utf8"),
+    { uniqueKeys: true },
+  ).toJS().jobs;
+  const steps = jobs["contracts-child"].steps;
+  const setupGo = steps.find((step) => step.id === "contract-go");
+  const cache = steps.find(
+    (step) => step.name === "Restore pinned contract toolchain",
+  );
+  assert.ok(setupGo && cache);
+  assert.match(cache.uses, /^actions\/cache@[0-9a-f]{40}$/);
+  assert.equal(cache.with.path, ".tools/contracts/bin");
+  assert.match(cache.with.key, /steps\.contract-go\.outputs\.go-version/);
+  assert.match(cache.with.key, /contracts\/toolchain\.json/);
+  assert.match(cache.with.key, /scripts\/contracts\/bootstrap-tools\.sh/);
+  assert.match(cache.with.key, /scripts\/contracts\/lib\/go-install-retry\.sh/);
+  assert.equal(cache.with["restore-keys"], undefined);
+  assert.ok(steps.indexOf(cache) > steps.indexOf(setupGo));
+  assert.ok(
+    steps.indexOf(cache) <
+      steps.findIndex(
+        (step) =>
+          step.name === "Execute manifest-selected contract verification",
+      ),
+  );
+});
+
 test("CLI emits a versioned receipt and fails red on incomplete Lint", () => {
   const x = sample();
   const dir = mkdtempSync(path.join(os.tmpdir(), "body-check-"));

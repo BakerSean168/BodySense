@@ -977,3 +977,17 @@ Playwright version, not unrelated package-lock changes, and install only
 headless Chromium shell. Real GitHub PR and Main Full acceptance is required
 before retiring the old branch-protection contexts; the repository's manual
 governance workflow is updated to declare only \`Check\`.
+
+### Contract bootstrap variability
+
+Actual PR run #40324331438 spent 11m37s in Test Contracts while
+the identical commit's manually dispatched full run #40324428103 needed
+2m20s. PR logs showed proxy.golang.org HTTP/2 transport failures
+while installing pinned buf modules, followed by successful bounded retry.
+No contract test was removed or suppressed.
+
+The Test Contracts Job caches exact-version pinned Go tool binaries and
+checksum-checked protoc by OS, CPU, resolved Go version, toolchain and
+bootstrap file digests. No broad restore key can substitute a different
+version. Warm caches avoid Go module re-downloads; cold caches can
+still experience normal network variability.
