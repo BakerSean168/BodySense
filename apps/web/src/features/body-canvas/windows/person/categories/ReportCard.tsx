@@ -64,7 +64,10 @@ export function ReportCard({
           >
             <MoreHorizontal size={18} aria-hidden="true" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bc-account-menu">
+          <DropdownMenuContent
+            align="end"
+            className="bc-account-menu bc-row-menu"
+          >
             <DropdownMenuItem variant="destructive" onClick={onDelete}>
               <Trash2 />
               删除…

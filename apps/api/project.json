@@ -3,11 +3,16 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/api",
   "projectType": "application",
-  "tags": ["scope:api", "type:app"],
+  "tags": [
+    "scope:api",
+    "type:app"
+  ],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{projectRoot}/bin"],
+      "outputs": [
+        "{projectRoot}/bin"
+      ],
       "options": {
         "cwd": "apps/api",
         "command": "mkdir -p bin && go build -o bin/api ./cmd/server"
@@ -23,7 +28,6 @@
     },
     "start": {
       "executor": "nx:run-commands",
-      "dependsOn": ["build"],
       "options": {
         "cwd": "apps/api",
         "command": "go run ./cmd/server"
@@ -39,7 +43,9 @@
     },
     "test:coverage": {
       "executor": "nx:run-commands",
-      "outputs": ["{projectRoot}/coverage"],
+      "outputs": [
+        "{projectRoot}/coverage.out"
+      ],
       "cache": true,
       "options": {
         "cwd": "apps/api",

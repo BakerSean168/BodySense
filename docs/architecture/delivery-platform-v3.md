@@ -139,18 +139,19 @@ production .deploy-state     actually deployed revision/release identity
 
 ### 4.1 Manifest
 
-The detector writes `delivery-manifest-v1.json` once per run.
+The detector writes `delivery-manifest-v8.json` once per run.
 
 Minimum shape:
 
 ```json
 {
-  "schema": "bodysense.delivery-manifest/v1",
+  "schema": "bodysense.delivery-manifest/v8",
   "baseSha": "...",
   "headSha": "...",
   "event": "pull_request",
+  "stage": "pr-fast",
   "risk": "runtime",
-  "policyVersion": "delivery-policy-v1",
+  "policyVersion": "delivery-policy-v7",
   "changedPaths": [],
   "lanes": {
     "governance": true,
@@ -159,32 +160,105 @@ Minimum shape:
     "ai": false,
     "contracts": true,
     "database": false,
-    "experience": true,
+    "experience": false,
+    "component": true,
     "full": false
+  },
+  "laneDetails": {
+    "web": {
+      "required": true,
+      "files": ["apps/web/src/example.tsx"],
+      "targets": ["job:quality-web-child", "nx:@bodysense/web:test"],
+      "skipReason": null
+    },
+    "api": {
+      "required": false,
+      "files": [],
+      "targets": ["job:quality-api-child", "nx:api:test"],
+      "skipReason": "no-matching-paths"
+    }
   },
   "digest": "sha256:..."
 }
 ```
 
-The digest is computed over a canonical representation excluding the `digest` field itself.
+Since schema v2, every lane carries a `laneDetails` entry:
+
+- `required` mirrors `lanes.<lane>`;
+- `files` lists the changed paths that require the lane (governance inspects
+  the whole diff, so its `files` is the full change set);
+- `targets` lists the executable units the lane gates (CI jobs, Nx targets,
+  scripts), fixed by policy in `scripts/delivery/lib.mjs`;
+- `skipReason` is `null` for a required lane and a machine-readable code
+  otherwise: `no-changed-paths` (empty diff) or `no-matching-paths` (no
+  changed path selects the lane). An Oracle can therefore distinguish a
+  legitimately skipped lane from a required lane that never ran.
+
+The digest is computed over a canonical representation excluding the `digest`
+field itself, and `laneDetails` is inside the digest. Validators additionally
+cross-check `laneDetails` against `lanes` and `changedPaths`, so recomputing
+a digest after tampering does not launder an inconsistent contract.
+
+Version compatibility: `validateManifest` accepts
+`bodysense.delivery-manifest/v1` (validated under the v1 rules, without
+`laneDetails`), v2, v3, v4 and v5. Lane sets, lane target policies, and policy
+versions are pinned per schema version: v1/v2 manifests validate against
+the eight-lane set and the v1-era target policy (`LANE_TARGETS_V2`) with
+`delivery-policy-v1`; v3 adds the `component` lane, moves contract
+verification into `contracts-child`, and carries `delivery-policy-v2`
+(`LANE_TARGETS_V3`); v4 splits the quality lanes into per-lane children,
+adds the `e2e-report-child` receipt to the experience and full lanes, and
+carries `delivery-policy-v3`. Generators only emit v5; `laneDetails` on a
+v1 manifest is rejected. Consumers that re-validate stored manifests
+(candidate publication, platform audit) therefore keep working across the
+transition.
+
+The Scope job publishes the manifest digest as a job output. Every consumer
+that downloads the manifest artifact (governance child, the quality
+children, contracts child, component child, the four Oracles, Delivery
+Observation)
+verifies the artifact against that output
+with `--expect-digest`, and each Oracle derives its expected child outcomes
+from the digest-validated manifest (`ORACLE_GROUPS` in
+`scripts/delivery/lib.mjs`) instead of re-deriving lane expressions in
+workflow YAML.
 
 ### 4.2 Risk classes
 
-Initial policy classes:
+Each changed path is classified by the first matching rule below (the table
+mirrors `classifySinglePath` in `scripts/delivery/lib.mjs`, in evaluation
+order). Governance always runs. The manifest risk is the highest-priority
+risk across all paths, with priority
+`docs < web < api < ai < contract < database < runtime < release < root`.
+If any path selects the `full` lane, every lane is enabled.
 
-| Risk       | Typical changes                                  | PR policy                                     |
-| ---------- | ------------------------------------------------ | --------------------------------------------- |
-| `docs`     | `docs/**`, prose-only metadata                   | governance only                               |
-| `web`      | React/UI/static frontend code                    | Web + contracts as required                   |
-| `api`      | Go service/application/domain                    | API + contracts                               |
-| `ai`       | Python Agent/runtime/prompts/evals               | AI + contracts/eval                           |
-| `database` | migrations, durable schemas, storage semantics   | API + database + required cross-service tests |
-| `runtime`  | Docker, deployment, model gateway, shared config | full                                          |
-| `contract` | shared API/SSE/tool/domain contracts             | Web + API + AI + experience                   |
-| `root`     | lockfiles, Nx/toolchain, CI control plane        | full                                          |
-| `release`  | release/deploy/runtime packaging                 | full + release contract validation            |
+| Path pattern | Risk | Lanes enabled |
+| ------------ | ---- | ------------- |
+| `docs/**`, any `*.md`, `README.md`, `CONTRIBUTING.md` | `docs` | governance only |
+| `.github/**`, `scripts/delivery/**`, `docker/**`, `deploy/**`, `.env.production` | `runtime` | all |
+| `release-please-config.json`, `.release-please-manifest.json` | `release` | all |
+| `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `nx.json`, `tsconfig*`, `.npm*`, `.node-version`, `.python-version`, `uv.lock` | `root` | all |
+| `apps/api/migrations/**` | `database` | api, database, experience |
+| `apps/api/**` | `api` | api, experience |
+| `apps/ai-service/**` | `ai` | ai, experience |
+| `apps/web/**` | `web` | web, experience, component |
+| `packages/contracts/**` | `contract` | web, api, ai, contracts, experience, component |
+| `postman/**`, `scripts/postman/**` | `contract` | contracts |
+| `packages/utils/**` | `root` | all (shared-utility fail-safe) |
+| `scripts/static-assets/**`, `scripts/anatomy/**` | `runtime` | all (public-asset runtime) |
+| any other `scripts/**` | `runtime` | all (repository script) |
+| `tests/**`, `e2e/**` | `contract` | contracts, experience |
+| anything else | `root` | all (unknown-path fail-safe) |
 
-Multiple categories collapse upward to the safest applicable risk.
+Special cases:
+
+- Empty diff: risk `docs`, governance only, reason `no-changed-paths`. An
+  empty diff is never interpreted as docs-only beyond governance, and the
+  manifest records the explicit reason.
+- Forced full (push to `main`, `workflow_dispatch`, or
+  `DELIVERY_FORCE_FULL=1`): risk `root`, every lane enabled, reason
+  `full-main-policy`, and every lane's `laneDetails.files` is the full
+  change set.
 
 ### 4.3 Full-main override
 
@@ -205,8 +279,38 @@ quality-contracts
 database-current-history
 database-production-baseline
 experience-e2e
+experience-component
 candidate-build
 ```
+
+Physical mapping: `quality-contracts` runs as its own CI job
+(`contracts-child`) with an independent Quality Oracle receipt, separate
+from the web/api/ai unit lanes; `experience-component` runs as
+`component-child` (static Storybook build + test-runner, no API/AI/
+database services) under the Experience Oracle, separate from the
+full-stack `experience-e2e` child.
+
+Since manifest v4, the quality lanes also run as separate jobs:
+`quality-web-child`, `quality-api-child`, and `quality-ai-child` execute
+one lane each in parallel with independent Quality Oracle receipts, and
+the cross-cutting `quality:architecture` checks run in
+`quality-arch-child` whenever any of those lanes is selected. The `full`
+lane keeps the `validate-repo.sh` monolith in `quality-full-child`; the
+per-lane children stand down in full runs (the Quality Oracle derives this
+from the manifest via `{ anyOf, noneOf }` child rules), so no check
+executes twice outside the documented full/contracts overlap.
+
+The `experience-e2e` child is sharded: `e2e-child` runs as a matrix over
+the duration-balanced partition committed in `apps/web/e2e/shards.json`
+(generated by `scripts/e2e/plan-shards.mjs` from measured per-file
+durations, LPT greedy), each shard booting its own full stack and
+uploading a Playwright blob report. `e2e-report-child` merges the blobs
+and verifies the merged results cover exactly the partitioned spec set
+with zero unexpected results (`scripts/e2e/verify-merged-report.mjs`);
+its outcome is the `experience` receipt the Experience Oracle checks, so
+a silently dropped shard fails the run even if every executed test
+passed. Governance additionally validates partition completeness
+(`plan-shards.mjs --check`) on every run.
 
 The implementation may combine lanes on one runner when that is cheaper. Logical lane identity must remain observable even if physical jobs are consolidated.
 
@@ -242,6 +346,19 @@ CI/Docker/release/root
 ### 5.2 Main semantics
 
 Every main push runs the complete existing production safety set, including migration scenarios and browser E2E. Candidate publication is downstream of those gates.
+
+### 5.3 Stage matrix
+
+Every stage reuses the same manifest, lane, and Oracle machinery; stages
+differ in trigger, lane selection, and which evidence they consume.
+
+| Stage | Trigger | What runs | Evidence | What does not run, and why |
+| --- | --- | --- | --- | --- |
+| Local | husky hooks on commit; `pnpm verify:pr` before push | commit-msg: commitlint. pre-commit: Oxfmt `--check` + Oxlint on staged files. `verify:pr`: governance format/lint gates, delivery + plan contract tests, E2E shard-partition check, and `nx affected` lint/typecheck/test against `origin/main` | Local exit codes only; nothing is uploaded | E2E, database migrations, and the full validate-repo.sh set: they need CI services and are covered by the PR stage on the same diff |
+| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v8` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
+| Main | `ci.yml` on push to `main` | The complete production safety set: the manifest force-selects every lane, including the full validate-repo.sh child, migration baseline + recovery, sharded browser E2E, and the component lane | Same artifacts as PR, bound to the exact main SHA | Nothing in the lane set is skipped; path scoping does not apply to main |
+| Nightly | `ci.yml` on `schedule` (daily 18:23 UTC) or manual `workflow_dispatch` | Identical to a main push: base == head, the `schedule` event force-selects every lane, same children, Oracles, and observation | Same artifacts as a main run, retained 30 days for the run summary | Not a required check and never gates a merge. It exists to catch drift that path-scoped PR selection and quiet main periods would hide (toolchain or upstream changes, flaky lanes). Failures surface as a red run plus the Delivery Observation summary, matching the release-health reporting style |
+| Release | release-please PR, then `release-publish`; production deploy is an explicit operator action | Candidate publication runs downstream of a successful main CI run, bound to the exact SHA: it downloads that run's delivery manifest, validates it, and embeds its digest in the candidate set | Candidate set + image digests trace back to the source CI run and its manifest digest | Lint/test/typecheck/E2E are **not** re-run: the exact SHA was already verified by the main run, and re-running could only test a different tree. Promotion consumes evidence; it does not recreate it |
 
 ## 6. Stable Oracle model
 
@@ -473,6 +590,8 @@ A non-production-mutating scheduled audit validates delivery mechanics such as:
 
 The audit reports platform health but does not automatically deploy or repair production.
 
+This weekly audit is complementary to the nightly CI run in section 5.3: the audit exercises delivery *mechanics* (fail-closed negative paths), while the nightly run exercises the product lanes themselves on current main.
+
 ## 13. Security boundaries
 
 - PR workflows use read-only repository permissions unless a narrowly scoped write is required.
@@ -500,3 +619,375 @@ Phase 6 audit/cleanup
 Production behavior is unchanged until its dedicated cutover phase.
 
 The pilot completed on v0.9.0. Transitional shadow CI, legacy required-context aliases, and the old manual production-image fallback were removed only after exact-SHA candidate, staging, Published Release, and explicit production-deploy evidence were all green. Immutable releases are never rewritten as a rollback mechanism.
+
+## 15. VNext acceptance (B7, 2026-10-25)
+
+Batches B1–B6 reworked the test and CI/CD system batch by batch (issues
+#446/#448/#450/#452/#454/#457, PRs #447/#449/#451/#453/#455/#458). This
+section is the consolidated acceptance record: what changed, that no check
+was lost, how the pipeline behaves under injected faults, what it costs,
+and what is known to remain open.
+
+### 15.1 Batch inventory
+
+| Batch | Change |
+| --- | --- |
+| B1 | Format and lint become gates: Oxfmt full-repo check (58-file debt cleared), Oxlint + type-aware Oxlint, gofmt, Ruff format, husky pre-commit; pre-existing zod supply-chain failure fixed |
+| B2 | Manifest contract v2: per-lane `required`/`files`/`targets`/`skipReason`, digest verified by every consumer, Oracle expectations derived from the validated manifest instead of hand-written expressions |
+| B3 | Nx graph honesty: fake `^build` edges removed, typecheck cache-input false-green fixed, outputs/inputs corrected, ai-service coverage target repaired |
+| B4 | Component browser lane (Storybook test-runner) and contracts child split out of the quality monolith with independent Oracle receipts; manifest v3 |
+| B5 | E2E sharded by measured duration (3 shards, per-shard databases, merged-report completeness check), quality lanes split into parallel children; manifest v4 |
+| B6 | Stage matrix (section 5.3), nightly full-run safety net on `schedule`, `pnpm verify:pr` local preflight, root `verify` false-green vector removed, shared Nx cache measured at zero task hits and reverted |
+| B7 | This acceptance: end-to-end fault-injection drill, performance comparison, release-evidence audit, child-receipt evaluation |
+
+### 15.2 Check reconciliation
+
+The 23 checks inventoried in B4 are all retained 1:1 (per-check table in
+issue #452); no batch dropped, merged away, or downgraded a check. Pure
+additions since that inventory: the four format gates and two Oxlint gates
+(B1), the component browser lane with 41 story tests (B4), the E2E
+merged-report completeness check (B5), the nightly full run (B6), and the
+local `verify:pr` preflight (B6). Required checks are unchanged throughout:
+commit-lint, the four Oracles, and Delivery Observation.
+
+### 15.3 Performance comparison (same scope: full safety set)
+
+Medians of three runs per side, from the GitHub Actions API. Baseline:
+main pushes at the pre-VNext architecture (runs 39910452549, 39905968499,
+39900065797; main force-selects every lane). Current: full-scope runs on
+the B5/B6 branches (runs 40143436887, 40149500738, 40150801347; the
+manifest selected the full lane set because CI/delivery paths changed).
+
+| Metric (median) | Baseline | Current | Change |
+| --- | ---: | ---: | --- |
+| Whole-run wall | 961s | 456s | −53% |
+| Critical path | E2E child 928s | Full quality child 421s | E2E no longer dominates |
+| E2E longest shard | 928s (single job) | 362s (+33s merged report) | −57% |
+| E2E total job time | 928s | ≈1049s (3 shards) | +13% job time buys the wall win |
+| Quality execution | 513s (one monolith child) | 421s full child, or per-lane children in parallel on scoped runs | split in B4/B5 |
+| Contracts child | (inside quality monolith) | 174s | independent receipt |
+| Component child | (did not exist) | 67s | new lane |
+| Governance child | 11s | 43s | now carries the B1 format/lint gates for four stacks |
+| PG baseline child | 176s | 176s | unchanged |
+| Jobs per run | 12 | 21 | more parallelism, same required checks |
+
+### 15.4 Fault-injection drill (CI, end to end)
+
+Each fault was injected as a single commit on the B7 acceptance branch,
+observed in a real PR run, and reverted before the next injection. All
+five faults failed exactly the gates listed below and nothing else; no
+defect was found by the drill. The injection commits are not part of
+this PR's net diff (branch history was reset after the drill).
+
+| # | Injected fault | Expected | Observed (run, jobs) |
+| --- | --- | --- | --- |
+| a | `any` in production web code (`apps/web/src/lib/utils.ts`) | Lint gates fail | Run [40152143094](https://github.com/BakerSean168/BodySense/actions/runs/40152143094): Governance child + Governance Oracle + Web quality child + Quality Oracle all failed; unrelated jobs green. The same commit was first stopped locally by the B1 pre-commit hook; the drill used `--no-verify` because CI, not the local hook, was the system under test |
+| b | Type error in a web test file (`displayValue.test.ts`) | Typecheck fails (B3 probe, CI form) | Run [40152712708](https://github.com/BakerSean168/BodySense/actions/runs/40152712708): Web quality child + Quality Oracle failed; Governance stayed green, isolating the failure to typecheck |
+| c | contracts-child forced to skip (`if: … && false && …`) while its lane is enabled | Quality Oracle fails | Run [40153188328](https://github.com/BakerSean168/BodySense/actions/runs/40153188328): Contract verification child skipped, Quality Oracle failed with `contracts: expected success, got skipped`; every other job green |
+| d | Deterministic failure in one E2E spec (`legacy-share-retired.spec.ts`, shard 1) | Its shard fails, merged-report check fails, Experience Oracle fails | Run [40153828687](https://github.com/BakerSean168/BodySense/actions/runs/40153828687): shard 1 + E2E merged report child + Experience Oracle failed; shards 2/3 and all other jobs green |
+| e | Format violation in one source file (`api-url.ts`, single quotes) | Governance format gate fails | Run [40154338364](https://github.com/BakerSean168/BodySense/actions/runs/40154338364): Governance child + Governance Oracle failed; Quality Oracle green, isolating the failure to the format gate |
+
+### 15.5 Release-evidence audit (read-only)
+
+| Link in the chain | Verdict | Evidence |
+| --- | --- | --- |
+| Exact-SHA binding | Complete | candidate-publish triggers only on a successful `push` CI run on `main` and checks out `workflow_run.head_sha`; release-publish revalidates candidate `gitSha` == checkout HEAD, source CI run `head_sha` == candidate `gitSha`, candidate SHA is an ancestor of `origin/main`, and the release tag points at the release SHA |
+| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v8` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
+| Image digest verification | Complete | Every component verifies existing-vs-built digest equality and the OCI revision label at build time, promotes by digest without rebuilding, and re-verifies registry and pulled `RepoDigests` after promotion; immutable-tag collisions fail closed |
+| Release-health retention | Gap (low) | The weekly release-health job writes only to the run's step summary and emits a soft-threshold `::warning::`; nothing is uploaded as an artifact or filed, so the signal survives only within Actions run retention. It is advisory (backlog/lag), never a gate |
+| Candidate artifact lifetime | Gap (low) | release-publish downloads the `candidate-set-*` artifact (90-day retention) from the candidate run; a release cut more than 90 days after candidate publication would first need candidate-publish re-dispatched for that SHA |
+
+No release-chain code was changed in this batch; both gaps are advisory
+and recorded here for a future decision.
+
+### 15.6 Child-receipt evaluation (B2 leftover)
+
+Question: is the platform's `needs.*.result` a sufficient truth source
+for the Oracles, or must each child also produce its own signed receipt
+file?
+
+Conclusion: the platform result is sufficient as the gating truth, and a
+separate child-receipt system is not required. Reasoning:
+
+- The result value is produced by the Actions scheduler, not by the
+  child; a child cannot forge it. It can only exit non-zero (fail) or
+  exit zero. The manifest side of the contract — which lanes must run —
+  is independently digest-bound and re-validated by every Oracle (B2),
+  so "lane should have run" and "lane result" come from two independent
+  sources and are cross-checked.
+- The truth table (section 6) fails closed on skipped, cancelled, and
+  missing children. Across B1–B6 there is no recorded instance of a
+  child reporting success while its lane did not execute; the failures
+  that did occur (B2 manifest/format interaction, B3 oracle mapping,
+  B5 schema gate) were all caught precisely because child results and
+  Oracle expectations disagreed.
+- The residual risk a receipt file would address is a child that exits
+  zero without doing its work (a runner script swallowing its own
+  errors). That is a runner-correctness risk, not a receipt-forgery
+  risk, and the delivery test suites already pin the runners' fail-loud
+  behavior. If it is ever addressed, the minimal step is to have the
+  Oracles also verify the existing `delivery-run-summary` artifact's
+  lane coverage; that design note is recorded here and intentionally
+  not implemented in this batch.
+
+### 15.7 Known limitations
+
+- The nightly full run (B6) is verified locally and by contract tests;
+  its first real `schedule` execution can only happen after the batch
+  chain merges to main, and is tracked as an open item in issue #457.
+- Oxlint warnings stand at 29 (plain) / 98 (type-aware) with zero
+  errors; warnings remain warn-level and are burned down individually,
+  never by disabling rules.
+- The shared Nx cache was measured at zero task-level hits in CI and
+  reverted (B6); local Nx caching is unaffected.
+- E2E sharding trades +13% total job time for a −57% longest-shard
+  wall; shard balance depends on the duration table in
+  `apps/web/e2e/shards.json`, which must be regenerated when the
+  distribution drifts materially.
+- Full-scope runs are now bounded below by the full quality child
+  (validate-repo.sh, median 421s); splitting it further is possible
+  (B5 scoped runs already use per-lane children) but was not needed
+  to meet the acceptance targets.
+
+## 16. Oxc evaluation and lint-gate decision (B8, 2026-10-25)
+
+Question (the Q8 analogue): can Oxlint replace ESLint as this repo's lint
+gate? Method: the effective ESLint configuration was dumped per project
+(`eslint --print-config`, 474 files across `apps/web`, `packages/contracts`,
+`packages/utils`), and a temporary probe suite (13 files, ~90 deliberate
+violations, including the scoped cases: data-boundary assertion, test-file
+exemption, `^_` unused exemptions) was run under the old ESLint, the
+then-current Oxlint config, and a candidate config with every mapped rule
+raised to `error`. Every verdict below is a probe result, not
+documentation. The probe files were deleted after the experiment; the
+suite is reproducible from the recipe in issue #461.
+
+### 16.1 Equivalence verdict (70 checks)
+
+| Class | Count | Detail |
+| --- | ---: | --- |
+| Oxlint equivalent at `error` | 67 | Identical probe hits rule for rule (core eslint rules plus typescript-eslint rules, incl. `no-unused-vars` with the `^_` exemptions and `no-unused-expressions`) |
+| Scoped `no-unsafe-type-assertion` | 1 | Equivalent via the existing override + `--type-aware`: boundary files error, test files exempt. One asymmetry: outside the boundary Oxlint additionally *warns* where ESLint is silent — warn-only, gate unaffected |
+| `no-delete-var` | 1 | The oxc parser rejects `delete <identifier>` in strict mode as a hard error — equal or stronger than the rule. Side effect: a parse error suppresses the file's other diagnostics |
+| `preserve-caught-error` | 1 | **Gap.** Oxlint 1.89 ships the rule but never fires under this repo's options (`{ requireCatchParameter: false }`), verified on both probe variants; ESLint fires. The only genuine non-equivalence found |
+
+`no-octal` is not a configured rule; octal literals and `\8` escapes are
+parse errors under both parsers (probe-verified). In the other direction,
+the new Oxlint config enables no error rule beyond this mapping, so no
+unaccounted gate was added.
+
+### 16.2 Decision: B — Oxlint primary, ESLint as single-rule residual
+
+Not C (full retirement): the `preserve-caught-error` gap has no
+equivalent carrier. Not A (unchanged dual track): with 69 of 70 checks
+equivalent, the full type-aware ESLint pass is pure duplication.
+
+Landed changes:
+
+- `.oxlintrc.json` now lists the 68 mapped rules explicitly at `error`
+  (categories stay `warn` for the incremental warning programme) and adds
+  one scoped override: `no-unsafe-optional-chaining` is `warn` in test
+  files. Reason: Oxlint sees through `as` assertions where the ESLint
+  core rule is blind; the only three hits are test files whose patterns
+  are guarded by call-count assertions (re-verified from the 2022
+  review). Production code stays `error`, so the gate is at least
+  ESLint-strict everywhere ESLint could see.
+- `lint:oxlint` / `lint:oxlint:types` widened from `apps/web/src` to the
+  former ESLint scope: plain run over `apps/web` + `packages` (474
+  files), type-aware over the three `src` trees (471 files). Governance
+  (the always-on lane) carries Oxlint; `validate-repo.sh` picks the same
+  scripts up unchanged.
+- `eslint.config.mjs` reduced to the residual rule only, without type
+  information (no `projectService`): the Nx `lint` targets now run a
+  syntactic single-rule pass. The `@nx` plugin block was dropped — it
+  contributed no enabled rules.
+- `packages/utils/tsconfig.json` gained an explicit `"rootDir": "src"`:
+  tsgolint could not build a program for the stub package (its single
+  file is comment-only) and emitted a `tsconfig-error`; `tsc` itself was
+  always green.
+- Five `no-unnecessary-type-assertion` warnings in real code were removed
+  as a separate commit (portal-scope, popover, select x2,
+  BodyRegionNavigator); web typecheck and the 716 web tests pass, and
+  the rule now reports 0.
+
+Check reconciliation: the former 70 ESLint-carried checks are now
+carried by Oxlint (68), the residual ESLint config (1), and the parser
+(1). No check was dropped or downgraded in production code. Required
+checks and lane semantics are unchanged; the probe suite was re-run
+against the landed configuration as a regression test (Oxlint: 77 plain
++ 3 boundary errors across the probes, each mapped; residual ESLint:
+exactly the one `preserve-caught-error` hit).
+
+### 16.3 Performance (Oracle2, medians of 3, same tree)
+
+| Pass | Before | After |
+| --- | ---: | ---: |
+| ESLint full (474 files, type-aware config) | 28.9s | 9.0s (residual single rule, no type info) |
+| Oxlint plain | 0.3s (`apps/web/src` only) | 2.4s (full scope, via pnpm) |
+| Oxlint `--type-aware` | 3.6s (`apps/web/src` only) | 7.5s (three `src` trees, via pnpm) |
+| **Total lint wall** | **~32.8s** | **~18.9s (-42%)** |
+
+Measurement note: the timing script was run twice (two independent
+sets of 3, same machine and tree). Set medians differ within shared-host
+load noise — ESLint full 28.9s vs 27.6s, Oxlint plain 0.30s vs 0.19s,
+type-aware 3.6s vs 4.5s (widest spread, 3.1–5.3s), Oxfmt 2.81s vs 2.87s.
+Read the table values as ranges (ESLint full ≈27.6–28.9s, type-aware
+≈3.6–4.5s); the total-lint conclusion (~32–33s → ~18.9s, about −42%)
+holds under both sets.
+
+In CI terms the quality web lane's lint segment shrinks by roughly 20s
+gross, about 13s net after the wider Oxlint runs in Governance. Oxfmt was
+re-verified in passing: `format:check` exit 0 over 677 files, median
+2.81s — the formatter migration remains complete and is not reopened.
+
+### 16.4 Warning stock (after the change: 33 plain / 96 type-aware)
+
+All remaining diagnostics are `warn` by design; none was silenced by
+disabling a rule. Classification (locations in issue #461):
+
+| Category | Count | Verdict |
+| --- | ---: | --- |
+| `consistent-function-scoping` | 19 | Style noise (React component-scope helpers) |
+| `no-unsafe-type-assertion` (type-aware) | 33 | By-design scope signal: assertions outside the data boundary, individually reviewed in 2022; boundary stays `error` |
+| `consistent-return` | 15 | Framework idiom / exhaustive-switch false positives |
+| `no-floating-promises` | 10 | Event-handler and router `navigate()` idiom; callee-side error handling verified in 2022 — remains the standing review item when this count *changes* |
+| `no-base-to-string` | 4 | Test-only false positives (string bodies) |
+| Plain remainder (`no-unsafe-optional-chaining` 3, `no-unmodified-loop-condition` 2, `no-shadow` 2, misc 4) | 11 | Guarded test patterns and 2022-verified false positives |
+| Type-aware remainder (`await-thenable` 1, `no-unnecessary-type-parameters` 1, misc) | ~15 | Known harmless idioms, itemised in #461 |
+
+Digestion path: categories stay at `warn`; new warnings in a PR are
+reviewed against this table, and any category whose count grows gets a
+fresh per-item review (the B8 method), not a config exemption.
+
+### 16.5 Exit condition for the residual ESLint
+
+When an Oxlint release enforces `preserve-caught-error` under
+`{ requireCatchParameter: false }` (re-run the #461 probe recipe to
+confirm), delete `eslint.config.mjs`, point the Nx lint targets at the
+Oxlint scripts, and this section's decision collapses to full retirement
+(option C) with no other changes.
+
+## 16. VNext v2: PR Fast migration (2026-10-26)
+
+**Status:** implementation branch from cumulative B8, Issue #464, not yet merged to main. This section supersedes the PR-stage behavior of the historic B8 audit above; historic performance results are not new measurements.
+
+- The v5 Manifest first bound an explicit `stage` to the triggering event and the Manifest Digest. Pull requests always use `pr-fast`. Main push/manual runs use `main-full`, and scheduled runs use `nightly-audit`.
+- Unknown/CI/root changes **conservatively select all applicable lower layers**, but PR never selects the full serial validator or full cross-service Playwright E2E. This is not a relaxation of Unit, Component Browser, Contracts, Go, Python or PG18 baseline checks.
+- Full `Lint` starts independently in parallel with Changes, and is a hard input to the existing protected `Governance Oracle`. A missing/failing Lint cannot be hidden by a green governance child.
+- The `Database Oracle` requires the PG18 baseline when necessary; full disaster-recovery execution is Main/Nightly only. PR experience skips full E2E while preserving component checks. Main/Nightly still require the full existing validation, E2E three shards, merged report and recovery.
+- The source CI and Candidate Publisher now consistently exchange `delivery-manifest-v8` from the exact successful Main run and embed the validated Digest. Archived v1–v6 manifests remain compatible with their original policy versions.
+- **Pending separate issues**: #465 actual PG integration non-Skip checks and server test grouping; #466 eliminate Main full-monolith duplicate execution; #467 consolidated CI Check migration; #468 measured PR P95 ≤300s and integrated merge. CD remains independent in #469.
+
+P0 implementation ran successfully in PR #470; the final five-minute P95 goal still requires repeated representative measurements.
+
+### v6 PostgreSQL integration policy (Issue #465)
+
+This phase adds **Test Server (PostgreSQL Integration)** as its own Main/PR task,
+with a PG18 migration-validated database and fail-closed individual Go test
+results. PR selects seven representative real database / HTTP / privacy
+integration tests, rather than any cross-service Playwright E2E. Main/Nightly
+exercise the full inventory from files requiring
+`BODYSENSE_INTEGRATION_DATABASE_URL`, with a verified non-Skip receipt.
+The Database Oracle now requires this child when the API or database is
+affected. The v6 Manifest encodes this task owner in the API/database target
+policy. Archived v1–v5 manifests still validate with their original targets.
+
+### v7 Main Full: parallel owners and release safety (Issue #466)
+
+**Implementation pending GitHub CI acceptance.** The v7 Manifest records the
+parallelized task policy with policy version v6; the old v6 and earlier
+manifests remain readable under their original targets and Oracle rules.
+
+Main and Nightly are now required to execute each independent owner:
+Test Web (Unit/Build), Test Server (Go Unit/Build), Test AI Service
+(Python/evaluations), Test Contracts (contract safety), architecture
+checks, PostgreSQL 18 baseline / non-Skip integration / restore, component
+browser tests, three Playwright E2E shards plus merged coverage verification,
+and **Release Safety** (supply chain, release, deployment validation,
+static assets, migration history, production capacity and off-host DR).
+Main quality owners depend only on Scope, not on one another. Lint and
+Commitlint start independently. The Quality Oracle requires every selected
+owner to complete successfully and rejects missing/skipped/failing outcomes.
+
+The old full serial `quality-full-child` is absent from v7 CI. Its historical
+`scripts/validate-repo.sh` is retained as a manual/archived diagnostic,
+not executed again by Main CI. Its quality checks are instead assigned
+to existing parallel owners, and its remaining release/supply-chain
+checks live in `scripts/quality/run-release-safety.sh`. The release
+job validates the exact v7 Manifest Digest and rejects PR-stage identity.
+
+This change does not authorize automatic Stable releases or production
+deployments; Candidate Publisher is still limited to successful exact-SHA
+Main `push` CI events. A manually dispatched full workflow on a
+feature branch cannot qualify as a Main release candidate.
+
+### v8 Unified CI Check and execution receipts (Issue #467)
+
+The v8 Manifest extends the original SHA / base / event / stage / task policy
+Digest with `execution.runId` and `execution.attempt`. CI generates these
+values from the actual GitHub execution and rejects any attempt to reuse a
+manifest from another run/attempt. Older v1-v7 manifests remain validated by
+their frozen policy; the CI Check itself requires current v8.
+
+The new **CI Check** independently validates the exact job status map
+(21 upstream jobs), source head SHA, event/ref, run/attempt, Scope Manifest
+Digest and the run-specific Delivery Observation artifact. Each required
+Governance / Quality / Database / Experience Oracle is evaluated again from
+the Manifest and actual child status; an originally green Oracle alone cannot
+launder a missing job. A full run also requires the real E2E matrix aggregate
+and merged-report child, on top of the existing shard-completeness verifier.
+Illegal skips, cancellations, changed source identity, invalid observation
+digest, missing/extra job keys and cross-run replay all fail closed.
+
+The check emits a deterministic SHA-256 **integrity digest** over a
+`bodysense.ci-check-receipt/v1` containing run/attempt, event/ref,
+exact head SHA, Manifest Digest, Observation Digest and all child results.
+This hash is an integrity checksum, **not a cryptographic signature**.
+Artifacts have attempt-specific names for unambiguous re-run provenance.
+
+**Required Check transition:** the existing protected contexts remain in
+place while the stacked Draft PRs are under validation. Do **not** replace
+them with CI Check until the full integrated workflow is merged into main
+and the new context is verified against genuine green/red PRs. Existing
+Candidate/Stable/Production gates remain unchanged.
+
+## VNext v2 flat CI (Issue #476)
+
+This is the correction to the intermediate v8 Oracle hierarchy.
+The v9 Manifest retains SHA / run / attempt / task-policy identity and
+keeps earlier v1-v8 manifests readable. A PR uses:
+
+**Changes + Lint** → selected parallel **Test Web / Test Server / Test AI
+Service / Test Contracts / Browser** → one final **Check**.
+
+Lint now owns OXFmt, Oxlint, GoFmt, PR Commitlint, all delivery/plan
+contracts, architecture and capacity checks, plus Git diff hygiene.
+The four separate Oracles, Governance child, Architecture child,
+Delivery Observation and standalone Commitlint runners are removed.
+The **Check** evaluates every selected job result directly against the
+digest-bound manifest and generates a per-attempt receipt, rejecting missing,
+failed, cancelled and illegally skipped jobs. It is an integrity checksum,
+not a digital signature.
+
+The PostgreSQL baseline, non-Skip DB integration, full Main PG recovery,
+all three full E2E shards plus their merged-coverage report, and
+Main/Nightly Release Safety still execute in parallel as before.
+PRs do **not** run full-stack E2E. Browser caches now key on the installed
+Playwright version, not unrelated package-lock changes, and install only
+headless Chromium shell. Real GitHub PR and Main Full acceptance is required
+before retiring the old branch-protection contexts; the repository's manual
+governance workflow is updated to declare only \`Check\`.
+
+### Contract bootstrap variability
+
+Actual PR run #40324331438 spent 11m37s in Test Contracts while
+the identical commit's manually dispatched full run #40324428103 needed
+2m20s. PR logs showed proxy.golang.org HTTP/2 transport failures
+while installing pinned buf modules, followed by successful bounded retry.
+No contract test was removed or suppressed.
+
+The Test Contracts Job caches exact-version pinned Go tool binaries and
+checksum-checked protoc by OS, CPU, resolved Go version, toolchain and
+bootstrap file digests. No broad restore key can substitute a different
+version. Warm caches avoid Go module re-downloads; cold caches can
+still experience normal network variability.

@@ -154,7 +154,6 @@ export function BodyEpisodeEditor({
               canSubmit={canSubmit}
               factsHasNextPage={factsQuery.hasNextPage}
               fetchingMoreFacts={factsQuery.isFetchingNextPage}
-              hasUnloadedPages={view.factsHaveMore || view.episodesHaveMore}
               onModeChange={(next) => {
                 setMode(next);
                 setFactId("");

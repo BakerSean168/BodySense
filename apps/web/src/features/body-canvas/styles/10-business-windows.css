@@ -226,6 +226,16 @@
   pointer-events: none;
   translate: -24px 0;
 }
+/* On phones every window is a full-width sheet over the stage, so the
+   Tools rail would peek out half-covered under its bottom edge. */
+@media (max-width: 760px) {
+  .bc-stage:has(.bc-business-sheet:not([hidden]))
+    :is(.bc-tool-rail, .bc-tool-rail-tab) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
 /* Desktop twin of the mobile sheet rule: the safety banner (z 45) would sit
    on the window header at its 70px stage top. While a window is open the
    banner moves to the stage's top edge and the window starts below its

@@ -58,7 +58,7 @@ describe("Penpot V2 Body Canvas Dock", () => {
       .querySelectorAll(".bc-dock-item");
     for (const item of items) {
       expect(item).toHaveAccessibleName();
-      expect(item.getAttribute("title")).toMatch(/ · .$/);
+      expect(item.getAttribute("aria-keyshortcuts")).toMatch(/^.$/);
       expect(item.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
       expect(item.querySelector(".bc-dock-label")?.textContent).toBeTruthy();
       expect(item.querySelector("kbd")).toHaveAttribute("aria-hidden", "true");
@@ -129,11 +129,11 @@ describe("Penpot V2 Body Canvas Dock", () => {
         .getByRole("navigation", { name: "身体工作区导航" })
         .querySelectorAll(".bc-dock-item"),
     );
-    expect(items.map((item) => item.getAttribute("title"))).toEqual([
-      "对话 · /",
-      "综合诊断 · D",
-      "训练计划 · P",
-      "个人档案 · M",
-    ]);
+    expect(
+      items.map(
+        (item) =>
+          `${item.getAttribute("aria-label")} · ${item.getAttribute("aria-keyshortcuts")}`,
+      ),
+    ).toEqual(["对话 · /", "综合诊断 · D", "训练计划 · P", "个人档案 · M"]);
   });
 });

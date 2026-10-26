@@ -521,7 +521,12 @@ describe("body-first business windows", () => {
   it("opens the Person window with five categories and the identity popover", async () => {
     renderPage();
     await openDock("个人档案");
-    const person = await screen.findByTestId("person-window");
+    // First test to open Person: its lazy chunk loads cold, so allow longer.
+    const person = await screen.findByTestId(
+      "person-window",
+      {},
+      { timeout: 5000 },
+    );
     // Penpot Person header: "nickname / <category picker>" replaces the tabs.
     const picker = screen.getByRole("button", { name: "档案分类 身体记录" });
     expect(picker).toHaveAttribute("aria-haspopup", "listbox");
@@ -1109,7 +1114,8 @@ describe("body-first business windows", () => {
     await user.click(screen.getByRole("button", { name: "synthetic" }));
     await user.click(await screen.findByRole("menuitem", { name: "退出登录" }));
     const confirm = await screen.findByRole("dialog", { name: "退出登录" });
-    expect(confirm).toHaveTextContent("确定要退出当前账号吗？");
+    // Title and the two buttons say it all: no extra prompt sentence.
+    expect(confirm).not.toHaveTextContent("确定");
     await user.click(within(confirm).getByRole("button", { name: "取消" }));
     expect(screen.queryByRole("dialog", { name: "退出登录" })).toBeNull();
   });

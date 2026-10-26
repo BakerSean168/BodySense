@@ -7,21 +7,31 @@ on:
   # Without this, a PR targeting a non-main branch silently has no CI checks.
   # Candidate/release publication remains restricted to successful main push.
   pull_request:
+  workflow_dispatch:
+  # Nightly full-set safety net: a schedule run checks out main HEAD with
+  # base == head, and the manifest generator force-selects every lane for
+  # the schedule event, so path-scoped PR selection cannot hide a broken
+  # lane for long. Nightly runs are not required checks and never gate a
+  # merge; failures surface as a red run plus the final Check
+  # receipt artifact, matching the release-health reporting style.
+  schedule:
+    - cron: "23 18 * * *"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  # A main push must not cancel an in-flight nightly full run.
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 permissions:
   contents: read
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v1.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v9.json
 
 jobs:
   scope:
-    name: Delivery Scope
+    name: Changes
     runs-on: ubuntu-latest
     outputs:
       manifest_digest: ${{ steps.manifest.outputs.manifest_digest }}
@@ -33,6 +43,7 @@ jobs:
       lane_contracts: ${{ steps.manifest.outputs.lane_contracts }}
       lane_database: ${{ steps.manifest.outputs.lane_database }}
       lane_experience: ${{ steps.manifest.outputs.lane_experience }}
+      lane_component: ${{ steps.manifest.outputs.lane_component }}
       lane_full: ${{ steps.manifest.outputs.lane_full }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -44,7 +55,7 @@ jobs:
       - id: manifest
         name: Generate one versioned delivery manifest
         env:
-          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
           DELIVERY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           node scripts/delivery/generate-manifest.mjs
@@ -55,54 +66,14 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v1
-          path: reports/delivery/delivery-manifest-v1.json
+          name: delivery-manifest-v9
+          path: reports/delivery/delivery-manifest-v9.json
+          overwrite: true
           if-no-files-found: error
           retention-days: 14
 
-  governance-child:
-    name: Governance child
-    needs: scope
-    if: needs.scope.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: delivery-manifest-v1
-          path: reports/delivery
-      - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
-      - name: Validate delivery policy contracts
-        run: node --test scripts/delivery/*.test.mjs
-      - name: Validate V2 active plans and handoff evidence
-        run: |
-          node scripts/plan/validate-v2-parallel.mjs
-          node --test scripts/plan/*.test.mjs
-      - name: Validate committed repository diff hygiene
-        shell: bash
-        run: |
-          set -euo pipefail
-          base_sha="$(jq -r .baseSha "$DELIVERY_MANIFEST_PATH")"
-          head_sha="$(jq -r .headSha "$DELIVERY_MANIFEST_PATH")"
-          git cat-file -e "${base_sha}^{commit}"
-          git cat-file -e "${head_sha}^{commit}"
-          git diff --check "${base_sha}...${head_sha}"
-
-  quality-child:
-    name: Affected quality child
-    needs: scope
-    if: >-
-      needs.scope.result == 'success' &&
-      (needs.scope.outputs.lane_web == 'true' ||
-       needs.scope.outputs.lane_api == 'true' ||
-       needs.scope.outputs.lane_ai == 'true' ||
-       needs.scope.outputs.lane_contracts == 'true' ||
-       needs.scope.outputs.lane_full == 'true')
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -114,61 +85,233 @@ jobs:
           node-version: 24
           cache: pnpm
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        if: >-
-          needs.scope.outputs.lane_api == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - name: Format (OXFmt)
+        run: pnpm format:check
+      - name: Format (Go)
+        run: pnpm format:check:go
+      - name: Lint (OXlint)
+        run: pnpm lint:oxlint
+      - name: Lint (OXlint type-aware)
+        run: pnpm lint:oxlint:types
+
+      - name: Commitlint authored PR commits
+        if: github.event_name == 'pull_request'
+        run: >-
+          bash scripts/quality/lint-commit-range.sh
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+      - name: Delivery, plan, shard and database runner contracts
+        run: |
+          set -euo pipefail
+          node --test scripts/delivery/*.test.mjs scripts/plan/*.test.mjs
+          node scripts/plan/validate-v2-parallel.mjs
+          node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json
+          python3 -m unittest discover -s scripts/quality -p 'test_run_go_db_tests.py' -v
+      - name: Architecture and validation capacity contracts
+        run: pnpm quality:verify
+      - name: Verify committed diff hygiene
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          git diff --check "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$HEAD_SHA"
+
+  quality-web-child:
+    name: Test Web (Unit + Build)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v9
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute web quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane web
+
+  quality-api-child:
+    name: Test Server (Go Unit + Build)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v9
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute api quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane api
+
+  quality-ai-child:
+    name: Test AI Service (Python + Eval)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_ai == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        if: >-
-          needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
         with:
           version: "0.12"
       - run: pnpm install --frozen-lockfile
-      - name: Sync Python environment when selected
-        if: >-
-          needs.scope.outputs.lane_ai == 'true' ||
-          needs.scope.outputs.lane_contracts == 'true' ||
-          needs.scope.outputs.lane_full == 'true'
+      - name: Sync Python environment
         working-directory: apps/ai-service
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v1
+          name: delivery-manifest-v9
           path: reports/delivery
-      - name: Execute manifest-selected quality lanes
-        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute ai quality lane
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane ai
 
-  governance-oracle:
-    name: Governance Oracle
-    needs: [scope, governance-child]
-    if: always()
+  contracts-child:
+    name: Test Contracts
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_contracts == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"governance":true},"children":{"governance":"${{ needs.governance-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - id: contract-go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      # setup-go's apps/api/go.sum cache does not contain buf's module graph.
+      # Cache only exact-version pinned contract binaries, with no broad restore key.
+      - name: Restore pinned contract toolchain
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .tools/contracts/bin
+          key: contracts-tools-${{ runner.os }}-${{ runner.arch }}-${{ steps.contract-go.outputs.go-version }}-${{ hashFiles('contracts/toolchain.json', 'scripts/contracts/bootstrap-tools.sh', 'scripts/contracts/lib/go-install-retry.sh') }}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python environment for contract generation
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra dev --extra ocr
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v9
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - name: Execute manifest-selected contract verification
+        run: node scripts/delivery/run-contracts.mjs "$DELIVERY_MANIFEST_PATH"
 
-  quality-oracle:
-    name: Quality Oracle
-    needs: [scope, quality-child]
-    if: always()
+  component-child:
+    name: Test Web (Browser)
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_component == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"quality":${{ (needs.scope.outputs.lane_web == 'true' || needs.scope.outputs.lane_api == 'true' || needs.scope.outputs.lane_ai == 'true' || needs.scope.outputs.lane_contracts == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"quality":"${{ needs.quality-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v9
+          path: reports/delivery
+      - name: Validate manifest digest binding
+        run: >-
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+          --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve Playwright browser version
+        id: playwright-version
+        run: |
+          version="$(node -p 'require("./node_modules/@playwright/test/package.json").version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}-headless
+      - name: Install Chromium (full, on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Install Chromium (cached browsers, on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install --only-shell chromium
+      - name: Run Storybook component browser tests
+        run: pnpm nx run @bodysense/web:component-test
 
   migrations-child:
-    name: PostgreSQL 18 vNext baseline child
+    name: Test Server (PostgreSQL baseline)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -224,10 +367,52 @@ jobs:
           BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
         run: go test -race ./internal/service -run '^TestIndependentTraining.*Postgres$' -count=1 -v
 
-  recovery-migrations-child:
-    name: PostgreSQL 18 vNext recovery child
+  db-integration-child:
+    name: Test Server (PostgreSQL Integration)
     needs: scope
     if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_api == 'true' ||
+       needs.scope.outputs.lane_database == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
+        env:
+          POSTGRES_USER: bodysense
+          POSTGRES_PASSWORD: bodysense123
+          POSTGRES_DB: bodysense_migration_validator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodysense -d bodysense_migration_validator"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - name: Apply actual PostgreSQL 18 schema before integration tests
+        working-directory: apps/api
+        run: >-
+          go run ./cmd/migration-validator
+          -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+          -migrations 'file://migrations'
+      - name: Test Server - PostgreSQL assertions without Skip
+        env:
+          BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
+          BODYSENSE_DB_TEST_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
+        run: python3 scripts/quality/run-go-db-tests.py --profile "$BODYSENSE_DB_TEST_PROFILE"
+
+  recovery-migrations-child:
+    name: Test Server (PostgreSQL recovery / Main)
+    needs: scope
+    if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
@@ -298,26 +483,57 @@ jobs:
           DB_SSLMODE: disable
         run: bash scripts/validate-production-dr.sh
 
-  database-oracle:
-    name: Database Oracle
-    needs: [scope, migrations-child, recovery-migrations-child]
-    if: always()
+  # Real Go DB integration: no fake Playwright smoke. The Go runner verifies
+  # every required test returned pass in go test -json; skip/missing is red.
+  quality-release-child:
+    name: Release Safety (Main / Nightly)
+    needs: scope
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.lane_full == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"database-baseline":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }},"database-recovery":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: delivery-manifest-v9
+          path: reports/delivery
+      - name: Validate Main / Nightly manifest digest and exact stage
+        run: |
+          set -euo pipefail
+          node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"             --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
+          jq -e --arg event "${{ github.event_name }}"             '.event == $event and .stage != "pr-fast" and .lanes.full == true'             "$DELIVERY_MANIFEST_PATH"
+      - name: Verify release, supply chain, platform and DR scripts
+        run: bash scripts/quality/run-release-safety.sh
 
   e2e-child:
-    name: Browser longitudinal health E2E child
+    name: Test Web (Full E2E shard ${{ matrix.shard }})
     needs: scope
     if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
     env:
       BODYSENSE_E2E_STUB_AI: "1"
+      E2E_BLOB: "1"
+    # The shard count must match apps/web/e2e/shards.json: a missing shard
+    # fails the merged-report verification in e2e-report-child, and an
+    # extra shard fails plan-shards --files-for below.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -360,8 +576,23 @@ jobs:
       - name: Sync Python E2E environment
         working-directory: apps/ai-service
         run: uv sync --frozen --extra ocr
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve Playwright browser version
+        id: playwright-version
+        run: |
+          version="$(node -p 'require("./node_modules/@playwright/test/package.json").version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.version }}-headless
+      - name: Install Chromium (full, on cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Install Chromium (cached browsers, on cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install --only-shell chromium
       - name: Start Go API
         working-directory: apps/api
         env:
@@ -407,19 +638,68 @@ jobs:
           done
           cat /tmp/bodysense-ai.log
           exit 1
-      - name: Run browser E2E
+      - name: Resolve shard spec files
+        id: shard-files
+        run: |
+          files="$(node scripts/e2e/plan-shards.mjs --files-for ${{ matrix.shard }} --partition apps/web/e2e/shards.json)"
+          echo "Shard ${{ matrix.shard }} specs: ${files}"
+          echo "files=${files}" >> "$GITHUB_OUTPUT"
+      - name: Run browser E2E shard
         env:
           CI: "true"
           E2E_BASE_URL: http://127.0.0.1:5173
           E2E_API_BASE_URL: http://127.0.0.1:8080
           VITE_BODYSENSE_ANATOMY_CATALOG_URL: https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json
-        run: pnpm e2e
+        run: pnpm exec playwright test ${{ steps.shard-files.outputs.files }}
       - name: Print service logs on failure
         if: failure()
         run: |
           cat /tmp/bodysense-api.log || true
           cat /tmp/bodysense-ai.log || true
-      - name: Upload Playwright report
+      - name: Upload E2E blob report for this shard
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: e2e-blob-shard-${{ matrix.shard }}
+          path: blob-report/
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e-report-child:
+    name: E2E merged report child
+    needs: [scope, e2e-child]
+    if: >-
+      github.event_name != 'pull_request' &&
+      always() &&
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download every shard blob report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: e2e-blob-shard-*
+          path: blob-reports
+          merge-multiple: true
+      - name: Merge shard reports
+        run: |
+          mkdir -p reports/e2e
+          pnpm exec playwright merge-reports --reporter html blob-reports
+          pnpm exec playwright merge-reports --reporter json blob-reports > reports/e2e/merged-results.json
+      - name: Verify merged report covers the whole shard partition
+        if: always()
+        run: >-
+          node scripts/e2e/verify-merged-report.mjs
+          --merged reports/e2e/merged-results.json
+          --partition apps/web/e2e/shards.json
+      - name: Upload merged Playwright report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -427,88 +707,64 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
-  experience-oracle:
-    name: Experience Oracle
-    needs: [scope, e2e-child]
+  # Single fail-closed fan-in: no independent Oracles or Observation runners.
+  ci-check:
+    name: Check
     if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"experience":${{ (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"experience":"${{ needs.e2e-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
-
-  delivery-observation:
-    name: Delivery Observation
     needs:
       - scope
-      - governance-child
-      - quality-child
+      - lint
+      - quality-web-child
+      - quality-api-child
+      - quality-ai-child
+      - quality-release-child
+      - contracts-child
       - migrations-child
       - recovery-migrations-child
+      - db-integration-child
+      - component-child
       - e2e-child
-      - governance-oracle
-      - quality-oracle
-      - database-oracle
-      - experience-oracle
-    if: always()
+      - e2e-report-child
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v1
+          name: delivery-manifest-v9
           path: reports/delivery
-      - name: Materialize execution outcomes
-        run: |
-          mkdir -p reports/delivery
-          cat > reports/delivery/lane-results.json <<'JSON'
-          {
-            "governance": "${{ needs.governance-child.result }}",
-            "quality": "${{ needs.quality-child.result }}",
-            "database-baseline": "${{ needs.migrations-child.result }}",
-            "database-recovery": "${{ needs.recovery-migrations-child.result }}",
-            "experience": "${{ needs.e2e-child.result }}"
-          }
-          JSON
-          cat > reports/delivery/oracle-results.json <<'JSON'
-          {
-            "governance": "${{ needs.governance-oracle.result }}",
-            "quality": "${{ needs.quality-oracle.result }}",
-            "database": "${{ needs.database-oracle.result }}",
-            "experience": "${{ needs.experience-oracle.result }}"
-          }
-          JSON
-      - name: Build versioned delivery observation
+      - name: Verify exact run, SHA, Digest and selected jobs
+        env:
+          CI_MANIFEST_DIGEST: ${{ needs.scope.outputs.manifest_digest }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          CI_EVENT: ${{ github.event_name }}
+          CI_REF: ${{ github.ref }}
+          CI_RESULTS_JSON: >-
+            {
+              "scope": "${{ needs.scope.result }}",
+              "lint": "${{ needs.lint.result }}",
+              "quality-web-child": "${{ needs.quality-web-child.result }}",
+              "quality-api-child": "${{ needs.quality-api-child.result }}",
+              "quality-ai-child": "${{ needs.quality-ai-child.result }}",
+              "quality-release-child": "${{ needs.quality-release-child.result }}",
+              "contracts-child": "${{ needs.contracts-child.result }}",
+              "migrations-child": "${{ needs.migrations-child.result }}",
+              "recovery-migrations-child": "${{ needs.recovery-migrations-child.result }}",
+              "db-integration-child": "${{ needs.db-integration-child.result }}",
+              "component-child": "${{ needs.component-child.result }}",
+              "e2e-child": "${{ needs.e2e-child.result }}",
+              "e2e-report-child": "${{ needs.e2e-report-child.result }}"
+            }
         run: >-
-          node scripts/delivery/observe-run.mjs
+          node scripts/delivery/ci-check.mjs
           --manifest "$DELIVERY_MANIFEST_PATH"
-          --lanes reports/delivery/lane-results.json
-          --oracles reports/delivery/oracle-results.json
-          --output reports/delivery/delivery-run-summary-v1.json
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+          --output reports/delivery/ci-check-receipt-v2.json
+      - name: Upload CI Check receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-run-summary-${{ github.run_id }}
-          path: reports/delivery/delivery-run-summary-v1.json
-          if-no-files-found: error
+          name: ci-check-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/delivery/ci-check-receipt-v2.json
+          if-no-files-found: warn
           retention-days: 30
-
-  commit-lint:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Lint authored PR commits
-        run: >-
-          bash scripts/quality/lint-commit-range.sh
-          "${{ github.event.pull_request.base.sha }}"
-          "${{ github.event.pull_request.head.sha }}"

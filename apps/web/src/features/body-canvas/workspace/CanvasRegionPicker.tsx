@@ -7,6 +7,7 @@ import {
   type BodyRegionId,
 } from "@/features/body-explorer/model/bodyRegionOntology";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/Input";
 import {
   regionPaletteShortcut,
   type CanvasSelection,
@@ -91,8 +92,9 @@ export function CanvasRegionPicker({
         <DialogTitle className="sr-only">按名称选择身体区域</DialogTitle>
         <div className="bc-region-palette-search">
           <Search size={18} strokeWidth={1.8} aria-hidden="true" />
-          <input
+          <Input
             ref={inputRef}
+            variant="bare"
             role="combobox"
             aria-label="搜索身体区域"
             aria-autocomplete="list"

@@ -48,11 +48,8 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   // API-seeded fixture, then require a separate user-authorized Episode action.
   await editor.getByRole("button", { name: "补充可关联的本人症状" }).click();
   await editor.getByLabel("本人完整症状陈述").fill("我右肩有些疼痛");
-  await editor.getByLabel("症状类型（本人描述）").fill("右肩疼痛");
-  await selectOption(
-    editor.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
-    "right",
-  );
+  await editor.getByLabel("症状类型").fill("右肩疼痛");
+  await selectOption(editor.getByRole("combobox", { name: "侧别" }), "right");
   await editor.getByRole("button", { name: "先保存症状陈述" }).click();
   await expect(editor.getByText(/本人症状陈述已保存/)).toBeVisible();
   await person.getByRole("button", { name: "返回记录" }).click();
@@ -111,15 +108,12 @@ test("Person Episode explicit create/link uses real Go receipts and survives rel
   // An explicitly negative report is a new Fact, not an automatic resolution.
   await editor.getByRole("button", { name: "补充可关联的本人症状" }).click();
   await editor.getByLabel("本人完整症状陈述").fill("今天我右肩没有疼痛");
-  await editor.getByLabel("症状类型（本人描述）").fill("右肩疼痛");
+  await editor.getByLabel("症状类型").fill("右肩疼痛");
   await selectOption(
     editor.getByRole("combobox", { name: "当前陈述是否存在症状" }),
     "absent",
   );
-  await selectOption(
-    editor.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
-    "right",
-  );
+  await selectOption(editor.getByRole("combobox", { name: "侧别" }), "right");
   await editor.getByRole("button", { name: "先保存症状陈述" }).click();
   await expect(editor.getByText(/本人症状陈述已保存/)).toBeVisible();
   const secondLedger = await (

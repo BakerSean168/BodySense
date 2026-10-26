@@ -11,6 +11,7 @@ import {
   getBusinessWindowMeta,
   type BusinessWindowId,
 } from "../model/businessWindows";
+import { IconTip } from "@/components/ui/tooltip";
 
 /**
  * The four Penpot V2 Dock entrances in the desktop board order (/ D P M).
@@ -65,17 +66,18 @@ export function BodyCanvasDock({
         data-collapsed="true"
         aria-label="身体工作区导航"
       >
-        <button
-          ref={toggleRef}
-          type="button"
-          className="bc-dock-toggle"
-          aria-label="展开导航"
-          title="展开导航"
-          aria-expanded={false}
-          onClick={toggle}
-        >
-          <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
-        </button>
+        <IconTip label="展开导航">
+          <button
+            ref={toggleRef}
+            type="button"
+            className="bc-dock-toggle"
+            aria-label="展开导航"
+            aria-expanded={false}
+            onClick={toggle}
+          >
+            <ChevronUp size={18} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        </IconTip>
       </nav>
     );
   }
@@ -88,45 +90,47 @@ export function BodyCanvasDock({
       ).map(({ id, icon: Icon }) => {
         const { title, dockLabel, key: shortcut } = getBusinessWindowMeta(id);
         return (
-          <button
-            key={id}
-            type="button"
-            className={`bc-dock-item bc-dock-${id}`}
-            aria-label={
-              id === "diagnosis" && diagnosisCount > 0
-                ? `${title}，${diagnosisCount} 项已确认病情`
-                : title
-            }
-            aria-pressed={activeWindow === id}
-            title={`${title} · ${shortcut}`}
-            onClick={() => onToggle(id)}
-          >
-            <span className="bc-dock-icon">
-              <Icon size={24} />
-              {id === "diagnosis" && diagnosisCount > 0 ? (
-                <span className="bc-dock-count" aria-hidden="true">
-                  {diagnosisCount > 99 ? "99+" : diagnosisCount}
-                </span>
-              ) : null}
-            </span>
-            {/* Desktop shows the Penpot icon-only Dock: the label stays in the
-                DOM (visually hidden), with aria-label and the title tooltip. */}
-            <span className="bc-dock-label">{dockLabel}</span>
-            <kbd aria-hidden="true">{shortcut}</kbd>
-          </button>
+          <IconTip key={id} label={title} shortcut={shortcut}>
+            <button
+              type="button"
+              className={`bc-dock-item bc-dock-${id}`}
+              aria-label={
+                id === "diagnosis" && diagnosisCount > 0
+                  ? `${title}，${diagnosisCount} 项已确认病情`
+                  : title
+              }
+              aria-pressed={activeWindow === id}
+              aria-keyshortcuts={shortcut}
+              onClick={() => onToggle(id)}
+            >
+              <span className="bc-dock-icon">
+                <Icon size={24} />
+                {id === "diagnosis" && diagnosisCount > 0 ? (
+                  <span className="bc-dock-count" aria-hidden="true">
+                    {diagnosisCount > 99 ? "99+" : diagnosisCount}
+                  </span>
+                ) : null}
+              </span>
+              {/* Desktop shows the Penpot icon-only Dock: the label stays in the
+                  DOM (visually hidden), with aria-label and the hover tooltip. */}
+              <span className="bc-dock-label">{dockLabel}</span>
+              <kbd aria-hidden="true">{shortcut}</kbd>
+            </button>
+          </IconTip>
         );
       })}
-      <button
-        ref={toggleRef}
-        type="button"
-        className="bc-dock-toggle"
-        aria-label="收起导航"
-        title="收起导航"
-        aria-expanded={true}
-        onClick={toggle}
-      >
-        <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
-      </button>
+      <IconTip label="收起导航">
+        <button
+          ref={toggleRef}
+          type="button"
+          className="bc-dock-toggle"
+          aria-label="收起导航"
+          aria-expanded={true}
+          onClick={toggle}
+        >
+          <ChevronDown size={18} strokeWidth={2.2} aria-hidden="true" />
+        </button>
+      </IconTip>
     </nav>
   );
 }

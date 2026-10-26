@@ -218,7 +218,7 @@ test("desktop chrome follows the Penpot window boards", async ({
   for (const name of ["个人档案", "训练计划", "综合诊断", "对话"]) {
     const item = dock.getByRole("button", { name, exact: true });
     await expect(item).toBeVisible();
-    await expect(item).toHaveAttribute("title", new RegExp(`^${name} · `));
+    await expect(item).toHaveAttribute("aria-keyshortcuts", /^.$/);
     // The text label is only visually hidden on desktop (Penpot icon Dock).
     const label = (await item.locator(".bc-dock-label").boundingBox())!;
     expect(label.width).toBeLessThanOrEqual(1);

@@ -50,7 +50,6 @@ export function BodyEpisodeSymptomForm({
         onSubmit();
       }}
     >
-      <p className="bc-window-note">症状类型不是诊断。</p>
       <label>
         本人完整症状陈述
         <Textarea
@@ -65,7 +64,7 @@ export function BodyEpisodeSymptomForm({
         />
       </label>
       <label>
-        症状类型（本人描述）
+        症状类型
         <Input
           type="text"
           value={draft.symptomType}
@@ -93,9 +92,9 @@ export function BodyEpisodeSymptomForm({
         />
       </label>
       <label>
-        侧别（不确定可以不指定）
+        侧别
         <SelectField
-          aria-label="侧别（不确定可以不指定）"
+          aria-label="侧别"
           value={draft.laterality}
           disabled={disabled}
           options={LATERALITY_OPTIONS}

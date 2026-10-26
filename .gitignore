@@ -86,6 +86,7 @@ check_wsl.bat
 coverage/
 .nyc_output/
 playwright-report/
+blob-report/
 test-results/
 
 # Secrets
@@ -107,3 +108,8 @@ apps/ai-service/models/
 
 
 storybook-static
+# Generated delivery manifests, run summaries, and platform audits
+# (CI artifacts downloaded into the workspace; not source files)
+reports/delivery/delivery-manifest-*.json
+reports/delivery/delivery-run-summary-*.json
+reports/delivery/platform-audit-*.json

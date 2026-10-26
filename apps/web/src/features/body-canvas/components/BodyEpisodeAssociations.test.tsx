@@ -334,14 +334,8 @@ describe("Person symptom input to Episode source", () => {
       screen.getByLabelText("本人完整症状陈述"),
       "我昨晚右肩疼痛",
     );
-    await userEvent.type(
-      screen.getByLabelText("症状类型（本人描述）"),
-      "右肩疼痛",
-    );
-    await selectOption(
-      screen.getByRole("combobox", { name: "侧别（不确定可以不指定）" }),
-      "right",
-    );
+    await userEvent.type(screen.getByLabelText("症状类型"), "右肩疼痛");
+    await selectOption(screen.getByRole("combobox", { name: "侧别" }), "right");
     await userEvent.click(
       screen.getByRole("button", { name: "先保存症状陈述" }),
     );
@@ -383,7 +377,7 @@ describe("Person symptom input to Episode source", () => {
       screen.getByRole("button", { name: "补充可关联的本人症状" }),
     );
     await userEvent.type(screen.getByLabelText("本人完整症状陈述"), "我肩痛");
-    await userEvent.type(screen.getByLabelText("症状类型（本人描述）"), "肩痛");
+    await userEvent.type(screen.getByLabelText("症状类型"), "肩痛");
     await userEvent.click(
       screen.getByRole("button", { name: "先保存症状陈述" }),
     );
@@ -419,7 +413,7 @@ describe("Person symptom input to Episode source", () => {
       screen.getByLabelText("本人完整症状陈述"),
       "今天我没有肩痛",
     );
-    await userEvent.type(screen.getByLabelText("症状类型（本人描述）"), "肩痛");
+    await userEvent.type(screen.getByLabelText("症状类型"), "肩痛");
     await selectOption(
       screen.getByRole("combobox", { name: "当前陈述是否存在症状" }),
       "absent",
@@ -469,9 +463,7 @@ describe("Episode read and ambiguous-write safety regressions", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "刷新症状经历和身体记录" }),
     );
-    expect(
-      await screen.findByText(/当前已读取的记录中没有症状经历/),
-    ).toBeVisible();
+    expect(await screen.findByText(/还没有症状经历/)).toBeVisible();
   });
 
   it("blocks new Fact or Episode commands when a cached read refresh fails", async () => {
@@ -486,9 +478,7 @@ describe("Episode read and ambiguous-write safety regressions", () => {
       screen.getByRole("button", { name: "刷新症状经历和身体记录" }),
     );
     expect(await screen.findByText(/资料读取失败，请刷新重试/)).toBeVisible();
-    expect(
-      screen.queryByText(/当前已读取的记录中没有症状经历/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/还没有症状经历/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "确认新建经历" }),
     ).not.toBeInTheDocument();
@@ -531,13 +521,13 @@ describe("Episode read and ambiguous-write safety regressions", () => {
       screen.getByLabelText("本人完整症状陈述"),
       "我右肩疼痛",
     );
-    await userEvent.type(screen.getByLabelText("症状类型（本人描述）"), "肩痛");
+    await userEvent.type(screen.getByLabelText("症状类型"), "肩痛");
     await userEvent.click(
       screen.getByRole("button", { name: "先保存症状陈述" }),
     );
     expect(await screen.findByText(/症状提交状态未确认/)).toBeVisible();
     expect(screen.getByLabelText("本人完整症状陈述")).toBeDisabled();
-    expect(screen.getByLabelText("症状类型（本人描述）")).toBeDisabled();
+    expect(screen.getByLabelText("症状类型")).toBeDisabled();
     expect(
       screen.getByRole("combobox", { name: "当前陈述是否存在症状" }),
     ).toBeDisabled();

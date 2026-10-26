@@ -8,13 +8,17 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
       POSTGRES_DB: ${DB_NAME:-bodysense}
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${DB_PORT:-20110}:5432'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${DB_PORT:-20110}:5432"
     volumes:
       - postgres-dev-vnext-data:/var/lib/postgresql
     networks:
       - bodysense-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,12 +27,13 @@ services:
     profiles: [dev]
     image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${REDIS_PORT:-20111}:6379'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${REDIS_PORT:-20111}:6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-bodysense123}
     networks:
       - bodysense-network
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-bodysense123}', 'ping']
+      test:
+        ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-bodysense123}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,9 +41,9 @@ services:
   litellm-gateway:
     profiles: [dev]
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
-    command: ['--config', '/app/config.yaml', '--port', '4000']
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${LITELLM_PORT:-20112}:4000'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${LITELLM_PORT:-20112}:4000"
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
       PRIMARY_LLM_BASE_URL: ${PRIMARY_LLM_BASE_URL:-https://api.ark717.com/v1}
@@ -51,9 +56,9 @@ services:
     healthcheck:
       test:
         [
-          'CMD',
-          'python',
-          '-c',
+          "CMD",
+          "python",
+          "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')",
         ]
       interval: 10s
@@ -68,7 +73,7 @@ services:
       context: ../apps/api
       dockerfile: Dockerfile
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${API_PORT:-20101}:8080'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${API_PORT:-20101}:8080"
     # ── Go API 只拿它需要的变量 ──
     environment:
       APP_ENV: development
@@ -125,16 +130,30 @@ services:
     build:
       context: ../apps/ai-service
       dockerfile: Dockerfile
-    command: ["uvicorn", "src.document_main:app", "--host", "0.0.0.0", "--port", "8100"]
+    command:
+      [
+        "uvicorn",
+        "src.document_main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8100",
+      ]
     init: true
     mem_limit: ${DOCUMENT_SERVICE_MEMORY_LIMIT:-384m}
     mem_reservation: ${DOCUMENT_SERVICE_MEMORY_RESERVATION:-64m}
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${DOCUMENT_SERVICE_PORT:-20103}:8100'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${DOCUMENT_SERVICE_PORT:-20103}:8100"
     networks:
       - bodysense-network
     healthcheck:
-      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -146,7 +165,7 @@ services:
       context: ../apps/ai-service
       dockerfile: Dockerfile
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${AI_SERVICE_PORT:-20102}:8100'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${AI_SERVICE_PORT:-20102}:8100"
     # ── Python AI 只拿它需要的变量 ──
     environment:
       AI_SERVICE_PORT: 8100
@@ -185,7 +204,7 @@ services:
       context: ../
       dockerfile: apps/web/Dockerfile
     ports:
-      - '${DEV_BIND_HOST:-127.0.0.1}:${WEB_PORT:-20100}:5173'
+      - "${DEV_BIND_HOST:-127.0.0.1}:${WEB_PORT:-20100}:5173"
     # ── 前端只拿公开配置 ──
     environment:
       VITE_WS_URL: ws://localhost:${API_PORT:-20101}/ws

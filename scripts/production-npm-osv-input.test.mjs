@@ -1,6 +1,10 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import { osvInput, parseLockfile, productionNpmPackages } from './production-npm-osv-input.mjs';
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  osvInput,
+  parseLockfile,
+  productionNpmPackages,
+} from "./production-npm-osv-input.mjs";
 
 const fixture = `
 lockfileVersion: '9.0'
@@ -33,15 +37,23 @@ snapshots:
   optional-transitive@1.2.0: {}
 `;
 
-test('extracts only production-reachable pnpm packages', () => {
+test("extracts only production-reachable pnpm packages", () => {
   const packages = productionNpmPackages(parseLockfile(fixture));
   assert.deepEqual(
     packages.map((pkg) => `${pkg.name}@${pkg.version}`),
-    ['app-runtime@1.0.0', 'optional-runtime@2.0.0', 'optional-transitive@1.2.0', 'runtime-transitive@1.1.0'],
+    [
+      "app-runtime@1.0.0",
+      "optional-runtime@2.0.0",
+      "optional-transitive@1.2.0",
+      "runtime-transitive@1.1.0",
+    ],
   );
-  assert.equal(JSON.stringify(osvInput(packages)).includes('dev-only'), false);
+  assert.equal(JSON.stringify(osvInput(packages)).includes("dev-only"), false);
 });
 
-test('rejects an incomplete lockfile instead of silently producing an empty scan', () => {
-  assert.throws(() => parseLockfile("lockfileVersion: '9.0'\nimporters: {}\n"), /missing/);
+test("rejects an incomplete lockfile instead of silently producing an empty scan", () => {
+  assert.throws(
+    () => parseLockfile("lockfileVersion: '9.0'\nimporters: {}\n"),
+    /missing/,
+  );
 });

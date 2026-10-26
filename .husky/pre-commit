@@ -1,0 +1,17 @@
+# Fast staged-file gates (VNext B1): Oxfmt --check + Oxlint on staged files
+# only, seconds-level. Checks working-tree content of staged paths, so keep
+# staged hunks whole. See AGENT.md "格式化与 Lint 门禁" for the full picture.
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+git diff --cached --name-only --diff-filter=ACMR -z > "$tmp_dir/staged"
+
+grep -z -E '\.(ts|tsx|js|jsx|mjs|cjs|json|css|html|yaml|yml)$' "$tmp_dir/staged" > "$tmp_dir/fmt" || true
+if [ -s "$tmp_dir/fmt" ]; then
+  xargs -0 pnpm exec oxfmt --check < "$tmp_dir/fmt" || exit 1
+fi
+
+grep -z -E '^apps/web/src/.+\.(ts|tsx)$' "$tmp_dir/staged" | grep -z -v '/generated/' > "$tmp_dir/lint" || true
+if [ -s "$tmp_dir/lint" ]; then
+  xargs -0 pnpm exec oxlint < "$tmp_dir/lint" || exit 1
+fi

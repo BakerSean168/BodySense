@@ -1,13 +1,8 @@
 {
   "name": "bodysense",
-  "private": true,
   "version": "0.15.0",
+  "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.27.1",
-  "engines": {
-    "node": ">=24.0.0",
-    "pnpm": ">=11.0.0"
-  },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
@@ -21,12 +16,13 @@
     "dev:infra:down": "bash scripts/dev-infra.sh down",
     "build": "pnpm nx run-many -t build --all --exclude=bodysense",
     "lint": "pnpm nx run-many -t lint --all --parallel=3 --exclude=bodysense",
-    "lint:oxlint": "oxlint apps/web/src",
-    "lint:oxlint:types": "oxlint --type-aware apps/web/src",
+    "lint:oxlint": "oxlint apps/web packages",
+    "lint:oxlint:types": "oxlint --type-aware apps/web/src packages/contracts/src packages/utils/src",
     "typecheck": "pnpm nx run-many -t typecheck --all --parallel=3 --exclude=bodysense",
     "test": "pnpm nx run-many -t test --all --exclude=bodysense",
     "e2e": "pnpm exec playwright test",
     "verify:release": "bash scripts/validate-repo.sh",
+    "verify:pr": "pnpm format:check && pnpm format:check:go && pnpm lint:oxlint && pnpm lint:oxlint:types && node --test scripts/delivery/*.test.mjs && node scripts/plan/validate-v2-parallel.mjs && node --test scripts/plan/*.test.mjs && node scripts/e2e/plan-shards.mjs --check --partition apps/web/e2e/shards.json && pnpm nx affected -t lint,typecheck,test --base=origin/main --head=HEAD --exclude=bodysense",
     "validate:local-deploy": "bash scripts/local-deploy-validate.sh",
     "test:watch": "pnpm nx run-many -t test:watch --all --exclude=bodysense",
     "test:coverage": "pnpm nx run-many -t test:coverage --all --exclude=bodysense",
@@ -83,8 +79,13 @@
     "quality:verify": "pnpm quality:architecture && pnpm quality:architecture:test && pnpm quality:capacity:test",
     "curriculum:lab:graphql": "node --test scripts/learning/labs/part8-graphql-lab.test.mjs",
     "test:body-fact-vertical": "bash scripts/validate-body-fact-vertical.sh",
-    "format": "oxfmt apps/web packages/contracts/src",
-    "format:check": "oxfmt --check apps/web packages/contracts/src"
+    "format": "git ls-files -z --cached --others --exclude-standard -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' '*.json' '*.css' '*.html' '*.yaml' '*.yml' | xargs -0 -r oxfmt",
+    "format:check": "git ls-files -z --cached --others --exclude-standard -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' '*.json' '*.css' '*.html' '*.yaml' '*.yml' | xargs -0 -r oxfmt --check",
+    "format:check:go": "sh -c 'f=$(gofmt -l apps/api); [ -z \"$f\" ] || { echo \"gofmt: unformatted Go files:\"; echo \"$f\"; exit 1; }'"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@apollo/client": "4.3.1",
@@ -129,10 +130,11 @@
     "vite": "^8.3.0",
     "vitest": "^4.1.10",
     "yaml": "2.9.0",
-    "zod": "4.6.6"
+    "zod": "4.6.7"
   },
-  "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  }
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "packageManager": "pnpm@11.27.1"
 }

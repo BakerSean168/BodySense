@@ -13,7 +13,11 @@ services:
       - postgres-staging-vnext-data:/var/lib/postgresql
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -21,12 +25,27 @@ services:
   redis:
     image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     restart: unless-stopped
-    command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?set REDIS_PASSWORD}",
+      ]
     volumes:
       - redis-staging-data:/data
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:?set REDIS_PASSWORD}', '--no-auth-warning', 'ping']
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "-a",
+          "${REDIS_PASSWORD:?set REDIS_PASSWORD}",
+          "--no-auth-warning",
+          "ping",
+        ]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -34,7 +53,7 @@ services:
   litellm-gateway:
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
     restart: unless-stopped
-    command: ['--config', '/app/config.yaml', '--port', '4000']
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -45,7 +64,13 @@ services:
       - ./litellm/config.staging.yaml:/app/config.yaml:ro
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -56,14 +81,28 @@ services:
     build:
       context: ../apps/ai-service
       dockerfile: Dockerfile
-    command: ["uvicorn", "src.document_main:app", "--host", "0.0.0.0", "--port", "8100"]
+    command:
+      [
+        "uvicorn",
+        "src.document_main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8100",
+      ]
     restart: unless-stopped
     init: true
     mem_limit: ${DOCUMENT_SERVICE_MEMORY_LIMIT:-384m}
     mem_reservation: ${DOCUMENT_SERVICE_MEMORY_RESERVATION:-64m}
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -86,8 +125,8 @@ services:
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
-      BODYSENSE_DETERMINISTIC_AI: 'false'
-      BODYSENSE_E2E_STUB_AI: '0'
+      BODYSENSE_DETERMINISTIC_AI: "false"
+      BODYSENSE_E2E_STUB_AI: "0"
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,7 +136,13 @@ services:
         condition: service_healthy
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -155,7 +200,7 @@ services:
         condition: service_healthy
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/health']
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -177,7 +222,7 @@ services:
         VITE_ASSET_BASE: ${VITE_ASSET_BASE:-}
     restart: unless-stopped
     ports:
-      - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'
+      - "${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -185,7 +230,8 @@ services:
         condition: service_healthy
     networks: [bodysense-staging]
     healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
+      test:
+        ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
       interval: 15s
       timeout: 5s
       retries: 8

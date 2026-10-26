@@ -1,6 +1,6 @@
-import { ApolloServer } from '@apollo/server';
-import { InMemoryCache, gql } from '@apollo/client/core';
-import { GraphQLError } from 'graphql';
+import { ApolloServer } from "@apollo/server";
+import { InMemoryCache, gql } from "@apollo/client/core";
+import { GraphQLError } from "graphql";
 
 export const typeDefs = `
   enum FactKind {
@@ -49,9 +49,9 @@ export function createGraphQLLab(initial = {}) {
       Mutation: {
         addFact: (_parent, { input }) => {
           if (input.expectedRevision !== state.revision) {
-            throw new GraphQLError('stale body state revision', {
+            throw new GraphQLError("stale body state revision", {
               extensions: {
-                code: 'CONFLICT',
+                code: "CONFLICT",
                 currentRevision: state.revision,
               },
             });
@@ -78,8 +78,8 @@ export function createGraphQLLab(initial = {}) {
         query: source,
         variables: variableValues,
       });
-      if (response.body.kind !== 'single') {
-        throw new Error('Part 8 lab expects a single GraphQL operation result');
+      if (response.body.kind !== "single") {
+        throw new Error("Part 8 lab expects a single GraphQL operation result");
       }
       return response.body.singleResult;
     },
@@ -106,7 +106,7 @@ export function createApolloCache() {
   return new InMemoryCache({
     typePolicies: {
       BodyFact: {
-        keyFields: ['id'],
+        keyFields: ["id"],
       },
     },
   });

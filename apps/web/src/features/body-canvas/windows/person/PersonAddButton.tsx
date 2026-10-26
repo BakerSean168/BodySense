@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import type { ProfileCategoryId } from "../../model/profileCategories";
+import { IconTip } from "@/components/ui/tooltip";
 
 /** What the header "+" does in each category (also its accessible name). */
 export const PERSON_ADD_LABELS: Record<ProfileCategoryId, string> = {
@@ -28,16 +29,17 @@ export function PersonAddButton({
 }) {
   const label = labelOverride ?? PERSON_ADD_LABELS[category];
   return (
-    <button
-      type="button"
-      className="bc-icon-button bc-header-add"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onAdd}
-      data-testid="person-add"
-    >
-      <Plus size={19} strokeWidth={1.9} aria-hidden="true" />
-    </button>
+    <IconTip label={label}>
+      <button
+        type="button"
+        className="bc-icon-button bc-header-add"
+        aria-label={label}
+        disabled={disabled}
+        onClick={onAdd}
+        data-testid="person-add"
+      >
+        <Plus size={19} strokeWidth={1.9} aria-hidden="true" />
+      </button>
+    </IconTip>
   );
 }

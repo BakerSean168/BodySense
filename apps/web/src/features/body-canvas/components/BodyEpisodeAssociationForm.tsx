@@ -23,7 +23,6 @@ interface BodyEpisodeAssociationFormProps {
   canSubmit: boolean;
   factsHasNextPage: boolean;
   fetchingMoreFacts: boolean;
-  hasUnloadedPages: boolean;
   onModeChange: (mode: EpisodeAssociationMode) => void;
   onFactChange: (id: string) => void;
   onEpisodeChange: (id: string) => void;
@@ -44,7 +43,6 @@ export function BodyEpisodeAssociationForm({
   canSubmit,
   factsHasNextPage,
   fetchingMoreFacts,
-  hasUnloadedPages,
   onModeChange,
   onFactChange,
   onEpisodeChange,
@@ -100,9 +98,7 @@ export function BodyEpisodeAssociationForm({
         </label>
       ) : null}
       {sources.length === 0 ? (
-        <p className="bc-window-note">
-          当前已读取的记录中没有可用于此操作的症状陈述。
-        </p>
+        <p className="bc-window-note">没有可用的症状陈述</p>
       ) : null}
       {factsHasNextPage ? (
         <button
@@ -113,11 +109,6 @@ export function BodyEpisodeAssociationForm({
         >
           {fetchingMoreFacts ? "正在读取" : "读取更早的症状陈述"}
         </button>
-      ) : null}
-      {hasUnloadedPages ? (
-        <p className="bc-window-note">
-          仍有更早的记录未加载；服务端会验证完整关联关系，防止重复创建。
-        </p>
       ) : null}
       <div className="bc-record-actions">
         <button

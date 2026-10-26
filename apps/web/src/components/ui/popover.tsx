@@ -20,9 +20,7 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 }
 
 function PopoverTrigger({ ref, ...props }: PopoverPrimitive.Trigger.Props) {
-  const triggerRef = useScopeTriggerRef<HTMLButtonElement>(
-    ref as React.Ref<HTMLButtonElement>,
-  );
+  const triggerRef = useScopeTriggerRef<HTMLButtonElement>(ref);
   return (
     <PopoverPrimitive.Trigger
       ref={triggerRef}

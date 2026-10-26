@@ -1,16 +1,23 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import process from 'node:process';
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
 
 const root = process.cwd();
-const ledgerPath = path.join(root, 'docs/learning/curriculum/ledger/full-stack-open.json');
-const currentPath = path.join(root, 'docs/learning/curriculum/ledger/full-stack-open-current-mooc.json');
-const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
-const current = JSON.parse(fs.readFileSync(currentPath, 'utf8'));
+const ledgerPath = path.join(
+  root,
+  "docs/learning/curriculum/ledger/full-stack-open.json",
+);
+const currentPath = path.join(
+  root,
+  "docs/learning/curriculum/ledger/full-stack-open-current-mooc.json",
+);
+const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+const current = JSON.parse(fs.readFileSync(currentPath, "utf8"));
 
 const isHistoricalAdvancedExercise = (item) =>
-  item.kind === 'exercise' &&
-  item.source?.part >= 8 && item.source?.part <= 11 &&
+  item.kind === "exercise" &&
+  item.source?.part >= 8 &&
+  item.source?.part <= 11 &&
   item.source?.snapshot_commit === ledger.baseline?.indexed_snapshot_commit;
 
 const historicalItems = [
@@ -20,19 +27,37 @@ const historicalItems = [
 const historicalById = new Map(historicalItems.map((item) => [item.id, item]));
 ledger.historical_items = [...historicalById.values()].sort((a, b) => {
   if (a.source.part !== b.source.part) return a.source.part - b.source.part;
-  return String(a.source.number ?? a.id).localeCompare(String(b.source.number ?? b.id), undefined, { numeric: true });
+  return String(a.source.number ?? a.id).localeCompare(
+    String(b.source.number ?? b.id),
+    undefined,
+    { numeric: true },
+  );
 });
 
 const currentExisting = new Map(
   ledger.items
-    .filter((item) => item.source?.authority === 'current-mooc-api' && item.source?.platform_exercise_id)
+    .filter(
+      (item) =>
+        item.source?.authority === "current-mooc-api" &&
+        item.source?.platform_exercise_id,
+    )
     .map((item) => [item.source.platform_exercise_id, item]),
 );
 
 ledger.items = ledger.items.filter((item) => {
   if (isHistoricalAdvancedExercise(item)) return false;
-  if (item.kind === 'source_boundary' && item.source?.part >= 12 && item.source?.part <= 14) return false;
-  if (item.source?.authority === 'current-mooc-api' && item.source?.part >= 8 && item.source?.part <= 14) return false;
+  if (
+    item.kind === "source_boundary" &&
+    item.source?.part >= 12 &&
+    item.source?.part <= 14
+  )
+    return false;
+  if (
+    item.source?.authority === "current-mooc-api" &&
+    item.source?.part >= 8 &&
+    item.source?.part <= 14
+  )
+    return false;
   return true;
 });
 
@@ -43,11 +68,11 @@ for (const course of current.courses) {
     const id = existing?.id ?? `FSO-P${course.part}-MOOC-${exercise.id}`;
     currentItems.push({
       id,
-      kind: 'exercise',
+      kind: "exercise",
       source: {
-        course: 'full-stack-open',
+        course: "full-stack-open",
         part: course.part,
-        platform: 'courses.mooc.fi',
+        platform: "courses.mooc.fi",
         platform_exercise_id: exercise.id,
         title: exercise.name,
         course_slug: course.slug,
@@ -60,11 +85,11 @@ for (const course of current.courses) {
         page_path: exercise.page_path,
         page_title: exercise.page_title,
         updated_at: exercise.updated_at,
-        verification: 'VERIFIED_CURRENT_MOOC_API_INDEX',
-        authority: 'current-mooc-api',
+        verification: "VERIFIED_CURRENT_MOOC_API_INDEX",
+        authority: "current-mooc-api",
         source_snapshot_sha256: current.source_state_sha256,
       },
-      lifecycle: existing?.lifecycle ?? 'SOURCE_INDEXED',
+      lifecycle: existing?.lifecycle ?? "SOURCE_INDEXED",
       mapping: existing?.mapping ?? null,
       mastery: existing?.mastery ?? null,
     });
@@ -75,7 +100,10 @@ currentItems.sort((a, b) => {
   const ca = a.source.chapter_number ?? Number.MAX_SAFE_INTEGER;
   const cb = b.source.chapter_number ?? Number.MAX_SAFE_INTEGER;
   if (ca !== cb) return ca - cb;
-  return (a.source.page_path ?? '').localeCompare(b.source.page_path ?? '') || a.id.localeCompare(b.id);
+  return (
+    (a.source.page_path ?? "").localeCompare(b.source.page_path ?? "") ||
+    a.id.localeCompare(b.id)
+  );
 });
 ledger.items.push(...currentItems);
 
@@ -83,20 +111,26 @@ ledger.items.push(...currentItems);
 const previousSections = ledger.source_sections ?? [];
 ledger.historical_source_sections = [
   ...(ledger.historical_source_sections ?? []),
-  ...previousSections.filter((item) => item.source?.part >= 8 && item.source?.part <= 11),
+  ...previousSections.filter(
+    (item) => item.source?.part >= 8 && item.source?.part <= 11,
+  ),
 ];
-const historicalSectionById = new Map(ledger.historical_source_sections.map((item) => [item.id, item]));
+const historicalSectionById = new Map(
+  ledger.historical_source_sections.map((item) => [item.id, item]),
+);
 ledger.historical_source_sections = [...historicalSectionById.values()];
-ledger.source_sections = previousSections.filter((item) => item.source?.part <= 7);
+ledger.source_sections = previousSections.filter(
+  (item) => item.source?.part <= 7,
+);
 
 ledger.current_mooc_sections = current.courses.flatMap((course) =>
   course.headings.map((heading, index) => ({
-    id: `FSO-P${course.part}-MOOC-SECTION-${String(index + 1).padStart(3, '0')}`,
-    kind: 'source_section',
+    id: `FSO-P${course.part}-MOOC-SECTION-${String(index + 1).padStart(3, "0")}`,
+    kind: "source_section",
     source: {
-      course: 'full-stack-open',
+      course: "full-stack-open",
       part: course.part,
-      platform: 'courses.mooc.fi',
+      platform: "courses.mooc.fi",
       course_slug: course.slug,
       course_id: course.course_id,
       course_url: course.course_url,
@@ -106,11 +140,11 @@ ledger.current_mooc_sections = current.courses.flatMap((course) =>
       page_title: heading.page_title,
       heading_level: heading.level,
       title: heading.text,
-      verification: 'VERIFIED_CURRENT_MOOC_API_INDEX',
-      authority: 'current-mooc-api',
+      verification: "VERIFIED_CURRENT_MOOC_API_INDEX",
+      authority: "current-mooc-api",
       source_snapshot_sha256: current.source_state_sha256,
     },
-    lifecycle: 'SOURCE_INDEXED',
+    lifecycle: "SOURCE_INDEXED",
     mapping: null,
     mastery: null,
   })),
@@ -127,9 +161,13 @@ ledger.baseline.current_mooc = {
     exercise_records: course.counts.exercise_records,
     headings: course.counts.headings,
   })),
-  authority: 'Metadata indexed directly from the public courses.mooc.fi Course Material API; semantic mapping remains separate.',
+  authority:
+    "Metadata indexed directly from the public courses.mooc.fi Course Material API; semantic mapping remains separate.",
 };
-ledger.baseline.current_parity_scope = 'Parts 0-7 exercise semantics mapped from pinned course-repository snapshot. Parts 8-14 current MOOC exercise/heading metadata are source-indexed from the public Course Material API; semantic mapping/readiness remain pending.';
+ledger.baseline.current_parity_scope =
+  "Parts 0-7 exercise semantics mapped from pinned course-repository snapshot. Parts 8-14 current MOOC exercise/heading metadata are source-indexed from the public Course Material API; semantic mapping/readiness remain pending.";
 
 fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-console.log(`synced ${currentItems.length} current MOOC exercise records into ${path.relative(root, ledgerPath)}`);
+console.log(
+  `synced ${currentItems.length} current MOOC exercise records into ${path.relative(root, ledgerPath)}`,
+);

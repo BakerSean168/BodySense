@@ -3,7 +3,10 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/ai-service",
   "projectType": "application",
-  "tags": ["scope:ai", "type:app"],
+  "tags": [
+    "scope:ai",
+    "type:app"
+  ],
   "targets": {
     "serve": {
       "executor": "nx:run-commands",
@@ -31,7 +34,9 @@
     },
     "test:coverage": {
       "executor": "nx:run-commands",
-      "outputs": ["{projectRoot}/coverage"],
+      "outputs": [
+        "{projectRoot}/.coverage"
+      ],
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
@@ -66,6 +71,13 @@
       "options": {
         "cwd": "apps/ai-service",
         "command": "uv run ruff format ."
+      }
+    },
+    "format:check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run ruff format --check ."
       }
     },
     "typecheck": {

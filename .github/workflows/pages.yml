@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'showcase/**'
-      - '.github/workflows/pages.yml'
+      - "showcase/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

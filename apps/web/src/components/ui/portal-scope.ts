@@ -25,7 +25,7 @@ export function useScopeTriggerRef<T extends HTMLElement>(
       }
       if (typeof forwarded === "function") forwarded(node);
       else if (forwarded) {
-        (forwarded as React.RefObject<T | null>).current = node;
+        forwarded.current = node;
       }
     },
     [scope, forwarded],
