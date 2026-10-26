@@ -129,7 +129,7 @@ test("PR PostgreSQL migrations require DB baseline but not production DR or full
   assert.equal(missingDb.ok, false);
 });
 
-test("v6 execution stage is bound to event and Digest; PR cannot pretend Main", () => {
+test("v7 execution stage is bound to event and Digest; PR cannot pretend Main", () => {
   const selected = manifest("pull_request", [".github/workflows/ci.yml"]);
   selected.stage = "main-full";
   selected.digest = computeManifestDigest(selected);
@@ -177,7 +177,7 @@ test("workflow runs Lint without Changes dependency and never runs PR E2E or mon
   assert.ok(jobs["governance-oracle"].needs.includes("lint"));
   assert.ok(jobs["delivery-observation"].needs.includes("lint"));
   for (const job of [
-    "quality-full-child",
+    "quality-release-child",
     "e2e-child",
     "e2e-report-child",
     "recovery-migrations-child",
@@ -197,6 +197,6 @@ test("workflow runs Lint without Changes dependency and never runs PR E2E or mon
     ".github/workflows/candidate-publish.yml",
     "utf8",
   );
-  assert.match(candidate, /name: delivery-manifest-v6/);
-  assert.match(candidate, /delivery-manifest-v6.json/);
+  assert.match(candidate, /name: delivery-manifest-v7/);
+  assert.match(candidate, /delivery-manifest-v7.json/);
 });

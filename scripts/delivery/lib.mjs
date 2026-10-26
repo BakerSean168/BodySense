@@ -5,20 +5,23 @@ export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
 export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
 export const MANIFEST_SCHEMA_V4 = "bodysense.delivery-manifest/v4";
 export const MANIFEST_SCHEMA_V5 = "bodysense.delivery-manifest/v5";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v6";
+export const MANIFEST_SCHEMA_V6 = "bodysense.delivery-manifest/v6";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v7";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
   MANIFEST_SCHEMA_V3,
   MANIFEST_SCHEMA_V4,
   MANIFEST_SCHEMA_V5,
+  MANIFEST_SCHEMA_V6,
   MANIFEST_SCHEMA,
 ]);
 export const POLICY_VERSION_V1 = "delivery-policy-v1";
 export const POLICY_VERSION_V2 = "delivery-policy-v2";
 export const POLICY_VERSION_V3 = "delivery-policy-v3";
 export const POLICY_VERSION_V4 = "delivery-policy-v4";
-export const POLICY_VERSION = "delivery-policy-v5";
+export const POLICY_VERSION_V5 = "delivery-policy-v5";
+export const POLICY_VERSION = "delivery-policy-v6";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 // Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
@@ -77,6 +80,7 @@ export function laneTargetsForSchema(schema) {
   if (schema === MANIFEST_SCHEMA_V3) return LANE_TARGETS_V3;
   if (schema === MANIFEST_SCHEMA_V4 || schema === MANIFEST_SCHEMA_V5)
     return LANE_TARGETS_V5;
+  if (schema === MANIFEST_SCHEMA_V6) return LANE_TARGETS_V6;
   return LANE_TARGETS;
 }
 
@@ -87,6 +91,7 @@ export function policyVersionForSchema(schema) {
   if (schema === MANIFEST_SCHEMA_V3) return POLICY_VERSION_V2;
   if (schema === MANIFEST_SCHEMA_V4) return POLICY_VERSION_V3;
   if (schema === MANIFEST_SCHEMA_V5) return POLICY_VERSION_V4;
+  if (schema === MANIFEST_SCHEMA_V6) return POLICY_VERSION_V5;
   return POLICY_VERSION;
 }
 
@@ -231,7 +236,7 @@ export const LANE_TARGETS_V5 = Object.freeze({
 // Which manifest lanes make each Oracle child required. Oracles derive their
 // expectations from the digest-validated manifest through this table instead
 // of re-deriving lane expressions in workflow YAML.
-export const LANE_TARGETS = Object.freeze({
+export const LANE_TARGETS_V6 = Object.freeze({
   ...LANE_TARGETS_V5,
   api: Object.freeze([...LANE_TARGETS_V5.api, "job:db-integration-child"]),
   database: Object.freeze([
@@ -241,7 +246,23 @@ export const LANE_TARGETS = Object.freeze({
   full: Object.freeze([...LANE_TARGETS_V5.full, "job:db-integration-child"]),
 });
 
-export const ORACLE_GROUPS = Object.freeze({
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V6,
+  ai: Object.freeze([
+    ...LANE_TARGETS_V6.ai,
+    "nx:ai-service:eval:assessment-evidence-contract",
+  ]),
+  full: Object.freeze([
+    ...LANE_TARGETS_V6.full.filter(
+      (target) =>
+        target !== "job:quality-full-child" &&
+        target !== "script:validate-repo.sh",
+    ),
+    "job:quality-release-child",
+  ]),
+});
+
+export const ORACLE_GROUPS_V6 = Object.freeze({
   governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
   quality: Object.freeze({
     // The full lane keeps the validate-repo.sh monolith child; per-lane
@@ -275,6 +296,20 @@ export const ORACLE_GROUPS = Object.freeze({
   experience: Object.freeze({
     experience: Object.freeze(["experience", "full"]),
     component: Object.freeze(["component", "full"]),
+  }),
+});
+
+// Main Full parallelizes quality by runtime instead of repeating the
+// entire validate-repo.sh. Archived policies keep the old Oracle map.
+export const ORACLE_GROUPS = Object.freeze({
+  ...ORACLE_GROUPS_V6,
+  quality: Object.freeze({
+    "quality-web": Object.freeze(["web", "full"]),
+    "quality-api": Object.freeze(["api", "full"]),
+    "quality-ai": Object.freeze(["ai", "full"]),
+    "quality-arch": Object.freeze(["web", "api", "ai", "full"]),
+    "quality-release": Object.freeze(["full"]),
+    contracts: Object.freeze(["contracts", "full"]),
   }),
 });
 
@@ -649,7 +684,11 @@ export function validateManifest(manifest) {
   ) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
-  if ([MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema)) {
+  if (
+    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6, MANIFEST_SCHEMA_V5].includes(
+      manifest.schema,
+    )
+  ) {
     const stage = stageForEvent(manifest.event);
     if (!stage || manifest.stage !== stage) {
       errors.push(`stage must equal ${stage} for event ${manifest.event}`);
@@ -844,7 +883,9 @@ export function evaluateOracle({
 }
 
 export function oracleEnabledFromManifest(manifest, group) {
-  const mapping = ORACLE_GROUPS[group];
+  const groups =
+    manifest.schema === MANIFEST_SCHEMA ? ORACLE_GROUPS : ORACLE_GROUPS_V6;
+  const mapping = groups[group];
   if (!mapping) throw new Error(`unknown oracle group: ${group}`);
   const enabled = Object.fromEntries(
     Object.entries(mapping).map(([child, rule]) => {
@@ -864,7 +905,9 @@ export function oracleEnabledFromManifest(manifest, group) {
     }),
   );
   if (
-    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema) &&
+    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6, MANIFEST_SCHEMA_V5].includes(
+      manifest.schema,
+    ) &&
     group === "governance"
   ) {
     // Full Lint starts concurrently with Changes; its result is still
@@ -872,7 +915,9 @@ export function oracleEnabledFromManifest(manifest, group) {
     enabled.lint = true;
   }
   if (
-    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema) &&
+    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6, MANIFEST_SCHEMA_V5].includes(
+      manifest.schema,
+    ) &&
     manifest.stage === "pr-fast" &&
     group === "database"
   ) {
@@ -880,8 +925,11 @@ export function oracleEnabledFromManifest(manifest, group) {
     // The PG18 baseline remains mandatory when migrations are changed.
     enabled["database-recovery"] = false;
   }
-  if (manifest.schema !== MANIFEST_SCHEMA && group === "database") {
-    delete enabled["database-integration"]; // Archived policies did not require this job.
+  if (
+    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6].includes(manifest.schema) &&
+    group === "database"
+  ) {
+    delete enabled["database-integration"]; // v1-v5 policies did not require this job.
   }
   return enabled;
 }

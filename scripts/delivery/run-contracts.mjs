@@ -13,7 +13,7 @@ import { validateManifest } from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
-  console.error("usage: run-contracts.mjs <delivery-manifest-v6.json>");
+  console.error("usage: run-contracts.mjs <delivery-manifest-v7.json>");
   process.exit(2);
 }
 

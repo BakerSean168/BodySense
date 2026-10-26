@@ -319,9 +319,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v6 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v7 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v6");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v7");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -536,35 +536,35 @@ test("oracle group enablement follows the manifest lanes", () => {
     "postman/collections/BodySense Public API.postman_collection.json",
   ]);
   assert.deepEqual(oracleEnabledFromManifest(contractManifest, "quality"), {
-    "quality-full": false,
     "quality-web": false,
     "quality-api": false,
     "quality-ai": false,
     "quality-arch": false,
+    "quality-release": false,
     contracts: true,
   });
   const webManifest = manifestFor(["apps/web/src/features/foo.tsx"]);
   assert.deepEqual(oracleEnabledFromManifest(webManifest, "quality"), {
-    "quality-full": false,
     "quality-web": true,
     "quality-api": false,
     "quality-ai": false,
     "quality-arch": true,
+    "quality-release": false,
     contracts: false,
   });
-  // In a full run the per-lane children stand down (noneOf full): the
-  // validate-repo.sh monolith child is the single quality execution.
+  // In Main Full v7, each service lane is still required in parallel with
+  // the dedicated, narrower release-safety child.
   const fullManifest = manifestFor(["docs/guide.md"], {
     forceFull: true,
     event: "push",
     ref: "refs/heads/main",
   });
   assert.deepEqual(oracleEnabledFromManifest(fullManifest, "quality"), {
-    "quality-full": true,
-    "quality-web": false,
-    "quality-api": false,
-    "quality-ai": false,
-    "quality-arch": false,
+    "quality-web": true,
+    "quality-api": true,
+    "quality-ai": true,
+    "quality-arch": true,
+    "quality-release": true,
     contracts: true,
   });
   const docsManifest = manifestFor(["docs/guide.md"]);

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
-import { validateManifest } from "./lib.mjs";
+import { MANIFEST_SCHEMA, validateManifest } from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
   console.error(
-    "usage: run-quality.mjs <delivery-manifest-v6.json> [--lane web|api|ai|arch|full]",
+    "usage: run-quality.mjs <delivery-manifest-v7.json> [--lane web|api|ai|arch|full]",
   );
   process.exit(2);
 }
@@ -57,6 +57,7 @@ function runAiLane() {
   nx("ai-service", "typecheck");
   nx("ai-service", "test");
   for (const target of [
+    "eval:assessment-evidence-contract",
     "eval:diagnosis",
     "eval:diagnosis-evidence-policy",
     "eval:diagnosis-promotion",
@@ -71,6 +72,14 @@ function runAiLane() {
 
 const LANE_RUNNERS = { web: runWebLane, api: runApiLane, ai: runAiLane };
 
+function runArchitectureChecks(full) {
+  run("pnpm", ["quality:architecture"]);
+  if (full) {
+    run("pnpm", ["quality:architecture:test"]);
+    run("pnpm", ["quality:capacity:test"]);
+  }
+}
+
 function skipLane(lane, reason) {
   console.log(`DELIVERY_QUALITY_LANE=SKIP lane=${lane} reason=${reason}`);
 }
@@ -80,21 +89,23 @@ try {
   const errors = validateManifest(manifest);
   if (errors.length > 0) throw new Error(errors.join("; "));
 
-  // Full runs keep the validate-repo.sh monolith as the single quality
-  // execution (quality-full-child). Per-lane children stand down when the
-  // full lane is selected so no check executes twice; their workflow jobs
-  // are gated off in ci.yml as well, this is the in-script mirror.
-  if (manifest.lanes.full) {
+  // Only archived manifests used the old full-monolith job. Main v7
+  // executes Web / Server / AI / Contracts in parallel, with dedicated
+  // architecture and release-safety owners.
+  if (manifest.lanes.full && manifest.schema !== MANIFEST_SCHEMA) {
+    // Archived v1-v6 manifests ran the serial monolith. V7 Main uses the
+    // parallel per-runtime owners instead of repeating full validation.
     if (onlyLane === null || onlyLane === "full") {
       run("bash", ["scripts/validate-repo.sh"]);
       process.exit(0);
     }
-    skipLane(onlyLane, "full-lane-selected");
+    skipLane(onlyLane, "archived-full-lane");
     process.exit(0);
   }
   if (onlyLane === "full") {
-    skipLane("full", "full-lane-not-selected");
-    process.exit(0);
+    throw new Error(
+      "Current full quality has no serial child: use per-runtime owners",
+    );
   }
 
   // Per-lane mode: each quality child runs exactly one lane and reports
@@ -103,7 +114,7 @@ try {
   // whenever any quality lane is selected.
   if (onlyLane === "arch") {
     if (manifest.lanes.web || manifest.lanes.api || manifest.lanes.ai) {
-      run("pnpm", ["quality:architecture"]);
+      runArchitectureChecks(manifest.lanes.full);
       console.log("DELIVERY_QUALITY_LANE=PASS lane=arch");
     } else {
       skipLane("arch", "no-quality-lanes-selected");
@@ -140,7 +151,7 @@ try {
   if (executed === 0) {
     console.log("DELIVERY_QUALITY=SKIP reason=no-quality-lanes-selected");
   } else {
-    run("pnpm", ["quality:architecture"]);
+    runArchitectureChecks(manifest.lanes.full);
     console.log(
       `DELIVERY_QUALITY=PASS selected=${[
         manifest.lanes.web && "web",

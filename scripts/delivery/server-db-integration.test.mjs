@@ -28,8 +28,8 @@ function m(files, event = "pull_request", forceFull = false) {
   });
 }
 
-test("new v6 manifest requires Go DB integration on API, database and all Main runs", () => {
-  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v6");
+test("new v7 manifest requires Go DB integration on API, database and all Main runs", () => {
+  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v7");
   for (const files of [
     ["apps/api/internal/service/episode.go"],
     ["apps/api/migrations/000061_body.up.sql"],

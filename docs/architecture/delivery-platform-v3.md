@@ -139,19 +139,19 @@ production .deploy-state     actually deployed revision/release identity
 
 ### 4.1 Manifest
 
-The detector writes `delivery-manifest-v6.json` once per run.
+The detector writes `delivery-manifest-v7.json` once per run.
 
 Minimum shape:
 
 ```json
 {
-  "schema": "bodysense.delivery-manifest/v6",
+  "schema": "bodysense.delivery-manifest/v7",
   "baseSha": "...",
   "headSha": "...",
   "event": "pull_request",
   "stage": "pr-fast",
   "risk": "runtime",
-  "policyVersion": "delivery-policy-v5",
+  "policyVersion": "delivery-policy-v6",
   "changedPaths": [],
   "lanes": {
     "governance": true,
@@ -355,7 +355,7 @@ differ in trigger, lane selection, and which evidence they consume.
 | Stage | Trigger | What runs | Evidence | What does not run, and why |
 | --- | --- | --- | --- | --- |
 | Local | husky hooks on commit; `pnpm verify:pr` before push | commit-msg: commitlint. pre-commit: Oxfmt `--check` + Oxlint on staged files. `verify:pr`: governance format/lint gates, delivery + plan contract tests, E2E shard-partition check, and `nx affected` lint/typecheck/test against `origin/main` | Local exit codes only; nothing is uploaded | E2E, database migrations, and the full validate-repo.sh set: they need CI services and are covered by the PR stage on the same diff |
-| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v6` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
+| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v7` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
 | Main | `ci.yml` on push to `main` | The complete production safety set: the manifest force-selects every lane, including the full validate-repo.sh child, migration baseline + recovery, sharded browser E2E, and the component lane | Same artifacts as PR, bound to the exact main SHA | Nothing in the lane set is skipped; path scoping does not apply to main |
 | Nightly | `ci.yml` on `schedule` (daily 18:23 UTC) or manual `workflow_dispatch` | Identical to a main push: base == head, the `schedule` event force-selects every lane, same children, Oracles, and observation | Same artifacts as a main run, retained 30 days for the run summary | Not a required check and never gates a merge. It exists to catch drift that path-scoped PR selection and quiet main periods would hide (toolchain or upstream changes, flaky lanes). Failures surface as a red run plus the Delivery Observation summary, matching the release-health reporting style |
 | Release | release-please PR, then `release-publish`; production deploy is an explicit operator action | Candidate publication runs downstream of a successful main CI run, bound to the exact SHA: it downloads that run's delivery manifest, validates it, and embeds its digest in the candidate set | Candidate set + image digests trace back to the source CI run and its manifest digest | Lint/test/typecheck/E2E are **not** re-run: the exact SHA was already verified by the main run, and re-running could only test a different tree. Promotion consumes evidence; it does not recreate it |
@@ -692,7 +692,7 @@ this PR's net diff (branch history was reset after the drill).
 | Link in the chain | Verdict | Evidence |
 | --- | --- | --- |
 | Exact-SHA binding | Complete | candidate-publish triggers only on a successful `push` CI run on `main` and checks out `workflow_run.head_sha`; release-publish revalidates candidate `gitSha` == checkout HEAD, source CI run `head_sha` == candidate `gitSha`, candidate SHA is an ancestor of `origin/main`, and the release tag points at the release SHA |
-| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v6` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
+| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v7` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
 | Image digest verification | Complete | Every component verifies existing-vs-built digest equality and the OCI revision label at build time, promotes by digest without rebuilding, and re-verifies registry and pulled `RepoDigests` after promotion; immutable-tag collisions fail closed |
 | Release-health retention | Gap (low) | The weekly release-health job writes only to the run's step summary and emits a soft-threshold `::warning::`; nothing is uploaded as an artifact or filed, so the signal survives only within Actions run retention. It is advisory (backlog/lag), never a gate |
 | Candidate artifact lifetime | Gap (low) | release-publish downloads the `candidate-set-*` artifact (90-day retention) from the candidate run; a release cut more than 90 days after candidate publication would first need candidate-publish re-dispatched for that SHA |
@@ -871,14 +871,14 @@ Oxlint scripts, and this section's decision collapses to full retirement
 
 **Status:** implementation branch from cumulative B8, Issue #464, not yet merged to main. This section supersedes the PR-stage behavior of the historic B8 audit above; historic performance results are not new measurements.
 
-- The current Manifest v5 binds an explicit `stage` to the triggering event and the Manifest Digest. Pull requests always use `pr-fast`. Main push/manual runs use `main-full`, and scheduled runs use `nightly-audit`.
+- The v5 Manifest first bound an explicit `stage` to the triggering event and the Manifest Digest. Pull requests always use `pr-fast`. Main push/manual runs use `main-full`, and scheduled runs use `nightly-audit`.
 - Unknown/CI/root changes **conservatively select all applicable lower layers**, but PR never selects the full serial validator or full cross-service Playwright E2E. This is not a relaxation of Unit, Component Browser, Contracts, Go, Python or PG18 baseline checks.
 - Full `Lint` starts independently in parallel with Changes, and is a hard input to the existing protected `Governance Oracle`. A missing/failing Lint cannot be hidden by a green governance child.
 - The `Database Oracle` requires the PG18 baseline when necessary; full disaster-recovery execution is Main/Nightly only. PR experience skips full E2E while preserving component checks. Main/Nightly still require the full existing validation, E2E three shards, merged report and recovery.
-- The source CI and Candidate Publisher now consistently exchange `delivery-manifest-v6` from the exact successful Main run and embed the validated Digest. Archived v1–v4 manifests remain compatible with their original policy versions.
+- The source CI and Candidate Publisher now consistently exchange `delivery-manifest-v7` from the exact successful Main run and embed the validated Digest. Archived v1–v6 manifests remain compatible with their original policy versions.
 - **Pending separate issues**: #465 actual PG integration non-Skip checks and server test grouping; #466 eliminate Main full-monolith duplicate execution; #467 consolidated CI Check migration; #468 measured PR P95 ≤300s and integrated merge. CD remains independent in #469.
 
-This P0 change does **not** assert that the final 5-minute target or full Main optimization has already been achieved.
+P0 implementation ran successfully in PR #470; the final five-minute P95 goal still requires repeated representative measurements.
 
 ### v6 PostgreSQL integration policy (Issue #465)
 
@@ -887,7 +887,36 @@ with a PG18 migration-validated database and fail-closed individual Go test
 results. PR selects seven representative real database / HTTP / privacy
 integration tests, rather than any cross-service Playwright E2E. Main/Nightly
 exercise the full inventory from files requiring
-\`BODYSENSE_INTEGRATION_DATABASE_URL\`, with a verified non-Skip receipt.
+`BODYSENSE_INTEGRATION_DATABASE_URL`, with a verified non-Skip receipt.
 The Database Oracle now requires this child when the API or database is
 affected. The v6 Manifest encodes this task owner in the API/database target
 policy. Archived v1–v5 manifests still validate with their original targets.
+
+### v7 Main Full: parallel owners and release safety (Issue #466)
+
+**Implementation pending GitHub CI acceptance.** The v7 Manifest records the
+parallelized task policy with policy version v6; the old v6 and earlier
+manifests remain readable under their original targets and Oracle rules.
+
+Main and Nightly are now required to execute each independent owner:
+Test Web (Unit/Build), Test Server (Go Unit/Build), Test AI Service
+(Python/evaluations), Test Contracts (contract safety), architecture
+checks, PostgreSQL 18 baseline / non-Skip integration / restore, component
+browser tests, three Playwright E2E shards plus merged coverage verification,
+and **Release Safety** (supply chain, release, deployment validation,
+static assets, migration history, production capacity and off-host DR).
+Main quality owners depend only on Scope, not on one another. Lint and
+Commitlint start independently. The Quality Oracle requires every selected
+owner to complete successfully and rejects missing/skipped/failing outcomes.
+
+The old full serial `quality-full-child` is absent from v7 CI. Its historical
+`scripts/validate-repo.sh` is retained as a manual/archived diagnostic,
+not executed again by Main CI. Its quality checks are instead assigned
+to existing parallel owners, and its remaining release/supply-chain
+checks live in `scripts/quality/run-release-safety.sh`. The release
+job validates the exact v7 Manifest Digest and rejects PR-stage identity.
+
+This change does not authorize automatic Stable releases or production
+deployments; Candidate Publisher is still limited to successful exact-SHA
+Main `push` CI events. A manually dispatched full workflow on a
+feature branch cannot qualify as a Main release candidate.
