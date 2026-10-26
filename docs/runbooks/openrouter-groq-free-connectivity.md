@@ -1,23 +1,27 @@
 # OpenRouter / Groq：免费渠道连通性与接入边界
 
-Status: **GCP Dev research / synthetic connectivity only**
-Snapshot: 2026-10-23
+Status: **Historical GCP research only; WSL/Oracle2 acceptance pending**
+Snapshot: 2026-10-23 (GCP-dev-01 retired on the same date)
+Current workspace: `wsl-local:/home/baker/projects/bodysense`; persistent gateway: `oracle2`.
+
+> **环境边界（2026-10-26 更新）**：以下 GCP API/模型/配额结果全部是 2026-10-23 的历史研究证据。GCP-dev-01 已退役，不能再用于执行、部署、认证或验收；其本地凭据、进程及未推送文件也不能假定存在于 WSL。当前 WSL 尚未完成 OpenRouter/Groq 免费凭据、专用 BodySense Virtual Key 与实际合成推理验收。
+
 Related: [Business LLM Integration Case Studies](../architecture/business-llm-integration-case-studies.md), [Model Gateway Routing](../architecture/model-gateway-routing.md).
 
 > 本记录不是模型质量排名，也不是运行时配置变更。除少量合成 PONG 请求外，没有执行任何 BodySense 用户健康数据请求，没有启用新的 Fallback。免费模型名、限流与可用性都会变化，实际接入前必须重新读取官方目录。
 
-## 接入现状（GCP Dev）
+## 历史接入现状（2026-10-23 GCP Dev，非 WSL 当前状态）
 
-| 内容 | 当前证据 |
+| 内容 | 历史 GCP 记录（不代表 WSL/Oracle2 的当前状态） |
 | --- | --- |
 | 凭据文件 | `/home/dev/projects/bodysense/.env.dev.local`，权限 `0600`；`OPENROUTER_API_KEY` / `GROQ_API_KEY` 都存在且非占位符；不记录明文 |
-| 正在运行的 GCP LiteLLM | `127.0.0.1:20112`，默认 `docker/litellm/config.yaml`；当前业务流量**未切换** |
+| 当时运行的 GCP LiteLLM | `127.0.0.1:20112`，默认 `docker/litellm/config.yaml`；当前业务流量**未切换** |
 | OpenRouter 已有映射 | 默认网关的部分通用备用模型和 Posture 视觉模型使用 OpenRouter，但映射到老的 / 非 `:free` ID；**不应直接视为免费渠道** |
-| Groq 映射 | GCP `docker/docker-compose.yml` 目前没有给 `litellm-gateway` 注入 `GROQ_API_KEY`，默认 LiteLLM 配置也没有 Groq 模型 |
+| Groq 映射 | 当时 GCP `docker/docker-compose.yml` 没有给 `litellm-gateway` 注入 `GROQ_API_KEY`，默认 LiteLLM 配置也没有 Groq 模型 |
 | Oracle2 共享 LiteLLM | PostgreSQL 动态模型表中尚未发现 OpenRouter / Groq 别名；不应假定已由 Oracle2 统一托管这两家 |
 | 实施范围 | 仅记录连接与适配方式，**不修改运行配置、数据库、生产/staging 或 Oracle2 共享渠道**；Groq Key 已验证但默认网关仍未配置 Groq 路由 |
 
-## 已执行的最小 API 验证（仅合成输入）
+## 历史 GCP 合成 API 验证（2026-10-23；不计入 WSL 验收）
 
 | API / 模型 | HTTP | 结论 |
 | --- | --- | --- |
@@ -44,13 +48,13 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 - `dots-studio/dots-3-note-preview:free` — 目录存在，未调用。
 - `google/gemma-4-31b-it:free` — 目录存在，但本次返回 429。
 
-`openrouter/free` 会从免费模型池自动选模型，**不适合做需要固定物理模型与可复现能力的业务路由或测评**。注意免费模型日额度受账号历史充值影响；本次账号在探针前为 50/day，当前剩余量以 `GET /api/v1/key` 为准。
+`openrouter/free` 会从免费模型池自动选模型，**不适合做需要固定物理模型与可复现能力的业务路由或测评**。注意免费模型日额度受账号历史充值影响；历史 GCP 账号在探针前为 50/day；WSL 的账号权限、凭据与当前额度均未验证。
 
 参考：[官方免费模型列表](https://openrouter.ai/collections/free-models)、[Free Router](https://openrouter.ai/docs/guides/routing/routers/free-router)、[Rate Limits](https://openrouter.ai/docs/api-reference/limits)、[Provider 数据政策](https://openrouter.ai/privacy/)。
 
 ### Groq
 
-官方 OpenAI 兼容 API：`https://api.groq.com/openai/v1`。使用项目现有的 `apps/ai-service/.venv` 内 OpenAI SDK，`models.list()` 返回 11 个模型、`openai/gpt-oss-20b` 的最小文本请求成功。**Key 已确认有效**。此前裸 `urllib` 返回 `403 error code: 1010`，Cloudflare 官方解释为客户端浏览器特征被拦截；优先使用受支持的正式 SDK，不应直接把此类 403 归咎于 Key。
+官方 OpenAI 兼容 API：`https://api.groq.com/openai/v1`。使用项目现有的 `apps/ai-service/.venv` 内 OpenAI SDK，`models.list()` 返回 11 个模型、`openai/gpt-oss-20b` 的最小文本请求成功。**仅历史 GCP Key 曾验证有效，不能推断 WSL Key 存在或有效**。此前裸 `urllib` 返回 `403 error code: 1010`，Cloudflare 官方解释为客户端浏览器特征被拦截；优先使用受支持的正式 SDK，不应直接把此类 403 归咎于 Key。
 
 官方 Free Plan rate-limit 表中可查到 `openai/gpt-oss-120b`、`openai/gpt-oss-20b` 和 `qwen/qwen3.8-27b` 等模型；**Free Plan 可以受限免费调用**，不代表这些模型的标价为每百万 Token 0 美元，也不代表你的项目已获权限。准确的账号权限/配额必须登录控制台确认。
 
@@ -58,35 +62,31 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 
 ## 未来接入时的正确边界（未实施）
 
-1. **明确入口归属**：现有 Oracle2 专用 Key 尚待合法创建时，不混用其 Master Key。若把 OpenRouter/Groq 直接配置在 GCP dev-only LiteLLM，也只能由 LiteLLM 容器持有真实供应商 Key，不能让 Go / Python Agent 和浏览器持有。
+1. **明确入口归属**：通过 Oracle2 LiteLLM/ProviderAdmin 作为供应商与模型权威；专用 BodySense Virtual Key 仍待按既有授权建立和限制。不混用 Oracle2 Master Key、T3 共享客户端 Key 或历史 GCP Key，不将供应商 Key 暴露给 Go、Python Agent 或浏览器。本 PR 不注册模型、不启用新路由、不修改 Oracle2/生产环境。
 2. **固定别名与能力**：独立的物理模型别名；逻辑 `bodysense-consultation`、`bodysense-structured`、`bodysense-diagnosis`、`bodysense-posture` 保持不变；Posture 模型需真视觉验收。
 3. **故障与隐私**：区分连接失败、模型不存在、429、401/403、400 Schema 错误；不把任意免费模型自动当替代渠道。免费服务可能由第三方保留或利用输入，应在处理真实健康数据前审核供应商政策、实际路由、用户知情与数据保护控制。
 4. **测评明确延期**：先完成 Key/模型列表/合成连接的资格确认；跨模型业务排名、Prompt/Agent 质量、Champion/Challenger 和自动选型另立阶段，不在本次执行。
 
-## 复查命令（只列模型和配额，不泄露 Key）
+## 当前 WSL 无凭据复核（不执行推理）
+
+以下命令仅从 `wsl-local` 检查公开目录、费用安全门禁、Oracle2 HTTPS 连通性与匿名鉴权拒绝；**它们不是 OpenRouter/Groq 账户认证或端到端验收**。不要连接已退役的 GCP，不要从旧 GCP 路径加载 `.env.dev.local`，也不要在日志中输出任何密钥或原始账户响应。
 
 ~~~bash
-# 在 GCP 的 BodySense 工作区，禁止 set -x 或 echo API Key。
-set -a
-source .env.dev.local
-set +a
+cd /home/baker/projects/bodysense
+# 公开目录无须 Key；只输出条目数，不把目录或账户数据写入公开日志。
+curl -fsS --max-time 15 'https://openrouter.ai/api/v1/models' \
+  | python3 -c 'import json,sys; print("public_models=", len(json.load(sys.stdin).get("data", [])))'
 
-# 只读模型目录（无需 Key）。
-curl -fsS 'https://openrouter.ai/api/v1/models'
-# 只读当前 Key 限额。
-curl -fsS -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-  'https://openrouter.ai/api/v1/key'
-# Groq 请使用项目已安装的 OpenAI SDK；裸 urllib 曾触发 Cloudflare 1010。
-apps/ai-service/.venv/bin/python - <<'MODEL_LIST'
-import os
-from openai import OpenAI
-client = OpenAI(
-    api_key=os.environ["GROQ_API_KEY"],
-    base_url="https://api.groq.com/openai/v1",
-    max_retries=0,
-)
-print(sorted(model.id for model in client.models.list().data))
-MODEL_LIST
+# 已存在的 PR #432 WSL 开发工作树：只检查费用，不发送图像或推理。
+cd /home/baker/projects/_bodysense_oracle2_gateway
+apps/ai-service/.venv/bin/python scripts/dev-oracle2-posture-free-audit.py
+# 当前配置中非零/未知费用应返回 BLOCKED（非零退出码），不可忽略后强行启动。
+
+curl -sS -o /dev/null -w 'oracle_health_http=%{http_code} tls=%{ssl_verify_result}\n' \
+  --max-time 10 'https://oracle.taile92a8e.ts.net:10446/health/liveliness'
+curl -sS -o /dev/null -w 'anonymous_models_http=%{http_code} tls=%{ssl_verify_result}\n' \
+  --max-time 10 'https://oracle.taile92a8e.ts.net:10446/v1/models'
+# 预期：200 / 401，均需 tls=0；这仅证明连通性和匿名鉴权边界。
 ~~~
 
-**不要把以上 curl 的完整响应粘贴到公开日志或 Issue**：虽然常规 Key/Models 响应不应返回 Key 明文，日志仍可能包含账户级元数据。只报告状态、模型 ID、免费配额，不打印凭据。
+**凭据与合成调用待验收：**只有独立确认 WSL 的合法免费额度、ProviderAdmin 供应商身份、BodySense 专用受限 Virtual Key、模型精确 ID/协议及 Posture 费用边界后，才可通过授权的安全密钥助手执行最小固定路由合成请求。Groq 优先使用其支持的 SDK；遇 401/403/429 不绕过访问控制或强制解封。真实业务健康数据、模型评测与优选均不属于本阶段。历史 GCP 的 200 或 429 不等于当前 WSL 结果。
