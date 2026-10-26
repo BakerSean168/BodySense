@@ -84,6 +84,10 @@ function main() {
     ref,
     changedPaths: changedPaths(baseSha, headSha),
     forceFull,
+    runId: args["run-id"] ?? process.env.GITHUB_RUN_ID ?? "1",
+    runAttempt: Number(
+      args["run-attempt"] ?? process.env.GITHUB_RUN_ATTEMPT ?? "1",
+    ),
   });
   const errors = validateManifest(manifest);
   if (errors.length > 0) throw new Error(errors.join("; "));
@@ -91,7 +95,7 @@ function main() {
   const output = path.resolve(
     args.output ??
       process.env.DELIVERY_MANIFEST_OUTPUT ??
-      "reports/delivery/delivery-manifest-v7.json",
+      "reports/delivery/delivery-manifest-v8.json",
   );
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`);

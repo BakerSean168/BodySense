@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
-import { MANIFEST_SCHEMA, validateManifest } from "./lib.mjs";
+import {
+  MANIFEST_SCHEMA,
+  MANIFEST_SCHEMA_V7,
+  validateManifest,
+} from "./lib.mjs";
 
 const manifestPath = process.argv[2] ?? process.env.DELIVERY_MANIFEST_PATH;
 if (!manifestPath) {
   console.error(
-    "usage: run-quality.mjs <delivery-manifest-v7.json> [--lane web|api|ai|arch|full]",
+    "usage: run-quality.mjs <delivery-manifest-v8.json> [--lane web|api|ai|arch|full]",
   );
   process.exit(2);
 }
@@ -92,7 +96,10 @@ try {
   // Only archived manifests used the old full-monolith job. Main v7
   // executes Web / Server / AI / Contracts in parallel, with dedicated
   // architecture and release-safety owners.
-  if (manifest.lanes.full && manifest.schema !== MANIFEST_SCHEMA) {
+  if (
+    manifest.lanes.full &&
+    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V7].includes(manifest.schema)
+  ) {
     // Archived v1-v6 manifests ran the serial monolith. V7 Main uses the
     // parallel per-runtime owners instead of repeating full validation.
     if (onlyLane === null || onlyLane === "full") {

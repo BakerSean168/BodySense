@@ -319,9 +319,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v7 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v8 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v7");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v8");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -354,6 +354,7 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
   const { component: _componentLane, ...lanesV2 } = current.lanes;
   const { component: _componentDetail, ...detailsV2 } = current.laneDetails;
   for (const lane of [
+    "governance",
     "web",
     "api",
     "ai",
@@ -392,7 +393,15 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
 test("v3 manifests remain valid under the v3 target policy and policy version", () => {
   const current = manifestFor(["apps/web/src/features/foo.tsx"]);
   const detailsV3 = { ...current.laneDetails };
-  for (const lane of ["web", "api", "ai", "database", "experience", "full"]) {
+  for (const lane of [
+    "governance",
+    "web",
+    "api",
+    "ai",
+    "database",
+    "experience",
+    "full",
+  ]) {
     detailsV3[lane] = {
       ...detailsV3[lane],
       targets: [...LANE_TARGETS_V3[lane]],

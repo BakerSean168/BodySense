@@ -37,7 +37,7 @@ function workflows() {
 }
 
 test("Main v7 requires all independent quality owners, never the old serial full child", () => {
-  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v7");
+  assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v8");
   const main = selected("push", ["docs/a.md"], true);
   assert.deepEqual(validateManifest(main), []);
   assert.equal(main.stage, "main-full");
@@ -130,7 +130,7 @@ test("Main and Nightly quality runners are flat and the exact Digest is required
   assert.match(releaseCommands, /run-release-safety\.sh/);
   const child = jobs["quality-release-child"];
   assert.ok(
-    child.steps.some((step) => step.with?.name === "delivery-manifest-v7"),
+    child.steps.some((step) => step.with?.name === "delivery-manifest-v8"),
   );
 });
 

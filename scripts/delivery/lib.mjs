@@ -6,7 +6,8 @@ export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
 export const MANIFEST_SCHEMA_V4 = "bodysense.delivery-manifest/v4";
 export const MANIFEST_SCHEMA_V5 = "bodysense.delivery-manifest/v5";
 export const MANIFEST_SCHEMA_V6 = "bodysense.delivery-manifest/v6";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v7";
+export const MANIFEST_SCHEMA_V7 = "bodysense.delivery-manifest/v7";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v8";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
@@ -14,6 +15,7 @@ export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V4,
   MANIFEST_SCHEMA_V5,
   MANIFEST_SCHEMA_V6,
+  MANIFEST_SCHEMA_V7,
   MANIFEST_SCHEMA,
 ]);
 export const POLICY_VERSION_V1 = "delivery-policy-v1";
@@ -21,7 +23,8 @@ export const POLICY_VERSION_V2 = "delivery-policy-v2";
 export const POLICY_VERSION_V3 = "delivery-policy-v3";
 export const POLICY_VERSION_V4 = "delivery-policy-v4";
 export const POLICY_VERSION_V5 = "delivery-policy-v5";
-export const POLICY_VERSION = "delivery-policy-v6";
+export const POLICY_VERSION_V6 = "delivery-policy-v6";
+export const POLICY_VERSION = "delivery-policy-v7";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 // Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
@@ -81,6 +84,7 @@ export function laneTargetsForSchema(schema) {
   if (schema === MANIFEST_SCHEMA_V4 || schema === MANIFEST_SCHEMA_V5)
     return LANE_TARGETS_V5;
   if (schema === MANIFEST_SCHEMA_V6) return LANE_TARGETS_V6;
+  if (schema === MANIFEST_SCHEMA_V7) return LANE_TARGETS_V7;
   return LANE_TARGETS;
 }
 
@@ -92,6 +96,7 @@ export function policyVersionForSchema(schema) {
   if (schema === MANIFEST_SCHEMA_V4) return POLICY_VERSION_V3;
   if (schema === MANIFEST_SCHEMA_V5) return POLICY_VERSION_V4;
   if (schema === MANIFEST_SCHEMA_V6) return POLICY_VERSION_V5;
+  if (schema === MANIFEST_SCHEMA_V7) return POLICY_VERSION_V6;
   return POLICY_VERSION;
 }
 
@@ -246,7 +251,7 @@ export const LANE_TARGETS_V6 = Object.freeze({
   full: Object.freeze([...LANE_TARGETS_V5.full, "job:db-integration-child"]),
 });
 
-export const LANE_TARGETS = Object.freeze({
+export const LANE_TARGETS_V7 = Object.freeze({
   ...LANE_TARGETS_V6,
   ai: Object.freeze([
     ...LANE_TARGETS_V6.ai,
@@ -260,6 +265,12 @@ export const LANE_TARGETS = Object.freeze({
     ),
     "job:quality-release-child",
   ]),
+});
+
+// The aggregate check owns one final, digest-bound result per workflow run.
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V7,
+  governance: Object.freeze([...LANE_TARGETS_V7.governance, "job:ci-check"]),
 });
 
 export const ORACLE_GROUPS_V6 = Object.freeze({
@@ -637,6 +648,8 @@ export function createManifest({
   ref = "",
   changedPaths,
   forceFull = false,
+  runId = process.env.GITHUB_RUN_ID ?? "1",
+  runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT ?? "1"),
   generatedAt = new Date().toISOString(),
 }) {
   const stage = stageForEvent(event);
@@ -648,6 +661,7 @@ export function createManifest({
     schema: MANIFEST_SCHEMA,
     policyVersion: POLICY_VERSION,
     stage,
+    execution: { runId: String(runId), attempt: runAttempt },
     event,
     ref,
     requestedBaseSha,
@@ -674,6 +688,21 @@ export function validateManifest(manifest) {
     errors.push(`schema must be one of: ${MANIFEST_SCHEMAS.join(", ")}`);
   }
   const expectedPolicy = policyVersionForSchema(manifest.schema);
+  if (manifest.schema === MANIFEST_SCHEMA) {
+    if (
+      !manifest.execution ||
+      typeof manifest.execution !== "object" ||
+      Array.isArray(manifest.execution) ||
+      !/^[1-9][0-9]*$/.test(manifest.execution.runId ?? "") ||
+      !Number.isSafeInteger(manifest.execution.attempt) ||
+      manifest.execution.attempt < 1 ||
+      Object.keys(manifest.execution).sort().join(",") !== "attempt,runId"
+    ) {
+      errors.push(
+        "execution.runId and execution.attempt must bind a valid run identity",
+      );
+    }
+  }
   if (manifest.policyVersion !== expectedPolicy) {
     errors.push(`policyVersion must be ${expectedPolicy}`);
   }
@@ -685,9 +714,12 @@ export function validateManifest(manifest) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
   if (
-    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6, MANIFEST_SCHEMA_V5].includes(
-      manifest.schema,
-    )
+    [
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V7,
+      MANIFEST_SCHEMA_V6,
+      MANIFEST_SCHEMA_V5,
+    ].includes(manifest.schema)
   ) {
     const stage = stageForEvent(manifest.event);
     if (!stage || manifest.stage !== stage) {
@@ -883,8 +915,9 @@ export function evaluateOracle({
 }
 
 export function oracleEnabledFromManifest(manifest, group) {
-  const groups =
-    manifest.schema === MANIFEST_SCHEMA ? ORACLE_GROUPS : ORACLE_GROUPS_V6;
+  const groups = [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V7].includes(manifest.schema)
+    ? ORACLE_GROUPS
+    : ORACLE_GROUPS_V6;
   const mapping = groups[group];
   if (!mapping) throw new Error(`unknown oracle group: ${group}`);
   const enabled = Object.fromEntries(
@@ -905,9 +938,12 @@ export function oracleEnabledFromManifest(manifest, group) {
     }),
   );
   if (
-    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6, MANIFEST_SCHEMA_V5].includes(
-      manifest.schema,
-    ) &&
+    [
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V7,
+      MANIFEST_SCHEMA_V6,
+      MANIFEST_SCHEMA_V5,
+    ].includes(manifest.schema) &&
     group === "governance"
   ) {
     // Full Lint starts concurrently with Changes; its result is still
@@ -926,7 +962,9 @@ export function oracleEnabledFromManifest(manifest, group) {
     enabled["database-recovery"] = false;
   }
   if (
-    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V6].includes(manifest.schema) &&
+    ![MANIFEST_SCHEMA, MANIFEST_SCHEMA_V7, MANIFEST_SCHEMA_V6].includes(
+      manifest.schema,
+    ) &&
     group === "database"
   ) {
     delete enabled["database-integration"]; // v1-v5 policies did not require this job.
