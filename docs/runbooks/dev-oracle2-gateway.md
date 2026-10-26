@@ -2,6 +2,25 @@
 
 Status: dev-only opt-in, **blocked for activation; not qualified for staging or production**.
 
+**WSL follow-up (2026-10-26 12:16 CST):** Existing clean integration worktree
+`/home/baker/projects/_bodysense_oracle2_gateway` remains at
+`9654b883ab1703b95198dc98b68ce72aeb9997e4`; the main worktree remains
+at `2dc2ff1a7c5618c9404f508fd9806a6b0735738e`. No BodySense T3 thread
+was listed, and no replacement Writer was started. The focused WSL tests
+passed **159/159**; Ruff and `git diff --check` passed. The supplier-route
+preflight and keyless Posture price audit both correctly **BLOCKED** (exit 1);
+the dev opt-in remains disabled. WSL → Oracle2 HTTPS liveliness returned
+**200 / verified TLS**, and anonymous `/v1/models` returned **401 / verified
+TLS**. Oracle2's versioned client policy still lists only `t3-gcp-dev` and
+`t3-oracle2` (the first is a historical alias, **not** an active GCP host);
+there is no dedicated BodySense client. The main WSL checkout has a
+mode-0600 `.env.dev.local`, but its contents were not inspected, exported, or
+accepted as evidence of a scoped BodySense key or legal free-account access.
+No authenticated provider request, model inference, model evaluation, route
+activation, or production/staging mutation was performed. Activation requires
+supplier identification, dedicated client authorization and exact free-only
+Posture routing; successful code tests or network probes do not replace these.
+
 **WSL independent checkpoint (2026-10-25):** `wsl-local` recovered and the
 existing clean feature worktree at `/home/baker/projects/_bodysense_oracle2_gateway`
 was verified at `df6e10142f2ea0e377a3f3ee23833e8f8c14c29f`.
@@ -61,12 +80,14 @@ free or substitute a `:free` suffix without fresh, exact approval and
 account-specific authentication. Separately, official
 [Groq vision documentation](https://console.groq.com/docs/vision) lists the
 already configured staging model `qwen/qwen3.8-27b`, but this establishes
-neither a WSL credential nor free-account authorization. The GCP-based
-commands in the unmerged historical research PR #442 are **not valid current
-verification instructions**; equivalent WSL keyless catalog inspection and
-the existing local Posture audit are the only completed checks in this run.
-OpenRouter/Groq real-account verification and synthetic inference remain
-blocked pending authorized credentials.
+neither a WSL credential nor free-account authorization. The unmerged
+[documentation PR #442](https://github.com/BakerSean168/BodySense/pull/442)
+was corrected on 2026-10-26 (commit
+`0c66cc365940d1d4abdc39602158089c288ad5bf`):
+its operational keyless recheck commands now use WSL, while the original GCP
+results remain **historical only**. The WSL keyless catalog/price and Oracle2
+health/auth-boundary checks do not establish OpenRouter/Groq real-account access.
+Authenticated synthetic inference remains blocked pending authorized credentials.
 
 This runbook covers routing the `wsl-local` dev LiteLLM gateway (`127.0.0.1:20112`) to the
 Oracle2 gateway at `https://oracle.taile92a8e.ts.net:10446/v1` for compatible non-vision
