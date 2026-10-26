@@ -35,7 +35,7 @@ services:
     # If Oracle2's Tailnet IP changes, rerun dev-env.sh and recreate ONLY the
     # gateway with scripts/dev-infra.sh restart-gateway (not full restart).
     extra_hosts:
-      - '${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}:${ORACLE2_BODYSENSE_TAILSCALE_IP:-100.68.237.116}'
+      - "${ORACLE2_BODYSENSE_HOSTNAME:-oracle.taile92a8e.ts.net}:${ORACLE2_BODYSENSE_TAILSCALE_IP:-100.68.237.116}"
     volumes:
       # Same container target as the base service, so this replaces (not
       # appends) the default docker/litellm/config.yaml mount.
