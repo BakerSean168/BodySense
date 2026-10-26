@@ -3,8 +3,8 @@ packages:
   - apps/web
 allowBuilds:
   "@apollo/protobufjs": false
-  '@parcel/watcher': true
-  '@swc/core': true
+  "@parcel/watcher": true
+  "@swc/core": true
   esbuild: true
   nx: true
   unrs-resolver: true

@@ -1,20 +1,31 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import process from 'node:process';
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
 
 const root = process.cwd();
-const outPath = path.join(root, 'docs/learning/curriculum/ledger/full-stack-open-current-mooc.json');
-const apiBase = 'https://courses.mooc.fi/api/v0/course-material';
+const outPath = path.join(
+  root,
+  "docs/learning/curriculum/ledger/full-stack-open-current-mooc.json",
+);
+const apiBase = "https://courses.mooc.fi/api/v0/course-material";
 
 const courses = [
-  { part: 8, slug: 'full-stack-open-graphql', label: 'GraphQL' },
-  { part: 9, slug: 'full-stack-open-typescript', label: 'TypeScript' },
-  { part: 10, slug: 'full-stack-open-react-native', label: 'React Native' },
-  { part: 11, slug: 'full-stack-open-continuous-integration', label: 'Continuous Integration' },
-  { part: 12, slug: 'full-stack-open-containers', label: 'Containers' },
-  { part: 13, slug: 'full-stack-open-relational-databases', label: 'Relational Databases' },
-  { part: 14, slug: 'full-stack-open-nextjs', label: 'Next.js' },
+  { part: 8, slug: "full-stack-open-graphql", label: "GraphQL" },
+  { part: 9, slug: "full-stack-open-typescript", label: "TypeScript" },
+  { part: 10, slug: "full-stack-open-react-native", label: "React Native" },
+  {
+    part: 11,
+    slug: "full-stack-open-continuous-integration",
+    label: "Continuous Integration",
+  },
+  { part: 12, slug: "full-stack-open-containers", label: "Containers" },
+  {
+    part: 13,
+    slug: "full-stack-open-relational-databases",
+    label: "Relational Databases",
+  },
+  { part: 14, slug: "full-stack-open-nextjs", label: "Next.js" },
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,13 +33,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function getJson(url, attempt = 0) {
   const response = await fetch(url, {
     headers: {
-      accept: 'application/json',
-      'user-agent': 'BodySense-curriculum-source-index/1.0',
+      accept: "application/json",
+      "user-agent": "BodySense-curriculum-source-index/1.0",
     },
   });
   if (response.status === 429 && attempt < 7) {
-    const retryAfter = Number(response.headers.get('retry-after') ?? 0);
-    const delay = retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1000 * 2 ** attempt);
+    const retryAfter = Number(response.headers.get("retry-after") ?? 0);
+    const delay =
+      retryAfter > 0 ? retryAfter * 1000 : Math.min(15000, 1000 * 2 ** attempt);
     await sleep(delay);
     return getJson(url, attempt + 1);
   }
@@ -49,7 +61,9 @@ async function mapLimit(values, limit, fn) {
       await sleep(125);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, values.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, values.length) }, worker),
+  );
   return results;
 }
 
@@ -59,26 +73,31 @@ function* walkBlocks(block) {
 }
 
 function stripHtml(value) {
-  return String(value ?? '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
+  return String(value ?? "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function stableStringify(value) {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }
 
 async function indexCourse(courseDef) {
-  const front = await getJson(`${apiBase}/courses/${courseDef.slug}/page-by-path/`);
+  const front = await getJson(
+    `${apiBase}/courses/${courseDef.slug}/page-by-path/`,
+  );
   const frontPage = front.page;
   const courseId = frontPage.course_id;
   const [pagesRaw, chaptersRaw] = await Promise.all([
@@ -113,10 +132,10 @@ async function indexCourse(courseDef) {
   for (const page of pagesRaw) {
     for (const topBlock of page.content ?? []) {
       for (const block of walkBlocks(topBlock)) {
-        if (block?.name === 'moocfi/exercise' && block.attributes?.id) {
+        if (block?.name === "moocfi/exercise" && block.attributes?.id) {
           exerciseIds.push(block.attributes.id);
         }
-        if (block?.name === 'core/heading') {
+        if (block?.name === "core/heading") {
           const text = stripHtml(block.attributes?.content);
           if (text) {
             headings.push({
@@ -145,7 +164,7 @@ async function indexCourse(courseDef) {
       const tasks = detail.current_exercise_slide?.exercise_tasks ?? [];
       return {
         id: exercise.id,
-        name: exercise.name ?? '',
+        name: exercise.name ?? "",
         created_at: exercise.created_at,
         updated_at: exercise.updated_at,
         score_maximum: exercise.score_maximum,
@@ -157,7 +176,11 @@ async function indexCourse(courseDef) {
         chapter_number: chapter?.chapter_number ?? null,
         chapter_name: chapter?.name ?? null,
         task_count: tasks.length,
-        exercise_service_slugs: [...new Set(tasks.map((task) => task.exercise_service_slug).filter(Boolean))].sort(),
+        exercise_service_slugs: [
+          ...new Set(
+            tasks.map((task) => task.exercise_service_slug).filter(Boolean),
+          ),
+        ].sort(),
       };
     },
   );
@@ -166,8 +189,10 @@ async function indexCourse(courseDef) {
     const ca = a.chapter_number ?? Number.MAX_SAFE_INTEGER;
     const cb = b.chapter_number ?? Number.MAX_SAFE_INTEGER;
     if (ca !== cb) return ca - cb;
-    if ((a.page_path ?? '') !== (b.page_path ?? '')) return (a.page_path ?? '').localeCompare(b.page_path ?? '');
-    if (a.order_number !== b.order_number) return a.order_number - b.order_number;
+    if ((a.page_path ?? "") !== (b.page_path ?? ""))
+      return (a.page_path ?? "").localeCompare(b.page_path ?? "");
+    if (a.order_number !== b.order_number)
+      return a.order_number - b.order_number;
     return a.id.localeCompare(b.id);
   });
 
@@ -205,23 +230,29 @@ indexedCourses.sort((a, b) => a.part - b.part);
 
 const sourceState = {
   schema_version: 1,
-  platform: 'courses.mooc.fi',
-  organization: 'uh-cs',
+  platform: "courses.mooc.fi",
+  organization: "uh-cs",
   api_base: apiBase,
   courses: indexedCourses,
 };
-const digest = crypto.createHash('sha256').update(stableStringify(sourceState)).digest('hex');
+const digest = crypto
+  .createHash("sha256")
+  .update(stableStringify(sourceState))
+  .digest("hex");
 const output = {
   ...sourceState,
   retrieved_at: new Date().toISOString(),
   source_state_sha256: digest,
-  scope_note: 'Metadata-only snapshot: course/chapter/page/heading/exercise identifiers and short titles. Exercise assignments, answers and course prose are intentionally not copied.',
+  scope_note:
+    "Metadata-only snapshot: course/chapter/page/heading/exercise identifiers and short titles. Exercise assignments, answers and course prose are intentionally not copied.",
 };
 
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, `${JSON.stringify(output, null, 2)}\n`);
 console.log(`wrote ${path.relative(root, outPath)}`);
 for (const course of indexedCourses) {
-  console.log(`Part ${course.part}: ${course.counts.exercise_records} exercises, ${course.counts.headings} headings, ${course.counts.pages} pages`);
+  console.log(
+    `Part ${course.part}: ${course.counts.exercise_records} exercises, ${course.counts.headings} headings, ${course.counts.pages} pages`,
+  );
 }
 console.log(`source state sha256: ${digest}`);

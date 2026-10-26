@@ -5,8 +5,7 @@
   "targets": {
     "verify": {
       "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": ["{workspaceRoot}/apps/**/*", "{workspaceRoot}/packages/**/*"],
+      "cache": false,
       "options": {
         "command": "pnpm nx run-many -t lint,typecheck --all --parallel=3 --exclude=bodysense"
       }

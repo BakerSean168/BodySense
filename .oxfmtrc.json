@@ -1,10 +1,4 @@
 {
-  "printWidth": 80,
-  "tabWidth": 2,
-  "useTabs": false,
-  "semi": true,
-  "singleQuote": false,
-  "trailingComma": "all",
   "endOfLine": "lf",
   "ignorePatterns": [
     "**/dist/**",
@@ -13,6 +7,22 @@
     "**/generated/**",
     "apps/web/public/static/anatomy/vanatome/**",
     "pnpm-lock.yaml",
-    "**/*.generated.json"
-  ]
+    "**/*.generated.json",
+    "**/*.md",
+    "docs/**",
+    "apps/api/**",
+    "apps/ai-service/**",
+    "tools/contracts/**",
+    "**/fixtures/**",
+    "**/testdata/**",
+    "showcase/**",
+    ".release-please-manifest.json",
+    "postman/**"
+  ],
+  "printWidth": 80,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "useTabs": false
 }

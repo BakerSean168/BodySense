@@ -1,0 +1,57 @@
+{
+  "schema": "bodysense.e2e-shards/v1",
+  "generatedFrom": "Per-file durations (sum of result durations, seconds) extracted from the Playwright HTML report of CI run 40138406720 on the B4 branch (all 63 tests expected, e2e-child 638s, tests 509.6s). Regenerate from a fresh full-run JSON report when the distribution drifts.",
+  "shardCount": 3,
+  "totalSeconds": 509.55,
+  "shards": [
+    {
+      "index": 1,
+      "files": [
+        "apps/web/e2e/ask-user-body-facts.spec.ts",
+        "apps/web/e2e/body-canvas-v3.spec.ts",
+        "apps/web/e2e/body-episode-associations.spec.ts",
+        "apps/web/e2e/body-hypotheses-ui.spec.ts",
+        "apps/web/e2e/body-observation-records.spec.ts",
+        "apps/web/e2e/body-state-suggestion.spec.ts",
+        "apps/web/e2e/boot-recovery.spec.ts",
+        "apps/web/e2e/legacy-share-retired.spec.ts",
+        "apps/web/e2e/symptom-safety-intake.spec.ts",
+        "apps/web/e2e/trainer-window.spec.ts"
+      ],
+      "totalSeconds": 170.59
+    },
+    {
+      "index": 2,
+      "files": [
+        "apps/web/e2e/assessment-evidence-contract.spec.ts",
+        "apps/web/e2e/auth-ink-pages.spec.ts",
+        "apps/web/e2e/body-observation-amendments.spec.ts",
+        "apps/web/e2e/chat-retention-window.spec.ts",
+        "apps/web/e2e/desktop-window-dock.spec.ts",
+        "apps/web/e2e/diagnosis-decision-window.spec.ts",
+        "apps/web/e2e/lifestyle-current-update.spec.ts",
+        "apps/web/e2e/longitudinal-full-loop.spec.ts",
+        "apps/web/e2e/longitudinal-health.spec.ts",
+        "apps/web/e2e/person-media-grid.spec.ts",
+        "apps/web/e2e/training-plan-window.spec.ts"
+      ],
+      "totalSeconds": 170.07
+    },
+    {
+      "index": 3,
+      "files": [
+        "apps/web/e2e/asset-erasure.spec.ts",
+        "apps/web/e2e/body-explorer.spec.ts",
+        "apps/web/e2e/body-fact-records.spec.ts",
+        "apps/web/e2e/consultation-runtime-recovery.spec.ts",
+        "apps/web/e2e/diagnosis-history-review.spec.ts",
+        "apps/web/e2e/onboarding-penpot.spec.ts",
+        "apps/web/e2e/person-identity-profile.spec.ts",
+        "apps/web/e2e/person-records-penpot.spec.ts",
+        "apps/web/e2e/region-mobile-sheet.spec.ts",
+        "apps/web/e2e/statement-erasure.spec.ts"
+      ],
+      "totalSeconds": 168.89
+    }
+  ]
+}

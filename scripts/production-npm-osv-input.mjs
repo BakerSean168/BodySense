@@ -1,17 +1,19 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
-import process from 'node:process';
-import YAML from 'yaml';
+import fs from "node:fs";
+import process from "node:process";
+import YAML from "yaml";
 
 function registryRef(name, rawRef, snapshots) {
-  let ref = typeof rawRef === 'object' && rawRef !== null ? rawRef.version : rawRef;
-  if (typeof ref !== 'string' || !ref) return null;
-  if (/^(?:link:|workspace:|file:|https?:|git\+|github:)/.test(ref)) return null;
+  let ref =
+    typeof rawRef === "object" && rawRef !== null ? rawRef.version : rawRef;
+  if (typeof ref !== "string" || !ref) return null;
+  if (/^(?:link:|workspace:|file:|https?:|git\+|github:)/.test(ref))
+    return null;
 
   let packageName = name;
-  if (ref.startsWith('npm:')) {
+  if (ref.startsWith("npm:")) {
     const alias = ref.slice(4);
-    const split = alias.lastIndexOf('@');
+    const split = alias.lastIndexOf("@");
     if (split <= 0) return null;
     packageName = alias.slice(0, split);
     ref = alias.slice(split + 1);
@@ -19,7 +21,7 @@ function registryRef(name, rawRef, snapshots) {
 
   const key = `${packageName}@${ref}`;
   if (!Object.prototype.hasOwnProperty.call(snapshots, key)) return null;
-  const version = ref.split('(')[0];
+  const version = ref.split("(")[0];
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) return null;
   return { name: packageName, version, ref, key };
 }
@@ -41,8 +43,9 @@ export function productionNpmPackages(lockfile) {
   // Every workspace importer is a possible production entrypoint. Only normal
   // and optional dependencies are roots; devDependencies never enter the graph.
   for (const importer of Object.values(importers)) {
-    for (const section of ['dependencies', 'optionalDependencies']) {
-      for (const [name, ref] of Object.entries(importer?.[section] ?? {})) enqueue(name, ref);
+    for (const section of ["dependencies", "optionalDependencies"]) {
+      for (const [name, ref] of Object.entries(importer?.[section] ?? {}))
+        enqueue(name, ref);
     }
   }
 
@@ -51,16 +54,18 @@ export function productionNpmPackages(lockfile) {
     packages.set(`${current.name}@${current.version}`, {
       name: current.name,
       version: current.version,
-      ecosystem: 'npm',
+      ecosystem: "npm",
     });
     const snapshot = snapshots[current.key] ?? {};
-    for (const section of ['dependencies', 'optionalDependencies']) {
-      for (const [name, ref] of Object.entries(snapshot[section] ?? {})) enqueue(name, ref);
+    for (const section of ["dependencies", "optionalDependencies"]) {
+      for (const [name, ref] of Object.entries(snapshot[section] ?? {}))
+        enqueue(name, ref);
     }
   }
 
   return [...packages.values()].sort(
-    (a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version),
+    (a, b) =>
+      a.name.localeCompare(b.name) || a.version.localeCompare(b.version),
   );
 }
 
@@ -76,18 +81,27 @@ export function osvInput(packages) {
 
 export function parseLockfile(text) {
   const parsed = YAML.parse(text);
-  if (!parsed || parsed.lockfileVersion == null || !parsed.importers || !parsed.snapshots) {
-    throw new Error('pnpm lockfile is missing lockfileVersion/importers/snapshots');
+  if (
+    !parsed ||
+    parsed.lockfileVersion == null ||
+    !parsed.importers ||
+    !parsed.snapshots
+  ) {
+    throw new Error(
+      "pnpm lockfile is missing lockfileVersion/importers/snapshots",
+    );
   }
   return parsed;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const path = process.argv[2] ?? 'pnpm-lock.yaml';
-  const lockfile = parseLockfile(fs.readFileSync(path, 'utf8'));
+  const path = process.argv[2] ?? "pnpm-lock.yaml";
+  const lockfile = parseLockfile(fs.readFileSync(path, "utf8"));
   const packages = productionNpmPackages(lockfile);
   if (packages.length === 0) {
-    console.error('SUPPLY_CHAIN_OSV_INPUT=FAIL no production npm packages resolved');
+    console.error(
+      "SUPPLY_CHAIN_OSV_INPUT=FAIL no production npm packages resolved",
+    );
     process.exit(2);
   }
   process.stdout.write(`${JSON.stringify(osvInput(packages), null, 2)}\n`);

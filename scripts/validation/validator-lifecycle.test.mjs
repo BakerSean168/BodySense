@@ -104,13 +104,18 @@ test("builder cleanup retries boundedly and fails when the builder still exists"
       script: `source "$LIFECYCLE"; validator_cleanup "$REPO_ROOT" bodysense-validator-test bodysense-validator-test-builder 1 0`,
     });
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /VALIDATOR_TEARDOWN_STEP=FAIL step=builder-remove/);
+    assert.match(
+      result.stderr,
+      /VALIDATOR_TEARDOWN_STEP=FAIL step=builder-remove/,
+    );
     assert.match(result.stderr, /VALIDATOR_TEARDOWN=FAIL/);
 
     const calls = await readFile(log, "utf8");
     const rmCalls = calls
       .split("\n")
-      .filter((line) => line.includes("buildx rm -f bodysense-validator-test-builder"));
+      .filter((line) =>
+        line.includes("buildx rm -f bodysense-validator-test-builder"),
+      );
     assert.equal(rmCalls.length, 2);
   });
 });

@@ -116,7 +116,7 @@ Registry tag writes are not transactional, so both staging and production watche
 
 ### Affected PR / exhaustive main policy
 
-`.github/workflows/ci.yml` generates one versioned `bodysense.delivery-manifest/v1` per run. Pull requests execute manifest-selected quality/database/experience children; changes to root/toolchain/CI/Docker/release/runtime coordinates fail safe to the full policy. Every push to `main` forces `full=true` regardless of the diff.
+`.github/workflows/ci.yml` generates one versioned `bodysense.delivery-manifest/v3` per run (v1/v2 manifests remain validatable for stored-artifact consumers; see `delivery-platform-v3.md` §4.1). Pull requests execute manifest-selected quality/database/experience children; changes to root/toolchain/CI/Docker/release/runtime coordinates fail safe to the full policy. Every push to `main` forces `full=true` regardless of the diff.
 
 The same `scripts/validate-repo.sh` entrypoint remains the exhaustive repository gate used locally and by the full-main quality child. It covers lint, typecheck, Go/Python/Web tests, Agent qualification/promotion evals, LiteLLM smoke and production builds.
 

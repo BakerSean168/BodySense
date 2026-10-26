@@ -1,31 +1,366 @@
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
-export const MANIFEST_SCHEMA = 'bodysense.delivery-manifest/v1';
-export const POLICY_VERSION = 'delivery-policy-v1';
-export const SUMMARY_SCHEMA = 'bodysense.delivery-run-summary/v1';
+export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
+export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
+export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
+export const MANIFEST_SCHEMA_V4 = "bodysense.delivery-manifest/v4";
+export const MANIFEST_SCHEMA_V5 = "bodysense.delivery-manifest/v5";
+export const MANIFEST_SCHEMA_V6 = "bodysense.delivery-manifest/v6";
+export const MANIFEST_SCHEMA_V7 = "bodysense.delivery-manifest/v7";
+export const MANIFEST_SCHEMA_V8 = "bodysense.delivery-manifest/v8";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v9";
+export const MANIFEST_SCHEMAS = Object.freeze([
+  MANIFEST_SCHEMA_V1,
+  MANIFEST_SCHEMA_V2,
+  MANIFEST_SCHEMA_V3,
+  MANIFEST_SCHEMA_V4,
+  MANIFEST_SCHEMA_V5,
+  MANIFEST_SCHEMA_V6,
+  MANIFEST_SCHEMA_V7,
+  MANIFEST_SCHEMA_V8,
+  MANIFEST_SCHEMA,
+]);
+export const POLICY_VERSION_V1 = "delivery-policy-v1";
+export const POLICY_VERSION_V2 = "delivery-policy-v2";
+export const POLICY_VERSION_V3 = "delivery-policy-v3";
+export const POLICY_VERSION_V4 = "delivery-policy-v4";
+export const POLICY_VERSION_V5 = "delivery-policy-v5";
+export const POLICY_VERSION_V6 = "delivery-policy-v6";
+export const POLICY_VERSION_V7 = "delivery-policy-v7";
+export const POLICY_VERSION = "delivery-policy-v8";
+export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
+
+// Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
+// v1/v2 manifests keep validating against the set they were generated with.
+export const LANE_NAMES_V2 = Object.freeze([
+  "governance",
+  "web",
+  "api",
+  "ai",
+  "contracts",
+  "database",
+  "experience",
+  "full",
+]);
 
 export const LANE_NAMES = Object.freeze([
-  'governance',
-  'web',
-  'api',
-  'ai',
-  'contracts',
-  'database',
-  'experience',
-  'full',
+  "governance",
+  "web",
+  "api",
+  "ai",
+  "contracts",
+  "database",
+  "experience",
+  "component",
+  "full",
 ]);
 
 export const RISK_NAMES = Object.freeze([
-  'docs',
-  'web',
-  'api',
-  'ai',
-  'contract',
-  'database',
-  'runtime',
-  'release',
-  'root',
+  "docs",
+  "web",
+  "api",
+  "ai",
+  "contract",
+  "database",
+  "runtime",
+  "release",
+  "root",
 ]);
+
+export const LANE_SKIP_REASONS = Object.freeze([
+  "no-changed-paths",
+  "no-matching-paths",
+]);
+
+export function laneNamesForSchema(schema) {
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return LANE_NAMES_V2;
+  }
+  return LANE_NAMES;
+}
+
+export function laneTargetsForSchema(schema) {
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return LANE_TARGETS_V2;
+  }
+  if (schema === MANIFEST_SCHEMA_V3) return LANE_TARGETS_V3;
+  if (schema === MANIFEST_SCHEMA_V4 || schema === MANIFEST_SCHEMA_V5)
+    return LANE_TARGETS_V5;
+  if (schema === MANIFEST_SCHEMA_V6) return LANE_TARGETS_V6;
+  if (schema === MANIFEST_SCHEMA_V7) return LANE_TARGETS_V7;
+  if (schema === MANIFEST_SCHEMA_V8) return LANE_TARGETS_V8;
+  return LANE_TARGETS;
+}
+
+export function policyVersionForSchema(schema) {
+  if (schema === MANIFEST_SCHEMA_V1 || schema === MANIFEST_SCHEMA_V2) {
+    return POLICY_VERSION_V1;
+  }
+  if (schema === MANIFEST_SCHEMA_V3) return POLICY_VERSION_V2;
+  if (schema === MANIFEST_SCHEMA_V4) return POLICY_VERSION_V3;
+  if (schema === MANIFEST_SCHEMA_V5) return POLICY_VERSION_V4;
+  if (schema === MANIFEST_SCHEMA_V6) return POLICY_VERSION_V5;
+  if (schema === MANIFEST_SCHEMA_V7) return POLICY_VERSION_V6;
+  if (schema === MANIFEST_SCHEMA_V8) return POLICY_VERSION_V7;
+  return POLICY_VERSION;
+}
+
+// Executable units each lane gates. Recorded in the manifest so the contract
+// states not only which lanes are required, but exactly what will run.
+// Target policy for schema v1/v2 manifests. Kept frozen so stored laneDetails
+// keep validating after the v3 policy moved contracts into its own child job.
+export const LANE_TARGETS_V2 = Object.freeze({
+  governance: Object.freeze(["job:governance-child"]),
+  web: Object.freeze([
+    "job:quality-child",
+    "nx:@bodysense/web:lint",
+    "nx:@bodysense/web:typecheck",
+    "nx:@bodysense/web:test",
+    "nx:@bodysense/web:build",
+  ]),
+  api: Object.freeze([
+    "job:quality-child",
+    "nx:api:lint",
+    "nx:api:test",
+    "nx:api:build",
+  ]),
+  ai: Object.freeze([
+    "job:quality-child",
+    "nx:ai-service:format:check",
+    "nx:ai-service:lint",
+    "nx:ai-service:typecheck",
+    "nx:ai-service:test",
+    "nx:ai-service:eval:diagnosis",
+    "nx:ai-service:eval:diagnosis-evidence-policy",
+    "nx:ai-service:eval:diagnosis-promotion",
+    "nx:ai-service:eval:treatment",
+    "nx:ai-service:eval:treatment-evidence-gap",
+    "nx:ai-service:eval:treatment-promotion",
+    "script:validate-litellm-gateway.sh",
+  ]),
+  contracts: Object.freeze([
+    "job:quality-child",
+    "nx:@bodysense/contracts:lint",
+    "nx:@bodysense/contracts:typecheck",
+    "nx:@bodysense/contracts:test",
+    "pnpm:contracts:verify",
+  ]),
+  database: Object.freeze([
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+  ]),
+  experience: Object.freeze(["job:e2e-child", "playwright:apps/web/e2e"]),
+  full: Object.freeze([
+    "job:quality-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
+// Target policy for schema v3 manifests: contracts execute in
+// contracts-child (not quality-child), and the component lane gates the
+// Storybook browser tests in component-child.
+export const LANE_TARGETS_V3 = Object.freeze({
+  ...LANE_TARGETS_V2,
+  contracts: Object.freeze([
+    "job:contracts-child",
+    "nx:@bodysense/contracts:lint",
+    "nx:@bodysense/contracts:typecheck",
+    "nx:@bodysense/contracts:test",
+    "pnpm:contracts:verify",
+  ]),
+  component: Object.freeze([
+    "job:component-child",
+    "nx:@bodysense/web:component-test",
+  ]),
+  full: Object.freeze([
+    "job:quality-child",
+    "job:contracts-child",
+    "job:component-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
+// Target policy for schema v4 manifests: quality lanes execute in
+// per-lane children (quality-web/api/ai-child) with quality:architecture
+// gated by quality-arch-child, the full lane keeps the validate-repo.sh
+// monolith in quality-full-child, and the experience lane adds the
+// e2e-report-child merged-report receipt next to the sharded e2e-child.
+export const LANE_TARGETS_V5 = Object.freeze({
+  ...LANE_TARGETS_V3,
+  web: Object.freeze([
+    "job:quality-web-child",
+    "nx:@bodysense/web:lint",
+    "nx:@bodysense/web:typecheck",
+    "nx:@bodysense/web:test",
+    "nx:@bodysense/web:build",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  api: Object.freeze([
+    "job:quality-api-child",
+    "nx:api:lint",
+    "nx:api:test",
+    "nx:api:build",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  ai: Object.freeze([
+    "job:quality-ai-child",
+    "nx:ai-service:format:check",
+    "nx:ai-service:lint",
+    "nx:ai-service:typecheck",
+    "nx:ai-service:test",
+    "nx:ai-service:eval:diagnosis",
+    "nx:ai-service:eval:diagnosis-evidence-policy",
+    "nx:ai-service:eval:diagnosis-promotion",
+    "nx:ai-service:eval:treatment",
+    "nx:ai-service:eval:treatment-evidence-gap",
+    "nx:ai-service:eval:treatment-promotion",
+    "script:validate-litellm-gateway.sh",
+    "job:quality-arch-child",
+    "pnpm:quality:architecture",
+  ]),
+  experience: Object.freeze([
+    "job:e2e-child",
+    "job:e2e-report-child",
+    "playwright:apps/web/e2e",
+  ]),
+  full: Object.freeze([
+    "job:quality-full-child",
+    "job:contracts-child",
+    "job:component-child",
+    "job:migrations-child",
+    "job:recovery-migrations-child",
+    "job:e2e-child",
+    "job:e2e-report-child",
+    "script:validate-repo.sh",
+  ]),
+});
+
+// Which manifest lanes make each Oracle child required. Oracles derive their
+// expectations from the digest-validated manifest through this table instead
+// of re-deriving lane expressions in workflow YAML.
+export const LANE_TARGETS_V6 = Object.freeze({
+  ...LANE_TARGETS_V5,
+  api: Object.freeze([...LANE_TARGETS_V5.api, "job:db-integration-child"]),
+  database: Object.freeze([
+    ...LANE_TARGETS_V5.database,
+    "job:db-integration-child",
+  ]),
+  full: Object.freeze([...LANE_TARGETS_V5.full, "job:db-integration-child"]),
+});
+
+export const LANE_TARGETS_V7 = Object.freeze({
+  ...LANE_TARGETS_V6,
+  ai: Object.freeze([
+    ...LANE_TARGETS_V6.ai,
+    "nx:ai-service:eval:assessment-evidence-contract",
+  ]),
+  full: Object.freeze([
+    ...LANE_TARGETS_V6.full.filter(
+      (target) =>
+        target !== "job:quality-full-child" &&
+        target !== "script:validate-repo.sh",
+    ),
+    "job:quality-release-child",
+  ]),
+});
+
+// The aggregate check owns one final, digest-bound result per workflow run.
+export const LANE_TARGETS_V8 = Object.freeze({
+  ...LANE_TARGETS_V7,
+  governance: Object.freeze([...LANE_TARGETS_V7.governance, "job:ci-check"]),
+});
+
+// V9: keep parallel tests, but one Lint and one final Check own validation.
+// Archived v1-v8 target policies remain exactly as previously published.
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V8,
+  governance: Object.freeze([
+    "job:lint",
+    "script:delivery-contract-tests",
+    "pnpm:quality:verify",
+    "job:ci-check",
+  ]),
+  web: Object.freeze(
+    LANE_TARGETS_V8.web.filter(
+      (target) =>
+        target !== "job:quality-arch-child" &&
+        target !== "pnpm:quality:architecture",
+    ),
+  ),
+  api: Object.freeze(
+    LANE_TARGETS_V8.api.filter(
+      (target) =>
+        target !== "job:quality-arch-child" &&
+        target !== "pnpm:quality:architecture",
+    ),
+  ),
+  ai: Object.freeze(
+    LANE_TARGETS_V8.ai.filter(
+      (target) =>
+        target !== "job:quality-arch-child" &&
+        target !== "pnpm:quality:architecture",
+    ),
+  ),
+});
+
+export const ORACLE_GROUPS_V6 = Object.freeze({
+  governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
+  quality: Object.freeze({
+    // The full lane keeps the validate-repo.sh monolith child; per-lane
+    // children are required only when their lane is selected without the
+    // full lane (their jobs are skipped in full runs to avoid executing
+    // the same checks twice).
+    "quality-full": Object.freeze(["full"]),
+    "quality-web": Object.freeze({
+      anyOf: Object.freeze(["web"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-api": Object.freeze({
+      anyOf: Object.freeze(["api"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-ai": Object.freeze({
+      anyOf: Object.freeze(["ai"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    "quality-arch": Object.freeze({
+      anyOf: Object.freeze(["web", "api", "ai"]),
+      noneOf: Object.freeze(["full"]),
+    }),
+    contracts: Object.freeze(["contracts", "full"]),
+  }),
+  database: Object.freeze({
+    "database-baseline": Object.freeze(["database", "full"]),
+    "database-recovery": Object.freeze(["database", "full"]),
+    "database-integration": Object.freeze(["api", "database", "full"]),
+  }),
+  experience: Object.freeze({
+    experience: Object.freeze(["experience", "full"]),
+    component: Object.freeze(["component", "full"]),
+  }),
+});
+
+// Main Full parallelizes quality by runtime instead of repeating the
+// entire validate-repo.sh. Archived policies keep the old Oracle map.
+export const ORACLE_GROUPS = Object.freeze({
+  ...ORACLE_GROUPS_V6,
+  quality: Object.freeze({
+    "quality-web": Object.freeze(["web", "full"]),
+    "quality-api": Object.freeze(["api", "full"]),
+    "quality-ai": Object.freeze(["ai", "full"]),
+    "quality-arch": Object.freeze(["web", "api", "ai", "full"]),
+    "quality-release": Object.freeze(["full"]),
+    contracts: Object.freeze(["contracts", "full"]),
+  }),
+});
 
 const FULL_LANES = Object.freeze(
   Object.fromEntries(LANE_NAMES.map((lane) => [lane, true])),
@@ -34,7 +369,7 @@ const FULL_LANES = Object.freeze(
 const RISK_PRIORITY = new Map(RISK_NAMES.map((risk, index) => [risk, index]));
 
 function normalizePath(path) {
-  return String(path).replaceAll('\\', '/').replace(/^\.\//, '');
+  return String(path).replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
 export function normalizeChangedPaths(paths) {
@@ -45,7 +380,7 @@ export function canonicalize(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize);
   }
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.keys(value)
         .sort()
@@ -57,7 +392,7 @@ export function canonicalize(value) {
 
 export function sha256Json(value) {
   const canonical = JSON.stringify(canonicalize(value));
-  return `sha256:${crypto.createHash('sha256').update(canonical).digest('hex')}`;
+  return `sha256:${crypto.createHash("sha256").update(canonical).digest("hex")}`;
 }
 
 export function computeManifestDigest(manifest) {
@@ -75,7 +410,9 @@ function allTrueLanes() {
 }
 
 function emptyLanes() {
-  return Object.fromEntries(LANE_NAMES.map((lane) => [lane, lane === 'governance']));
+  return Object.fromEntries(
+    LANE_NAMES.map((lane) => [lane, lane === "governance"]),
+  );
 }
 
 function mergeLanes(target, patch) {
@@ -88,7 +425,7 @@ function mergeLanes(target, patch) {
 }
 
 function highestRisk(risks) {
-  let selected = 'docs';
+  let selected = "docs";
   for (const risk of risks) {
     if ((RISK_PRIORITY.get(risk) ?? -1) > (RISK_PRIORITY.get(selected) ?? -1)) {
       selected = risk;
@@ -100,146 +437,162 @@ function highestRisk(risks) {
 function classifySinglePath(path) {
   // Documentation and prose-only repository metadata are the cheapest class.
   if (
-    path.startsWith('docs/') ||
-    path === 'README.md' ||
-    path === 'CONTRIBUTING.md' ||
-    path.endsWith('.md')
+    path.startsWith("docs/") ||
+    path === "README.md" ||
+    path === "CONTRIBUTING.md" ||
+    path.endsWith(".md")
   ) {
-    return { risk: 'docs', lanes: {}, reason: 'documentation' };
+    return { risk: "docs", lanes: {}, reason: "documentation" };
   }
 
   // Delivery/release/runtime coordinates are intentionally full because a
   // detector bug in its own implementation must never reduce validation.
   if (
-    path.startsWith('.github/') ||
-    path.startsWith('scripts/delivery/') ||
-    path.startsWith('docker/') ||
-    path.startsWith('deploy/') ||
-    path === '.env.production' ||
-    path === 'release-please-config.json' ||
-    path === '.release-please-manifest.json'
+    path.startsWith(".github/") ||
+    path.startsWith("scripts/delivery/") ||
+    path.startsWith("docker/") ||
+    path.startsWith("deploy/") ||
+    path === ".env.production" ||
+    path === "release-please-config.json" ||
+    path === ".release-please-manifest.json"
   ) {
     const risk =
-      path === 'release-please-config.json' || path === '.release-please-manifest.json'
-        ? 'release'
-        : 'runtime';
-    return { risk, lanes: allTrueLanes(), reason: 'delivery-runtime' };
+      path === "release-please-config.json" ||
+      path === ".release-please-manifest.json"
+        ? "release"
+        : "runtime";
+    return { risk, lanes: allTrueLanes(), reason: "delivery-runtime" };
   }
 
   if (
-    path === 'package.json' ||
-    path === 'pnpm-lock.yaml' ||
-    path === 'pnpm-workspace.yaml' ||
-    path === 'nx.json' ||
-    path.startsWith('tsconfig') ||
-    path.startsWith('.npm') ||
-    path.startsWith('.node-version') ||
-    path.startsWith('.python-version') ||
-    path === 'uv.lock'
+    path === "package.json" ||
+    path === "pnpm-lock.yaml" ||
+    path === "pnpm-workspace.yaml" ||
+    path === "nx.json" ||
+    path.startsWith("tsconfig") ||
+    path.startsWith(".npm") ||
+    path.startsWith(".node-version") ||
+    path.startsWith(".python-version") ||
+    path === "uv.lock"
   ) {
-    return { risk: 'root', lanes: allTrueLanes(), reason: 'root-toolchain' };
+    return { risk: "root", lanes: allTrueLanes(), reason: "root-toolchain" };
   }
 
-  if (path.startsWith('apps/api/migrations/')) {
+  if (path.startsWith("apps/api/migrations/")) {
     return {
-      risk: 'database',
+      risk: "database",
       lanes: {
         api: true,
         database: true,
         experience: true,
       },
-      reason: 'database-migration',
+      reason: "database-migration",
     };
   }
 
-  if (path.startsWith('apps/api/')) {
+  if (path.startsWith("apps/api/")) {
     return {
-      risk: 'api',
+      risk: "api",
       lanes: { api: true, experience: true },
-      reason: 'go-api',
+      reason: "go-api",
     };
   }
 
-  if (path.startsWith('apps/ai-service/')) {
+  if (path.startsWith("apps/ai-service/")) {
     return {
-      risk: 'ai',
+      risk: "ai",
       lanes: { ai: true, experience: true },
-      reason: 'ai-service',
+      reason: "ai-service",
     };
   }
 
-  if (path.startsWith('apps/web/')) {
+  if (path.startsWith("apps/web/")) {
     return {
-      risk: 'web',
-      lanes: { web: true, experience: true },
-      reason: 'web',
+      risk: "web",
+      lanes: { web: true, experience: true, component: true },
+      reason: "web",
     };
   }
 
-  if (path.startsWith('packages/contracts/')) {
+  if (path.startsWith("packages/contracts/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: {
         web: true,
         api: true,
         ai: true,
         contracts: true,
         experience: true,
+        component: true,
       },
-      reason: 'shared-contract',
+      reason: "shared-contract",
     };
   }
 
-  if (path.startsWith('postman/') || path.startsWith('scripts/postman/')) {
+  if (path.startsWith("postman/") || path.startsWith("scripts/postman/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: { contracts: true },
-      reason: 'postman-contract-view',
+      reason: "postman-contract-view",
     };
   }
 
-  if (path.startsWith('packages/utils/')) {
+  if (path.startsWith("packages/utils/")) {
     return {
-      risk: 'root',
+      risk: "root",
       lanes: allTrueLanes(),
-      reason: 'shared-utility-fail-safe',
+      reason: "shared-utility-fail-safe",
     };
   }
 
-  if (path.startsWith('scripts/static-assets/') || path.startsWith('scripts/anatomy/')) {
+  if (
+    path.startsWith("scripts/static-assets/") ||
+    path.startsWith("scripts/anatomy/")
+  ) {
     return {
-      risk: 'runtime',
+      risk: "runtime",
       lanes: allTrueLanes(),
-      reason: 'public-asset-runtime',
+      reason: "public-asset-runtime",
     };
   }
 
-  if (path.startsWith('scripts/')) {
+  if (path.startsWith("scripts/")) {
     // Operational/test scripts frequently participate in deploy, migration,
     // privacy or release validation. Unknown scripts are therefore full risk.
-    return { risk: 'runtime', lanes: allTrueLanes(), reason: 'repository-script' };
+    return {
+      risk: "runtime",
+      lanes: allTrueLanes(),
+      reason: "repository-script",
+    };
   }
 
-  if (path.startsWith('tests/') || path.startsWith('e2e/')) {
+  if (path.startsWith("tests/") || path.startsWith("e2e/")) {
     return {
-      risk: 'contract',
+      risk: "contract",
       lanes: { contracts: true, experience: true },
-      reason: 'cross-service-test',
+      reason: "cross-service-test",
     };
   }
 
   // Unknown executable or repository-root content is deliberately safest/full.
-  return { risk: 'root', lanes: allTrueLanes(), reason: 'unknown-path-fail-safe' };
+  return {
+    risk: "root",
+    lanes: allTrueLanes(),
+    reason: "unknown-path-fail-safe",
+  };
 }
 
 export function classifyPaths(paths, { forceFull = false } = {}) {
   const changedPaths = normalizeChangedPaths(paths);
   if (forceFull) {
     return {
-      risk: 'root',
+      risk: "root",
       lanes: allTrueLanes(),
-      reasons: ['full-main-policy'],
+      reasons: ["full-main-policy"],
       changedPaths,
+      laneFiles: Object.fromEntries(
+        LANE_NAMES.map((lane) => [lane, [...changedPaths]]),
+      ),
     };
   }
 
@@ -248,39 +601,81 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
     // interpreted as docs-only. Governance remains active and the manifest
     // records the explicit no-change reason.
     return {
-      risk: 'docs',
+      risk: "docs",
       lanes: emptyLanes(),
-      reasons: ['no-changed-paths'],
+      reasons: ["no-changed-paths"],
       changedPaths,
+      laneFiles: Object.fromEntries(LANE_NAMES.map((lane) => [lane, []])),
     };
   }
 
   const lanes = emptyLanes();
-  const risks = new Set(['docs']);
+  const laneFileSets = new Map(LANE_NAMES.map((lane) => [lane, new Set()]));
+  const risks = new Set(["docs"]);
   const reasons = new Set();
 
   for (const path of changedPaths) {
     const classification = classifySinglePath(path);
     risks.add(classification.risk);
     reasons.add(classification.reason);
+    // Governance inspects the whole diff, so every path triggers it.
+    laneFileSets.get("governance").add(path);
+    for (const [lane, enabled] of Object.entries(classification.lanes)) {
+      if (enabled) laneFileSets.get(lane).add(path);
+    }
     mergeLanes(lanes, classification.lanes);
-  }
-
-  if (lanes.full) {
-    return {
-      risk: highestRisk(risks),
-      lanes: allTrueLanes(),
-      reasons: [...reasons].sort(),
-      changedPaths,
-    };
   }
 
   return {
     risk: highestRisk(risks),
-    lanes,
+    lanes: lanes.full ? allTrueLanes() : lanes,
     reasons: [...reasons].sort(),
     changedPaths,
+    laneFiles: Object.fromEntries(
+      LANE_NAMES.map((lane) => [lane, [...laneFileSets.get(lane)].sort()]),
+    ),
   };
+}
+
+// PR Fast: retain all lower-level owners for broad/unknown changes but never
+// schedule cross-service Playwright E2E or the full serial release validator.
+// Main and Nightly still retain complete suites as the PR selection safety net.
+export function stageForEvent(event) {
+  if (event === "pull_request") return "pr-fast";
+  if (event === "schedule") return "nightly-audit";
+  if (event === "push" || event === "workflow_dispatch") return "main-full";
+  return null;
+}
+
+function applyStagePolicy(classification, stage) {
+  if (stage !== "pr-fast") return classification;
+  return {
+    ...classification,
+    lanes: { ...classification.lanes, experience: false, full: false },
+    laneFiles: { ...classification.laneFiles, experience: [], full: [] },
+  };
+}
+
+function buildLaneDetails(classification) {
+  const { lanes, laneFiles, changedPaths } = classification;
+  return Object.fromEntries(
+    LANE_NAMES.map((lane) => {
+      const required = lanes[lane] === true;
+      return [
+        lane,
+        {
+          required,
+          files: [...(laneFiles[lane] ?? [])],
+          targets: [...LANE_TARGETS[lane]],
+          skipReason: required
+            ? null
+            : changedPaths.length === 0
+              ? "no-changed-paths"
+              : "no-matching-paths",
+        },
+      ];
+    }),
+  );
 }
 
 export function createManifest({
@@ -288,15 +683,23 @@ export function createManifest({
   headSha,
   requestedBaseSha = baseSha,
   event,
-  ref = '',
+  ref = "",
   changedPaths,
   forceFull = false,
+  runId = process.env.GITHUB_RUN_ID ?? "1",
+  runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT ?? "1"),
   generatedAt = new Date().toISOString(),
 }) {
-  const classification = classifyPaths(changedPaths, { forceFull });
+  const stage = stageForEvent(event);
+  const classification = applyStagePolicy(
+    classifyPaths(changedPaths, { forceFull }),
+    stage,
+  );
   const manifest = {
     schema: MANIFEST_SCHEMA,
     policyVersion: POLICY_VERSION,
+    stage,
+    execution: { runId: String(runId), attempt: runAttempt },
     event,
     ref,
     requestedBaseSha,
@@ -306,6 +709,7 @@ export function createManifest({
     reasons: classification.reasons,
     changedPaths: classification.changedPaths,
     lanes: classification.lanes,
+    laneDetails: buildLaneDetails(classification),
     generatedAt,
   };
   manifest.digest = computeManifestDigest(manifest);
@@ -314,22 +718,64 @@ export function createManifest({
 
 export function validateManifest(manifest) {
   const errors = [];
-  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
-    return ['manifest must be an object'];
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    return ["manifest must be an object"];
   }
 
-  if (manifest.schema !== MANIFEST_SCHEMA) {
-    errors.push(`schema must be ${MANIFEST_SCHEMA}`);
+  if (!MANIFEST_SCHEMAS.includes(manifest.schema)) {
+    errors.push(`schema must be one of: ${MANIFEST_SCHEMAS.join(", ")}`);
   }
-  if (manifest.policyVersion !== POLICY_VERSION) {
-    errors.push(`policyVersion must be ${POLICY_VERSION}`);
+  const expectedPolicy = policyVersionForSchema(manifest.schema);
+  if ([MANIFEST_SCHEMA, MANIFEST_SCHEMA_V8].includes(manifest.schema)) {
+    if (
+      !manifest.execution ||
+      typeof manifest.execution !== "object" ||
+      Array.isArray(manifest.execution) ||
+      !/^[1-9][0-9]*$/.test(manifest.execution.runId ?? "") ||
+      !Number.isSafeInteger(manifest.execution.attempt) ||
+      manifest.execution.attempt < 1 ||
+      Object.keys(manifest.execution).sort().join(",") !== "attempt,runId"
+    ) {
+      errors.push(
+        "execution.runId and execution.attempt must bind a valid run identity",
+      );
+    }
   }
-  if (!['pull_request', 'push', 'workflow_dispatch'].includes(manifest.event)) {
+  if (manifest.policyVersion !== expectedPolicy) {
+    errors.push(`policyVersion must be ${expectedPolicy}`);
+  }
+  if (
+    !["pull_request", "push", "workflow_dispatch", "schedule"].includes(
+      manifest.event,
+    )
+  ) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
+  if (
+    [
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V8,
+      MANIFEST_SCHEMA_V7,
+      MANIFEST_SCHEMA_V6,
+      MANIFEST_SCHEMA_V5,
+    ].includes(manifest.schema)
+  ) {
+    const stage = stageForEvent(manifest.event);
+    if (!stage || manifest.stage !== stage) {
+      errors.push(`stage must equal ${stage} for event ${manifest.event}`);
+    }
+    if (
+      stage === "pr-fast" &&
+      (manifest.lanes?.experience === true || manifest.lanes?.full === true)
+    ) {
+      errors.push(
+        "PR Fast cannot require full-stack E2E or full serial validation",
+      );
+    }
+  }
 
-  for (const field of ['requestedBaseSha', 'baseSha', 'headSha']) {
-    if (!/^[0-9a-f]{40}$/i.test(manifest[field] ?? '')) {
+  for (const field of ["requestedBaseSha", "baseSha", "headSha"]) {
+    if (!/^[0-9a-f]{40}$/i.test(manifest[field] ?? "")) {
       errors.push(`${field} must be a full 40-character Git SHA`);
     }
   }
@@ -339,37 +785,57 @@ export function validateManifest(manifest) {
   }
 
   if (!Array.isArray(manifest.changedPaths)) {
-    errors.push('changedPaths must be an array');
+    errors.push("changedPaths must be an array");
   } else {
     const normalized = normalizeChangedPaths(manifest.changedPaths);
     if (JSON.stringify(normalized) !== JSON.stringify(manifest.changedPaths)) {
-      errors.push('changedPaths must be normalized, unique, and sorted');
+      errors.push("changedPaths must be normalized, unique, and sorted");
     }
   }
 
-  if (!Array.isArray(manifest.reasons) || manifest.reasons.some((value) => typeof value !== 'string')) {
-    errors.push('reasons must be an array of strings');
+  if (
+    !Array.isArray(manifest.reasons) ||
+    manifest.reasons.some((value) => typeof value !== "string")
+  ) {
+    errors.push("reasons must be an array of strings");
   }
 
-  if (!manifest.lanes || typeof manifest.lanes !== 'object' || Array.isArray(manifest.lanes)) {
-    errors.push('lanes must be an object');
+  if (
+    !manifest.lanes ||
+    typeof manifest.lanes !== "object" ||
+    Array.isArray(manifest.lanes)
+  ) {
+    errors.push("lanes must be an object");
   } else {
+    const schemaLanes = laneNamesForSchema(manifest.schema);
     const keys = Object.keys(manifest.lanes).sort();
-    const expected = [...LANE_NAMES].sort();
+    const expected = [...schemaLanes].sort();
     if (JSON.stringify(keys) !== JSON.stringify(expected)) {
-      errors.push(`lanes must contain exactly: ${LANE_NAMES.join(', ')}`);
+      errors.push(`lanes must contain exactly: ${schemaLanes.join(", ")}`);
     }
-    for (const lane of LANE_NAMES) {
-      if (typeof manifest.lanes[lane] !== 'boolean') {
+    for (const lane of schemaLanes) {
+      if (typeof manifest.lanes[lane] !== "boolean") {
         errors.push(`lane ${lane} must be boolean`);
       }
     }
     if (manifest.lanes.governance !== true) {
-      errors.push('governance lane must always be enabled');
+      errors.push("governance lane must always be enabled");
     }
-    if (manifest.lanes.full && LANE_NAMES.some((lane) => manifest.lanes[lane] !== true)) {
-      errors.push('full lane requires every lane to be enabled');
+    if (
+      manifest.lanes.full &&
+      schemaLanes.some((lane) => manifest.lanes[lane] !== true)
+    ) {
+      errors.push("full lane requires every lane to be enabled");
     }
+  }
+
+  // laneDetails exist on every schema from v2 onward; only v1 predates
+  // them. (Pinning this to "current or v2" would reject stored v3
+  // manifests the moment the current schema moves to v4.)
+  if (manifest.schema !== MANIFEST_SCHEMA_V1) {
+    errors.push(...validateLaneDetails(manifest));
+  } else if (manifest.laneDetails !== undefined) {
+    errors.push(`laneDetails requires schema ${MANIFEST_SCHEMA_V2} or later`);
   }
 
   const expectedDigest = computeManifestDigest(manifest);
@@ -380,21 +846,103 @@ export function validateManifest(manifest) {
   return errors;
 }
 
-export function evaluateOracle({ detector = 'success', enabled = {}, children = {} }) {
-  const failures = [];
-  if (detector !== 'success') {
-    failures.push(`detector=${detector || 'missing'}`);
+function validateLaneDetails(manifest) {
+  const errors = [];
+  const details = manifest.laneDetails;
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
+    return ["laneDetails must be an object"];
+  }
+  const schemaLanes = laneNamesForSchema(manifest.schema);
+  const schemaTargets = laneTargetsForSchema(manifest.schema);
+  const keys = Object.keys(details).sort();
+  const expectedKeys = [...schemaLanes].sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expectedKeys)) {
+    return [`laneDetails must contain exactly: ${schemaLanes.join(", ")}`];
   }
 
-  const laneNames = [...new Set([...Object.keys(enabled), ...Object.keys(children)])].sort();
+  const changed = new Set(
+    Array.isArray(manifest.changedPaths) ? manifest.changedPaths : [],
+  );
+  for (const lane of schemaLanes) {
+    const entry = details[lane];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`laneDetails.${lane} must be an object`);
+      continue;
+    }
+    const required = manifest.lanes?.[lane] === true;
+    if (entry.required !== required) {
+      errors.push(`laneDetails.${lane}.required must match lanes.${lane}`);
+    }
+    if (!Array.isArray(entry.files)) {
+      errors.push(`laneDetails.${lane}.files must be an array`);
+    } else {
+      const normalized = normalizeChangedPaths(entry.files);
+      if (JSON.stringify(normalized) !== JSON.stringify(entry.files)) {
+        errors.push(
+          `laneDetails.${lane}.files must be normalized, unique, and sorted`,
+        );
+      }
+      for (const file of entry.files) {
+        if (!changed.has(file)) {
+          errors.push(
+            `laneDetails.${lane}.files contains ${file} which is not in changedPaths`,
+          );
+        }
+      }
+      if (required && changed.size > 0 && entry.files.length === 0) {
+        errors.push(
+          `laneDetails.${lane}.files must record the paths that require the lane`,
+        );
+      }
+      if (!required && entry.files.length > 0) {
+        errors.push(
+          `laneDetails.${lane}.files must be empty for a lane that is not required`,
+        );
+      }
+    }
+    if (
+      JSON.stringify(entry.targets) !== JSON.stringify([...schemaTargets[lane]])
+    ) {
+      errors.push(
+        `laneDetails.${lane}.targets must equal the policy targets for lane ${lane}`,
+      );
+    }
+    if (required) {
+      if (entry.skipReason !== null) {
+        errors.push(
+          `laneDetails.${lane}.skipReason must be null for a required lane`,
+        );
+      }
+    } else if (!LANE_SKIP_REASONS.includes(entry.skipReason)) {
+      errors.push(
+        `laneDetails.${lane}.skipReason must be one of: ${LANE_SKIP_REASONS.join(", ")}`,
+      );
+    }
+  }
+  return errors;
+}
+
+export function evaluateOracle({
+  detector = "success",
+  enabled = {},
+  children = {},
+}) {
+  const failures = [];
+  if (detector !== "success") {
+    failures.push(`detector=${detector || "missing"}`);
+  }
+
+  const laneNames = [
+    ...new Set([...Object.keys(enabled), ...Object.keys(children)]),
+  ].sort();
   for (const lane of laneNames) {
     const shouldRun = enabled[lane] === true;
-    const result = children[lane] ?? 'missing';
-    if (shouldRun && result !== 'success') {
+    const result = children[lane] ?? "missing";
+    if (shouldRun && result !== "success") {
       failures.push(`${lane}: expected success, got ${result}`);
       continue;
     }
-    if (!shouldRun && ['failure', 'cancelled'].includes(result)) {
+    if (!shouldRun && ["failure", "cancelled"].includes(result)) {
       failures.push(`${lane}: unexpected ${result} for disabled lane`);
     }
   }
@@ -405,19 +953,113 @@ export function evaluateOracle({ detector = 'success', enabled = {}, children = 
   };
 }
 
-export function createRunSummary({ manifest, laneResults = {}, oracleResults = {}, generatedAt }) {
+export function oracleEnabledFromManifest(manifest, group) {
+  const groups = [
+    MANIFEST_SCHEMA,
+    MANIFEST_SCHEMA_V8,
+    MANIFEST_SCHEMA_V7,
+  ].includes(manifest.schema)
+    ? ORACLE_GROUPS
+    : ORACLE_GROUPS_V6;
+  const mapping = groups[group];
+  if (!mapping) throw new Error(`unknown oracle group: ${group}`);
+  const enabled = Object.fromEntries(
+    Object.entries(mapping).map(([child, rule]) => {
+      // A rule is either a lane list (child required when any listed lane
+      // is selected) or { anyOf, noneOf } (required when any anyOf lane is
+      // selected and no noneOf lane is).
+      if (Array.isArray(rule)) {
+        return [child, rule.some((lane) => manifest.lanes[lane] === true)];
+      }
+      const anyOf = rule.anyOf ?? [];
+      const noneOf = rule.noneOf ?? [];
+      return [
+        child,
+        anyOf.some((lane) => manifest.lanes[lane] === true) &&
+          !noneOf.some((lane) => manifest.lanes[lane] === true),
+      ];
+    }),
+  );
+  if (
+    [
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V8,
+      MANIFEST_SCHEMA_V7,
+      MANIFEST_SCHEMA_V6,
+      MANIFEST_SCHEMA_V5,
+    ].includes(manifest.schema) &&
+    group === "governance"
+  ) {
+    // Full Lint starts concurrently with Changes; its result is still
+    // mandatory for the original protected Governance Oracle.
+    enabled.lint = true;
+  }
+  if (
+    [
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V8,
+      MANIFEST_SCHEMA_V6,
+      MANIFEST_SCHEMA_V5,
+    ].includes(manifest.schema) &&
+    manifest.stage === "pr-fast" &&
+    group === "database"
+  ) {
+    // Expensive full disaster-recovery exercises run on Main/Nightly.
+    // The PG18 baseline remains mandatory when migrations are changed.
+    enabled["database-recovery"] = false;
+  }
+  if (
+    ![
+      MANIFEST_SCHEMA,
+      MANIFEST_SCHEMA_V8,
+      MANIFEST_SCHEMA_V7,
+      MANIFEST_SCHEMA_V6,
+    ].includes(manifest.schema) &&
+    group === "database"
+  ) {
+    delete enabled["database-integration"]; // v1-v5 policies did not require this job.
+  }
+  return enabled;
+}
+
+export function evaluateManifestOracle({
+  manifest,
+  group,
+  detector = "success",
+  children = {},
+}) {
   const manifestErrors = validateManifest(manifest);
   if (manifestErrors.length > 0) {
-    throw new Error(`invalid delivery manifest: ${manifestErrors.join('; ')}`);
+    return {
+      ok: false,
+      failures: manifestErrors.map((error) => `manifest: ${error}`),
+    };
+  }
+  return evaluateOracle({
+    detector,
+    enabled: oracleEnabledFromManifest(manifest, group),
+    children,
+  });
+}
+
+export function createRunSummary({
+  manifest,
+  laneResults = {},
+  oracleResults = {},
+  generatedAt,
+}) {
+  const manifestErrors = validateManifest(manifest);
+  if (manifestErrors.length > 0) {
+    throw new Error(`invalid delivery manifest: ${manifestErrors.join("; ")}`);
   }
 
   const enabledLanes = LANE_NAMES.filter((lane) => manifest.lanes[lane]);
   const failedLanes = Object.entries(laneResults)
-    .filter(([, result]) => result !== 'success' && result !== 'skipped')
+    .filter(([, result]) => result !== "success" && result !== "skipped")
     .map(([lane]) => lane)
     .sort();
   const failedOracles = Object.entries(oracleResults)
-    .filter(([, result]) => result !== 'success')
+    .filter(([, result]) => result !== "success")
     .map(([oracle]) => oracle)
     .sort();
 

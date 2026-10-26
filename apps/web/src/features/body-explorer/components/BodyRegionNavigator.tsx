@@ -48,7 +48,7 @@ export function BodyRegionNavigator({
               const status = summary ? stateLabels[summary.visualState] : "";
               const count = summary?.statementCount ?? 0;
               return {
-                value: region.id as string,
+                value: region.id,
                 label: `${region.labels["zh-CN"]}${status ? ` · ${status}${count > 0 ? ` ${count}` : ""}` : ""}`,
               };
             }),

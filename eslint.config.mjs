@@ -1,7 +1,19 @@
-import js from "@eslint/js";
-import nx from "@nx/eslint-plugin";
 import tseslint from "typescript-eslint";
 
+// B8 (VNext Oxc evaluation): Oxlint is the primary lint gate. Its rule set
+// in .oxlintrc.json mirrors, rule for rule, the error-level rules this
+// config used to enforce via @eslint/js + typescript-eslint recommended —
+// equivalence was established empirically with a probe suite, not assumed
+// (see docs/architecture/delivery-platform-v3.md, B8 section).
+//
+// ESLint remains only for the single rule oxlint 1.89 cannot yet enforce
+// with this repo's options: `preserve-caught-error` never fires in oxlint
+// for `{ requireCatchParameter: false }` (throwing a new error inside a
+// catch block without attaching the caught error as `cause`). The rule is
+// syntactic, so this config intentionally runs without type information
+// (no projectService), which keeps the residual ESLint pass fast.
+// If a future oxlint implements that rule faithfully, delete this config
+// and the Nx lint targets become pure oxlint runs.
 export default tseslint.config(
   {
     ignores: [
@@ -16,68 +28,25 @@ export default tseslint.config(
       "**/*.config.{js,mjs,cjs,ts,mts,cts}",
     ],
   },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
   {
-    plugins: {
-      "@nx": nx,
-    },
-    files: ["**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx,mts,cts}"],
     languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+      parser: tseslint.parser,
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": [
+      "preserve-caught-error": [
         "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-        },
+        { requireCatchParameter: false, errorClassNames: [] },
       ],
-      "@typescript-eslint/no-explicit-any": "error",
     },
   },
   {
-    files: ["apps/web/**/*.stories.{ts,tsx}", "apps/web/.storybook/*.ts"],
-    languageOptions: {
-      parserOptions: {
-        projectService: false,
-        project: "./apps/web/tsconfig.storybook.json",
-      },
-    },
-  },
-  {
-    files: [
-      "apps/web/src/features/**/services/**/*.ts",
-      "apps/web/src/features/workspace/api/**/*.ts",
-      "apps/web/src/stores/*.ts",
-      "apps/web/src/lib/clientDiagnostics.ts",
-      "packages/contracts/src/**/*.ts",
-    ],
-    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    files: ["**/*.{js,mjs,cjs,jsx}"],
     rules: {
-      "@typescript-eslint/no-unsafe-type-assertion": "error",
-    },
-  },
-  {
-    files: ["**/*.tsx"],
-    languageOptions: {
-      globals: {
-        console: "readonly",
-        document: "readonly",
-        EventSource: "readonly",
-        File: "readonly",
-        FormData: "readonly",
-        HTMLInputElement: "readonly",
-        HTMLTextAreaElement: "readonly",
-        confirm: "readonly",
-        localStorage: "readonly",
-        window: "readonly",
-      },
+      "preserve-caught-error": [
+        "error",
+        { requireCatchParameter: false, errorClassNames: [] },
+      ],
     },
   },
 );

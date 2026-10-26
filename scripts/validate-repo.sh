@@ -17,6 +17,11 @@ bash scripts/test-v2-release-dry-run.sh
 pnpm test:static-assets
 pnpm test:delivery
 pnpm test:validation-lifecycle
+pnpm format:check
+pnpm format:check:go
+pnpm lint:oxlint
+pnpm lint:oxlint:types
+pnpm nx run ai-service:format:check
 pnpm lint
 pnpm typecheck
 pnpm test

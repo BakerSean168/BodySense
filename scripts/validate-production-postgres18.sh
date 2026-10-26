@@ -32,8 +32,12 @@ grep -q 'pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3
 grep -q 'target: pgvector:pg18' .github/workflows/mirror-production-infra.yml
 reject_match 'source: pgvector/pgvector:pg16' .github/workflows/mirror-production-infra.yml
 
-grep -q 'name: PostgreSQL 18 vNext baseline child' .github/workflows/ci.yml
-grep -q 'name: PostgreSQL 18 vNext recovery child' .github/workflows/ci.yml
+# Job IDs are the stable contract; presentation labels are Test Server.
+# Never require legacy display names after the vNext v2 rename.
+grep -q '^  migrations-child:$' .github/workflows/ci.yml
+grep -Fq 'name: Test Server (PostgreSQL baseline)' .github/workflows/ci.yml
+grep -q '^  recovery-migrations-child:$' .github/workflows/ci.yml
+grep -Fq 'name: Test Server (PostgreSQL recovery / Main)' .github/workflows/ci.yml
 grep -q 'Prepare PostgreSQL 18 client toolchain' .github/workflows/ci.yml
 grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
 grep -Eq '^FROM alpine:3\.24@sha256:[0-9a-f]{64}$' apps/api/Dockerfile

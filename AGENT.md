@@ -229,7 +229,25 @@ GitHub Issues，不处理外部 PRs。使用 `gh` CLI 操作。See `docs/agents/
 
 Single-context 布局，`CONTEXT.md` + `docs/adr/` 在仓库根目录。See `docs/agents/domain.md`.
 
+## 格式化与 Lint 门禁
+
+格式化与 Lint 各有唯一权威工具，不并行维护两套规则：
+
+| 范围 | 格式化 | Lint |
+| --- | --- | --- |
+| JS/TS/JSON/CSS/HTML/YAML（Git 受管理文件） | Oxfmt（`.oxfmtrc.json`） | Oxlint（主门禁，含 type-aware）+ ESLint（残项门禁，仅 `preserve-caught-error`） |
+| Go（apps/api） | gofmt | go vet + staticcheck（Nx `api:lint`） |
+| Python（apps/ai-service） | ruff format | ruff check（Nx `ai-service:lint`） |
+
+- JS/TS 侧命令：`pnpm format` / `pnpm format:check`（文件清单取自 `git ls-files`，排除规则在 `.oxfmtrc.json`）；`pnpm lint:oxlint`、`pnpm lint:oxlint:types`；Go 格式：`pnpm format:check:go`；Python 格式：`pnpm nx run ai-service:format:check`。
+- 格式门禁的排除边界：Markdown 散文（含 release-please 维护的 CHANGELOG.md）、`apps/api` 与 `apps/ai-service`（各由本语言格式化工具负责）、`tools/contracts` 契约基线、fixtures/testdata、postman 生成集合、showcase 静态页不进入 Oxfmt 范围。
+- CI 落点：PR 与 main 推送都由 governance-child 执行 Oxfmt/Oxlint/gofmt 检查，结果汇入 Governance Oracle（required check）；ruff format 在 quality 的 ai lane 检查；`scripts/validate-repo.sh`（full 验证）包含同一组检查。
+- Lint 双轨分工（B8 定版，实测依据见 docs/architecture/delivery-platform-v3.md §16 与 Issue #461）：`.oxlintrc.json` 的显式 error 规则集与旧 ESLint 的 70 项 error 检查逐条探针对账等价（68 项由 Oxlint 承担、1 项 `no-delete-var` 由 oxc 解析器硬错误承担）；ESLint 精简为无类型信息的单规则配置，只保留 oxlint 1.89 按本仓选项尚不触发的 `preserve-caught-error`，经 Nx `lint` target 在 quality/contracts lane 执行。oxlint 后续版本若补齐该规则，按 §16.5 删除 `eslint.config.mjs` 即完成 ESLint 退役。Oxlint 的 warn 级存量（categories）逐类归类在 §16.4，新增 warning 按该表复核，不许全局关规则消化。
+- 本地：husky pre-commit 对暂存文件跑 Oxfmt --check 与 Oxlint（仅 apps/web/src），提交前先 `pnpm format` 可避免往返。
+
 ## 最小验证
+
+- 提交前一键预检（与 PR 必跑的 governance + affected quality 子集对齐）：`pnpm verify:pr`（Oxfmt/gofmt 格式门禁、Oxlint 两档、delivery/plan 契约测试、E2E 分片完整性、对 `origin/main` 的 Nx affected lint/typecheck/test）。根 `bodysense:verify` / `verify:full` 为全量 lint/typecheck（full 含 test），根 target 不缓存，每次真实执行。
 
 - 文档和治理相关改动：检查文档格式和链接有效性
 - 前端改动：`pnpm nx run web:lint && pnpm nx run web:typecheck`

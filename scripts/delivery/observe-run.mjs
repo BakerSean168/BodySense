@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
-import path from 'node:path';
-import { createRunSummary } from './lib.mjs';
+import fs from "node:fs";
+import path from "node:path";
+import { createRunSummary } from "./lib.mjs";
 
 function readJson(file, fallback = {}) {
   if (!file) return fallback;
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
 function arg(name) {
@@ -14,15 +14,23 @@ function arg(name) {
 }
 
 try {
-  const manifestFile = arg('manifest') ?? process.env.DELIVERY_MANIFEST_PATH;
-  if (!manifestFile) throw new Error('--manifest is required');
+  const manifestFile = arg("manifest") ?? process.env.DELIVERY_MANIFEST_PATH;
+  if (!manifestFile) throw new Error("--manifest is required");
   const output = path.resolve(
-    arg('output') ?? process.env.DELIVERY_SUMMARY_OUTPUT ?? 'reports/delivery/delivery-run-summary-v1.json',
+    arg("output") ??
+      process.env.DELIVERY_SUMMARY_OUTPUT ??
+      "reports/delivery/delivery-run-summary-v1.json",
   );
   const summary = createRunSummary({
     manifest: readJson(manifestFile),
-    laneResults: readJson(arg('lanes') ?? process.env.DELIVERY_LANE_RESULTS, {}),
-    oracleResults: readJson(arg('oracles') ?? process.env.DELIVERY_ORACLE_RESULTS, {}),
+    laneResults: readJson(
+      arg("lanes") ?? process.env.DELIVERY_LANE_RESULTS,
+      {},
+    ),
+    oracleResults: readJson(
+      arg("oracles") ?? process.env.DELIVERY_ORACLE_RESULTS,
+      {},
+    ),
   });
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(summary, null, 2)}\n`);
