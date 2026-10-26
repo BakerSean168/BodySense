@@ -227,3 +227,23 @@ test("Main/Nightly release-safety fails closed on candidate identity mismatch", 
   altered.digest = computeManifestDigest(altered);
   assert.ok(validateManifest(altered).some((error) => error.includes("stage")));
 });
+
+test("PostgreSQL 18 production validator recognizes stable Test Server job IDs", () => {
+  const validator = fs.readFileSync(
+    "scripts/validate-production-postgres18.sh",
+    "utf8",
+  );
+  const ci = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+  for (const fragment of [
+    "  migrations-child:",
+    "  recovery-migrations-child:",
+    "name: Test Server (PostgreSQL baseline)",
+    "name: Test Server (PostgreSQL recovery / Main)",
+  ]) {
+    assert.ok(ci.includes(fragment), "missing workflow token " + fragment);
+  }
+  assert.match(validator, /grep -q '\^  migrations-child:\$'/);
+  assert.match(validator, /grep -q '\^  recovery-migrations-child:\$'/);
+  assert.doesNotMatch(validator, /name: PostgreSQL 18 vNext baseline child/);
+  assert.doesNotMatch(validator, /name: PostgreSQL 18 vNext recovery child/);
+});
