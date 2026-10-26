@@ -86,6 +86,7 @@ test("Main push and Nightly retain complete E2E, full validation and database re
     assert.deepEqual(oracleEnabledFromManifest(selected, "database"), {
       "database-baseline": true,
       "database-recovery": true,
+      "database-integration": true,
     });
     assert.deepEqual(oracleEnabledFromManifest(selected, "experience"), {
       experience: true,
@@ -100,6 +101,7 @@ test("PR PostgreSQL migrations require DB baseline but not production DR or full
   assert.deepEqual(oracleEnabledFromManifest(selected, "database"), {
     "database-baseline": true,
     "database-recovery": false,
+    "database-integration": true,
   });
   assert.deepEqual(oracleEnabledFromManifest(selected, "experience"), {
     experience: false,
@@ -111,6 +113,7 @@ test("PR PostgreSQL migrations require DB baseline but not production DR or full
     children: {
       "database-baseline": "success",
       "database-recovery": "skipped",
+      "database-integration": "success",
     },
   });
   assert.equal(omittedRecovery.ok, true);
@@ -120,12 +123,13 @@ test("PR PostgreSQL migrations require DB baseline but not production DR or full
     children: {
       "database-baseline": "missing",
       "database-recovery": "skipped",
+      "database-integration": "success",
     },
   });
   assert.equal(missingDb.ok, false);
 });
 
-test("v5 execution stage is bound to event and Digest; PR cannot pretend Main", () => {
+test("v6 execution stage is bound to event and Digest; PR cannot pretend Main", () => {
   const selected = manifest("pull_request", [".github/workflows/ci.yml"]);
   selected.stage = "main-full";
   selected.digest = computeManifestDigest(selected);
@@ -193,6 +197,6 @@ test("workflow runs Lint without Changes dependency and never runs PR E2E or mon
     ".github/workflows/candidate-publish.yml",
     "utf8",
   );
-  assert.match(candidate, /name: delivery-manifest-v5/);
-  assert.match(candidate, /delivery-manifest-v5.json/);
+  assert.match(candidate, /name: delivery-manifest-v6/);
+  assert.match(candidate, /delivery-manifest-v6.json/);
 });

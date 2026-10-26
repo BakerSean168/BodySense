@@ -16,6 +16,9 @@ import {
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
   MANIFEST_SCHEMA_V3,
+  MANIFEST_SCHEMA_V5,
+  POLICY_VERSION_V4,
+  LANE_TARGETS_V5,
   oracleEnabledFromManifest,
   POLICY_VERSION_V1,
   POLICY_VERSION_V2,
@@ -316,9 +319,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v5 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v6 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v5");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v6");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -350,7 +353,15 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
   const current = manifestFor(["apps/web/src/features/foo.tsx"]);
   const { component: _componentLane, ...lanesV2 } = current.lanes;
   const { component: _componentDetail, ...detailsV2 } = current.laneDetails;
-  for (const lane of ["web", "api", "ai", "contracts", "experience", "full"]) {
+  for (const lane of [
+    "web",
+    "api",
+    "ai",
+    "contracts",
+    "database",
+    "experience",
+    "full",
+  ]) {
     detailsV2[lane] = {
       ...detailsV2[lane],
       targets: [...LANE_TARGETS_V2[lane]],
@@ -381,7 +392,7 @@ test("v2 manifests remain valid under the v2 lane set and target policy", () => 
 test("v3 manifests remain valid under the v3 target policy and policy version", () => {
   const current = manifestFor(["apps/web/src/features/foo.tsx"]);
   const detailsV3 = { ...current.laneDetails };
-  for (const lane of ["web", "api", "ai", "experience", "full"]) {
+  for (const lane of ["web", "api", "ai", "database", "experience", "full"]) {
     detailsV3[lane] = {
       ...detailsV3[lane],
       targets: [...LANE_TARGETS_V3[lane]],
@@ -515,6 +526,7 @@ test("oracle group enablement follows the manifest lanes", () => {
   assert.deepEqual(oracleEnabledFromManifest(dbManifest, "database"), {
     "database-baseline": true,
     "database-recovery": false,
+    "database-integration": true,
   });
   assert.deepEqual(oracleEnabledFromManifest(dbManifest, "experience"), {
     experience: false,
@@ -559,6 +571,7 @@ test("oracle group enablement follows the manifest lanes", () => {
   assert.deepEqual(oracleEnabledFromManifest(docsManifest, "database"), {
     "database-baseline": false,
     "database-recovery": false,
+    "database-integration": false,
   });
 });
 
@@ -1560,6 +1573,21 @@ test("archived v4 manifests stay valid under the old policy version", () => {
     policyVersion: "delivery-policy-v3",
   };
   delete previous.stage;
+  for (const lane of Object.keys(previous.laneDetails)) {
+    previous.laneDetails[lane].targets = [...LANE_TARGETS_V5[lane]];
+  }
   previous.digest = computeManifestDigest(previous);
   assert.deepEqual(validateManifest(previous), []);
+});
+
+test("archived v5 stages remain valid with the old v5 task targets", () => {
+  const current = manifestFor(["apps/api/internal/service/foo.go"]);
+  const legacy = structuredClone(current);
+  legacy.schema = MANIFEST_SCHEMA_V5;
+  legacy.policyVersion = POLICY_VERSION_V4;
+  for (const lane of Object.keys(legacy.laneDetails)) {
+    legacy.laneDetails[lane].targets = [...LANE_TARGETS_V5[lane]];
+  }
+  legacy.digest = computeManifestDigest(legacy);
+  assert.deepEqual(validateManifest(legacy), []);
 });

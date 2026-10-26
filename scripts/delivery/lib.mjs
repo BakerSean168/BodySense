@@ -4,18 +4,21 @@ export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
 export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
 export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
 export const MANIFEST_SCHEMA_V4 = "bodysense.delivery-manifest/v4";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v5";
+export const MANIFEST_SCHEMA_V5 = "bodysense.delivery-manifest/v5";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v6";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
   MANIFEST_SCHEMA_V3,
   MANIFEST_SCHEMA_V4,
+  MANIFEST_SCHEMA_V5,
   MANIFEST_SCHEMA,
 ]);
 export const POLICY_VERSION_V1 = "delivery-policy-v1";
 export const POLICY_VERSION_V2 = "delivery-policy-v2";
 export const POLICY_VERSION_V3 = "delivery-policy-v3";
-export const POLICY_VERSION = "delivery-policy-v4";
+export const POLICY_VERSION_V4 = "delivery-policy-v4";
+export const POLICY_VERSION = "delivery-policy-v5";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 // Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
@@ -72,6 +75,8 @@ export function laneTargetsForSchema(schema) {
     return LANE_TARGETS_V2;
   }
   if (schema === MANIFEST_SCHEMA_V3) return LANE_TARGETS_V3;
+  if (schema === MANIFEST_SCHEMA_V4 || schema === MANIFEST_SCHEMA_V5)
+    return LANE_TARGETS_V5;
   return LANE_TARGETS;
 }
 
@@ -81,6 +86,7 @@ export function policyVersionForSchema(schema) {
   }
   if (schema === MANIFEST_SCHEMA_V3) return POLICY_VERSION_V2;
   if (schema === MANIFEST_SCHEMA_V4) return POLICY_VERSION_V3;
+  if (schema === MANIFEST_SCHEMA_V5) return POLICY_VERSION_V4;
   return POLICY_VERSION;
 }
 
@@ -170,7 +176,7 @@ export const LANE_TARGETS_V3 = Object.freeze({
 // gated by quality-arch-child, the full lane keeps the validate-repo.sh
 // monolith in quality-full-child, and the experience lane adds the
 // e2e-report-child merged-report receipt next to the sharded e2e-child.
-export const LANE_TARGETS = Object.freeze({
+export const LANE_TARGETS_V5 = Object.freeze({
   ...LANE_TARGETS_V3,
   web: Object.freeze([
     "job:quality-web-child",
@@ -225,6 +231,16 @@ export const LANE_TARGETS = Object.freeze({
 // Which manifest lanes make each Oracle child required. Oracles derive their
 // expectations from the digest-validated manifest through this table instead
 // of re-deriving lane expressions in workflow YAML.
+export const LANE_TARGETS = Object.freeze({
+  ...LANE_TARGETS_V5,
+  api: Object.freeze([...LANE_TARGETS_V5.api, "job:db-integration-child"]),
+  database: Object.freeze([
+    ...LANE_TARGETS_V5.database,
+    "job:db-integration-child",
+  ]),
+  full: Object.freeze([...LANE_TARGETS_V5.full, "job:db-integration-child"]),
+});
+
 export const ORACLE_GROUPS = Object.freeze({
   governance: Object.freeze({ governance: Object.freeze(["governance"]) }),
   quality: Object.freeze({
@@ -254,6 +270,7 @@ export const ORACLE_GROUPS = Object.freeze({
   database: Object.freeze({
     "database-baseline": Object.freeze(["database", "full"]),
     "database-recovery": Object.freeze(["database", "full"]),
+    "database-integration": Object.freeze(["api", "database", "full"]),
   }),
   experience: Object.freeze({
     experience: Object.freeze(["experience", "full"]),
@@ -632,7 +649,7 @@ export function validateManifest(manifest) {
   ) {
     errors.push(`unsupported event: ${manifest.event}`);
   }
-  if (manifest.schema === MANIFEST_SCHEMA) {
+  if ([MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema)) {
     const stage = stageForEvent(manifest.event);
     if (!stage || manifest.stage !== stage) {
       errors.push(`stage must equal ${stage} for event ${manifest.event}`);
@@ -846,19 +863,25 @@ export function oracleEnabledFromManifest(manifest, group) {
       ];
     }),
   );
-  if (manifest.schema === MANIFEST_SCHEMA && group === "governance") {
+  if (
+    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema) &&
+    group === "governance"
+  ) {
     // Full Lint starts concurrently with Changes; its result is still
     // mandatory for the original protected Governance Oracle.
     enabled.lint = true;
   }
   if (
-    manifest.schema === MANIFEST_SCHEMA &&
+    [MANIFEST_SCHEMA, MANIFEST_SCHEMA_V5].includes(manifest.schema) &&
     manifest.stage === "pr-fast" &&
     group === "database"
   ) {
     // Expensive full disaster-recovery exercises run on Main/Nightly.
     // The PG18 baseline remains mandatory when migrations are changed.
     enabled["database-recovery"] = false;
+  }
+  if (manifest.schema !== MANIFEST_SCHEMA && group === "database") {
+    delete enabled["database-integration"]; // Archived policies did not require this job.
   }
   return enabled;
 }

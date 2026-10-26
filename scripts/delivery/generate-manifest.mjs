@@ -91,7 +91,7 @@ function main() {
   const output = path.resolve(
     args.output ??
       process.env.DELIVERY_MANIFEST_OUTPUT ??
-      "reports/delivery/delivery-manifest-v5.json",
+      "reports/delivery/delivery-manifest-v6.json",
   );
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`);
