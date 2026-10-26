@@ -62,36 +62,48 @@ def verify_free_pricing(config: Any, catalog: Any) -> dict[str, str]:
     if not isinstance(catalog, dict) or not isinstance(catalog.get("data"), list):
         raise PriceAuditError("invalid OpenRouter catalog payload")
 
+    # Validate both exact Posture routes before reporting. A nonfree primary
+    # must not hide an unlisted or nonfree fallback from the operator.
+    failures: list[str] = []
     for logical_group, model_id in routes.items():
-        matches = [
-            item
-            for item in catalog["data"]
-            if isinstance(item, dict) and item.get("id") == model_id
-        ]
-        if len(matches) != 1:
-            raise PriceAuditError(
-                f"{logical_group}: exact catalog model not uniquely listed"
-            )
-        pricing = matches[0].get("pricing")
-        if not isinstance(pricing, dict) or not {"prompt", "completion"} <= set(
-            pricing
-        ):
-            raise PriceAuditError(f"{logical_group}: missing required pricing fields")
-        for price_kind, raw_value in pricing.items():
-            if isinstance(raw_value, bool) or not isinstance(
-                raw_value, (str, int, float)
-            ):
-                raise PriceAuditError(f"{logical_group}: unknown {price_kind} price")
-            try:
-                value = Decimal(str(raw_value))
-            except InvalidOperation as exc:
+        try:
+            matches = [
+                item
+                for item in catalog["data"]
+                if isinstance(item, dict) and item.get("id") == model_id
+            ]
+            if len(matches) != 1:
                 raise PriceAuditError(
-                    f"{logical_group}: invalid {price_kind} price"
-                ) from exc
-            if not value.is_finite() or value != 0:
-                raise PriceAuditError(
-                    f"{logical_group}: nonzero or invalid {price_kind} price"
+                    f"{logical_group}: exact catalog model not uniquely listed"
                 )
+            pricing = matches[0].get("pricing")
+            if not isinstance(pricing, dict) or not {"prompt", "completion"} <= set(
+                pricing
+            ):
+                raise PriceAuditError(
+                    f"{logical_group}: missing required pricing fields"
+                )
+            for price_kind, raw_value in pricing.items():
+                if isinstance(raw_value, bool) or not isinstance(
+                    raw_value, (str, int, float)
+                ):
+                    raise PriceAuditError(
+                        f"{logical_group}: unknown {price_kind} price"
+                    )
+                try:
+                    value = Decimal(str(raw_value))
+                except InvalidOperation as exc:
+                    raise PriceAuditError(
+                        f"{logical_group}: invalid {price_kind} price"
+                    ) from exc
+                if not value.is_finite() or value != 0:
+                    raise PriceAuditError(
+                        f"{logical_group}: nonzero or invalid {price_kind} price"
+                    )
+        except PriceAuditError as exc:
+            failures.append(str(exc))
+    if failures:
+        raise PriceAuditError("; ".join(failures))
     return routes
 
 

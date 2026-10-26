@@ -76,6 +76,28 @@ def test_missing_fallback_cannot_be_mistaken_for_free() -> None:
         module["verify_free_pricing"](_configured(), _catalog(include_fallback=False))
 
 
+def test_nonfree_primary_and_missing_fallback_report_both_blockers() -> None:
+    module = _module()
+    catalog = _catalog(
+        pricing={"prompt": "0.0000008", "completion": "0"},
+        include_fallback=False,
+    )
+    with pytest.raises(module["PriceAuditError"]) as error:
+        module["verify_free_pricing"](_configured(), catalog)
+    assert "bodysense-posture: nonzero or invalid prompt price" in str(error.value)
+    assert "bodysense-posture-fallback: exact catalog model not uniquely listed" in str(error.value)
+
+
+def test_nonfree_primary_and_nonfree_fallback_report_both_blockers() -> None:
+    module = _module()
+    catalog = _catalog(pricing={"prompt": "0.0000008", "completion": "0"})
+    catalog["data"][1]["pricing"]["image"] = "0.002"
+    with pytest.raises(module["PriceAuditError"]) as error:
+        module["verify_free_pricing"](_configured(), catalog)
+    assert "bodysense-posture: nonzero or invalid prompt price" in str(error.value)
+    assert "bodysense-posture-fallback: nonzero or invalid image price" in str(error.value)
+
+
 def test_duplicate_id_in_catalog_is_refused() -> None:
     module = _module()
     catalog = _catalog()
