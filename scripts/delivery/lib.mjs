@@ -3,16 +3,19 @@ import crypto from "node:crypto";
 export const MANIFEST_SCHEMA_V1 = "bodysense.delivery-manifest/v1";
 export const MANIFEST_SCHEMA_V2 = "bodysense.delivery-manifest/v2";
 export const MANIFEST_SCHEMA_V3 = "bodysense.delivery-manifest/v3";
-export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v4";
+export const MANIFEST_SCHEMA_V4 = "bodysense.delivery-manifest/v4";
+export const MANIFEST_SCHEMA = "bodysense.delivery-manifest/v5";
 export const MANIFEST_SCHEMAS = Object.freeze([
   MANIFEST_SCHEMA_V1,
   MANIFEST_SCHEMA_V2,
   MANIFEST_SCHEMA_V3,
+  MANIFEST_SCHEMA_V4,
   MANIFEST_SCHEMA,
 ]);
 export const POLICY_VERSION_V1 = "delivery-policy-v1";
 export const POLICY_VERSION_V2 = "delivery-policy-v2";
-export const POLICY_VERSION = "delivery-policy-v3";
+export const POLICY_VERSION_V3 = "delivery-policy-v3";
+export const POLICY_VERSION = "delivery-policy-v4";
 export const SUMMARY_SCHEMA = "bodysense.delivery-run-summary/v1";
 
 // Lane set for schema v1/v2 manifests. v3 adds the component lane; stored
@@ -77,6 +80,7 @@ export function policyVersionForSchema(schema) {
     return POLICY_VERSION_V1;
   }
   if (schema === MANIFEST_SCHEMA_V3) return POLICY_VERSION_V2;
+  if (schema === MANIFEST_SCHEMA_V4) return POLICY_VERSION_V3;
   return POLICY_VERSION;
 }
 
@@ -532,6 +536,25 @@ export function classifyPaths(paths, { forceFull = false } = {}) {
   };
 }
 
+// PR Fast: retain all lower-level owners for broad/unknown changes but never
+// schedule cross-service Playwright E2E or the full serial release validator.
+// Main and Nightly still retain complete suites as the PR selection safety net.
+export function stageForEvent(event) {
+  if (event === "pull_request") return "pr-fast";
+  if (event === "schedule") return "nightly-audit";
+  if (event === "push" || event === "workflow_dispatch") return "main-full";
+  return null;
+}
+
+function applyStagePolicy(classification, stage) {
+  if (stage !== "pr-fast") return classification;
+  return {
+    ...classification,
+    lanes: { ...classification.lanes, experience: false, full: false },
+    laneFiles: { ...classification.laneFiles, experience: [], full: [] },
+  };
+}
+
 function buildLaneDetails(classification) {
   const { lanes, laneFiles, changedPaths } = classification;
   return Object.fromEntries(
@@ -564,10 +587,15 @@ export function createManifest({
   forceFull = false,
   generatedAt = new Date().toISOString(),
 }) {
-  const classification = classifyPaths(changedPaths, { forceFull });
+  const stage = stageForEvent(event);
+  const classification = applyStagePolicy(
+    classifyPaths(changedPaths, { forceFull }),
+    stage,
+  );
   const manifest = {
     schema: MANIFEST_SCHEMA,
     policyVersion: POLICY_VERSION,
+    stage,
     event,
     ref,
     requestedBaseSha,
@@ -603,6 +631,20 @@ export function validateManifest(manifest) {
     )
   ) {
     errors.push(`unsupported event: ${manifest.event}`);
+  }
+  if (manifest.schema === MANIFEST_SCHEMA) {
+    const stage = stageForEvent(manifest.event);
+    if (!stage || manifest.stage !== stage) {
+      errors.push(`stage must equal ${stage} for event ${manifest.event}`);
+    }
+    if (
+      stage === "pr-fast" &&
+      (manifest.lanes?.experience === true || manifest.lanes?.full === true)
+    ) {
+      errors.push(
+        "PR Fast cannot require full-stack E2E or full serial validation",
+      );
+    }
   }
 
   for (const field of ["requestedBaseSha", "baseSha", "headSha"]) {
@@ -787,7 +829,7 @@ export function evaluateOracle({
 export function oracleEnabledFromManifest(manifest, group) {
   const mapping = ORACLE_GROUPS[group];
   if (!mapping) throw new Error(`unknown oracle group: ${group}`);
-  return Object.fromEntries(
+  const enabled = Object.fromEntries(
     Object.entries(mapping).map(([child, rule]) => {
       // A rule is either a lane list (child required when any listed lane
       // is selected) or { anyOf, noneOf } (required when any anyOf lane is
@@ -804,6 +846,21 @@ export function oracleEnabledFromManifest(manifest, group) {
       ];
     }),
   );
+  if (manifest.schema === MANIFEST_SCHEMA && group === "governance") {
+    // Full Lint starts concurrently with Changes; its result is still
+    // mandatory for the original protected Governance Oracle.
+    enabled.lint = true;
+  }
+  if (
+    manifest.schema === MANIFEST_SCHEMA &&
+    manifest.stage === "pr-fast" &&
+    group === "database"
+  ) {
+    // Expensive full disaster-recovery exercises run on Main/Nightly.
+    // The PG18 baseline remains mandatory when migrations are changed.
+    enabled["database-recovery"] = false;
+  }
+  return enabled;
 }
 
 export function evaluateManifestOracle({

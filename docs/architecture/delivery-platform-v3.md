@@ -139,18 +139,19 @@ production .deploy-state     actually deployed revision/release identity
 
 ### 4.1 Manifest
 
-The detector writes `delivery-manifest-v4.json` once per run.
+The detector writes `delivery-manifest-v5.json` once per run.
 
 Minimum shape:
 
 ```json
 {
-  "schema": "bodysense.delivery-manifest/v4",
+  "schema": "bodysense.delivery-manifest/v5",
   "baseSha": "...",
   "headSha": "...",
   "event": "pull_request",
+  "stage": "pr-fast",
   "risk": "runtime",
-  "policyVersion": "delivery-policy-v3",
+  "policyVersion": "delivery-policy-v4",
   "changedPaths": [],
   "lanes": {
     "governance": true,
@@ -159,7 +160,7 @@ Minimum shape:
     "ai": false,
     "contracts": true,
     "database": false,
-    "experience": true,
+    "experience": false,
     "component": true,
     "full": false
   },
@@ -200,14 +201,14 @@ a digest after tampering does not launder an inconsistent contract.
 
 Version compatibility: `validateManifest` accepts
 `bodysense.delivery-manifest/v1` (validated under the v1 rules, without
-`laneDetails`), v2, v3, and v4. Lane sets, lane target policies, and policy
+`laneDetails`), v2, v3, v4 and v5. Lane sets, lane target policies, and policy
 versions are pinned per schema version: v1/v2 manifests validate against
 the eight-lane set and the v1-era target policy (`LANE_TARGETS_V2`) with
 `delivery-policy-v1`; v3 adds the `component` lane, moves contract
 verification into `contracts-child`, and carries `delivery-policy-v2`
 (`LANE_TARGETS_V3`); v4 splits the quality lanes into per-lane children,
 adds the `e2e-report-child` receipt to the experience and full lanes, and
-carries `delivery-policy-v3`. Generators only emit v4; `laneDetails` on a
+carries `delivery-policy-v3`. Generators only emit v5; `laneDetails` on a
 v1 manifest is rejected. Consumers that re-validate stored manifests
 (candidate publication, platform audit) therefore keep working across the
 transition.
@@ -354,7 +355,7 @@ differ in trigger, lane selection, and which evidence they consume.
 | Stage | Trigger | What runs | Evidence | What does not run, and why |
 | --- | --- | --- | --- | --- |
 | Local | husky hooks on commit; `pnpm verify:pr` before push | commit-msg: commitlint. pre-commit: Oxfmt `--check` + Oxlint on staged files. `verify:pr`: governance format/lint gates, delivery + plan contract tests, E2E shard-partition check, and `nx affected` lint/typecheck/test against `origin/main` | Local exit codes only; nothing is uploaded | E2E, database migrations, and the full validate-repo.sh set: they need CI services and are covered by the PR stage on the same diff |
-| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v4` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
+| Pull request | `ci.yml` on `pull_request` | Manifest-scoped lanes selected by risk (sections 4.1-4.2): governance always; web/api/ai/arch/contracts/component/database/experience children only when their paths or risk require them; Oracles aggregate child receipts | `delivery-manifest-v5` artifact (digest-bound) + `delivery-run-summary` artifact. Required checks: commit-lint, the four Oracles, Delivery Observation (strict) | Unaffected lanes: the manifest records a machine-readable skip reason per lane, and Oracles fail closed if a required lane is missing |
 | Main | `ci.yml` on push to `main` | The complete production safety set: the manifest force-selects every lane, including the full validate-repo.sh child, migration baseline + recovery, sharded browser E2E, and the component lane | Same artifacts as PR, bound to the exact main SHA | Nothing in the lane set is skipped; path scoping does not apply to main |
 | Nightly | `ci.yml` on `schedule` (daily 18:23 UTC) or manual `workflow_dispatch` | Identical to a main push: base == head, the `schedule` event force-selects every lane, same children, Oracles, and observation | Same artifacts as a main run, retained 30 days for the run summary | Not a required check and never gates a merge. It exists to catch drift that path-scoped PR selection and quiet main periods would hide (toolchain or upstream changes, flaky lanes). Failures surface as a red run plus the Delivery Observation summary, matching the release-health reporting style |
 | Release | release-please PR, then `release-publish`; production deploy is an explicit operator action | Candidate publication runs downstream of a successful main CI run, bound to the exact SHA: it downloads that run's delivery manifest, validates it, and embeds its digest in the candidate set | Candidate set + image digests trace back to the source CI run and its manifest digest | Lint/test/typecheck/E2E are **not** re-run: the exact SHA was already verified by the main run, and re-running could only test a different tree. Promotion consumes evidence; it does not recreate it |
@@ -691,7 +692,7 @@ this PR's net diff (branch history was reset after the drill).
 | Link in the chain | Verdict | Evidence |
 | --- | --- | --- |
 | Exact-SHA binding | Complete | candidate-publish triggers only on a successful `push` CI run on `main` and checks out `workflow_run.head_sha`; release-publish revalidates candidate `gitSha` == checkout HEAD, source CI run `head_sha` == candidate `gitSha`, candidate SHA is an ancestor of `origin/main`, and the release tag points at the release SHA |
-| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v4` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
+| Manifest digest embedding | Complete | candidate-manifest downloads the `delivery-manifest-v5` artifact from the exact source CI run, validates it (self-digest + policy), and embeds its digest into `candidate-set-v1`; the candidate set's own digest is format-checked and validated again in release-publish |
 | Image digest verification | Complete | Every component verifies existing-vs-built digest equality and the OCI revision label at build time, promotes by digest without rebuilding, and re-verifies registry and pulled `RepoDigests` after promotion; immutable-tag collisions fail closed |
 | Release-health retention | Gap (low) | The weekly release-health job writes only to the run's step summary and emits a soft-threshold `::warning::`; nothing is uploaded as an artifact or filed, so the signal survives only within Actions run retention. It is advisory (backlog/lag), never a gate |
 | Candidate artifact lifetime | Gap (low) | release-publish downloads the `candidate-set-*` artifact (90-day retention) from the candidate run; a release cut more than 90 days after candidate publication would first need candidate-publish re-dispatched for that SHA |
@@ -865,3 +866,16 @@ When an Oxlint release enforces `preserve-caught-error` under
 confirm), delete `eslint.config.mjs`, point the Nx lint targets at the
 Oxlint scripts, and this section's decision collapses to full retirement
 (option C) with no other changes.
+
+## 16. VNext v2: PR Fast migration (2026-10-26)
+
+**Status:** implementation branch from cumulative B8, Issue #464, not yet merged to main. This section supersedes the PR-stage behavior of the historic B8 audit above; historic performance results are not new measurements.
+
+- The current Manifest v5 binds an explicit `stage` to the triggering event and the Manifest Digest. Pull requests always use `pr-fast`. Main push/manual runs use `main-full`, and scheduled runs use `nightly-audit`.
+- Unknown/CI/root changes **conservatively select all applicable lower layers**, but PR never selects the full serial validator or full cross-service Playwright E2E. This is not a relaxation of Unit, Component Browser, Contracts, Go, Python or PG18 baseline checks.
+- Full `Lint` starts independently in parallel with Changes, and is a hard input to the existing protected `Governance Oracle`. A missing/failing Lint cannot be hidden by a green governance child.
+- The `Database Oracle` requires the PG18 baseline when necessary; full disaster-recovery execution is Main/Nightly only. PR experience skips full E2E while preserving component checks. Main/Nightly still require the full existing validation, E2E three shards, merged report and recovery.
+- The source CI and Candidate Publisher now consistently exchange `delivery-manifest-v5` from the exact successful Main run and embed the validated Digest. Archived v1–v4 manifests remain compatible with their original policy versions.
+- **Pending separate issues**: #465 actual PG integration non-Skip checks and server test grouping; #466 eliminate Main full-monolith duplicate execution; #467 consolidated CI Check migration; #468 measured PR P95 ≤300s and integrated merge. CD remains independent in #469.
+
+This P0 change does **not** assert that the final 5-minute target or full Main optimization has already been achieved.

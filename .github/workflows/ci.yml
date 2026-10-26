@@ -27,9 +27,34 @@ permissions:
   actions: read
 
 env:
-  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v4.json
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v5.json
 
 jobs:
+  # Start full static checks in parallel with Changes (T3 Code pattern).
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - name: Format (OXFmt)
+        run: pnpm format:check
+      - name: Format (Go)
+        run: pnpm format:check:go
+      - name: Lint (OXlint)
+        run: pnpm lint:oxlint
+      - name: Lint (OXlint type-aware)
+        run: pnpm lint:oxlint:types
+
   scope:
     name: Delivery Scope
     runs-on: ubuntu-latest
@@ -66,8 +91,8 @@ jobs:
         run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: delivery-manifest-v4
-          path: reports/delivery/delivery-manifest-v4.json
+          name: delivery-manifest-v5
+          path: reports/delivery/delivery-manifest-v5.json
           if-no-files-found: error
           retention-days: 14
 
@@ -85,26 +110,14 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version: "1.26"
-          cache-dependency-path: apps/api/go.sum
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - run: >-
           node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
       - run: pnpm install --frozen-lockfile
-      - name: Check formatting (Oxfmt, git-managed files)
-        run: pnpm format:check
-      - name: Check Go formatting (gofmt)
-        run: pnpm format:check:go
-      - name: Lint with Oxlint
-        run: pnpm lint:oxlint
-      - name: Lint with Oxlint (type-aware)
-        run: pnpm lint:oxlint:types
       - name: Validate delivery policy contracts
         run: node --test scripts/delivery/*.test.mjs
       - name: Validate E2E shard partition completeness
@@ -124,7 +137,7 @@ jobs:
           git diff --check "${base_sha}...${head_sha}"
 
   quality-web-child:
-    name: Web quality child
+    name: Test Web (Unit + Build)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -143,7 +156,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -153,7 +166,7 @@ jobs:
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane web
 
   quality-api-child:
-    name: API quality child
+    name: Test Server (Go Unit + Build)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -176,7 +189,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -186,7 +199,7 @@ jobs:
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane api
 
   quality-ai-child:
-    name: AI quality child
+    name: Test AI Service (Python + Eval)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -211,7 +224,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -246,7 +259,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -259,6 +272,7 @@ jobs:
     name: Full quality child (validate-repo)
     needs: scope
     if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
       needs.scope.outputs.lane_full == 'true'
     runs-on: ubuntu-latest
@@ -284,7 +298,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -294,7 +308,7 @@ jobs:
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH" --lane full
 
   contracts-child:
-    name: Contract verification child
+    name: Test Contracts
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -323,7 +337,7 @@ jobs:
         run: uv sync --frozen --extra dev --extra ocr
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -334,14 +348,14 @@ jobs:
 
   governance-oracle:
     name: Governance Oracle
-    needs: [scope, governance-child]
+    needs: [scope, lint, governance-child]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -350,7 +364,7 @@ jobs:
           --group governance
           --detector "${{ needs.scope.result }}"
           --expect-digest "${{ needs.scope.outputs.manifest_digest }}"
-          --children-json '{"governance":"${{ needs.governance-child.result }}"}'
+          --children-json '{"governance":"${{ needs.governance-child.result }}","lint":"${{ needs.lint.result }}"}'
 
   quality-oracle:
     name: Quality Oracle
@@ -370,7 +384,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -382,7 +396,7 @@ jobs:
           --children-json '{"quality-full":"${{ needs.quality-full-child.result }}","quality-web":"${{ needs.quality-web-child.result }}","quality-api":"${{ needs.quality-api-child.result }}","quality-ai":"${{ needs.quality-ai-child.result }}","quality-arch":"${{ needs.quality-arch-child.result }}","contracts":"${{ needs.contracts-child.result }}"}'
 
   migrations-child:
-    name: PostgreSQL 18 vNext baseline child
+    name: Test Server (PostgreSQL baseline)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -435,9 +449,10 @@ jobs:
         run: go test -race ./internal/service -run '^TestIndependentTraining.*Postgres$' -count=1 -v
 
   recovery-migrations-child:
-    name: PostgreSQL 18 vNext recovery child
+    name: Test Server (PostgreSQL recovery / Main)
     needs: scope
     if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
@@ -517,7 +532,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -529,9 +544,10 @@ jobs:
           --children-json '{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}'
 
   e2e-child:
-    name: Browser longitudinal health E2E child (shard ${{ matrix.shard }})
+    name: Test Web (Full E2E shard ${{ matrix.shard }})
     needs: scope
     if: >-
+      github.event_name != 'pull_request' &&
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
     env:
@@ -674,6 +690,7 @@ jobs:
     name: E2E merged report child
     needs: [scope, e2e-child]
     if: >-
+      github.event_name != 'pull_request' &&
       always() &&
       needs.scope.result == 'success' &&
       (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
@@ -712,7 +729,7 @@ jobs:
           if-no-files-found: ignore
 
   component-child:
-    name: Component browser tests child
+    name: Test Web (Browser)
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -730,7 +747,7 @@ jobs:
           cache: pnpm
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Validate manifest digest binding
         run: >-
@@ -761,7 +778,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Verify child outcomes against the delivery manifest
         run: >-
@@ -776,6 +793,7 @@ jobs:
     name: Delivery Observation
     needs:
       - scope
+      - lint
       - governance-child
       - quality-web-child
       - quality-api-child
@@ -798,7 +816,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: delivery-manifest-v4
+          name: delivery-manifest-v5
           path: reports/delivery
       - name: Materialize execution outcomes
         env:
@@ -820,6 +838,7 @@ jobs:
           cat > reports/delivery/lane-results.json <<JSON
           {
             "governance": "${{ needs.governance-child.result }}",
+            "lint": "${{ needs.lint.result }}",
             "quality": "${quality}",
             "contracts": "${{ needs.contracts-child.result }}",
             "component": "${{ needs.component-child.result }}",

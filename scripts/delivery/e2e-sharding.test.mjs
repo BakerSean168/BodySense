@@ -189,8 +189,8 @@ test("experience oracle goes red when the merged-report receipt is missing or fa
     requestedBaseSha: A,
     baseSha: A,
     headSha: B,
-    event: "pull_request",
-    ref: "refs/pull/1/merge",
+    event: "push",
+    ref: "refs/heads/main",
     changedPaths: ["apps/web/e2e/a.spec.ts"],
     generatedAt: "2026-08-29T00:00:00.000Z",
   });

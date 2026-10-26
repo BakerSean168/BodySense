@@ -316,9 +316,9 @@ test("manifest validation rejects digest tampering and malformed lane contracts"
   );
 });
 
-test("v4 manifest records per-lane required, files, targets, and skip reasons", () => {
+test("v5 manifest records per-lane required, files, targets, and skip reasons", () => {
   const manifest = manifestFor(["apps/web/src/features/foo.tsx", "README.md"]);
-  assert.equal(manifest.schema, "bodysense.delivery-manifest/v4");
+  assert.equal(manifest.schema, "bodysense.delivery-manifest/v5");
   assert.deepEqual(validateManifest(manifest), []);
 
   const web = manifest.laneDetails.web;
@@ -417,8 +417,12 @@ test("empty diff records no-changed-paths skip reasons", () => {
   assert.equal(manifest.laneDetails.web.skipReason, "no-changed-paths");
 });
 
-test("force-full manifests require every lane with the full change set", () => {
-  const manifest = manifestFor(["docs/guide.md"], { forceFull: true });
+test("Main full manifests require every lane with the full change set", () => {
+  const manifest = manifestFor(["docs/guide.md"], {
+    forceFull: true,
+    event: "push",
+    ref: "refs/heads/main",
+  });
   assert.deepEqual(validateManifest(manifest), []);
   for (const detail of Object.values(manifest.laneDetails)) {
     assert.equal(detail.required, true);
@@ -510,10 +514,10 @@ test("oracle group enablement follows the manifest lanes", () => {
   const dbManifest = manifestFor(["apps/api/migrations/0001_init.sql"]);
   assert.deepEqual(oracleEnabledFromManifest(dbManifest, "database"), {
     "database-baseline": true,
-    "database-recovery": true,
+    "database-recovery": false,
   });
   assert.deepEqual(oracleEnabledFromManifest(dbManifest, "experience"), {
-    experience: true,
+    experience: false,
     component: false,
   });
   const contractManifest = manifestFor([
@@ -538,7 +542,11 @@ test("oracle group enablement follows the manifest lanes", () => {
   });
   // In a full run the per-lane children stand down (noneOf full): the
   // validate-repo.sh monolith child is the single quality execution.
-  const fullManifest = manifestFor(["docs/guide.md"], { forceFull: true });
+  const fullManifest = manifestFor(["docs/guide.md"], {
+    forceFull: true,
+    event: "push",
+    ref: "refs/heads/main",
+  });
   assert.deepEqual(oracleEnabledFromManifest(fullManifest, "quality"), {
     "quality-full": true,
     "quality-web": false,
@@ -1542,4 +1550,16 @@ test("stacked PR manifest resolves moving non-main base without misclassifying p
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("archived v4 manifests stay valid under the old policy version", () => {
+  const current = manifestFor(["apps/web/src/features/foo.tsx"]);
+  const previous = {
+    ...current,
+    schema: "bodysense.delivery-manifest/v4",
+    policyVersion: "delivery-policy-v3",
+  };
+  delete previous.stage;
+  previous.digest = computeManifestDigest(previous);
+  assert.deepEqual(validateManifest(previous), []);
 });
