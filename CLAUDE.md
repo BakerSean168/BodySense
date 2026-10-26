@@ -1,1 +1,1 @@
-See [`./AGENT.md`](./AGENT.md).
+@AGENTS.md

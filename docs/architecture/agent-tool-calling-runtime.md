@@ -3,7 +3,7 @@
 - Status: Current Consultation tool/interrupt architecture
 - Updated: 2026-09-01
 - Supersedes: the old Go-centered `ChatHandler`/resume design
-- Historical snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/agent-tool-calling-runtime.md`](../plan/archive/architecture-snapshots/2026-09-01/agent-tool-calling-runtime.md)
+- Historical snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/agent-tool-calling-runtime.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/agent-tool-calling-runtime.md)
 - Authority: [ADR 0002 — Agent Runtime Ownership](../adr/0002-agent-runtime-ownership.md)
 
 ## 1. Ownership

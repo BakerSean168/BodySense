@@ -111,7 +111,7 @@ for required in \
   apps/api/migrations/000001_vnext_baseline.up.sql \
   apps/api/migrations/000001_vnext_baseline.down.sql \
   apps/api/migrations/checksums.sha256 \
-  docs/refactor/vnext/schema/database-schema.json \
+  tools/schema/database-schema.json \
   docker/docker-compose.prod.yml \
   docker/docker-compose.staging.yml \
   scripts/production-postgres18-reset.sh \
@@ -183,7 +183,7 @@ plan 'PostgreSQL 18 production contract' 'bash scripts/validate-production-postg
 plan 'Contracts drift (lint, generated, breaking, mutation, conformance, Postman)' 'pnpm contracts:verify'
 plan 'Supply chain' 'bash scripts/test-validate-supply-chain.sh' 'bash scripts/validate-supply-chain.sh'
 plan 'Web chunk budgets (enforced by the production build)' 'pnpm nx run @bodysense/web:build'
-plan 'Delivery policy + V2 plan register' 'pnpm test:delivery' 'pnpm plan:check'
+plan 'Delivery policy + V2 plan register' 'pnpm test:delivery' 'pnpm test:delivery'
 plan 'Full repository gate' 'pnpm verify:release'
 plan 'E2E matrix: CI "Browser longitudinal health E2E child" on the exact SHA + QA-001 (#316) matrix evidence' \
   "gh api repos/BakerSean168/BodySense/commits/$SHA/check-runs --jq '.check_runs[]|[.name,.conclusion]|@tsv'"
@@ -203,7 +203,7 @@ if [[ "$TARGET" == staging || "$TARGET" == all ]]; then
     "docker volume rm $STAGING_VOLUME"
   plan 'Admit the exact candidate to staging-latest (repository variable; CI promotes only the exact main SHA)' \
     'gh variable set BODYSENSE_V2_STAGING_PROMOTION_ENABLED --body true' \
-    "gh run rerun <Publish Main Candidate run id for $SHORT>   # promotes only while $SHORT is still main HEAD"
+    "gh run rerun <Publish Nightly Candidate run id for $SHORT>   # promotes only while $SHORT is still main HEAD"
   plan 'Deploy through the canonical watcher (fresh PG18 volume; API bootstraps 000001_vnext_baseline)' \
     'systemctl --user start bodysense-staging-deploy-watch.timer' \
     'bodysense-staging-deploy-watch --force'
@@ -231,7 +231,7 @@ if [[ "$TARGET" == production || "$TARGET" == all ]]; then
   approval A3 "canary promote of the exact staging-qualified SHA to production"
   plan 'Prepare and publish the Release from the qualified SHA (no rebuild)' \
     'gh workflow run release-please.yml' \
-    'gh workflow run release-publish.yml   # Draft-first postflight binds tag/SHA/digests'
+    'gh workflow run release-publish.yml -f candidate_run_id=<successful-nightly-run> -f release_tag=vX.Y.Z'
   plan 'Deploy Production (moves prod-latest; the watcher performs the volume reset)' \
     'gh workflow run deploy-production.yml -f release_tag=vX.Y.Z'
   plan 'Watch the transactional reset and health gates' \

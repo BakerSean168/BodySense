@@ -5,7 +5,7 @@ Version: 2.0.0
 Baseline: 57aaf8974a835964db074dda7b39f3b80f162a86
 Owner: Track A contract review + Track B implementation; transport adapters belong to Track C.
 
-本文落实 [四线主计划](../../plan/active/2026-10-13-v2-parallel-master.md) 的展示契约，不新增业务决策、不替代 `docs/product/domain`。`ready` 的界面资源状态也不等于 Active Plan 中 `view_model` 门禁已验收。
+本文落实 [四线主计划](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/active/2026-10-13-v2-parallel-master.md) 的展示契约，不新增业务决策、不替代 `docs/product/domain`。`ready` 的界面资源状态也不等于 Active Plan 中 `view_model` 门禁已验收。
 
 ## 1. 唯一可执行定义与消费方式
 
@@ -114,6 +114,6 @@ BodyFact 当前 generated `list/record/correct/withdraw` 服务中，Records/Hab
 | DS-PE / ENG-PE    | Profile/Equipment/UserAsset transport；完整 source-admission、erasure propagation 与 verifier      |
 | IR 各领域         | 真实登录、权限撤销、断网重入、跨设备争用、同一天多 Session、跨日保留训练日、视觉/键盘/移动端       |
 
-因此本次提供完整的**目标展示词汇和可校验形状**，不宣称五个领域已经端到端实现；统一登记仍位于 `docs/plan/active/v2-handoff-state.json`，未完成 typed endpoints 的领域不能仅凭本文变更为门禁 ready。
+因此本次提供完整的**目标展示词汇和可校验形状**，不宣称五个领域已经端到端实现；统一登记仍位于 `docs/operations/v2-handoff-state.json`，未完成 typed endpoints 的领域不能仅凭本文变更为门禁 ready。
 
 Q-17（Diagnosis proposal 的时效策略）仍不填固定数值；Q-19（多提案确认布局）本次由设计稿给出候选方案，但不能伪造用户最终签收。训练和擦除的安全阈值/检测规则仍由后端权威策略决定，前端不增加医学阈值。

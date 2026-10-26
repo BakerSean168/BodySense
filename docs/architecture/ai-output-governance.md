@@ -2,7 +2,7 @@
 
 - Status: Current role-specific governance architecture
 - Updated: 2026-09-01
-- Historical generic-guard design: [`docs/plan/archive/architecture-snapshots/2026-09-01/ai-output-governance.md`](../plan/archive/architecture-snapshots/2026-09-01/ai-output-governance.md)
+- Historical generic-guard design: [`docs/plan/archive/architecture-snapshots/2026-09-01/ai-output-governance.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/ai-output-governance.md)
 - Related: [Agent Platform Role Governance](./agent-platform-role-governance.md)
 
 ## 1. Governing principle
@@ -140,7 +140,7 @@ OCR, ASR, Embedding and geometric pose estimation are not Agents. They still nee
 
 Posture geometric perception now satisfies this mechanism rule through ADR 0012: current Posture v2 pins MediaPipe version, a versioned pose-model SHA256 and a canonical threshold SHA256, requires the mechanism at serving time, and persists/revalidates exact mechanism provenance before durable analysis storage.
 
-OCR report-indicator admissibility is now deterministic and versioned: completed extraction alone does not grant evidence authority, and current Assessment accepts only `ocr-indicator-admissibility-v1` items marked `admissible`. The remaining OCR gap is mechanism provenance (engine/parser/rendering/extractor identity), tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
+OCR report-indicator admissibility is now deterministic and versioned: completed extraction alone does not grant evidence authority, and current Assessment accepts only `ocr-indicator-admissibility-v1` items marked `admissible`. The remaining OCR gap is mechanism provenance (engine/parser/rendering/extractor identity), tracked in [`2026-09-01-documentation-code-alignment-audit.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/active/2026-09-01-documentation-code-alignment-audit.md).
 
 ## 10. Definition of done for a new durable AI output
 

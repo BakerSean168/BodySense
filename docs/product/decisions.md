@@ -4,7 +4,7 @@
 
 ## 2026-10-13 · Person / Chat + 跨领域最终决定（PC-D1～D9、CD-D1～D4）
 
-**产品级语义已收敛，实施尚未完成。** 详见唯一权威 [Person / Chat 领域契约](./domain/person-chat.md)、[需求](./requirements.md) 与 [最终评审记录](./reviews/person-chat-cross-domain-review-20261013.md)。此记录取代阶段三先前的多 Conversation、自由输入并行和保留公开分享的候选建议。
+**产品级语义已收敛，实施尚未完成。** 详见唯一权威 [Person / Chat 领域契约](./domain/person-chat.md)、[需求](./requirements.md) 与 [最终评审记录](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/product/reviews/person-chat-cross-domain-review-20261013.md)。此记录取代阶段三先前的多 Conversation、自由输入并行和保留公开分享的候选建议。
 
 | 决策 | 已批准的规则 | 涉及旧问题 |
 | --- | --- | --- |

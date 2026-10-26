@@ -13,6 +13,7 @@
     "apps/api/**",
     "apps/ai-service/**",
     "tools/contracts/**",
+    "tools/schema/database-schema.json",
     "**/fixtures/**",
     "**/testdata/**",
     "showcase/**",

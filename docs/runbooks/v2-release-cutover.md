@@ -1,5 +1,7 @@
 # BodySense V2 Release Cutover (REL-001)
 
+> **历史一次性操作说明（已废弃，不是当前 CD 步骤）**：这是旧 V2 数据清理/切换演练。任何生产删除须重新审批，并以 [当前发布流程](../operations/release.md) 为准。
+
 > Issue: [#317](https://github.com/BakerSean168/BodySense/issues/317) · Ticket: `docs/plan/tickets/v2/REL-001.md`
 > Status: **prepared, not executed.** Nothing in this runbook has been run against
 > staging or production. Every staging/production step waits for an explicit user
@@ -13,7 +15,7 @@ the live PostgreSQL 18 volume is swapped for an empty one, the previous volume i
 kept only as a short rollback seam, and it is deleted only after every health gate
 passes.
 
-Related runbooks: [delivery-platform-v3-rollout.md](./delivery-platform-v3-rollout.md),
+Related runbooks: [delivery-platform-v3-rollout.md](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/runbooks/delivery-platform-v3-rollout.md),
 [production-postgres-dr.md](./production-postgres-dr.md),
 [../architecture/release-lifecycle-v3.md](../architecture/release-lifecycle-v3.md),
 [../architecture/delivery-platform-v3.md](../architecture/delivery-platform-v3.md) §8.1.1.
@@ -81,7 +83,7 @@ matrix and its per-SHA evidence are owned by QA-001
 that evidence and does not redefine it.
 
 **Readiness register.** `scripts/delivery/v2-staging-readiness.mjs` evaluates
-`docs/plan/active/v2-handoff-state.json` (owned by the plan owner). The staging
+`docs/operations/v2-handoff-state.json` (owned by the plan owner). The staging
 promotion job stays closed until all five domains × six gates and the five
 foundations are `ready` with proof **and** the repository variable is set (A1).
 

@@ -9,7 +9,7 @@ import {
 } from "./v2-staging-readiness.mjs";
 
 const current = JSON.parse(
-  fs.readFileSync("docs/plan/active/v2-handoff-state.json", "utf8"),
+  fs.readFileSync("docs/operations/v2-handoff-state.json", "utf8"),
 );
 function accepted() {
   const v2 = structuredClone(current);
