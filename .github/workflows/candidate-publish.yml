@@ -97,37 +97,30 @@ jobs:
           --receipt reports/candidate/source-ci/ci-check-receipt-v2.json
           --sha "$CI_SHA" --run-id "$CI_RUN_ID" --run-attempt "$CI_ATTEMPT"
       - id: decision
-        name: Avoid rebuilding an already published Nightly SHA
+        name: Reuse only a fully qualified scheduled Nightly candidate
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          # Use the verified source run, not a mutable tag or Main HEAD.
-          revision="$(git rev-parse HEAD)"
-          # Use the published candidate-set artifact NAME to identify its
-          # actual source SHA. workflow_run.head_sha can instead be a newer
-          # main HEAD and must never act as proof of which SHA was built.
-          found=false
-          artifact_json="$(gh api "repos/${REPOSITORY}/actions/artifacts?name=candidate-set-${revision}&per_page=100")"
-          while IFS= read -r run_id; do
-            [[ "$run_id" =~ ^[0-9]+$ ]] || continue
-            run_json="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
-            if [[ "$(jq -r .name <<<"$run_json")" == 'Publish Nightly Candidate' ]] &&
-               [[ "$(jq -r .event <<<"$run_json")" == workflow_run ]] &&
-               [[ "$(jq -r .conclusion <<<"$run_json")" == success ]] &&
-               [[ "$(jq -r .head_branch <<<"$run_json")" == main ]]; then
-              found=true
-              break
-            fi
-          done < <(jq -r '.artifacts[] | select(.expired == false) | .workflow_run.id' <<<"$artifact_json")
-          if [[ "$found" == true ]]; then
-            echo 'publish=false' >> "$GITHUB_OUTPUT"
-            echo "Nightly candidate artifact for $revision already exists; reusing it." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'publish=true' >> "$GITHUB_OUTPUT"
-          fi
+          # Reuse requires the immutable candidate manifest AND the source CI
+          # to be a successful scheduled Main Full, never a historical push.
+          node scripts/delivery/nightly-reuse.mjs \
+            --revision "$(git rev-parse HEAD)" \
+            --repository "$REPOSITORY" \
+            --output-manifest reports/candidate/reuse/candidate-set-v1.json
+
+      # A reused run must carry its own valid manifest so manual Stable can
+      # select THIS Nightly run ID even though images were not rebuilt.
+      - name: Attach verified reused candidate to this Nightly run
+        if: steps.decision.outputs.publish == 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: candidate-set-${{ steps.meta.outputs.revision }}
+          path: reports/candidate/reuse/candidate-set-v1.json
+          if-no-files-found: error
+          retention-days: 90
 
   static-assets:
     if: needs.resolve.outputs.publish == 'true'
