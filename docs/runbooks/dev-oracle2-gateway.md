@@ -345,6 +345,44 @@ untrusted input into stderr, even if it resembles a secret.
 
 ## Verify
 
+**Canonical host-side reachability check (no credentials or inference):**
+Oracle2 LiteLLM is served on Tailnet HTTPS port **10446**, not the
+default port 443. On 2026-10-27, port 443 returned `200 text/html`
+for both `/health/liveliness` and `/v1/models` because it routes to
+a different service. A status-only `200` check on that port is a **false
+positive** for LiteLLM. Use the exact authorized endpoint and verify the
+response media type and unauthenticated authorization boundary:
+
+```bash
+python3 - <<'PY'
+import json
+from urllib.error import HTTPError
+from urllib.request import ProxyHandler, build_opener
+
+base = "https://oracle.taile92a8e.ts.net:10446"
+opener = build_opener(ProxyHandler({}))  # direct Tailnet; verified system TLS
+
+with opener.open(base + "/health/liveliness", timeout=10) as response:
+    assert response.status == 200
+    assert response.headers.get_content_type() == "application/json"
+    assert json.load(response)
+print("LiteLLM liveness: 200 JSON, TLS verified")
+
+try:
+    opener.open(base + "/v1/models", timeout=10)
+except HTTPError as error:
+    assert error.code == 401
+    assert error.headers.get_content_type() == "application/json"
+    error.close()
+else:
+    raise AssertionError("Anonymous model listing must return HTTP 401")
+print("LiteLLM anonymous model listing: 401 JSON, auth boundary enforced")
+PY
+```
+
+Both checks are prerequisites only. They do **not** authorize an API key,
+establish a free provider route, or prove model inference.
+
 ```bash
 scripts/dev-infra.sh status                       # shows oracle2_dev_opt_in=1
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev-infra.yml \
