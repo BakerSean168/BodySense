@@ -65,8 +65,8 @@ test("candidate and Stable workflow do not publish on normal main push", async (
   assert.match(nightly, /workflow_run\.event == 'schedule'/);
   assert.match(nightly, /nightly-qualification\.mjs/);
   assert.match(nightly, /ci-check-receipt-/);
-  assert.match(nightly, /publish=false/);
-  assert.match(nightly, /actions\/artifacts\?name=candidate-set-/);
+  assert.match(nightly, /nightly-reuse\.mjs/);
+  assert.match(nightly, /steps\.decision\.outputs\.publish/);
   assert.doesNotMatch(nightly, /\.head_sha == \$sha/);
   assert.match(stable, /name: Publish Stable/);
   assert.match(stable, /candidate_run_id:/);

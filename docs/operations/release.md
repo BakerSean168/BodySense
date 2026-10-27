@@ -22,7 +22,7 @@ flowchart TD
 
 ## 1. CI 与 Nightly
 
-正常 `main` push 只运行验证，不创建 Candidate、不改变 `staging-latest` 或 `prod-latest`。每日 Scheduled Main Full 全选 Web、Go、AI、Contracts、PG18 恢复和 Playwright E2E。完整 `Check` 结果与回执身份一致后，`candidate-publish.yml` 才构建/复用源 SHA 的候选镜像、R2/CDN 静态资源、`candidate-set-v1.json`。若相同 SHA 已成功发布过候选，跳过重复构建。候选可在现有的 V2 显式 Staging 授权就绪后晋升 staging；Staging 晋升不是 Stable 资格的替代。
+正常 `main` push 只运行验证，不创建 Candidate、不改变 `staging-latest` 或 `prod-latest`。每日 Scheduled Main Full 全选 Web、Go、AI、Contracts、PG18 恢复和 Playwright E2E。完整 `Check` 结果与回执身份一致后，`candidate-publish.yml` 才构建/复用源 SHA 的候选镜像、R2/CDN 静态资源、`candidate-set-v1.json`。同一 SHA 仅在历史 Candidate Manifest 完整、候选运行成功，且原始 CI 确认来自成功的 Scheduled Main Full 时才允许复用；普通 Push 产生的旧候选不能复用。复用时也会将验签的 Candidate Manifest 附加到本次 Nightly Run，使 Stable 可以直接选择该 Run ID。候选可在现有的 V2 显式 Staging 授权就绪后晋升 staging；Staging 晋升不是 Stable 资格的替代。
 
 ## 2. Stable 手动晋升
 
