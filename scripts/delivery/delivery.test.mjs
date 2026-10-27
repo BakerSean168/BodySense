@@ -1173,24 +1173,23 @@ test("release manifest fails closed if a promoted component digest/revision is t
   assert.ok(errors.some((error) => error.includes("release digest mismatch")));
 });
 
-test("Release Publish reconciles release-please tagged state only after publication and supports retries", () => {
+test("Stable promotion is manual and preserves digest-bound release publication", () => {
   const contents = fs.readFileSync(
     ".github/workflows/release-publish.yml",
     "utf8",
   );
-  assert.match(contents, /pull-requests: write/);
-  assert.match(contents, /issues: write/);
-  assert.match(contents, /reconcile-release-please-state:/);
-  assert.match(
-    contents,
-    /needs\.prepare-draft\.outputs\.already_published == 'true'/,
-  );
-  assert.match(contents, /needs\.finalize\.result == 'success'/);
-  assert.match(contents, /\| jq -r --arg title/);
-  assert.match(contents, /gh release view \"\$RELEASE_TAG\".*--json isDraft/);
-  assert.match(contents, /\[\[ \"\$tag_sha\" == \"\$RELEASE_SHA\" \]\]/);
-  assert.match(contents, /autorelease%3A%20pending/);
-  assert.match(contents, /labels\[\]=autorelease: tagged/);
+  assert.match(contents, /name: Publish Stable/);
+  assert.match(contents, /  workflow_dispatch:\n/);
+  assert.doesNotMatch(contents, /  workflow_run:\n/);
+  assert.match(contents, /release_tag:/);
+  assert.match(contents, /candidate_run_id:/);
+  assert.match(contents, /Publish Nightly Candidate/);
+  assert.match(contents, /\.event <<<"\$ci_json"\)" == schedule/);
+  assert.match(contents, /candidate-manifest\.mjs --validate/);
+  assert.match(contents, /imagetools create --prefer-index=false/);
+  assert.match(contents, /release-manifest\.mjs --validate/);
+  assert.doesNotMatch(contents, /reconcile-release-please-state/);
+  assert.doesNotMatch(contents, /autorelease%3A%20pending/);
 });
 
 test("local deploy keeps production-shaped runtime env after repository quality validation", () => {
@@ -1487,7 +1486,7 @@ test("stacked pull requests receive CI without broadening main candidate promoti
   assert.match(ci, /if: github\.event_name == 'pull_request'/);
   assert.match(candidate, /    workflows: \[CI\]/);
   assert.match(candidate, /    branches: \[main\]/);
-  assert.match(candidate, /github\.event\.workflow_run\.event == 'push'/);
+  assert.match(candidate, /github\.event\.workflow_run\.event == 'schedule'/);
   assert.match(candidate, /github\.event\.workflow_run\.head_branch == 'main'/);
   assert.match(
     candidate,

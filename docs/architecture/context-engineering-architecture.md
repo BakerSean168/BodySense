@@ -2,7 +2,7 @@
 
 - Status: Superseded by ADR 0002
 - Current runtime authority: [ADR 0002 — Agent Runtime Ownership](../adr/0002-agent-runtime-ownership.md)
-- Historical snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/context-engineering-architecture.md`](../plan/archive/architecture-snapshots/2026-09-01/context-engineering-architecture.md)
+- Historical snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/context-engineering-architecture.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/context-engineering-architecture.md)
 
 The former Go `ContextBuilder` architecture is no longer an implementation target and has been removed from the current architecture document set.
 

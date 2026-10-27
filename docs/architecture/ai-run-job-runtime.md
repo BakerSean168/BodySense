@@ -2,7 +2,7 @@
 
 - Status: Current implemented runtime with explicit remaining scope
 - Updated: 2026-09-01
-- Historical design snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/ai-run-job-runtime.md`](../plan/archive/architecture-snapshots/2026-09-01/ai-run-job-runtime.md)
+- Historical design snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/ai-run-job-runtime.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/ai-run-job-runtime.md)
 
 ## 1. Purpose
 
@@ -145,4 +145,4 @@ Open items must be justified by a concrete product/runtime need rather than an o
 - additional job-type recovery tests as new background operations are added;
 - optional worker separation only if current in-process execution becomes an availability/scaling bottleneck.
 
-These are tracked as implementation gaps only when accepted by an active plan. The current documentation/code alignment audit is [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
+These are tracked as implementation gaps only when accepted by an active plan. The current documentation/code alignment audit is [`2026-09-01-documentation-code-alignment-audit.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/active/2026-09-01-documentation-code-alignment-audit.md).

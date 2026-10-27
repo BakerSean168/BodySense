@@ -2,7 +2,7 @@
 
 - Status: Current public stream/recovery contract
 - Updated: 2026-09-01
-- Historical design snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/stream-event-contract-runtime.md`](../plan/archive/architecture-snapshots/2026-09-01/stream-event-contract-runtime.md)
+- Historical design snapshot: [`docs/plan/archive/architecture-snapshots/2026-09-01/stream-event-contract-runtime.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/stream-event-contract-runtime.md)
 - ADR: [0003 — StreamEvent Contract Versioning](../adr/0003-stream-event-versioning.md)
 
 ## 1. Authority

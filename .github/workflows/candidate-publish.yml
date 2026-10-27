@@ -1,13 +1,14 @@
-name: Publish Main Candidate
+name: Publish Nightly Candidate
 
 on:
+  # Only the successful scheduled Main Full run can publish a Nightly candidate.
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
 
 concurrency:
-  group: main-candidate-${{ github.event.workflow_run.head_sha }}
+  group: nightly-candidate-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
 permissions:
@@ -19,13 +20,14 @@ env:
 
 jobs:
   resolve:
-    name: Resolve exact-SHA main candidate
+    name: Resolve qualified Nightly candidate
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.event == 'schedule' &&
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     outputs:
+      publish: ${{ steps.decision.outputs.publish }}
       revision: ${{ steps.meta.outputs.revision }}
       candidate_tag: ${{ steps.meta.outputs.candidate_tag }}
       ci_run_id: ${{ steps.meta.outputs.ci_run_id }}
@@ -68,7 +70,7 @@ jobs:
             echo "ai_runtime_base_tag=$ai_runtime_base_tag"
           } >> "$GITHUB_OUTPUT"
           {
-            echo '### Exact-SHA main candidate'
+            echo '### Qualified Nightly candidate'
             echo ''
             echo "- Revision: \`$revision\`"
             echo "- Candidate tag: \`$candidate_tag\`"
@@ -77,7 +79,58 @@ jobs:
             echo "- AI runtime base: \`$ai_runtime_base_tag\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Download exact successful scheduled CI Check receipt
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ci-check-receipt-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: reports/candidate/source-ci
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Require complete scheduled Main Full evidence before building
+        env:
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          CI_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: >-
+          node scripts/delivery/nightly-qualification.mjs
+          --receipt reports/candidate/source-ci/ci-check-receipt-v2.json
+          --sha "$CI_SHA" --run-id "$CI_RUN_ID" --run-attempt "$CI_ATTEMPT"
+      - id: decision
+        name: Avoid rebuilding an already published Nightly SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Use the verified source run, not a mutable tag or Main HEAD.
+          revision="$(git rev-parse HEAD)"
+          # Use the published candidate-set artifact NAME to identify its
+          # actual source SHA. workflow_run.head_sha can instead be a newer
+          # main HEAD and must never act as proof of which SHA was built.
+          found=false
+          artifact_json="$(gh api "repos/${REPOSITORY}/actions/artifacts?name=candidate-set-${revision}&per_page=100")"
+          while IFS= read -r run_id; do
+            [[ "$run_id" =~ ^[0-9]+$ ]] || continue
+            run_json="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
+            if [[ "$(jq -r .name <<<"$run_json")" == 'Publish Nightly Candidate' ]] &&
+               [[ "$(jq -r .event <<<"$run_json")" == workflow_run ]] &&
+               [[ "$(jq -r .conclusion <<<"$run_json")" == success ]] &&
+               [[ "$(jq -r .head_branch <<<"$run_json")" == main ]]; then
+              found=true
+              break
+            fi
+          done < <(jq -r '.artifacts[] | select(.expired == false) | .workflow_run.id' <<<"$artifact_json")
+          if [[ "$found" == true ]]; then
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+            echo "Nightly candidate artifact for $revision already exists; reusing it." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          fi
+
   static-assets:
+    if: needs.resolve.outputs.publish == 'true'
     name: Publish candidate immutable public assets
     needs: resolve
     runs-on: ubuntu-latest
@@ -149,6 +202,7 @@ jobs:
             --public-base "$STATIC_ASSET_CDN_BASE"
 
   ai-runtime-base:
+    if: needs.resolve.outputs.publish == 'true'
     name: Prepare AI runtime base
     needs: resolve
     runs-on: ubuntu-latest
@@ -238,6 +292,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
+    if: needs.resolve.outputs.publish == 'true'
     name: Build candidate ${{ matrix.component }}
     needs: [resolve, static-assets]
     runs-on: ubuntu-latest
@@ -368,6 +423,7 @@ jobs:
           retention-days: 90
 
   build-ai:
+    if: needs.resolve.outputs.publish == 'true'
     name: Build candidate aiService
     needs: [resolve, ai-runtime-base]
     runs-on: ubuntu-latest
@@ -474,6 +530,7 @@ jobs:
           retention-days: 90
 
   verify-static-coherence:
+    if: needs.resolve.outputs.publish == 'true'
     name: Verify candidate Web image ↔ CDN
     needs: [resolve, static-assets, build]
     runs-on: ubuntu-latest
@@ -517,6 +574,7 @@ jobs:
           (( failures == 0 )) || { echo "$failures candidate CDN assets are missing" >&2; exit 1; }
 
   candidate-manifest:
+    if: needs.resolve.outputs.publish == 'true'
     name: Build canonical candidate manifest
     needs: [resolve, static-assets, build, build-ai, verify-static-coherence]
     runs-on: ubuntu-latest
@@ -575,6 +633,7 @@ jobs:
           retention-days: 90
 
   staging-readiness:
+    if: needs.resolve.outputs.publish == 'true'
     name: Enforce approved V2 staging gate
     needs: resolve
     runs-on: ubuntu-latest
@@ -595,6 +654,7 @@ jobs:
     name: Promote coherent staging channel
     needs: [resolve, candidate-manifest, staging-readiness]
     if: >-
+      needs.resolve.outputs.publish == 'true' &&
       needs.resolve.outputs.is_current_main == 'true' &&
       needs.staging-readiness.outputs.eligible == 'true'
     runs-on: ubuntu-latest

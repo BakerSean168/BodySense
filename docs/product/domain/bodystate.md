@@ -89,7 +89,7 @@ type BodyFact = {
 
 字段不由 Agent 依据习惯擅自填满；无来源则保留未提供。症状的同一次/多次发作，不由部位和固定天数判断；同一句训练反馈若明确包含身体症状，可同时形成来源共享但职责不同的 symptom Fact，且避免复制 Trainer 已有的完成记录。
 
-明确病程陈述作为 **symptom Fact 自身可选的来源解释字段**：`episodeCourseReport = explicit_current_report | explicit_resolution`；前者与 `presence=present` 对应，后者与 `presence=absent` 对应，但反向推断不成立，普通“现在没有疼”**绝非**“本次病程已结束”。保存 Fact、将 Fact 组织到 Episode、将明确报告纳入 Episode 状态证据是三个独立写入动作。当前 v9 工程仅开放经过本人直接编辑的明确陈述及其精确关联的用户授权提交；Chat/Agent 提取的 High 可信病程关联仍须完成独立验证，不得复用直接编辑命令绕过审核。见 [v9 证据准入验收说明](../../plan/active/2026-10-13-episode-status-admission.md)。
+明确病程陈述作为 **symptom Fact 自身可选的来源解释字段**：`episodeCourseReport = explicit_current_report | explicit_resolution`；前者与 `presence=present` 对应，后者与 `presence=absent` 对应，但反向推断不成立，普通“现在没有疼”**绝非**“本次病程已结束”。保存 Fact、将 Fact 组织到 Episode、将明确报告纳入 Episode 状态证据是三个独立写入动作。当前 v9 工程仅开放经过本人直接编辑的明确陈述及其精确关联的用户授权提交；Chat/Agent 提取的 High 可信病程关联仍须完成独立验证，不得复用直接编辑命令绕过审核。见 [v9 证据准入验收说明](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/active/2026-10-13-episode-status-admission.md)。
 
 ### 2.4 SymptomEpisode：身份、关联及状态（BS-D3～D7）
 

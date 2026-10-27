@@ -14,7 +14,7 @@
 [桌面 Viewer](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=2) ·
 [移动 Viewer](https://design.penpot.app/#/view?file-id=24d9d841-759d-81bc-8008-b6423250c2b8&page-id=ed4c6ec0-8f91-80cb-8008-c1e744bad64b&section=interactions&index=0)
 
-> **已失效**：旧 Body Canvas V3 交接文档及其 `penpot-manifest.json` 引用的页面 ID `536d2a99-67da-80a5-8008-c113cf18702a`（Product）、`536d2a99-67da-80a5-8008-c112dce0b60c`（Foundation）、`536d2a99-67da-80a5-8008-c1132f6f6c7c`（Component）不再是基准。相关文件已移至 [archive/design/body-canvas-v3](../archive/design/body-canvas-v3/README.md)，仅供追溯。
+> **已失效**：旧 Body Canvas V3 交接文档及其 `penpot-manifest.json` 引用的页面 ID `536d2a99-67da-80a5-8008-c113cf18702a`（Product）、`536d2a99-67da-80a5-8008-c112dce0b60c`（Foundation）、`536d2a99-67da-80a5-8008-c1132f6f6c7c`（Component）不再是基准。旧稿现仅保留在 Git 历史中供追溯。
 
 ## 设计稿命名对照
 
@@ -45,7 +45,7 @@ Product 页仍使用部分旧窗口名，阅读时按下表换算（完整对照
 ## V2 前端设计实施与交接（未完成最终验收）
 
 - [五大业务领域 ViewModel 契约](./v2/viewmodels.md)：16 项目标查询与命令边界；Records/Habits 已有真实 BodyFact bounded Adapter。
-- [Penpot V2 实际写入检查点](./v2/penpot-handoff-checkpoint.md)：42 个状态画板与 14 个可编辑复用组件、36 个 Canvas 组合场景、162 条本地导航、17 组/48 步真实 Viewer 测试及仍待关闭的门禁。
+- [Penpot V2 实际写入检查点](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/design/v2/penpot-handoff-checkpoint.md)：42 个状态画板与 14 个可编辑复用组件、36 个 Canvas 组合场景、162 条本地导航、17 组/48 步真实 Viewer 测试及仍待关闭的门禁。
 - [Penpot 画板/组件精确 ID 清单](./v2/penpot-scene-manifest.json)、[已实际写入的组合场景与交互清单](./v2/penpot-live-scenes-manifest.json) 和 [六组业务 Flow 条件契约](./v2/penpot-flow-contract.json)：设计恢复时使用已有源文件与授权业务状态，不重建一套图片原型。**新场景和交互只做局部 Viewer 验收，未完成完整端到端签收。**
 - 本地检查：`node scripts/design/validate-v2-penpot-handoff.mjs && node --test scripts/design/validate-v2-penpot-handoff.test.mjs`。通过表示引用和业务流*规格*自洽；现场 Viewer 的局部点击证据另由 `node scripts/design/validate-v2-penpot-live-scenes.mjs` 和对应单测核验，仍不等于完整端到端 Flow 验收。
 

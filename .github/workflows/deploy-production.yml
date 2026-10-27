@@ -98,7 +98,6 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/delivery/release-manifest.mjs --validate "$RELEASE_MANIFEST"
-          node scripts/delivery/release-contract.mjs --require-release
           git fetch --quiet origin main --tags
           tag_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
           [[ "$tag_sha" == "$RELEASE_SHA" ]] || { echo "tag $RELEASE_TAG points to $tag_sha, manifest expects $RELEASE_SHA" >&2; exit 1; }
@@ -106,7 +105,24 @@ jobs:
           ci_run_id="$(jq -r .ciRunId "$RELEASE_MANIFEST")"
           ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${ci_run_id}")"
           [[ "$(jq -r .name <<<"$ci_json")" == CI ]] || { echo 'release source run is not CI' >&2; exit 1; }
-          [[ "$(jq -r .event <<<"$ci_json")" == push ]] || { echo 'release source CI was not push' >&2; exit 1; }
+          ci_event="$(jq -r .event <<<"$ci_json")"
+          candidate_run_id="$(jq -r .candidateRunId "$RELEASE_MANIFEST")"
+          candidate_json="$(gh api "repos/${REPOSITORY}/actions/runs/${candidate_run_id}")"
+          candidate_name="$(jq -r .name <<<"$candidate_json")"
+          [[ "$(jq -r .conclusion <<<"$candidate_json")" == success ]] || { echo 'candidate did not succeed' >&2; exit 1; }
+          # workflow_run.head_sha is the default branch checkout identity, not
+          # a guaranteed candidate source SHA. The published Release Manifest
+          # already binds candidateRunId, source CI Run/SHA and original digest.
+          [[ "$(jq -r .head_branch <<<"$candidate_json")" == main ]] || { echo 'candidate not from main' >&2; exit 1; }
+          if [[ "$ci_event" == schedule && "$candidate_name" == 'Publish Nightly Candidate' ]]; then
+            [[ "$(jq -r .event <<<"$candidate_json")" == workflow_run ]] || { echo 'Nightly must originate from CI' >&2; exit 1; }
+          elif [[ "$ci_event" == push && "$candidate_name" == 'Publish Main Candidate' ]]; then
+            # Historical Stable releases remain deployable for rollback.
+            node scripts/delivery/release-contract.mjs --require-release
+          else
+            echo "unsupported source: CI=$ci_event candidate=$candidate_name" >&2
+            exit 1
+          fi
           [[ "$(jq -r .head_branch <<<"$ci_json")" == main ]] || { echo 'release source CI was not main' >&2; exit 1; }
           [[ "$(jq -r .head_sha <<<"$ci_json")" == "$RELEASE_SHA" ]] || { echo 'release source CI SHA mismatch' >&2; exit 1; }
           [[ "$(jq -r .conclusion <<<"$ci_json")" == success ]] || { echo 'release source CI did not succeed' >&2; exit 1; }
