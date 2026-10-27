@@ -701,6 +701,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
+          retention-days: 6
 
   # Single fail-closed fan-in: no independent Oracles or Observation runners.
   ci-check:
