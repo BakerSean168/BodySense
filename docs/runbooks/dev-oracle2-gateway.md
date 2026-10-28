@@ -2,6 +2,40 @@
 
 Status: dev-only opt-in, **blocked for activation; not qualified for staging or production**.
 
+**Current acceptance checkpoint (2026-10-28 17:19 CST; WSL + Oracle2, read-only):**
+- Valid working environment: Agent Fabric `wsl-local`; primary repository
+  `/home/baker/projects/bodysense` at `ad4b92639595`. Existing clean
+  integration worktree `/home/baker/projects/_bodysense_oracle2_gateway`
+  is at `69d18a97a539b66f10778d3de94dcbafa2007744`, matching
+  [Draft PR #432](https://github.com/BakerSean168/BodySense/pull/432).
+  The five existing BodySense worktrees were clean and no BodySense T3
+  coding Writer was identified; no new Writer or worktree was created.
+- Exact-head GitHub Actions
+  [run #40648694733](https://github.com/BakerSean168/BodySense/actions/runs/40648694733)
+  finished successfully (10 successful jobs, 4 scope-skipped, 0 failures).
+  Previous WSL tests on the same head: 161/161 Python and 124/124 Node;
+  isolated, synthetic, network-disabled Router SDK 14/14 and proxy HTTP
+  15/15. These prove code behavior only, **not authorized upstream inference**.
+- Oracle2 `hermes-litellm` and its PostgreSQL are healthy. TLS-validated
+  gateway `/health/liveliness` responds 200, unauthenticated
+  `/v1/models` responds 401. ProviderAdmin read-only inspection returned
+  `bindings=0` for each of `openrouter-free` and `groq-free`.
+  The versioned virtual-client policy still has no BodySense-scoped client.
+- The supplier-qualified Nanliang/DeepSeek identity is unapproved, and
+  keyless provider-route preflight continues to **reject activation**.
+  Posture Vision price audit also **rejects activation**: configured primary
+  is nonzero-cost and fallback cannot be precisely located in the public
+  catalog. Neither a route, scoped Virtual Key, nor authorized zero-fee
+  OpenRouter/Groq access is established.
+- **Do not activate, merge, deploy, call real models, run the deferred
+  evaluation/selection, or substitute a supplier/paid route** before those
+  approval, identity, zero-fee, and end-to-end acceptance gates are met.
+  `gcp-dev-01` was retired on 2026-10-23; old GCP findings below are
+  historical only and cannot substitute for WSL verification.
+
+Earlier dated checkpoints below are retained as historical evidence, not
+as claims about the current checkout or acceptance state.
+
 **WSL follow-up (2026-10-26 12:16 CST):** Existing clean integration worktree
 `/home/baker/projects/_bodysense_oracle2_gateway` remains at
 `9654b883ab1703b95198dc98b68ce72aeb9997e4`; the main worktree remains
