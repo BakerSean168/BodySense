@@ -23,7 +23,7 @@ BodySense 是持续理解个人身体状况的 Agent 应用。用户通过自然
 
 文中的逻辑结构与工具名称是实现目标，不表示所有能力已经部署。Diagnosis V2 的新医学身份和确认语义取代原 V1 规则；Training V2 与 Safety 的批量业务决策也已登记。历史决策仍留存但不作为新实现依据。
 
-**阶段三产品领域评审已通过：** [Person / Chat + 跨领域最终评审记录（2026-10-13）](./reviews/person-chat-cross-domain-review-20261013.md)。**权威业务规则**已回填 [domain/person-chat.md](./domain/person-chat.md)、需求、工作流、UI、验收和决策登记；该评审记录仅用于追溯，不作为另一份冲突来源。代码、数据迁移、历史消息清理、隐私擦除和旧分享退役仍待实现及验证。
+产品领域评审的历史过程由 GitHub Issue/PR 和 Git 历史保存；本目录中维护的规则及验收契约是当前实施依据。
 
 ## 核心对象一览
 

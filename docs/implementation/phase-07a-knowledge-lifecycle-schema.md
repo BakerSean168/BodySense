@@ -4,7 +4,7 @@
 
 The original implementation note moved to:
 
-- [`docs/plan/archive/implementation/phase-07a-knowledge-lifecycle-schema.md`](../plan/archive/implementation/phase-07a-knowledge-lifecycle-schema.md)
+- [`docs/plan/archive/implementation/phase-07a-knowledge-lifecycle-schema.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/implementation/phase-07a-knowledge-lifecycle-schema.md)
 
 Current architecture:
 

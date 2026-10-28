@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Fails when docs/refactor/vnext/schema/database-schema.json no longer matches
+# Fails when tools/schema/database-schema.json no longer matches
 # the schema produced by applying 000001_vnext_baseline to a throwaway PG18.
 # Regenerate with `pnpm schema:snapshot` after editing the baseline in place.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMMITTED="$ROOT/docs/refactor/vnext/schema/database-schema.json"
+COMMITTED="$ROOT/tools/schema/database-schema.json"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 

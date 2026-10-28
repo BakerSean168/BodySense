@@ -254,7 +254,7 @@ aggregate, its lifecycle and every link to it are gone:
   `outcomes.intervention_id`. Dropped indexes:
   `idx_training_plans_treatment_revision`, `idx_outcomes_treatment`,
   `idx_training_logs_intervention`. `checksums.sha256` and
-  `docs/refactor/vnext/schema/database-schema.json` are regenerated; the
+  `tools/schema/database-schema.json` are regenerated; the
   frozen Phase 00 snapshot under `baseline/` is not.
 - **Privacy erasure** needs no privileged pre-delete any more: the only
   `ON DELETE RESTRICT` lineage (TreatmentRevision → DiagnosisAnalysis) is

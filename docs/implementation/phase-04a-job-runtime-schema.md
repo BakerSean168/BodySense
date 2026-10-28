@@ -4,7 +4,7 @@
 
 The original implementation note moved to:
 
-- [`docs/plan/archive/implementation/phase-04a-job-runtime-schema.md`](../plan/archive/implementation/phase-04a-job-runtime-schema.md)
+- [`docs/plan/archive/implementation/phase-04a-job-runtime-schema.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/implementation/phase-04a-job-runtime-schema.md)
 
 Current architecture:
 

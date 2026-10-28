@@ -109,7 +109,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === script) {
   try {
     handoff = JSON.parse(
       fs.readFileSync(
-        path.join(root, "docs/plan/active/v2-handoff-state.json"),
+        path.join(root, "docs/operations/v2-handoff-state.json"),
         "utf8",
       ),
     );

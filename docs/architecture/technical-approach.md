@@ -5,7 +5,7 @@
 - Status: Current implementation snapshot
 - Updated: 2026-10-16 (PR6 native BodyState retirement)
 - Architecture authority: accepted ADRs + executable repository state
-- Historical initial design: [`docs/plan/archive/architecture-snapshots/2026-09-01/technical-approach.md`](../plan/archive/architecture-snapshots/2026-09-01/technical-approach.md)
+- Historical initial design: [`docs/plan/archive/architecture-snapshots/2026-09-01/technical-approach.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/archive/architecture-snapshots/2026-09-01/technical-approach.md)
 
 This document intentionally describes the **implemented** platform. Historical stack choices, retired routes and migration-era schemas are kept in the archived snapshot rather than mixed into the current architecture.
 
@@ -246,4 +246,4 @@ Canonical development/staging/production use PostgreSQL 18. Direct development s
 
 Business requirements are owned by `docs/product`. For implementation facts, code, canonical contracts, the baseline and runtime manifests take precedence over descriptive architecture text. Accepted ADRs supply architectural decisions and historical intent; current documents must be corrected when the implementation changes. Archived plans and old route examples do not authorize restoring retired paths.
 
-Current known mismatches are tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
+Current known mismatches are tracked in [`2026-09-01-documentation-code-alignment-audit.md`](https://github.com/BakerSean168/BodySense/blob/0b4c28a80cb26c8ffe2c3fc9eb4b3068d7978bae/docs/plan/active/2026-09-01-documentation-code-alignment-audit.md).
