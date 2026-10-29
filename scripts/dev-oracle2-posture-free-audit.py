@@ -100,6 +100,22 @@ def verify_free_pricing(config: Any, catalog: Any) -> dict[str, str]:
                     raise PriceAuditError(
                         f"{logical_group}: nonzero or invalid {price_kind} price"
                     )
+            # A zero-price text-only route is not a usable Posture vision route.
+            # Require explicit catalog metadata for image input and text output;
+            # this remains a keyless metadata check, not inference acceptance.
+            architecture = matches[0].get("architecture")
+            if not isinstance(architecture, dict):
+                raise PriceAuditError(f"{logical_group}: missing architecture metadata")
+            inputs = architecture.get("input_modalities")
+            outputs = architecture.get("output_modalities")
+            if not isinstance(inputs, list) or "image" not in inputs:
+                raise PriceAuditError(
+                    f"{logical_group}: image input capability not verified"
+                )
+            if not isinstance(outputs, list) or "text" not in outputs:
+                raise PriceAuditError(
+                    f"{logical_group}: text output capability not verified"
+                )
         except PriceAuditError as exc:
             failures.append(str(exc))
     if failures:

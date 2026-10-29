@@ -26,6 +26,10 @@ def _catalog(pricing: dict | None = None, include_fallback: bool = True) -> dict
         {
             "id": "qwen/qwen2.5-vl-72b-instruct",
             "pricing": pricing if pricing is not None else {"prompt": "0", "completion": "0"},
+            "architecture": {
+                "input_modalities": ["text", "image"],
+                "output_modalities": ["text"],
+            },
         },
     ]
     if include_fallback:
@@ -33,6 +37,10 @@ def _catalog(pricing: dict | None = None, include_fallback: bool = True) -> dict
             {
                 "id": "google/gemini-2.0-flash-001",
                 "pricing": {"prompt": "0", "completion": "0", "image": "0"},
+                "architecture": {
+                    "input_modalities": ["text", "image"],
+                    "output_modalities": ["text"],
+                },
             }
         )
     return {"data": rows}
@@ -68,6 +76,34 @@ def test_nonfree_or_unknown_price_fails_closed(pricing: dict) -> None:
     module = _module()
     with pytest.raises(module["PriceAuditError"]):
         module["verify_free_pricing"](_configured(), _catalog(pricing=pricing))
+
+
+@pytest.mark.parametrize(
+    ("architecture", "reason"),
+    [
+        (None, "missing architecture metadata"),
+        (
+            {"input_modalities": ["text"], "output_modalities": ["text"]},
+            "image input capability not verified",
+        ),
+        (
+            {"input_modalities": "text+image", "output_modalities": ["text"]},
+            "image input capability not verified",
+        ),
+        (
+            {"input_modalities": ["text", "image"], "output_modalities": ["image"]},
+            "text output capability not verified",
+        ),
+    ],
+)
+def test_free_metadata_without_posture_vision_capability_fails_closed(
+    architecture: dict | None, reason: str
+) -> None:
+    module = _module()
+    catalog = _catalog()
+    catalog["data"][0]["architecture"] = architecture
+    with pytest.raises(module["PriceAuditError"], match=reason):
+        module["verify_free_pricing"](_configured(), catalog)
 
 
 def test_missing_fallback_cannot_be_mistaken_for_free() -> None:

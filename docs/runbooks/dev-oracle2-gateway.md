@@ -250,7 +250,9 @@ apps/ai-service/.venv/bin/python scripts/dev-oracle2-posture-free-audit.py
 The audit reads the two **exact** currently configured dev Posture OpenRouter
 model IDs and performs a public, unauthenticated `GET` to the official OpenRouter
 model catalog. It rejects either model if missing, ambiguous, unpriced or priced
-above zero in **any** published pricing field, including image charges. It never
+above zero in **any** published pricing field, including image charges. It also
+requires explicit catalog metadata for image input and text output, so a free
+text-only model cannot be certified as a Posture vision route. It never
 sends an image, inference prompt, API key or personal data. It does not select
 replacement models. On 2026-10-25 WSL the current primary was rejected for its
 nonzero prompt price (`POSTURE_FREE_PRICE_AUDIT=BLOCKED`, exit 1); the fallback
