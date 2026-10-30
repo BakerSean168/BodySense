@@ -40,7 +40,14 @@ start_process() {
     return
   fi
   rm -f "$(pid_file "$name")"
-  setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
+  # The LiteLLM master credential belongs only to local gateway infra.
+  # Pass the client credential only to the AI Service, never to the web,
+  # document, or Go API processes that inherit the direct-dev environment.
+  local -a process_env=(env -u LITELLM_MASTER_KEY)
+  if [[ "$name" != ai ]]; then
+    process_env+=(-u LITELLM_API_KEY)
+  fi
+  "${process_env[@]}" setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
   local pid=$!
   printf '%s\n' "$pid" >"$(pid_file "$name")"
   echo "$name started pid=$pid"
