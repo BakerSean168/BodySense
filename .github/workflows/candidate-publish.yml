@@ -653,7 +653,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: artifact-publish
-      url: https://gcp-dev-01.taile92a8e.ts.net:20150/
+      url: http://localhost:20150/
     env:
       REGISTRY: ${{ vars.ACR_REGISTRY }}
       NAMESPACE: ${{ vars.ACR_NAMESPACE }}

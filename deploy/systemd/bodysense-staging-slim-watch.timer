@@ -1,0 +1,14 @@
+[Unit]
+Description=Poll BodySense staging-latest every 2 minutes (slim, memory-guarded)
+
+[Timer]
+# Staging containers use restart: "no"; after a reboot this first run is what starts
+# staging again, and only if the memory-headroom guard allows it.
+OnBootSec=3min
+OnUnitActiveSec=2min
+RandomizedDelaySec=20s
+Persistent=true
+Unit=bodysense-staging-slim-watch.service
+
+[Install]
+WantedBy=timers.target
