@@ -124,6 +124,8 @@ export function OnboardingWizard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep a successful context write across retries when a later step fails.
+  const contextSaved = useRef(false);
 
   useEffect(
     () => () => {
@@ -211,23 +213,35 @@ export function OnboardingWizard() {
   };
 
   const handleSubmit = async () => {
+    if (isGenerating) return;
     setIsGenerating(true);
     try {
-      // One application command: stable identity + the whole BodyState baseline in a
-      // single transaction, producing one BodyState revision.
-      await onboardingContextService.submit(buildOnboardingPayload(answers));
+      // Persist identity + BodyState first. An unavailable LLM must not turn a
+      // committed onboarding into a failed wizard or duplicate its writes.
+      if (!contextSaved.current) {
+        await onboardingContextService.submit(buildOnboardingPayload(answers));
+        contextSaved.current = true;
+      }
       await fetchProfile();
-      // Build evidence from admissible BodyState / reports / finished posture analyses.
-      await assessmentApi.generate();
-      toast.success("初始身体状态已建立");
-      navigate("/consultation?view=state", { replace: true });
     } catch (err) {
-      console.error("Onboarding submission failed:", err);
+      console.error("Onboarding context save or refresh failed:", err);
       setIsGenerating(false);
       toast.error(
-        err instanceof Error ? err.message : "生成评估报告失败，请稍后重试",
+        err instanceof Error ? err.message : "保存身体档案失败，请稍后重试",
       );
+      return;
     }
+
+    try {
+      // Assessment is derived and optional; the committed BodyState is the
+      // durable source of truth even when the model provider is unavailable.
+      await assessmentApi.generate();
+      toast.success("初始身体状态已建立");
+    } catch (err) {
+      console.warn("Onboarding saved but assessment generation failed:", err);
+      toast.warning("身体档案已保存，AI 评估暂不可用，可稍后重试");
+    }
+    navigate("/consultation?view=state", { replace: true });
   };
 
   if (isGenerating) {
