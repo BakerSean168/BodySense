@@ -5,6 +5,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { validateCandidate } from "./candidate-manifest.mjs";
+import { isQualifiedNightlySource } from "./nightly-qualification.mjs";
 
 const CANDIDATE_WORKFLOW = "Publish Nightly Candidate";
 
@@ -28,11 +29,11 @@ export function reusableCandidateFailures({
     failures.push("artifact owner workflow run mismatch");
   if (
     candidateRun?.name !== CANDIDATE_WORKFLOW ||
-    candidateRun?.event !== "workflow_run" ||
+    !["workflow_run", "workflow_dispatch"].includes(candidateRun?.event) ||
     candidateRun?.head_branch !== "main" ||
     candidateRun?.conclusion !== "success"
   )
-    failures.push("candidate workflow was not a successful main CI downstream");
+    failures.push("candidate workflow was not a successful main Nightly run");
   failures.push(...validateCandidate(candidate));
   if (candidate?.gitSha !== revision)
     failures.push("candidate manifest source SHA mismatch");
@@ -40,13 +41,13 @@ export function reusableCandidateFailures({
     failures.push("candidate source CI run ID mismatch");
   if (
     sourceCiRun?.name !== "CI" ||
-    sourceCiRun?.event !== "schedule" ||
+    !isQualifiedNightlySource(candidateRun?.event, sourceCiRun?.event) ||
     sourceCiRun?.head_branch !== "main" ||
     sourceCiRun?.head_sha !== revision ||
     sourceCiRun?.conclusion !== "success"
   )
     failures.push(
-      "candidate source must be a successful scheduled Main Full CI",
+      "candidate source must be a successful full Main CI qualified for its Nightly path",
     );
   return failures;
 }
@@ -133,7 +134,7 @@ export function resolveReusableCandidate({
     );
     if (
       candidateRun.name !== CANDIDATE_WORKFLOW ||
-      candidateRun.event !== "workflow_run" ||
+      !["workflow_run", "workflow_dispatch"].includes(candidateRun.event) ||
       candidateRun.head_branch !== "main" ||
       candidateRun.conclusion !== "success"
     )

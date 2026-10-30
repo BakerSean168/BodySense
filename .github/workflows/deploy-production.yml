@@ -114,8 +114,12 @@ jobs:
           # a guaranteed candidate source SHA. The published Release Manifest
           # already binds candidateRunId, source CI Run/SHA and original digest.
           [[ "$(jq -r .head_branch <<<"$candidate_json")" == main ]] || { echo 'candidate not from main' >&2; exit 1; }
+          candidate_event="$(jq -r .event <<<"$candidate_json")"
           if [[ "$ci_event" == schedule && "$candidate_name" == 'Publish Nightly Candidate' ]]; then
-            [[ "$(jq -r .event <<<"$candidate_json")" == workflow_run ]] || { echo 'Nightly must originate from CI' >&2; exit 1; }
+            [[ "$candidate_event" == workflow_run || "$candidate_event" == workflow_dispatch ]] || { echo 'Nightly must originate from CI or a manual Nightly dispatch' >&2; exit 1; }
+          elif [[ "$ci_event" == workflow_dispatch && "$candidate_name" == 'Publish Nightly Candidate' ]]; then
+            # Manual Nightly bound to a manually dispatched full Main CI.
+            [[ "$candidate_event" == workflow_dispatch ]] || { echo 'dispatched full CI qualifies only a manual Nightly' >&2; exit 1; }
           elif [[ "$ci_event" == push && "$candidate_name" == 'Publish Main Candidate' ]]; then
             # Historical Stable releases remain deployable for rollback.
             node scripts/delivery/release-contract.mjs --require-release

@@ -8,7 +8,7 @@
 
 - PR 使用全仓 Lint + 受影响 Web / Go / AI / Contracts / PostgreSQL 检查并行，最终 `Check` 对 SHA、Run、Attempt、Manifest 和 selected jobs 做 fail-closed 汇聚。PR 不运行完整 E2E。
 - Main push 完整回归（E2E 三分片、PG18 恢复与 Release Safety），**只验证，不构建候选**。
-- Scheduled Main Full 全选。成功后独立的 `Publish Nightly Candidate` 下载**该次** `Check` 回执，验证所有必需任务真实成功，然后构建四种候选镜像（Web、API、AI Service、Runtime）和按 SHA 版本化的 CDN 资产；相同 SHA 的成功候选直接复用。
+- Scheduled Main Full 全选。成功后独立的 `Publish Nightly Candidate` 下载**该次** `Check` 回执，验证所有必需任务真实成功，然后构建四种候选镜像（Web、API、AI Service、Runtime）和按 SHA 版本化的 CDN 资产；相同 SHA 的成功候选直接复用。也可人工 dispatch `Publish Nightly Candidate`，绑定当前 main HEAD 上成功的全量 CI（schedule 或手动 dispatch 的 `ci.yml`），其余回执与 Digest 门禁相同。
 - 发布候选必须有 `candidate-set-v1.json`：source SHA、CI Run ID、delivery Manifest Digest、migration head、四镜像原始 Digest、静态资源归属。任何缺件、错配或错误 Skip 均不构成可发布候选。
 - `Publish Stable` 仅人工调度。给定 Nightly Run ID 与稳定 `vX.Y.Z`，验证候选，原 Digest 晋升为稳定版本，生成 `release-manifest.json`，**不重新 build**、不部署生产。
 - `Deploy Production` 独立手动调度，受 `production` 环境保护。严格检验 GitHub Release、Tag、SHA、CI、Manifest、OCI Digest；Watcher 再负责备份、PG18 迁移、健康和回滚。

@@ -8,6 +8,8 @@ flowchart TD
   PR --> Main["合入 main"]
   Main --> Full["Main Full（只验证）"]
   Main --> Nightly["Scheduled Main Full"]
+  Main --> Manual["手动 Nightly：dispatch ci.yml（全量）→ dispatch candidate-publish.yml"]
+  Manual --> Gate
   Nightly --> Gate{"完整 Check 回执、SHA/Run/Attempt 合格？"}
   Gate -->|否| Stop["失败 / 不创建候选"]
   Gate -->|是| Candidate["Publish Nightly Candidate：四镜像 + CDN + Manifest"]
@@ -24,9 +26,22 @@ flowchart TD
 
 正常 `main` push 只运行验证，不创建 Candidate、不改变 `staging-latest` 或 `prod-latest`。每日 Scheduled Main Full 全选 Web、Go、AI、Contracts、PG18 恢复和 Playwright E2E。完整 `Check` 结果与回执身份一致后，`candidate-publish.yml` 才构建/复用源 SHA 的候选镜像、R2/CDN 静态资源、`candidate-set-v1.json`。同一 SHA 仅在历史 Candidate Manifest 完整、候选运行成功，且原始 CI 确认来自成功的 Scheduled Main Full 时才允许复用；普通 Push 产生的旧候选不能复用。复用时也会将验签的 Candidate Manifest 附加到本次 Nightly Run，使 Stable 可以直接选择该 Run ID。候选可在现有的 V2 显式 Staging 授权就绪后晋升 staging；Staging 晋升不是 Stable 资格的替代。
 
+### 手动 Nightly（不等定时）
+
+需要当天发布 main HEAD 时，参照 T3 Code `release.yml` 的 dispatch 模式，走同样严格的手动路径：
+
+```bash
+gh workflow run ci.yml --ref main                        # 1. 对 main HEAD 跑一次全量 Main CI（workflow_dispatch = main-full，全 lane）
+gh run watch <ci-run-id>                                 #    等它 success，Check 回执上传
+gh workflow run candidate-publish.yml --ref main \
+  -f ci_run_id=<ci-run-id>                                # 2. 手动 Publish Nightly Candidate（ci_run_id 留空则自动选 HEAD 最新合格 run）
+```
+
+门禁不放宽：手动候选只接受 `CI` 工作流、事件为 `schedule` 或 `workflow_dispatch`、`head_branch=main`、`conclusion=success`，且 `head_sha` **必须等于当前 main HEAD**；随后与定时路径相同地校验完整 Check 回执（SHA/Run/Attempt/事件/全部 Job success/摘要），普通 Push CI 和 PR CI 永远不合格。自动（`workflow_run`）候选仍只接受定时 CI。手动与定时 Nightly 共享 `nightly-candidate-<sha>` 并发组，`cancel-in-progress: false`。
+
 ## 2. Stable 手动晋升
 
-先人工验收 Nightly 候选和静态资源，再在 GitHub Actions 手动运行 `Publish Stable`：填写**成功的 Nightly Candidate Run ID** 与一个新版本 `release_tag=vMAJOR.MINOR.PATCH`。该工作流验证 Run 成功、source CI 为已通过的 scheduled main 全量运行、候选 Manifest SHA/Digest、主线可达性，**不重新构建镜像**，只把四个原候选 OCI Digest 提升为版本标签，生成带 `candidateRunId`、source `ciRunId`、Manifest Digest、四镜像和 CDN 身份的 `release-manifest.json`，发布 GitHub Release。
+先人工验收 Nightly 候选和静态资源，再在 GitHub Actions 手动运行 `Publish Stable`：填写**成功的 Nightly Candidate Run ID** 与一个新版本 `release_tag=vMAJOR.MINOR.PATCH`。该工作流验证 Run 成功、source CI 为已通过的 main 全量运行（自动候选须为 scheduled；手动候选可为 scheduled 或 workflow_dispatch 全量 CI）、候选 Manifest SHA/Digest、主线可达性，**不重新构建镜像**，只把四个原候选 OCI Digest 提升为版本标签，生成带 `candidateRunId`、source `ciRunId`、Manifest Digest、四镜像和 CDN 身份的 `release-manifest.json`，发布 GitHub Release。
 
 `Publish Stable` 仅在显式手动触发时执行。Nightly 完成或 Main 合并不会自动发布 Stable。既有 `Prepare Release`（release-please）可以辅助更新 CHANGELOG/版本文件，但**不是 Stable 发布授权，也不触发自动发布**。首次发布或升级仍需先核对版本号与手动 Release 的一致性。
 
@@ -38,6 +53,6 @@ flowchart TD
 
 ## 4. 验收与状态
 
-P5 的验收需要四步独立的真实记录：PR Fast → 合入后 Main Full → Scheduled Full 与成功的 Nightly Candidate（必须有完整 Manifest）→ 明确授权的 Stable（再按需独立 Production）。仅看到 Nightly 资格检查绿色、但候选 Job 跳过，不算构建通过。**在未人工选择版本及批准生产门禁前，不运行后两步**。
+P5 的验收需要四步独立的真实记录：PR Fast → 合入后 Main Full → Scheduled Full（或手动全量 CI + 手动 Nightly）与成功的 Nightly Candidate（必须有完整 Manifest）→ 明确授权的 Stable（再按需独立 Production）。仅看到 Nightly 资格检查绿色、但候选 Job 跳过，不算构建通过。**在未人工选择版本及批准生产门禁前，不运行后两步**。
 
 关联 GitHub [P5 #469](https://github.com/BakerSean168/BodySense/issues/469)。

@@ -67,8 +67,27 @@ test("legacy push-based candidate cannot bypass scheduled Nightly on same SHA", 
   item.sourceCiRun.event = "push";
   assert.match(
     reusableCandidateFailures(item).join("; "),
-    /successful scheduled Main Full CI/,
+    /successful full Main CI qualified for its Nightly path/,
   );
+});
+
+test("manual Nightly candidate is reusable when bound to a dispatched or scheduled full Main CI", () => {
+  for (const ciEvent of ["workflow_dispatch", "schedule"]) {
+    const item = fixture();
+    item.candidateRun.event = "workflow_dispatch";
+    item.sourceCiRun.event = ciEvent;
+    assert.deepEqual(reusableCandidateFailures(item), [], ciEvent);
+  }
+});
+
+test("automatic Nightly cannot claim a dispatched CI and manual Nightly cannot claim push CI", () => {
+  const auto = fixture();
+  auto.sourceCiRun.event = "workflow_dispatch";
+  assert.ok(reusableCandidateFailures(auto).length > 0);
+  const manual = fixture();
+  manual.candidateRun.event = "workflow_dispatch";
+  manual.sourceCiRun.event = "push";
+  assert.ok(reusableCandidateFailures(manual).length > 0);
 });
 
 test("reuse rejects incomplete or mismatched provenance", () => {
@@ -95,7 +114,7 @@ test("reuse rejects incomplete or mismatched provenance", () => {
       item.candidateRun.conclusion = "failure";
     },
     (item) => {
-      item.candidateRun.event = "workflow_dispatch";
+      item.candidateRun.event = "push";
     },
     (item) => {
       item.candidate.images.web.digest = "sha256:" + "0".repeat(64);

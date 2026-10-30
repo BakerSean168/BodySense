@@ -48,10 +48,14 @@ jobs:
           [[ "$run_id" =~ ^[0-9]+$ ]] || { echo 'candidate workflow run ID must be numeric' >&2; exit 1; }
           run_json="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
           [[ "$(jq -r .name <<<"$run_json")" == 'Publish Nightly Candidate' ]] || { echo 'selected run is not Publish Nightly Candidate' >&2; exit 1; }
-          [[ "$(jq -r .event <<<"$run_json")" == workflow_run ]] || { echo 'candidate must be triggered by CI' >&2; exit 1; }
+          candidate_event="$(jq -r .event <<<"$run_json")"
+          # workflow_run = automatic scheduled Nightly; workflow_dispatch = manual
+          # Nightly for main HEAD. Its source CI pair is enforced below.
+          [[ "$candidate_event" == workflow_run || "$candidate_event" == workflow_dispatch ]] || { echo 'candidate must be an automatic or manual Nightly run' >&2; exit 1; }
           [[ "$(jq -r .head_branch <<<"$run_json")" == main ]] || { echo 'candidate source is not main' >&2; exit 1; }
           [[ "$(jq -r .conclusion <<<"$run_json")" == success ]] || { echo 'selected candidate workflow did not complete successfully' >&2; exit 1; }
           echo "candidate_run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "candidate_event=$candidate_event" >> "$GITHUB_OUTPUT"
       # Download the immutable candidate evidence BEFORE checkout. A downstream
       # workflow_run's own head_sha can be main HEAD, not the qualified source
       # SHA; candidate-set.gitSha is the authority for the source checkout.
@@ -83,6 +87,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
+          CANDIDATE_EVENT: ${{ steps.run.outputs.candidate_event }}
         shell: bash
         run: |
           set -euo pipefail
@@ -92,7 +97,13 @@ jobs:
           ci_run_id="$(jq -r .ciRunId "$CANDIDATE_PATH")"
           ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${ci_run_id}")"
           [[ "$(jq -r .name <<<"$ci_json")" == CI ]] || { echo 'candidate source run is not CI' >&2; exit 1; }
-          [[ "$(jq -r .event <<<"$ci_json")" == schedule ]] || { echo 'candidate source CI was not a scheduled Main Full run' >&2; exit 1; }
+          ci_event="$(jq -r .event <<<"$ci_json")"
+          if [[ "$CANDIDATE_EVENT" == workflow_run ]]; then
+            [[ "$(jq -r .event <<<"$ci_json")" == schedule ]] || { echo 'candidate source CI was not a scheduled Main Full run' >&2; exit 1; }
+          else
+            # Manual Nightly: full Main CI only (schedule or workflow_dispatch), never push/PR.
+            [[ "$ci_event" == schedule || "$ci_event" == workflow_dispatch ]] || { echo "manual Nightly source CI event $ci_event is not a full Main run" >&2; exit 1; }
+          fi
           [[ "$(jq -r .head_branch <<<"$ci_json")" == main ]] || { echo 'candidate source CI was not on main' >&2; exit 1; }
           [[ "$(jq -r .head_sha <<<"$ci_json")" == "$candidate_sha" ]] || { echo 'candidate source CI SHA mismatch' >&2; exit 1; }
           [[ "$(jq -r .conclusion <<<"$ci_json")" == success ]] || { echo 'candidate source CI did not succeed' >&2; exit 1; }

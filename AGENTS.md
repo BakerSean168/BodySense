@@ -27,7 +27,7 @@
 
 ## CD / 环境安全
 
-- Main push **不自动构建 Candidate**。成功的定时 Main Full 才能产生 Nightly 候选；同 SHA 可复用已构建的候选。候选绑定 source CI、完整 Check 回执、四镜像 Digest 和静态 CDN 资源。
+- Main push **不自动构建 Candidate**。成功的定时 Main Full 才能产生自动 Nightly 候选；手动 Nightly（`candidate-publish.yml` workflow_dispatch）只接受当前 main HEAD 上成功的全量 CI（schedule 或手动 dispatch 的 `ci.yml`），见 [Release](docs/operations/release.md)；同 SHA 可复用已构建的候选。候选绑定 source CI、完整 Check 回执、四镜像 Digest 和静态 CDN 资源。
 - Stable 必须人工选定已成功构建的 Nightly Run 与不可变版本号，**只晋升原 Digest，不重新编译**；发布 Stable 不等于生产部署。
 - 生产发布通过独立手动 workflow 与 GitHub `production` 环境门禁；迁移、备份、资源归属、数据库回滚和人工签核不能由开发 Agent 自行放宽或静默执行。详情见 [Release](docs/operations/release.md)。
 - 开发不得使用真实凭据、生产数据或用户持久配置做测试；遇到需要操作真实生产、清空数据、修改 Secret 或门禁的任务，应保留安全检查并取得明确授权。
