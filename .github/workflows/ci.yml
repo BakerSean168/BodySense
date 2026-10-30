@@ -354,7 +354,10 @@ jobs:
         working-directory: apps/api
         env:
           BODYSENSE_INTEGRATION_DATABASE_URL: host=127.0.0.1 user=bodysense password=bodysense123 dbname=bodysense_migration_validator port=5432 sslmode=disable
-        run: go test -race ./internal/repository ./internal/service ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode|Diagnosis|UserAsset|ChatRetention).*Postgres$' -count=1 -v
+        # All four packages share one PostgreSQL database. Package-level concurrency lets a
+        # storage migrator see another package's temporary user_asset and read its source
+        # from the wrong local store. Serialize packages; keep the race detector in each.
+        run: go test -race -p 1 ./internal/repository ./internal/service ./internal/transport/httpapi ./internal/consultation -run '^Test(BodyFact|BodyEpisode|ThreadProjection|InteractionResume|SymptomEpisode|Diagnosis|UserAsset|ChatRetention).*Postgres$' -count=1 -v
 
       - name: Verify independent TrainingPlan decisions on PostgreSQL 18
         working-directory: apps/api
