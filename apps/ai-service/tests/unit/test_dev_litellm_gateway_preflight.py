@@ -98,4 +98,5 @@ def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None
     source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
     assert "LITELLM_API_KEY='${LITELLM_MASTER_KEY}'" not in source
     assert "LITELLM_BASE_URL='http://127.0.0.1:" not in source
+    assert 'export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:' in source
     assert "start_process ai" in source
