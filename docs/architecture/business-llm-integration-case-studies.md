@@ -2,7 +2,7 @@
 
 Status: **research only / no runtime behavior change**
 Checked: 2026-10-23
-Related: [Model Gateway Routing](./model-gateway-routing.md), [Oracle2 dev-only PR #432 (runbook 尚未合并)](https://github.com/BakerSean168/BodySense/pull/432), [OpenRouter / Groq connectivity](../runbooks/openrouter-groq-free-connectivity.md).
+Related: [Model Gateway Routing](./model-gateway-routing.md), [Oracle2 dev-only PR #432（已关闭、未合并，仅作历史记录）](https://github.com/BakerSean168/BodySense/pull/432), [OpenRouter / Groq connectivity](../runbooks/openrouter-groq-free-connectivity.md).
 
 ## 调研边界
 
@@ -52,12 +52,12 @@ BodySense 对应原则：保持 `LITELLM_BASE_URL` / `LITELLM_API_KEY` 这一条
 ~~~text
 Go：业务状态与安全规则／配置部署权
   -> Python AI Service：Agent 运行、Manifest logical_model / Prompt / Tool
-  -> GCP Dev Standalone LiteLLM：模型逻辑组与 dev-only 路由
+  -> 本地 Dev Standalone LiteLLM：模型逻辑组与 dev-only 路由（staging 复用生产网关）
   -> [可选] Oracle2 共享 LiteLLM：供应商凭据与专用 Virtual Key
   -> 物理模型渠道：WindHub / Kunyou / 南梁 / OpenRouter / Groq 等
 ~~~
 
-**本轮决定：不改变以上路径、不修改任何生产/staging/当前 GCP 正在运行的逻辑模型。** `bodysense-posture` 的视觉能力仍需单独验证。Oracle2 与 GCP 的双层网关需避免重复 Fallback；返回结果必须追踪最终物理模型。`num_retries: 0` 不代表所有 4xx 都不会触发 Fallback；认证及业务契约错误必须区分处理。
+**本轮决定：不改变以上路径、不修改任何生产/staging/当前 dev 环境正在运行的逻辑模型。** `bodysense-posture` 的视觉能力仍需单独验证。Oracle2 与本地 dev 网关的双层结构需避免重复 Fallback；返回结果必须追踪最终物理模型。`num_retries: 0` 不代表所有 4xx 都不会触发 Fallback；认证及业务契约错误必须区分处理。
 
 按 Chatwoot/FastGPT 的经验，新渠道首先作为网关层的候选适配能力，并按业务能力白名单开放，而不是因为 Key 可用就自动给所有 Agent 分配。
 

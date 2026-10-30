@@ -2,7 +2,8 @@
 
 Status: **Historical GCP research only; WSL/Oracle2 acceptance pending**
 Snapshot: 2026-10-23 (GCP-dev-01 retired on the same date)
-Current workspace: `wsl-local:/home/baker/projects/bodysense`; persistent gateway: `oracle2`.
+Current dev hosts: `oracle2` (dev machine and shared LiteLLM) or `wsl-local`; staging reuses the
+production LiteLLM gateway.
 
 > **环境边界（2026-10-26 更新）**：以下 GCP API/模型/配额结果全部是 2026-10-23 的历史研究证据。GCP-dev-01 已退役，不能再用于执行、部署、认证或验收；其本地凭据、进程及未推送文件也不能假定存在于 WSL。当前 WSL 尚未完成 OpenRouter/Groq 免费凭据、专用 BodySense Virtual Key 与实际合成推理验收。
 
@@ -69,18 +70,13 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 
 ## 当前 WSL 无凭据复核（不执行推理）
 
-以下命令仅从 `wsl-local` 检查公开目录、费用安全门禁、Oracle2 HTTPS 连通性与匿名鉴权拒绝；**它们不是 OpenRouter/Groq 账户认证或端到端验收**。不要连接已退役的 GCP，不要从旧 GCP 路径加载 `.env.dev.local`，也不要在日志中输出任何密钥或原始账户响应。
+以下命令仅从 `wsl-local` 检查公开目录、Oracle2 HTTPS 连通性与匿名鉴权拒绝；**它们不是 OpenRouter/Groq 账户认证或端到端验收**。不要连接已退役的 GCP，不要从旧 GCP 路径加载 `.env.dev.local`，也不要在日志中输出任何密钥或原始账户响应。
 
 ~~~bash
 cd /home/baker/projects/bodysense
 # 公开目录无须 Key；只输出条目数，不把目录或账户数据写入公开日志。
 curl -fsS --max-time 15 'https://openrouter.ai/api/v1/models' \
   | python3 -c 'import json,sys; print("public_models=", len(json.load(sys.stdin).get("data", [])))'
-
-# 已存在的 PR #432 WSL 开发工作树：只检查费用，不发送图像或推理。
-cd /home/baker/projects/_bodysense_oracle2_gateway
-apps/ai-service/.venv/bin/python scripts/dev-oracle2-posture-free-audit.py
-# 当前配置中非零/未知费用应返回 BLOCKED（非零退出码），不可忽略后强行启动。
 
 curl -sS -o /dev/null -w 'oracle_health_http=%{http_code} tls=%{ssl_verify_result}\n' \
   --max-time 10 'https://oracle.taile92a8e.ts.net:10446/health/liveliness'
