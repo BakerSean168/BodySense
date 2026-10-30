@@ -107,7 +107,10 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
     """Use shell command stubs to inspect child environments without launching services."""
     env_file = tmp_path / "dev.env"
     env_file.write_text(
-        "LITELLM_MASTER_KEY=synthetic-master\nLITELLM_API_KEY=synthetic-client\n",
+        "LITELLM_MASTER_KEY=synthetic-master\n"
+        "LITELLM_API_KEY=synthetic-client\n"
+        "OPENROUTER_API_KEY=synthetic-openrouter\n"
+        "GROQ_API_KEY=synthetic-groq\n",
         encoding="utf-8",
     )
     stubs = tmp_path / "stubs"
@@ -119,7 +122,7 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
     setsid = stubs / "setsid"
     setsid.write_text(
         "#!/bin/sh\n"
-        "env | grep '^LITELLM_' > "
+        "env | grep -E '^(LITELLM_|OPENROUTER_API_KEY=|GROQ_API_KEY=)' > "
         '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n',
         encoding="utf-8",
     )
@@ -128,7 +131,13 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
     capture.mkdir()
 
     env = os.environ.copy()
-    for key in ("LITELLM_MASTER_KEY", "LITELLM_API_KEY", "LITELLM_BASE_URL"):
+    for key in (
+        "LITELLM_MASTER_KEY",
+        "LITELLM_API_KEY",
+        "LITELLM_BASE_URL",
+        "OPENROUTER_API_KEY",
+        "GROQ_API_KEY",
+    ):
         env.pop(key, None)
     env.update(
         {
@@ -159,4 +168,6 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
     for role in ("ai", "api", "document", "web"):
         output = (capture / role).read_text(encoding="utf-8")
         assert "LITELLM_MASTER_KEY=" not in output, role
+        assert "OPENROUTER_API_KEY=" not in output, role
+        assert "GROQ_API_KEY=" not in output, role
         assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai"), role

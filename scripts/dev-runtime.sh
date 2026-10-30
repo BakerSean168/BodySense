@@ -40,10 +40,11 @@ start_process() {
     return
   fi
   rm -f "$(pid_file "$name")"
-  # The LiteLLM master credential belongs only to local gateway infra.
-  # Pass the client credential only to the AI Service, never to the web,
-  # document, or Go API processes that inherit the direct-dev environment.
-  local -a process_env=(env -u LITELLM_MASTER_KEY)
+  # Upstream provider credentials and the LiteLLM master belong to gateway
+  # infrastructure, not to any long-lived application process. The AI Service
+  # alone receives the LiteLLM client key (which must be scoped separately
+  # before any external gateway is authorized).
+  local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY)
   if [[ "$name" != ai ]]; then
     process_env+=(-u LITELLM_API_KEY)
   fi
