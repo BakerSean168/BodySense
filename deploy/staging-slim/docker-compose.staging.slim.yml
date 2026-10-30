@@ -1,0 +1,95 @@
+# Slim override for BodySense staging co-located on a small production host (1.6 GiB RAM).
+# Layered on the runtime artifact's docker-compose.staging.yml by
+# scripts/staging-slim-watch.sh (see docs/runbooks/staging-slim.md):
+#   docker compose -p bodysense-staging -f <runtime>/docker/docker-compose.staging.yml \
+#     -f /opt/bodysense-staging/docker-compose.staging.slim.yml \
+#     --env-file .env.staging.local ...
+# - restart: "no" everywhere: after a reboot or a guard stop, only the watcher's
+#   memory-headroom guard may start staging again, never the Docker daemon.
+# - document-service and the staging litellm-gateway are disabled (profile "disabled").
+# - ai-service talks to the production litellm-gateway: the watcher runs
+#   `docker network connect` (container-name DNS only, never the `ai-service` alias,
+#   so production traffic can never resolve to staging).
+# - postgres/redis use the ACR mirrors (Docker Hub is unreliable from the host).
+services:
+  postgres:
+    restart: "no"
+    image: crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/pgvector:pg18
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - max_connections=40
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=64MB
+      - -c
+      - wal_buffers=1MB
+      - -c
+      - max_wal_size=256MB
+      - -c
+      - max_worker_processes=4
+      - -c
+      - max_parallel_workers=0
+      - -c
+      - max_parallel_workers_per_gather=0
+    mem_limit: 160m
+    memswap_limit: 320m
+    cpus: 0.5
+    shm_size: 32m
+
+  redis:
+    restart: "no"
+    image: crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com/bodysense/redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 24mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    mem_limit: 32m
+    memswap_limit: 64m
+    cpus: 0.2
+
+  litellm-gateway:
+    profiles: [disabled]
+
+  document-service:
+    profiles: [disabled]
+
+  api:
+    restart: "no"
+    mem_limit: 96m
+    memswap_limit: 192m
+    cpus: 0.5
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-service:
+    restart: "no"
+    mem_limit: 256m
+    mem_reservation: 64m
+    memswap_limit: 512m
+    cpus: 0.5
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  web:
+    restart: "no"
+    mem_limit: 48m
+    memswap_limit: 96m
+    cpus: 0.25

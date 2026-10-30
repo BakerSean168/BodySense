@@ -2,7 +2,8 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 pnpm quality:capacity
-bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh scripts/production-postgres18-reset.sh \
+bash -n scripts/staging-slim-watch.sh scripts/install-staging-slim-watch.sh \
+  scripts/setup-server.sh scripts/production-deploy-watch.sh scripts/production-postgres18-reset.sh \
   scripts/setup-postgres18-client-wrappers.sh \
   scripts/production-offhost-backup.sh scripts/restore-production-backup.sh \
   scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh scripts/install-production-dr.sh scripts/validate-production-dr-installer.sh scripts/validate-production-proxy.sh scripts/validate-supply-chain.sh scripts/test-validate-supply-chain.sh \
