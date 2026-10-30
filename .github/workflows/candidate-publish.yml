@@ -1,14 +1,24 @@
 name: Publish Nightly Candidate
 
 on:
-  # Only the successful scheduled Main Full run can publish a Nightly candidate.
+  # Automatic path: only a successful scheduled Main Full run publishes.
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # Manual path: a human publishes a Nightly for the CURRENT main HEAD, bound
+  # to a green full Main CI run (scheduled, or `gh workflow run ci.yml --ref
+  # main`) for that exact SHA. Normal push CI and PR CI never qualify.
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful full CI run ID for current main HEAD (blank = newest qualifying run)
+        required: false
+        type: string
 
+# Manual and scheduled Nightlies share one per-SHA group and never cancel.
 concurrency:
-  group: nightly-candidate-${{ github.event.workflow_run.head_sha }}
+  group: nightly-candidate-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
 permissions:
@@ -22,9 +32,12 @@ jobs:
   resolve:
     name: Resolve qualified Nightly candidate
     if: >-
+      (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'schedule' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     outputs:
       publish: ${{ steps.decision.outputs.publish }}
@@ -36,15 +49,57 @@ jobs:
       build_date: ${{ steps.meta.outputs.build_date }}
       ai_runtime_base_tag: ${{ steps.meta.outputs.ai_runtime_base_tag }}
     steps:
+      - id: source
+        name: Resolve qualifying full Main CI source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          WR_ID: ${{ github.event.workflow_run.id }}
+          WR_SHA: ${{ github.event.workflow_run.head_sha }}
+          WR_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          REQUESTED_CI_RUN_ID: ${{ inputs.ci_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == workflow_run ]]; then
+            run_id="$WR_ID"; sha="$WR_SHA"; attempt="$WR_ATTEMPT"; ci_event=schedule
+          else
+            main_sha="$(gh api "repos/${REPOSITORY}/commits/main" --jq .sha)"
+            if [[ -n "$REQUESTED_CI_RUN_ID" ]]; then
+              [[ "$REQUESTED_CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'ci_run_id must be numeric' >&2; exit 1; }
+              run_id="$REQUESTED_CI_RUN_ID"
+            else
+              run_id="$(gh api "repos/${REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&status=success&head_sha=${main_sha}&per_page=50" \
+                --jq '[.workflow_runs[] | select(.event == "schedule" or .event == "workflow_dispatch")] | first | .id // empty')"
+              [[ -n "$run_id" ]] || { echo "no green full CI (schedule/workflow_dispatch) for main HEAD $main_sha; run: gh workflow run ci.yml --ref main" >&2; exit 1; }
+            fi
+            ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
+            [[ "$(jq -r .name <<<"$ci_json")" == CI ]] || { echo 'source run is not CI' >&2; exit 1; }
+            ci_event="$(jq -r .event <<<"$ci_json")"
+            [[ "$ci_event" == schedule || "$ci_event" == workflow_dispatch ]] || { echo "source CI event $ci_event is not a full Main run" >&2; exit 1; }
+            [[ "$(jq -r .head_branch <<<"$ci_json")" == main ]] || { echo 'source CI was not on main' >&2; exit 1; }
+            [[ "$(jq -r .conclusion <<<"$ci_json")" == success ]] || { echo 'source CI did not succeed' >&2; exit 1; }
+            sha="$(jq -r .head_sha <<<"$ci_json")"
+            [[ "$sha" == "$main_sha" ]] || { echo "source CI SHA $sha is not current main HEAD $main_sha" >&2; exit 1; }
+            attempt="$(jq -r .run_attempt <<<"$ci_json")"
+          fi
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'source CI SHA is invalid' >&2; exit 1; }
+          {
+            echo "ci_run_id=$run_id"
+            echo "sha=$sha"
+            echo "run_attempt=$attempt"
+            echo "ci_event=$ci_event"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ steps.source.outputs.sha }}
           fetch-depth: 0
       - id: meta
         name: Bind candidate to the successful CI revision
         env:
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
-          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          TESTED_SHA: ${{ steps.source.outputs.sha }}
+          CI_RUN_ID: ${{ steps.source.outputs.ci_run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -79,23 +134,25 @@ jobs:
             echo "- AI runtime base: \`$ai_runtime_base_tag\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Download exact successful scheduled CI Check receipt
+      - name: Download exact successful full Main CI Check receipt
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ci-check-receipt-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          name: ci-check-receipt-${{ steps.source.outputs.ci_run_id }}-${{ steps.source.outputs.run_attempt }}
           path: reports/candidate/source-ci
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-      - name: Require complete scheduled Main Full evidence before building
+          run-id: ${{ steps.source.outputs.ci_run_id }}
+      - name: Require complete full Main CI evidence before building
         env:
-          CI_SHA: ${{ github.event.workflow_run.head_sha }}
-          CI_RUN_ID: ${{ github.event.workflow_run.id }}
-          CI_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          CI_SHA: ${{ steps.source.outputs.sha }}
+          CI_RUN_ID: ${{ steps.source.outputs.ci_run_id }}
+          CI_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
+          CI_EVENT: ${{ steps.source.outputs.ci_event }}
         run: >-
           node scripts/delivery/nightly-qualification.mjs
           --receipt reports/candidate/source-ci/ci-check-receipt-v2.json
           --sha "$CI_SHA" --run-id "$CI_RUN_ID" --run-attempt "$CI_ATTEMPT"
+          --event "$CI_EVENT"
       - id: decision
         name: Reuse only a fully qualified scheduled Nightly candidate
         env:
