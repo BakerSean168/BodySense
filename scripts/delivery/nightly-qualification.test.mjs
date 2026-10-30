@@ -122,6 +122,18 @@ test("candidate and Stable workflow do not publish on normal main push", async (
   assert.match(deploy, /if \[\[ "\$ci_event" == schedule/);
   assert.match(deploy, /elif \[\[ "\$ci_event" == workflow_dispatch/);
   assert.match(stable, /candidate_event" == workflow_dispatch/);
+  const resolveJob = stable.slice(0, stable.indexOf("  prepare-draft:"));
+  const checkoutAt = resolveJob.indexOf("actions/checkout@");
+  const validateAt = resolveJob.indexOf(
+    "name: Validate candidate and exact source CI provenance",
+  );
+  const redownloadAt = resolveJob.indexOf(
+    "name: Re-download candidate evidence after source checkout",
+  );
+  assert.ok(
+    checkoutAt > 0 && checkoutAt < redownloadAt && redownloadAt < validateAt,
+    "Stable must re-download candidate evidence after the cleaning checkout",
+  );
   assert.match(
     deploy,
     /Historical Stable releases remain deployable for rollback/,

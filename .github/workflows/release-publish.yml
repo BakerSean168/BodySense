@@ -83,6 +83,17 @@ jobs:
         with:
           ref: ${{ steps.candidate.outputs.revision }}
           fetch-depth: 0
+      # actions/checkout cleans the workspace, which deletes the manifest
+      # downloaded above; fetch the same immutable artifact again.
+      - name: Re-download candidate evidence after source checkout
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: candidate-set-*
+          path: reports/release/candidate
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.run.outputs.candidate_run_id }}
       - name: Validate candidate and exact source CI provenance
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,6 +104,7 @@ jobs:
           set -euo pipefail
           node scripts/delivery/candidate-manifest.mjs --validate "$CANDIDATE_PATH"
           candidate_sha="$(jq -r .gitSha "$CANDIDATE_PATH")"
+          [[ "$candidate_sha" == "${{ steps.candidate.outputs.revision }}" ]] || { echo 'candidate evidence changed between downloads' >&2; exit 1; }
           [[ "$(git rev-parse HEAD)" == "$candidate_sha" ]] || { echo 'candidate/source checkout mismatch' >&2; exit 1; }
           ci_run_id="$(jq -r .ciRunId "$CANDIDATE_PATH")"
           ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${ci_run_id}")"
