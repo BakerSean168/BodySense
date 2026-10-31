@@ -48,6 +48,15 @@ start_process() {
   if [[ "$name" != ai ]]; then
     process_env+=(-u LITELLM_API_KEY)
   fi
+  # The API needs DB, Redis, and JWT secrets; AI needs DB and a scoped LiteLLM
+  # client key. Neither Web nor Document should inherit those credentials.
+  case "$name" in
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY) ;;
+    document|web)
+      process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY)
+      ;;
+  esac
   "${process_env[@]}" setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
   local pid=$!
   printf '%s\n' "$pid" >"$(pid_file "$name")"
@@ -95,7 +104,9 @@ up() {
 
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
-  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' JWT_SECRET_KEY='${JWT_SECRET_KEY}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
+  # Sensitive Go credentials are already exported by dev-env; do not duplicate
+  # their values into bash -lc argv (visible in process listings).
+  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 DB_HOST=127.0.0.1 DB_SSLMODE=disable REDIS_HOST=127.0.0.1 AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
   wait_http api "http://127.0.0.1:${API_PORT}/api/health"
 
   # Preserve the existing local database boundary without putting its password

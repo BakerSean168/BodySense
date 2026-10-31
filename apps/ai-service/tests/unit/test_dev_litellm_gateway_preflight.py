@@ -103,14 +103,19 @@ def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None
     assert "start_process ai" in source
 
 
-def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> None:
+def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> None:
     """Use shell command stubs to inspect child environments without launching services."""
     env_file = tmp_path / "dev.env"
     env_file.write_text(
         "LITELLM_MASTER_KEY=synthetic-master\n"
         "LITELLM_API_KEY=synthetic-client\n"
         "OPENROUTER_API_KEY=synthetic-openrouter\n"
-        "GROQ_API_KEY=synthetic-groq\n",
+        "GROQ_API_KEY=synthetic-groq\n"
+        "DB_PASSWORD=synthetic-db\n"
+        "REDIS_PASSWORD=synthetic-redis\n"
+        "JWT_SECRET_KEY=synthetic-jwt\n"
+        "DATABASE_URL=postgresql://synthetic-user:synthetic-db@127.0.0.1/test\n"
+        "LANGGRAPH_CHECKPOINTER_URL=postgresql://synthetic-checkpointer/test\n",
         encoding="utf-8",
     )
     stubs = tmp_path / "stubs"
@@ -122,8 +127,11 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
     setsid = stubs / "setsid"
     setsid.write_text(
         "#!/bin/sh\n"
-        "env | grep -E '^(LITELLM_|OPENROUTER_API_KEY=|GROQ_API_KEY=)' > "
-        '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n',
+        "env | grep -E '^(LITELLM_|OPENROUTER_API_KEY=|GROQ_API_KEY=|"
+        "DB_PASSWORD=|REDIS_PASSWORD=|JWT_SECRET_KEY=|DATABASE_URL=|"
+        "LANGGRAPH_CHECKPOINTER_URL=)' > "
+        '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n'
+        'printf "%s\\n" "$@" > "$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE.argv"\n',
         encoding="utf-8",
     )
     setsid.chmod(0o755)
@@ -137,6 +145,11 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
         "LITELLM_BASE_URL",
         "OPENROUTER_API_KEY",
         "GROQ_API_KEY",
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
+        "JWT_SECRET_KEY",
+        "DATABASE_URL",
+        "LANGGRAPH_CHECKPOINTER_URL",
     ):
         env.pop(key, None)
     env.update(
@@ -171,3 +184,37 @@ def test_long_lived_services_receive_only_needed_litellm_key(tmp_path: Path) -> 
         assert "OPENROUTER_API_KEY=" not in output, role
         assert "GROQ_API_KEY=" not in output, role
         assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai"), role
+        for key in ("DB_PASSWORD", "DATABASE_URL"):
+            assert (f"{key}=" in output) == (role in {"ai", "api"}), (role, key)
+        for key in ("REDIS_PASSWORD", "JWT_SECRET_KEY"):
+            assert (f"{key}=" in output) == (role == "api"), (role, key)
+        assert ("LANGGRAPH_CHECKPOINTER_URL=" in output) == (role in {"ai", "api"}), role
+        argv = (capture / f"{role}.argv").read_text(encoding="utf-8")
+        assert "synthetic-db" not in argv, role
+        assert "synthetic-redis" not in argv, role
+        assert "synthetic-jwt" not in argv, role
+
+
+def test_go_api_launch_inherits_secrets_without_interpolating_them_into_argv() -> None:
+    source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
+    api_launch = next(
+        line for line in source.splitlines() if line.strip().startswith("start_process api ")
+    )
+    assert "go run ./cmd/server" in api_launch
+    for secret in ("DB_PASSWORD", "REDIS_PASSWORD", "JWT_SECRET_KEY", "DATABASE_URL"):
+        assert "${" + secret + "}" not in api_launch
+
+
+@pytest.mark.parametrize("explicit_alias", [False, True])
+def test_unscoped_local_master_alias_never_unblocks_external_route(
+    tmp_path: Path, explicit_alias: bool
+) -> None:
+    settings = (
+        "LITELLM_MASTER_KEY=synthetic-shared-master\n"
+        + ("LITELLM_API_KEY=synthetic-shared-master\n" if explicit_alias else "")
+        + "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+    )
+    result = _run(tmp_path, PREFLIGHT, settings=settings)
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert "synthetic-shared-master" not in result.stdout + result.stderr
