@@ -40,7 +40,24 @@ start_process() {
     return
   fi
   rm -f "$(pid_file "$name")"
-  setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
+  # Upstream provider credentials and the LiteLLM master belong to gateway
+  # infrastructure, not to any long-lived application process. The AI Service
+  # alone receives the LiteLLM client key (which must be scoped separately
+  # before any external gateway is authorized).
+  local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY)
+  if [[ "$name" != ai ]]; then
+    process_env+=(-u LITELLM_API_KEY)
+  fi
+  # The API needs DB, Redis, and JWT secrets; AI needs DB and a scoped LiteLLM
+  # client key. Neither Web nor Document should inherit those credentials.
+  case "$name" in
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY) ;;
+    document|web)
+      process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY)
+      ;;
+  esac
+  "${process_env[@]}" setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
   local pid=$!
   printf '%s\n' "$pid" >"$(pid_file "$name")"
   echo "$name started pid=$pid"
@@ -78,6 +95,7 @@ wait_http() {
 }
 
 up() {
+  "$ROOT/scripts/dev-litellm-gateway-preflight.sh"
   "$ROOT/scripts/dev-infra.sh" up
 
   (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
@@ -86,10 +104,15 @@ up() {
 
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
-  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' JWT_SECRET_KEY='${JWT_SECRET_KEY}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
+  # Sensitive Go credentials are already exported by dev-env; do not duplicate
+  # their values into bash -lc argv (visible in process listings).
+  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 DB_HOST=127.0.0.1 DB_SSLMODE=disable REDIS_HOST=127.0.0.1 AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
   wait_http api "http://127.0.0.1:${API_PORT}/api/health"
 
-  start_process ai "cd '$ROOT/apps/ai-service' && exec env DATABASE_URL='postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}' LITELLM_BASE_URL='http://127.0.0.1:${LITELLM_PORT}/v1' LITELLM_API_KEY='${LITELLM_MASTER_KEY}' EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
+  # Preserve the existing local database boundary without putting its password
+  # or the exported LiteLLM client key in the process command string.
+  export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}"
+  start_process ai "cd '$ROOT/apps/ai-service' && exec env EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health"
 
   start_process web "cd '$ROOT' && exec env BODYSENSE_WEB_PORT='${WEB_PORT}' BODYSENSE_ALLOWED_HOSTS='${BODYSENSE_ALLOWED_HOSTS:-}' VITE_DEV_API_TARGET='http://127.0.0.1:${API_PORT}' pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1 --port '${WEB_PORT}' --strictPort"
@@ -121,7 +144,7 @@ status() {
 case "${1:-status}" in
   up) up ;;
   down) down ;;
-  restart) down; up ;;
+  restart) "$ROOT/scripts/dev-litellm-gateway-preflight.sh"; down; up ;;
   infra-down) down; "$ROOT/scripts/dev-infra.sh" down ;;
   status) status ;;
   logs) tail -n "${2:-120}" "$RUNTIME_DIR"/*.log 2>/dev/null || true ;;

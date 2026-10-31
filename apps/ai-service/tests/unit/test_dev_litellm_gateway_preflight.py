@@ -1,0 +1,233 @@
+"""Fail-closed checks for the direct-dev LiteLLM boundary (no real services)."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import time
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[4]
+PREFLIGHT = ROOT / "scripts/dev-litellm-gateway-preflight.sh"
+
+
+def _run(
+    tmp_path: Path, script: Path, *args: str, settings: str = ""
+) -> subprocess.CompletedProcess[str]:
+    env_file = tmp_path / "dev.env"
+    env_file.write_text(settings, encoding="utf-8")
+    # Tests must never launch Docker/processes even if a future guard regresses.
+    stubs = tmp_path / "command-stubs"
+    stubs.mkdir(exist_ok=True)
+    for name in ("docker", "uv", "go", "pnpm", "curl", "setsid"):
+        stub = stubs / name
+        stub.write_text("#!/bin/sh\necho UNEXPECTED_SERVICE_START >&2\nexit 94\n", encoding="utf-8")
+        stub.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{stubs}:{env.get('PATH', '')}"
+    for key in (
+        "BODYSENSE_LITELLM_DEV_ORACLE2",
+        "LITELLM_BASE_URL",
+        "LITELLM_API_KEY",
+        "LITELLM_MASTER_KEY",
+        "LITELLM_PORT",
+    ):
+        env.pop(key, None)
+    env["BODYSENSE_DEV_ENV_FILE"] = str(env_file)
+    env["BODYSENSE_DEV_RUNTIME_DIR"] = str(tmp_path / "runtime")
+    return subprocess.run(
+        ["bash", str(script), *args],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+
+
+def test_local_default_gateway_is_allowed(tmp_path: Path) -> None:
+    result = _run(tmp_path, PREFLIGHT)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n"
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n",
+    ],
+)
+def test_unapproved_external_gateway_is_blocked(tmp_path: Path, settings: str) -> None:
+    result = _run(tmp_path, PREFLIGHT, settings=settings)
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert "sk-synthetic-secret-for-test" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        # Both guard conditions must independently fail closed. Testing only
+        # both together would miss regressions that drop either check.
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n",
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n"
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+    ],
+)
+@pytest.mark.parametrize(
+    ("script", "action"),
+    [
+        ("dev-runtime.sh", "up"),
+        ("dev-runtime.sh", "restart"),
+        ("dev-infra.sh", "up"),
+        ("dev-infra.sh", "restart"),
+    ],
+)
+def test_mutating_start_entrypoints_block_before_services(
+    tmp_path: Path, script: str, action: str, settings: str
+) -> None:
+    result = _run(tmp_path, ROOT / "scripts" / script, action, settings=settings)
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert "started pid=" not in result.stdout
+    # A rejected restart must not tear down existing services first. Stubbed
+    # Docker/service launches and the runtime's down() message are both
+    # observable signs that the guard ran too late.
+    assert "UNEXPECTED_SERVICE_START" not in result.stdout + result.stderr
+    assert "persistent dev infrastructure left running" not in result.stdout
+    assert "sk-synthetic-secret-for-test" not in result.stdout + result.stderr
+
+
+def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None:
+    source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
+    assert "LITELLM_API_KEY='${LITELLM_MASTER_KEY}'" not in source
+    assert "LITELLM_BASE_URL='http://127.0.0.1:" not in source
+    assert 'export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:' in source
+    assert "start_process ai" in source
+
+
+def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> None:
+    """Use shell command stubs to inspect child environments without launching services."""
+    env_file = tmp_path / "dev.env"
+    env_file.write_text(
+        "LITELLM_MASTER_KEY=synthetic-master\n"
+        "LITELLM_API_KEY=synthetic-client\n"
+        "OPENROUTER_API_KEY=synthetic-openrouter\n"
+        "GROQ_API_KEY=synthetic-groq\n"
+        "DB_PASSWORD=synthetic-db\n"
+        "REDIS_PASSWORD=synthetic-redis\n"
+        "JWT_SECRET_KEY=synthetic-jwt\n"
+        "DATABASE_URL=postgresql://synthetic-user:synthetic-db@127.0.0.1/test\n"
+        "LANGGRAPH_CHECKPOINTER_URL=postgresql://synthetic-checkpointer/test\n",
+        encoding="utf-8",
+    )
+    stubs = tmp_path / "stubs"
+    stubs.mkdir()
+    for tool in ("docker", "curl"):
+        stub = stubs / tool
+        stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        stub.chmod(0o755)
+    setsid = stubs / "setsid"
+    setsid.write_text(
+        "#!/bin/sh\n"
+        "env | grep -E '^(LITELLM_|OPENROUTER_API_KEY=|GROQ_API_KEY=|"
+        "DB_PASSWORD=|REDIS_PASSWORD=|JWT_SECRET_KEY=|DATABASE_URL=|"
+        "LANGGRAPH_CHECKPOINTER_URL=)' > "
+        '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n'
+        'printf "%s\\n" "$@" > "$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE.argv"\n',
+        encoding="utf-8",
+    )
+    setsid.chmod(0o755)
+    capture = tmp_path / "capture"
+    capture.mkdir()
+
+    env = os.environ.copy()
+    for key in (
+        "LITELLM_MASTER_KEY",
+        "LITELLM_API_KEY",
+        "LITELLM_BASE_URL",
+        "OPENROUTER_API_KEY",
+        "GROQ_API_KEY",
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
+        "JWT_SECRET_KEY",
+        "DATABASE_URL",
+        "LANGGRAPH_CHECKPOINTER_URL",
+    ):
+        env.pop(key, None)
+    env.update(
+        {
+            "PATH": f"{stubs}:{env.get('PATH', '')}",
+            "BODYSENSE_DEV_ENV_FILE": str(env_file),
+            "BODYSENSE_DEV_RUNTIME_DIR": str(tmp_path / "runtime"),
+            "BODYSENSE_TEST_CAPTURE_DIR": str(capture),
+        }
+    )
+    script = ['source "$PWD/scripts/dev-runtime.sh" status']
+    for role in ("ai", "api", "document", "web"):
+        script.extend((f"export BODYSENSE_TEST_CAPTURE_ROLE={role}", f"start_process {role} true"))
+    result = subprocess.run(
+        ["bash", "-c", "\n".join(script)],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    for _ in range(100):
+        if all((capture / role).exists() for role in ("ai", "api", "document", "web")):
+            break
+        time.sleep(0.02)
+
+    for role in ("ai", "api", "document", "web"):
+        output = (capture / role).read_text(encoding="utf-8")
+        assert "LITELLM_MASTER_KEY=" not in output, role
+        assert "OPENROUTER_API_KEY=" not in output, role
+        assert "GROQ_API_KEY=" not in output, role
+        assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai"), role
+        for key in ("DB_PASSWORD", "DATABASE_URL"):
+            assert (f"{key}=" in output) == (role in {"ai", "api"}), (role, key)
+        for key in ("REDIS_PASSWORD", "JWT_SECRET_KEY"):
+            assert (f"{key}=" in output) == (role == "api"), (role, key)
+        assert ("LANGGRAPH_CHECKPOINTER_URL=" in output) == (role in {"ai", "api"}), role
+        argv = (capture / f"{role}.argv").read_text(encoding="utf-8")
+        assert "synthetic-db" not in argv, role
+        assert "synthetic-redis" not in argv, role
+        assert "synthetic-jwt" not in argv, role
+
+
+def test_go_api_launch_inherits_secrets_without_interpolating_them_into_argv() -> None:
+    source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
+    api_launch = next(
+        line for line in source.splitlines() if line.strip().startswith("start_process api ")
+    )
+    assert "go run ./cmd/server" in api_launch
+    for secret in ("DB_PASSWORD", "REDIS_PASSWORD", "JWT_SECRET_KEY", "DATABASE_URL"):
+        assert "${" + secret + "}" not in api_launch
+
+
+@pytest.mark.parametrize("explicit_alias", [False, True])
+def test_unscoped_local_master_alias_never_unblocks_external_route(
+    tmp_path: Path, explicit_alias: bool
+) -> None:
+    settings = (
+        "LITELLM_MASTER_KEY=synthetic-shared-master\n"
+        + ("LITELLM_API_KEY=synthetic-shared-master\n" if explicit_alias else "")
+        + "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+    )
+    result = _run(tmp_path, PREFLIGHT, settings=settings)
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert "synthetic-shared-master" not in result.stdout + result.stderr
