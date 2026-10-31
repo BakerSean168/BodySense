@@ -72,6 +72,19 @@ def test_unapproved_external_gateway_is_blocked(tmp_path: Path, settings: str) -
 
 
 @pytest.mark.parametrize(
+    "settings",
+    [
+        # Both guard conditions must independently fail closed. Testing only
+        # both together would miss regressions that drop either check.
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n",
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n"
+        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
+        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n",
+    ],
+)
+@pytest.mark.parametrize(
     ("script", "action"),
     [
         ("dev-runtime.sh", "up"),
@@ -81,13 +94,8 @@ def test_unapproved_external_gateway_is_blocked(tmp_path: Path, settings: str) -
     ],
 )
 def test_mutating_start_entrypoints_block_before_services(
-    tmp_path: Path, script: str, action: str
+    tmp_path: Path, script: str, action: str, settings: str
 ) -> None:
-    settings = (
-        "BODYSENSE_LITELLM_DEV_ORACLE2=1\n"
-        "LITELLM_BASE_URL=https://oracle.taile92a8e.ts.net:10446/v1\n"
-        "LITELLM_API_KEY=sk-synthetic-secret-for-test\n"
-    )
     result = _run(tmp_path, ROOT / "scripts" / script, action, settings=settings)
     assert result.returncode != 0
     assert "BLOCKED" in result.stderr
