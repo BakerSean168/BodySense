@@ -92,6 +92,11 @@ def test_mutating_start_entrypoints_block_before_services(
     assert result.returncode != 0
     assert "BLOCKED" in result.stderr
     assert "started pid=" not in result.stdout
+    # A rejected restart must not tear down existing services first. Stubbed
+    # Docker/service launches and the runtime's down() message are both
+    # observable signs that the guard ran too late.
+    assert "UNEXPECTED_SERVICE_START" not in result.stdout + result.stderr
+    assert "persistent dev infrastructure left running" not in result.stdout
     assert "sk-synthetic-secret-for-test" not in result.stdout + result.stderr
 
 
