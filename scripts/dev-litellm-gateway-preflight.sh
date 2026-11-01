@@ -13,6 +13,14 @@ if [[ "${BODYSENSE_LITELLM_DEV_ORACLE2:-0}" != "0" ]]; then
   exit 1
 fi
 
+# The direct-dev compose publishes PostgreSQL, Redis, and the gateway on
+# DEV_BIND_HOST. A wildcard or LAN bind would expose the default dev gateway
+# credential beyond this workstation, even when the client URL is loopback.
+if [[ "$DEV_BIND_HOST" != "127.0.0.1" ]]; then
+  echo "BodySense direct-dev bind BLOCKED: DEV_BIND_HOST must be 127.0.0.1" >&2
+  exit 1
+fi
+
 # Validate the port before constructing a URL. Otherwise a value such as
 # 20112@remote.invalid makes 127.0.0.1 URL userinfo, not the network host.
 if [[ ! "$LITELLM_PORT" =~ ^[1-9][0-9]{0,4}$ ]] || (( 10#$LITELLM_PORT > 65535 )); then

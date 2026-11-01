@@ -28,6 +28,7 @@ def _run(
     env = os.environ.copy()
     env["PATH"] = f"{stubs}:{env.get('PATH', '')}"
     for key in (
+        "DEV_BIND_HOST",
         "BODYSENSE_LITELLM_DEV_ORACLE2",
         "LITELLM_BASE_URL",
         "LITELLM_API_KEY",
@@ -141,6 +142,35 @@ def test_malformed_port_rejected_before_service_mutation(
     )
     assert result.returncode != 0
     assert "port is invalid" in result.stderr
+    assert "UNEXPECTED_SERVICE_START" not in result.stdout + result.stderr
+    assert "persistent dev infrastructure left running" not in result.stdout
+
+
+@pytest.mark.parametrize("bind_host", ["0.0.0.0", "::", "192.0.2.1", "localhost"])
+def test_direct_dev_never_exposes_gateway_bind(tmp_path: Path, bind_host: str) -> None:
+    result = _run(tmp_path, PREFLIGHT, settings=f"DEV_BIND_HOST={bind_host}\n")
+    assert result.returncode != 0
+    assert "bind BLOCKED" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("script", "action"),
+    [
+        ("dev-runtime.sh", "up"),
+        ("dev-runtime.sh", "restart"),
+        ("dev-infra.sh", "up"),
+        ("dev-infra.sh", "restart"),
+    ],
+)
+def test_public_bind_rejected_before_mutation(tmp_path: Path, script: str, action: str) -> None:
+    result = _run(
+        tmp_path,
+        ROOT / "scripts" / script,
+        action,
+        settings="DEV_BIND_HOST=0.0.0.0\n",
+    )
+    assert result.returncode != 0
+    assert "bind BLOCKED" in result.stderr
     assert "UNEXPECTED_SERVICE_START" not in result.stdout + result.stderr
     assert "persistent dev infrastructure left running" not in result.stdout
 
