@@ -108,6 +108,43 @@ def test_mutating_start_entrypoints_block_before_services(
     assert "sk-synthetic-secret-for-test" not in result.stdout + result.stderr
 
 
+@pytest.mark.parametrize(
+    "port",
+    ["20112@external.invalid", "20112/path", "0", "65536", "020112", "20112 "],
+)
+def test_malformed_litellm_port_never_passes_local_gateway_guard(tmp_path: Path, port: str) -> None:
+    # A URI with 127.0.0.1:port@external.invalid actually targets the remote
+    # hostname. Reject port injection even when BASE_URL uses the default.
+    result = _run(tmp_path, PREFLIGHT, settings=f"LITELLM_PORT='{port}'\n")
+    assert result.returncode != 0
+    assert "port is invalid" in result.stderr
+    assert "external.invalid" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("script", "action"),
+    [
+        ("dev-runtime.sh", "up"),
+        ("dev-runtime.sh", "restart"),
+        ("dev-infra.sh", "up"),
+        ("dev-infra.sh", "restart"),
+    ],
+)
+def test_malformed_port_rejected_before_service_mutation(
+    tmp_path: Path, script: str, action: str
+) -> None:
+    result = _run(
+        tmp_path,
+        ROOT / "scripts" / script,
+        action,
+        settings="LITELLM_PORT=20112@external.invalid\n",
+    )
+    assert result.returncode != 0
+    assert "port is invalid" in result.stderr
+    assert "UNEXPECTED_SERVICE_START" not in result.stdout + result.stderr
+    assert "persistent dev infrastructure left running" not in result.stdout
+
+
 def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None:
     source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
     assert "LITELLM_API_KEY='${LITELLM_MASTER_KEY}'" not in source
