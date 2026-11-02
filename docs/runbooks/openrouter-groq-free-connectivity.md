@@ -77,6 +77,14 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 - **Groq**：[Billing FAQ](https://console.groq.com/docs/billing-faqs) 区分 Free 和按量计费的 Developer 计划；[Rate Limits](https://console.groq.com/docs/rate-limits) 以组织为单位计数。必须先在**实际使用的组织/项目**核实 Free 层级、模型授权及剩余额度，只对白名单模型执行受限请求。[Spend Limits](https://console.groq.com/docs/spend-limits) 仅面向付费账户，费用统计延迟约 10–15 分钟，**不能替代严格零费用门禁**。无法证明零计费时保持禁用。
 - **审计顺序**：服务身份及仅 tailnet 可达 → 账号/组织级 Free 权限 → 精确路由、协议与多模态费用核验 → BodySense-only 最小权限 Virtual Key → 无真实健康资料的固定模型合成调用 → 业务 E2E 与独立审查。任何模糊价格、Key 权限、数据保留政策或 401/403/429 都中止对应上游；不得静默切换到付费或共享 Hermes 账户。
 
+## 2026-11-02 官方隐私与数据留存核查（仅公开政策，未核验账户）
+
+以下仅是公开服务条款和技术控制的**待验收清单**，并不代表 BodySense 的实际组织/项目已启用相关隐私设置、满足健康信息处理要求，或允许上传真实问诊、诊断和体态图片。模型免费不等于数据处理获得授权。
+
+- **OpenRouter**：官方说明其网关默认不记录 prompt/completion 内容，但实际请求会转发到所选上游模型提供商，后者可能有不同的保留/训练规则；影像等多模态数据也会传至上游。OpenRouter 支持在账号隐私设置/guardrails 或请求的 `provider.zdr: true` 强制选择零数据留存端点，并可配合 `provider.data_collection: "deny"` 限制数据收集。**需验证实际 BodySense 账号设置、具体免费模型的上游端点能否同时满足价格和隐私约束**；若没有符合条件的端点，拒绝该路由而不是关闭隐私限制或回退到非免费渠道。参见 [OpenRouter ZDR 说明（2026-10-27 更新）](https://openrouter.ai/blog/insights/zero-data-retention/)、[官方隐私政策](https://openrouter.ai/privacy/) 与 [Provider 路由控制](https://openrouter.ai/docs/guides/get-started/sovereign-ai)。
+- **Groq**：官方说明普通推理默认不持久保存客户输入/输出，但为了故障调查或滥用监测，可能短暂记录内容，通常至多 30 天（法律义务例外）；始终保留不含请求正文的使用元数据。官方 Data Controls 提供供所有客户启用的 Zero Data Retention（ZDR），启用后限制上述监控内容留存，并可能禁用依赖持久数据的功能。**必须由实际 Groq 组织管理员核对并留存 Data Controls 证据**，不能由“免费层级”“默认不保存”推断已经启用 ZDR。参见 [Groq Your Data](https://console.groq.com/docs/your-data)。
+- **BodySense 处理边界**：获得账号权限、费用和数据处理批准之前，只能使用**不含任何真实用户健康信息的合成请求**；后续真实业务 E2E 的数据范围、跨境处理/用户告知、上游端点、日志与缓存留存须独立审查。不得把通过 HTTP 200/401、网关健康检查或免费价格视为隐私验收；对不明确的上游、留存策略或图片路径保持 fail-closed。模型评测与优选仍不在此阶段。
+
 ## 未来接入时的正确边界（未实施）
 
 1. **明确入口归属**：通过 Oracle2 LiteLLM/ProviderAdmin 作为供应商与模型权威；专用 BodySense Virtual Key 仍待按既有授权建立和限制。不混用 Oracle2 Master Key、T3 共享客户端 Key 或历史 GCP Key，不将供应商 Key 暴露给 Go、Python Agent 或浏览器。本 PR 不注册模型、不启用新路由、不修改 Oracle2/生产环境。
