@@ -2,8 +2,8 @@
 
 Status: **Historical GCP research only; WSL/Oracle2 acceptance pending**
 Snapshot: 2026-10-23 (GCP-dev-01 retired on the same date)
-Current dev hosts: `oracle2` (dev machine and shared LiteLLM) or `wsl-local`; staging reuses the
-production LiteLLM gateway.
+Current main development workspace: Agent Fabric `wsl-local`, `/home/baker/projects/bodysense`;
+persistent Agent/API host: `oracle2`. No GCP staging or development host is valid.
 
 > **环境边界（2026-10-26 更新）**：以下 GCP API/模型/配额结果全部是 2026-10-23 的历史研究证据。GCP-dev-01 已退役，不能再用于执行、部署、认证或验收；其本地凭据、进程及未推送文件也不能假定存在于 WSL。当前 WSL 尚未完成 OpenRouter/Groq 免费凭据、专用 BodySense Virtual Key 与实际合成推理验收。
 
@@ -61,6 +61,14 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 
 后续如某客户端仍报 `1010`，使用供应商支持的 OpenAI/Groq SDK 确认，不直接模仿非标准客户端；如正式 SDK 也失败，再查看 Groq [组织/项目模型权限](https://console.groq.com/docs/model-permissions)、[API 错误类型](https://console.groq.com/docs/errors)、[当前模型列表](https://console.groq.com/docs/models)、[账号限流](https://console.groq.com/docs/rate-limits)。[Cloudflare 1010](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1010/) 的定义为基于客户端特征的访问拒绝。不得通过不受信任的代理绕过访问控制。
 
+## 2026-11-02 WSL / Oracle2 网关身份核对（只读，非供应商验收）
+
+- `wsl-local` 为唯一主开发工作区，已有 PR #486 的 direct-dev 默认网关使用只读 `docker/litellm/config.dev-offline.yaml`（`model_list: []`），禁止外部推理。
+- Oracle2 的 **BodySense 专用开发实例** 是 `bodysense-dev-infra-litellm-gateway-1`，仅监听 Oracle2 的 `127.0.0.1:20112`，当前挂载旧版 `docker/litellm/config.yaml`（8 个逻辑路由）；此配置**不是** PR #486 的离线配置，Groq 路由未在运行实例中启用。
+- `https://oracle.taile92a8e.ts.net:10446/v1` 经 Tailscale Serve 反代到 Oracle2 的 `127.0.0.1:4000`，实际为 **共享 `hermes-litellm`**，不是 BodySense 专用实例。该 URL 的健康检查 200 / 匿名模型请求 401 **不得作为 BodySense 专用网关连通性或验收证据**。
+- Oracle2 本机专用实例的 `/health/liveliness` 为 200，匿名 `/v1/models` 为 401；这只验证其本机存活及匿名拒绝，**不证明 WSL 可以远程访问、不证明供应商授权或零费用**。目前尚无已确认的 WSL→专用实例独立 HTTPS 入口。
+- 未来网络方案需独立审批，至少满足专用服务身份、tailnet-only HTTPS、BodySense 专属最小权限 Virtual Key、服务端凭据隔离、禁止付费路由及明确回滚；**不可复用共享 Hermes URL/密钥**。未审批前不得创建端口转发、变更 Tailscale Serve、防火墙、生产或共享模型注册表。
+
 ## 未来接入时的正确边界（未实施）
 
 1. **明确入口归属**：通过 Oracle2 LiteLLM/ProviderAdmin 作为供应商与模型权威；专用 BodySense Virtual Key 仍待按既有授权建立和限制。不混用 Oracle2 Master Key、T3 共享客户端 Key 或历史 GCP Key，不将供应商 Key 暴露给 Go、Python Agent 或浏览器。本 PR 不注册模型、不启用新路由、不修改 Oracle2/生产环境。
@@ -68,21 +76,26 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 3. **故障与隐私**：区分连接失败、模型不存在、429、401/403、400 Schema 错误；不把任意免费模型自动当替代渠道。免费服务可能由第三方保留或利用输入，应在处理真实健康数据前审核供应商政策、实际路由、用户知情与数据保护控制。
 4. **测评明确延期**：先完成 Key/模型列表/合成连接的资格确认；跨模型业务排名、Prompt/Agent 质量、Champion/Challenger 和自动选型另立阶段，不在本次执行。
 
-## 当前 WSL 无凭据复核（不执行推理）
+## 当前无凭据复核（不执行推理）
 
-以下命令仅从 `wsl-local` 检查公开目录、Oracle2 HTTPS 连通性与匿名鉴权拒绝；**它们不是 OpenRouter/Groq 账户认证或端到端验收**。不要连接已退役的 GCP，不要从旧 GCP 路径加载 `.env.dev.local`，也不要在日志中输出任何密钥或原始账户响应。
+在 `wsl-local` 只能无密钥读取 OpenRouter 公开目录；**不以共享 Hermes 的 :10446 作为 BodySense 服务入口**。公开目录不是当前账户的权限或费用凭证。不要连接已退役 GCP，也不要加载其历史 `.env.dev.local`。
 
 ~~~bash
+# 在 wsl-local 执行；不传递凭据或用户健康数据。
 cd /home/baker/projects/bodysense
-# 公开目录无须 Key；只输出条目数，不把目录或账户数据写入公开日志。
 curl -fsS --max-time 15 'https://openrouter.ai/api/v1/models' \
   | python3 -c 'import json,sys; print("public_models=", len(json.load(sys.stdin).get("data", [])))'
+~~~
 
-curl -sS -o /dev/null -w 'oracle_health_http=%{http_code} tls=%{ssl_verify_result}\n' \
-  --max-time 10 'https://oracle.taile92a8e.ts.net:10446/health/liveliness'
-curl -sS -o /dev/null -w 'anonymous_models_http=%{http_code} tls=%{ssl_verify_result}\n' \
-  --max-time 10 'https://oracle.taile92a8e.ts.net:10446/v1/models'
-# 预期：200 / 401，均需 tls=0；这仅证明连通性和匿名鉴权边界。
+Oracle2 专用网关只能在 **Oracle2 本机**进行下列只读匿名检查，不代表从 WSL 可达；本机 `127.0.0.1` 绝不能误用为 WSL 的回环地址。
+
+~~~bash
+# 仅在 Agent Fabric oracle2 目标内执行；不创建隧道、不改动服务或密钥。
+curl -sS -o /dev/null -w 'bodysense_local_health_http=%{http_code}\n' \
+  --max-time 5 'http://127.0.0.1:20112/health/liveliness'
+curl -sS -o /dev/null -w 'bodysense_local_anonymous_models_http=%{http_code}\n' \
+  --max-time 5 'http://127.0.0.1:20112/v1/models'
+# 预期：200 / 401。仅为本机存活与匿名拒绝；不构成提供商/业务验收。
 ~~~
 
 **凭据与合成调用待验收：**只有独立确认 WSL 的合法免费额度、ProviderAdmin 供应商身份、BodySense 专用受限 Virtual Key、模型精确 ID/协议及 Posture 费用边界后，才可通过授权的安全密钥助手执行最小固定路由合成请求。Groq 优先使用其支持的 SDK；遇 401/403/429 不绕过访问控制或强制解封。真实业务健康数据、模型评测与优选均不属于本阶段。历史 GCP 的 200 或 429 不等于当前 WSL 结果。
