@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[4]
 PREFLIGHT = ROOT / "scripts/dev-litellm-gateway-preflight.sh"
@@ -298,3 +299,33 @@ def test_unscoped_local_master_alias_never_unblocks_external_route(
     assert result.returncode != 0
     assert "BLOCKED" in result.stderr
     assert "synthetic-shared-master" not in result.stdout + result.stderr
+
+
+def test_raw_compose_is_loopback_only_and_has_no_external_upstream() -> None:
+    """The Docker Compose entrypoint bypasses shell preflight: guard the config itself."""
+    compose = yaml.safe_load((ROOT / "docker/docker-compose.yml").read_text(encoding="utf-8"))
+    services = compose["services"]
+    published = [port for service in services.values() for port in service.get("ports", [])]
+    assert published
+    assert all(port.startswith("127.0.0.1:") for port in published)
+
+    gateway = services["litellm-gateway"]
+    assert "./litellm/config.dev-offline.yaml:/app/config.yaml:ro" in gateway["volumes"]
+    assert not {"PRIMARY_LLM_API_KEY", "OPENROUTER_API_KEY", "GROQ_API_KEY"} & set(
+        gateway["environment"]
+    )
+    offline = yaml.safe_load(
+        (ROOT / "docker/litellm/config.dev-offline.yaml").read_text(encoding="utf-8")
+    )
+    assert offline["model_list"] == []
+    assert not offline.get("router_settings", {}).get("fallbacks")
+
+
+def test_raw_compose_uses_a_separate_client_key_source() -> None:
+    compose = yaml.safe_load((ROOT / "docker/docker-compose.yml").read_text(encoding="utf-8"))
+    services = compose["services"]
+    master = services["litellm-gateway"]["environment"]["LITELLM_MASTER_KEY"]
+    client = services["ai-service"]["environment"]["LITELLM_API_KEY"]
+    assert client == "${BODYSENSE_LITELLM_CLIENT_KEY:-}"
+    assert client != master
+    assert "LITELLM_MASTER_KEY" not in services["ai-service"]["environment"]
