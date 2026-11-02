@@ -88,6 +88,18 @@ def test_local_master_alias_is_blocked_without_provider_calls(tmp_path: Path) ->
     assert "synthetic-master" not in result.stdout + result.stderr
 
 
+@pytest.mark.parametrize("legacy", ["synthetic-legacy", "synthetic-master"])
+def test_unscoped_legacy_key_cannot_implicitly_authorize_ai(tmp_path: Path, legacy: str) -> None:
+    result = _run(
+        tmp_path,
+        PREFLIGHT,
+        settings=f"LITELLM_MASTER_KEY=synthetic-master\nLITELLM_API_KEY={legacy}\n",
+    )
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert legacy not in result.stdout + result.stderr
+
+
 def test_scoped_client_takes_precedence_over_legacy_alias(tmp_path: Path) -> None:
     result = _run(
         tmp_path,
@@ -240,7 +252,7 @@ def test_long_lived_services_only_inherit_role_credentials(
     env_file.write_text(
         "LITELLM_MASTER_KEY=synthetic-master\n"
         + (
-            "LITELLM_API_KEY=synthetic-master\n"
+            "BODYSENSE_LITELLM_CLIENT_KEY=synthetic-master\n"
             if client_is_master
             else "LITELLM_API_KEY=synthetic-client\nBODYSENSE_LITELLM_CLIENT_KEY=synthetic-client\n"
         )

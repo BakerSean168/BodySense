@@ -38,8 +38,18 @@ export TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1,::1}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
 # The offline gateway master credential is never an application client key.
-# Leave inference unavailable until a separately authorized client key is supplied.
-export LITELLM_API_KEY=${BODYSENSE_LITELLM_CLIENT_KEY:-${LITELLM_API_KEY:-}}
+# Refuse ambient/legacy LITELLM_API_KEY without a BodySense-scoped source;
+# otherwise a shared gateway key could silently become this project's key.
+if [[ -n "${LITELLM_API_KEY:-}" && -z "${BODYSENSE_LITELLM_CLIENT_KEY:-}" ]]; then
+  if [[ "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
+    echo "BodySense LiteLLM client credential BLOCKED: master-key alias is forbidden" >&2
+  else
+    echo "BodySense LiteLLM client credential BLOCKED: unscoped legacy LITELLM_API_KEY" >&2
+  fi
+  exit 1
+fi
+# Leave inference unavailable until a separately authorized client key exists.
+export LITELLM_API_KEY=${BODYSENSE_LITELLM_CLIENT_KEY:-}
 export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-http://127.0.0.1:${AI_SERVICE_PORT}}
 export HEALTH_DOCUMENT_SERVICE_URL=${HEALTH_DOCUMENT_SERVICE_URL:-http://127.0.0.1:${DOCUMENT_SERVICE_PORT}}
