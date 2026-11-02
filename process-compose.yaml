@@ -1,0 +1,74 @@
+version: "0.5"
+is_strict: true
+# The shell entrypoint loads .env.dev.local. CLI uses --disable-dotenv.
+log_level: info
+log_length: 800
+
+# Application processes stay on the host for fast rebuild and HMR.
+# PostgreSQL/Redis/LiteLLM are separately managed by scripts/dev-infra.sh.
+processes:
+  document:
+    description: "Python Document Service - reload on changes"
+    command: "exec bash scripts/dev-pane.sh document"
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 20103
+        path: /health
+      initial_delay_seconds: 5
+      period_seconds: 4
+      failure_threshold: 20
+    shutdown:
+      signal: 2
+      timeout_seconds: 10
+
+  api:
+    description: "Go API - Air rebuild/restart on changes; initializes dev schema"
+    command: "exec bash scripts/dev-pane.sh api"
+    depends_on:
+      document:
+        condition: process_healthy
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 20101
+        path: /api/health
+      initial_delay_seconds: 30
+      period_seconds: 5
+      failure_threshold: 36
+    shutdown:
+      signal: 2
+      timeout_seconds: 10
+
+  ai:
+    description: "Python AI service - reload on changes"
+    command: "exec bash scripts/dev-pane.sh ai"
+    depends_on:
+      api:
+        condition: process_healthy
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 20102
+        path: /health
+      initial_delay_seconds: 10
+      period_seconds: 5
+      failure_threshold: 36
+    shutdown:
+      signal: 2
+      timeout_seconds: 10
+
+  web:
+    description: "React Vite - HMR, preview via SSH forwarding port 20100"
+    command: "exec bash scripts/dev-pane.sh web"
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 20100
+        path: /
+      initial_delay_seconds: 5
+      period_seconds: 5
+      failure_threshold: 18
+    shutdown:
+      signal: 2
+      timeout_seconds: 10

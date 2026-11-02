@@ -1,0 +1,22 @@
+# Go API source watcher. Run from apps/api; migrations are relative to this directory.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/bodysense-api ./cmd/server"
+  entrypoint = ["./tmp/bodysense-api"]
+  delay = 1000
+  include_ext = ["go", "sql"]
+  include_dir = ["cmd", "internal", "migrations"]
+  include_file = ["go.mod", "go.sum"]
+  exclude_dir = ["tmp", "bin", "vendor"]
+  exclude_regex = ["_test[.]go$"]
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "1s"
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true
