@@ -119,7 +119,7 @@ pnpm dev:infra:logs    # 查看基础设施日志
 pnpm dev:infra:down    # 显式拆除；持久化数据卷保留
 ```
 
-远程 VPS 建议采用独立 tmux 窗口管理应用进程：`pnpm dev:tmux` 启动基础设施与 `ops/document/api/ai/web` 窗口，`pnpm dev:tmux:status` 查看状态，`bash scripts/dev-tmux.sh restart api` 单独重启 Go API，`bash scripts/dev-tmux.sh stop ai` 单独停止 AI，`tmux attach -t bodysense-dev` 进入会话（`Ctrl+A` 后按 `D` 分离），`pnpm dev:tmux:down` 仅关闭应用进程。Go API 使用 Air（`GOBIN="$HOME/.local/bin" go install github.com/air-verse/air@v1.67.4`）监听重编译；前端和 Python 服务保留热更新。需要舍弃开发测试数据时，可先停止应用，再用 `bash scripts/dev-tmux.sh reset-db` 对经过容器与端口校验的 BodySense 开发数据库执行删除、重建；Go API 启动时自动创建当前表结构。该操作不触及生产数据库，也不会把 feature worktree 的代码切换到主会话。
+远程 VPS 建议采用 tmux + Process Compose（v1.124.0）管理独立应用进程：`pnpm dev:tmux` 启动基础设施与 `services`（Process Compose TUI）/ `ops` 窗口，`pnpm dev:tmux:status` 查看状态，`bash scripts/dev-tmux.sh restart api` 单独重启 Go API，`bash scripts/dev-tmux.sh stop ai` 单独停止 AI，`tmux attach -t bodysense-dev` 进入 TUI 查看各服务状态/日志（`Ctrl+A` 后按 `D` 分离），`pnpm dev:tmux:down` 仅关闭应用进程。Go API 使用 Air（`GOBIN="$HOME/.local/bin" go install github.com/air-verse/air@v1.67.4`）监听重编译；Process Compose 使用 `GOBIN="$HOME/.local/bin" go install github.com/f1bonacc1/process-compose@v1.124.0` 安装、在 127.0.0.1:20120 提供本机控制接口；前端和 Python 服务保留热更新。需要舍弃开发测试数据时，可先停止应用，再用 `bash scripts/dev-tmux.sh reset-db` 对经过容器与端口校验的 BodySense 开发数据库执行删除、重建；Go API 启动时自动创建当前表结构。该操作不触及生产数据库，也不会把 feature worktree 的代码切换到主会话。
 
 默认 direct-dev 端口为 Web `20100`、API `20101`、AI `20102`、PostgreSQL `20110`、Redis `20111`、LiteLLM `20112`。基础设施容器采用 `restart: unless-stopped`，因此 Docker 或宿主机正常重启后会自动恢复，但 Web / API / AI 不会被强制常驻。
 
