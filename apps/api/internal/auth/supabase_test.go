@@ -24,6 +24,10 @@ func newSupabaseJWTFixture(t *testing.T) (*SupabaseVerifier, *ecdsa.PrivateKey, 
 	if err != nil {
 		t.Fatal(err)
 	}
+	point, err := signingKey.PublicKey.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
@@ -32,8 +36,7 @@ func newSupabaseJWTFixture(t *testing.T) (*SupabaseVerifier, *ecdsa.PrivateKey, 
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		x := signingKey.PublicKey.X.FillBytes(make([]byte, 32))
-		y := signingKey.PublicKey.Y.FillBytes(make([]byte, 32))
+		x, y := point[1:33], point[33:65]
 		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{{
 			"kid": "supabase-kid-test", "kty": "EC", "crv": "P-256", "alg": "ES256", "use": "sig",
 			"x": base64.RawURLEncoding.EncodeToString(x),

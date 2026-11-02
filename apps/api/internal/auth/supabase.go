@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -190,8 +189,14 @@ func (v *SupabaseVerifier) key(ctx context.Context, kid string) (*ecdsa.PublicKe
 		if xErr != nil || yErr != nil || len(x) != 32 || len(y) != 32 {
 			continue
 		}
-		key := &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
-		if key.Curve.IsOnCurve(key.X, key.Y) {
+		// SEC 1 uncompressed point. ParseUncompressedPublicKey validates
+		// on-curve membership without the deprecated raw ECDSA coordinates.
+		point := make([]byte, 65)
+		point[0] = 4
+		copy(point[1:33], x)
+		copy(point[33:], y)
+		key, keyErr := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), point)
+		if keyErr == nil {
 			fresh[item.KeyID] = key
 		}
 	}

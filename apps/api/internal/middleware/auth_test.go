@@ -40,7 +40,10 @@ func TestSupabaseAuthMiddlewareValidatesAndProvisionsOnlySignedIdentity(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	pub := &key.PublicKey
+	point, err := key.PublicKey.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/auth/v1/.well-known/jwks.json" {
 			http.NotFound(w, r)
@@ -49,8 +52,8 @@ func TestSupabaseAuthMiddlewareValidatesAndProvisionsOnlySignedIdentity(t *testi
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{{
 			"kid": "test-key", "kty": "EC", "alg": "ES256", "crv": "P-256",
-			"x": base64.RawURLEncoding.EncodeToString(pub.X.FillBytes(make([]byte, 32))),
-			"y": base64.RawURLEncoding.EncodeToString(pub.Y.FillBytes(make([]byte, 32))),
+			"x": base64.RawURLEncoding.EncodeToString(point[1:33]),
+			"y": base64.RawURLEncoding.EncodeToString(point[33:65]),
 		}}})
 	}))
 	defer server.Close()
