@@ -61,7 +61,7 @@ status() {
     echo "tmux session $SESSION: not running"
   fi
   if test -x "$PC"; then
-    pc process list || true
+    pc process list -o wide || true
   fi
   "$ROOT/scripts/dev-infra.sh" status
 }
