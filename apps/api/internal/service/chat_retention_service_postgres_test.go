@@ -94,7 +94,7 @@ func newPruneJobFixture(t *testing.T) *pruneJobFixture {
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
 	owner := uuid.New()
-	if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", owner, "retention-"+owner.String()+"@example.test", "synthetic-hash").Error; err != nil {
+	if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", owner, "retention-"+owner.String()+"@example.test").Error; err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Exec("DELETE FROM users WHERE id = ?", owner).Error })

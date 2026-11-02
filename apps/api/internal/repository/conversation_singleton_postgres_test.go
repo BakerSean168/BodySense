@@ -41,7 +41,7 @@ func openSingletonTestDB(t *testing.T) *gorm.DB {
 func createSingletonTestUser(t *testing.T, db *gorm.DB) uuid.UUID {
 	t.Helper()
 	owner := uuid.New()
-	if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", owner, "singleton-"+owner.String()+"@example.test", "synthetic-hash").Error; err != nil {
+	if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", owner, "singleton-"+owner.String()+"@example.test").Error; err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {

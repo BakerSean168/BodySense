@@ -52,7 +52,7 @@ func TestUserAssetStorageMigrationRemovalPostgres(t *testing.T) {
 		t.Fatalf("PG18 required: version=%d err=%v", version, err)
 	}
 	owner := uuid.New()
-	if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)", owner, "as-storage-"+owner.String()+"@example.test", "synthetic").Error; err != nil {
+	if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", owner, "as-storage-"+owner.String()+"@example.test").Error; err != nil {
 		t.Fatal(err)
 	}
 	defer db.Exec("DELETE FROM users WHERE id=?", owner)

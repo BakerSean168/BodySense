@@ -1018,9 +1018,12 @@ test("staging health-document qualification validator is fail-safe and restores 
   assert.match(contents, /HEALTH_DOCUMENT_STAGE=champion/);
   assert.match(contents, /document_extraction_runs/);
   assert.match(contents, /HEALTH_DOCUMENT_STAGING_QUALIFICATION=PASS/);
-  assert.match(contents, /-X DELETE/);
-  assert.match(contents, /api\/v1\/uploads\/\$upload_id/);
-  assert.match(contents, /DELETE FROM users WHERE email/);
+  // Hosted Supabase Auth owns test credentials. Cleanup must go through
+  // full privacy erasure, never direct SQL deletion of only the local row.
+  assert.match(contents, /SUPABASE_SECRET_KEY/);
+  assert.match(contents, /-X POST/);
+  assert.match(contents, /api\/v1\/privacy\/erasure/);
+  assert.doesNotMatch(contents, /DELETE FROM users WHERE email/);
 });
 
 test("release file contract recognizes release-please merge/squash identity and rejects normal commits", () => {
