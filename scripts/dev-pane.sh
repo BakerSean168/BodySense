@@ -22,12 +22,12 @@ case "${1:-}" in
   ai)
     cd "$ROOT/apps/ai-service"
     uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py
-    exec uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
+    exec uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --reload-dir src --host 127.0.0.1 --port "$AI_SERVICE_PORT"
     ;;
   document)
     cd "$ROOT/apps/ai-service"
     uv run --extra document-ocr python scripts/ensure_health_document_models.py
-    exec uv run --extra document-ocr uvicorn src.document_main:app --reload --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
+    exec uv run --extra document-ocr uvicorn src.document_main:app --reload --reload-dir src --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
     ;;
   *)
     echo "usage: $0 {web|api|ai|document}" >&2
