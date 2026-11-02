@@ -53,6 +53,15 @@ export VITE_WS_URL=${VITE_WS_URL:-ws://127.0.0.1:${API_PORT}/ws}
 # .env.dev.local when debugging Vite/plugin behavior with classic dev serving.
 export BODYSENSE_VITE_BUNDLED_DEV=${BODYSENSE_VITE_BUNDLED_DEV:-true}
 
+# Model asset preparation needs neither gateway/provider nor application credentials.
+# Keep these out of uv and any helper it launches, even during interactive start.
+run_model_setup() {
+  env -u LITELLM_MASTER_KEY -u LITELLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY \
+      -u PRIMARY_LLM_API_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY \
+      -u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL \
+      -u REDIS_PASSWORD -u JWT_SECRET_KEY "$@"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ $# -eq 0 ]]; then
     printf 'BodySense direct-dev env: web=%s api=%s ai=%s document=%s postgres=%s redis=%s litellm=%s\n' \

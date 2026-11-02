@@ -352,6 +352,46 @@ def test_long_lived_services_only_inherit_role_credentials(
         assert "synthetic-jwt" not in argv, role
 
 
+def test_model_setup_helpers_never_inherit_gateway_or_application_credentials(
+    tmp_path: Path,
+) -> None:
+    """Model artifact preparation is not an authorized gateway client."""
+    secrets = (
+        "LITELLM_MASTER_KEY",
+        "LITELLM_API_KEY",
+        "BODYSENSE_LITELLM_CLIENT_KEY",
+        "PRIMARY_LLM_API_KEY",
+        "OPENROUTER_API_KEY",
+        "GROQ_API_KEY",
+        "DB_PASSWORD",
+        "DATABASE_URL",
+        "LANGGRAPH_CHECKPOINTER_URL",
+        "REDIS_PASSWORD",
+        "JWT_SECRET_KEY",
+    )
+    env = os.environ.copy()
+    env.update({name: f"synthetic-{name}" for name in secrets})
+    env["BODYSENSE_DEV_ENV_FILE"] = str(tmp_path / "missing.env")
+    result = subprocess.run(
+        ["bash", "-c", "source scripts/dev-env.sh; run_model_setup env"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    child_keys = {line.partition("=")[0] for line in result.stdout.splitlines()}
+    assert not child_keys.intersection(secrets)
+    for name in ("dev-runtime.sh", "dev-interactive.sh"):
+        source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
+        prep_lines = [line for line in source.splitlines() if "python scripts/ensure_" in line]
+        assert prep_lines
+        for line in prep_lines:
+            assert line.count("run_model_setup uv run") == line.count("python scripts/ensure_")
+
+
 def test_go_api_launch_inherits_secrets_without_interpolating_them_into_argv() -> None:
     source = (ROOT / "scripts/dev-runtime.sh").read_text(encoding="utf-8")
     api_launch = next(

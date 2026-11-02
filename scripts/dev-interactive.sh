@@ -122,7 +122,7 @@ trap cleanup EXIT
 start_document() {
   assert_port_free document "$DOCUMENT_SERVICE_PORT"
   "$ROOT/scripts/dev-infra.sh" up
-  (cd "$ROOT/apps/ai-service" && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+  (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra document-ocr python scripts/ensure_health_document_models.py)
   start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
   wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
 }
@@ -137,7 +137,7 @@ start_api() {
 start_ai() {
   assert_port_free ai "$AI_SERVICE_PORT"
   "$ROOT/scripts/dev-infra.sh" up
-  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py)
+  (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py)
   start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health" "${pids[-1]}"
 }
@@ -156,7 +156,7 @@ case "$mode" in
     assert_port_free web "$WEB_PORT"
     "$ROOT/scripts/dev-infra.sh" up
 
-    (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+    (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && run_model_setup uv run --extra document-ocr python scripts/ensure_health_document_models.py)
     start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
     wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
 
