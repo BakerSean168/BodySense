@@ -33,7 +33,10 @@ if [[ "$LITELLM_BASE_URL" != "$local_url" ]]; then
   echo "BodySense external LiteLLM route BLOCKED: direct-dev currently permits only the local gateway" >&2
   exit 1
 fi
-if [[ -z "${LITELLM_API_KEY:-}" ]]; then
-  echo "BodySense local LiteLLM API key is missing" >&2
+# An absent client credential is allowed only because the default dev gateway
+# has no model routes. Actual inference fails closed until a scoped key exists.
+# Never permit the infrastructure master credential to stand in for that key.
+if [[ -n "${LITELLM_API_KEY:-}" && "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
+  echo "BodySense LiteLLM client credential BLOCKED: master-key alias is forbidden" >&2
   exit 1
 fi

@@ -37,7 +37,9 @@ export JWT_REFRESH_TTL_HOURS=${JWT_REFRESH_TTL_HOURS:-720}
 export TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1,::1}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
-export LITELLM_API_KEY=${LITELLM_API_KEY:-$LITELLM_MASTER_KEY}
+# The offline gateway master credential is never an application client key.
+# Leave inference unavailable until a separately authorized client key is supplied.
+export LITELLM_API_KEY=${BODYSENSE_LITELLM_CLIENT_KEY:-${LITELLM_API_KEY:-}}
 export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-http://127.0.0.1:${AI_SERVICE_PORT}}
 export HEALTH_DOCUMENT_SERVICE_URL=${HEALTH_DOCUMENT_SERVICE_URL:-http://127.0.0.1:${DOCUMENT_SERVICE_PORT}}

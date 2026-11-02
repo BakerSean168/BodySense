@@ -34,6 +34,7 @@ def _run(
         "LITELLM_BASE_URL",
         "LITELLM_API_KEY",
         "LITELLM_MASTER_KEY",
+        "BODYSENSE_LITELLM_CLIENT_KEY",
         "LITELLM_PORT",
     ):
         env.pop(key, None)
@@ -52,6 +53,51 @@ def _run(
 
 def test_local_default_gateway_is_allowed(tmp_path: Path) -> None:
     result = _run(tmp_path, PREFLIGHT)
+    assert result.returncode == 0, result.stderr
+
+    # Offline local development must not silently grant the AI Service the
+    # gateway infrastructure master credential.
+    env = os.environ.copy()
+    for key in ("LITELLM_API_KEY", "LITELLM_MASTER_KEY", "BODYSENSE_LITELLM_CLIENT_KEY"):
+        env.pop(key, None)
+    env_file = tmp_path / "dev.env"
+    env["BODYSENSE_DEV_ENV_FILE"] = str(env_file)
+    sourced = subprocess.run(
+        [
+            "bash",
+            "-c",
+            'source scripts/dev-env.sh; [[ -z "$LITELLM_API_KEY" && -n "$LITELLM_MASTER_KEY" ]]',
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert sourced.returncode == 0, sourced.stderr
+
+
+def test_local_master_alias_is_blocked_without_provider_calls(tmp_path: Path) -> None:
+    result = _run(
+        tmp_path,
+        PREFLIGHT,
+        settings="LITELLM_MASTER_KEY=synthetic-master\nLITELLM_API_KEY=synthetic-master\n",
+    )
+    assert result.returncode != 0
+    assert "master-key alias is forbidden" in result.stderr
+    assert "synthetic-master" not in result.stdout + result.stderr
+
+
+def test_scoped_client_takes_precedence_over_legacy_alias(tmp_path: Path) -> None:
+    result = _run(
+        tmp_path,
+        PREFLIGHT,
+        settings=(
+            "LITELLM_MASTER_KEY=synthetic-master\n"
+            "LITELLM_API_KEY=synthetic-master\n"
+            "BODYSENSE_LITELLM_CLIENT_KEY=synthetic-client\n"
+        ),
+    )
     assert result.returncode == 0, result.stderr
 
 
@@ -184,12 +230,20 @@ def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None
     assert "start_process ai" in source
 
 
-def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> None:
+@pytest.mark.parametrize("client_is_master", [False, True])
+def test_long_lived_services_only_inherit_role_credentials(
+    tmp_path: Path, client_is_master: bool
+) -> None:
     """Use shell command stubs to inspect child environments without launching services."""
     env_file = tmp_path / "dev.env"
     env_file.write_text(
         "LITELLM_MASTER_KEY=synthetic-master\n"
-        "LITELLM_API_KEY=synthetic-client\n"
+        + (
+            "LITELLM_API_KEY=synthetic-master\n"
+            if client_is_master
+            else "LITELLM_API_KEY=synthetic-client\nBODYSENSE_LITELLM_CLIENT_KEY=synthetic-client\n"
+        )
+        + "PRIMARY_LLM_API_KEY=synthetic-primary\n"
         "OPENROUTER_API_KEY=synthetic-openrouter\n"
         "GROQ_API_KEY=synthetic-groq\n"
         "DB_PASSWORD=synthetic-db\n"
@@ -208,7 +262,8 @@ def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> No
     setsid = stubs / "setsid"
     setsid.write_text(
         "#!/bin/sh\n"
-        "env | grep -E '^(LITELLM_|OPENROUTER_API_KEY=|GROQ_API_KEY=|"
+        "env | grep -E '^(LITELLM_|BODYSENSE_LITELLM_CLIENT_KEY=|"
+        "PRIMARY_LLM_API_KEY=|OPENROUTER_API_KEY=|GROQ_API_KEY=|"
         "DB_PASSWORD=|REDIS_PASSWORD=|JWT_SECRET_KEY=|DATABASE_URL=|"
         "LANGGRAPH_CHECKPOINTER_URL=)' > "
         '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n'
@@ -224,6 +279,8 @@ def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> No
         "LITELLM_MASTER_KEY",
         "LITELLM_API_KEY",
         "LITELLM_BASE_URL",
+        "BODYSENSE_LITELLM_CLIENT_KEY",
+        "PRIMARY_LLM_API_KEY",
         "OPENROUTER_API_KEY",
         "GROQ_API_KEY",
         "DB_PASSWORD",
@@ -262,9 +319,14 @@ def test_long_lived_services_only_inherit_role_credentials(tmp_path: Path) -> No
     for role in ("ai", "api", "document", "web"):
         output = (capture / role).read_text(encoding="utf-8")
         assert "LITELLM_MASTER_KEY=" not in output, role
+        assert "BODYSENSE_LITELLM_CLIENT_KEY=" not in output, role
+        assert "PRIMARY_LLM_API_KEY=" not in output, role
         assert "OPENROUTER_API_KEY=" not in output, role
         assert "GROQ_API_KEY=" not in output, role
-        assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai"), role
+        assert ("LITELLM_API_KEY=synthetic-client" in output) == (
+            role == "ai" and not client_is_master
+        ), role
+        assert "LITELLM_API_KEY=synthetic-master" not in output, role
         for key in ("DB_PASSWORD", "DATABASE_URL"):
             assert (f"{key}=" in output) == (role in {"ai", "api"}), (role, key)
         for key in ("REDIS_PASSWORD", "JWT_SECRET_KEY"):

@@ -44,8 +44,11 @@ start_process() {
   # infrastructure, not to any long-lived application process. The AI Service
   # alone receives the LiteLLM client key (which must be scoped separately
   # before any external gateway is authorized).
-  local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY)
-  if [[ "$name" != ai ]]; then
+  local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY
+                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY)
+  # Defense in depth for direct start_process calls that bypass preflight:
+  # never pass the gateway master into AI as a supposed client credential.
+  if [[ "$name" != ai || -z "${LITELLM_API_KEY:-}" || "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
     process_env+=(-u LITELLM_API_KEY)
   fi
   # The API needs DB, Redis, and JWT secrets; AI needs DB and a scoped LiteLLM
