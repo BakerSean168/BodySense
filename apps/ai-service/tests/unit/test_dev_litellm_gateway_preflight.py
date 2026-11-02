@@ -457,3 +457,114 @@ def test_raw_compose_uses_a_separate_client_key_source() -> None:
     assert client == "${BODYSENSE_LITELLM_CLIENT_KEY:-}"
     assert client != master
     assert "LITELLM_MASTER_KEY" not in services["ai-service"]["environment"]
+
+
+@pytest.mark.parametrize("role", ["web", "api", "ai", "document"])
+def test_process_compose_pane_blocks_external_gateway(tmp_path: Path, role: str) -> None:
+    """No Process Compose service may bypass the offline gateway guard."""
+    result = _run(
+        tmp_path,
+        ROOT / "scripts/dev-pane.sh",
+        role,
+        settings="LITELLM_BASE_URL=https://unapproved.invalid/v1\n",
+    )
+    assert result.returncode != 0
+    assert "BLOCKED" in result.stderr
+    assert "UNEXPECTED_SERVICE_START" not in result.stderr
+
+
+@pytest.mark.parametrize("role", ["web", "api", "ai", "document"])
+def test_process_compose_pane_keeps_service_and_model_setup_secrets_scoped(
+    tmp_path: Path, role: str
+) -> None:
+    """The Process Compose path must enforce the same boundary as dev-runtime."""
+    env_file = tmp_path / "synthetic.env"
+    env_file.write_text(
+        "LITELLM_MASTER_KEY=synthetic-master\n"
+        "BODYSENSE_LITELLM_CLIENT_KEY=synthetic-client\n"
+        "PRIMARY_LLM_API_KEY=synthetic-primary\n"
+        "OPENROUTER_API_KEY=synthetic-openrouter\n"
+        "GROQ_API_KEY=synthetic-groq\n"
+        "DB_PASSWORD=synthetic-db\n"
+        "REDIS_PASSWORD=synthetic-redis\n"
+        "JWT_SECRET_KEY=synthetic-jwt\n"
+        "LANGGRAPH_CHECKPOINTER_URL=postgresql://synthetic-checkpoint\n",
+        encoding="utf-8",
+    )
+    stubs = tmp_path / "stubs"
+    capture = tmp_path / "capture"
+    stubs.mkdir()
+    capture.mkdir()
+    stub_source = (
+        "#!/usr/bin/env bash\n"
+        "set -Eeuo pipefail\n"
+        "kind=service\n"
+        '[[ " $* " == *"scripts/ensure_"* ]] && kind=setup\n'
+        'env | sort > "$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_ROLE.$kind.env"\n'
+        'printf "%s\\\n" "$@" > "$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_ROLE.$kind.argv"\n'
+    )
+    for tool in ("pnpm", "air", "uv"):
+        stub = stubs / tool
+        stub.write_text(stub_source, encoding="utf-8")
+        stub.chmod(0o755)
+    env = os.environ.copy()
+    for name in (
+        "LITELLM_MASTER_KEY",
+        "LITELLM_API_KEY",
+        "BODYSENSE_LITELLM_CLIENT_KEY",
+        "LITELLM_BASE_URL",
+        "PRIMARY_LLM_API_KEY",
+        "OPENROUTER_API_KEY",
+        "GROQ_API_KEY",
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
+        "JWT_SECRET_KEY",
+        "LANGGRAPH_CHECKPOINTER_URL",
+        "BODYSENSE_LITELLM_DEV_ORACLE2",
+    ):
+        env.pop(name, None)
+    env.update(
+        {
+            "BODYSENSE_DEV_ENV_FILE": str(env_file),
+            "BODYSENSE_TEST_CAPTURE_DIR": str(capture),
+            "BODYSENSE_TEST_ROLE": role,
+            "PATH": f"{stubs}:{env.get('PATH', '')}",
+        }
+    )
+    result = subprocess.run(
+        ["bash", "scripts/dev-pane.sh", role],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    output = (capture / f"{role}.service.env").read_text(encoding="utf-8")
+    assert not any(
+        f"{name}=" in output
+        for name in (
+            "LITELLM_MASTER_KEY",
+            "BODYSENSE_LITELLM_CLIENT_KEY",
+            "PRIMARY_LLM_API_KEY",
+            "OPENROUTER_API_KEY",
+            "GROQ_API_KEY",
+        )
+    )
+    assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai")
+    assert ("DB_PASSWORD=synthetic-db" in output) == (role in {"api", "ai"})
+    assert ("REDIS_PASSWORD=synthetic-redis" in output) == (role == "api")
+    assert ("JWT_SECRET_KEY=synthetic-jwt" in output) == (role == "api")
+    if role in {"ai", "document"}:
+        setup = (capture / f"{role}.setup.env").read_text(encoding="utf-8")
+        for secret in (
+            "LITELLM_MASTER_KEY",
+            "LITELLM_API_KEY",
+            "OPENROUTER_API_KEY",
+            "GROQ_API_KEY",
+            "DB_PASSWORD",
+            "REDIS_PASSWORD",
+            "JWT_SECRET_KEY",
+        ):
+            assert f"{secret}=" not in setup
