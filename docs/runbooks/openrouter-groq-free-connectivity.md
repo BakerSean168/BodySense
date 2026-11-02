@@ -69,6 +69,14 @@ Related: [Business LLM Integration Case Studies](../architecture/business-llm-in
 - Oracle2 本机专用实例的 `/health/liveliness` 为 200，匿名 `/v1/models` 为 401；这只验证其本机存活及匿名拒绝，**不证明 WSL 可以远程访问、不证明供应商授权或零费用**。目前尚无已确认的 WSL→专用实例独立 HTTPS 入口。
 - 未来网络方案需独立审批，至少满足专用服务身份、tailnet-only HTTPS、BodySense 专属最小权限 Virtual Key、服务端凭据隔离、禁止付费路由及明确回滚；**不可复用共享 Hermes URL/密钥**。未审批前不得创建端口转发、变更 Tailscale Serve、防火墙、生产或共享模型注册表。
 
+## 2026-11-02 官方零费用约束核查（仅政策研究，未授权调用）
+
+此处只核对供应商公开规则，**不进行模型质量评测、选型或运行时路由变更**；官方免费政策不是本项目账户权限或账单担保。
+
+- **OpenRouter**：[Free Models](https://openrouter.ai/collections/free-models) 明确列出的 `:free` 变体为零模型单价，但免费请求有限额（通常 20 RPM、50 RPD，失败尝试也计入日限额）；[Pricing](https://openrouter.ai/pricing) 显示同一普通 API Key 可调用收费模型，Free 计划不提供预算/费用控制。**因此仅有免费账号/API Key 并不是零费用技术隔离**。必须在网关与专用 Virtual Key 双层使用已核实的精确 `:free` ID 白名单，检查文本与视觉/图片等实际请求的所有计价项，不启用 `openrouter/free`、自动付费回退或附加计费服务；不满足任一条件直接拒绝请求。查询目录不等于发起计费调用。
+- **Groq**：[Billing FAQ](https://console.groq.com/docs/billing-faqs) 区分 Free 和按量计费的 Developer 计划；[Rate Limits](https://console.groq.com/docs/rate-limits) 以组织为单位计数。必须先在**实际使用的组织/项目**核实 Free 层级、模型授权及剩余额度，只对白名单模型执行受限请求。[Spend Limits](https://console.groq.com/docs/spend-limits) 仅面向付费账户，费用统计延迟约 10–15 分钟，**不能替代严格零费用门禁**。无法证明零计费时保持禁用。
+- **审计顺序**：服务身份及仅 tailnet 可达 → 账号/组织级 Free 权限 → 精确路由、协议与多模态费用核验 → BodySense-only 最小权限 Virtual Key → 无真实健康资料的固定模型合成调用 → 业务 E2E 与独立审查。任何模糊价格、Key 权限、数据保留政策或 401/403/429 都中止对应上游；不得静默切换到付费或共享 Hermes 账户。
+
 ## 未来接入时的正确边界（未实施）
 
 1. **明确入口归属**：通过 Oracle2 LiteLLM/ProviderAdmin 作为供应商与模型权威；专用 BodySense Virtual Key 仍待按既有授权建立和限制。不混用 Oracle2 Master Key、T3 共享客户端 Key 或历史 GCP Key，不将供应商 Key 暴露给 Go、Python Agent 或浏览器。本 PR 不注册模型、不启用新路由、不修改 Oracle2/生产环境。
