@@ -1,26 +1,35 @@
 import { expect, type Page } from "@playwright/test";
 
 /**
- * Acquire a short-lived API token without weakening the production browser
- * contract. The page keeps the refresh credential in its HttpOnly cookie;
- * BrowserContext.request shares that cookie jar and receives the rotated cookie.
+ * Supabase JS handles refresh-token rotation and persists its own browser
+ * session. E2E tests read the current access token from that same browser
+ * origin; there is no longer a Go /api/v1/auth/refresh endpoint.
+ *
+ * Never copy this helper into application code. Product code uses the SDK.
  */
 export async function refreshBrowserAccessToken(
   page: Page,
-  apiBase: string,
+  _apiBase: string,
 ): Promise<string> {
-  const origin = new URL(page.url()).origin;
-  const response = await page
-    .context()
-    .request.post(`${apiBase}/api/v1/auth/refresh`, {
-      headers: { Origin: origin },
-    });
-  const body = await response.text();
+  const accessToken = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(
+      (name) => name.startsWith("sb-") && name.endsWith("-auth-token"),
+    );
+    if (!key) return null;
+    try {
+      const session = JSON.parse(localStorage.getItem(key) || "{}") as {
+        access_token?: unknown;
+      };
+      return typeof session.access_token === "string"
+        ? session.access_token
+        : null;
+    } catch {
+      return null;
+    }
+  });
   expect(
-    response.ok(),
-    `browser refresh failed with ${response.status()}: ${body}`,
+    accessToken,
+    "Supabase browser session must have an access JWT",
   ).toBeTruthy();
-  const payload = JSON.parse(body) as { access_token?: string };
-  expect(payload.access_token).toBeTruthy();
-  return payload.access_token ?? "";
+  return accessToken || "";
 }

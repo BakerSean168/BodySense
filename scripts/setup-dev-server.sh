@@ -187,7 +187,6 @@ cd "${DEV_DIR}"
 if [ ! -f "${DEV_DIR}/.env.development" ]; then
     echo ">>> 生成 .env.development..."
 
-    JWT_SECRET_KEY=$(openssl rand -base64 48)
 
     cat > "${DEV_DIR}/.env.development" << EOF
 # BodySense 开发环境变量
@@ -200,7 +199,11 @@ DB_PORT=5432
 
 REDIS_PASSWORD=bodysense123
 
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
+SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
+VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
+# Public client key; configure in this ignored development env.
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_TURNSTILE_SITE_KEY=
 
 # OpenRouter API Key — 请手动填写
 OPENROUTER_API_KEY=

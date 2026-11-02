@@ -234,6 +234,10 @@ jobs:
           REVISION: ${{ needs.resolve.outputs.revision }}
           VITE_ASSET_BASE: ${{ steps.config.outputs.asset_base }}
           VITE_BODYSENSE_ANATOMY_CATALOG_URL: ${{ steps.config.outputs.atlas_catalog_url }}
+          # Public browser-only identity configuration, baked into immutable assets.
+          VITE_SUPABASE_URL: https://qdezojzgajsunjwthifv.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_EMxwsj1diGR6BeEXkFhOCQ_rRx4gGil
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.BODYSENSE_TURNSTILE_SITE_KEY }}
           STATIC_ASSET_CDN_BASE: ${{ vars.STATIC_ASSET_CDN_BASE }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -423,6 +427,9 @@ jobs:
             VERSION=${{ needs.resolve.outputs.candidate_tag }}
             VITE_ASSET_BASE=${{ needs.static-assets.outputs.asset_base }}
             VITE_BODYSENSE_ANATOMY_CATALOG_URL=${{ needs.static-assets.outputs.atlas_catalog_url }}
+            VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
+            VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_EMxwsj1diGR6BeEXkFhOCQ_rRx4gGil
+            VITE_TURNSTILE_SITE_KEY=${{ vars.BODYSENSE_TURNSTILE_SITE_KEY }}
             ${{ matrix.extra_build_args }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}

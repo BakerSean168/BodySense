@@ -91,9 +91,8 @@ func newValidator(db *gorm.DB) *validator {
 
 func (v *validator) createUser(ctx context.Context) (uuid.UUID, func(), error) {
 	user := model.User{
-		ID:           uuid.New(),
-		Email:        fmt.Sprintf("domain-validator-%s@example.invalid", uuid.NewString()),
-		PasswordHash: "domain-validator-only",
+		ID:    uuid.New(),
+		Email: fmt.Sprintf("domain-validator-%s@example.invalid", uuid.NewString()),
 	}
 	if err := v.db.WithContext(ctx).Create(&user).Error; err != nil {
 		return uuid.Nil, nil, fmt.Errorf("create validator user: %w", err)

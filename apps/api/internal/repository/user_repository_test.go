@@ -25,7 +25,6 @@ func TestUserRepository_Create(t *testing.T) {
 	user := &model.User{
 		ID:           uuid.New(),
 		Email:        "test-" + uuid.New().String()[:8] + "@example.com",
-		PasswordHash: "$2a$12$test-hash",
 		CreatedAt:    time.Now(),
 	}
 

@@ -1,6 +1,10 @@
 FROM node:24.22.1-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
 RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 WORKDIR /app
+# Client-side public configuration is injected at build/runtime by the host.
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ARG VITE_TURNSTILE_SITE_KEY
 
 # Supply-chain validation depends on authoritative registry metadata.
 # Default to the canonical npm registry; China-local builds may explicitly

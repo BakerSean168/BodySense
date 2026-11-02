@@ -109,7 +109,7 @@ describe("RegisterPage (Penpot ink register)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
-    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1");
+    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1", undefined);
   });
 
   it("requires the confirm password", () => {
@@ -169,7 +169,7 @@ describe("RegisterPage (Penpot ink register)", () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
     expect(screen.queryByText("两次输入的密码不一致")).toBeNull();
-    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1");
+    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1", undefined);
   });
 
   it("toggles the confirm field with its own eye button", () => {

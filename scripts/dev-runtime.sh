@@ -86,7 +86,7 @@ up() {
 
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
-  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' JWT_SECRET_KEY='${JWT_SECRET_KEY}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
+  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' SUPABASE_URL='${SUPABASE_URL}' SUPABASE_SECRET_KEY='${SUPABASE_SECRET_KEY:-}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
   wait_http api "http://127.0.0.1:${API_PORT}/api/health"
 
   start_process ai "cd '$ROOT/apps/ai-service' && exec env DATABASE_URL='postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}' LITELLM_BASE_URL='http://127.0.0.1:${LITELLM_PORT}/v1' LITELLM_API_KEY='${LITELLM_MASTER_KEY}' EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
