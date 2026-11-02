@@ -231,8 +231,9 @@ def test_ai_startup_no_longer_embeds_litellm_secret_in_process_command() -> None
 
 
 @pytest.mark.parametrize("client_is_master", [False, True])
+@pytest.mark.parametrize("entrypoint", ["dev-runtime.sh", "dev-interactive.sh"])
 def test_long_lived_services_only_inherit_role_credentials(
-    tmp_path: Path, client_is_master: bool
+    tmp_path: Path, client_is_master: bool, entrypoint: str
 ) -> None:
     """Use shell command stubs to inspect child environments without launching services."""
     env_file = tmp_path / "dev.env"
@@ -298,9 +299,22 @@ def test_long_lived_services_only_inherit_role_credentials(
             "BODYSENSE_TEST_CAPTURE_DIR": str(capture),
         }
     )
-    script = ['source "$PWD/scripts/dev-runtime.sh" status']
+    if entrypoint == "dev-runtime.sh":
+        script = ['source "$PWD/scripts/dev-runtime.sh" status']
+    else:
+        # Source only the helper body; never execute the interactive CLI.
+        script = [
+            'source "$PWD/scripts/dev-env.sh"',
+            "pids=(); names=()",
+            "source <(sed -n '/^start_service() {/,/^}/p' scripts/dev-interactive.sh)",
+        ]
     for role in ("ai", "api", "document", "web"):
-        script.extend((f"export BODYSENSE_TEST_CAPTURE_ROLE={role}", f"start_process {role} true"))
+        command = (
+            f"start_process {role} true"
+            if entrypoint == "dev-runtime.sh"
+            else f'start_service {role} "$PWD" true'
+        )
+        script.extend((f"export BODYSENSE_TEST_CAPTURE_ROLE={role}", command))
     result = subprocess.run(
         ["bash", "-c", "\n".join(script)],
         cwd=ROOT,
