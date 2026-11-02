@@ -1635,6 +1635,10 @@ async def resume_thread_interrupt(
                 "recent_outcomes": list(recent_outcomes or []),
                 "spatial_context": spatial_context or {},
                 "context_window": context_window,
+                # One answered HITL interrupt ends the previous autonomous
+                # LLM/tool segment. Keep the unattended MAX_TOOL_ROUNDS guard,
+                # but never count earlier user answers against its budget.
+                "tool_rounds": 0,
             },
         ),
         config=config,
