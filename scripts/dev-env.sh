@@ -57,10 +57,11 @@ export EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-hashing}
 export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}}
 export VITE_DEV_API_TARGET=${VITE_DEV_API_TARGET:-http://127.0.0.1:${API_PORT}}
 export VITE_WS_URL=${VITE_WS_URL:-ws://127.0.0.1:${API_PORT}/ws}
-# Persistent GCP direct-dev is normally reached over Tailscale/SSH, where RTT
-# makes Vite's native-ESM module waterfall expensive. Bundled Dev preserves HMR
-# while collapsing that browser-facing request graph. Set false in
-# .env.dev.local when debugging Vite/plugin behavior with classic dev serving.
+# WSL direct-dev may be reached over Tailscale/SSH; network RTT makes Vite's
+# native-ESM module waterfall expensive. Bundled Dev preserves HMR while
+# collapsing that browser-facing request graph. Set false in .env.dev.local
+# when debugging Vite/plugin behavior with classic dev serving.
+# GCP-dev-01 is retired and is not a valid development or staging host.
 export BODYSENSE_VITE_BUNDLED_DEV=${BODYSENSE_VITE_BUNDLED_DEV:-true}
 
 # Model asset preparation needs neither gateway/provider nor application credentials.
