@@ -92,6 +92,13 @@ from .body_state_suggestion import (
 )
 from .checkpoint_retention import segment_runs, tag_runtime_message
 from .checkpointing import get_runtime_checkpointer
+from .context_budget import (
+    DEFAULT_RESERVED_OUTPUT_TOKENS,
+    ContextBudgetError,
+    estimate_text_tokens,
+    fit_history_to_budget,
+    history_allowance,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -451,7 +458,27 @@ def _format_spatial_context(spatial_context: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[ChatMessage]:
+def _estimate_tool_overhead_tokens(tools: list[Any]) -> int:
+    """Estimate the tool schemas' share of the model window (#494)."""
+    if not tools:
+        return 0
+    payload = [
+        {
+            "name": getattr(tool, "name", ""),
+            "description": getattr(tool, "description", ""),
+            "parameters": getattr(tool, "parameters", {}),
+        }
+        for tool in tools
+    ]
+    return estimate_text_tokens(json.dumps(payload, ensure_ascii=False, default=str))
+
+
+def _runtime_messages_to_chat_messages(
+    state: ConsultationThreadState,
+    *,
+    tool_overhead_tokens: int = 0,
+    max_output_tokens: int | None = None,
+) -> list[ChatMessage]:
     messages: list[ChatMessage] = []
 
     profile_context = format_profile_context(state.get("profile", {}))
@@ -500,7 +527,18 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
     messages.append(ChatMessage(role="system", content=system_content))
 
-    for item in context_history(state):
+    # #494: fit a request-only copy of the selected history into the window
+    # plan. context_history applies Go's cross-Run cursor; the assembler
+    # bounds what accumulates *inside* the active Run (ask_user resumes,
+    # tool output, images) without ever touching checkpoint entries.
+    allowance = history_allowance(
+        system_tokens=estimate_text_tokens(system_content),
+        tool_overhead_tokens=tool_overhead_tokens,
+        reserved_output_tokens=(
+            max_output_tokens if max_output_tokens is not None else DEFAULT_RESERVED_OUTPUT_TOKENS
+        ),
+    )
+    for item in fit_history_to_budget(context_history(state), budget_tokens=allowance):
         chat_message = ChatMessage(
             role=item["role"],
             content=item.get("content", ""),
@@ -867,12 +905,24 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
     emitted_text_length = 0
     completed_tool_calls: list[dict[str, Any]] = []
 
+    # #494: an unfittable request fails predictably here (explicit stream
+    # error) instead of overflowing the model window mid-generation.
+    try:
+        model_messages = _runtime_messages_to_chat_messages(
+            state,
+            tool_overhead_tokens=_estimate_tool_overhead_tokens(provider_tools),
+            max_output_tokens=manifest.generation.max_tokens,
+        )
+    except ContextBudgetError as exc:
+        writer({"type": "stream_error", "message": f"上下文超出模型窗口预算：{exc}"})
+        return {"pending_tool_calls": [], "tool_rounds": tool_rounds}
+
     # North-Star: pin the exact logical model + generation settings from the
     # immutable manifest so the runtime honors the exact configuration identity.
     async for event in ai.generate_stream(
         AiRequest(
             use_case="consultation.reply",
-            messages=_runtime_messages_to_chat_messages(state),
+            messages=model_messages,
             tools=provider_tools,
             temperature=manifest.generation.temperature,
             max_tokens=manifest.generation.max_tokens,
