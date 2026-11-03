@@ -34,5 +34,6 @@
 - [真实业务 LLM 接入调研（Chatwoot / FastGPT / Onyx）](./business-llm-integration-case-studies.md)
 - [OpenRouter / Groq 免费渠道连通性记录](../runbooks/openrouter-groq-free-connectivity.md)
 - [知识库生命周期](./knowledge-lifecycle-architecture.md)
+- [知识扩展 Stage A 调研：基线、需求与参考架构](./knowledge-expansion-stage-a.md)
 
 运行细节以真实代码、API 契约和数据库迁移为准。产品规格中的逻辑对象、字段、工具名是要实现和验证的目标。
