@@ -116,8 +116,6 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
     const path = new URL(route.request().url()).pathname;
     const reply = (body: unknown, status = 200) =>
       route.fulfill({ status, json: body });
-    if (path.endsWith("/auth/refresh"))
-      return reply({ access_token: "fixture-token", expires_in: 3600 });
     if (path.endsWith("/me"))
       return reply({ id: owner, email: "synthetic@example.test" });
     if (path.endsWith("/health-workspace"))
@@ -265,6 +263,47 @@ test("Person responsive keyboard, source badges, stale retry and receipt flow at
       503,
     );
   });
+  // Supabase Auth replaced the Go /auth/refresh bootstrap in #491: the app
+  // restores its session from localStorage through the Supabase SDK, so seed
+  // a session for the mocked owner instead of mocking a refresh endpoint.
+  // The API stays fully mocked above and never validates this token.
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || "http://127.0.0.1:18120";
+  const supabaseStorageKey = `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`;
+  const encodeSegment = (value: unknown) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const fixtureAccessToken = [
+    encodeSegment({ alg: "ES256", typ: "JWT" }),
+    encodeSegment({
+      sub: owner,
+      email: "synthetic@example.test",
+      aud: "authenticated",
+      role: "authenticated",
+      exp: 4102444800,
+      iat: 1700000000,
+    }),
+    "fixture-signature",
+  ].join(".");
+  await page.addInitScript(
+    ({ key, session }) => {
+      localStorage.setItem(key, JSON.stringify(session));
+    },
+    {
+      key: supabaseStorageKey,
+      session: {
+        access_token: fixtureAccessToken,
+        refresh_token: "fixture-refresh-token",
+        expires_in: 900,
+        expires_at: 4102444800,
+        token_type: "bearer",
+        user: {
+          id: owner,
+          email: "synthetic@example.test",
+          aud: "authenticated",
+          role: "authenticated",
+        },
+      },
+    },
+  );
   try {
     await page.goto("/consultation?view=state", {
       waitUntil: "domcontentloaded",
