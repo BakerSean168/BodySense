@@ -110,6 +110,8 @@ fi
 for required in \
   apps/api/migrations/000001_vnext_baseline.up.sql \
   apps/api/migrations/000001_vnext_baseline.down.sql \
+  apps/api/migrations/000002_supabase_identity.up.sql \
+  apps/api/migrations/000002_supabase_identity.down.sql \
   apps/api/migrations/checksums.sha256 \
   tools/schema/database-schema.json \
   docker/docker-compose.prod.yml \
@@ -128,8 +130,8 @@ for required in \
 done
 
 migration_files="$(cd apps/api/migrations && ls -1 ./*.sql 2>/dev/null | sed 's#^\./##' | sort | tr '\n' ' ')"
-if [[ "$migration_files" == '000001_vnext_baseline.down.sql 000001_vnext_baseline.up.sql ' ]]; then
-  pass 'only the 000001_vnext_baseline pair exists (big-bang policy)'
+if [[ "$migration_files" == '000001_vnext_baseline.down.sql 000001_vnext_baseline.up.sql 000002_supabase_identity.down.sql 000002_supabase_identity.up.sql ' ]]; then
+  pass 'only the 000001_vnext_baseline + 000002_supabase_identity pairs exist (big-bang policy)'
 else
   failc "unexpected migration files: ${migration_files:-none}"
 fi
@@ -204,12 +206,12 @@ if [[ "$TARGET" == staging || "$TARGET" == all ]]; then
   plan 'Admit the exact candidate to staging-latest (repository variable; CI promotes only the exact main SHA)' \
     'gh variable set BODYSENSE_V2_STAGING_PROMOTION_ENABLED --body true' \
     "gh run rerun <Publish Nightly Candidate run id for $SHORT>   # promotes only while $SHORT is still main HEAD"
-  plan 'Deploy through the canonical watcher (fresh PG18 volume; API bootstraps 000001_vnext_baseline)' \
+  plan 'Deploy through the canonical watcher (fresh PG18 volume; API bootstraps 000001_vnext_baseline + 000002_supabase_identity)' \
     'systemctl --user start bodysense-staging-deploy-watch.timer' \
     'bodysense-staging-deploy-watch --force'
   plan 'Verify exact revision, schema state and health' \
     'cat ~/.local/state/bodysense/staging-deploy-state   # revision must equal the candidate' \
-    "docker exec ${STAGING_PROJECT}-postgres-1 psql -U bodysense -d bodysense -Atc \"select version::text||':'||dirty::text from schema_migrations\"   # 1:false" \
+    "docker exec ${STAGING_PROJECT}-postgres-1 psql -U bodysense -d bodysense -Atc \"select version::text||':'||dirty::text from schema_migrations\"   # 2:false" \
     'curl -fsS http://127.0.0.1:20150/api/health'
   plan 'Smoke + canary soak on staging (runbook §6): five-domain journeys, 390px + second device, error budget' \
     'see docs/runbooks/v2-release-cutover.md#6-canary-plan'
@@ -237,7 +239,7 @@ if [[ "$TARGET" == production || "$TARGET" == all ]]; then
   plan 'Watch the transactional reset and health gates' \
     'cat /opt/bodysense/.postgres18-reset-state   # prepared -> cutover_complete -> committed' \
     'cat /opt/bodysense/.deploy-state' \
-    "docker exec docker-postgres-1 psql -U bodysense -d bodysense -Atc \"select version::text||':'||dirty::text from schema_migrations\"   # 1:false" \
+    "docker exec docker-postgres-1 psql -U bodysense -d bodysense -Atc \"select version::text||':'||dirty::text from schema_migrations\"   # 2:false" \
     'curl -fsS https://body.bakersean.top/api/health'
   plan 'Post-promote canary window (runbook §6.3) and sign-off record' \
     'see docs/runbooks/v2-release-cutover.md#63-production-canary-window'
