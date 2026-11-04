@@ -239,7 +239,7 @@ docker exec "$API_NAME" /app/validators/migration-validator \
 
 # --- prove real data travels with the backup --------------------------------------
 docker exec "$PG_NAME" psql -U "$DB_USER" -d "$DB_NAME" -Atc \
-  "INSERT INTO users(email, password_hash) VALUES ('dr-probe@example.com','x') RETURNING 1;" \
+  "INSERT INTO users(email) VALUES ('dr-probe@example.com') RETURNING 1;" \
   | grep -qx 1
 
 # --- real backup through the signed off-host client --------------------------------
