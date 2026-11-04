@@ -33,7 +33,7 @@ func TestBodyFactHTTPRecordReadRetryRoundTripPostgres(t *testing.T) {
 	t.Cleanup(func() { _ = sqlDB.Close() })
 	owner, other := uuid.New(), uuid.New()
 	for _, userID := range []uuid.UUID{owner, other} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", userID, "fact-http-"+userID.String()+"@example.test", "synthetic-test-hash").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", userID, "fact-http-"+userID.String()+"@example.test").Error; err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() {

@@ -1,18 +1,42 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "./authStore";
 
-const USER_ID_1 = "11111111-1111-4111-8111-111111111111";
-const USER_ID_2 = "22222222-2222-4222-8222-222222222222";
-const USER_ID_3 = "33333333-3333-4333-8333-333333333333";
+const client = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  refreshSession: vi.fn(),
+  signInWithPassword: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+  onAuthStateChange: vi.fn(() => ({
+    data: { subscription: { unsubscribe: vi.fn() } },
+  })),
+}));
 
-function jsonResponse(body: unknown, status = 200): Response {
+vi.mock("@/features/auth/services/supabase", () => ({
+  getSupabaseClient: () => ({ auth: client }),
+}));
+
+const USER_ID = "11111111-1111-4111-8111-111111111111";
+
+function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 }
 
-function resetAuthState() {
+function mockSession(accessToken = "supabase-signed-access") {
+  return {
+    access_token: accessToken,
+    refresh_token: "supabase-managed-refresh",
+    token_type: "bearer",
+    expires_in: 900,
+    expires_at: Math.floor(Date.now() / 1000) + 900,
+    user: { id: USER_ID, email: "test@example.com" },
+  };
+}
+
+function reset() {
   useAuthStore.setState({
     user: null,
     accessToken: null,
@@ -23,164 +47,156 @@ function resetAuthState() {
     isLoading: false,
     error: null,
   });
-  localStorage.clear();
 }
 
-describe("authStore secure browser session", () => {
+describe("Supabase Auth browser session adapter", () => {
   beforeEach(() => {
-    resetAuthState();
     vi.restoreAllMocks();
+    for (const mock of Object.values(client)) mock.mockClear();
+    reset();
+    client.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+    client.signOut.mockResolvedValue({ error: null });
   });
 
-  it("bootstraps from the HttpOnly refresh cookie and keeps tokens out of localStorage", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        jsonResponse({ access_token: "access-1", expires_in: 900 }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ id: USER_ID_1, email: "user@example.com" }),
-      );
-
-    await useAuthStore.getState().bootstrapSession();
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "/api/v1/auth/refresh",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
+  it("restores a hosted Supabase session and verifies user via Go /me", async () => {
+    client.getSession.mockResolvedValue({
+      data: { session: mockSession() },
+      error: null,
+    });
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        id: USER_ID,
+        email: "test@example.com",
+      }),
     );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+    await useAuthStore.getState().bootstrapSession();
+    expect(client.getSession).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith(
       "/api/v1/me",
       expect.objectContaining({
-        headers: { Authorization: "Bearer access-1" },
+        headers: { Authorization: "Bearer supabase-signed-access" },
       }),
     );
     expect(useAuthStore.getState()).toMatchObject({
-      accessToken: "access-1",
+      accessToken: "supabase-signed-access",
       isAuthenticated: true,
+      user: { id: USER_ID, email: "test@example.com" },
       hasHydrated: true,
-      isAuthResolved: true,
-      user: { id: USER_ID_1, email: "user@example.com" },
-    });
-    expect(localStorage.getItem("auth-storage")).toBeNull();
-  });
-
-  it("unblocks protected routes after refresh while user hydration is still pending", async () => {
-    let resolveUser: ((response: Response) => void) | undefined;
-    const userPromise = new Promise<Response>((resolve) => {
-      resolveUser = resolve;
-    });
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        jsonResponse({ access_token: "access-fast", expires_in: 900 }),
-      )
-      .mockReturnValueOnce(userPromise);
-
-    const bootstrap = useAuthStore.getState().bootstrapSession();
-    await vi.waitFor(() => {
-      expect(useAuthStore.getState()).toMatchObject({
-        accessToken: "access-fast",
-        isAuthenticated: true,
-        hasHydrated: true,
-        isAuthResolved: true,
-      });
-    });
-    expect(useAuthStore.getState().user).toBeNull();
-
-    resolveUser?.(jsonResponse({ id: USER_ID_2, email: "fast@example.com" }));
-    await bootstrap;
-    expect(useAuthStore.getState().user).toEqual({
-      id: USER_ID_2,
-      email: "fast@example.com",
     });
   });
 
-  it("fails closed when /me violates the generated identity schema", async () => {
-    useAuthStore.setState({
-      accessToken: "access-invalid-user",
-      isAuthenticated: true,
-      hasHydrated: true,
-      isAuthResolved: true,
-    });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ id: "not-a-uuid", email: "user@example.com" }),
-    );
-
-    await expect(useAuthStore.getState().verifySession()).resolves.toBe(false);
+  it("with no hosted session fails closed and never calls the retired refresh endpoint", async () => {
+    const fetcher = vi.spyOn(globalThis, "fetch");
+    await useAuthStore.getState().bootstrapSession();
     expect(useAuthStore.getState()).toMatchObject({
+      user: null,
       accessToken: null,
       isAuthenticated: false,
-      user: null,
+      hasHydrated: true,
     });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("deduplicates concurrent cookie refreshes", async () => {
-    let resolveResponse: ((response: Response) => void) | undefined;
-    const responsePromise = new Promise<Response>((resolve) => {
-      resolveResponse = resolve;
+  it("signs in using Supabase Auth and passes the Turnstile captchaToken", async () => {
+    client.signInWithPassword.mockResolvedValue({
+      data: { session: mockSession() },
+      error: null,
     });
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockReturnValue(responsePromise);
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        id: USER_ID,
+        email: "test@example.com",
+      }),
+    );
+    await useAuthStore
+      .getState()
+      .login("test@example.com", "password123", "turnstile-token");
+    expect(client.signInWithPassword).toHaveBeenCalledWith({
+      email: "test@example.com",
+      password: "password123",
+      options: { captchaToken: "turnstile-token" },
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
 
+  it("signs up using Supabase Auth, and refuses to pretend email confirmation was completed", async () => {
+    client.signUp.mockResolvedValue({ data: { session: null }, error: null });
+    await expect(
+      useAuthStore
+        .getState()
+        .register("test@example.com", "password123", "captcha-token"),
+    ).rejects.toThrow("Confirm email");
+    expect(client.signUp).toHaveBeenCalledWith({
+      email: "test@example.com",
+      password: "password123",
+      options: { captchaToken: "captcha-token" },
+    });
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    client.signUp.mockResolvedValue({
+      data: { session: mockSession() },
+      error: null,
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        id: USER_ID,
+        email: "test@example.com",
+      }),
+    );
+    await useAuthStore.getState().register("test@example.com", "password123");
+    expect(useAuthStore.getState().user?.id).toBe(USER_ID);
+  });
+
+  it("deduplicates parallel refresh requests via the hosted Auth SDK", async () => {
+    let resolveRefresh: ((value: unknown) => void) | undefined;
+    const pending = new Promise((resolve) => {
+      resolveRefresh = resolve;
+    });
+    client.refreshSession.mockReturnValue(pending);
     const first = useAuthStore.getState().refreshAccessToken();
     const second = useAuthStore.getState().refreshAccessToken();
-    resolveResponse?.(
-      jsonResponse({ access_token: "access-2", expires_in: 900 }),
-    );
-
+    resolveRefresh?.({
+      data: { session: mockSession("refreshed") },
+      error: null,
+    });
     await expect(first).resolves.toBe(true);
     await expect(second).resolves.toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(client.refreshSession).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().accessToken).toBe("refreshed");
   });
 
-  it("login accepts only the access credential in JSON", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        jsonResponse({ access_token: "access-login", expires_in: 900 }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ id: USER_ID_2, email: "user@example.com" }),
-      );
-
-    await useAuthStore.getState().login("user@example.com", "password123");
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "/api/v1/auth/login",
-      expect.objectContaining({
-        method: "POST",
-        credentials: "include",
+  it("fails closed for invalid Go identity responses", async () => {
+    useAuthStore.setState({
+      accessToken: "access-signed",
+      isAuthenticated: true,
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        id: "not-a-uuid",
+        email: "test@example.com",
       }),
     );
-    expect(useAuthStore.getState().accessToken).toBe("access-login");
-    expect(localStorage.length).toBe(0);
+    await expect(useAuthStore.getState().verifySession()).resolves.toBe(false);
+    expect(useAuthStore.getState().accessToken).toBeNull();
   });
 
-  it("logout uses the cookie endpoint and clears in-memory auth state", async () => {
+  it("logs out through Supabase and clears the entire app auth state", async () => {
     useAuthStore.setState({
-      accessToken: "access-live",
+      accessToken: "token",
+      user: { id: USER_ID, email: "test@example.com" },
       isAuthenticated: true,
       hasHydrated: true,
-      isAuthResolved: true,
-      user: { id: USER_ID_3, email: "user@example.com" },
     });
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(jsonResponse({ message: "Logged out successfully" }));
-
     await useAuthStore.getState().logout();
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/auth/logout",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
-    );
+    expect(client.signOut).toHaveBeenCalledWith();
     expect(useAuthStore.getState()).toMatchObject({
       accessToken: null,
-      isAuthenticated: false,
       user: null,
+      isAuthenticated: false,
+      hasHydrated: true,
     });
   });
 });

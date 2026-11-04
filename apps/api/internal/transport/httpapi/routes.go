@@ -33,7 +33,6 @@ func routeErrorHandler(c *gin.Context, err error, statusCode int) {
 // RegisterRoutes registers every operation from the generated public OpenAPI
 // contract exactly once, partitioned by security domain:
 //
-//   - auth public:     account session establishment without authentication
 //   - knowledge:       authenticated knowledge operator authority
 //   - protected:       authenticated browser user
 //
@@ -45,12 +44,6 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 		Handler:      si,
 		ErrorHandler: routeErrorHandler,
 	}
-
-	authPublic := router.Group("/api/v1/auth", security.Validator)
-	authPublic.POST("/register", wrapper.RegisterAccount)
-	authPublic.POST("/login", wrapper.LoginAccount)
-	authPublic.POST("/refresh", wrapper.RefreshAccountSession)
-	authPublic.POST("/logout", wrapper.LogoutAccount)
 
 	// Knowledge administration is a distinct authorization domain. Authenticate
 	// first, resolve durable operator role second, then validate the request.

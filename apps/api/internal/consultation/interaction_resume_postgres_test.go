@@ -47,7 +47,7 @@ func newResumeFixture(t *testing.T) resumeFixture {
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
 	owner := uuid.New()
-	if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", owner, "resume-"+owner.String()+"@example.test", "synthetic-hash").Error; err != nil {
+	if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", owner, "resume-"+owner.String()+"@example.test").Error; err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {

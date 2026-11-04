@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/cache"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
@@ -59,14 +58,17 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	// JWT + browser auth security configuration.
-	jwtConfig := auth.JWTConfigFromEnv()
 	corsOrigins := parseCORSOrigins()
-	authSecurity := auth.DefaultSecurityConfig(jwtConfig.RefreshTokenTTL)
-	authSecurity.CookieSecure = strings.EqualFold(os.Getenv("APP_ENV"), "production")
-	authSecurity.RequireOrigin = authSecurity.CookieSecure
-	authSecurity.TrustedOrigins = corsOrigins
-	authSecurity.RateLimiter = auth.NewRedisRateLimiter(database.RedisClient, "bodysense:auth:rate")
+	// Hosted Supabase is the only identity authority. Go verifies its ES256
+	// access tokens and keeps the existing local health-data ownership boundary.
+	supabaseConfig, err := auth.SupabaseConfigFromEnv()
+	if err != nil {
+		log.Fatalf("Supabase Auth configuration failed: %v", err)
+	}
+	supabaseVerifier, err := auth.NewSupabaseVerifier(supabaseConfig.URL, nil)
+	if err != nil {
+		log.Fatalf("Supabase JWT verifier failed: %v", err)
+	}
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
@@ -96,17 +98,14 @@ func main() {
 	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 
-	// User session cache (Redis-backed). Sessions live as long as their refresh
-	// token, so the session TTL matches the refresh-token TTL and outlives the
-	// short-lived access token.
-	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.RefreshTokenTTL)
-
-	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
+	// Hosted identity revocation is required before a full account erasure
+	// can be accepted. The server-only admin key is never exposed to the web.
+	authAdmin := auth.NewSupabaseAdminRevoker(supabaseConfig, nil)
 	privacyErasureRepo := repository.NewPrivacyErasureRepository(database.DB)
 	privacyErasureService := service.NewPrivacyErasureService(
 		privacyErasureRepo,
 		userRepo,
-		authService,
+		authAdmin,
 		uploadStorage,
 		database.NewTransactionManager(database.DB),
 	)
@@ -351,7 +350,7 @@ func main() {
 
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
-	authMiddleware := middleware.AuthMiddleware(jwtConfig, sessionCache)
+	authMiddleware := middleware.AuthMiddleware(supabaseVerifier, userRepo)
 	protected := r.Group("/api/v1")
 	protected.Use(authMiddleware)
 	{
@@ -375,7 +374,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithReportedDiscomfort(reportedDiscomfortService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithNativeDiagnosis(reviewedDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithNativeDiagnosisReview(service.NewDiagnosisAnalysisRequestService(database.DB), service.NewDiagnosisReviewPromptService(database.DB, reviewedDiagnosisReader)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithAssetErasure(assetErasureService).WithStatementErasure(statementErasureService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithReportedDiscomfort(reportedDiscomfortService).WithProfile(profileService).WithPrivacy(privacyErasureService).WithAssessment(assessmentService, assessmentReplayService).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithNativeDiagnosis(reviewedDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithNativeDiagnosisReview(service.NewDiagnosisAnalysisRequestService(database.DB), service.NewDiagnosisReviewPromptService(database.DB, reviewedDiagnosisReader)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithAssetErasure(assetErasureService).WithStatementErasure(statementErasureService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

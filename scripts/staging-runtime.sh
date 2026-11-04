@@ -25,7 +25,12 @@ DB_USER=bodysense
 DB_NAME=bodysense
 DB_PASSWORD=$(openssl rand -hex 24)
 REDIS_PASSWORD=$(openssl rand -hex 24)
-JWT_SECRET_KEY=$(openssl rand -hex 32)
+SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
+# Supabase server-only secret required for account erasure.
+SUPABASE_SECRET_KEY=
+VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_TURNSTILE_SITE_KEY=
 LITELLM_MASTER_KEY=sk-$(openssl rand -hex 24)
 EMBEDDING_PROVIDER=hashing
 # Real provider credentials for non-stub staging inference.

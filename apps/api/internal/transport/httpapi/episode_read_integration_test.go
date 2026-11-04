@@ -33,8 +33,8 @@ func TestBodyEpisodeHTTPSourceVisibilityRoundTripPostgres(t *testing.T) {
 	t.Cleanup(func() { _ = sqlDB.Close() })
 	owner, other := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, other} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)",
-			id, "episode-http-"+id.String()+"@example.test", "synthetic").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)",
+			id, "episode-http-"+id.String()+"@example.test").Error; err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() {

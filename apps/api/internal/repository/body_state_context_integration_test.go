@@ -31,9 +31,8 @@ func seedBodyStateContextUser(t *testing.T, db *gorm.DB) uuid.UUID {
 	t.Helper()
 	userID := uuid.New()
 	if err := db.Exec(
-		"INSERT INTO users(id,email,password_hash) VALUES (?,?,?)",
-		userID, "body-state-context-"+userID.String()+"@example.test", "synthetic-hash",
-	).Error; err != nil {
+		"INSERT INTO users(id,email) VALUES(?,?)",
+		userID, "body-state-context-"+userID.String()+"@example.test").Error; err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Exec("DELETE FROM users WHERE id = ?", userID).Error })

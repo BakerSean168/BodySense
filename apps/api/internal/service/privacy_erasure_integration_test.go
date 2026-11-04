@@ -3,23 +3,26 @@ package service
 import (
 	"bytes"
 	"context"
-	"errors"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
-	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+// Integration tests inject the hosted revocation port; Supabase API request
+// semantics are tested separately with a fake HTTP server.
+type integrationPrivacyIdentityRevoker struct{}
+
+func (*integrationPrivacyIdentityRevoker) RevokeUser(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
 
 func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	dsn := os.Getenv("BODYSENSE_INTEGRATION_DATABASE_URL")
@@ -50,7 +53,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		}
 	}
 
-	mustExec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", userID, email, "synthetic-hash")
+	mustExec("INSERT INTO users(id,email) VALUES (?,?)", userID, email)
 	mustExec("INSERT INTO user_profiles(user_id,birth_date) VALUES (?,?)", userID, "1998-05-20")
 	mustExec("INSERT INTO conversations(id,user_id) VALUES (?,?)", conversationID, userID)
 	mustExec("INSERT INTO messages(id,conversation_id,turn_id,role,seq,parts,content_text) VALUES (?,?,?,?,?,?,?)", uuid.New(), conversationID, turnID, "user", 1, `[{"type":"text","text":"private symptom"}]`, "private symptom")
@@ -78,24 +81,13 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 
 	mustExec("INSERT INTO outcomes(user_id,source_type,source_key,kind,value,notes,occurred_at) VALUES (?,?,?,?,?,?,?)", userID, "synthetic", "privacy-outcome", "pain", `{"score":4}`, "private outcome", time.Now().UTC())
 
-	mini := miniredis.RunT(t)
-	redisClient := redis.NewClient(&redis.Options{Addr: mini.Addr()})
-	defer redisClient.Close()
-	jwtConfig := auth.JWTConfig{SecretKey: "integration-secret", AccessTokenTTL: 15 * time.Minute, RefreshTokenTTL: 30 * 24 * time.Hour}
-	sessionCache := cache.NewUserSessionCache(redisClient, jwtConfig.RefreshTokenTTL)
 	userRepo := repository.NewUserRepository(db)
-	authService := NewAuthService(userRepo, jwtConfig, sessionCache, redisClient)
-	refreshSessionID := uuid.New()
-	tokens, err := authService.generateTokens(ctx, &model.User{ID: userID, Email: email}, refreshSessionID)
-	if err != nil {
-		t.Fatalf("seed auth session: %v", err)
-	}
 
 	privacyRepo := repository.NewPrivacyErasureRepository(db)
 	privacyService := NewPrivacyErasureService(
 		privacyRepo,
 		userRepo,
-		authService,
+		&integrationPrivacyIdentityRevoker{},
 		uploadStorage,
 		database.NewTransactionManager(db),
 	)
@@ -143,10 +135,8 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	if err := db.Table("privacy_erasure_requests").Where("id = ? AND subject_user_id IS NULL AND status = 'completed'", request.ID).Count(&auditCount).Error; err != nil || auditCount != 1 {
 		t.Fatalf("anonymous audit count=%d err=%v", auditCount, err)
 	}
-	if exists, err := sessionCache.Exists(ctx, refreshSessionID); err != nil || exists {
-		t.Fatalf("session survived erasure: exists=%v err=%v", exists, err)
-	}
-	if _, err := authService.RefreshSession(ctx, tokens.RefreshToken); err == nil || !(errors.Is(err, ErrInvalidRefresh) || errors.Is(err, ErrRefreshReuse)) {
-		t.Fatalf("erased refresh credential remained usable: %v", err)
+	closed, err := userRepo.IsClosed(ctx, userID)
+	if err != nil || !closed {
+		t.Fatalf("erased identity must retain immutable tombstone: closed=%v err=%v", closed, err)
 	}
 }

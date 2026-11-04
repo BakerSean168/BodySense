@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/bodysense/api/internal/auth"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
@@ -19,18 +18,8 @@ type privacyErasureApplication interface {
 	Request(context.Context, uuid.UUID, string) (*model.PrivacyErasureRequest, error)
 }
 
-type privacyRefreshCookiePolicy struct {
-	name   string
-	secure bool
-}
-
-func (s *PublicServer) WithPrivacy(
-	privacy privacyErasureApplication,
-	refreshCookieName string,
-	refreshCookieSecure bool,
-) *PublicServer {
+func (s *PublicServer) WithPrivacy(privacy privacyErasureApplication) *PublicServer {
 	s.privacy = privacy
-	s.privacyCookie = privacyRefreshCookiePolicy{name: refreshCookieName, secure: refreshCookieSecure}
 	return s
 }
 
@@ -79,6 +68,9 @@ func (s *PublicServer) RequestPrivacyErasure(
 		if errors.Is(err, service.ErrPrivacyErasureConfirmation) {
 			return requestPrivacyErasureError(http.StatusBadRequest, "CONFIRMATION_MISMATCH", "confirmation phrase does not match"), nil
 		}
+		if errors.Is(err, service.ErrPrivacyErasureUnavailable) {
+			return requestPrivacyErasureError(http.StatusInternalServerError, "AUTH_ERASURE_UNAVAILABLE", "hosted identity deletion is not configured"), nil
+		}
 		return requestPrivacyErasureError(http.StatusInternalServerError, "PRIVACY_ERASURE_FAILED", "unable to persist data deletion request"), nil
 	}
 	if erasure == nil {
@@ -90,7 +82,6 @@ func (s *PublicServer) RequestPrivacyErasure(
 	}
 
 	noStore := "no-store"
-	clearCookie := auth.NewClearedRefreshCookie(s.privacyCookie.name, s.privacyCookie.secure).String()
 	return openapiv1.RequestPrivacyErasure202JSONResponse{
 		Body: openapiv1.PrivacyErasureAccepted{
 			RequestId: erasure.ID,
@@ -99,7 +90,6 @@ func (s *PublicServer) RequestPrivacyErasure(
 		},
 		Headers: openapiv1.RequestPrivacyErasure202ResponseHeaders{
 			CacheControl: &noStore,
-			SetCookie:    &clearCookie,
 		},
 	}, nil
 }
