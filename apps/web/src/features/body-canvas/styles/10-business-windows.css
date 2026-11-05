@@ -726,7 +726,9 @@
   margin-right: -6px;
 }
 @media (max-width: 760px) {
-  .bc-person-notes {
+  /* This element also carries .bc-person-equipment, whose later mobile rule
+     would otherwise restore two columns. */
+  .bc-person-equipment.bc-person-notes {
     grid-template-columns: 1fr;
   }
 }
