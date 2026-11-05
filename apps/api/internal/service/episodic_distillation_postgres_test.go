@@ -7,7 +7,6 @@ import (
 	"sync"
 	"testing"
 
-	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
@@ -19,46 +18,43 @@ import (
 // synthetic and every provider call is faked.
 type fakeEpisodicProposer struct {
 	mu    sync.Mutex
-	calls []*runtimev1.EpisodicShadowGenerationCommand
+	calls []EpisodicShadowProposalRequest
 	err   error
 	quote bool
 }
 
 func (f *fakeEpisodicProposer) ProposeEpisodicShadowQuote(
-	_ context.Context, command *runtimev1.EpisodicShadowGenerationCommand,
-) (*runtimev1.EpisodicShadowDraftProposal, error) {
+	_ context.Context, request EpisodicShadowProposalRequest,
+) (EpisodicShadowProposalResponse, error) {
 	f.mu.Lock()
-	f.calls = append(f.calls, command)
+	f.calls = append(f.calls, request)
 	err, quote := f.err, f.quote
 	f.mu.Unlock()
 	if err != nil {
-		return nil, err
+		return EpisodicShadowProposalResponse{}, err
 	}
 	if !quote {
-		return &runtimev1.EpisodicShadowDraftProposal{PolicyRevision: EpisodicShadowQuotePolicyRevision}, nil
+		return EpisodicShadowProposalResponse{}, nil
 	}
-	for _, source := range command.GetSourceMessages() {
-		if source.GetRole() != "user" {
+	for _, source := range request.Source {
+		if source.Role != "user" {
 			continue
 		}
-		canonical, ok := repository.CanonicalEpisodicPreference(source.GetText())
+		canonical, ok := repository.CanonicalEpisodicPreference(source.Text)
 		if !ok {
 			continue
 		}
-		return &runtimev1.EpisodicShadowDraftProposal{
-			PolicyRevision: EpisodicShadowQuotePolicyRevision,
-			Quotes: []*runtimev1.EpisodicShadowQuote{{
-				SourceMessageId: source.GetId(), Quote: source.GetText(), Preference: canonical.Kind,
-			}},
-		}, nil
+		return EpisodicShadowProposalResponse{Quotes: []EpisodicShadowQuoteSuggestion{{
+			SourceMessageID: source.ID, Quote: source.Text, Preference: canonical.Kind,
+		}}}, nil
 	}
-	return &runtimev1.EpisodicShadowDraftProposal{PolicyRevision: EpisodicShadowQuotePolicyRevision}, nil
+	return EpisodicShadowProposalResponse{}, nil
 }
 
-func (f *fakeEpisodicProposer) snapshot() []*runtimev1.EpisodicShadowGenerationCommand {
+func (f *fakeEpisodicProposer) snapshot() []EpisodicShadowProposalRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]*runtimev1.EpisodicShadowGenerationCommand(nil), f.calls...)
+	return append([]EpisodicShadowProposalRequest(nil), f.calls...)
 }
 
 func (f *pruneJobFixture) messageIDs(from, to int) []uuid.UUID {
@@ -147,14 +143,14 @@ func TestEpisodicDistillationPruneBoundaryCreatesShadowNotePostgres(t *testing.T
 	if len(calls) != 2 {
 		t.Fatalf("proposer calls=%d, want two segments", len(calls))
 	}
-	if len(calls[0].GetContextMessages()) != 0 {
-		t.Fatalf("first segment invented context: %+v", calls[0].GetContextMessages())
+	if len(calls[0].Context) != 0 {
+		t.Fatalf("first segment invented context: %+v", calls[0].Context)
 	}
-	if len(calls[1].GetContextMessages()) != 2 ||
-		calls[1].GetContextMessages()[0].GetId() != ids[0].String() ||
-		calls[1].GetContextMessages()[1].GetId() != ids[1].String() ||
-		len(calls[1].GetSourceMessages()) != 2 {
-		t.Fatalf("bounded lookback=%+v", calls[1].GetContextMessages())
+	if len(calls[1].Context) != 2 ||
+		calls[1].Context[0].ID != ids[0] ||
+		calls[1].Context[1].ID != ids[1] ||
+		len(calls[1].Source) != 2 {
+		t.Fatalf("bounded lookback=%+v", calls[1].Context)
 	}
 	if status, reason, attempts := f.ledger(1, 2); status != repository.EpisodicDistillationDistilled || reason != "abstained" || attempts != 0 {
 		t.Fatalf("abstained ledger=%s/%s/%d", status, reason, attempts)

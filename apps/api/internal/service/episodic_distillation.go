@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
@@ -28,16 +27,6 @@ const (
 func EpisodicShadowGenerationEnabledFromEnv(getenv func(string) string) bool {
 	value := strings.TrimSpace(getenv(EpisodicShadowGenerationEnv))
 	return strings.EqualFold(value, "true") || value == "1"
-}
-
-// EpisodicShadowProposer is the only model seam S2 permits: it accepts the
-// existing typed S2-B1 command and returns the existing typed proposal. A
-// production implementation requires the separately approved model transport;
-// tests inject a fake and never contact a provider.
-type EpisodicShadowProposer interface {
-	ProposeEpisodicShadowQuote(
-		context.Context, *runtimev1.EpisodicShadowGenerationCommand,
-	) (*runtimev1.EpisodicShadowDraftProposal, error)
 }
 
 // EpisodicDistillationStats is content-free accounting recorded on the prune
@@ -222,39 +211,31 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 			continue
 		}
 		modelCalls++
-		command := episodicCommand(owner, plan.ConversationID, seg)
+		request := EpisodicShadowProposalRequest{
+			Owner: owner, ConversationID: plan.ConversationID,
+			FromSeq: seg.FromSeq, ToSeq: seg.ToSeq,
+			Source:  make([]EpisodicShadowSourceMessage, 0, len(seg.Messages)),
+			Context: make([]EpisodicShadowSourceMessage, 0, len(seg.Context)),
+		}
+		for _, msg := range seg.Messages {
+			request.Source = append(request.Source, EpisodicShadowSourceMessage{
+				ID: msg.ID, Seq: msg.Seq, Role: msg.Role, Text: msg.Text,
+			})
+		}
+		for _, msg := range seg.Context {
+			request.Context = append(request.Context, EpisodicShadowSourceMessage{
+				ID: msg.ID, Seq: msg.Seq, Role: msg.Role, Text: msg.Text,
+			})
+		}
 		callCtx, cancelCall := context.WithTimeout(ctx, t.proposalTimeout)
-		proposal, proposeErr := t.proposer.ProposeEpisodicShadowQuote(callCtx, command)
+		note, created, generateErr := GenerateAndApplyEpisodicShadow(callCtx, t.writer, t.proposer, request)
 		cancelCall()
-		if proposeErr != nil {
+		if generateErr != nil {
 			stats.Failures++
-			reason, _ := episodicFailureReason(proposeErr)
-			if t.recordFailure(ctx, owner, state.ConversationID, seg, reason, &stats, &blocked, plan) && !blocked {
-				resolvedThrough = seg.ToSeq
-			}
-			continue
-		}
-		if proposal == nil || len(proposal.GetQuotes()) == 0 {
-			// Abstention is a final, empty outcome: no note and no retry.
-			if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
-				repository.EpisodicDistillationDistilled, "abstained", nil); err != nil {
-				log.Printf("episodic distillation abstention for conversation %s: %v", plan.ConversationID, err)
-				blocked = true
-				continue
-			}
-			stats.Abstained++
-			if !blocked {
-				resolvedThrough = seg.ToSeq
-			}
-			continue
-		}
-		note, created, applyErr := ApplyEpisodicShadowProposal(ctx, owner, t.writer, command, proposal)
-		if applyErr != nil {
-			stats.Failures++
-			reason, terminal := episodicFailureReason(applyErr)
+			reason, terminal := episodicFailureReason(generateErr)
 			if terminal {
 				status := repository.EpisodicDistillationGapped
-				if errors.Is(applyErr, repository.ErrEpisodicNoteUserDeleted) {
+				if errors.Is(generateErr, repository.ErrEpisodicNoteUserDeleted) {
 					status = repository.EpisodicDistillationSkipped
 				}
 				if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
@@ -278,10 +259,21 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 			}
 			continue
 		}
-		var noteID *uuid.UUID
-		if note != nil {
-			noteID = &note.ID
+		if note == nil {
+			// Abstention is a final, empty outcome: no note and no retry.
+			if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
+				repository.EpisodicDistillationDistilled, "abstained", nil); err != nil {
+				log.Printf("episodic distillation abstention for conversation %s: %v", plan.ConversationID, err)
+				blocked = true
+				continue
+			}
+			stats.Abstained++
+			if !blocked {
+				resolvedThrough = seg.ToSeq
+			}
+			continue
 		}
+		noteID := &note.ID
 		reason := "replayed"
 		if created {
 			reason = "persisted"
@@ -331,6 +323,8 @@ func episodicFailureReason(err error) (string, bool) {
 	switch {
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
 		return "timeout", false
+	case errors.Is(err, ErrEpisodicShadowProposalFailed):
+		return "model_error", false
 	case errors.Is(err, repository.ErrEpisodicNoteUserDeleted):
 		return "user_deleted", true
 	case errors.Is(err, repository.ErrEpisodicDraftConflict):
@@ -340,31 +334,6 @@ func episodicFailureReason(err error) (string, bool) {
 	default:
 		return "model_error", false
 	}
-}
-
-func episodicCommand(
-	owner, conversationID uuid.UUID, seg repository.EpisodicDistillationSegment,
-) *runtimev1.EpisodicShadowGenerationCommand {
-	command := &runtimev1.EpisodicShadowGenerationCommand{
-		ConversationId:  conversationID.String(),
-		UserId:          owner.String(),
-		FromSeq:         uint32(seg.FromSeq),
-		ToSeq:           uint32(seg.ToSeq),
-		PolicyRevision:  EpisodicShadowQuotePolicyRevision,
-		SourceMessages:  make([]*runtimev1.EpisodicShadowSourceMessage, 0, len(seg.Messages)),
-		ContextMessages: make([]*runtimev1.EpisodicShadowSourceMessage, 0, len(seg.Context)),
-	}
-	for _, msg := range seg.Messages {
-		command.SourceMessages = append(command.SourceMessages, &runtimev1.EpisodicShadowSourceMessage{
-			Id: msg.ID.String(), Seq: uint32(msg.Seq), Role: msg.Role, Text: msg.Text,
-		})
-	}
-	for _, msg := range seg.Context {
-		command.ContextMessages = append(command.ContextMessages, &runtimev1.EpisodicShadowSourceMessage{
-			Id: msg.ID.String(), Seq: uint32(msg.Seq), Role: msg.Role, Text: msg.Text,
-		})
-	}
-	return command
 }
 
 // AfterPrune closes the watermark after the raw rows are gone. It uses a
