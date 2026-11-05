@@ -625,6 +625,8 @@ jobs:
           CORS_ORIGINS: http://127.0.0.1:5173
           AI_SERVICE_URL: http://127.0.0.1:18100
           CONSULTATION_CHAMPION_CONFIGURATION_ID: consult-config-83b6a1cc70477c82
+          # S6-B preview: test-only, default-off in every real environment.
+          EPISODIC_NOTES_CONTROLS_ENABLED: "true"
         run: |
           go run ./cmd/server > /tmp/bodysense-api.log 2>&1 &
           echo $! > /tmp/bodysense-api.pid
@@ -659,6 +661,8 @@ jobs:
           files="$(node scripts/e2e/plan-shards.mjs --files-for ${{ matrix.shard }} --partition apps/web/e2e/shards.json)"
           echo "Shard ${{ matrix.shard }} specs: ${files}"
           echo "files=${files}" >> "$GITHUB_OUTPUT"
+      - name: Verify PostgreSQL client for S6-B note seeding
+        run: psql --version
       - name: Run browser E2E shard
         env:
           CI: "true"
@@ -668,6 +672,10 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
           VITE_TURNSTILE_SITE_KEY: ""
           VITE_BODYSENSE_ANATOMY_CATALOG_URL: https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json
+          # S6-B preview is enabled only for the browser E2E environment. The
+          # spec seeds inert shadow notes into the disposable service database.
+          VITE_EPISODIC_NOTES_CONTROLS_ENABLED: "true"
+          E2E_DATABASE_URL: postgresql://bodysense:bodysense123@127.0.0.1:5432/bodysense
         run: pnpm exec playwright test ${{ steps.shard-files.outputs.files }}
       - name: Print service logs on failure
         if: failure()

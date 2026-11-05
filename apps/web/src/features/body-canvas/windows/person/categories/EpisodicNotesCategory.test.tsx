@@ -85,7 +85,7 @@ describe("EpisodicNotesCategory", () => {
     mount();
     await screen.findByText(note.contentText);
     await user.click(
-      screen.getByRole("button", { name: "删除记忆：2026/11/05" }),
+      screen.getByRole("button", { name: /^删除记忆：2026\/11\/05/ }),
     );
     const dialog = await screen.findByRole("dialog", {
       name: "删除这条记忆？",
@@ -113,7 +113,7 @@ describe("EpisodicNotesCategory", () => {
     mount();
     await screen.findByText(note.contentText);
     await user.click(
-      screen.getByRole("button", { name: "删除记忆：2026/11/05" }),
+      screen.getByRole("button", { name: /^删除记忆：2026\/11\/05/ }),
     );
     await user.click(await screen.findByRole("button", { name: "永久删除" }));
     expect(await screen.findByText("删除失败")).toBeVisible();

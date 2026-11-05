@@ -91,7 +91,7 @@ export function EpisodicNotesCategory() {
                 <button
                   type="button"
                   className="bc-icon-button bc-person-note-delete"
-                  aria-label={`删除记忆：${date}`}
+                  aria-label={`删除记忆：${date} · ${note.contentText.slice(0, 12)}`}
                   disabled={removingId !== null}
                   onClick={() => setPendingDelete(note)}
                 >
