@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	protovalidate "buf.build/go/protovalidate"
@@ -53,6 +54,29 @@ func ApplyEpisodicShadowProposal(
 	if fromSeq < 1 || toSeq < fromSeq || len(sources) != toSeq-fromSeq+1 {
 		return fail("source message sequence is not contiguous")
 	}
+	// Untrusted lookback is bounded, immediately preceding the source and
+	// never part of provenance or a quotable source. Go selected it from the
+	// same owner-scoped transcript; SaveShadowDraft never sees it.
+	context := command.GetContextMessages()
+	if len(context) > 2 {
+		return fail("context window exceeds two messages")
+	}
+	if len(context) > 0 && int(context[len(context)-1].GetSeq()) != fromSeq-1 {
+		return fail("context must immediately precede the source")
+	}
+	contextIDs := make(map[uuid.UUID]bool, len(context))
+	for i, src := range context {
+		id, err := uuid.Parse(src.GetId())
+		seq := int(src.GetSeq())
+		if err != nil || id == uuid.Nil || contextIDs[id] ||
+			seq < 1 || seq >= fromSeq ||
+			(i > 0 && seq != int(context[i-1].GetSeq())+1) ||
+			(src.GetRole() != "user" && src.GetRole() != "assistant") ||
+			src.GetText() == "" || src.GetText() != strings.TrimSpace(src.GetText()) {
+			return fail("invalid context message")
+		}
+		contextIDs[id] = true
+	}
 	var sourceBytes int
 	ids := make([]uuid.UUID, 0, len(sources))
 	seen := make(map[uuid.UUID]bool, len(sources))
@@ -60,6 +84,9 @@ func ApplyEpisodicShadowProposal(
 		id, err := uuid.Parse(src.GetId())
 		if err != nil || id == uuid.Nil || seen[id] || int(src.GetSeq()) != fromSeq+i {
 			return fail("source message identity or order is inconsistent")
+		}
+		if contextIDs[id] {
+			return fail("context message reused as source")
 		}
 		seen[id] = true
 		sourceBytes += utf8.RuneCountInString(src.GetText())

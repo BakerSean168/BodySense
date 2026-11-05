@@ -28,6 +28,8 @@ CONVERSATION_ID = "11111111-1111-4111-8111-111111111111"
 USER_ID = "22222222-2222-4222-8222-222222222222"
 MESSAGE_ID = "33333333-3333-4333-8333-333333333333"
 ASSISTANT_ID = "44444444-4444-4444-8444-444444444444"
+CONTEXT_USER_ID = "55555555-5555-4555-8555-555555555555"
+CONTEXT_ASSISTANT_ID = "66666666-6666-4666-8666-666666666666"
 POLICY_REVISION = "episodic-shadow-quote-v1"
 
 
@@ -41,6 +43,36 @@ def source_payload(text: str = "请简短回答。") -> dict[str, object]:
         "source_messages": [
             {"id": MESSAGE_ID, "seq": 1, "role": "user", "text": text},
             {"id": ASSISTANT_ID, "seq": 2, "role": "assistant", "text": "已收到。"},
+        ],
+    }
+
+
+def contextual_payload(
+    from_seq: int = 3, context_seqs: tuple[int, int] = (1, 2)
+) -> dict[str, object]:
+    return {
+        "conversation_id": CONVERSATION_ID,
+        "user_id": USER_ID,
+        "from_seq": from_seq,
+        "to_seq": from_seq + 1,
+        "policy_revision": POLICY_REVISION,
+        "source_messages": [
+            {"id": MESSAGE_ID, "seq": from_seq, "role": "user", "text": "请简短回答。"},
+            {"id": ASSISTANT_ID, "seq": from_seq + 1, "role": "assistant", "text": "已收到。"},
+        ],
+        "context_messages": [
+            {
+                "id": CONTEXT_USER_ID,
+                "seq": context_seqs[0],
+                "role": "user",
+                "text": "上一轮合成问题。",
+            },
+            {
+                "id": CONTEXT_ASSISTANT_ID,
+                "seq": context_seqs[1],
+                "role": "assistant",
+                "text": "上一轮合成回答。",
+            },
         ],
     }
 
@@ -103,6 +135,54 @@ def test_exact_whole_message_quote_and_versioned_proto_parity() -> None:
 
     with pytest.raises(ValidationError):
         ShadowSelectionOutput.model_validate({"quotes": [], "content_text": "伪造诊断"})
+
+
+def test_context_is_bounded_untrusted_and_never_quotable() -> None:
+    window = parse_shadow_source_window(contextual_payload())
+    assert [item.seq for item in window.source_messages] == [3, 4]
+    assert [item.seq for item in window.context_messages] == [1, 2]
+    assert MESSAGE_ID in {item.id for item in window.source_messages}
+    assert CONTEXT_USER_ID not in {item.id for item in window.source_messages}
+
+    # Context can never be quoted, even when its text happens to match the
+    # approved vocabulary.
+    with pytest.raises(InvalidShadowProposalError):
+        serialize_shadow_selection(
+            window,
+            selected(message_id=CONTEXT_USER_ID),
+        )
+
+    # Context must end immediately before from_seq.
+    with pytest.raises(InvalidShadowProposalError):
+        parse_shadow_source_window(contextual_payload(from_seq=4))
+    # Context sequence must be < from_seq.
+    with pytest.raises(InvalidShadowProposalError):
+        parse_shadow_source_window(contextual_payload(from_seq=2))
+
+    mutations = (
+        # Source id cannot be reused as context.
+        lambda p: p["context_messages"][0].update(id=MESSAGE_ID),
+        # Padding changes the exact source text.
+        lambda p: p["context_messages"][0].update(text=" 上一轮合成问题。 "),
+    )
+    for mutation in mutations:
+        payload = contextual_payload()
+        mutation(payload)
+        with pytest.raises(InvalidShadowProposalError):
+            parse_shadow_source_window(payload)
+
+    too_many = contextual_payload(from_seq=4, context_seqs=(2, 3))
+    too_many["context_messages"].insert(
+        0,
+        {
+            "id": str(uuid5(NAMESPACE_URL, "third-context")),
+            "seq": 1,
+            "role": "user",
+            "text": "更早的合成消息。",
+        },
+    )
+    with pytest.raises(InvalidShadowProposalError):
+        parse_shadow_source_window(too_many)
 
 
 @pytest.mark.asyncio

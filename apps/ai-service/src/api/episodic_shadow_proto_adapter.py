@@ -13,6 +13,7 @@ from pydantic_ai.models import Model
 
 from ..generated.runtimeproto.bodysense.runtime.v1 import runtime_pb2
 from ..services.episodic_shadow_proposal import (
+    CONTEXT_MAX_CHARS,
     POLICY_REVISION,
     SOURCE_MAX_CHARS,
     InvalidShadowProposalError,
@@ -46,6 +47,22 @@ def parse_shadow_source_window(payload: dict[str, object]) -> ShadowSourceWindow
         if source.seq != command.from_seq + index or source.text != source.text.strip():
             raise InvalidShadowProposalError("source window changed ordering or padding")
 
+    context = command.context_messages
+    source_ids = {item.id for item in sources}
+    if (
+        len(context) > 2
+        or sum(len(item.text) for item in context) > CONTEXT_MAX_CHARS
+        or any(item.seq >= command.from_seq for item in context)
+        or (context and context[-1].seq != command.from_seq - 1)
+        or any(
+            context[index].seq + 1 != context[index + 1].seq for index in range(len(context) - 1)
+        )
+        or len({item.id for item in context}) != len(context)
+        or any(item.id in source_ids for item in context)
+        or any(item.text != item.text.strip() for item in context)
+    ):
+        raise InvalidShadowProposalError("context window is not bounded and contiguous")
+
     return ShadowSourceWindow(
         conversation_id=command.conversation_id,
         user_id=command.user_id,
@@ -54,6 +71,9 @@ def parse_shadow_source_window(payload: dict[str, object]) -> ShadowSourceWindow
         policy_revision=command.policy_revision,
         source_messages=tuple(
             ShadowSourceMessage(id=s.id, seq=s.seq, role=s.role, text=s.text) for s in sources
+        ),
+        context_messages=tuple(
+            ShadowSourceMessage(id=s.id, seq=s.seq, role=s.role, text=s.text) for s in context
         ),
     )
 
