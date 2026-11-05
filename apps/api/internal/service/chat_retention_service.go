@@ -64,6 +64,13 @@ func (c *AIClient) CleanupConsultationCheckpoints(
 	return &receipt, nil
 }
 
+// EpisodicDistillationRunner is the prune-boundary seam for the default-off
+// S2 trigger. Both methods are best-effort: neither may abort a prune.
+type EpisodicDistillationRunner interface {
+	BeforePrune(context.Context, uuid.UUID, *model.ChatRetentionPrunePlan) EpisodicDistillationStats
+	AfterPrune(context.Context, uuid.UUID, *model.ChatRetentionPrunePlan)
+}
+
 // ChatRetentionService runs prune passes (PC-RET-001). A pass is planned under
 // the Conversation lock, the ai-service cleans the checkpoint copies of the
 // planned Runs, and only a verified receipt lets Go delete raw messages and
@@ -74,6 +81,9 @@ type ChatRetentionService struct {
 	jobs    *JobRuntime
 	// budget is the context window token budget (model.ChatContextTokenBudget).
 	budget int
+	// distiller is the optional, default-off S2 shadow trigger. Nil keeps
+	// prune behavior byte-for-byte identical to the pre-S2 path.
+	distiller EpisodicDistillationRunner
 	// wake lets EnqueuePrune start the worker's next pass now instead of at
 	// the next poll; the poll still recovers anything a wake-up missed.
 	wake chan struct{}
@@ -92,6 +102,13 @@ func (s *ChatRetentionService) WithContextTokenBudget(budget int) *ChatRetention
 	if budget >= model.MinChatContextTokenBudget {
 		s.budget = budget
 	}
+	return s
+}
+
+// WithEpisodicDistillation attaches the default-off S2 trigger. Callers that
+// never call this keep the pre-S2 prune path exactly.
+func (s *ChatRetentionService) WithEpisodicDistillation(distiller EpisodicDistillationRunner) *ChatRetentionService {
+	s.distiller = distiller
 	return s
 }
 
@@ -166,11 +183,35 @@ func (s *ChatRetentionService) prune(ctx context.Context, owner, jobID uuid.UUID
 	if replay != nil {
 		return replay, nil
 	}
+	// Shadow distillation runs before checkpoint cleanup so the source rows
+	// still exist, and never returns an error that could stop this pass.
+	var stats EpisodicDistillationStats
+	if s.distiller != nil {
+		stats = s.distiller.BeforePrune(ctx, owner, plan)
+	}
 	cleanup, err := s.cleaner.CleanupConsultationCheckpoints(ctx, plan.ConversationID, owner, plan.RunIDs)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCheckpointCleanupFailed, err)
 	}
-	return s.repo.CommitPrune(ctx, owner, plan, cleanup, jobID)
+	receipt, err := s.repo.CommitPrune(ctx, owner, plan, cleanup, jobID)
+	if err != nil {
+		return nil, err
+	}
+	if s.distiller != nil {
+		s.distiller.AfterPrune(ctx, owner, plan)
+		if !receipt.Replayed && stats.any() {
+			payload := map[string]any{
+				"considered": stats.Considered, "distilled": stats.Distilled,
+				"abstained": stats.Abstained, "skipped": stats.Skipped,
+				"gaps": stats.Gaps, "failures": stats.Failures, "retries": stats.Retries,
+			}
+			if err := s.repo.RecordPruneEvent(context.WithoutCancel(ctx), receipt.JobID,
+				"episodic.distillation", payload); err != nil {
+				log.Printf("episodic distillation job event for conversation %s: %v", plan.ConversationID, err)
+			}
+		}
+	}
+	return receipt, nil
 }
 
 // EnqueuePrune asks for a pass past the current pruned cursor. trigger names

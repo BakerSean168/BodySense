@@ -37,6 +37,11 @@ type Conversation struct {
 	ContextStartSeq     int   `gorm:"not null;default:1" json:"-"`
 	PrunedThroughSeq    int   `gorm:"not null;default:0" json:"-"`
 	RetentionRevision   int64 `gorm:"not null;default:0" json:"-"`
+	// DistilledThroughSeq is the last seq whose S2 shadow-distillation
+	// outcome is final (note saved/replayed, abstained, ineligible, tombstoned
+	// or a recorded gap). It is not a retention cursor: it never moves on its
+	// own, never blocks pruning and does not bump RetentionRevision.
+	DistilledThroughSeq int `gorm:"not null;default:0" json:"-"`
 }
 
 // TableName specifies the table name for GORM.

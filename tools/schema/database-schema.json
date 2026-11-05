@@ -2433,6 +2433,13 @@
                     "type": "bigint",
                     "default": "0",
                     "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "distilled_through_seq",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
                 }
             ]
         },
@@ -3472,6 +3479,81 @@
                     "name": "created_revision",
                     "type": "bigint",
                     "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "episodic_distillation_segments",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "from_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "to_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "attempts",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "note_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "reason",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
                     "nullable": false
                 }
             ]
@@ -7753,5 +7835,5 @@
     ],
     "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
-    "migration_state": "6:false"
+    "migration_state": "7:false"
 }

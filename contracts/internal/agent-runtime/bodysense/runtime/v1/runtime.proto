@@ -309,6 +309,12 @@ message EpisodicShadowGenerationCommand {
   repeated EpisodicShadowSourceMessage source_messages = 6 [
     (buf.validate.field).repeated = {min_items: 2, max_items: 128}
   ];
+  // Optional untrusted context immediately preceding from_seq (at most two
+  // messages). It is never a quote source, never stored and never part of the
+  // note's provenance; Go selects it from the same owner-scoped transcript.
+  repeated EpisodicShadowSourceMessage context_messages = 7 [
+    (buf.validate.field).repeated.max_items = 2
+  ];
 }
 
 message EpisodicShadowQuote {

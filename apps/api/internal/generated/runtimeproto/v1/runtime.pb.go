@@ -2532,8 +2532,12 @@ type EpisodicShadowGenerationCommand struct {
 	ToSeq          uint32                         `protobuf:"varint,4,opt,name=to_seq,json=toSeq,proto3" json:"to_seq,omitempty"`
 	PolicyRevision string                         `protobuf:"bytes,5,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
 	SourceMessages []*EpisodicShadowSourceMessage `protobuf:"bytes,6,rep,name=source_messages,json=sourceMessages,proto3" json:"source_messages,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional untrusted context immediately preceding from_seq (at most two
+	// messages). It is never a quote source, never stored and never part of the
+	// note's provenance; Go selects it from the same owner-scoped transcript.
+	ContextMessages []*EpisodicShadowSourceMessage `protobuf:"bytes,7,rep,name=context_messages,json=contextMessages,proto3" json:"context_messages,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *EpisodicShadowGenerationCommand) Reset() {
@@ -2604,6 +2608,13 @@ func (x *EpisodicShadowGenerationCommand) GetPolicyRevision() string {
 func (x *EpisodicShadowGenerationCommand) GetSourceMessages() []*EpisodicShadowSourceMessage {
 	if x != nil {
 		return x.SourceMessages
+	}
+	return nil
+}
+
+func (x *EpisodicShadowGenerationCommand) GetContextMessages() []*EpisodicShadowSourceMessage {
+	if x != nil {
+		return x.ContextMessages
 	}
 	return nil
 }
@@ -2946,7 +2957,7 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x03seq\x18\x02 \x01(\rB\a\xbaH\x04*\x02(\x01R\x03seq\x12*\n" +
 	"\x04role\x18\x03 \x01(\tB\x16\xbaH\x13r\x11R\x04userR\tassistantR\x04role\x12\x1e\n" +
 	"\x04text\x18\x04 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xb0\tR\x04text\"\xee\x02\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xb0\tR\x04text\"\xd6\x03\n" +
 	"\x1fEpisodicShadowGenerationCommand\x121\n" +
 	"\x0fconversation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0econversationId\x12!\n" +
 	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12\"\n" +
@@ -2954,7 +2965,8 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x06to_seq\x18\x04 \x01(\rB\a\xbaH\x04*\x02(\x01R\x05toSeq\x12H\n" +
 	"\x0fpolicy_revision\x18\x05 \x01(\tB\x1f\xbaH\x1cr\x1a\n" +
 	"\x18episodic-shadow-quote-v1R\x0epolicyRevision\x12g\n" +
-	"\x0fsource_messages\x18\x06 \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\v\xbaH\b\x92\x01\x05\b\x02\x10\x80\x01R\x0esourceMessages\"\xd5\x01\n" +
+	"\x0fsource_messages\x18\x06 \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\v\xbaH\b\x92\x01\x05\b\x02\x10\x80\x01R\x0esourceMessages\x12f\n" +
+	"\x10context_messages\x18\a \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\b\xbaH\x05\x92\x01\x02\x10\x02R\x0fcontextMessages\"\xd5\x01\n" +
 	"\x13EpisodicShadowQuote\x124\n" +
 	"\x11source_message_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceMessageId\x12\x1f\n" +
 	"\x05quote\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x03\x18xR\x05quote\x12g\n" +
@@ -3077,12 +3089,13 @@ var file_bodysense_runtime_v1_runtime_proto_depIdxs = []int32{
 	37, // 53: bodysense.runtime.v1.StreamDone.usage:type_name -> google.protobuf.Struct
 	37, // 54: bodysense.runtime.v1.StreamDone.governance:type_name -> google.protobuf.Struct
 	33, // 55: bodysense.runtime.v1.EpisodicShadowGenerationCommand.source_messages:type_name -> bodysense.runtime.v1.EpisodicShadowSourceMessage
-	35, // 56: bodysense.runtime.v1.EpisodicShadowDraftProposal.quotes:type_name -> bodysense.runtime.v1.EpisodicShadowQuote
-	57, // [57:57] is the sub-list for method output_type
-	57, // [57:57] is the sub-list for method input_type
-	57, // [57:57] is the sub-list for extension type_name
-	57, // [57:57] is the sub-list for extension extendee
-	0,  // [0:57] is the sub-list for field type_name
+	33, // 56: bodysense.runtime.v1.EpisodicShadowGenerationCommand.context_messages:type_name -> bodysense.runtime.v1.EpisodicShadowSourceMessage
+	35, // 57: bodysense.runtime.v1.EpisodicShadowDraftProposal.quotes:type_name -> bodysense.runtime.v1.EpisodicShadowQuote
+	58, // [58:58] is the sub-list for method output_type
+	58, // [58:58] is the sub-list for method input_type
+	58, // [58:58] is the sub-list for extension type_name
+	58, // [58:58] is the sub-list for extension extendee
+	0,  // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_bodysense_runtime_v1_runtime_proto_init() }
