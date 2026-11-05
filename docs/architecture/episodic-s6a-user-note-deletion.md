@@ -12,8 +12,8 @@ Person/Chat control interface, not the user-facing release.
   source sequence range and deletion time. It stores **no quoted text,
   message UUIDs, clinical data, model output or asset IDs**.
 - `EpisodicNoteControlsRepository.ListOwned` returns no other user's notes,
-  active `shadow` notes only, sorted newest first. The current S2-A storage
-  cap is 48 notes; no serving uses this list.
+  active `shadow` notes only, sorted newest first. The approved S2 retention
+  policy caps the list at 96 notes; no serving uses this list.
 - `DeleteOwned` accepts an authenticated owner identity from a *future*
   application call. It locks the owner Conversation as the S2 writer and
   retention machinery do, records a durable tombstone, then removes the

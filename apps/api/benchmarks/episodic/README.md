@@ -19,8 +19,10 @@ Approved memory design: [episodic-memory-hybrid-plan.md](../../../docs/architect
 - There is no API, server wire-up, scheduler or runtime retrieval path. The
   harness is a standalone `main` package and executes SQL directly.
 - Runtime retention constants are not imported or changed. The retention caps
-  measured here are local values in `corpus.go`; the S2-A provisional
-  48 notes / 16,000 characters is test-only and is not approved policy.
+  measured here are local values in `corpus.go`; the 48 notes / 16,000
+  characters tier is a historical comparison baseline, not the approved
+  policy. The approved default is 96 notes / 32,000 characters (product
+  owner, 2026-11-05).
 - No model or remote provider is called. The "extraction stub" is a
   deterministic text builder, so measured latency excludes inference.
 
@@ -52,6 +54,6 @@ every cap/mode, so repeated runs are deterministic apart from latency.
 
 - `fixtures/queries.json` — 320 annotated queries (100 original term, 110
   paraphrase, 110 temporal reference), each naming the exact note id it must
-  recall and why. Every expected note is retained at the test-only cap, so the
-  same fixture is valid at every measured cap.
+  recall and why. Every expected note is retained at the 48/16,000 baseline
+  cap, so the same fixture is valid at every measured cap.
 - `results/benchmark.json` — aggregate result of the committed run.

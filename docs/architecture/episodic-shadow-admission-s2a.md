@@ -32,10 +32,18 @@ proves all of these properties:
   IDs, and is written atomically as a non-serving `shadow` note. Repeated
   range+version+policy writes replay the exact existing note; changed content
   or source IDs are rejected as conflicts.
-- A provisional **test-only** owner cap bounds retained rows (48) and total
-  characters (16,000) through oldest-first rollover. These values are *not*
-  an approved product privacy retention policy; the policy owner and a
-  12-month synthetic-bound benchmark must approve the eventual limits.
+- An **approved** per-owner retention policy bounds retained rows (96) and
+  total stored characters (32,000, counted in UTF-8 runes rather than bytes)
+  through oldest-first rollover. The product owner approved these values on
+  2026-11-05 based on the 12-month benchmark in
+  [S2 benchmark and recall evaluation](episodic-s2-benchmark-recall-eval.md).
+  Historical note: this section previously carried a provisional, test-only
+  48 notes / 16,000 characters cap; that temporary value is superseded.
+- `retentionPolicyVersion` remains caller-supplied provenance and is not
+  coupled to these constants. No production note exists under the provisional
+  cap (admission is default-off and only synthetic tests enable it), so no
+  re-evaluation or policy-version migration is needed; the first wired
+  generator must stamp an approved policy version.
 
 ## Source deletion and owner boundaries
 
