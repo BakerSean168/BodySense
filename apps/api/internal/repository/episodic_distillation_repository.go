@@ -162,7 +162,9 @@ SELECT m.id, m.turn_id, m.seq, m.role, m.status, m.parts::text AS parts,
          WHERE x.conversation_id = m.conversation_id AND x.turn_id = m.turn_id) AS turn_size,
        ((SELECT count(*) FROM statement_evidence e WHERE e.source_message_id = m.id)
         + (SELECT count(*) FROM safety_screens s WHERE s.source_message_id = m.id)
-        + (SELECT count(*) FROM safety_resolutions sr WHERE sr.source_message_id = m.id)) AS clinical_refs
+        + (SELECT count(*) FROM safety_resolutions sr WHERE sr.source_message_id = m.id)
+        + (SELECT count(*) FROM condition_analysis_runs c WHERE c.request_message_id = m.id)
+        + (SELECT count(*) FROM condition_direct_edits d WHERE d.request_message_id = m.id)) AS clinical_refs
 FROM messages m
 LEFT JOIN runs r ON r.id = m.run_id
 WHERE m.conversation_id = ? AND m.seq >= ? AND m.seq <= ?
