@@ -20,9 +20,10 @@ func quoteProposal(policy, msgID, quote, category string) *runtimev1.EpisodicSha
 	}
 }
 
-// Real isolated PostgreSQL 18; no model or network call. All chat and
-// generated content are synthetic. The Go source lock, not a model-facing
-// payload, is the authority for message identity and exact source text.
+// Real isolated PostgreSQL 18; no model or network call. Requires
+// BODYSENSE_INTEGRATION_DATABASE_URL. All chat and generated content are
+// synthetic. The Go source lock, not a model-facing payload, is the authority
+// for message identity and exact source text.
 func TestEpisodicShadowProposalOwnerSourceAndErasureGatesPostgres(t *testing.T) {
 	f := newPruneJobFixture(t)
 	ctx := context.Background()

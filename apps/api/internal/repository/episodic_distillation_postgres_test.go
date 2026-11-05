@@ -9,9 +9,10 @@ import (
 	"testing"
 )
 
-// Real PostgreSQL 18, synthetic chat only. The distillation repository never
-// calls a model; these tests assert the content-free ledger, the segment
-// boundary and the watermark that the S2 trigger relies on.
+// Real PostgreSQL 18, synthetic chat only. Requires
+// BODYSENSE_INTEGRATION_DATABASE_URL. The distillation repository never calls
+// a model; these tests assert the content-free ledger, the segment boundary
+// and the watermark that the S2 trigger relies on.
 func TestEpisodicDistillationSegmentsWatermarkAndGapPostgres(t *testing.T) {
 	db := openSingletonTestDB(t)
 	f := newRetentionFixture(t, db)

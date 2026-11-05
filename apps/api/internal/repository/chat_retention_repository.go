@@ -702,6 +702,24 @@ func (r *ChatRetentionRepository) CommitPrune(
 	return receipt, nil
 }
 
+// RecordPruneEvent appends a content-free auxiliary event to an already
+// completed prune job. The S2 trigger uses it to expose distillation counts;
+// failing to record it never changes the prune outcome or the watermark.
+func (r *ChatRetentionRepository) RecordPruneEvent(
+	ctx context.Context, jobID uuid.UUID, eventType string, payload any,
+) error {
+	if jobID == uuid.Nil || eventType == "" {
+		return nil
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return database.FromContext(ctx, r.db).WithContext(ctx).Create(&model.JobEvent{
+		JobID: jobID, EventType: eventType, Payload: datatypes.JSON(body),
+	}).Error
+}
+
 // recordPruneReceipt completes the prune job in the commit transaction, so the
 // receipt exists exactly when the cursor moved. jobID names a claimed job; a
 // direct pass (uuid.Nil) records its receipt on a job of its own.

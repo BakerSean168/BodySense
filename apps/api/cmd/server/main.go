@@ -193,7 +193,16 @@ func main() {
 	// Slice 3: Run settlement reconciles P and the token-budget C, and
 	// enqueues a prune job once C - 1 and P are both past R.
 	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
-		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv))
+		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv)).
+		// S2 wiring exists but is inert: EPISODIC_SHADOW_GENERATION_ENABLED
+		// alone cannot generate because no approved model proposer is
+		// connected, and the shadow writer stays admission-disabled.
+		WithEpisodicDistillation(service.NewEpisodicDistillationTriggerFromEnv(
+			os.Getenv,
+			repository.NewEpisodicDistillationRepository(database.DB),
+			repository.NewEpisodicShadowRepository(database.DB),
+			nil,
+		))
 	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
 	assessmentService := service.NewAssessmentService(
