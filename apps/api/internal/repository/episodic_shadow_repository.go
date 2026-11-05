@@ -18,9 +18,10 @@ import (
 )
 
 var (
-	ErrEpisodicShadowDisabled = errors.New("episodic shadow admission disabled")
-	ErrEpisodicSourceInvalid  = errors.New("episodic shadow source is unavailable or incomplete")
-	ErrEpisodicDraftConflict  = errors.New("episodic shadow draft conflicts with an existing range")
+	ErrEpisodicShadowDisabled  = errors.New("episodic shadow admission disabled")
+	ErrEpisodicSourceInvalid   = errors.New("episodic shadow source is unavailable or incomplete")
+	ErrEpisodicDraftConflict   = errors.New("episodic shadow draft conflicts with an existing range")
+	ErrEpisodicNoteUserDeleted = errors.New("episodic source window was deleted by user")
 )
 
 // Stage S2-A is deliberately *not* wired to consultation, retention, AI or
@@ -141,6 +142,19 @@ func (r *EpisodicShadowRepository) SaveShadowDraft(
 		}
 		if err != nil {
 			return err
+		}
+		// A durable user delete wins over a generator retry, a later model
+		// version, or any overlapping replay source window. The record has
+		// no content and is kept until the owner Conversation is erased.
+		var blocked int64
+		if err := tx.Table("episodic_note_deletions").
+			Where("user_id = ? AND conversation_id = ? AND from_seq <= ? AND to_seq >= ?",
+				owner, c.ID, draft.ToSeq, draft.FromSeq).
+			Count(&blocked).Error; err != nil {
+			return err
+		}
+		if blocked > 0 {
+			return ErrEpisodicNoteUserDeleted
 		}
 		// A generation retry after normal pruning must replay the existing
 		// note, not read resurrected or stale source messages.

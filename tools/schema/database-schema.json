@@ -3477,6 +3477,53 @@
             ]
         },
         {
+            "table": "episodic_note_deletions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "note_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "from_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "to_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "deleted_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "episodic_notes",
             "columns": [
                 {
@@ -7706,5 +7753,5 @@
     ],
     "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
-    "migration_state": "5:false"
+    "migration_state": "6:false"
 }

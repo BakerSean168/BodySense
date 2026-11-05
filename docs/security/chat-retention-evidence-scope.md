@@ -104,6 +104,11 @@ Conversation lock and only permits one of four non-clinical canonical reply
 preferences. It does not create a serving path or authorize model egress.
 See [S2-A admission](../architecture/episodic-shadow-admission-s2a.md)
 and [S2-B1 quote proposal](../architecture/episodic-shadow-s2b-quote-proposal.md).
+S6-A adds persistent, content-free user-delete suppression markers for source
+sequence ranges; they do not pin raw messages or block retention pruning, and
+only the owning account can erase them via full account erasure. S6-A remains
+unwired to any public user control until separate UI/privacy approval; see
+[S6-A note deletion](../architecture/episodic-s6a-user-note-deletion.md).
 User controls, clinical authority, full source audit and production approval
 in #495/#514/#515 remain gating.
 

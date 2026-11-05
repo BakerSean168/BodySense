@@ -25,6 +25,9 @@ PR_CASES = {
         "TestBodyStateLegacyTablesAbsentPostgres",
         "TestRunLeaseConcurrentReconciliationPostgres",
         "TestConversationSingletonDatabaseRejectsSecondConversation",
+        "TestEpisodicNoteControlsOwnerDeleteAndNoRegenerationPostgres",
+        "TestEpisodicNoteDeletionMigrationRefusesRollbackWithTombstonePostgres",
+        "TestEpisodicNoteControlsDeletionWaitsForConversationLockPostgres",
     ),
     "./internal/service": (
         "TestOnboardingContextCommitsProfileAndV2LedgerPostgres",
