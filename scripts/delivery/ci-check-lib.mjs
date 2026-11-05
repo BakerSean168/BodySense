@@ -74,14 +74,31 @@ export function verifyCiCheck({
   if (manifest?.event !== expectedEvent || manifest?.ref !== expectedRef) {
     failures.push("event/ref does not match GitHub run");
   }
+  // A selective "rerun failed jobs" attempt re-executes only the failed jobs
+  // and their dependents. Successful upstream jobs keep their artifacts from
+  // the attempt that produced them, so the scope manifest may legitimately
+  // carry an earlier attempt of this same workflow run. Provenance therefore
+  // binds the run ID exactly and the manifest attempt to the closed range
+  // [1, current attempt] instead of requiring equality; a missing, foreign,
+  // non-positive or future attempt stays a hard failure.
+  const currentAttempt = Number(expectedRunAttempt);
+  const manifestAttempt = manifest?.execution?.attempt;
   if (
     !/^[1-9][0-9]*$/.test(String(expectedRunId)) ||
-    !Number.isSafeInteger(Number(expectedRunAttempt)) ||
-    Number(expectedRunAttempt) < 1 ||
-    manifest?.execution?.runId !== String(expectedRunId) ||
-    manifest?.execution?.attempt !== Number(expectedRunAttempt)
+    !Number.isSafeInteger(currentAttempt) ||
+    currentAttempt < 1
   ) {
-    failures.push("run ID/attempt does not match GitHub run");
+    failures.push("GitHub run ID/attempt is invalid");
+  } else if (manifest?.execution?.runId !== String(expectedRunId)) {
+    failures.push("run ID does not match GitHub run");
+  } else if (
+    !Number.isSafeInteger(manifestAttempt) ||
+    manifestAttempt < 1 ||
+    manifestAttempt > currentAttempt
+  ) {
+    failures.push(
+      "manifest attempt provenance is not an earlier attempt of this run",
+    );
   }
 
   if (!results || typeof results !== "object" || Array.isArray(results)) {
@@ -116,6 +133,13 @@ export function verifyCiCheck({
     ref: String(expectedRef),
     headSha: String(expectedHeadSha),
     manifestDigest: manifest?.digest ?? null,
+    manifestAttempt: Number.isSafeInteger(manifestAttempt)
+      ? manifestAttempt
+      : null,
+    manifestReusedEarlierAttempt:
+      Number.isSafeInteger(manifestAttempt) &&
+      Number.isSafeInteger(currentAttempt) &&
+      manifestAttempt < currentAttempt,
     results: canonicalize(results),
     passed: failures.length === 0,
     failures,
