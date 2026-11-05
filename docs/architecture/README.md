@@ -18,6 +18,8 @@
 | Agent 工具运行 | [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) |
 | Agent 上下文 | [Context Engineering](./context-engineering-architecture.md) |
 | 情景连续性决策 | [Episodic Continuity Decision](./episodic-continuity-decision.md) |
+| 情景记忆混合方案（已定案） | [Episodic Memory Hybrid Plan](./episodic-memory-hybrid-plan.md) |
+| 情景记忆基准与召回评测 | [Episodic S2 Benchmark & Recall Eval](./episodic-s2-benchmark-recall-eval.md) |
 | 业务/AI 事件与流协议 | [Stream Event Contract](./stream-event-contract-runtime.md) |
 | 诊断证据及安全判定 | [Diagnosis Decision Authority](./diagnosis-decision-authority.md) |
 | 训练方案生成治理 | [Treatment Agent Configuration](./treatment-agent-configuration.md) |

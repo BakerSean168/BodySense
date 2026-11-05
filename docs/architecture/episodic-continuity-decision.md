@@ -252,3 +252,10 @@ as proposals only and edits no product rule:
 3. Interface: memory-view copy and empty/error states for the Person
    surface (S6), including the rule that deleting a note is not health
    data erasure.
+
+Implementation detail for these follow-ups, approved by the product owner on
+2026-11-05: [episodic-memory-hybrid-plan.md](episodic-memory-hybrid-plan.md).
+That document refines how the layers, triggers, limits and gates are built; it
+amends none of the decisions above. Measured evidence for the retention caps and
+the Stage 2 keyword baseline is in
+[episodic-s2-benchmark-recall-eval.md](episodic-s2-benchmark-recall-eval.md).
