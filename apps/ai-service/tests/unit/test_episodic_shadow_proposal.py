@@ -1,0 +1,169 @@
+"""S2-B transport and model-boundary tests use synthetic text exclusively."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from uuid import NAMESPACE_URL, UUID, uuid5
+
+import pytest
+from pydantic import ValidationError
+from pydantic_ai.models.test import TestModel
+
+from src.api.episodic_shadow_proto_adapter import (
+    parse_shadow_source_window,
+    propose_shadow_quote_proto,
+    serialize_shadow_selection,
+)
+from src.services.episodic_shadow_proposal import (
+    SAFE_RESPONSE_PREFERENCES,
+    InvalidShadowProposalError,
+    ShadowGenerationDisabledError,
+    ShadowQuoteSelection,
+    ShadowSelectionOutput,
+    validate_shadow_selection,
+)
+
+CONVERSATION_ID = "11111111-1111-4111-8111-111111111111"
+USER_ID = "22222222-2222-4222-8222-222222222222"
+MESSAGE_ID = "33333333-3333-4333-8333-333333333333"
+ASSISTANT_ID = "44444444-4444-4444-8444-444444444444"
+POLICY_REVISION = "episodic-shadow-quote-v1"
+
+
+def source_payload(text: str = "请简短回答。") -> dict[str, object]:
+    return {
+        "conversation_id": CONVERSATION_ID,
+        "user_id": USER_ID,
+        "from_seq": 1,
+        "to_seq": 2,
+        "policy_revision": POLICY_REVISION,
+        "source_messages": [
+            {"id": MESSAGE_ID, "seq": 1, "role": "user", "text": text},
+            {"id": ASSISTANT_ID, "seq": 2, "role": "assistant", "text": "已收到。"},
+        ],
+    }
+
+
+def selected(
+    *, quote: str = "请简短回答。", preference: str = "brief_answers", message_id: str = MESSAGE_ID
+) -> ShadowSelectionOutput:
+    return ShadowSelectionOutput(
+        quotes=[
+            ShadowQuoteSelection(
+                source_message_id=UUID(message_id),
+                quote=quote,
+                preference=preference,
+            )
+        ]
+    )
+
+
+def test_typed_proposal_rejects_inconsistent_or_unknown_source_fields() -> None:
+    assert parse_shadow_source_window(source_payload()).to_seq == 2
+    for mutation in (
+        lambda p: p.update(to_seq=3),
+        lambda p: p.update(policy_revision="other"),
+        lambda p: p["source_messages"][1].update(seq=3),
+        lambda p: p["source_messages"][1].update(id=MESSAGE_ID),
+        lambda p: p["source_messages"][0].update(text=" 请简短回答。"),
+        lambda p: p["source_messages"][0].update(text="x" * 1201),
+        lambda p: p["source_messages"][0].update(extra="injected"),
+    ):
+        payload = source_payload()
+        mutation(payload)
+        with pytest.raises(InvalidShadowProposalError):
+            parse_shadow_source_window(payload)
+
+
+def test_exact_whole_message_quote_and_versioned_proto_parity() -> None:
+    window = parse_shadow_source_window(source_payload())
+    actual = serialize_shadow_selection(window, selected())
+    assert actual == {
+        "policy_revision": POLICY_REVISION,
+        "quotes": [
+            {
+                "source_message_id": MESSAGE_ID,
+                "quote": "请简短回答。",
+                "preference": "brief_answers",
+            }
+        ],
+    }
+    assert serialize_shadow_selection(window, ShadowSelectionOutput()) == {
+        "policy_revision": POLICY_REVISION
+    }
+    for bad in (
+        selected(quote="请分点回答。", preference="bullet_answers"),
+        selected(quote="请简短回答。", preference="detailed_answers"),
+        selected(message_id=ASSISTANT_ID),
+        selected(message_id="55555555-5555-4555-8555-555555555555"),
+    ):
+        with pytest.raises(InvalidShadowProposalError):
+            validate_shadow_selection(window, bad)
+
+    with pytest.raises(ValidationError):
+        ShadowSelectionOutput.model_validate({"quotes": [], "content_text": "伪造诊断"})
+
+
+@pytest.mark.asyncio
+async def test_testmodel_can_only_propose_valid_source_quote_when_opted_in() -> None:
+    payload = source_payload()
+    with pytest.raises(ShadowGenerationDisabledError):
+        await propose_shadow_quote_proto(payload, model=TestModel(), enabled=False)
+    with pytest.raises(ShadowGenerationDisabledError):
+        await propose_shadow_quote_proto(payload, enabled=True)
+    result = await propose_shadow_quote_proto(
+        payload,
+        model=TestModel(
+            custom_output_args={
+                "quotes": [
+                    {
+                        "source_message_id": MESSAGE_ID,
+                        "quote": "请简短回答。",
+                        "preference": "brief_answers",
+                    }
+                ]
+            }
+        ),
+        enabled=True,
+    )
+    assert result["policy_revision"] == POLICY_REVISION
+    assert result["quotes"][0]["quote"] == "请简短回答。"
+
+
+def test_120_synthetic_claims_are_exact_with_no_clinical_vocabulary() -> None:
+    """Structural source traceability, NOT a real-model clinical safety audit."""
+    root = Path(__file__).resolve().parents[4]
+    corpus = json.loads(
+        (root / "contracts/internal/agent-runtime/fixtures/episodic-shadow-s2b.v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert corpus["policy_revision"] == POLICY_REVISION
+    assert len(corpus["accepted"]) == len(SAFE_RESPONSE_PREFERENCES)
+    for entry in corpus["accepted"]:
+        assert SAFE_RESPONSE_PREFERENCES[entry["quote"]] == (
+            entry["preference"],
+            entry["summary"],
+        )
+    accepted = 0
+    for i in range(120):
+        phrase = corpus["accepted"][i % len(corpus["accepted"])]
+        payload = source_payload(phrase["quote"])
+        mid = str(uuid5(NAMESPACE_URL, f"synthetic-memory-source-{i}"))
+        payload["source_messages"][0]["id"] = mid
+        window = parse_shadow_source_window(payload)
+        result = serialize_shadow_selection(
+            window, selected(quote=phrase["quote"], preference=phrase["preference"], message_id=mid)
+        )
+        assert len(result["quotes"]) == 1
+        assert result["quotes"][0]["quote"] == window.source_messages[0].text
+        accepted += 1
+    assert accepted == 120
+    for text in corpus["rejected"]:
+        assert text not in SAFE_RESPONSE_PREFERENCES
+        with pytest.raises(InvalidShadowProposalError):
+            serialize_shadow_selection(
+                parse_shadow_source_window(source_payload(text)),
+                selected(quote=text, preference="brief_answers"),
+            )

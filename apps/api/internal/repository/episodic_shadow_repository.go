@@ -47,6 +47,11 @@ type EpisodicShadowDraft struct {
 	GeneratorVersion       string
 	RetentionPolicyVersion string
 	ContentText            string
+	// S2-B: if quoted evidence is supplied, Go must verify the *entire*
+	// user message against the locked database row before accepting a
+	// canonical, fixed non-clinical preference. No model-authored summary.
+	QuotedMessageID   uuid.UUID
+	QuotedMessageText string
 }
 
 // EpisodicShadowRepository is a server-only, disabled-by-default boundary.
@@ -90,6 +95,12 @@ func validShadowDraft(d EpisodicShadowDraft) bool {
 		}
 		seen[id] = true
 	}
+	if d.QuotedMessageID != uuid.Nil || d.QuotedMessageText != "" {
+		canonical, ok := CanonicalEpisodicPreference(d.QuotedMessageText)
+		if !ok || !seen[d.QuotedMessageID] || canonical.Text != d.ContentText {
+			return false
+		}
+	}
 	return true
 }
 
@@ -102,6 +113,7 @@ type episodicSourceRow struct {
 	RunStatus    *string
 	Parts        string
 	ContentBytes int
+	ContentText  string
 }
 
 // SaveShadowDraft enforces same-owner, exact and fully settled source
@@ -158,7 +170,7 @@ func (r *EpisodicShadowRepository) SaveShadowDraft(
 		var rows []episodicSourceRow
 		if err := tx.WithContext(ctx).Raw(`SELECT m.id,m.turn_id,m.seq,m.role,m.status,m.parts::text AS parts,
 octet_length(COALESCE(m.content_text,'')) AS content_bytes,
-r.status AS run_status FROM messages m
+COALESCE(m.content_text,'') AS content_text, r.status AS run_status FROM messages m
 LEFT JOIN runs r ON r.id = m.run_id
 WHERE m.conversation_id = ? AND m.seq BETWEEN ? AND ?
 ORDER BY m.seq`, c.ID, draft.FromSeq, draft.ToSeq).Scan(&rows).Error; err != nil {
@@ -173,6 +185,22 @@ ORDER BY m.seq`, c.ID, draft.FromSeq, draft.ToSeq).Scan(&rows).Error; err != nil
 				(msg.Role != "user" && msg.Role != "assistant") ||
 				(msg.RunStatus != nil && *msg.RunStatus != "completed") ||
 				msg.Parts != "[]" { // reject uploads/multimodal/opaque source
+				return ErrEpisodicSourceInvalid
+			}
+		}
+		// S2-B quote must match the actual owner-locked *whole user message*.
+		// Quotes from a model or its caller have no authority over DB source
+		// content, and never enter the stored text verbatim.
+		if draft.QuotedMessageID != uuid.Nil {
+			matched := false
+			for _, msg := range rows {
+				if msg.ID == draft.QuotedMessageID && msg.Role == "user" &&
+					msg.ContentText == draft.QuotedMessageText {
+					matched = true
+					break
+				}
+			}
+			if !matched {
 				return ErrEpisodicSourceInvalid
 			}
 		}

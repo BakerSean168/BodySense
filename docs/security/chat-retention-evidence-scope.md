@@ -98,7 +98,12 @@ complete text-only messages; rejects any referenced clinical statement,
 safety source or asset-bearing content; and persists bounded shadow rows.
 It is not called by chat, prune or the AI runtime, does not modify the
 non-protecting source-message classification, and cannot delay raw pruning.
-See [episodic-shadow-admission-s2a.md](../architecture/episodic-shadow-admission-s2a.md).
+S2-B1 additionally defines an **unwired typed quote-only model proposal**;
+Go independently verifies the entire persisted user message inside the same
+Conversation lock and only permits one of four non-clinical canonical reply
+preferences. It does not create a serving path or authorize model egress.
+See [S2-A admission](../architecture/episodic-shadow-admission-s2a.md)
+and [S2-B1 quote proposal](../architecture/episodic-shadow-s2b-quote-proposal.md).
 User controls, clinical authority, full source audit and production approval
 in #495/#514/#515 remain gating.
 

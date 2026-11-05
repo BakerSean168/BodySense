@@ -8,7 +8,9 @@ git diff --cached --name-only --diff-filter=ACMR -z > "$tmp_dir/staged"
 
 grep -z -E '\.(ts|tsx|js|jsx|mjs|cjs|json|css|html|yaml|yml)$' "$tmp_dir/staged" > "$tmp_dir/fmt" || true
 if [ -s "$tmp_dir/fmt" ]; then
-  xargs -0 pnpm exec oxfmt --check < "$tmp_dir/fmt" || exit 1
+  # An entirely ignored staged set (for example a golden Proto corpus JSON)
+  # is not a formatting failure; any matched source is still checked strictly.
+  xargs -0 pnpm exec oxfmt --check --no-error-on-unmatched-pattern < "$tmp_dir/fmt" || exit 1
 fi
 
 grep -z -E '^apps/web/src/.+\.(ts|tsx)$' "$tmp_dir/staged" | grep -z -v '/generated/' > "$tmp_dir/lint" || true
