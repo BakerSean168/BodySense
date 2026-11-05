@@ -33,6 +33,8 @@ import {
   CurrentUser,
   DerivedConcernGroupList,
   DocumentIndicatorReviewRecord,
+  EpisodicNoteDeleteResponse,
+  EpisodicNoteList,
   EquipmentAsset,
   EquipmentAssetList,
   HealthDocumentReviewContext,
@@ -123,6 +125,8 @@ import type {
   CurrentUserOutput,
   DerivedConcernGroupListOutput,
   DocumentIndicatorReviewRecordOutput,
+  EpisodicNoteDeleteResponseOutput,
+  EpisodicNoteListOutput,
   EquipmentAssetListOutput,
   EquipmentAssetOutput,
   FinishTrainingSessionRequest,
@@ -1998,6 +2002,86 @@ const res = await (fetchFn ?? fetch)(getRequestPrivacyErasureUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? PrivacyErasureAccepted.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListEpisodicNotesUrl = () => {
+
+
+
+
+  return `/api/v1/profile/episodic-notes`
+}
+
+/**
+ * S6-B owner-scoped inspection of episodic memory. Returns only the caller's active shadow notes, newest first. The projection deliberately omits source message IDs, source asset IDs, user IDs and Conversation IDs. These notes are conversational memory, not BodyState facts, and this surface never serves them to a model. The whole surface is default-off behind EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the route behaves as if it does not exist (owner-masked 404).
+ * @summary List the authenticated user's non-authoritative conversational memory notes.
+ */
+export const listEpisodicNotes = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EpisodicNoteListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListEpisodicNotesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EpisodicNoteList, status?: number} = new globalThis.Error();
+    const data : EpisodicNoteList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EpisodicNoteList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteEpisodicNoteUrl = (noteId: string,) => {
+
+
+
+
+  return `/api/v1/profile/episodic-notes/${noteId}`
+}
+
+/**
+ * S6-B owner-only deletion. Removes the selected note and every note whose source range overlaps it, then records a content-free tombstone that prevents regeneration from the same source window. Repeating the command for the same owner is idempotent; foreign and unknown IDs are indistinguishable (owner-masked 404). This never deletes BodyState, Diagnosis, Safety or raw chat records, and it is not an account or health-data erasure request. Default-off behind EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the route behaves as if it does not exist (404).
+ * @summary Permanently remove one owned non-authoritative memory note.
+ */
+export const deleteEpisodicNote = async (noteId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EpisodicNoteDeleteResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteEpisodicNoteUrl(noteId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EpisodicNoteDeleteResponse, status?: number} = new globalThis.Error();
+    const data : EpisodicNoteDeleteResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EpisodicNoteDeleteResponse.parse(parsedBody) : parsedBody
   return data
 }
 
