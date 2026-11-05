@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -33,8 +35,13 @@ func (f *fakeEpisodicNoteControls) DeleteOwned(ctx context.Context, owner, noteI
 	return f.deleteFn(ctx, owner, noteID)
 }
 
+// The generated strict handlers pass Gin's *gin.Context, whose Value method
+// exposes keys set by the auth middleware. Using that same carrier here keeps
+// the test faithful to production and avoids an untyped context key.
 func episodicNoteTestContext(owner uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), "user_id", owner.String())
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Set("user_id", owner.String())
+	return c
 }
 
 func sampleEpisodicNote(owner, conversation uuid.UUID) model.EpisodicNote {
