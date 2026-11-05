@@ -402,3 +402,49 @@ class StreamError(_message.Message):
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str
     def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class EpisodicShadowSourceMessage(_message.Message):
+    __slots__ = ("id", "seq", "role", "text")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SEQ_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    seq: int
+    role: str
+    text: str
+    def __init__(self, id: _Optional[str] = ..., seq: _Optional[int] = ..., role: _Optional[str] = ..., text: _Optional[str] = ...) -> None: ...
+
+class EpisodicShadowGenerationCommand(_message.Message):
+    __slots__ = ("conversation_id", "user_id", "from_seq", "to_seq", "policy_revision", "source_messages")
+    CONVERSATION_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    FROM_SEQ_FIELD_NUMBER: _ClassVar[int]
+    TO_SEQ_FIELD_NUMBER: _ClassVar[int]
+    POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    conversation_id: str
+    user_id: str
+    from_seq: int
+    to_seq: int
+    policy_revision: str
+    source_messages: _containers.RepeatedCompositeFieldContainer[EpisodicShadowSourceMessage]
+    def __init__(self, conversation_id: _Optional[str] = ..., user_id: _Optional[str] = ..., from_seq: _Optional[int] = ..., to_seq: _Optional[int] = ..., policy_revision: _Optional[str] = ..., source_messages: _Optional[_Iterable[_Union[EpisodicShadowSourceMessage, _Mapping]]] = ...) -> None: ...
+
+class EpisodicShadowQuote(_message.Message):
+    __slots__ = ("source_message_id", "quote", "preference")
+    SOURCE_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    QUOTE_FIELD_NUMBER: _ClassVar[int]
+    PREFERENCE_FIELD_NUMBER: _ClassVar[int]
+    source_message_id: str
+    quote: str
+    preference: str
+    def __init__(self, source_message_id: _Optional[str] = ..., quote: _Optional[str] = ..., preference: _Optional[str] = ...) -> None: ...
+
+class EpisodicShadowDraftProposal(_message.Message):
+    __slots__ = ("policy_revision", "quotes")
+    POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    QUOTES_FIELD_NUMBER: _ClassVar[int]
+    policy_revision: str
+    quotes: _containers.RepeatedCompositeFieldContainer[EpisodicShadowQuote]
+    def __init__(self, policy_revision: _Optional[str] = ..., quotes: _Optional[_Iterable[_Union[EpisodicShadowQuote, _Mapping]]] = ...) -> None: ...

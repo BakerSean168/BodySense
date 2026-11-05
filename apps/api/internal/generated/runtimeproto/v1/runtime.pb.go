@@ -2452,6 +2452,276 @@ func (x *StreamError) GetMessage() string {
 	return ""
 }
 
+// Episodic S2-B private *proposal* boundary (ADR #495 / #515).
+// These types are NOT new HTTP routes. Go selects the exact source window;
+// Python can only propose a bounded verbatim source quote. No model may write
+// a note, select ownership/retention, or provide clinical authority.
+type EpisodicShadowSourceMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowSourceMessage) Reset() {
+	*x = EpisodicShadowSourceMessage{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowSourceMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowSourceMessage) ProtoMessage() {}
+
+func (x *EpisodicShadowSourceMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowSourceMessage.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowSourceMessage) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *EpisodicShadowSourceMessage) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EpisodicShadowSourceMessage) GetSeq() uint32 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowSourceMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *EpisodicShadowSourceMessage) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+type EpisodicShadowGenerationCommand struct {
+	state          protoimpl.MessageState         `protogen:"open.v1"`
+	ConversationId string                         `protobuf:"bytes,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	UserId         string                         `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	FromSeq        uint32                         `protobuf:"varint,3,opt,name=from_seq,json=fromSeq,proto3" json:"from_seq,omitempty"`
+	ToSeq          uint32                         `protobuf:"varint,4,opt,name=to_seq,json=toSeq,proto3" json:"to_seq,omitempty"`
+	PolicyRevision string                         `protobuf:"bytes,5,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
+	SourceMessages []*EpisodicShadowSourceMessage `protobuf:"bytes,6,rep,name=source_messages,json=sourceMessages,proto3" json:"source_messages,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowGenerationCommand) Reset() {
+	*x = EpisodicShadowGenerationCommand{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowGenerationCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowGenerationCommand) ProtoMessage() {}
+
+func (x *EpisodicShadowGenerationCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowGenerationCommand.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowGenerationCommand) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *EpisodicShadowGenerationCommand) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetFromSeq() uint32 {
+	if x != nil {
+		return x.FromSeq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowGenerationCommand) GetToSeq() uint32 {
+	if x != nil {
+		return x.ToSeq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowGenerationCommand) GetPolicyRevision() string {
+	if x != nil {
+		return x.PolicyRevision
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetSourceMessages() []*EpisodicShadowSourceMessage {
+	if x != nil {
+		return x.SourceMessages
+	}
+	return nil
+}
+
+type EpisodicShadowQuote struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SourceMessageId string                 `protobuf:"bytes,1,opt,name=source_message_id,json=sourceMessageId,proto3" json:"source_message_id,omitempty"`
+	Quote           string                 `protobuf:"bytes,2,opt,name=quote,proto3" json:"quote,omitempty"`
+	Preference      string                 `protobuf:"bytes,3,opt,name=preference,proto3" json:"preference,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowQuote) Reset() {
+	*x = EpisodicShadowQuote{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowQuote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowQuote) ProtoMessage() {}
+
+func (x *EpisodicShadowQuote) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowQuote.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowQuote) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *EpisodicShadowQuote) GetSourceMessageId() string {
+	if x != nil {
+		return x.SourceMessageId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowQuote) GetQuote() string {
+	if x != nil {
+		return x.Quote
+	}
+	return ""
+}
+
+func (x *EpisodicShadowQuote) GetPreference() string {
+	if x != nil {
+		return x.Preference
+	}
+	return ""
+}
+
+type EpisodicShadowDraftProposal struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	PolicyRevision string                 `protobuf:"bytes,1,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
+	// Zero = explicit abstention. Exactly one verified quote at most; no free
+	// summary text and no user/conversation/sequence ids in the model output.
+	Quotes        []*EpisodicShadowQuote `protobuf:"bytes,2,rep,name=quotes,proto3" json:"quotes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowDraftProposal) Reset() {
+	*x = EpisodicShadowDraftProposal{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowDraftProposal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowDraftProposal) ProtoMessage() {}
+
+func (x *EpisodicShadowDraftProposal) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowDraftProposal.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowDraftProposal) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *EpisodicShadowDraftProposal) GetPolicyRevision() string {
+	if x != nil {
+		return x.PolicyRevision
+	}
+	return ""
+}
+
+func (x *EpisodicShadowDraftProposal) GetQuotes() []*EpisodicShadowQuote {
+	if x != nil {
+		return x.Quotes
+	}
+	return nil
+}
+
 var File_bodysense_runtime_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
@@ -2670,7 +2940,31 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"governanceB\x0e\n" +
 	"\f_response_id\"0\n" +
 	"\vStreamError\x12!\n" +
-	"\amessage\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\amessageBGZEgithub.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1b\x06proto3"
+	"\amessage\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\amessage\"\x9e\x01\n" +
+	"\x1bEpisodicShadowSourceMessage\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
+	"\x03seq\x18\x02 \x01(\rB\a\xbaH\x04*\x02(\x01R\x03seq\x12*\n" +
+	"\x04role\x18\x03 \x01(\tB\x16\xbaH\x13r\x11R\x04userR\tassistantR\x04role\x12\x1e\n" +
+	"\x04text\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xb0\tR\x04text\"\xee\x02\n" +
+	"\x1fEpisodicShadowGenerationCommand\x121\n" +
+	"\x0fconversation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0econversationId\x12!\n" +
+	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12\"\n" +
+	"\bfrom_seq\x18\x03 \x01(\rB\a\xbaH\x04*\x02(\x01R\afromSeq\x12\x1e\n" +
+	"\x06to_seq\x18\x04 \x01(\rB\a\xbaH\x04*\x02(\x01R\x05toSeq\x12H\n" +
+	"\x0fpolicy_revision\x18\x05 \x01(\tB\x1f\xbaH\x1cr\x1a\n" +
+	"\x18episodic-shadow-quote-v1R\x0epolicyRevision\x12g\n" +
+	"\x0fsource_messages\x18\x06 \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\v\xbaH\b\x92\x01\x05\b\x02\x10\x80\x01R\x0esourceMessages\"\xd5\x01\n" +
+	"\x13EpisodicShadowQuote\x124\n" +
+	"\x11source_message_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceMessageId\x12\x1f\n" +
+	"\x05quote\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x03\x18xR\x05quote\x12g\n" +
+	"\n" +
+	"preference\x18\x03 \x01(\tBG\xbaHDrBR\rbrief_answersR\x0ebullet_answersR\x0fchinese_answersR\x10detailed_answersR\n" +
+	"preference\"\xb4\x01\n" +
+	"\x1bEpisodicShadowDraftProposal\x12H\n" +
+	"\x0fpolicy_revision\x18\x01 \x01(\tB\x1f\xbaH\x1cr\x1a\n" +
+	"\x18episodic-shadow-quote-v1R\x0epolicyRevision\x12K\n" +
+	"\x06quotes\x18\x02 \x03(\v2).bodysense.runtime.v1.EpisodicShadowQuoteB\b\xbaH\x05\x92\x01\x02\x10\x01R\x06quotesBGZEgithub.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1b\x06proto3"
 
 var (
 	file_bodysense_runtime_v1_runtime_proto_rawDescOnce sync.Once
@@ -2684,7 +2978,7 @@ func file_bodysense_runtime_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_bodysense_runtime_v1_runtime_proto_rawDescData
 }
 
-var file_bodysense_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_bodysense_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_bodysense_runtime_v1_runtime_proto_goTypes = []any{
 	(*StartTurnCommand)(nil),                    // 0: bodysense.runtime.v1.StartTurnCommand
 	(*ResumeInterruptCommand)(nil),              // 1: bodysense.runtime.v1.ResumeInterruptCommand
@@ -2719,26 +3013,30 @@ var file_bodysense_runtime_v1_runtime_proto_goTypes = []any{
 	(*UsageReported)(nil),                       // 30: bodysense.runtime.v1.UsageReported
 	(*StreamDone)(nil),                          // 31: bodysense.runtime.v1.StreamDone
 	(*StreamError)(nil),                         // 32: bodysense.runtime.v1.StreamError
-	(*structpb.Struct)(nil),                     // 33: google.protobuf.Struct
-	(*structpb.ListValue)(nil),                  // 34: google.protobuf.ListValue
+	(*EpisodicShadowSourceMessage)(nil),         // 33: bodysense.runtime.v1.EpisodicShadowSourceMessage
+	(*EpisodicShadowGenerationCommand)(nil),     // 34: bodysense.runtime.v1.EpisodicShadowGenerationCommand
+	(*EpisodicShadowQuote)(nil),                 // 35: bodysense.runtime.v1.EpisodicShadowQuote
+	(*EpisodicShadowDraftProposal)(nil),         // 36: bodysense.runtime.v1.EpisodicShadowDraftProposal
+	(*structpb.Struct)(nil),                     // 37: google.protobuf.Struct
+	(*structpb.ListValue)(nil),                  // 38: google.protobuf.ListValue
 }
 var file_bodysense_runtime_v1_runtime_proto_depIdxs = []int32{
 	3,  // 0: bodysense.runtime.v1.StartTurnCommand.input:type_name -> bodysense.runtime.v1.ConsultationUserInput
 	7,  // 1: bodysense.runtime.v1.StartTurnCommand.business_context:type_name -> bodysense.runtime.v1.ConsultationBusinessContext
-	33, // 2: bodysense.runtime.v1.ResumeInterruptCommand.answer:type_name -> google.protobuf.Struct
+	37, // 2: bodysense.runtime.v1.ResumeInterruptCommand.answer:type_name -> google.protobuf.Struct
 	7,  // 3: bodysense.runtime.v1.ResumeInterruptCommand.business_context:type_name -> bodysense.runtime.v1.ConsultationBusinessContext
 	2,  // 4: bodysense.runtime.v1.ConsultationUserInput.images:type_name -> bodysense.runtime.v1.ConsultationImageRef
-	33, // 5: bodysense.runtime.v1.ConsultationRuntimeState.extracted_info:type_name -> google.protobuf.Struct
+	37, // 5: bodysense.runtime.v1.ConsultationRuntimeState.extracted_info:type_name -> google.protobuf.Struct
 	5,  // 6: bodysense.runtime.v1.ConsultationSpatialContext.reference_motion:type_name -> bodysense.runtime.v1.ConsultationReferenceMotion
-	33, // 7: bodysense.runtime.v1.ConsultationBusinessContext.profile:type_name -> google.protobuf.Struct
-	33, // 8: bodysense.runtime.v1.ConsultationBusinessContext.body_state:type_name -> google.protobuf.Struct
+	37, // 7: bodysense.runtime.v1.ConsultationBusinessContext.profile:type_name -> google.protobuf.Struct
+	37, // 8: bodysense.runtime.v1.ConsultationBusinessContext.body_state:type_name -> google.protobuf.Struct
 	4,  // 9: bodysense.runtime.v1.ConsultationBusinessContext.runtime_state:type_name -> bodysense.runtime.v1.ConsultationRuntimeState
-	33, // 10: bodysense.runtime.v1.ConsultationBusinessContext.relevant_history:type_name -> google.protobuf.Struct
-	33, // 11: bodysense.runtime.v1.ConsultationBusinessContext.current_diagnosis:type_name -> google.protobuf.Struct
-	33, // 12: bodysense.runtime.v1.ConsultationBusinessContext.current_treatment:type_name -> google.protobuf.Struct
-	33, // 13: bodysense.runtime.v1.ConsultationBusinessContext.recent_outcomes:type_name -> google.protobuf.Struct
+	37, // 10: bodysense.runtime.v1.ConsultationBusinessContext.relevant_history:type_name -> google.protobuf.Struct
+	37, // 11: bodysense.runtime.v1.ConsultationBusinessContext.current_diagnosis:type_name -> google.protobuf.Struct
+	37, // 12: bodysense.runtime.v1.ConsultationBusinessContext.current_treatment:type_name -> google.protobuf.Struct
+	37, // 13: bodysense.runtime.v1.ConsultationBusinessContext.recent_outcomes:type_name -> google.protobuf.Struct
 	6,  // 14: bodysense.runtime.v1.ConsultationBusinessContext.spatial_context:type_name -> bodysense.runtime.v1.ConsultationSpatialContext
-	33, // 15: bodysense.runtime.v1.ConsultationBusinessContext.posture_analysis:type_name -> google.protobuf.Struct
+	37, // 15: bodysense.runtime.v1.ConsultationBusinessContext.posture_analysis:type_name -> google.protobuf.Struct
 	8,  // 16: bodysense.runtime.v1.ConsultationBusinessContext.context_window:type_name -> bodysense.runtime.v1.ConsultationContextWindow
 	9,  // 17: bodysense.runtime.v1.RuntimeEvent.ids:type_name -> bodysense.runtime.v1.RuntimeEventIds
 	11, // 18: bodysense.runtime.v1.RuntimeEvent.agent_configuration:type_name -> bodysense.runtime.v1.AgentConfigurationHandshake
@@ -2762,27 +3060,29 @@ var file_bodysense_runtime_v1_runtime_proto_depIdxs = []int32{
 	15, // 36: bodysense.runtime.v1.AgentConfigurationHandshake.execution_provenance:type_name -> bodysense.runtime.v1.ExecutionProvenance
 	13, // 37: bodysense.runtime.v1.AgentConfiguration.intake:type_name -> bodysense.runtime.v1.ConsultationIntakeConfiguration
 	14, // 38: bodysense.runtime.v1.ConsultationIntakeConfiguration.generation:type_name -> bodysense.runtime.v1.ConsultationGenerationConfiguration
-	33, // 39: bodysense.runtime.v1.ExecutionProvenance.usage:type_name -> google.protobuf.Struct
-	33, // 40: bodysense.runtime.v1.ToolCall.args:type_name -> google.protobuf.Struct
-	33, // 41: bodysense.runtime.v1.ToolResult.result:type_name -> google.protobuf.Struct
-	33, // 42: bodysense.runtime.v1.ExtractedInfoUpsert.info:type_name -> google.protobuf.Struct
-	33, // 43: bodysense.runtime.v1.LifestyleContextUpsert.context:type_name -> google.protobuf.Struct
-	33, // 44: bodysense.runtime.v1.InteractionRequired.question:type_name -> google.protobuf.Struct
+	37, // 39: bodysense.runtime.v1.ExecutionProvenance.usage:type_name -> google.protobuf.Struct
+	37, // 40: bodysense.runtime.v1.ToolCall.args:type_name -> google.protobuf.Struct
+	37, // 41: bodysense.runtime.v1.ToolResult.result:type_name -> google.protobuf.Struct
+	37, // 42: bodysense.runtime.v1.ExtractedInfoUpsert.info:type_name -> google.protobuf.Struct
+	37, // 43: bodysense.runtime.v1.LifestyleContextUpsert.context:type_name -> google.protobuf.Struct
+	37, // 44: bodysense.runtime.v1.InteractionRequired.question:type_name -> google.protobuf.Struct
 	22, // 45: bodysense.runtime.v1.InteractionRequired.suggestion:type_name -> bodysense.runtime.v1.BodyStateSuggestion
 	23, // 46: bodysense.runtime.v1.BodyStateSuggestion.span:type_name -> bodysense.runtime.v1.BodyStateSuggestionSpan
-	33, // 47: bodysense.runtime.v1.BodyStateSuggestion.payload:type_name -> google.protobuf.Struct
-	33, // 48: bodysense.runtime.v1.CitationAdded.citation:type_name -> google.protobuf.Struct
-	33, // 49: bodysense.runtime.v1.AnswerAttributionAdded.attribution:type_name -> google.protobuf.Struct
-	33, // 50: bodysense.runtime.v1.RedFlagDetected.flags:type_name -> google.protobuf.Struct
-	34, // 51: bodysense.runtime.v1.SafetyOutputEvent.issues:type_name -> google.protobuf.ListValue
-	33, // 52: bodysense.runtime.v1.UsageReported.usage:type_name -> google.protobuf.Struct
-	33, // 53: bodysense.runtime.v1.StreamDone.usage:type_name -> google.protobuf.Struct
-	33, // 54: bodysense.runtime.v1.StreamDone.governance:type_name -> google.protobuf.Struct
-	55, // [55:55] is the sub-list for method output_type
-	55, // [55:55] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	37, // 47: bodysense.runtime.v1.BodyStateSuggestion.payload:type_name -> google.protobuf.Struct
+	37, // 48: bodysense.runtime.v1.CitationAdded.citation:type_name -> google.protobuf.Struct
+	37, // 49: bodysense.runtime.v1.AnswerAttributionAdded.attribution:type_name -> google.protobuf.Struct
+	37, // 50: bodysense.runtime.v1.RedFlagDetected.flags:type_name -> google.protobuf.Struct
+	38, // 51: bodysense.runtime.v1.SafetyOutputEvent.issues:type_name -> google.protobuf.ListValue
+	37, // 52: bodysense.runtime.v1.UsageReported.usage:type_name -> google.protobuf.Struct
+	37, // 53: bodysense.runtime.v1.StreamDone.usage:type_name -> google.protobuf.Struct
+	37, // 54: bodysense.runtime.v1.StreamDone.governance:type_name -> google.protobuf.Struct
+	33, // 55: bodysense.runtime.v1.EpisodicShadowGenerationCommand.source_messages:type_name -> bodysense.runtime.v1.EpisodicShadowSourceMessage
+	35, // 56: bodysense.runtime.v1.EpisodicShadowDraftProposal.quotes:type_name -> bodysense.runtime.v1.EpisodicShadowQuote
+	57, // [57:57] is the sub-list for method output_type
+	57, // [57:57] is the sub-list for method input_type
+	57, // [57:57] is the sub-list for extension type_name
+	57, // [57:57] is the sub-list for extension extendee
+	0,  // [0:57] is the sub-list for field type_name
 }
 
 func init() { file_bodysense_runtime_v1_runtime_proto_init() }
@@ -2826,7 +3126,7 @@ func file_bodysense_runtime_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bodysense_runtime_v1_runtime_proto_rawDesc), len(file_bodysense_runtime_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

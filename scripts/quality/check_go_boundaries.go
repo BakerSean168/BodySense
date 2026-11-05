@@ -12,9 +12,12 @@ import (
 )
 
 var allowedRuntimeProtoConsumers = map[string]bool{
-	"apps/api/internal/service/runtime_proto_adapter.go":      true,
-	"apps/api/internal/service/consultation_runtime_event.go": true,
-	"apps/api/internal/runtimeproto/contract_test.go":         true,
+	"apps/api/internal/service/runtime_proto_adapter.go":                  true,
+	"apps/api/internal/service/episodic_shadow_proto_adapter.go":          true,
+	"apps/api/internal/service/episodic_shadow_proposal_postgres_test.go": true,
+	"apps/api/internal/service/consultation_runtime_event.go":             true,
+	"apps/api/internal/runtimeproto/contract_test.go":                     true,
+	"apps/api/internal/runtimeproto/episodic_shadow_contract_test.go":     true,
 }
 
 func normalize(path string) string {

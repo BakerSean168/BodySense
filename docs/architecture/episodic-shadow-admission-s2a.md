@@ -53,10 +53,12 @@ and unchanged S3 erasure. Tests do **not** use patient data.
 
 ## Remaining S2-B and Stage 2 gates
 
-- Decide and implement a typed Go→Python draft contract (bounded output,
-  trusted model provider, privacy/data-egress approval). Go must still select
-  source IDs itself and validate all the generated content; never trust the
-  model to return the canonical provenance.
+- S2-B1 adds a narrow **offline, default-off typed Go↔Python quote proposal**
+  contract for four exact non-clinical response-style preferences. See
+  [S2-B1 quote proposal](episodic-shadow-s2b-quote-proposal.md). This is not
+  approval of a live model provider, arbitrary narrative generation or
+  private health-data egress; source IDs and final canonical text remain
+  Go-owned and Go-validated.
 - Prove 100% source coverage for **all** narrative/asset source content and
   detect indirect clinical fact restatements. Add frozen ≥100-note trace audit,
   ≥98% claim traceability, zero untraceable clinical claims and zero clinical
