@@ -91,8 +91,16 @@ Any explicitly listed upload is validated as owner-scoped/non-erased under a
 source-row lock; deleting the asset deletes those notes whole and the asset
 finalizer rechecks for notes that reappear. **There is still no runtime writer,
 reader or serving path**: future Go admission must attach *every* underlying
-asset source ID and reject undeclared asset-derived content. User controls,
-clinical authority and production approval in #495/#514 remain gating.
+asset source ID and reject undeclared asset-derived content. S2-A (#515) adds
+only a **default-disabled, repository-level** Go writer that validates an
+already context-expired, still-unpruned, whole-turn and owner-scoped range of
+complete text-only messages; rejects any referenced clinical statement,
+safety source or asset-bearing content; and persists bounded shadow rows.
+It is not called by chat, prune or the AI runtime, does not modify the
+non-protecting source-message classification, and cannot delay raw pruning.
+See [episodic-shadow-admission-s2a.md](../architecture/episodic-shadow-admission-s2a.md).
+User controls, clinical authority, full source audit and production approval
+in #495/#514/#515 remain gating.
 
 ## 2. Why no cascade decides what is kept
 

@@ -8,9 +8,10 @@ import (
 )
 
 // EpisodicNote is a non-authoritative, provenance-bound conversational note.
-// S1 only declares the shape. There is deliberately no repository writer,
-// background job, HTTP route, model retrieval or clinical decision consumer.
-// The DB permits shadow rows only until erasure and user-delete controls ship.
+// S1 declares the schema; S2-A adds only a Go admission boundary that is
+// default-disabled and is not wired to background jobs, HTTP, runtime model
+// retrieval or any clinical decision consumer. The database remains
+// shadow-only until the independently approved serving gates ship.
 type EpisodicNote struct {
 	ID                     uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()"`
 	UserID                 uuid.UUID      `gorm:"type:uuid;not null"`
