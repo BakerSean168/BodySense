@@ -44,6 +44,7 @@ export const STATEMENT_ERASURE_TARGET_LABELS: Record<string, string> = {
   assessment_reports: "评估报告副本",
   decision_records: "冻结的诊断与计划决策输入",
   runtime_checkpoints: "对话运行缓存",
+  episodic_notes: "关联的对话摘要",
   source_message: "陈述所在的聊天消息",
   statement_manifest: "陈述原文",
 };

@@ -8348,9 +8348,10 @@ components:
           document_extractions,
           assessment_reports,
           runtime_checkpoints,
+          episodic_notes,
           asset_manifest,
         ]
-      description: One controlled-copy family of the asset, in execution order. asset_manifest (the asset row itself) is finalized last.
+      description: One controlled-copy family of the asset, in execution order. episodic_notes clears non-authoritative notes referencing the upload. asset_manifest (the asset row itself) is finalized last.
     AssetErasureTargetReceipt:
       type: object
       additionalProperties: false
@@ -8483,10 +8484,11 @@ components:
           assessment_reports,
           decision_records,
           runtime_checkpoints,
+          episodic_notes,
           source_message,
           statement_manifest,
         ]
-      description: One controlled-copy family of the statement, in execution order. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.
+      description: One controlled-copy family of the statement, in execution order. episodic_notes clears non-authoritative notes referencing this statement's chat source. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.
     StatementErasureTargetReceipt:
       type: object
       additionalProperties: false
