@@ -3477,6 +3477,95 @@
             ]
         },
         {
+            "table": "episodic_notes",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "from_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "to_seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "_uuid",
+                    "name": "source_message_ids",
+                    "type": "ARRAY",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "generator_version",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "retention_policy_version",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_text",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'shadow'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
             "table": "equipment_assets",
             "columns": [
                 {
@@ -7610,5 +7699,5 @@
     ],
     "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
-    "migration_state": "2:false"
+    "migration_state": "3:false"
 }

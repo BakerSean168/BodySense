@@ -98,7 +98,7 @@ echo "KNOWLEDGE_SOURCE_SNAPSHOT=PASS id=$actual_snapshot_id"
 "${compose[@]}" up -d --build --wait --wait-timeout 180 postgres-dev redis-dev litellm-gateway ai-service api
 
 version="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT version, dirty FROM schema_migrations;")"
-if [[ "$version" != "2|f" ]]; then
+if [[ "$version" != "3|f" ]]; then
   echo "KNOWLEDGE_CANDIDATE_SCHEMA=FAIL state=$version" >&2
   exit 1
 fi
