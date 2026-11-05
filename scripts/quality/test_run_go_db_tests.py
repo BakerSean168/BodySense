@@ -26,7 +26,7 @@ class GoDatabaseInventoryTests(unittest.TestCase):
         self.assertIn("TestBodyFactHTTPRecordReadRetryRoundTripPostgres",
                       inventory["./internal/transport/httpapi"])
         pr_cases = go_db.cases_for("pr")
-        self.assertEqual(sum(len(v) for v in pr_cases.values()), 10)
+        self.assertEqual(sum(len(v) for v in pr_cases.values()), 11)
         self.assertTrue({
             "TestEpisodicNoteControlsOwnerDeleteAndNoRegenerationPostgres",
             "TestEpisodicNoteDeletionMigrationRefusesRollbackWithTombstonePostgres",
