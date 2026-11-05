@@ -37,7 +37,19 @@ export VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-$SUPABASE_URL}
 export TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1,::1}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
-export LITELLM_API_KEY=${LITELLM_API_KEY:-$LITELLM_MASTER_KEY}
+# The offline gateway master credential is never an application client key.
+# Refuse ambient/legacy LITELLM_API_KEY without a BodySense-scoped source;
+# otherwise a shared gateway key could silently become this project's key.
+if [[ -n "${LITELLM_API_KEY:-}" && -z "${BODYSENSE_LITELLM_CLIENT_KEY:-}" ]]; then
+  if [[ "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
+    echo "BodySense LiteLLM client credential BLOCKED: master-key alias is forbidden" >&2
+  else
+    echo "BodySense LiteLLM client credential BLOCKED: unscoped legacy LITELLM_API_KEY" >&2
+  fi
+  exit 1
+fi
+# Leave inference unavailable until a separately authorized client key exists.
+export LITELLM_API_KEY=${BODYSENSE_LITELLM_CLIENT_KEY:-}
 export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-http://127.0.0.1:${AI_SERVICE_PORT}}
 export HEALTH_DOCUMENT_SERVICE_URL=${HEALTH_DOCUMENT_SERVICE_URL:-http://127.0.0.1:${DOCUMENT_SERVICE_PORT}}
@@ -45,11 +57,22 @@ export EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-hashing}
 export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}}
 export VITE_DEV_API_TARGET=${VITE_DEV_API_TARGET:-http://127.0.0.1:${API_PORT}}
 export VITE_WS_URL=${VITE_WS_URL:-ws://127.0.0.1:${API_PORT}/ws}
-# Persistent GCP direct-dev is normally reached over Tailscale/SSH, where RTT
-# makes Vite's native-ESM module waterfall expensive. Bundled Dev preserves HMR
-# while collapsing that browser-facing request graph. Set false in
-# .env.dev.local when debugging Vite/plugin behavior with classic dev serving.
+# WSL direct-dev may be reached over Tailscale/SSH; network RTT makes Vite's
+# native-ESM module waterfall expensive. Bundled Dev preserves HMR while
+# collapsing that browser-facing request graph. Set false in .env.dev.local
+# when debugging Vite/plugin behavior with classic dev serving.
+# GCP-dev-01 is retired and is not a valid development or staging host.
 export BODYSENSE_VITE_BUNDLED_DEV=${BODYSENSE_VITE_BUNDLED_DEV:-true}
+
+# Model asset preparation needs neither gateway/provider nor application credentials.
+# Keep these out of uv and any helper it launches, even during interactive start.
+run_model_setup() {
+  env -u LITELLM_MASTER_KEY -u LITELLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY \
+      -u PRIMARY_LLM_API_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY \
+      -u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL \
+      -u REDIS_PASSWORD -u JWT_SECRET_KEY \
+      -u SUPABASE_SECRET_KEY -u SUPABASE_SERVICE_ROLE_KEY "$@"
+}
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ $# -eq 0 ]]; then

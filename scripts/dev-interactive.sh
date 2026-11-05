@@ -29,9 +29,24 @@ start_service() {
   local name=$1 cwd=$2
   shift 2
   echo "[$name] starting"
+  # Keep provider/master credentials out of every application child.
+  # Only AI may receive a separately scoped LiteLLM client credential.
+  local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY
+                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY
+                        -u SUPABASE_SERVICE_ROLE_KEY)
+  if [[ "$name" != ai || -z "${LITELLM_API_KEY:-}" || "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
+    process_env+=(-u LITELLM_API_KEY)
+  fi
+  case "$name" in
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY) ;;
+    document|web)
+      process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY)
+      ;;
+  esac
   # The single-quoted child script intentionally expands $1/$@ inside that child shell.
   # shellcheck disable=SC2016
-  setsid bash -c 'cd "$1"; shift; exec "$@"' _ "$cwd" "$@" &
+  "${process_env[@]}" setsid bash -c 'cd "$1"; shift; exec "$@"' _ "$cwd" "$@" &
   local pid=$!
   pids+=("$pid")
   names+=("$name")
@@ -108,7 +123,7 @@ trap cleanup EXIT
 start_document() {
   assert_port_free document "$DOCUMENT_SERVICE_PORT"
   "$ROOT/scripts/dev-infra.sh" up
-  (cd "$ROOT/apps/ai-service" && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+  (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra document-ocr python scripts/ensure_health_document_models.py)
   start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
   wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
 }
@@ -123,7 +138,7 @@ start_api() {
 start_ai() {
   assert_port_free ai "$AI_SERVICE_PORT"
   "$ROOT/scripts/dev-infra.sh" up
-  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py)
+  (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py)
   start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health" "${pids[-1]}"
 }
@@ -142,7 +157,7 @@ case "$mode" in
     assert_port_free web "$WEB_PORT"
     "$ROOT/scripts/dev-infra.sh" up
 
-    (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+    (cd "$ROOT/apps/ai-service" && run_model_setup uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && run_model_setup uv run --extra document-ocr python scripts/ensure_health_document_models.py)
     start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
     wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
 
