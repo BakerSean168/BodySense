@@ -1,0 +1,3853 @@
+{
+  "version": 1,
+  "corpus": "episodic-bench-corpus-v1",
+  "seed": 20261105,
+  "users": 8,
+  "weeks": 52,
+  "segments": 1248,
+  "note_eligible_segments": 873,
+  "fixture_retention_cap": "48 notes / 16000 characters (S2-A test-only provisional cap)",
+  "note": "Every expected note is retained at the test-only cap, so the same queries are answerable at every measured cap. All users and content are synthetic.",
+  "queries": [
+    {
+      "id": "q-001",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "你还记得我之前说过的滨江公园吗？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "原词命中：查询直接包含笔记锚点「滨江公园」。"
+    },
+    {
+      "id": "q-002",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "之前聊到滨江公园的时候，我说了什么？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "原词命中：查询直接包含笔记锚点「滨江公园」。"
+    },
+    {
+      "id": "q-003",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "上次提到江畔公园，你还记得吗？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "改写同义：用「江畔公园」替换原词「滨江公园」，二者指同一件事。"
+    },
+    {
+      "id": "q-004",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "我之前是不是讲过江畔公园的事？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "改写同义：用「江畔公园」替换原词「滨江公园」。"
+    },
+    {
+      "id": "q-005",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "年初我说过江畔公园的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "时间指代：用「年初」指代 2026-07-26 的笔记，内容用「江畔公园」。"
+    },
+    {
+      "id": "q-006",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "你还记得年初我提到的江畔公园吗？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "时间指代：用「年初」指代 2026-07-26 的笔记。"
+    },
+    {
+      "id": "q-007",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "你还记得我之前说过的城南图书馆吗？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「城南图书馆」。"
+    },
+    {
+      "id": "q-008",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "之前聊到城南图书馆的时候，我说了什么？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「城南图书馆」。"
+    },
+    {
+      "id": "q-009",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "上次提到南边的图书馆，你还记得吗？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "改写同义：用「南边的图书馆」替换原词「城南图书馆」，二者指同一件事。"
+    },
+    {
+      "id": "q-010",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "我之前是不是讲过南边的图书馆的事？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "改写同义：用「南边的图书馆」替换原词「城南图书馆」。"
+    },
+    {
+      "id": "q-011",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "三个月前我说过南边的图书馆的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "时间指代：用「三个月前」指代 2026-08-11 的笔记，内容用「南边的图书馆」。"
+    },
+    {
+      "id": "q-012",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "你还记得三个月前我提到的南边的图书馆吗？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "时间指代：用「三个月前」指代 2026-08-11 的笔记。"
+    },
+    {
+      "id": "q-013",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "你还记得我之前说过的老街菜市场吗？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「老街菜市场」。"
+    },
+    {
+      "id": "q-014",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "之前聊到老街菜市场的时候，我说了什么？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「老街菜市场」。"
+    },
+    {
+      "id": "q-015",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "上次提到旧城那个菜场，你还记得吗？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "改写同义：用「旧城那个菜场」替换原词「老街菜市场」，二者指同一件事。"
+    },
+    {
+      "id": "q-016",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "我之前是不是讲过旧城那个菜场的事？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "改写同义：用「旧城那个菜场」替换原词「老街菜市场」。"
+    },
+    {
+      "id": "q-017",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "两三个月前我说过旧城那个菜场的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-23 的笔记，内容用「旧城那个菜场」。"
+    },
+    {
+      "id": "q-018",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "你还记得两三个月前我提到的旧城那个菜场吗？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-23 的笔记。"
+    },
+    {
+      "id": "q-019",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "你还记得我之前说过的西山步道吗？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "原词命中：查询直接包含笔记锚点「西山步道」。"
+    },
+    {
+      "id": "q-020",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "之前聊到西山步道的时候，我说了什么？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "原词命中：查询直接包含笔记锚点「西山步道」。"
+    },
+    {
+      "id": "q-021",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "上次提到西山的小路，你还记得吗？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "改写同义：用「西山的小路」替换原词「西山步道」，二者指同一件事。"
+    },
+    {
+      "id": "q-022",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "我之前是不是讲过西山的小路的事？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "改写同义：用「西山的小路」替换原词「西山步道」。"
+    },
+    {
+      "id": "q-023",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "前几个月我说过西山的小路的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-10 的笔记，内容用「西山的小路」。"
+    },
+    {
+      "id": "q-024",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "你还记得前几个月我提到的西山的小路吗？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-10 的笔记。"
+    },
+    {
+      "id": "q-025",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "你还记得我之前说过的湖心亭吗？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "原词命中：查询直接包含笔记锚点「湖心亭」。"
+    },
+    {
+      "id": "q-026",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "之前聊到湖心亭的时候，我说了什么？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "原词命中：查询直接包含笔记锚点「湖心亭」。"
+    },
+    {
+      "id": "q-027",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "上次提到湖中间的亭子，你还记得吗？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "改写同义：用「湖中间的亭子」替换原词「湖心亭」，二者指同一件事。"
+    },
+    {
+      "id": "q-028",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "我之前是不是讲过湖中间的亭子的事？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "改写同义：用「湖中间的亭子」替换原词「湖心亭」。"
+    },
+    {
+      "id": "q-029",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "上个月我说过湖中间的亭子的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "时间指代：用「上个月」指代 2026-09-29 的笔记，内容用「湖中间的亭子」。"
+    },
+    {
+      "id": "q-030",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "你还记得上个月我提到的湖中间的亭子吗？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "时间指代：用「上个月」指代 2026-09-29 的笔记。"
+    },
+    {
+      "id": "q-031",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "你还记得我之前说过的城北体育馆吗？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「城北体育馆」。"
+    },
+    {
+      "id": "q-032",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "之前聊到城北体育馆的时候，我说了什么？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「城北体育馆」。"
+    },
+    {
+      "id": "q-033",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "上次提到北边的体育中心，你还记得吗？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "改写同义：用「北边的体育中心」替换原词「城北体育馆」，二者指同一件事。"
+    },
+    {
+      "id": "q-034",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "我之前是不是讲过北边的体育中心的事？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "改写同义：用「北边的体育中心」替换原词「城北体育馆」。"
+    },
+    {
+      "id": "q-035",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "上个月我说过北边的体育中心的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "时间指代：用「上个月」指代 2026-10-18 的笔记，内容用「北边的体育中心」。"
+    },
+    {
+      "id": "q-036",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "你还记得上个月我提到的北边的体育中心吗？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "时间指代：用「上个月」指代 2026-10-18 的笔记。"
+    },
+    {
+      "id": "q-037",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "你还记得我之前说过的望江楼吗？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「望江楼」。"
+    },
+    {
+      "id": "q-038",
+      "slice": "original_term",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "之前聊到望江楼的时候，我说了什么？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「望江楼」。"
+    },
+    {
+      "id": "q-039",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "上次提到江边那座楼，你还记得吗？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "改写同义：用「江边那座楼」替换原词「望江楼」，二者指同一件事。"
+    },
+    {
+      "id": "q-040",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "我之前是不是讲过江边那座楼的事？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "改写同义：用「江边那座楼」替换原词「望江楼」。"
+    },
+    {
+      "id": "q-041",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "这段时间我说过江边那座楼的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-27 的笔记，内容用「江边那座楼」。"
+    },
+    {
+      "id": "q-042",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "你还记得这段时间我提到的江边那座楼吗？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-27 的笔记。"
+    },
+    {
+      "id": "q-043",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "你还记得我之前说过的青石巷吗？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "原词命中：查询直接包含笔记锚点「青石巷」。"
+    },
+    {
+      "id": "q-044",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "之前聊到青石巷的时候，我说了什么？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "原词命中：查询直接包含笔记锚点「青石巷」。"
+    },
+    {
+      "id": "q-045",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "上次提到石板路那条巷子，你还记得吗？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "改写同义：用「石板路那条巷子」替换原词「青石巷」，二者指同一件事。"
+    },
+    {
+      "id": "q-046",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "我之前是不是讲过石板路那条巷子的事？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "改写同义：用「石板路那条巷子」替换原词「青石巷」。"
+    },
+    {
+      "id": "q-047",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "前几个月我说过石板路那条巷子的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-09 的笔记，内容用「石板路那条巷子」。"
+    },
+    {
+      "id": "q-048",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "你还记得前几个月我提到的石板路那条巷子吗？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-09 的笔记。"
+    },
+    {
+      "id": "q-049",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "你还记得我之前说过的梧桐大道吗？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「梧桐大道」。"
+    },
+    {
+      "id": "q-050",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "之前聊到梧桐大道的时候，我说了什么？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「梧桐大道」。"
+    },
+    {
+      "id": "q-051",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "上次提到梧桐树那条路，你还记得吗？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "改写同义：用「梧桐树那条路」替换原词「梧桐大道」，二者指同一件事。"
+    },
+    {
+      "id": "q-052",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "我之前是不是讲过梧桐树那条路的事？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "改写同义：用「梧桐树那条路」替换原词「梧桐大道」。"
+    },
+    {
+      "id": "q-053",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "两三个月前我说过梧桐树那条路的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-20 的笔记，内容用「梧桐树那条路」。"
+    },
+    {
+      "id": "q-054",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "你还记得两三个月前我提到的梧桐树那条路吗？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-20 的笔记。"
+    },
+    {
+      "id": "q-055",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "你还记得我之前说过的南湖湿地吗？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "原词命中：查询直接包含笔记锚点「南湖湿地」。"
+    },
+    {
+      "id": "q-056",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "之前聊到南湖湿地的时候，我说了什么？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "原词命中：查询直接包含笔记锚点「南湖湿地」。"
+    },
+    {
+      "id": "q-057",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "上次提到南边那片湿地，你还记得吗？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "改写同义：用「南边那片湿地」替换原词「南湖湿地」，二者指同一件事。"
+    },
+    {
+      "id": "q-058",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "我之前是不是讲过南边那片湿地的事？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "改写同义：用「南边那片湿地」替换原词「南湖湿地」。"
+    },
+    {
+      "id": "q-059",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "两三个月前我说过南边那片湿地的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-08 的笔记，内容用「南边那片湿地」。"
+    },
+    {
+      "id": "q-060",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "你还记得两三个月前我提到的南边那片湿地吗？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-08 的笔记。"
+    },
+    {
+      "id": "q-061",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "你还记得我之前说过的半程马拉松吗？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「半程马拉松」。"
+    },
+    {
+      "id": "q-062",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "之前聊到半程马拉松的时候，我说了什么？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「半程马拉松」。"
+    },
+    {
+      "id": "q-063",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "上次提到半马，你还记得吗？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "改写同义：用「半马」替换原词「半程马拉松」，二者指同一件事。"
+    },
+    {
+      "id": "q-064",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "我之前是不是讲过半马的事？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "改写同义：用「半马」替换原词「半程马拉松」。"
+    },
+    {
+      "id": "q-065",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "前阵子我说过半马的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "时间指代：用「前阵子」指代 2026-09-27 的笔记，内容用「半马」。"
+    },
+    {
+      "id": "q-066",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "你还记得前阵子我提到的半马吗？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "时间指代：用「前阵子」指代 2026-09-27 的笔记。"
+    },
+    {
+      "id": "q-067",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "你还记得我之前说过的普拉提吗？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "原词命中：查询直接包含笔记锚点「普拉提」。"
+    },
+    {
+      "id": "q-068",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "之前聊到普拉提的时候，我说了什么？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "原词命中：查询直接包含笔记锚点「普拉提」。"
+    },
+    {
+      "id": "q-069",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "上次提到垫上训练，你还记得吗？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "改写同义：用「垫上训练」替换原词「普拉提」，二者指同一件事。"
+    },
+    {
+      "id": "q-070",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "我之前是不是讲过垫上训练的事？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "改写同义：用「垫上训练」替换原词「普拉提」。"
+    },
+    {
+      "id": "q-071",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "上个月我说过垫上训练的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "时间指代：用「上个月」指代 2026-10-06 的笔记，内容用「垫上训练」。"
+    },
+    {
+      "id": "q-072",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "你还记得上个月我提到的垫上训练吗？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "时间指代：用「上个月」指代 2026-10-06 的笔记。"
+    },
+    {
+      "id": "q-073",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "你还记得我之前说过的陶艺课吗？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "原词命中：查询直接包含笔记锚点「陶艺课」。"
+    },
+    {
+      "id": "q-074",
+      "slice": "original_term",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "之前聊到陶艺课的时候，我说了什么？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "原词命中：查询直接包含笔记锚点「陶艺课」。"
+    },
+    {
+      "id": "q-075",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "上次提到做陶的课，你还记得吗？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "改写同义：用「做陶的课」替换原词「陶艺课」，二者指同一件事。"
+    },
+    {
+      "id": "q-076",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "我之前是不是讲过做陶的课的事？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "改写同义：用「做陶的课」替换原词「陶艺课」。"
+    },
+    {
+      "id": "q-077",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "上个月我说过做陶的课的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "时间指代：用「上个月」指代 2026-10-25 的笔记，内容用「做陶的课」。"
+    },
+    {
+      "id": "q-078",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "你还记得上个月我提到的做陶的课吗？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "时间指代：用「上个月」指代 2026-10-25 的笔记。"
+    },
+    {
+      "id": "q-079",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "你还记得我之前说过的社区合唱团吗？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「社区合唱团」。"
+    },
+    {
+      "id": "q-080",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "之前聊到社区合唱团的时候，我说了什么？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「社区合唱团」。"
+    },
+    {
+      "id": "q-081",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "上次提到小区合唱队，你还记得吗？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "改写同义：用「小区合唱队」替换原词「社区合唱团」，二者指同一件事。"
+    },
+    {
+      "id": "q-082",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "我之前是不是讲过小区合唱队的事？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "改写同义：用「小区合唱队」替换原词「社区合唱团」。"
+    },
+    {
+      "id": "q-083",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "两三个月前我说过小区合唱队的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-04 的笔记，内容用「小区合唱队」。"
+    },
+    {
+      "id": "q-084",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "你还记得两三个月前我提到的小区合唱队吗？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-04 的笔记。"
+    },
+    {
+      "id": "q-085",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "你还记得我之前说过的露天电影吗？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "原词命中：查询直接包含笔记锚点「露天电影」。"
+    },
+    {
+      "id": "q-086",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "之前聊到露天电影的时候，我说了什么？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "原词命中：查询直接包含笔记锚点「露天电影」。"
+    },
+    {
+      "id": "q-087",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "上次提到户外电影，你还记得吗？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "改写同义：用「户外电影」替换原词「露天电影」，二者指同一件事。"
+    },
+    {
+      "id": "q-088",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "我之前是不是讲过户外电影的事？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "改写同义：用「户外电影」替换原词「露天电影」。"
+    },
+    {
+      "id": "q-089",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "前几个月我说过户外电影的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-16 的笔记，内容用「户外电影」。"
+    },
+    {
+      "id": "q-090",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "你还记得前几个月我提到的户外电影吗？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-16 的笔记。"
+    },
+    {
+      "id": "q-091",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "你还记得我之前说过的旧书店吗？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "原词命中：查询直接包含笔记锚点「旧书店」。"
+    },
+    {
+      "id": "q-092",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "之前聊到旧书店的时候，我说了什么？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "原词命中：查询直接包含笔记锚点「旧书店」。"
+    },
+    {
+      "id": "q-093",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "上次提到二手书店，你还记得吗？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "改写同义：用「二手书店」替换原词「旧书店」，二者指同一件事。"
+    },
+    {
+      "id": "q-094",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "我之前是不是讲过二手书店的事？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "改写同义：用「二手书店」替换原词「旧书店」。"
+    },
+    {
+      "id": "q-095",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "三个月前我说过二手书店的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "时间指代：用「三个月前」指代 2026-09-03 的笔记，内容用「二手书店」。"
+    },
+    {
+      "id": "q-096",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "你还记得三个月前我提到的二手书店吗？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "时间指代：用「三个月前」指代 2026-09-03 的笔记。"
+    },
+    {
+      "id": "q-097",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "你还记得我之前说过的早市吗？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「早市」。"
+    },
+    {
+      "id": "q-098",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "之前聊到早市的时候，我说了什么？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「早市」。"
+    },
+    {
+      "id": "q-099",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "上次提到清晨的集市，你还记得吗？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "改写同义：用「清晨的集市」替换原词「早市」，二者指同一件事。"
+    },
+    {
+      "id": "q-100",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "我之前是不是讲过清晨的集市的事？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "改写同义：用「清晨的集市」替换原词「早市」。"
+    },
+    {
+      "id": "q-101",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "上个月我说过清晨的集市的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "时间指代：用「上个月」指代 2026-09-20 的笔记，内容用「清晨的集市」。"
+    },
+    {
+      "id": "q-102",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "你还记得上个月我提到的清晨的集市吗？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "时间指代：用「上个月」指代 2026-09-20 的笔记。"
+    },
+    {
+      "id": "q-103",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "你还记得我之前说过的江边骑行吗？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「江边骑行」。"
+    },
+    {
+      "id": "q-104",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "之前聊到江边骑行的时候，我说了什么？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「江边骑行」。"
+    },
+    {
+      "id": "q-105",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "上次提到沿江骑车，你还记得吗？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "改写同义：用「沿江骑车」替换原词「江边骑行」，二者指同一件事。"
+    },
+    {
+      "id": "q-106",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "我之前是不是讲过沿江骑车的事？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "改写同义：用「沿江骑车」替换原词「江边骑行」。"
+    },
+    {
+      "id": "q-107",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "前阵子我说过沿江骑车的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-01 的笔记，内容用「沿江骑车」。"
+    },
+    {
+      "id": "q-108",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "你还记得前阵子我提到的沿江骑车吗？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-01 的笔记。"
+    },
+    {
+      "id": "q-109",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "你还记得我之前说过的山间露营吗？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「山间露营」。"
+    },
+    {
+      "id": "q-110",
+      "slice": "original_term",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "之前聊到山间露营的时候，我说了什么？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「山间露营」。"
+    },
+    {
+      "id": "q-111",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "上次提到山里扎营，你还记得吗？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "改写同义：用「山里扎营」替换原词「山间露营」，二者指同一件事。"
+    },
+    {
+      "id": "q-112",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "我之前是不是讲过山里扎营的事？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "改写同义：用「山里扎营」替换原词「山间露营」。"
+    },
+    {
+      "id": "q-113",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "前阵子我说过山里扎营的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-20 的笔记，内容用「山里扎营」。"
+    },
+    {
+      "id": "q-114",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "你还记得前阵子我提到的山里扎营吗？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-20 的笔记。"
+    },
+    {
+      "id": "q-115",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "你还记得我之前说过的周末市集吗？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「周末市集」。"
+    },
+    {
+      "id": "q-116",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "之前聊到周末市集的时候，我说了什么？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「周末市集」。"
+    },
+    {
+      "id": "q-117",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "上次提到周末集市，你还记得吗？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "改写同义：用「周末集市」替换原词「周末市集」，二者指同一件事。"
+    },
+    {
+      "id": "q-118",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "我之前是不是讲过周末集市的事？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "改写同义：用「周末集市」替换原词「周末市集」。"
+    },
+    {
+      "id": "q-119",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "四个多月前我说过周末集市的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "时间指代：用「四个多月前」指代 2026-07-23 的笔记，内容用「周末集市」。"
+    },
+    {
+      "id": "q-120",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "你还记得四个多月前我提到的周末集市吗？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "时间指代：用「四个多月前」指代 2026-07-23 的笔记。"
+    },
+    {
+      "id": "q-121",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "你还记得我之前说过的老城墙吗？",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「老城墙」。"
+    },
+    {
+      "id": "q-122",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "之前聊到老城墙的时候，我说了什么？",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「老城墙」。"
+    },
+    {
+      "id": "q-123",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "上次提到旧城墙，你还记得吗？",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "改写同义：用「旧城墙」替换原词「老城墙」，二者指同一件事。"
+    },
+    {
+      "id": "q-124",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "我之前是不是讲过旧城墙的事？",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "改写同义：用「旧城墙」替换原词「老城墙」。"
+    },
+    {
+      "id": "q-125",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "两三个月前我说过旧城墙的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-11 的笔记，内容用「旧城墙」。"
+    },
+    {
+      "id": "q-126",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a21",
+      "query": "你还记得两三个月前我提到的旧城墙吗？",
+      "expected_note_ids": [
+        "7e282ede-a770-5f35-be14-2488e9da4f45"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-11 的笔记。"
+    },
+    {
+      "id": "q-127",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "你还记得我之前说过的竹林小径吗？",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「竹林小径」。"
+    },
+    {
+      "id": "q-128",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "之前聊到竹林小径的时候，我说了什么？",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「竹林小径」。"
+    },
+    {
+      "id": "q-129",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "上次提到竹林小路，你还记得吗？",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "改写同义：用「竹林小路」替换原词「竹林小径」，二者指同一件事。"
+    },
+    {
+      "id": "q-130",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "我之前是不是讲过竹林小路的事？",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "改写同义：用「竹林小路」替换原词「竹林小径」。"
+    },
+    {
+      "id": "q-131",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "两三个月前我说过竹林小路的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-27 的笔记，内容用「竹林小路」。"
+    },
+    {
+      "id": "q-132",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a22",
+      "query": "你还记得两三个月前我提到的竹林小路吗？",
+      "expected_note_ids": [
+        "585d57b6-6a82-57f3-a640-3e49d92c4b49"
+      ],
+      "expected_note_date": "2026-08-27",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-27 的笔记。"
+    },
+    {
+      "id": "q-133",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "你还记得我之前说过的城西植物园吗？",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "原词命中：查询直接包含笔记锚点「城西植物园」。"
+    },
+    {
+      "id": "q-134",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "之前聊到城西植物园的时候，我说了什么？",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "原词命中：查询直接包含笔记锚点「城西植物园」。"
+    },
+    {
+      "id": "q-135",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "上次提到西边植物园，你还记得吗？",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "改写同义：用「西边植物园」替换原词「城西植物园」，二者指同一件事。"
+    },
+    {
+      "id": "q-136",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "我之前是不是讲过西边植物园的事？",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "改写同义：用「西边植物园」替换原词「城西植物园」。"
+    },
+    {
+      "id": "q-137",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "前几个月我说过西边植物园的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-08 的笔记，内容用「西边植物园」。"
+    },
+    {
+      "id": "q-138",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a23",
+      "query": "你还记得前几个月我提到的西边植物园吗？",
+      "expected_note_ids": [
+        "02077847-44b4-5b10-b0e9-12063f3a7230"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-08 的笔记。"
+    },
+    {
+      "id": "q-139",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "你还记得我之前说过的天台花园吗？",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「天台花园」。"
+    },
+    {
+      "id": "q-140",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "之前聊到天台花园的时候，我说了什么？",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "原词命中：查询直接包含笔记锚点「天台花园」。"
+    },
+    {
+      "id": "q-141",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "上次提到楼顶花园，你还记得吗？",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "改写同义：用「楼顶花园」替换原词「天台花园」，二者指同一件事。"
+    },
+    {
+      "id": "q-142",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "我之前是不是讲过楼顶花园的事？",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "改写同义：用「楼顶花园」替换原词「天台花园」。"
+    },
+    {
+      "id": "q-143",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "上个月我说过楼顶花园的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "时间指代：用「上个月」指代 2026-09-27 的笔记，内容用「楼顶花园」。"
+    },
+    {
+      "id": "q-144",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a24",
+      "query": "你还记得上个月我提到的楼顶花园吗？",
+      "expected_note_ids": [
+        "9868c43c-e90a-5240-ae6e-ea7ae355190d"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "时间指代：用「上个月」指代 2026-09-27 的笔记。"
+    },
+    {
+      "id": "q-145",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "你还记得我之前说过的河边钓点吗？",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「河边钓点」。"
+    },
+    {
+      "id": "q-146",
+      "slice": "original_term",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "之前聊到河边钓点的时候，我说了什么？",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「河边钓点」。"
+    },
+    {
+      "id": "q-147",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "上次提到河边钓鱼的地方，你还记得吗？",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "改写同义：用「河边钓鱼的地方」替换原词「河边钓点」，二者指同一件事。"
+    },
+    {
+      "id": "q-148",
+      "slice": "paraphrase",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "我之前是不是讲过河边钓鱼的地方的事？",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "改写同义：用「河边钓鱼的地方」替换原词「河边钓点」。"
+    },
+    {
+      "id": "q-149",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "这段时间我说过河边钓鱼的地方的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-15 的笔记，内容用「河边钓鱼的地方」。"
+    },
+    {
+      "id": "q-150",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a25",
+      "query": "你还记得这段时间我提到的河边钓鱼的地方吗？",
+      "expected_note_ids": [
+        "d305e5fb-d307-5d2b-b51a-a4308421734f"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-15 的笔记。"
+    },
+    {
+      "id": "q-151",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "你还记得我之前说过的老电影院吗？",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "原词命中：查询直接包含笔记锚点「老电影院」。"
+    },
+    {
+      "id": "q-152",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "之前聊到老电影院的时候，我说了什么？",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "原词命中：查询直接包含笔记锚点「老电影院」。"
+    },
+    {
+      "id": "q-153",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "上次提到旧影院，你还记得吗？",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "改写同义：用「旧影院」替换原词「老电影院」，二者指同一件事。"
+    },
+    {
+      "id": "q-154",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "我之前是不是讲过旧影院的事？",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "改写同义：用「旧影院」替换原词「老电影院」。"
+    },
+    {
+      "id": "q-155",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "前一阵我说过旧影院的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "时间指代：用「前一阵」指代 2026-07-19 的笔记，内容用「旧影院」。"
+    },
+    {
+      "id": "q-156",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a26",
+      "query": "你还记得前一阵我提到的旧影院吗？",
+      "expected_note_ids": [
+        "087f71eb-6df9-53dd-b8ac-a8dc43ce6315"
+      ],
+      "expected_note_date": "2026-07-19",
+      "rationale": "时间指代：用「前一阵」指代 2026-07-19 的笔记。"
+    },
+    {
+      "id": "q-157",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "你还记得我之前说过的城东花市吗？",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「城东花市」。"
+    },
+    {
+      "id": "q-158",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "之前聊到城东花市的时候，我说了什么？",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「城东花市」。"
+    },
+    {
+      "id": "q-159",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "上次提到东边花鸟市场，你还记得吗？",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "改写同义：用「东边花鸟市场」替换原词「城东花市」，二者指同一件事。"
+    },
+    {
+      "id": "q-160",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "我之前是不是讲过东边花鸟市场的事？",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "改写同义：用「东边花鸟市场」替换原词「城东花市」。"
+    },
+    {
+      "id": "q-161",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "前几个月我说过东边花鸟市场的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-04 的笔记，内容用「东边花鸟市场」。"
+    },
+    {
+      "id": "q-162",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a27",
+      "query": "你还记得前几个月我提到的东边花鸟市场吗？",
+      "expected_note_ids": [
+        "06d57f02-8c11-5fd2-b71f-e1f47d4701b3"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-04 的笔记。"
+    },
+    {
+      "id": "q-163",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "你还记得我之前说过的夜跑路线吗？",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「夜跑路线」。"
+    },
+    {
+      "id": "q-164",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "之前聊到夜跑路线的时候，我说了什么？",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "原词命中：查询直接包含笔记锚点「夜跑路线」。"
+    },
+    {
+      "id": "q-165",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "上次提到晚上跑步的路线，你还记得吗？",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "改写同义：用「晚上跑步的路线」替换原词「夜跑路线」，二者指同一件事。"
+    },
+    {
+      "id": "q-166",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "我之前是不是讲过晚上跑步的路线的事？",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "改写同义：用「晚上跑步的路线」替换原词「夜跑路线」。"
+    },
+    {
+      "id": "q-167",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "前几个月我说过晚上跑步的路线的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-23 的笔记，内容用「晚上跑步的路线」。"
+    },
+    {
+      "id": "q-168",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a28",
+      "query": "你还记得前几个月我提到的晚上跑步的路线吗？",
+      "expected_note_ids": [
+        "4f97a4e5-0516-50de-bfba-72f00fe00dc5"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-23 的笔记。"
+    },
+    {
+      "id": "q-169",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "你还记得我之前说过的社区球场吗？",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "原词命中：查询直接包含笔记锚点「社区球场」。"
+    },
+    {
+      "id": "q-170",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "之前聊到社区球场的时候，我说了什么？",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "原词命中：查询直接包含笔记锚点「社区球场」。"
+    },
+    {
+      "id": "q-171",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "上次提到小区球场，你还记得吗？",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "改写同义：用「小区球场」替换原词「社区球场」，二者指同一件事。"
+    },
+    {
+      "id": "q-172",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "我之前是不是讲过小区球场的事？",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "改写同义：用「小区球场」替换原词「社区球场」。"
+    },
+    {
+      "id": "q-173",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "两三个月前我说过小区球场的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-03 的笔记，内容用「小区球场」。"
+    },
+    {
+      "id": "q-174",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a29",
+      "query": "你还记得两三个月前我提到的小区球场吗？",
+      "expected_note_ids": [
+        "0d83ae78-75cf-5457-9610-a97da8f197b8"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-03 的笔记。"
+    },
+    {
+      "id": "q-175",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "你还记得我之前说过的山顶观景台吗？",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "原词命中：查询直接包含笔记锚点「山顶观景台」。"
+    },
+    {
+      "id": "q-176",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "之前聊到山顶观景台的时候，我说了什么？",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "原词命中：查询直接包含笔记锚点「山顶观景台」。"
+    },
+    {
+      "id": "q-177",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "上次提到山顶的观景平台，你还记得吗？",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "改写同义：用「山顶的观景平台」替换原词「山顶观景台」，二者指同一件事。"
+    },
+    {
+      "id": "q-178",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "我之前是不是讲过山顶的观景平台的事？",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "改写同义：用「山顶的观景平台」替换原词「山顶观景台」。"
+    },
+    {
+      "id": "q-179",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "前阵子我说过山顶的观景平台的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "时间指代：用「前阵子」指代 2026-09-22 的笔记，内容用「山顶的观景平台」。"
+    },
+    {
+      "id": "q-180",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a30",
+      "query": "你还记得前阵子我提到的山顶的观景平台吗？",
+      "expected_note_ids": [
+        "f7e1e122-8dee-51d4-a1ea-a234ff29450c"
+      ],
+      "expected_note_date": "2026-09-22",
+      "rationale": "时间指代：用「前阵子」指代 2026-09-22 的笔记。"
+    },
+    {
+      "id": "q-181",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "你还记得我之前说过的先给结论吗？",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「先给结论」。"
+    },
+    {
+      "id": "q-182",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "之前聊到先给结论的时候，我说了什么？",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "原词命中：查询直接包含笔记锚点「先给结论」。"
+    },
+    {
+      "id": "q-183",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "上次提到结论放在最前面，你还记得吗？",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "改写同义：用「结论放在最前面」替换原词「先给结论」，二者指同一件事。"
+    },
+    {
+      "id": "q-184",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "我之前是不是讲过结论放在最前面的事？",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "改写同义：用「结论放在最前面」替换原词「先给结论」。"
+    },
+    {
+      "id": "q-185",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "前阵子我说过结论放在最前面的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-11 的笔记，内容用「结论放在最前面」。"
+    },
+    {
+      "id": "q-186",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a31",
+      "query": "你还记得前阵子我提到的结论放在最前面吗？",
+      "expected_note_ids": [
+        "1e2686c9-1c6d-5961-85ec-f25ab3681219"
+      ],
+      "expected_note_date": "2026-10-11",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-11 的笔记。"
+    },
+    {
+      "id": "q-187",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "你还记得我之前说过的别用敬语吗？",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「别用敬语」。"
+    },
+    {
+      "id": "q-188",
+      "slice": "original_term",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "之前聊到别用敬语的时候，我说了什么？",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「别用敬语」。"
+    },
+    {
+      "id": "q-189",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "上次提到不用客气称呼，你还记得吗？",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "改写同义：用「不用客气称呼」替换原词「别用敬语」，二者指同一件事。"
+    },
+    {
+      "id": "q-190",
+      "slice": "paraphrase",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "我之前是不是讲过不用客气称呼的事？",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "改写同义：用「不用客气称呼」替换原词「别用敬语」。"
+    },
+    {
+      "id": "q-191",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "上个月我说过不用客气称呼的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "时间指代：用「上个月」指代 2026-10-20 的笔记，内容用「不用客气称呼」。"
+    },
+    {
+      "id": "q-192",
+      "slice": "temporal_reference",
+      "user_index": 4,
+      "anchor": "a32",
+      "query": "你还记得上个月我提到的不用客气称呼吗？",
+      "expected_note_ids": [
+        "abe39e1c-c559-5e86-8f81-53faa6afc867"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "时间指代：用「上个月」指代 2026-10-20 的笔记。"
+    },
+    {
+      "id": "q-193",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "你还记得我之前说过的用表格对比吗？",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "原词命中：查询直接包含笔记锚点「用表格对比」。"
+    },
+    {
+      "id": "q-194",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "之前聊到用表格对比的时候，我说了什么？",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "原词命中：查询直接包含笔记锚点「用表格对比」。"
+    },
+    {
+      "id": "q-195",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "上次提到表格形式对照，你还记得吗？",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "改写同义：用「表格形式对照」替换原词「用表格对比」，二者指同一件事。"
+    },
+    {
+      "id": "q-196",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "我之前是不是讲过表格形式对照的事？",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "改写同义：用「表格形式对照」替换原词「用表格对比」。"
+    },
+    {
+      "id": "q-197",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "两三个月前我说过表格形式对照的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-02 的笔记，内容用「表格形式对照」。"
+    },
+    {
+      "id": "q-198",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a33",
+      "query": "你还记得两三个月前我提到的表格形式对照吗？",
+      "expected_note_ids": [
+        "bdee369b-f47c-58f6-9cf5-337dc56aeb09"
+      ],
+      "expected_note_date": "2026-08-02",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-02 的笔记。"
+    },
+    {
+      "id": "q-199",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "你还记得我之前说过的举生活例子吗？",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「举生活例子」。"
+    },
+    {
+      "id": "q-200",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "之前聊到举生活例子的时候，我说了什么？",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「举生活例子」。"
+    },
+    {
+      "id": "q-201",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "上次提到打个生活里的比方，你还记得吗？",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "改写同义：用「打个生活里的比方」替换原词「举生活例子」，二者指同一件事。"
+    },
+    {
+      "id": "q-202",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "我之前是不是讲过打个生活里的比方的事？",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "改写同义：用「打个生活里的比方」替换原词「举生活例子」。"
+    },
+    {
+      "id": "q-203",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "前几个月我说过打个生活里的比方的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-20 的笔记，内容用「打个生活里的比方」。"
+    },
+    {
+      "id": "q-204",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a34",
+      "query": "你还记得前几个月我提到的打个生活里的比方吗？",
+      "expected_note_ids": [
+        "7b5ec697-557d-5220-a29a-9ebac0ed17cf"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-20 的笔记。"
+    },
+    {
+      "id": "q-205",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "你还记得我之前说过的少用英文缩写吗？",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「少用英文缩写」。"
+    },
+    {
+      "id": "q-206",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "之前聊到少用英文缩写的时候，我说了什么？",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「少用英文缩写」。"
+    },
+    {
+      "id": "q-207",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "上次提到别堆英文简称，你还记得吗？",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "改写同义：用「别堆英文简称」替换原词「少用英文缩写」，二者指同一件事。"
+    },
+    {
+      "id": "q-208",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "我之前是不是讲过别堆英文简称的事？",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "改写同义：用「别堆英文简称」替换原词「少用英文缩写」。"
+    },
+    {
+      "id": "q-209",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "三个月前我说过别堆英文简称的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "时间指代：用「三个月前」指代 2026-09-01 的笔记，内容用「别堆英文简称」。"
+    },
+    {
+      "id": "q-210",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a35",
+      "query": "你还记得三个月前我提到的别堆英文简称吗？",
+      "expected_note_ids": [
+        "c745c7b4-d4a8-5187-a93f-5ef88516cc59"
+      ],
+      "expected_note_date": "2026-09-01",
+      "rationale": "时间指代：用「三个月前」指代 2026-09-01 的笔记。"
+    },
+    {
+      "id": "q-211",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "你还记得我之前说过的每次只问一个问题吗？",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「每次只问一个问题」。"
+    },
+    {
+      "id": "q-212",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "之前聊到每次只问一个问题的时候，我说了什么？",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "原词命中：查询直接包含笔记锚点「每次只问一个问题」。"
+    },
+    {
+      "id": "q-213",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "上次提到一次只问一件事，你还记得吗？",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "改写同义：用「一次只问一件事」替换原词「每次只问一个问题」，二者指同一件事。"
+    },
+    {
+      "id": "q-214",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "我之前是不是讲过一次只问一件事的事？",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "改写同义：用「一次只问一件事」替换原词「每次只问一个问题」。"
+    },
+    {
+      "id": "q-215",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "这段时间我说过一次只问一件事的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "时间指代：用「这段时间」指代 2026-09-20 的笔记，内容用「一次只问一件事」。"
+    },
+    {
+      "id": "q-216",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a36",
+      "query": "你还记得这段时间我提到的一次只问一件事吗？",
+      "expected_note_ids": [
+        "8d3c68a6-d66b-510b-b72e-20448db5b097"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "时间指代：用「这段时间」指代 2026-09-20 的笔记。"
+    },
+    {
+      "id": "q-217",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "你还记得我之前说过的回复短一点吗？",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "原词命中：查询直接包含笔记锚点「回复短一点」。"
+    },
+    {
+      "id": "q-218",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "之前聊到回复短一点的时候，我说了什么？",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "原词命中：查询直接包含笔记锚点「回复短一点」。"
+    },
+    {
+      "id": "q-219",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "上次提到回答简短些，你还记得吗？",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "改写同义：用「回答简短些」替换原词「回复短一点」，二者指同一件事。"
+    },
+    {
+      "id": "q-220",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "我之前是不是讲过回答简短些的事？",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "改写同义：用「回答简短些」替换原词「回复短一点」。"
+    },
+    {
+      "id": "q-221",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "这段时间我说过回答简短些的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-06 的笔记，内容用「回答简短些」。"
+    },
+    {
+      "id": "q-222",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a37",
+      "query": "你还记得这段时间我提到的回答简短些吗？",
+      "expected_note_ids": [
+        "9d6699f6-b52b-56a5-b5cc-e2e86348f7ad"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-06 的笔记。"
+    },
+    {
+      "id": "q-223",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "你还记得我之前说过的用要点列表吗？",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「用要点列表」。"
+    },
+    {
+      "id": "q-224",
+      "slice": "original_term",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "之前聊到用要点列表的时候，我说了什么？",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「用要点列表」。"
+    },
+    {
+      "id": "q-225",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "上次提到列成条目，你还记得吗？",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "改写同义：用「列成条目」替换原词「用要点列表」，二者指同一件事。"
+    },
+    {
+      "id": "q-226",
+      "slice": "paraphrase",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "我之前是不是讲过列成条目的事？",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "改写同义：用「列成条目」替换原词「用要点列表」。"
+    },
+    {
+      "id": "q-227",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "前阵子我说过列成条目的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-18 的笔记，内容用「列成条目」。"
+    },
+    {
+      "id": "q-228",
+      "slice": "temporal_reference",
+      "user_index": 5,
+      "anchor": "a38",
+      "query": "你还记得前阵子我提到的列成条目吗？",
+      "expected_note_ids": [
+        "157e5ba2-265a-58e8-9663-9c731fa6a081"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-18 的笔记。"
+    },
+    {
+      "id": "q-229",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "你还记得我之前说过的不要重复我的话吗？",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "原词命中：查询直接包含笔记锚点「不要重复我的话」。"
+    },
+    {
+      "id": "q-230",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "之前聊到不要重复我的话的时候，我说了什么？",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "原词命中：查询直接包含笔记锚点「不要重复我的话」。"
+    },
+    {
+      "id": "q-231",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "上次提到别复述我的原话，你还记得吗？",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "改写同义：用「别复述我的原话」替换原词「不要重复我的话」，二者指同一件事。"
+    },
+    {
+      "id": "q-232",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "我之前是不是讲过别复述我的原话的事？",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "改写同义：用「别复述我的原话」替换原词「不要重复我的话」。"
+    },
+    {
+      "id": "q-233",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "两三个月前我说过别复述我的原话的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "时间指代：用「两三个月前」指代 2026-07-30 的笔记，内容用「别复述我的原话」。"
+    },
+    {
+      "id": "q-234",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a39",
+      "query": "你还记得两三个月前我提到的别复述我的原话吗？",
+      "expected_note_ids": [
+        "e1bf7a91-05c9-588b-9e6b-143b30b3c12f"
+      ],
+      "expected_note_date": "2026-07-30",
+      "rationale": "时间指代：用「两三个月前」指代 2026-07-30 的笔记。"
+    },
+    {
+      "id": "q-235",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "你还记得我之前说过的先问再建议吗？",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「先问再建议」。"
+    },
+    {
+      "id": "q-236",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "之前聊到先问再建议的时候，我说了什么？",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "原词命中：查询直接包含笔记锚点「先问再建议」。"
+    },
+    {
+      "id": "q-237",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "上次提到先确认再给建议，你还记得吗？",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "改写同义：用「先确认再给建议」替换原词「先问再建议」，二者指同一件事。"
+    },
+    {
+      "id": "q-238",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "我之前是不是讲过先确认再给建议的事？",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "改写同义：用「先确认再给建议」替换原词「先问再建议」。"
+    },
+    {
+      "id": "q-239",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "两三个月前我说过先确认再给建议的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-18 的笔记，内容用「先确认再给建议」。"
+    },
+    {
+      "id": "q-240",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a40",
+      "query": "你还记得两三个月前我提到的先确认再给建议吗？",
+      "expected_note_ids": [
+        "a87a8cf1-5306-5144-81ba-d78ca6e70864"
+      ],
+      "expected_note_date": "2026-08-18",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-18 的笔记。"
+    },
+    {
+      "id": "q-241",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "你还记得我之前说过的数字加单位吗？",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "原词命中：查询直接包含笔记锚点「数字加单位」。"
+    },
+    {
+      "id": "q-242",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "之前聊到数字加单位的时候，我说了什么？",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "原词命中：查询直接包含笔记锚点「数字加单位」。"
+    },
+    {
+      "id": "q-243",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "上次提到数值带上单位，你还记得吗？",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "改写同义：用「数值带上单位」替换原词「数字加单位」，二者指同一件事。"
+    },
+    {
+      "id": "q-244",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "我之前是不是讲过数值带上单位的事？",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "改写同义：用「数值带上单位」替换原词「数字加单位」。"
+    },
+    {
+      "id": "q-245",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "前几个月我说过数值带上单位的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-30 的笔记，内容用「数值带上单位」。"
+    },
+    {
+      "id": "q-246",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a41",
+      "query": "你还记得前几个月我提到的数值带上单位吗？",
+      "expected_note_ids": [
+        "038ee596-dcd5-5888-96e5-10f0390331b6"
+      ],
+      "expected_note_date": "2026-08-30",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-30 的笔记。"
+    },
+    {
+      "id": "q-247",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "你还记得我之前说过的避免夸张词吗？",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「避免夸张词」。"
+    },
+    {
+      "id": "q-248",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "之前聊到避免夸张词的时候，我说了什么？",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「避免夸张词」。"
+    },
+    {
+      "id": "q-249",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "上次提到别用夸张的说法，你还记得吗？",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "改写同义：用「别用夸张的说法」替换原词「避免夸张词」，二者指同一件事。"
+    },
+    {
+      "id": "q-250",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "我之前是不是讲过别用夸张的说法的事？",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "改写同义：用「别用夸张的说法」替换原词「避免夸张词」。"
+    },
+    {
+      "id": "q-251",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "前几个月我说过别用夸张的说法的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-15 的笔记，内容用「别用夸张的说法」。"
+    },
+    {
+      "id": "q-252",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a42",
+      "query": "你还记得前几个月我提到的别用夸张的说法吗？",
+      "expected_note_ids": [
+        "5b46269b-577a-53a1-b5b9-ffedd2811f01"
+      ],
+      "expected_note_date": "2026-09-15",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-15 的笔记。"
+    },
+    {
+      "id": "q-253",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "你还记得我之前说过的用中文术语吗？",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「用中文术语」。"
+    },
+    {
+      "id": "q-254",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "之前聊到用中文术语的时候，我说了什么？",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "原词命中：查询直接包含笔记锚点「用中文术语」。"
+    },
+    {
+      "id": "q-255",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "上次提到术语用中文，你还记得吗？",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "改写同义：用「术语用中文」替换原词「用中文术语」，二者指同一件事。"
+    },
+    {
+      "id": "q-256",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "我之前是不是讲过术语用中文的事？",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "改写同义：用「术语用中文」替换原词「用中文术语」。"
+    },
+    {
+      "id": "q-257",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "上个月我说过术语用中文的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "时间指代：用「上个月」指代 2026-10-04 的笔记，内容用「术语用中文」。"
+    },
+    {
+      "id": "q-258",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a43",
+      "query": "你还记得上个月我提到的术语用中文吗？",
+      "expected_note_ids": [
+        "b4c6cf4b-750b-5110-8b41-51cff324237e"
+      ],
+      "expected_note_date": "2026-10-04",
+      "rationale": "时间指代：用「上个月」指代 2026-10-04 的笔记。"
+    },
+    {
+      "id": "q-259",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "你还记得我之前说过的直接说风险吗？",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「直接说风险」。"
+    },
+    {
+      "id": "q-260",
+      "slice": "original_term",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "之前聊到直接说风险的时候，我说了什么？",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "原词命中：查询直接包含笔记锚点「直接说风险」。"
+    },
+    {
+      "id": "q-261",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "上次提到风险讲直白，你还记得吗？",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "改写同义：用「风险讲直白」替换原词「直接说风险」，二者指同一件事。"
+    },
+    {
+      "id": "q-262",
+      "slice": "paraphrase",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "我之前是不是讲过风险讲直白的事？",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "改写同义：用「风险讲直白」替换原词「直接说风险」。"
+    },
+    {
+      "id": "q-263",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "前阵子我说过风险讲直白的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-15 的笔记，内容用「风险讲直白」。"
+    },
+    {
+      "id": "q-264",
+      "slice": "temporal_reference",
+      "user_index": 6,
+      "anchor": "a44",
+      "query": "你还记得前阵子我提到的风险讲直白吗？",
+      "expected_note_ids": [
+        "366e9646-c799-5c55-9bbb-9a3c4f46338a"
+      ],
+      "expected_note_date": "2026-10-15",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-15 的笔记。"
+    },
+    {
+      "id": "q-265",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "你还记得我之前说过的给两套方案吗？",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "原词命中：查询直接包含笔记锚点「给两套方案」。"
+    },
+    {
+      "id": "q-266",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "之前聊到给两套方案的时候，我说了什么？",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "原词命中：查询直接包含笔记锚点「给两套方案」。"
+    },
+    {
+      "id": "q-267",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "上次提到提供两个选择，你还记得吗？",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "改写同义：用「提供两个选择」替换原词「给两套方案」，二者指同一件事。"
+    },
+    {
+      "id": "q-268",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "我之前是不是讲过提供两个选择的事？",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "改写同义：用「提供两个选择」替换原词「给两套方案」。"
+    },
+    {
+      "id": "q-269",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "三个月前我说过提供两个选择的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "时间指代：用「三个月前」指代 2026-07-28 的笔记，内容用「提供两个选择」。"
+    },
+    {
+      "id": "q-270",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a45",
+      "query": "你还记得三个月前我提到的提供两个选择吗？",
+      "expected_note_ids": [
+        "3ab74eab-1c2f-5de5-97d0-e71d07393f53"
+      ],
+      "expected_note_date": "2026-07-28",
+      "rationale": "时间指代：用「三个月前」指代 2026-07-28 的笔记。"
+    },
+    {
+      "id": "q-271",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "你还记得我之前说过的结尾给下一步吗？",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "原词命中：查询直接包含笔记锚点「结尾给下一步」。"
+    },
+    {
+      "id": "q-272",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "之前聊到结尾给下一步的时候，我说了什么？",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "原词命中：查询直接包含笔记锚点「结尾给下一步」。"
+    },
+    {
+      "id": "q-273",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "上次提到最后说下一步做什么，你还记得吗？",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "改写同义：用「最后说下一步做什么」替换原词「结尾给下一步」，二者指同一件事。"
+    },
+    {
+      "id": "q-274",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "我之前是不是讲过最后说下一步做什么的事？",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "改写同义：用「最后说下一步做什么」替换原词「结尾给下一步」。"
+    },
+    {
+      "id": "q-275",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "三个月前我说过最后说下一步做什么的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "时间指代：用「三个月前」指代 2026-08-16 的笔记，内容用「最后说下一步做什么」。"
+    },
+    {
+      "id": "q-276",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a46",
+      "query": "你还记得三个月前我提到的最后说下一步做什么吗？",
+      "expected_note_ids": [
+        "c687467b-e8fe-54b1-815e-dd1157ddd7ba"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "时间指代：用「三个月前」指代 2026-08-16 的笔记。"
+    },
+    {
+      "id": "q-277",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "你还记得我之前说过的别一次给太多选项吗？",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "原词命中：查询直接包含笔记锚点「别一次给太多选项」。"
+    },
+    {
+      "id": "q-278",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "之前聊到别一次给太多选项的时候，我说了什么？",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "原词命中：查询直接包含笔记锚点「别一次给太多选项」。"
+    },
+    {
+      "id": "q-279",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "上次提到选项别太多，你还记得吗？",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "改写同义：用「选项别太多」替换原词「别一次给太多选项」，二者指同一件事。"
+    },
+    {
+      "id": "q-280",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "我之前是不是讲过选项别太多的事？",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "改写同义：用「选项别太多」替换原词「别一次给太多选项」。"
+    },
+    {
+      "id": "q-281",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "两三个月前我说过选项别太多的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-25 的笔记，内容用「选项别太多」。"
+    },
+    {
+      "id": "q-282",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a47",
+      "query": "你还记得两三个月前我提到的选项别太多吗？",
+      "expected_note_ids": [
+        "46e446b6-31bb-528a-890b-31a92766606a"
+      ],
+      "expected_note_date": "2026-08-25",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-25 的笔记。"
+    },
+    {
+      "id": "q-283",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "你还记得我之前说过的用第二人称吗？",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "原词命中：查询直接包含笔记锚点「用第二人称」。"
+    },
+    {
+      "id": "q-284",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "之前聊到用第二人称的时候，我说了什么？",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "原词命中：查询直接包含笔记锚点「用第二人称」。"
+    },
+    {
+      "id": "q-285",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "上次提到直接说「你」，你还记得吗？",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "改写同义：用「直接说「你」」替换原词「用第二人称」，二者指同一件事。"
+    },
+    {
+      "id": "q-286",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "我之前是不是讲过直接说「你」的事？",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "改写同义：用「直接说「你」」替换原词「用第二人称」。"
+    },
+    {
+      "id": "q-287",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "两三个月前我说过直接说「你」的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-13 的笔记，内容用「直接说「你」」。"
+    },
+    {
+      "id": "q-288",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a48",
+      "query": "你还记得两三个月前我提到的直接说「你」吗？",
+      "expected_note_ids": [
+        "fa3419b9-ad1c-587b-be22-ef206ab6ed4a"
+      ],
+      "expected_note_date": "2026-09-13",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-13 的笔记。"
+    },
+    {
+      "id": "q-289",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "你还记得我之前说过的别用感叹号吗？",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「别用感叹号」。"
+    },
+    {
+      "id": "q-290",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "之前聊到别用感叹号的时候，我说了什么？",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "原词命中：查询直接包含笔记锚点「别用感叹号」。"
+    },
+    {
+      "id": "q-291",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "上次提到不要感叹语气，你还记得吗？",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "改写同义：用「不要感叹语气」替换原词「别用感叹号」，二者指同一件事。"
+    },
+    {
+      "id": "q-292",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "我之前是不是讲过不要感叹语气的事？",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "改写同义：用「不要感叹语气」替换原词「别用感叹号」。"
+    },
+    {
+      "id": "q-293",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "上个月我说过不要感叹语气的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "时间指代：用「上个月」指代 2026-10-01 的笔记，内容用「不要感叹语气」。"
+    },
+    {
+      "id": "q-294",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a49",
+      "query": "你还记得上个月我提到的不要感叹语气吗？",
+      "expected_note_ids": [
+        "3d7ee1e6-fd11-5a2d-847c-2bfe679ff051"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "时间指代：用「上个月」指代 2026-10-01 的笔记。"
+    },
+    {
+      "id": "q-295",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "你还记得我之前说过的保留我的原词吗？",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "原词命中：查询直接包含笔记锚点「保留我的原词」。"
+    },
+    {
+      "id": "q-296",
+      "slice": "original_term",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "之前聊到保留我的原词的时候，我说了什么？",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "原词命中：查询直接包含笔记锚点「保留我的原词」。"
+    },
+    {
+      "id": "q-297",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "上次提到沿用我自己的说法，你还记得吗？",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "改写同义：用「沿用我自己的说法」替换原词「保留我的原词」，二者指同一件事。"
+    },
+    {
+      "id": "q-298",
+      "slice": "paraphrase",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "我之前是不是讲过沿用我自己的说法的事？",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "改写同义：用「沿用我自己的说法」替换原词「保留我的原词」。"
+    },
+    {
+      "id": "q-299",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "这段时间我说过沿用我自己的说法的事，帮我回忆一下。",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-13 的笔记，内容用「沿用我自己的说法」。"
+    },
+    {
+      "id": "q-300",
+      "slice": "temporal_reference",
+      "user_index": 7,
+      "anchor": "a50",
+      "query": "你还记得这段时间我提到的沿用我自己的说法吗？",
+      "expected_note_ids": [
+        "549b540a-a11f-5097-a307-b61f5654e404"
+      ],
+      "expected_note_date": "2026-10-13",
+      "rationale": "时间指代：用「这段时间」指代 2026-10-13 的笔记。"
+    },
+    {
+      "id": "q-301",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a01",
+      "query": "我说的江畔公园那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "6db2f945-f88c-5e93-a9d7-74b63fc61068"
+      ],
+      "expected_note_date": "2026-07-26",
+      "rationale": "改写同义：用「江畔公园」替换原词「滨江公园」。"
+    },
+    {
+      "id": "q-302",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a02",
+      "query": "三个月前聊到南边的图书馆，你还记得细节吗？",
+      "expected_note_ids": [
+        "3121f609-898c-5365-a63c-803905b07f7f"
+      ],
+      "expected_note_date": "2026-08-11",
+      "rationale": "时间指代：用「三个月前」指代 2026-08-11 的笔记。"
+    },
+    {
+      "id": "q-303",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a03",
+      "query": "我说的旧城那个菜场那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "3f2c2056-5300-5e99-9bcb-43da69602b98"
+      ],
+      "expected_note_date": "2026-08-23",
+      "rationale": "改写同义：用「旧城那个菜场」替换原词「老街菜市场」。"
+    },
+    {
+      "id": "q-304",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a04",
+      "query": "前几个月聊到西山的小路，你还记得细节吗？",
+      "expected_note_ids": [
+        "e0b08a46-644c-5f1a-a2f7-7aa2074341b7"
+      ],
+      "expected_note_date": "2026-09-10",
+      "rationale": "时间指代：用「前几个月」指代 2026-09-10 的笔记。"
+    },
+    {
+      "id": "q-305",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a05",
+      "query": "我说的湖中间的亭子那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "4bc84302-9e84-5fa8-99a8-3c11545d723f"
+      ],
+      "expected_note_date": "2026-09-29",
+      "rationale": "改写同义：用「湖中间的亭子」替换原词「湖心亭」。"
+    },
+    {
+      "id": "q-306",
+      "slice": "temporal_reference",
+      "user_index": 0,
+      "anchor": "a06",
+      "query": "上个月聊到北边的体育中心，你还记得细节吗？",
+      "expected_note_ids": [
+        "ea1ecf4e-7020-5838-bbf9-1baa378a8cbb"
+      ],
+      "expected_note_date": "2026-10-18",
+      "rationale": "时间指代：用「上个月」指代 2026-10-18 的笔记。"
+    },
+    {
+      "id": "q-307",
+      "slice": "paraphrase",
+      "user_index": 0,
+      "anchor": "a07",
+      "query": "我说的江边那座楼那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "7f893daa-6405-5866-b547-a825cf024a9e"
+      ],
+      "expected_note_date": "2026-10-27",
+      "rationale": "改写同义：用「江边那座楼」替换原词「望江楼」。"
+    },
+    {
+      "id": "q-308",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a08",
+      "query": "前几个月聊到石板路那条巷子，你还记得细节吗？",
+      "expected_note_ids": [
+        "c2f1033b-b3dd-5493-aebf-cca62ad1f85f"
+      ],
+      "expected_note_date": "2026-08-09",
+      "rationale": "时间指代：用「前几个月」指代 2026-08-09 的笔记。"
+    },
+    {
+      "id": "q-309",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a09",
+      "query": "我说的梧桐树那条路那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "7e883bb2-1490-5f1a-b8bb-38f512a9654f"
+      ],
+      "expected_note_date": "2026-08-20",
+      "rationale": "改写同义：用「梧桐树那条路」替换原词「梧桐大道」。"
+    },
+    {
+      "id": "q-310",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a10",
+      "query": "两三个月前聊到南边那片湿地，你还记得细节吗？",
+      "expected_note_ids": [
+        "6f9ce428-91f1-55cb-a104-19e997787fac"
+      ],
+      "expected_note_date": "2026-09-08",
+      "rationale": "时间指代：用「两三个月前」指代 2026-09-08 的笔记。"
+    },
+    {
+      "id": "q-311",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a11",
+      "query": "我说的半马那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "823f4032-7077-58b8-9f6c-8b4629a8451a"
+      ],
+      "expected_note_date": "2026-09-27",
+      "rationale": "改写同义：用「半马」替换原词「半程马拉松」。"
+    },
+    {
+      "id": "q-312",
+      "slice": "temporal_reference",
+      "user_index": 1,
+      "anchor": "a12",
+      "query": "上个月聊到垫上训练，你还记得细节吗？",
+      "expected_note_ids": [
+        "9fc0909d-6ed6-54ef-a48f-a07772c17e44"
+      ],
+      "expected_note_date": "2026-10-06",
+      "rationale": "时间指代：用「上个月」指代 2026-10-06 的笔记。"
+    },
+    {
+      "id": "q-313",
+      "slice": "paraphrase",
+      "user_index": 1,
+      "anchor": "a13",
+      "query": "我说的做陶的课那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "c2193752-2501-50d0-8875-fd7701675e68"
+      ],
+      "expected_note_date": "2026-10-25",
+      "rationale": "改写同义：用「做陶的课」替换原词「陶艺课」。"
+    },
+    {
+      "id": "q-314",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a14",
+      "query": "两三个月前聊到小区合唱队，你还记得细节吗？",
+      "expected_note_ids": [
+        "293b4d7c-89f8-51bc-a3cf-143aa0f447bf"
+      ],
+      "expected_note_date": "2026-08-04",
+      "rationale": "时间指代：用「两三个月前」指代 2026-08-04 的笔记。"
+    },
+    {
+      "id": "q-315",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a15",
+      "query": "我说的户外电影那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "8d8cd514-6e5c-5ee0-9929-cd8a3d490a35"
+      ],
+      "expected_note_date": "2026-08-16",
+      "rationale": "改写同义：用「户外电影」替换原词「露天电影」。"
+    },
+    {
+      "id": "q-316",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a16",
+      "query": "三个月前聊到二手书店，你还记得细节吗？",
+      "expected_note_ids": [
+        "d1e67b9a-f019-579e-8541-045552e3f600"
+      ],
+      "expected_note_date": "2026-09-03",
+      "rationale": "时间指代：用「三个月前」指代 2026-09-03 的笔记。"
+    },
+    {
+      "id": "q-317",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a17",
+      "query": "我说的清晨的集市那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "dde4932e-021e-5aee-a07d-fe3d390c7d29"
+      ],
+      "expected_note_date": "2026-09-20",
+      "rationale": "改写同义：用「清晨的集市」替换原词「早市」。"
+    },
+    {
+      "id": "q-318",
+      "slice": "temporal_reference",
+      "user_index": 2,
+      "anchor": "a18",
+      "query": "前阵子聊到沿江骑车，你还记得细节吗？",
+      "expected_note_ids": [
+        "47f79d26-d44c-5b55-9183-702e38681fc1"
+      ],
+      "expected_note_date": "2026-10-01",
+      "rationale": "时间指代：用「前阵子」指代 2026-10-01 的笔记。"
+    },
+    {
+      "id": "q-319",
+      "slice": "paraphrase",
+      "user_index": 2,
+      "anchor": "a19",
+      "query": "我说的山里扎营那件事，你还有印象吗？",
+      "expected_note_ids": [
+        "bf966497-8018-5f18-8883-e12a06789aef"
+      ],
+      "expected_note_date": "2026-10-20",
+      "rationale": "改写同义：用「山里扎营」替换原词「山间露营」。"
+    },
+    {
+      "id": "q-320",
+      "slice": "temporal_reference",
+      "user_index": 3,
+      "anchor": "a20",
+      "query": "四个多月前聊到周末集市，你还记得细节吗？",
+      "expected_note_ids": [
+        "b7a6c199-1c8d-5ce3-99bd-13afc3aa8264"
+      ],
+      "expected_note_date": "2026-07-23",
+      "rationale": "时间指代：用「四个多月前」指代 2026-07-23 的笔记。"
+    }
+  ]
+}
