@@ -67,6 +67,26 @@ and re-reads it under a share lock at commit time; a pruned source rejects
 the commit (`ErrBodyStateSuggestionRejected`) instead of trusting a stale
 excerpt. That is fail-closed, not a kept reference.
 
+### Inert episodic provenance (S1, #495 / #509)
+
+Migration `000003_episodic_notes` reserves `source_message_ids uuid[]` for future,
+non-authoritative conversation notes. This **soft provenance** has no foreign
+key to `messages` and is **never** a reason for `protectedMessages` to keep a
+raw chat row. The PostgreSQL scope regression
+`TestEpisodicNoteSchemaIsInertAndOwnerScopedPostgres` asserts that no chat FK
+appears, that the provenance array remains typed, and that owner deletion
+cascades to all notes. The composite Conversation-owner FK prevents notes
+from crossing users.
+
+S1 adds **no writer, model retrieval, HTTP route, background generation or
+serving**. The database restricts new notes to `status = shadow`; neither
+the Agent nor clinical domains read them. Before any actual shadow-generation
+writer is enabled, AS-002 statement/asset erasure must be extended to remove
+source-derived notes and verify those targets. A copied note must never survive
+its source's explicit erasure, but normal rolling message pruning must not be
+blocked. The user-visible memory controls and clinical authority gates in the
+#495 ADR are prerequisites to later serving.
+
 ## 2. Why no cascade decides what is kept
 
 `interaction_resumes` references `messages` (answer and reply) and
