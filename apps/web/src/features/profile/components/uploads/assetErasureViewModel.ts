@@ -29,6 +29,7 @@ export const ASSET_ERASURE_TARGET_LABELS: Record<string, string> = {
   document_extractions: "报告识别结果与指标复核",
   assessment_reports: "评估报告副本",
   runtime_checkpoints: "对话运行缓存",
+  episodic_notes: "关联的对话摘要",
   asset_manifest: "文件记录",
 };
 
@@ -153,6 +154,7 @@ export const ASSET_ERASURE_FAMILIES: ReadonlyArray<{
       "document_extractions",
       "diagnosis_records",
       "assessment_reports",
+      "episodic_notes",
     ],
   },
   { id: "checkpoints", label: "检查点副本", targets: ["runtime_checkpoints"] },

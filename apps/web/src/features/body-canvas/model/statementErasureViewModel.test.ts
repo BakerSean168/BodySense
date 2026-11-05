@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import * as zod from "zod/mini";
+import { StatementErasureReceipt as StatementErasureReceiptSchema } from "@/generated/api/model/statementErasureReceipt.zod";
 import type { StatementErasureReceipt } from "@/features/profile/services/statementErasureService";
 import { projectStatementErasure } from "./statementErasureViewModel";
 
@@ -9,6 +11,7 @@ const targets = [
   "assessment_reports",
   "decision_records",
   "runtime_checkpoints",
+  "episodic_notes",
   "source_message",
   "statement_manifest",
 ] as const;
@@ -27,7 +30,7 @@ function receipt(
     request_id: "00000000-0000-4000-8000-000000000001",
     statement_id: "00000000-0000-4000-8000-000000000002",
     status,
-    inventory_revision: "statement-erasure-inventory-v2",
+    inventory_revision: "statement-erasure-inventory-v3",
     requested_at: "2026-10-19T00:00:00Z",
     targets: targets.map((target) => ({
       target,
@@ -45,6 +48,28 @@ function receipt(
 const record = "00000000-0000-4000-8000-0000000000aa";
 
 describe("projectStatementErasure", () => {
+  it("accepts the ninth episodic_notes erasure target at the generated REST boundary", () => {
+    const value = receipt("outstanding", {
+      episodic_notes: {
+        state: "failed",
+        failure_code: "copy_reappeared",
+        outstanding_count: 1,
+      },
+    });
+    value.outstanding_targets = ["episodic_notes"];
+    expect(zod.safeParse(StatementErasureReceiptSchema, value).success).toBe(
+      true,
+    );
+    const projected = projectStatementErasure(value, record);
+    expect(projected.outstanding).toContainEqual(
+      expect.objectContaining({
+        target: "episodic_notes",
+        label: "关联的对话摘要",
+      }),
+    );
+    expect(projected.phase).toBe("outstanding");
+  });
+
   it("asks for a review and offers withdrawing this record here", () => {
     const view = projectStatementErasure(
       receipt(

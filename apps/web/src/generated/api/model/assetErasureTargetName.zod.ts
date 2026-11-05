@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod/mini';
 
-export const AssetErasureTargetName = /*#__PURE__*/ zod.enum(['source_objects', 'derived_jobs', 'posture_analyses', 'diagnosis_records', 'document_extractions', 'assessment_reports', 'runtime_checkpoints', 'asset_manifest']).check(/*#__PURE__*/ zod.describe('One controlled-copy family of the asset, in execution order. asset_manifest (the asset row itself) is finalized last.'));
+export const AssetErasureTargetName = /*#__PURE__*/ zod.enum(['source_objects', 'derived_jobs', 'posture_analyses', 'diagnosis_records', 'document_extractions', 'assessment_reports', 'runtime_checkpoints', 'episodic_notes', 'asset_manifest']).check(/*#__PURE__*/ zod.describe('One controlled-copy family of the asset, in execution order. episodic_notes clears non-authoritative notes referencing the upload. asset_manifest (the asset row itself) is finalized last.'));
 
 export type AssetErasureTargetName = zod.input<typeof AssetErasureTargetName>;
 export type AssetErasureTargetNameOutput = zod.output<typeof AssetErasureTargetName>;
