@@ -80,12 +80,15 @@ from crossing users.
 
 S1 adds **no writer, model retrieval, HTTP route, background generation or
 serving**. The database restricts new notes to `status = shadow`; neither
-the Agent nor clinical domains read them. Before any actual shadow-generation
-writer is enabled, AS-002 statement/asset erasure must be extended to remove
-source-derived notes and verify those targets. A copied note must never survive
-its source's explicit erasure, but normal rolling message pruning must not be
-blocked. The user-visible memory controls and clinical authority gates in the
-#495 ADR are prerequisites to later serving.
+the Agent nor clinical domains read them. Migration `000004_episodic_statement_erasure`
+adds a separately receipted **statement-source** erasure target: it deletes
+all shadow notes naming any chat message cited by the erased statement,
+rechecks before finalization and rejects later notes naming an erased
+statement. Source-message provenance still never pins raw chat retention.
+**Asset-derived content remains forbidden**: asset provenance and erasure
+checks have not yet been implemented. No generation or serving may be enabled
+until asset/source erasure, user controls, and clinical authority gates in
+#495/#514 pass.
 
 ## 2. Why no cascade decides what is kept
 

@@ -249,6 +249,8 @@ func (r *StatementErasureRepository) ExecuteDatabaseTarget(ctx context.Context, 
 			outcome, err = eraseStatementAssessmentReports(tx, request.UserID, pins)
 		case model.StatementErasureDecisionRecords:
 			outcome, err = inventoryStatementDecisions(tx, request.UserID, pins)
+		case model.StatementErasureEpisodicNotes:
+			outcome, err = eraseStatementEpisodicNotes(tx, request.UserID, request.StatementID)
 		default:
 			err = fmt.Errorf("target %s is not a database target", target)
 		}
@@ -551,6 +553,45 @@ SELECT (SELECT count(*) FROM statement_evidence
      + (SELECT count(*) FROM interaction_resumes ir JOIN cited ON cited.interaction_id = ir.interaction_id
          WHERE ir.user_message_id = @message OR ir.assistant_message_id = @message)`
 
+// episodicNotesForStatement counts narrative copies citing any chat source of
+// this statement. Only the owner and the exact source-message UUID can match;
+// a note that cites several statements is deleted whole when *one* is erased.
+// The statement row is already locked by lockStatementPins at each call.
+func episodicNotesForStatement(tx *gorm.DB, userID, statementID uuid.UUID) (int, *uuid.UUID, error) {
+	var source struct{ MessageID *uuid.UUID }
+	if err := tx.Raw(`SELECT source_message_id AS message_id FROM statement_evidence
+WHERE user_id = ? AND id = ?`, userID, statementID).Scan(&source).Error; err != nil {
+		return 0, nil, err
+	}
+	if source.MessageID == nil {
+		return 0, nil, nil
+	}
+	count, err := countRows(tx, `SELECT count(*) FROM episodic_notes
+WHERE user_id = ? AND source_message_ids @> ARRAY[?::uuid]`, userID, *source.MessageID)
+	return count, source.MessageID, err
+}
+
+// eraseStatementEpisodicNotes is a separately receipted controlled-copy
+// target. PostgreSQL's source gate takes the statement FOR SHARE on note
+// INSERT/UPDATE; the worker holds its FOR UPDATE lock during deletion.
+func eraseStatementEpisodicNotes(tx *gorm.DB, userID, statementID uuid.UUID) (model.AssetErasureOutcome, error) {
+	_, source, err := episodicNotesForStatement(tx, userID, statementID)
+	if err != nil {
+		return model.AssetErasureOutcome{}, err
+	}
+	if source == nil {
+		return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}, nil
+	}
+	deleted := tx.Exec(`DELETE FROM episodic_notes WHERE user_id = ?
+AND source_message_ids @> ARRAY[?::uuid]`, userID, *source)
+	if deleted.Error != nil {
+		return model.AssetErasureOutcome{}, deleted.Error
+	}
+	return verifyCount(tx, int(deleted.RowsAffected),
+		`SELECT count(*) FROM episodic_notes WHERE user_id = ?
+AND source_message_ids @> ARRAY[?::uuid]`, userID, *source)
+}
+
 // eraseStatementSourceMessage deletes the chat message the statement was
 // taken from when nothing else cites it. Under the Conversation lock (the
 // one chat retention and message admission take) it refuses a message whose
@@ -706,6 +747,11 @@ func (r *StatementErasureRepository) Finalize(ctx context.Context, request *mode
 			return err
 		} else if n > 0 {
 			reappeared[model.StatementErasureAssessmentReports] = n
+		}
+		if n, _, err := episodicNotesForStatement(tx, request.UserID, request.StatementID); err != nil {
+			return err
+		} else if n > 0 {
+			reappeared[model.StatementErasureEpisodicNotes] = n
 		}
 		if len(reappeared) > 0 {
 			for target, n := range reappeared {
