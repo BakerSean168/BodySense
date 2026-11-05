@@ -2,8 +2,11 @@ import { Plus } from "lucide-react";
 import type { ProfileCategoryId } from "../../model/profileCategories";
 import { IconTip } from "@/components/ui/tooltip";
 
-/** What the header "+" does in each category (also its accessible name). */
-export const PERSON_ADD_LABELS: Record<ProfileCategoryId, string> = {
+/** What the header "+" does in each addable category (also its accessible name). */
+export const PERSON_ADD_LABELS: Record<
+  Exclude<ProfileCategoryId, "memory">,
+  string
+> = {
   records: "补充记录",
   habits: "补充生活习惯",
   equipment: "添加器材",
@@ -21,7 +24,8 @@ export function PersonAddButton({
   disabled,
   onAdd,
 }: {
-  category: ProfileCategoryId;
+  /** Memory is read/delete-only, so it never renders this button. */
+  category: Exclude<ProfileCategoryId, "memory">;
   /** A subview's own add action (我的猜测) replaces the category default. */
   label?: string | null;
   disabled?: boolean;

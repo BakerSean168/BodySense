@@ -12,11 +12,13 @@ import {
   Image as ImageIcon,
   List,
   Repeat,
+  Sparkles,
 } from "lucide-react";
 import { DockTrainingIcon } from "../../components/DockIcons";
+import { episodicNotesControlsEnabled } from "../../model/episodicNotesFeature";
 import {
-  PROFILE_CATEGORIES,
   getProfileCategoryMeta,
+  profileCategories,
   type ProfileCategoryId,
 } from "../../model/profileCategories";
 
@@ -31,6 +33,7 @@ const ICONS: Record<
   media: ImageIcon,
   reports: FileText,
   habits: Repeat,
+  memory: Sparkles,
 };
 
 /**
@@ -62,6 +65,9 @@ export function PersonCategoryMenu({
   const list = useRef<HTMLUListElement>(null);
   const root = useRef<HTMLSpanElement>(null);
   const meta = getProfileCategoryMeta(value);
+  // The memory preview only joins the established five when its build flag is
+  // on; the flag-off list is byte-for-byte the existing navigation contract.
+  const categories = profileCategories(episodicNotesControlsEnabled());
 
   useEffect(() => {
     if (open) list.current?.focus();
@@ -89,7 +95,7 @@ export function PersonCategoryMenu({
     close();
     if (category !== value) onChange(category);
   };
-  const ids = PROFILE_CATEGORIES.map((category) => category.id);
+  const ids = categories.map((category) => category.id);
   const move = (delta: number) => {
     const index = ids.indexOf(active);
     setActive(ids[Math.min(ids.length - 1, Math.max(0, index + delta))]);
@@ -170,7 +176,7 @@ export function PersonCategoryMenu({
               if (!root.current?.contains(event.relatedTarget)) setOpen(false);
             }}
           >
-            {PROFILE_CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const Icon = ICONS[category.id];
               const count = counts[category.id];
               return (

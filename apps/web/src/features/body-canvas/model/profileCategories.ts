@@ -10,6 +10,7 @@
  * | media    | user uploads with a photo file type          |
  * | reports  | user uploads with file type report + OCR     |
  * | habits   | lifestyle onboarding snapshot                |
+ * | memory   | non-authoritative episodic notes (S6-B, flag-gated) |
  *
  * Per Penpot Person boards the header category picker ("BakerSean / 身体记录")
  * already names the category, so no category renders a duplicate body heading
@@ -20,7 +21,8 @@ export type ProfileCategoryId =
   | "equipment"
   | "media"
   | "reports"
-  | "habits";
+  | "habits"
+  | "memory";
 
 export interface ProfileCategoryMeta {
   id: ProfileCategoryId;
@@ -38,6 +40,25 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryMeta[] = [
   { id: "habits", label: "生活习惯", regionLabel: "生活习惯" },
 ] as const;
 
+/**
+ * S6-B preview category. It is never part of PROFILE_CATEGORIES so the
+ * established five-category navigation contract is unchanged while the
+ * feature flag is off. Only the flag-aware picker appends it.
+ */
+export const MEMORY_PROFILE_CATEGORY: ProfileCategoryMeta = {
+  id: "memory",
+  label: "记忆",
+  regionLabel: "对话记忆",
+};
+
+export function profileCategories(
+  episodicNotesEnabled: boolean,
+): readonly ProfileCategoryMeta[] {
+  return episodicNotesEnabled
+    ? [...PROFILE_CATEGORIES, MEMORY_PROFILE_CATEGORY]
+    : PROFILE_CATEGORIES;
+}
+
 export const PROFILE_CATEGORY_IDS: readonly ProfileCategoryId[] =
   PROFILE_CATEGORIES.map((category) => category.id);
 
@@ -49,8 +70,9 @@ export function getProfileCategoryMeta(
   id: ProfileCategoryId,
 ): ProfileCategoryMeta {
   return (
-    PROFILE_CATEGORIES.find((category) => category.id === id) ??
-    PROFILE_CATEGORIES[0]
+    [...PROFILE_CATEGORIES, MEMORY_PROFILE_CATEGORY].find(
+      (category) => category.id === id,
+    ) ?? PROFILE_CATEGORIES[0]
   );
 }
 

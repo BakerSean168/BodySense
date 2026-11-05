@@ -689,6 +689,47 @@
   color: var(--bc-muted);
   font-size: 11px;
 }
+/* S6-B memory cards: two readable columns on desktop, one at 390px. */
+.bc-person-notes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.bc-person-notes > li {
+  width: 100%;
+}
+.bc-person-note-text {
+  margin: 0;
+  color: var(--bc-primary);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.bc-person-note-meta {
+  margin: 0;
+  color: var(--bc-muted);
+  font-size: 11px;
+}
+.bc-person-note-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bc-subtle-strong, var(--bc-subtle));
+  color: var(--bc-secondary);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.bc-person-note-delete.bc-icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  margin-right: -6px;
+}
+@media (max-width: 760px) {
+  .bc-person-notes {
+    grid-template-columns: 1fr;
+  }
+}
 .bc-person-uploads {
   display: grid;
   gap: 8px;
