@@ -31,19 +31,17 @@ stage_changed=0
 container_report="/tmp/healthdoc-qualification-$$.pdf"
 
 cleanup_test_data() {
-  if [[ -n "$upload_id" && -n "${access_token:-}" ]]; then
-    curl -fsS --max-time 10 -X DELETE \
+  # Supabase owns the hosted identity. The durable BodySense erasure flow
+  # deletes both the external account and local health data; raw SQL user
+  # deletion would leave an orphaned identity able to sign in again.
+  if [[ -n "${access_token:-}" ]]; then
+    if ! curl -fsS --max-time 20 -X POST \
+      -H "Content-Type: application/json" \
       -H "Authorization: Bearer $access_token" \
-      "$WEB_BASE/api/v1/uploads/$upload_id" >/dev/null 2>&1 || true
-  fi
-  local postgres_container
-  postgres_container=$(docker ps -q \
-    --filter "label=com.docker.compose.project=$PROJECT" \
-    --filter 'label=com.docker.compose.service=postgres' | head -n 1)
-  if [[ -n "$postgres_container" ]]; then
-    docker exec "$postgres_container" sh -lc \
-      "psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"DELETE FROM users WHERE email = '$email';\"" \
-      >/dev/null 2>&1 || true
+      --data '{"confirmation":"DELETE ALL BODY DATA"}' \
+      "$WEB_BASE/api/v1/privacy/erasure" >/dev/null; then
+      echo "WARNING: failed to erase staging test identity $email; use Supabase admin + BodySense privacy workflow to remove it" >&2
+    fi
   fi
 }
 
@@ -132,9 +130,19 @@ done
 stage_after=$(docker inspect "$PROJECT-api-1" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^HEALTH_DOCUMENT_STAGE=//p' | tail -n1)
 [[ "$stage_after" == "qualification" ]] || { echo "qualification stage was not applied: $stage_after" >&2; exit 1; }
 
+# Staging browser and Go API use hosted Supabase Auth. These must be set in
+# the ignored staging env; in particular deletion needs a server-only secret.
+set -a
+# shellcheck disable=SC1090
+source "$env_file"
+set +a
+: "${SUPABASE_URL:=https://qdezojzgajsunjwthifv.supabase.co}"
+: "${VITE_SUPABASE_PUBLISHABLE_KEY:?staging needs a Supabase publishable API key}"
+: "${SUPABASE_SECRET_KEY:?staging needs a server-only Supabase secret for cleanup}"
 curl -fsS --max-time 15 -H 'Content-Type: application/json' \
+  -H "apikey: $VITE_SUPABASE_PUBLISHABLE_KEY" \
   -d "{\"email\":\"$email\",\"password\":\"$password\"}" \
-  "$WEB_BASE/api/v1/auth/register" >"$register_json"
+  "$SUPABASE_URL/auth/v1/signup" >"$register_json"
 access_token=$(jq -r '.access_token // empty' "$register_json")
 [[ -n "$access_token" ]] || { echo 'registration did not return access_token' >&2; cat "$register_json" >&2; exit 1; }
 

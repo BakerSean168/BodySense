@@ -262,6 +262,8 @@ def test_long_lived_services_only_inherit_role_credentials(
         "DB_PASSWORD=synthetic-db\n"
         "REDIS_PASSWORD=synthetic-redis\n"
         "JWT_SECRET_KEY=synthetic-jwt\n"
+        "SUPABASE_SECRET_KEY=synthetic-sb-secret\n"
+        "SUPABASE_SERVICE_ROLE_KEY=synthetic-sb-legacy\n"
         "DATABASE_URL=postgresql://synthetic-user:synthetic-db@127.0.0.1/test\n"
         "LANGGRAPH_CHECKPOINTER_URL=postgresql://synthetic-checkpointer/test\n",
         encoding="utf-8",
@@ -277,7 +279,7 @@ def test_long_lived_services_only_inherit_role_credentials(
         "#!/bin/sh\n"
         "env | grep -E '^(LITELLM_|BODYSENSE_LITELLM_CLIENT_KEY=|"
         "PRIMARY_LLM_API_KEY=|OPENROUTER_API_KEY=|GROQ_API_KEY=|"
-        "DB_PASSWORD=|REDIS_PASSWORD=|JWT_SECRET_KEY=|DATABASE_URL=|"
+        "DB_PASSWORD=|REDIS_PASSWORD=|JWT_SECRET_KEY=|SUPABASE_SECRET_KEY=|SUPABASE_SERVICE_ROLE_KEY=|DATABASE_URL=|"
         "LANGGRAPH_CHECKPOINTER_URL=)' > "
         '"$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE" || true\n'
         'printf "%s\\n" "$@" > "$BODYSENSE_TEST_CAPTURE_DIR/$BODYSENSE_TEST_CAPTURE_ROLE.argv"\n',
@@ -299,6 +301,8 @@ def test_long_lived_services_only_inherit_role_credentials(
         "DB_PASSWORD",
         "REDIS_PASSWORD",
         "JWT_SECRET_KEY",
+        "SUPABASE_SECRET_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
         "DATABASE_URL",
         "LANGGRAPH_CHECKPOINTER_URL",
     ):
@@ -355,13 +359,16 @@ def test_long_lived_services_only_inherit_role_credentials(
         assert "LITELLM_API_KEY=synthetic-master" not in output, role
         for key in ("DB_PASSWORD", "DATABASE_URL"):
             assert (f"{key}=" in output) == (role in {"ai", "api"}), (role, key)
-        for key in ("REDIS_PASSWORD", "JWT_SECRET_KEY"):
+        for key in ("REDIS_PASSWORD", "JWT_SECRET_KEY", "SUPABASE_SECRET_KEY"):
             assert (f"{key}=" in output) == (role == "api"), (role, key)
+        assert "SUPABASE_SERVICE_ROLE_KEY=" not in output, role
         assert ("LANGGRAPH_CHECKPOINTER_URL=" in output) == (role in {"ai", "api"}), role
         argv = (capture / f"{role}.argv").read_text(encoding="utf-8")
         assert "synthetic-db" not in argv, role
         assert "synthetic-redis" not in argv, role
         assert "synthetic-jwt" not in argv, role
+        assert "synthetic-sb-secret" not in argv, role
+        assert "synthetic-sb-legacy" not in argv, role
 
 
 def test_model_setup_helpers_never_inherit_gateway_or_application_credentials(
@@ -380,6 +387,8 @@ def test_model_setup_helpers_never_inherit_gateway_or_application_credentials(
         "LANGGRAPH_CHECKPOINTER_URL",
         "REDIS_PASSWORD",
         "JWT_SECRET_KEY",
+        "SUPABASE_SECRET_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
     )
     env = os.environ.copy()
     env.update({name: f"synthetic-{name}" for name in secrets})
@@ -410,7 +419,14 @@ def test_go_api_launch_inherits_secrets_without_interpolating_them_into_argv() -
         line for line in source.splitlines() if line.strip().startswith("start_process api ")
     )
     assert "go run ./cmd/server" in api_launch
-    for secret in ("DB_PASSWORD", "REDIS_PASSWORD", "JWT_SECRET_KEY", "DATABASE_URL"):
+    for secret in (
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
+        "JWT_SECRET_KEY",
+        "DATABASE_URL",
+        "SUPABASE_SECRET_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+    ):
         assert "${" + secret + "}" not in api_launch
 
 
@@ -488,6 +504,8 @@ def test_process_compose_pane_keeps_service_and_model_setup_secrets_scoped(
         "DB_PASSWORD=synthetic-db\n"
         "REDIS_PASSWORD=synthetic-redis\n"
         "JWT_SECRET_KEY=synthetic-jwt\n"
+        "SUPABASE_SECRET_KEY=synthetic-sb-secret\n"
+        "SUPABASE_SERVICE_ROLE_KEY=synthetic-sb-legacy\n"
         "LANGGRAPH_CHECKPOINTER_URL=postgresql://synthetic-checkpoint\n",
         encoding="utf-8",
     )
@@ -519,6 +537,8 @@ def test_process_compose_pane_keeps_service_and_model_setup_secrets_scoped(
         "DB_PASSWORD",
         "REDIS_PASSWORD",
         "JWT_SECRET_KEY",
+        "SUPABASE_SECRET_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
         "LANGGRAPH_CHECKPOINTER_URL",
         "BODYSENSE_LITELLM_DEV_ORACLE2",
     ):
@@ -550,12 +570,14 @@ def test_process_compose_pane_keeps_service_and_model_setup_secrets_scoped(
             "PRIMARY_LLM_API_KEY",
             "OPENROUTER_API_KEY",
             "GROQ_API_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
         )
     )
     assert ("LITELLM_API_KEY=synthetic-client" in output) == (role == "ai")
     assert ("DB_PASSWORD=synthetic-db" in output) == (role in {"api", "ai"})
     assert ("REDIS_PASSWORD=synthetic-redis" in output) == (role == "api")
     assert ("JWT_SECRET_KEY=synthetic-jwt" in output) == (role == "api")
+    assert ("SUPABASE_SECRET_KEY=synthetic-sb-secret" in output) == (role == "api")
     if role in {"ai", "document"}:
         setup = (capture / f"{role}.setup.env").read_text(encoding="utf-8")
         for secret in (
@@ -566,5 +588,7 @@ def test_process_compose_pane_keeps_service_and_model_setup_secrets_scoped(
             "DB_PASSWORD",
             "REDIS_PASSWORD",
             "JWT_SECRET_KEY",
+            "SUPABASE_SECRET_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
         ):
             assert f"{secret}=" not in setup

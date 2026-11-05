@@ -45,7 +45,8 @@ start_process() {
   # alone receives the LiteLLM client key (which must be scoped separately
   # before any external gateway is authorized).
   local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY
-                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY)
+                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY
+                        -u SUPABASE_SERVICE_ROLE_KEY)
   # Defense in depth for direct start_process calls that bypass preflight:
   # never pass the gateway master into AI as a supposed client credential.
   if [[ "$name" != ai || -z "${LITELLM_API_KEY:-}" || "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
@@ -54,10 +55,10 @@ start_process() {
   # The API needs DB, Redis, and JWT secrets; AI needs DB and a scoped LiteLLM
   # client key. Neither Web nor Document should inherit those credentials.
   case "$name" in
-    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY) ;;
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY) ;;
     document|web)
       process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
-                    -u REDIS_PASSWORD -u JWT_SECRET_KEY)
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY)
       ;;
   esac
   "${process_env[@]}" setsid bash -lc "$command" >>"$(log_file "$name")" 2>&1 < /dev/null &
@@ -107,9 +108,10 @@ up() {
 
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
-  # Sensitive Go credentials are already exported by dev-env; do not duplicate
-  # their values into bash -lc argv (visible in process listings).
-  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 DB_HOST=127.0.0.1 DB_SSLMODE=disable REDIS_HOST=127.0.0.1 AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
+  # Supabase and PostgreSQL credentials are already exported by dev-env.
+  # Never interpolate DB_PASSWORD, REDIS_PASSWORD or SUPABASE_SECRET_KEY into
+  # the bash -lc argv; process listings must not expose them.
+  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
   wait_http api "http://127.0.0.1:${API_PORT}/api/health"
 
   # Preserve the existing local database boundary without putting its password

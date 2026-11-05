@@ -4,14 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/bodysense/api/internal/auth"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/google/uuid"
 )
-
-// authConfig mirrors the auth edge policy without exposing the limiter
-// implementation beyond the transport package.
-type authConfig = auth.SecurityConfig
 
 // PublicServer is the handwritten application adapter behind generated public
 // HTTP transport types. Generated OpenAPI models stop here and are translated
@@ -31,11 +26,8 @@ type PublicServer struct {
 	reportedDiscomfort           reportedDiscomfortReader
 	profile                      profileApplication
 	privacy                      privacyErasureApplication
-	privacyCookie                privacyRefreshCookiePolicy
 	assessment                   assessmentApplication
 	assessmentReplay             assessmentReplayApplication
-	accounts                     authAccountApplication
-	authSecurity                 authConfig
 	conversations                conversationApplication
 	runtimeEvents                runtimeEventApplication
 	consultationRuntime          consultationRuntimeApplication

@@ -87,9 +87,8 @@ services:
       REDIS_HOST: redis-dev
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-bodysense123}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key}
-      JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
-      JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
+      SUPABASE_URL: ${SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:20100,http://127.0.0.1:20100}
       AI_SERVICE_URL: http://ai-service:8100
       HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
@@ -210,6 +209,9 @@ services:
     environment:
       VITE_WS_URL: ws://localhost:${API_PORT:-20101}/ws
       VITE_DEV_API_TARGET: http://api:8080
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
       # Remote/disposable dev must not expose Chromium to Vite's cold
       # dependency-optimizer restart window (ERR_NETWORK_CHANGED on lazy routes).
       BODYSENSE_VITE_BUNDLED_DEV: ${BODYSENSE_VITE_BUNDLED_DEV:-true}

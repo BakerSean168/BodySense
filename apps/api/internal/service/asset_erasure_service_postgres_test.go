@@ -74,7 +74,7 @@ func newAssetErasureFixture(t *testing.T) *assetErasureFixture {
 func (f *assetErasureFixture) seedUser(t *testing.T) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
-	if err := f.db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)", id, "as002-"+id.String()+"@example.test", "synthetic").Error; err != nil {
+	if err := f.db.Exec("INSERT INTO users(id,email) VALUES(?,?)", id, "as002-"+id.String()+"@example.test").Error; err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { f.db.Exec("DELETE FROM users WHERE id=?", id) })

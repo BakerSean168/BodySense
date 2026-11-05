@@ -1,85 +1,57 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/dto"
+	"github.com/bodysense/api/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// AuthMiddleware creates a middleware for JWT authentication.
-//
-// Validation flow:
-//  1. Extract and validate JWT signature + expiry.
-//  2. Require the canonical session-aware access-token contract.
-//  3. Check the session id against the revocation cache:
-//     - present → allow (hot path)
-//     - absent → 401 (session was revoked on logout / global sign-out)
-//     - Redis unavailable → fail closed with 503; revocation authority is unavailable.
-func AuthMiddleware(jwtConfig auth.JWTConfig, sessionCache cache.SessionCache) gin.HandlerFunc {
+// IdentityProvisioner is the only storage seam used by the auth middleware.
+// It materializes the identity after verifying the Supabase JWT and enforces
+// durable account-erasure tombstones.
+type IdentityProvisioner interface {
+	EnsureIdentity(ctx context.Context, id uuid.UUID, email string) (*model.User, error)
+}
+
+// AuthMiddleware validates hosted Supabase access tokens (ES256/JWKS) and
+// resolves a local, owner-scoped business identity. No refresh cookies or
+// locally minted JWTs are accepted.
+func AuthMiddleware(verifier *auth.SupabaseVerifier, users IdentityProvisioner) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// ── Step 1: Extract Bearer token ──
-
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Authorization header is required"))
+		header := c.GetHeader("Authorization")
+		if !strings.HasPrefix(header, "Bearer ") || len(header) <= len("Bearer ") {
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Supabase bearer access token required"))
 			c.Abort()
 			return
 		}
 
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid authorization format. Use: Bearer <token>"))
-			c.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Token is required"))
-			c.Abort()
-			return
-		}
-
-		// ── Step 2: Validate JWT signature + expiry ──
-
-		claims, err := auth.ValidateAccessToken(jwtConfig, tokenString)
+		claims, err := verifier.Verify(c.Request.Context(), strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid or expired token"))
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid or expired Supabase session"))
 			c.Abort()
 			return
 		}
-
-		userID := claims.UserID
-
-		// ── Step 3: Verify the canonical session is still live ──
-
-		if claims.SessionID == uuid.Nil {
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Access token is missing its session identity, please sign in again"))
+		id, err := uuid.Parse(claims.Subject)
+		if err != nil || id == uuid.Nil {
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid Supabase account identity"))
 			c.Abort()
 			return
 		}
-		exists, cacheErr := sessionCache.Exists(c.Request.Context(), claims.SessionID)
-		if cacheErr != nil {
-			// Session authority is the revocation boundary. Failing open here would
-			// let a previously revoked bearer token through during a Redis outage.
-			c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHENTICATION_UNAVAILABLE", "Authentication service is temporarily unavailable"))
-			c.Abort()
-			return
-		} else if !exists {
-			// Definitive miss: the session was revoked (logout / global sign-out).
-			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Session has been revoked, please sign in again"))
+		if _, err := users.EnsureIdentity(c.Request.Context(), id, strings.ToLower(strings.TrimSpace(claims.Email))); err != nil {
+			// Includes account-erasure tombstones and datastore unavailability:
+			// fail closed instead of granting access to erased health data.
+			c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHENTICATION_UNAVAILABLE", "Account access is unavailable"))
 			c.Abort()
 			return
 		}
-
-		// Set user info in context
-		c.Set("user_id", userID.String())
+		c.Set("user_id", id.String())
 		c.Set("email", claims.Email)
-
 		c.Next()
 	}
 }

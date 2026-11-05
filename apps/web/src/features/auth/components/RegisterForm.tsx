@@ -1,18 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import { InkButton, InkField } from "./InkField";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AuthCaptcha, turnstileSiteKey } from "./AuthCaptcha";
 
 type RegisterErrors = {
   email?: string;
   password?: string;
   confirmPassword?: string;
   consent?: string;
+  captcha?: string;
 };
 
 export function RegisterForm() {
   const navigate = useNavigate();
+  const captchaRef = useRef<TurnstileInstance | null>(null);
   const { register, isLoading, error, clearError } = useAuthStore();
 
   const [email, setEmail] = useState("");
@@ -67,12 +71,24 @@ export function RegisterForm() {
     clearError();
 
     if (!validateForm()) return;
+    const captchaToken = turnstileSiteKey
+      ? captchaRef.current?.getResponse()
+      : undefined;
+    if (turnstileSiteKey && !captchaToken) {
+      setValidationErrors((errors) => ({
+        ...errors,
+        captcha: "请完成人机验证",
+      }));
+      return;
+    }
 
     try {
-      await register(email, password);
+      await register(email, password, captchaToken || undefined);
       navigate("/consultation");
     } catch {
       // Error is handled by the store
+    } finally {
+      captchaRef.current?.reset();
     }
   };
 
@@ -138,6 +154,13 @@ export function RegisterForm() {
           </p>
         )}
       </div>
+
+      <AuthCaptcha captchaRef={captchaRef} />
+      {validationErrors.captcha && (
+        <p role="alert" className="mt-2 text-[13px] text-[#9A3F35]">
+          {validationErrors.captcha}
+        </p>
+      )}
 
       {error && (
         <p

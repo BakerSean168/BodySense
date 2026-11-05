@@ -167,7 +167,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      SUPABASE_URL: ${SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       AI_SERVICE_URL: http://ai-service:8100
       HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
       HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
@@ -213,6 +214,9 @@ services:
       dockerfile: docker/Dockerfile.web
       args:
         BODYSENSE_ANATOMY_ATLAS_VERSION: ${BODYSENSE_ANATOMY_ATLAS_VERSION:-1.4.0}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
         # Staging keeps application/API traffic private on Tailnet, but public immutable
         # atlas bytes use Vanatome's version-pinned Cloudflare distribution. This avoids
         # coupling multi-megabyte GLBs to a lossy developer Tailnet path. Production

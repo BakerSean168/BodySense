@@ -14,15 +14,15 @@ exec_scoped_service() {
   shift
   local -a process_env=(env -u LITELLM_MASTER_KEY -u PRIMARY_LLM_API_KEY
                         -u OPENROUTER_API_KEY -u GROQ_API_KEY
-                        -u BODYSENSE_LITELLM_CLIENT_KEY)
+                        -u BODYSENSE_LITELLM_CLIENT_KEY -u SUPABASE_SERVICE_ROLE_KEY)
   if [[ "$role" != ai || -z "${LITELLM_API_KEY:-}" || "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
     process_env+=(-u LITELLM_API_KEY)
   fi
   case "$role" in
-    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY) ;;
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY) ;;
     document|web)
       process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
-                    -u REDIS_PASSWORD -u JWT_SECRET_KEY)
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY)
       ;;
   esac
   exec "${process_env[@]}" "$@"

@@ -32,15 +32,16 @@ start_service() {
   # Keep provider/master credentials out of every application child.
   # Only AI may receive a separately scoped LiteLLM client credential.
   local -a process_env=(env -u LITELLM_MASTER_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY
-                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY)
+                        -u PRIMARY_LLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY
+                        -u SUPABASE_SERVICE_ROLE_KEY)
   if [[ "$name" != ai || -z "${LITELLM_API_KEY:-}" || "$LITELLM_API_KEY" == "$LITELLM_MASTER_KEY" ]]; then
     process_env+=(-u LITELLM_API_KEY)
   fi
   case "$name" in
-    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY) ;;
+    ai) process_env+=(-u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY) ;;
     document|web)
       process_env+=(-u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL
-                    -u REDIS_PASSWORD -u JWT_SECRET_KEY)
+                    -u REDIS_PASSWORD -u JWT_SECRET_KEY -u SUPABASE_SECRET_KEY)
       ;;
   esac
   # The single-quoted child script intentionally expands $1/$@ inside that child shell.

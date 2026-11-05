@@ -31,9 +31,9 @@ export DB_PASSWORD=${DB_PASSWORD:-bodysense123}
 export DB_NAME=${DB_NAME:-bodysense}
 export DB_SSLMODE=${DB_SSLMODE:-disable}
 export REDIS_PASSWORD=${REDIS_PASSWORD:-bodysense123}
-export JWT_SECRET_KEY=${JWT_SECRET_KEY:-bodysense-dev-only-secret}
-export JWT_ACCESS_TTL_HOURS=${JWT_ACCESS_TTL_HOURS:-168}
-export JWT_REFRESH_TTL_HOURS=${JWT_REFRESH_TTL_HOURS:-720}
+# Authentication is hosted by Supabase; never mint local access tokens.
+export SUPABASE_URL=${SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+export VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-$SUPABASE_URL}
 export TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1,::1}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
@@ -70,7 +70,8 @@ run_model_setup() {
   env -u LITELLM_MASTER_KEY -u LITELLM_API_KEY -u BODYSENSE_LITELLM_CLIENT_KEY \
       -u PRIMARY_LLM_API_KEY -u OPENROUTER_API_KEY -u GROQ_API_KEY \
       -u DB_PASSWORD -u DATABASE_URL -u LANGGRAPH_CHECKPOINTER_URL \
-      -u REDIS_PASSWORD -u JWT_SECRET_KEY "$@"
+      -u REDIS_PASSWORD -u JWT_SECRET_KEY \
+      -u SUPABASE_SECRET_KEY -u SUPABASE_SERVICE_ROLE_KEY "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

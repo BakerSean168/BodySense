@@ -55,7 +55,7 @@ func TestUserAssetErasureHTTPPostgres(t *testing.T) {
 	}
 	owner, stranger := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, stranger} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)", id, "as002-http-"+id.String()+"@example.test", "synthetic").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", id, "as002-http-"+id.String()+"@example.test").Error; err != nil {
 			t.Fatal(err)
 		}
 		uid := id
