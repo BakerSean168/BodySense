@@ -35,6 +35,7 @@ PR_CASES = {
     ),
     "./internal/transport/httpapi": (
         "TestBodyFactHTTPRecordReadRetryRoundTripPostgres",
+        "TestEpisodicNotesHTTPControlsPostgres",
     ),
 }
 

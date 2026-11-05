@@ -2,7 +2,7 @@
   "schema": "bodysense.e2e-shards/v1",
   "generatedFrom": "Per-file durations (sum of result durations, seconds) extracted from the Playwright HTML report of CI run 40138406720 on the B4 branch (all 63 tests expected, e2e-child 638s, tests 509.6s). Regenerate from a fresh full-run JSON report when the distribution drifts.",
   "shardCount": 3,
-  "totalSeconds": 509.55,
+  "totalSeconds": 531.55,
   "shards": [
     {
       "index": 1,
@@ -46,12 +46,13 @@
         "apps/web/e2e/consultation-runtime-recovery.spec.ts",
         "apps/web/e2e/diagnosis-history-review.spec.ts",
         "apps/web/e2e/onboarding-penpot.spec.ts",
+        "apps/web/e2e/person-episodic-memory.spec.ts",
         "apps/web/e2e/person-identity-profile.spec.ts",
         "apps/web/e2e/person-records-penpot.spec.ts",
         "apps/web/e2e/region-mobile-sheet.spec.ts",
         "apps/web/e2e/statement-erasure.spec.ts"
       ],
-      "totalSeconds": 168.89
+      "totalSeconds": 190.89
     }
   ]
 }

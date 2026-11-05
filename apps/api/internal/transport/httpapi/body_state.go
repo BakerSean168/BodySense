@@ -55,6 +55,8 @@ type PublicServer struct {
 	knowledgeIngestion           knowledgeIngestionApplication
 	knowledgeQuery               knowledgeQueryApplication
 	equipment                    equipmentApplication
+	episodicNotes                episodicNoteControlsApplication
+	episodicNotesEnabled         bool
 }
 
 func NewPublicServer() *PublicServer {

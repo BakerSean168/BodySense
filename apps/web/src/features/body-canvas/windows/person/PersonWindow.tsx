@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { LoaderCircle } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { BodyFactRecords } from "../../components/BodyFactRecords";
+import { episodicNotesControlsEnabled } from "../../model/episodicNotesFeature";
 import {
   getProfileCategoryMeta,
   type ProfileCategoryId,
 } from "../../model/profileCategories";
 import { PersonRecordsView } from "./categories/records/PersonRecordsView";
+import { EpisodicNotesCategory } from "./categories/EpisodicNotesCategory";
 import { EquipmentCategory } from "./categories/EquipmentCategory";
 import { UploadsCategory } from "./categories/UploadsCategory";
 import { PersonDataError } from "./categories/PersonDataError";
@@ -24,8 +26,9 @@ import type { PersonWindowProps } from "./types";
  * - clicking avatar/nickname opens the Identity popover (minimal optional
  *   Profile: nickname, birth date + self-reported gender, display time zone +
  *   units); outside click closes it;
- * - exactly five categories; the picker label is the only place the category
- *   name appears — no duplicate H1 and no generic explanation beneath it;
+ * - exactly the five established categories, plus the flag-gated "记忆"
+ *   preview; the picker label is the only place the category name appears —
+ *   no duplicate H1 and no generic explanation beneath it;
  * - adding is only the header "+" (before Close), controlled here by
  *   `addOpen`; empty states carry no add buttons. Equipment grows naturally
  *   (Desktop 4 columns, Mobile 2 columns) with no fixed slot count.
@@ -41,7 +44,13 @@ export function PersonWindow({
   onAddLabelChange,
 }: PersonWindowProps) {
   const mobile = useMediaQuery("(max-width: 760px)");
-  const category: ProfileCategoryId = controlledCategory ?? "records";
+  const memoryEnabled = episodicNotesControlsEnabled();
+  // A persisted/controlled memory selection must never render while the
+  // preview flag is off; the default category remains 身体记录.
+  const category: ProfileCategoryId =
+    controlledCategory === "memory" && !memoryEnabled
+      ? "records"
+      : (controlledCategory ?? "records");
   const setInfoOpen = onIdentityInfoOpenChange;
   // The window owns its own reads: nothing loads until the window is open, and
   // a failure is surfaced instead of substituted with placeholder values.
@@ -97,6 +106,8 @@ export function PersonWindow({
             addOpen={addOpen}
             onAddOpenChange={onAddOpenChange}
           />
+        ) : category === "memory" ? (
+          <EpisodicNotesCategory />
         ) : data.loading ? (
           <p role="status" className="bc-person-loading">
             <LoaderCircle size={16} className="animate-spin" />

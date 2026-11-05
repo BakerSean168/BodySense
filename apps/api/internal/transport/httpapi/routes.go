@@ -126,6 +126,11 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/privacy/erasure-plan", wrapper.GetPrivacyErasurePlan)
 	protected.POST("/privacy/erasure", wrapper.RequestPrivacyErasure)
 
+	// Non-authoritative conversational memory (S6-B). The handlers themselves
+	// stay owner-masked 404 while EPISODIC_NOTES_CONTROLS_ENABLED is off.
+	protected.GET("/profile/episodic-notes", wrapper.ListEpisodicNotes)
+	protected.DELETE("/profile/episodic-notes/:noteId", wrapper.DeleteEpisodicNote)
+
 	// Client diagnostics.
 	protected.POST("/client-diagnostics", wrapper.RecordClientDiagnostic)
 
