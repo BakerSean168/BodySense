@@ -18,6 +18,7 @@ type EpisodicNote struct {
 	FromSeq                int            `gorm:"not null"`
 	ToSeq                  int            `gorm:"not null"`
 	SourceMessageIDs       pq.StringArray `gorm:"type:uuid[];not null"`
+	SourceAssetIDs         pq.StringArray `gorm:"type:uuid[];not null;default:{}"`
 	GeneratorVersion       string         `gorm:"size:128;not null"`
 	RetentionPolicyVersion string         `gorm:"size:128;not null"`
 	ContentText            string         `gorm:"type:text;not null"`

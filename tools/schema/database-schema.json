@@ -3562,6 +3562,13 @@
                     "type": "timestamp with time zone",
                     "default": "now()",
                     "nullable": false
+                },
+                {
+                    "udt": "_uuid",
+                    "name": "source_asset_ids",
+                    "type": "ARRAY",
+                    "default": "'{}'::uuid[]",
+                    "nullable": false
                 }
             ]
         },
@@ -7699,5 +7706,5 @@
     ],
     "runtime_image": "pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a",
     "schema_version": 1,
-    "migration_state": "4:false"
+    "migration_state": "5:false"
 }

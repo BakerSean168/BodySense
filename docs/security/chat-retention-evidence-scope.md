@@ -85,10 +85,14 @@ adds a separately receipted **statement-source** erasure target: it deletes
 all shadow notes naming any chat message cited by the erased statement,
 rechecks before finalization and rejects later notes naming an erased
 statement. Source-message provenance still never pins raw chat retention.
-**Asset-derived content remains forbidden**: asset provenance and erasure
-checks have not yet been implemented. No generation or serving may be enabled
-until asset/source erasure, user controls, and clinical authority gates in
-#495/#514 pass.
+Migration `000005_episodic_asset_erasure` adds optional typed
+`source_asset_ids uuid[]` provenance and its **asset-source** erasure target.
+Any explicitly listed upload is validated as owner-scoped/non-erased under a
+source-row lock; deleting the asset deletes those notes whole and the asset
+finalizer rechecks for notes that reappear. **There is still no runtime writer,
+reader or serving path**: future Go admission must attach *every* underlying
+asset source ID and reject undeclared asset-derived content. User controls,
+clinical authority and production approval in #495/#514 remain gating.
 
 ## 2. Why no cascade decides what is kept
 
