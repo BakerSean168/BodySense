@@ -181,7 +181,7 @@ func TestUserAssetErasureDiagnosisPinnedPostgres(t *testing.T) {
 	if err := db.Exec(`UPDATE document_indicator_reviews SET note='back' WHERE id=?`, review).Error; err == nil {
 		t.Fatal("tombstone revived")
 	}
-	for _, target := range []model.AssetErasureTargetName{model.AssetErasureSourceObjects, model.AssetErasureDerivedJobs, model.AssetErasurePostureAnalyses, model.AssetErasureRuntimeCheckpoints} {
+	for _, target := range []model.AssetErasureTargetName{model.AssetErasureSourceObjects, model.AssetErasureDerivedJobs, model.AssetErasurePostureAnalyses, model.AssetErasureRuntimeCheckpoints, model.AssetErasureEpisodicNotes} {
 		if err := repo.RecordOutcome(ctx, request, target, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}); err != nil {
 			t.Fatal(err)
 		}
@@ -262,6 +262,10 @@ func TestUserAssetErasureTargetsPostgres(t *testing.T) {
 	}
 	if n := erasureRows(t, db, `SELECT count(*) FROM assessment_reports WHERE user_id=?`, owner); n != 0 {
 		t.Fatalf("assessment reports kept: %d", n)
+	}
+	// No episodic notes were created by the synthetic asset fixture.
+	if got := execErasureTarget(t, repo, request, model.AssetErasureEpisodicNotes); got.State != model.AssetErasureTargetVerified {
+		t.Fatalf("episodic notes: %+v", got)
 	}
 	// The runtime target is executed by the ai-service; the repository only
 	// scopes it: every Conversation of the owner, the attached ones, the hash.

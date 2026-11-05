@@ -218,6 +218,18 @@ func (r *AssetErasureRepository) ExecuteDatabaseTarget(ctx context.Context, requ
 			outcome, err = eraseAssetDocumentExtractions(tx, request.UserID, request.AssetID)
 		case model.AssetErasureAssessmentReports:
 			outcome, err = eraseAssetAssessmentReports(tx, request.UserID, request.AssetID)
+		case model.AssetErasureEpisodicNotes:
+			// Serialize the note source gate's FOR SHARE admissions with our
+			// source row before deleting notes. Finalize locks it again.
+			var locked []uuid.UUID
+			if err = tx.Raw(`SELECT id FROM user_assets WHERE user_id = ? AND id = ? FOR UPDATE`,
+				request.UserID, request.AssetID).Scan(&locked).Error; err != nil {
+				return err
+			}
+			if len(locked) == 0 {
+				return fmt.Errorf("asset erasure source not found")
+			}
+			outcome, err = eraseAssetEpisodicNotes(tx, request.UserID, request.AssetID)
 		default:
 			err = fmt.Errorf("target %s is not a database target", target)
 		}
@@ -418,6 +430,27 @@ func verifyCount(tx *gorm.DB, erased int, query string, args ...any) (model.Asse
 	return model.AssetErasureOutcome{State: model.AssetErasureTargetVerified, Erased: erased}, nil
 }
 
+// countAssetEpisodicNotes counts narrative copies pinned to the asset's
+// explicit source ID. It is never a raw chat retention citation.
+func countAssetEpisodicNotes(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
+	return countRows(tx, `SELECT count(*) FROM episodic_notes
+WHERE user_id = ? AND source_asset_ids @> ARRAY[?::uuid]`, userID, assetID)
+}
+
+// eraseAssetEpisodicNotes deletes the full shadow note when even one
+// explicitly cited upload is erased. This is under the asset FOR UPDATE lock
+// in ExecuteDatabaseTarget, and verified before committing the receipt.
+func eraseAssetEpisodicNotes(tx *gorm.DB, userID, assetID uuid.UUID) (model.AssetErasureOutcome, error) {
+	deleted := tx.Exec(`DELETE FROM episodic_notes
+WHERE user_id = ? AND source_asset_ids @> ARRAY[?::uuid]`, userID, assetID)
+	if deleted.Error != nil {
+		return model.AssetErasureOutcome{}, deleted.Error
+	}
+	return verifyCount(tx, int(deleted.RowsAffected),
+		`SELECT count(*) FROM episodic_notes WHERE user_id = ?
+AND source_asset_ids @> ARRAY[?::uuid]`, userID, assetID)
+}
+
 // countAssetDocumentCopies counts extraction runs and reviews that still hold
 // content; tombstones are identity only.
 func countAssetDocumentCopies(tx *gorm.DB, userID, assetID uuid.UUID) (int, error) {
@@ -597,6 +630,7 @@ func recheckAssetCopies(tx *gorm.DB, userID, assetID uuid.UUID) (map[model.Asset
 		{model.AssetErasureDiagnosisRecords, countAssetPinningConditions},
 		{model.AssetErasureDocumentExtractions, countAssetDocumentCopies},
 		{model.AssetErasureAssessmentReports, countAssetAssessmentRefs},
+		{model.AssetErasureEpisodicNotes, countAssetEpisodicNotes},
 	}
 	for _, check := range checks {
 		n, err := check.count(tx, userID, assetID)

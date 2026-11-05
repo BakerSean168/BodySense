@@ -174,7 +174,7 @@ vector database and any always-on permanent summary store.**
   over-length, reference ids outside the range, or restate content carried
   by cited BodyState/statement-evidence refs.
 - **Policy versioning:** `retentionPolicyVersion` on each note follows the
-  AS-002 inventory-version precedent (`asset-erasure-inventory-v1`,
+  AS-002 inventory-version precedent (`asset-erasure-inventory-v2` after #514 S3-B,
   `statement-erasure-inventory-v3` after the #514 S3-A statement-source slice).
   Earlier revisions are historical. A policy-version change triggers
   re-evaluation (regenerate or roll off) of notes written under older
