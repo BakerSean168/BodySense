@@ -9,10 +9,10 @@
 
 The **original V2 baseline** was a big-bang reset: `000001_vnext_baseline`
 was applied to fresh databases by volume replacement, as already proven by the vNext
-rebaseline. Subsequent `000002_supabase_identity` and `000003_episodic_notes`
-are ordinary forward migrations. An existing Staging database at `2:false`
-advances to `3:false` **in place**; do not repeat the historical volume-reset
-procedure solely to apply S1. Production promotion still requires separate
+rebaseline. Subsequent `000002_supabase_identity`, `000003_episodic_notes`
+and `000004_episodic_statement_erasure` are ordinary forward migrations.
+An existing Staging database at `3:false` advances to `4:false` **in place**;
+do not repeat the historical volume-reset procedure solely to apply S3-A. Production promotion still requires separate
 explicit sign-off. The original reset mechanism is documented in the vNext
 rebaseline ([vnext-schema-rebaseline-cutover.md](./vnext-schema-rebaseline-cutover.md)):
 the live PostgreSQL 18 volume is swapped for an empty one, the previous volume is
@@ -110,11 +110,11 @@ Fill one copy of §10 per candidate. Every line refers to the same full SHA.
       with only docs changes in between, stated explicitly).
 - [ ] No open user/clinical decision blocks a shipped feature (Q-17 diagnosis TTL and clinical
       thresholds stay out of implementation authority).
-- [ ] Staging: `staging-deploy-state` `revision=` equals the SHA, `schema_migrations=3:false`,
+- [ ] Staging: `staging-deploy-state` `revision=` equals the SHA, `schema_migrations=4:false`,
       health green, canary soak and rollback drill recorded (§6.1, §7.1).
 - [ ] Release manifest binds version/tag/SHA/CI/image digests (Release Publish postflight).
 - [ ] Production: `.deploy-state` revision equals the SHA, `.postgres18-reset-state`
-      `status=committed release_revision=<sha>`, `schema_migrations=3:false`, public health green.
+      `status=committed release_revision=<sha>`, `schema_migrations=4:false`, public health green.
 
 Never reuse evidence from another SHA (including V11 / PR #247 runs).
 
@@ -142,8 +142,8 @@ keeps that name and preserves the old contents in a separate rollback volume.
    readiness register passes). Never re-tag `staging-latest` by hand.
 7. Resume: `systemctl --user start bodysense-staging-deploy-watch.timer` and
    `bodysense-staging-deploy-watch --force`. Compose recreates an empty volume; the API
-   bootstraps `000001_vnext_baseline` + `000002_supabase_identity` + `000003_episodic_notes` before AI and Web start.
-8. Verify: state `revision=` equals the SHA; `schema_migrations` reports `3:false`; every
+   bootstraps `000001_vnext_baseline` through `000004_episodic_statement_erasure` before AI and Web start.
+8. Verify: state `revision=` equals the SHA; `schema_migrations` reports `4:false`; every
    service healthy; `curl -fsS http://127.0.0.1:20150/api/health` succeeds.
 9. Keep the rollback volume until §6.1 and §7.1 pass; then delete it (commit).
 
@@ -204,7 +204,7 @@ Run once after the staging canary, with the watcher paused:
    (`STAGING_WEB_IMAGE/STAGING_API_IMAGE/STAGING_AI_IMAGE=…:sha-<previous revision>`) and
    verify health and the previous schema state.
 3. Roll forward: restore the drill copy (or re-run §5 steps 5–8) and verify the candidate
-   is healthy again with `3:false`.
+   is healthy again with `4:false`.
 4. Record timings and outcomes in §10. Resume the watcher only after roll-forward.
 
 ### 7.2 Production before commit (automatic)
@@ -270,7 +270,7 @@ main_ci_run=  candidate_publish_run=  image_digests=web:… api:… ai:… runti
 local_gates=PASS (date, host)  schema_snapshot=PASS  dry_run=READY
 qa_001_matrix=<link>
 A2 approved_by/at=  dr_backup_id=  arming_pr=
-A1 approved_by/at=  staging_revision=  staging_schema=3:false  canary_window=  drill=
+A1 approved_by/at=  staging_revision=  staging_schema=4:false  canary_window=  drill=
 A3 approved_by/at=  release_tag=  deploy_run=  reset_state=committed  prod_revision=
 production_canary_window=  sign_off=
 ```

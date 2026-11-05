@@ -144,6 +144,9 @@ func TestBodyFactStatementErasurePinnedWithdrawTombstonePostgres(t *testing.T) {
 	if err := repo.RecordOutcome(ctx, request, model.StatementErasureRuntimeCheckpoints, model.AssetErasureOutcome{State: model.AssetErasureTargetVerified}); err != nil {
 		t.Fatal(err)
 	}
+	if got := execStatementTarget(t, repo, request, model.StatementErasureEpisodicNotes); got.State != model.AssetErasureTargetVerified {
+		t.Fatalf("episodic notes: %+v", got)
+	}
 	if terminal, err := repo.Finalize(ctx, request); err != nil || terminal {
 		t.Fatalf("finalize before the source message target: %v %v", terminal, err)
 	}

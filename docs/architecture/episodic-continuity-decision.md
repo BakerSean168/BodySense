@@ -175,7 +175,8 @@ vector database and any always-on permanent summary store.**
   by cited BodyState/statement-evidence refs.
 - **Policy versioning:** `retentionPolicyVersion` on each note follows the
   AS-002 inventory-version precedent (`asset-erasure-inventory-v1`,
-  `statement-erasure-inventory-v2`). A policy-version change triggers
+  `statement-erasure-inventory-v3` after the #514 S3-A statement-source slice).
+  Earlier revisions are historical. A policy-version change triggers
   re-evaluation (regenerate or roll off) of notes written under older
   versions; mixed-version serving is not allowed.
 - **Erasure wiring (before serving):** `episodic_notes` targets added to
