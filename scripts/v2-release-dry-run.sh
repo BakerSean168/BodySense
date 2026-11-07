@@ -120,6 +120,8 @@ for required in \
   apps/api/migrations/000005_episodic_asset_erasure.down.sql \
   apps/api/migrations/000006_episodic_user_deletion.up.sql \
   apps/api/migrations/000006_episodic_user_deletion.down.sql \
+  apps/api/migrations/000007_episodic_distillation.up.sql \
+  apps/api/migrations/000007_episodic_distillation.down.sql \
   apps/api/migrations/checksums.sha256 \
   tools/schema/database-schema.json \
   docker/docker-compose.prod.yml \
@@ -138,8 +140,8 @@ for required in \
 done
 
 migration_files="$(cd apps/api/migrations && ls -1 ./*.sql 2>/dev/null | sed 's#^\./##' | sort | tr '\n' ' ')"
-if [[ "$migration_files" == '000001_vnext_baseline.down.sql 000001_vnext_baseline.up.sql 000002_supabase_identity.down.sql 000002_supabase_identity.up.sql 000003_episodic_notes.down.sql 000003_episodic_notes.up.sql 000004_episodic_statement_erasure.down.sql 000004_episodic_statement_erasure.up.sql 000005_episodic_asset_erasure.down.sql 000005_episodic_asset_erasure.up.sql 000006_episodic_user_deletion.down.sql 000006_episodic_user_deletion.up.sql ' ]]; then
-  pass 'only 000001 baseline through 000006 episodic user deletion pairs exist (migration policy)'
+if [[ "$migration_files" == '000001_vnext_baseline.down.sql 000001_vnext_baseline.up.sql 000002_supabase_identity.down.sql 000002_supabase_identity.up.sql 000003_episodic_notes.down.sql 000003_episodic_notes.up.sql 000004_episodic_statement_erasure.down.sql 000004_episodic_statement_erasure.up.sql 000005_episodic_asset_erasure.down.sql 000005_episodic_asset_erasure.up.sql 000006_episodic_user_deletion.down.sql 000006_episodic_user_deletion.up.sql 000007_episodic_distillation.down.sql 000007_episodic_distillation.up.sql ' ]]; then
+  pass 'only 000001 baseline through 000007 episodic distillation pairs exist (migration policy)'
 else
   failc "unexpected migration files: ${migration_files:-none}"
 fi
@@ -214,7 +216,7 @@ if [[ "$TARGET" == staging || "$TARGET" == all ]]; then
   plan 'Admit the exact candidate to staging-latest (repository variable; CI promotes only the exact main SHA)' \
     'gh variable set BODYSENSE_V2_STAGING_PROMOTION_ENABLED --body true' \
     "gh run rerun <Publish Nightly Candidate run id for $SHORT>   # promotes only while $SHORT is still main HEAD"
-  plan 'Deploy through the canonical watcher (current PG18 database; API applies 000001_vnext_baseline through 000006_episodic_user_deletion as appropriate; no S3-specific wipe)' \
+  plan 'Deploy through the canonical watcher (current PG18 database; API applies 000001_vnext_baseline through 000007_episodic_distillation as appropriate; no S3-specific wipe)' \
     'systemctl --user start bodysense-staging-deploy-watch.timer' \
     'bodysense-staging-deploy-watch --force'
   plan 'Verify exact revision, schema state and health' \
