@@ -374,8 +374,8 @@ type retentionCap struct {
 }
 
 var retentionCaps = []retentionCap{
-	{Name: "test-only", Count: 48, Runes: 16000, Source: "S2-A provisional test-only cap (not approved policy)"},
-	{Name: "candidate-a", Count: 96, Runes: 32000, Source: "candidate cap for product review"},
+	{Name: "test-only", Count: 48, Runes: 16000, Source: "historical S2-A test-only tier (superseded by the approved policy)"},
+	{Name: "candidate-a", Count: 96, Runes: 32000, Source: "approved default retention policy (product owner, 2026-11-05)"},
 	{Name: "candidate-b", Count: 200, Runes: 64000, Source: "candidate cap for product review"},
 }
 

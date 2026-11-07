@@ -248,7 +248,8 @@ as proposals only and edits no product rule:
    non-authoritative Conversation object — its retention cap defaults,
    user view/delete rights, and its relation to PC-D6's WorkingContext.
 2. Privacy: add the `episodic_notes` family to the retention matrix and
-   confirm the note roll-off cap with the privacy owner.
+   record the approved note roll-off cap (96 notes / 32,000 characters,
+   product owner 2026-11-05).
 3. Interface: memory-view copy and empty/error states for the Person
    surface (S6), including the rule that deleting a note is not health
    data erasure.

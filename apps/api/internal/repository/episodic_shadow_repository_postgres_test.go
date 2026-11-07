@@ -166,8 +166,8 @@ func TestEpisodicShadowAdmissionRollsOldestNotesWithinPolicyCapPostgres(t *testi
 	db := openSingletonTestDB(t)
 	f := newRetentionFixture(t, db)
 	ctx := context.Background()
-	turns := make([]retentionTurn, 0, episodicMaxNotesPerUser+3)
-	for i := 0; i < episodicMaxNotesPerUser+3; i++ {
+	turns := make([]retentionTurn, 0, episodicRetentionPolicyMaxNotes+3)
+	for i := 0; i < episodicRetentionPolicyMaxNotes+3; i++ {
 		turns = append(turns, f.addTurn("completed", "synthetic preference"))
 	}
 	f.advance(f.seq, f.seq+1)
@@ -177,7 +177,7 @@ func TestEpisodicShadowAdmissionRollsOldestNotesWithinPolicyCapPostgres(t *testi
 			t.Fatalf("generated seq %d: %v %v", turn.userSeq, created, err)
 		}
 	}
-	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=?", f.owner); count != episodicMaxNotesPerUser {
+	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=?", f.owner); count != episodicRetentionPolicyMaxNotes {
 		t.Fatalf("unbounded or prematurely removed notes: %d", count)
 	}
 	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=? AND from_seq=?", f.owner, turns[0].userSeq); count != 0 {
@@ -190,5 +190,42 @@ func TestEpisodicShadowAdmissionRollsOldestNotesWithinPolicyCapPostgres(t *testi
 	var statuses []string
 	if err := db.Model(&model.EpisodicNote{}).Distinct("status").Pluck("status", &statuses).Error; err != nil || len(statuses) != 1 || statuses[0] != "shadow" {
 		t.Fatalf("non-shadow memory status: %v %v", statuses, err)
+	}
+}
+
+func TestEpisodicShadowAdmissionRollsOldestNotesUnderPolicyCharacterCapPostgres(t *testing.T) {
+	db := openSingletonTestDB(t)
+	f := newRetentionFixture(t, db)
+	ctx := context.Background()
+	// Each note is at the 800-rune per-note maximum. Multi-byte runes prove
+	// the policy counts runes, not bytes; 41 notes force one roll-off while
+	// staying below the count cap.
+	const noteRunes = episodicMaxNoteRunes
+	noteCount := episodicRetentionPolicyMaxStoredRunes/noteRunes + 1
+	turns := make([]retentionTurn, 0, noteCount)
+	for i := 0; i < noteCount; i++ {
+		turns = append(turns, f.addTurn("completed", "synthetic preference"))
+	}
+	f.advance(f.seq, f.seq+1)
+	writer := NewEpisodicShadowRepository(db).WithShadowAdmissionEnabled(true)
+	for _, turn := range turns {
+		draft := shadowDraft(f, turn)
+		draft.ContentText = strings.Repeat("健", noteRunes)
+		if _, created, err := writer.SaveShadowDraft(ctx, f.owner, draft); err != nil || !created {
+			t.Fatalf("generated seq %d: %v %v", turn.userSeq, created, err)
+		}
+	}
+	wantNotes := episodicRetentionPolicyMaxStoredRunes / noteRunes
+	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=?", f.owner); count != int64(wantNotes) {
+		t.Fatalf("character cap did not roll off oldest: %d notes", count)
+	}
+	if used := f.count("SELECT COALESCE(sum(char_length(content_text)),0) FROM episodic_notes WHERE user_id=?", f.owner); used != int64(episodicRetentionPolicyMaxStoredRunes) {
+		t.Fatalf("stored runes exceed policy cap: %d", used)
+	}
+	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=? AND from_seq=?", f.owner, turns[0].userSeq); count != 0 {
+		t.Fatal("oldest note did not roll off")
+	}
+	if count := f.count("SELECT count(*) FROM episodic_notes WHERE user_id=? AND from_seq=?", f.owner, turns[len(turns)-1].userSeq); count != 1 {
+		t.Fatal("newest note was removed during roll-off")
 	}
 }

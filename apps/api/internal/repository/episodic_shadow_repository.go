@@ -30,8 +30,13 @@ var (
 const (
 	episodicMaxSourceMessages = 128
 	episodicMaxNoteRunes      = 800
-	episodicMaxNotesPerUser   = 48
-	episodicMaxStoredRunes    = 16000
+
+	// Approved per-owner rolling retention policy (product owner,
+	// 2026-11-05; basis: episodic-s2-benchmark-recall-eval.md). Both the
+	// note-count and stored-rune limits apply, and the oldest notes roll
+	// off first. The former test-only 48 / 16,000 values are historical.
+	episodicRetentionPolicyMaxNotes       = 96
+	episodicRetentionPolicyMaxStoredRunes = 32000
 )
 
 // EpisodicShadowDraft is a candidate from a future, typed, bounded generator.
@@ -260,7 +265,7 @@ ORDER BY m.seq`, c.ID, draft.FromSeq, draft.ToSeq).Scan(&rows).Error; err != nil
 		for _, note := range old {
 			total += utf8.RuneCountInString(note.ContentText)
 		}
-		for len(old)+1 > episodicMaxNotesPerUser || total > episodicMaxStoredRunes {
+		for len(old)+1 > episodicRetentionPolicyMaxNotes || total > episodicRetentionPolicyMaxStoredRunes {
 			if len(old) == 0 {
 				return ErrEpisodicSourceInvalid
 			}

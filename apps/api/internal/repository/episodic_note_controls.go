@@ -40,8 +40,8 @@ func NewEpisodicNoteControlsRepository(db *gorm.DB) *EpisodicNoteControlsReposit
 }
 
 // ListOwned returns only the caller's *active* shadow notes. Existing notes
-// are bounded to 48 per user by S2-A; no erased tombstones or raw message
-// provenance are exposed as separate user content.
+// are bounded to the approved per-owner policy cap; no erased tombstones or
+// raw message provenance are exposed as separate user content.
 func (r *EpisodicNoteControlsRepository) ListOwned(ctx context.Context, owner uuid.UUID) ([]model.EpisodicNote, error) {
 	if owner == uuid.Nil {
 		return nil, ErrEpisodicNoteNotFound
@@ -49,7 +49,7 @@ func (r *EpisodicNoteControlsRepository) ListOwned(ctx context.Context, owner uu
 	notes := make([]model.EpisodicNote, 0)
 	err := database.FromContext(ctx, r.db).
 		Where("user_id = ? AND status = 'shadow'", owner).
-		Order("created_at DESC, id DESC").Limit(48).Find(&notes).Error
+		Order("created_at DESC, id DESC").Limit(episodicRetentionPolicyMaxNotes).Find(&notes).Error
 	return notes, err
 }
 

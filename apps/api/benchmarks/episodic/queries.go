@@ -168,8 +168,8 @@ func writeFixture(c *corpus, path string) error {
 		Weeks:        c.Weeks,
 		Segments:     len(c.Segments),
 		Eligible:     countEligible(c),
-		RetentionCap: "48 notes / 16000 characters (S2-A test-only provisional cap)",
-		Note:         "Every expected note is retained at the test-only cap, so the same queries are answerable at every measured cap. All users and content are synthetic.",
+		RetentionCap: "48 notes / 16000 characters (historical S2-A test-only baseline)",
+		Note:         "Every expected note is retained at the historical test-only baseline, so the same queries are answerable at every measured cap. All users and content are synthetic.",
 		Queries:      queries,
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

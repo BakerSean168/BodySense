@@ -6,8 +6,8 @@
   "weeks": 52,
   "segments": 1248,
   "note_eligible_segments": 873,
-  "fixture_retention_cap": "48 notes / 16000 characters (S2-A test-only provisional cap)",
-  "note": "Every expected note is retained at the test-only cap, so the same queries are answerable at every measured cap. All users and content are synthetic.",
+  "fixture_retention_cap": "48 notes / 16000 characters (historical S2-A test-only baseline)",
+  "note": "Every expected note is retained at the historical test-only baseline, so the same queries are answerable at every measured cap. All users and content are synthetic.",
   "queries": [
     {
       "id": "q-001",
