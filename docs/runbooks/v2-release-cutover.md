@@ -11,7 +11,8 @@ The **original V2 baseline** was a big-bang reset: `000001_vnext_baseline`
 was applied to fresh databases by volume replacement, as already proven by the vNext
 rebaseline. Subsequent `000002_supabase_identity`, `000003_episodic_notes`
 and `000004_episodic_statement_erasure`, `000005_episodic_asset_erasure`,
-and `000006_episodic_user_deletion` are ordinary forward migrations.
+`000006_episodic_user_deletion`, and `000007_episodic_distillation` are ordinary
+forward migrations.
 An existing Staging database at `4:false` advances to `6:false` **in place**;
 do not repeat the historical volume-reset procedure solely to apply S3-A or S3-B. Production promotion still requires separate
 explicit sign-off. The original reset mechanism is documented in the vNext
@@ -143,7 +144,7 @@ keeps that name and preserves the old contents in a separate rollback volume.
    readiness register passes). Never re-tag `staging-latest` by hand.
 7. Resume: `systemctl --user start bodysense-staging-deploy-watch.timer` and
    `bodysense-staging-deploy-watch --force`. Compose recreates an empty volume; the API
-   bootstraps `000001_vnext_baseline` through `000006_episodic_user_deletion` before AI and Web start.
+   bootstraps `000001_vnext_baseline` through `000007_episodic_distillation` before AI and Web start.
 8. Verify: state `revision=` equals the SHA; `schema_migrations` reports `6:false`; every
    service healthy; `curl -fsS http://127.0.0.1:20150/api/health` succeeds.
 9. Keep the rollback volume until §6.1 and §7.1 pass; then delete it (commit).
