@@ -132,7 +132,7 @@ uv run python scripts/medlineplus_topic_adapter.py render \
   --snapshot-dir ~/projects/bodysense-knowledge-snapshots \
   --topic knee-injuries-and-disorders
 
-# 2. materialize the reviewed artifacts for one shard
+# 2. materialize the reviewed artifacts for one shard (k1|k2|k3|cohort)
 uv run python scripts/medlineplus_topic_adapter.py materialize \
   --snapshot-dir ~/projects/bodysense-knowledge-snapshots \
   --topic knee-injuries-and-disorders --shard k1 \
@@ -151,13 +151,28 @@ uv run python scripts/ingest_medlineplus_snapshot.py \
   --evidence-review-manifest ../../docs/knowledges/evidence/medlineplus-knee-k1-evidence-review.json \
   --claim-review-manifest ../../docs/knowledges/evidence/medlineplus-knee-k1-claim-review.json
 
-# 5. publish, evaluate, observe, roll back
+# 5. evaluate the published cohort against its thresholds
+uv run python scripts/run_published_knowledge_eval.py \
+  --cases ../../docs/knowledges/eval/published-knowledge-knee-cohort.jsonl \
+  --thresholds ../../docs/knowledges/eval/published-knowledge-knee-cohort.thresholds.json \
+  --publication-key medlineplus-knee-cohort --source-type medlineplus_topic
+
+# 6. publish, evaluate, observe, roll back
 go run ./cmd/knowledge-publication-manager publish-reviewed \
   --publication-key medlineplus-knee-k1 \
   --batch-key medlineplus-knee \
   --reviewed-snapshot ../../docs/knowledges/evidence/medlineplus-knee-k1-reviewed-knowledge.json \
   --published-by <operator-uuid> --summary "K1 knee cohort"
 ```
+
+### Delivered shards
+
+| Shard | Units | Scope |
+| --- | --- | --- |
+| K1 | 5 (`mlp-knee-001..005`) | structures, muscle/tendon role, mechanism, symptoms, common-ness |
+| K2 | 4 (`mlp-knee-006..009`) | activity impact, osteoarthritis, cartilage wear, ligament/tendon injury |
+| K3 | 4 (`mlp-knee-010..013`) | ACL injury, twisting mechanism, sports-injury context, treatment boundary |
+| cohort | 13 | one pack, one claim-review identity for the published evaluation |
 
 ## 6. Takedown
 

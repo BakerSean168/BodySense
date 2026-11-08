@@ -20,6 +20,8 @@ The interface uses a persistent interactive 3D body canvas with movable Chat and
 > [!IMPORTANT]
 > BodySense supports personal health-information organization and evidence-aware explanation. It is not a medical device and does not replace qualified medical diagnosis or treatment.
 
+若您是相关内容的权利人并认为知识库内容侵权，请联系维护者，我们将及时下架处理。
+
 ## Business model
 
 - **BodyState** — one durable state per user, with clear self-reports saved automatically and correction distinguished from actual progression.
