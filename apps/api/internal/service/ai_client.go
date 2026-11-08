@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -159,13 +160,36 @@ type ResumeConsultationInterruptRequest struct {
 	BusinessContext ConsultationBusinessContext `json:"business_context"`
 }
 
+const (
+	aiRuntimeTimeoutEnv     = "AI_RUNTIME_TIMEOUT_SECONDS"
+	defaultAIRuntimeTimeout = 120 * time.Second
+)
+
+// aiRuntimeTimeout resolves the HTTP client timeout for the AI runtime client.
+// http.Client.Timeout bounds the total read of the whole AI stream — every
+// serial model call plus the complete answer — not a single packet, so a slow
+// provider handling multi-turn work can legitimately exceed the previous fixed
+// 120s. AI_RUNTIME_TIMEOUT_SECONDS lets a deployment raise it without a code
+// change; unset, non-numeric, zero, or negative values keep the safe default.
+func aiRuntimeTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(aiRuntimeTimeoutEnv))
+	if raw == "" {
+		return defaultAIRuntimeTimeout
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return defaultAIRuntimeTimeout
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func NewAIClient() *AIClient {
 	baseURL := os.Getenv("AI_SERVICE_URL")
 	if baseURL == "" {
 		baseURL = "http://localhost:8100"
 	}
 	return &AIClient{
-		httpClient: &http.Client{Timeout: 120 * time.Second},
+		httpClient: &http.Client{Timeout: aiRuntimeTimeout()},
 		baseURL:    baseURL,
 	}
 }
