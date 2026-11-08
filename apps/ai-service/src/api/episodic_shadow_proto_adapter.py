@@ -2,7 +2,8 @@
 
 Private cross-language data is validated here, handed to an isolated
 application service as ordinary dataclasses, and revalidated on return.
-No HTTP route, auth bypass, runtime hookup or model-provider fallback.
+No public HTTP route, auth bypass, runtime hookup or model-provider fallback;
+only the internal Go-callable transport in routes/episodic_shadow.py uses it.
 """
 
 from __future__ import annotations

@@ -28,6 +28,7 @@ for _env_path in _env_paths:
 from .api.routes import (  # noqa: E402
     assessment,
     diagnosis,
+    episodic_shadow,
     knowledge,
     ocr,
     posture,
@@ -65,6 +66,7 @@ app.include_router(knowledge.router)
 app.include_router(ocr.router)
 app.include_router(posture.router)
 app.include_router(runtime.router)
+app.include_router(episodic_shadow.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)
 app.include_router(treatment.router)
