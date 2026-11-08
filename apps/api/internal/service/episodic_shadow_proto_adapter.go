@@ -63,19 +63,13 @@ type EpisodicShadowProposer interface {
 	) (EpisodicShadowProposalResponse, error)
 }
 
-// GenerateAndApplyEpisodicShadow is the sole place where the trigger touches
-// the typed contract. It builds the existing S2-B1 command from the plain
-// request, maps the plain response to the typed proposal, and reuses the
-// Go-owned validation/persistence path.
-func GenerateAndApplyEpisodicShadow(
-	ctx context.Context,
-	writer *repository.EpisodicShadowRepository,
-	proposer EpisodicShadowProposer,
+// episodicShadowGenerationCommand is the single command builder. It carries
+// only the Go-selected window, never a note, storage command or clinical
+// authority, and is shared by the server-side apply path and the HTTP
+// proposer so both speak the same typed contract.
+func episodicShadowGenerationCommand(
 	request EpisodicShadowProposalRequest,
-) (*model.EpisodicNote, bool, error) {
-	if writer == nil || proposer == nil {
-		return nil, false, fmt.Errorf("%w: missing writer or proposer", repository.ErrEpisodicSourceInvalid)
-	}
+) *runtimev1.EpisodicShadowGenerationCommand {
 	command := &runtimev1.EpisodicShadowGenerationCommand{
 		ConversationId:  request.ConversationID.String(),
 		UserId:          request.Owner.String(),
@@ -95,6 +89,23 @@ func GenerateAndApplyEpisodicShadow(
 			Id: msg.ID.String(), Seq: uint32(msg.Seq), Role: msg.Role, Text: msg.Text,
 		})
 	}
+	return command
+}
+
+// GenerateAndApplyEpisodicShadow is the sole place where the trigger touches
+// the typed contract. It builds the existing S2-B1 command from the plain
+// request, maps the plain response to the typed proposal, and reuses the
+// Go-owned validation/persistence path.
+func GenerateAndApplyEpisodicShadow(
+	ctx context.Context,
+	writer *repository.EpisodicShadowRepository,
+	proposer EpisodicShadowProposer,
+	request EpisodicShadowProposalRequest,
+) (*model.EpisodicNote, bool, error) {
+	if writer == nil || proposer == nil {
+		return nil, false, fmt.Errorf("%w: missing writer or proposer", repository.ErrEpisodicSourceInvalid)
+	}
+	command := episodicShadowGenerationCommand(request)
 	response, err := proposer.ProposeEpisodicShadowQuote(ctx, request)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: %w", ErrEpisodicShadowProposalFailed, err)
