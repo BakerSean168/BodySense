@@ -45,8 +45,12 @@ episodic precedent is S2-A's repository-level
 `WithShadowAdmissionEnabled`, which is not wired to `cmd/server`, so S6-B uses
 the smallest explicit environment switch and injects the parsed boolean through
 `WithEpisodicNotesControls`. The Web side follows the repository's existing
-`VITE_` configuration pattern. The flag is on only in the browser E2E job;
-staging and production keep it off.
+`VITE_` configuration pattern. The Web flag is on in the browser E2E job and in
+the Nightly candidate Web bundle, so the staging channel can review the Person
+记忆 category. Stable release and production deployment promote those exact
+candidate digests without rebuilding, so a production Web bundle also ships the
+category; availability stays governed by the API switch, which remains off
+there (the routes answer as absent).
 
 ## Person preview and copy
 
