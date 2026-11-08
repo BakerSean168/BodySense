@@ -2,7 +2,9 @@
 
 Go must select and validate the source window and must independently verify
 the exact quote against its own locked database row before persistence.
-There is intentionally no app startup, HTTP route, model resolver or worker.
+This module has no app startup, route or model resolver of its own; the
+internal transport lives in api/routes/episodic_shadow.py and is only called
+by Go behind its default-off switch.
 """
 
 from __future__ import annotations

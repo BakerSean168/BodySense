@@ -192,16 +192,16 @@ func main() {
 	// moves no cursor until the ai-service checkpoint cleanup is verified.
 	// Slice 3: Run settlement reconciles P and the token-budget C, and
 	// enqueues a prune job once C - 1 and P are both past R.
+	// S2: the HTTP proposer is constructed only while the default-off switch
+	// is on. With the switch off the trigger keeps its previous inert shape
+	// (nil proposer, one log line, no model traffic).
 	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
 		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv)).
-		// S2 wiring exists but is inert: EPISODIC_SHADOW_GENERATION_ENABLED
-		// alone cannot generate because no approved model proposer is
-		// connected, and the shadow writer stays admission-disabled.
 		WithEpisodicDistillation(service.NewEpisodicDistillationTriggerFromEnv(
 			os.Getenv,
 			repository.NewEpisodicDistillationRepository(database.DB),
 			repository.NewEpisodicShadowRepository(database.DB),
-			nil,
+			episodicShadowProposerFromEnv(os.Getenv, aiClient),
 		))
 	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
@@ -407,6 +407,18 @@ func resolveAPIListenAddress(host, port string) string {
 		port = "8080"
 	}
 	return net.JoinHostPort(host, port)
+}
+
+// episodicShadowProposerFromEnv wires the S2 HTTP proposer only while the
+// explicit, default-off switch is on. A falsy or absent value returns a nil
+// proposer, which keeps NewEpisodicDistillationTriggerFromEnv inert.
+func episodicShadowProposerFromEnv(
+	getenv func(string) string, client *service.AIClient,
+) service.EpisodicShadowProposer {
+	if !service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return nil
+	}
+	return service.NewEpisodicShadowHTTPProposer(client)
 }
 
 func startRunLeaseReconciler(
