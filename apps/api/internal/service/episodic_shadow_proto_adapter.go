@@ -12,6 +12,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // EpisodicShadowQuotePolicyRevision is an internal proposal contract, NOT
@@ -90,6 +91,48 @@ func episodicShadowGenerationCommand(
 		})
 	}
 	return command
+}
+
+// marshalEpisodicShadowGenerationCommand is the only way the HTTP proposer
+// gets the outbound contract: opaque bytes carrying the typed command. The
+// generated runtime Proto never leaves this adapter file.
+func marshalEpisodicShadowGenerationCommand(request EpisodicShadowProposalRequest) ([]byte, error) {
+	body, err := validateAndMarshalRuntimeCommand(episodicShadowGenerationCommand(request))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrEpisodicShadowProposalFailed, err)
+	}
+	return body, nil
+}
+
+// parseEpisodicShadowDraftProposal strictly decodes and validates the typed
+// proposal, then returns the boundary-neutral response. An unknown field, a
+// non-contract value or a malformed id is an error, never an inferred quote.
+func parseEpisodicShadowDraftProposal(raw []byte) (EpisodicShadowProposalResponse, error) {
+	proposal := &runtimev1.EpisodicShadowDraftProposal{}
+	if err := protojson.Unmarshal(raw, proposal); err != nil {
+		return EpisodicShadowProposalResponse{}, fmt.Errorf(
+			"%w: invalid shadow proposal response: %w", ErrEpisodicShadowProposalFailed, err)
+	}
+	if err := protovalidate.Validate(proposal); err != nil {
+		return EpisodicShadowProposalResponse{}, fmt.Errorf(
+			"%w: invalid typed shadow proposal: %w", ErrEpisodicShadowProposalFailed, err)
+	}
+	response := EpisodicShadowProposalResponse{
+		Quotes: make([]EpisodicShadowQuoteSuggestion, 0, len(proposal.GetQuotes())),
+	}
+	for _, quote := range proposal.GetQuotes() {
+		id, err := uuid.Parse(quote.GetSourceMessageId())
+		if err != nil {
+			return EpisodicShadowProposalResponse{}, fmt.Errorf(
+				"%w: invalid shadow proposal source id: %w", ErrEpisodicShadowProposalFailed, err)
+		}
+		response.Quotes = append(response.Quotes, EpisodicShadowQuoteSuggestion{
+			SourceMessageID: id,
+			Quote:           quote.GetQuote(),
+			Preference:      quote.GetPreference(),
+		})
+	}
+	return response, nil
 }
 
 // GenerateAndApplyEpisodicShadow is the sole place where the trigger touches

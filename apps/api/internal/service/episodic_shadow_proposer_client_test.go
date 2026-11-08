@@ -11,14 +11,38 @@ import (
 	"reflect"
 	"testing"
 
-	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // The golden wire fixture is shared with the ai-service route tests so both
 // sides evolve the private proposal transport from one sample pair.
 const episodicShadowWireFixturePath = "../../../../contracts/internal/agent-runtime/fixtures/episodic-shadow-wire.v1.json"
+
+type episodicShadowWireMessage struct {
+	ID   string `json:"id"`
+	Seq  int    `json:"seq"`
+	Role string `json:"role"`
+	Text string `json:"text"`
+}
+
+type episodicShadowWireCommand struct {
+	ConversationID  string                      `json:"conversation_id"`
+	UserID          string                      `json:"user_id"`
+	FromSeq         int                         `json:"from_seq"`
+	ToSeq           int                         `json:"to_seq"`
+	PolicyRevision  string                      `json:"policy_revision"`
+	SourceMessages  []episodicShadowWireMessage `json:"source_messages"`
+	ContextMessages []episodicShadowWireMessage `json:"context_messages"`
+}
+
+type episodicShadowWireProposal struct {
+	PolicyRevision string `json:"policy_revision"`
+	Quotes         []struct {
+		SourceMessageID string `json:"source_message_id"`
+		Quote           string `json:"quote"`
+		Preference      string `json:"preference"`
+	} `json:"quotes"`
+}
 
 type episodicShadowWireFixture struct {
 	Command  json.RawMessage `json:"command"`
@@ -38,38 +62,30 @@ func loadEpisodicShadowWireFixture(t *testing.T) episodicShadowWireFixture {
 	return fixture
 }
 
-func episodicShadowRequestFromCommand(
-	t *testing.T, command *runtimev1.EpisodicShadowGenerationCommand,
+func episodicShadowRequestFromWire(
+	t *testing.T, command episodicShadowWireCommand,
 ) EpisodicShadowProposalRequest {
 	t.Helper()
-	owner, err := uuid.Parse(command.GetUserId())
-	if err != nil {
-		t.Fatal(err)
-	}
-	conversation, err := uuid.Parse(command.GetConversationId())
-	if err != nil {
-		t.Fatal(err)
-	}
 	request := EpisodicShadowProposalRequest{
-		Owner:          owner,
-		ConversationID: conversation,
-		FromSeq:        int(command.GetFromSeq()),
-		ToSeq:          int(command.GetToSeq()),
+		Owner:          uuid.MustParse(command.UserID),
+		ConversationID: uuid.MustParse(command.ConversationID),
+		FromSeq:        command.FromSeq,
+		ToSeq:          command.ToSeq,
 	}
-	for _, message := range command.GetSourceMessages() {
+	for _, message := range command.SourceMessages {
 		request.Source = append(request.Source, EpisodicShadowSourceMessage{
-			ID:   uuid.MustParse(message.GetId()),
-			Seq:  int(message.GetSeq()),
-			Role: message.GetRole(),
-			Text: message.GetText(),
+			ID:   uuid.MustParse(message.ID),
+			Seq:  message.Seq,
+			Role: message.Role,
+			Text: message.Text,
 		})
 	}
-	for _, message := range command.GetContextMessages() {
+	for _, message := range command.ContextMessages {
 		request.Context = append(request.Context, EpisodicShadowSourceMessage{
-			ID:   uuid.MustParse(message.GetId()),
-			Seq:  int(message.GetSeq()),
-			Role: message.GetRole(),
-			Text: message.GetText(),
+			ID:   uuid.MustParse(message.ID),
+			Seq:  message.Seq,
+			Role: message.Role,
+			Text: message.Text,
 		})
 	}
 	return request
@@ -77,9 +93,9 @@ func episodicShadowRequestFromCommand(
 
 func TestEpisodicShadowHTTPProposerUsesGoldenWireFormat(t *testing.T) {
 	fixture := loadEpisodicShadowWireFixture(t)
-	command := &runtimev1.EpisodicShadowGenerationCommand{}
-	if err := protojson.Unmarshal(fixture.Command, command); err != nil {
-		t.Fatalf("golden command is not a typed command: %v", err)
+	var command episodicShadowWireCommand
+	if err := json.Unmarshal(fixture.Command, &command); err != nil {
+		t.Fatal(err)
 	}
 	var (
 		path, method, contentType string
@@ -98,7 +114,7 @@ func TestEpisodicShadowHTTPProposerUsesGoldenWireFormat(t *testing.T) {
 		baseURL:    server.URL,
 	})
 	response, err := proposer.ProposeEpisodicShadowQuote(
-		context.Background(), episodicShadowRequestFromCommand(t, command),
+		context.Background(), episodicShadowRequestFromWire(t, command),
 	)
 	if err != nil {
 		t.Fatalf("proposal call failed: %v", err)
@@ -122,18 +138,18 @@ func TestEpisodicShadowHTTPProposerUsesGoldenWireFormat(t *testing.T) {
 		t.Fatalf("wire command diverged:\n got: %s\nwant: %s", body, fixture.Command)
 	}
 
-	var expected runtimev1.EpisodicShadowDraftProposal
-	if err := protojson.Unmarshal(fixture.Proposal, &expected); err != nil {
-		t.Fatalf("golden proposal is not a typed proposal: %v", err)
+	var expected episodicShadowWireProposal
+	if err := json.Unmarshal(fixture.Proposal, &expected); err != nil {
+		t.Fatalf("golden proposal is not JSON: %v", err)
 	}
-	if len(response.Quotes) != len(expected.GetQuotes()) {
-		t.Fatalf("quote count %d, want %d", len(response.Quotes), len(expected.GetQuotes()))
+	if len(response.Quotes) != len(expected.Quotes) {
+		t.Fatalf("quote count %d, want %d", len(response.Quotes), len(expected.Quotes))
 	}
 	for i, quote := range response.Quotes {
-		want := expected.GetQuotes()[i]
-		if quote.SourceMessageID.String() != want.GetSourceMessageId() ||
-			quote.Quote != want.GetQuote() ||
-			quote.Preference != want.GetPreference() {
+		want := expected.Quotes[i]
+		if quote.SourceMessageID.String() != want.SourceMessageID ||
+			quote.Quote != want.Quote ||
+			quote.Preference != want.Preference {
 			t.Fatalf("quote %d diverged: %+v", i, quote)
 		}
 	}
@@ -215,14 +231,14 @@ func TestEpisodicShadowHTTPProposerWithoutClientFails(t *testing.T) {
 	}
 }
 
-// episodicShadowRequestFromDiscovery builds a synthetic, DB-free request that
-// satisfies the typed command constraints.
+// episodicShadowRequestFromDiscovery builds a synthetic, DB-free request from
+// the shared fixture; the adapter itself validates the typed command.
 func episodicShadowRequestFromDiscovery(t *testing.T) EpisodicShadowProposalRequest {
 	t.Helper()
 	fixture := loadEpisodicShadowWireFixture(t)
-	command := &runtimev1.EpisodicShadowGenerationCommand{}
-	if err := protojson.Unmarshal(fixture.Command, command); err != nil {
+	var command episodicShadowWireCommand
+	if err := json.Unmarshal(fixture.Command, &command); err != nil {
 		t.Fatal(err)
 	}
-	return episodicShadowRequestFromCommand(t, command)
+	return episodicShadowRequestFromWire(t, command)
 }
