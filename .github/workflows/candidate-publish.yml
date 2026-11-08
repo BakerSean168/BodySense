@@ -238,6 +238,9 @@ jobs:
           VITE_SUPABASE_URL: https://qdezojzgajsunjwthifv.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_EMxwsj1diGR6BeEXkFhOCQ_rRx4gGil
           VITE_TURNSTILE_SITE_KEY: ${{ vars.BODYSENSE_TURNSTILE_SITE_KEY }}
+          # Nightly candidate Web bundle carries the Person 记忆 category so the
+          # staging channel can be reviewed against the staging API switch.
+          VITE_EPISODIC_NOTES_CONTROLS_ENABLED: "true"
           STATIC_ASSET_CDN_BASE: ${{ vars.STATIC_ASSET_CDN_BASE }}
           R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -363,7 +366,9 @@ jobs:
             dockerfile: docker/Dockerfile.web
             cache_scope: candidate-web
             timeout_minutes: 30
-            extra_build_args: BUNDLE_ANATOMY_ATLAS=false
+            extra_build_args: |
+              BUNDLE_ANATOMY_ATLAS=false
+              VITE_EPISODIC_NOTES_CONTROLS_ENABLED=true
           - component: api
             image: bodysense-api
             context: apps/api
