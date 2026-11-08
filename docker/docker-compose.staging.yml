@@ -170,6 +170,9 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       AI_SERVICE_URL: http://ai-service:8100
+      # Bounds the whole AI runtime stream read (all serial model calls plus
+      # the full answer). Empty keeps the in-code default of 120 seconds.
+      AI_RUNTIME_TIMEOUT_SECONDS: ${AI_RUNTIME_TIMEOUT_SECONDS:-}
       HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
       HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
       HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
