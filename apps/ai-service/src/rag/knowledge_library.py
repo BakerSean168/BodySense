@@ -129,6 +129,11 @@ _LEXICAL_GENERIC_ANCHORS = {
 }
 
 
+# Governed text sources that publish under the lexical hashing embedding. Under
+# hashing a cosine score is not calibrated, so these sources require an
+# independent lexical anchor before a published citation is returned.
+GOVERNED_TEXT_SOURCE_TYPES = frozenset({"thought_forest_note", "medlineplus_topic"})
+
 _PUBLISHED_HASHING_INTERPRETATION_MARKERS = (
     "同一",
     "一样",
@@ -659,7 +664,7 @@ class KnowledgeLibrary:
                 results,
                 key=lambda result: (
                     self._published_hashing_rerank_score(query, result)
-                    if result.source_type == "thought_forest_note"
+                    if result.source_type in GOVERNED_TEXT_SOURCE_TYPES
                     else result.similarity + self._intent_boost(query, result)
                 ),
                 reverse=True,
@@ -766,10 +771,10 @@ class KnowledgeLibrary:
         """Rerank admitted hashing candidates using section-local lexical evidence.
 
         The hashing embedding is intentionally not treated as a calibrated semantic
-        score. Once the deny-first lexical gate admits a published Thought Forest
-        candidate, the section-specific heading, reviewed claim body, and claim kind
-        decide which nearby unit is the best match. This only orders candidates; it
-        never makes an otherwise irrelevant result eligible.
+        score. Once the deny-first lexical gate admits a governed text candidate,
+        the section-specific heading, reviewed claim body, and claim kind decide
+        which nearby unit is the best match. This only orders candidates; it never
+        makes an otherwise irrelevant result eligible.
         """
         heading = self._section_heading(result)
         heading_coverage = self._lexical_coverage(query, heading)
@@ -793,14 +798,15 @@ class KnowledgeLibrary:
         *,
         embedding_provider: str,
     ) -> bool:
-        """Deny hash-only Thought Forest matches without a lexical topic anchor.
+        """Deny hash-only governed-text matches without a lexical topic anchor.
 
         Hashing embeddings are deterministic development/search embeddings, not a
-        calibrated semantic model. A high cosine score can be a hash collision,
-        so published Thought Forest citations require an independent lexical anchor.
-        Other source types and semantic embedding providers keep their existing behavior.
+        calibrated semantic model. A high cosine score can be a hash collision, so
+        published governed text sources require an independent lexical anchor.
+        Other source types and semantic embedding providers keep their existing
+        behavior.
         """
-        if embedding_provider != "hashing" or result.source_type != "thought_forest_note":
+        if embedding_provider != "hashing" or result.source_type not in GOVERNED_TEXT_SOURCE_TYPES:
             return True
         return cls._has_meaningful_lexical_anchor(query, result)
 

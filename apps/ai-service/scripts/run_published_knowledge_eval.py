@@ -271,6 +271,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--publication-key", required=True)
+    parser.add_argument(
+        "--source-type",
+        default="thought_forest_note",
+        help="Governed source type under evaluation",
+    )
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--json-report", type=Path)
     parser.add_argument("--thresholds", type=Path)
@@ -293,7 +298,7 @@ async def main() -> int:
             results = await library.search(
                 case.query,
                 top_k=max(1, args.top_k),
-                source_type="thought_forest_note",
+                source_type=args.source_type,
                 min_quality_score=0.90,
             )
             observation = evaluate_case(
@@ -314,6 +319,7 @@ async def main() -> int:
     report = {
         "schema_version": SCHEMA_VERSION,
         "evaluator_revision": EVALUATOR_REVISION,
+        "source_type": args.source_type,
         "publication": {
             "publication_id": publication_id,
             "publication_key": args.publication_key,

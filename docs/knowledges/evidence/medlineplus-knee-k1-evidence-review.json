@@ -1,0 +1,60 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-knee-k1-evidence-review-2026-11-08",
+  "snapshot_git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+  "reviewed_at": "2026-11-08T21:30:00Z",
+  "sources": [
+    {
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "canonical_url": "https://medlineplus.gov/kneeinjuriesanddisorders.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-knee-f0cb221ab484",
+      "claim_content_hash": "c2b42a3601f24f43eaf5c3ab2979987a93db1f33ad4891e1f61ec9d8cde0d7d9",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-9ecd49619265",
+      "claim_content_hash": "147059b5682703714df428e108555a764bea4416d6d5b475954289813c0925a1",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-fa9b13047d97",
+      "claim_content_hash": "d0041989a425a6939a1aa629693cf0b46638926f5feaa5b80bcd4b7ab5e2362f",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-3f4768b4f981",
+      "claim_content_hash": "179d78ffb6764f155b1932015ec268d702a9beed1a71f5ebecf3c02f1f75cb2f",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-9a8768875f84",
+      "claim_content_hash": "76e4d3f64d64c63ff90526cfb8fc961f40ccf64299423cf3c6bfc7f37c5d4370",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}

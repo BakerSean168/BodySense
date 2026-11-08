@@ -1,0 +1,146 @@
+{
+  "schema_version": "bodysense.reviewed-knowledge-snapshot.v1",
+  "reviewed_snapshot_id": "reviewed-knowledge:2fa9d765b2a458e312cddfb3",
+  "source_snapshot_id": "medlineplus-topics:a127b7e642d929072bb78557a87d17646fb0571e:c7625abe24df",
+  "source_git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+  "external_evidence_review_id": "medlineplus-knee-k2-evidence-review-2026-11-08",
+  "claim_review_id": "medlineplus-knee-k2-claim-review-2026-11-08",
+  "units": [
+    {
+      "unit_key": "mlp-knee-006",
+      "claim_id": "mlc-knee-91708e596ee0",
+      "claim_content_hash": "5f369f3c95f2883c61c9fec8e9156ca1be789ea46f7ae814313ff01046903f54",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+        "path": "topics/knee-injuries-and-disorders.md",
+        "line_start": 27,
+        "line_end": 29,
+        "heading_path": [
+          "膝关节损伤与疾病",
+          "膝关节问题会影响日常活动吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-knee-k2-claim-review-2026-11-08",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-08T21:30:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-knee-k2-evidence-review-2026-11-08"
+      }
+    },
+    {
+      "unit_key": "mlp-knee-007",
+      "claim_id": "mlc-knee-e23d1a7027f4",
+      "claim_content_hash": "95eeed8a1b596bc4858f961d904c3aacc4a332ea9133d1b3c99eb46d26508f76",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+        "path": "topics/knee-injuries-and-disorders.md",
+        "line_start": 31,
+        "line_end": 33,
+        "heading_path": [
+          "膝关节损伤与疾病",
+          "影响膝关节最常见的疾病是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-knee-k2-claim-review-2026-11-08",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-08T21:30:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-knee-k2-evidence-review-2026-11-08"
+      }
+    },
+    {
+      "unit_key": "mlp-knee-008",
+      "claim_id": "mlc-knee-b21fe7d3c288",
+      "claim_content_hash": "6de60ab81d797372d2570b200b8ad18ef9e0c681413d81b1ba603e12ce32dbad",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+        "path": "topics/knee-injuries-and-disorders.md",
+        "line_start": 35,
+        "line_end": 37,
+        "heading_path": [
+          "膝关节损伤与疾病",
+          "软骨磨损和膝关节疼痛有什么关系"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-knee-k2-claim-review-2026-11-08",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-08T21:30:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-knee-k2-evidence-review-2026-11-08"
+      }
+    },
+    {
+      "unit_key": "mlp-knee-009",
+      "claim_id": "mlc-knee-015c703181d6",
+      "claim_content_hash": "0d173a6458f355c76d9afa40e51ecbc22117dc4d2d588f8f9ecf203aa0286e6a",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+        "path": "topics/knee-injuries-and-disorders.md",
+        "line_start": 39,
+        "line_end": 41,
+        "heading_path": [
+          "膝关节损伤与疾病",
+          "韧带和肌腱损伤也会造成膝关节问题吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-knee-k2-claim-review-2026-11-08",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-08T21:30:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-knee-k2-evidence-review-2026-11-08"
+      }
+    }
+  ]
+}

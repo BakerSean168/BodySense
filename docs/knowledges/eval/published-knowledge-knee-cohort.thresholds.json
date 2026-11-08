@@ -1,0 +1,12 @@
+{
+  "schema_version": "bodysense.published-knowledge-qualification-thresholds.v1",
+  "dataset": "docs/knowledges/eval/published-knowledge-knee-cohort.jsonl",
+  "dataset_sha256": "2b3062d47f9d18c8eb222f9769465f0aad58f55b2b7959b10b8563f2bff55ead",
+  "expected_cases": 12,
+  "min_pass_rate": 1.0,
+  "min_positive_hits": 6,
+  "min_negative_rejections": 6,
+  "min_citation_valid": 6,
+  "min_grounding_supported": 6,
+  "require_publication_identity": true
+}

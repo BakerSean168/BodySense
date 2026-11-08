@@ -103,3 +103,58 @@ func TestValidateKnowledgeUnitForPublicationRejectsRejectedSourceLicense(t *test
 		t.Fatal("expected rejected source license to fail closed")
 	}
 }
+
+func medlineplusUnit(t *testing.T) repository.KnowledgePublicationUnit {
+	t.Helper()
+	unit := publishableUnit(t)
+	unit.UnitKey = "mlp-knee-001"
+	unit.SourceType = "medlineplus_topic"
+	unit.SourceLicenseStatus = "public_domain"
+	unit.Metadata = datatypes.JSON([]byte(`{
+		"embedding_identity": {"provider":"hashing","model":"bodysense-hashing-ngram","dimension":1536,"revision":"sha256-char-word-ngram-v1","fingerprint":"` + testEmbeddingIdentity()["fingerprint"].(string) + `"},
+		"claim_admissibility": {"status":"claim_reviewed","publication_eligible":true},
+		"claim_review": {"decision":"approved","review_status":"reviewed"},
+		"external_evidence_candidates": [{"support_status":"reviewed_support","admissibility_status":"admissible_for_claim_review","license_status":"verified_reuse"}],
+		"source_locator": {"locator_type":"markdown_lines","git_commit":"a127b7e642d929072bb78557a87d17646fb0571e","path":"topics/knee-injuries-and-disorders.md","line_start":7,"line_end":9}
+	}`))
+	return unit
+}
+
+func TestValidateKnowledgeUnitForPublicationAcceptsMedlinePlusTopic(t *testing.T) {
+	if err := ValidateKnowledgeUnitForPublication(medlineplusUnit(t), KnowledgePublicationMinQualityScore); err != nil {
+		t.Fatalf("expected publishable MedlinePlus unit: %v", err)
+	}
+}
+
+func TestValidateKnowledgeUnitForPublicationRejectsLowQualityMedlinePlusTopic(t *testing.T) {
+	unit := medlineplusUnit(t)
+	unit.QualityScore = 0.85
+	if err := ValidateKnowledgeUnitForPublication(unit, KnowledgePublicationMinQualityScore); err == nil {
+		t.Fatal("expected quality floor rejection")
+	}
+}
+
+func TestValidateKnowledgeUnitForPublicationRejectsMedlinePlusTopicWithoutEmbeddingIdentity(t *testing.T) {
+	unit := medlineplusUnit(t)
+	unit.Metadata = datatypes.JSON([]byte(`{
+		"claim_admissibility": {"status":"claim_reviewed","publication_eligible":true},
+		"claim_review": {"decision":"approved","review_status":"reviewed"},
+		"external_evidence_candidates": [{"support_status":"reviewed_support","admissibility_status":"admissible_for_claim_review","license_status":"verified_reuse"}]
+	}`))
+	if err := ValidateKnowledgeUnitForPublication(unit, KnowledgePublicationMinQualityScore); err == nil {
+		t.Fatal("expected incomplete embedding identity rejection")
+	}
+}
+
+func TestValidateKnowledgeUnitForPublicationRejectsMedlinePlusTopicWithoutExternalSupport(t *testing.T) {
+	unit := medlineplusUnit(t)
+	unit.Metadata = datatypes.JSON([]byte(`{
+		"embedding_identity": {"provider":"hashing","model":"bodysense-hashing-ngram","dimension":1536,"revision":"sha256-char-word-ngram-v1","fingerprint":"` + testEmbeddingIdentity()["fingerprint"].(string) + `"},
+		"claim_admissibility": {"status":"claim_reviewed","publication_eligible":true},
+		"claim_review": {"decision":"approved","review_status":"reviewed"},
+		"external_evidence_candidates": []
+	}`))
+	if err := ValidateKnowledgeUnitForPublication(unit, KnowledgePublicationMinQualityScore); err == nil {
+		t.Fatal("expected missing external support rejection")
+	}
+}
