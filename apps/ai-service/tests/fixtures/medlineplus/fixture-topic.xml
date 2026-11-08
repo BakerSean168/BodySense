@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nlmSearchResult>
+  <term>fixture</term>
+  <file>viv_fixture</file>
+  <server>fixture</server>
+  <count>1</count>
+  <retstart>0</retstart>
+  <retmax>1</retmax>
+  <list num="1" start="0" per="1">
+    <document rank="0" url="https://medlineplus.gov/fixturetopic.html">
+      <content name="healthTopic">
+        <health-topic meta-desc="Fixture topic for adapter tests." title="Fixture Topic" url="https://medlineplus.gov/fixturetopic.html" id="9001" language="English" date-created="01/01/2000">
+          <full-summary>&lt;p&gt;The knee joint is made of &lt;span class="qt0"&gt;bone&lt;/span&gt; and &lt;a href="https://medlineplus.gov/cartilage.html"&gt;cartilage&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Knee problems can cause pain.&lt;/p&gt;</full-summary>
+          <group id="1" url="https://medlineplus.gov/fixturegroup.html">Bones, Joints and Muscles</group>
+          <see-reference>Fixture Reference</see-reference>
+          <related-topic id="2" url="https://medlineplus.gov/related.html">Related Fixture Topic</related-topic>
+        </health-topic>
+      </content>
+    </document>
+  </list>
+</nlmSearchResult>
