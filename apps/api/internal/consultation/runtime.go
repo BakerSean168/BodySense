@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,11 +26,32 @@ import (
 
 const (
 	maxSSEEvents = 10000
-	sseTimeout   = 5 * time.Minute
+
+	consultationExecutionTimeoutEnv     = "CONSULTATION_EXECUTION_TIMEOUT_SECONDS"
+	defaultConsultationExecutionTimeout = 5 * time.Minute
 )
 
+// consultationExecutionTimeout resolves the total time budget for one
+// consultation execution. durableExecutionContext applies it to every serial
+// model call (diagnosis, structuring, knowledge tool rounds, final
+// composition) plus all persistence, so a slow provider doing multi-turn work
+// can legitimately exceed the previous fixed five minutes. The environment
+// variable lets a deployment raise the budget without a code change; unset,
+// non-numeric, zero, or negative values keep the safe default.
+func consultationExecutionTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(consultationExecutionTimeoutEnv))
+	if raw == "" {
+		return defaultConsultationExecutionTimeout
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return defaultConsultationExecutionTimeout
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func durableExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(parent), sseTimeout)
+	return context.WithTimeout(context.WithoutCancel(parent), consultationExecutionTimeout())
 }
 
 type ConsultationErrorCode string
