@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.rag.claim_review import (  # noqa: E402  # noqa: E402
+from src.rag.claim_review import (  # noqa: E402
     CLAIM_REVIEW_SCHEMA_VERSION,
     ReviewedKnowledgeUnit,
     apply_claim_review,
@@ -32,6 +32,7 @@ from src.rag.medlineplus_topic import (  # noqa: E402
     load_rendering_plan,
     load_topic_xml,
     load_unit_spec,
+    parse_markdown_sections,
     render_markdown,
     sha256_bytes,
     sha256_text,
@@ -278,11 +279,11 @@ def materialize(args: argparse.Namespace) -> int:
                 "line_count": committed_markdown.count("\n"),
                 "sections": [
                     {
-                        "heading_path": unit.metadata["source_locator"]["heading_path"],
-                        "line_start": unit.metadata["source_locator"]["line_start"],
-                        "line_end": unit.metadata["source_locator"]["line_end"],
+                        "heading_path": section.heading_path,
+                        "line_start": section.line_start,
+                        "line_end": section.line_end,
                     }
-                    for unit in units
+                    for section in parse_markdown_sections(committed_markdown)
                 ],
             }
         ],
