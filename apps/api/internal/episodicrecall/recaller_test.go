@@ -55,9 +55,7 @@ func testNote(text string, createdAt time.Time, sourceIDs ...uuid.UUID) model.Ep
 }
 
 func newTestRecaller(store CandidateStore) *Recaller {
-	r := NewRecaller(store)
-	r.logf = func(string, ...any) {}
-	return r
+	return NewRecaller(store)
 }
 
 func TestRecallRanksByOverlapThenRecency(t *testing.T) {
@@ -150,5 +148,50 @@ func TestRecallRejectsNilOwner(t *testing.T) {
 	}
 	if store.calls != 0 {
 		t.Fatalf("nil owner hit the store %d times, want 0", store.calls)
+	}
+}
+
+// The turn log needs the exact empty reason, so the outcome is part of the
+// recall contract rather than something the caller has to infer.
+func TestRecallTurnReportsContentFreeOutcome(t *testing.T) {
+	now := time.Now().UTC()
+	bad := testNote("膝盖疼", now, uuid.New())
+	bad.SourceMessageIDs = pq.StringArray{"not-a-uuid"}
+	cases := []struct {
+		name  string
+		store *fakeStore
+		owner uuid.UUID
+		query string
+		want  RecallOutcome
+	}{
+		{name: "served", store: &fakeStore{notes: []model.EpisodicNote{testNote("膝盖疼", now, uuid.New())}}, owner: uuid.New(), query: "膝盖", want: OutcomeServed},
+		{name: "no_candidates", store: &fakeStore{}, owner: uuid.New(), query: "膝盖", want: OutcomeNoCandidates},
+		{name: "no_overlap", store: &fakeStore{notes: []model.EpisodicNote{testNote("睡眠很好", now, uuid.New())}}, owner: uuid.New(), query: "膝盖", want: OutcomeNoOverlap},
+		{name: "invalid_provenance", store: &fakeStore{notes: []model.EpisodicNote{bad}}, owner: uuid.New(), query: "膝盖", want: OutcomeInvalidProvenance},
+		{name: "store_error", store: &fakeStore{err: errors.New("db unavailable")}, owner: uuid.New(), query: "膝盖", want: OutcomeStoreError},
+		{name: "empty_query", store: &fakeStore{notes: []model.EpisodicNote{testNote("膝盖", now, uuid.New())}}, owner: uuid.New(), query: "  ", want: OutcomeEmptyQuery},
+		{name: "invalid_owner", store: &fakeStore{notes: []model.EpisodicNote{testNote("膝盖", now, uuid.New())}}, owner: uuid.Nil, query: "膝盖", want: OutcomeInvalidOwner},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := newTestRecaller(tc.store).RecallTurn(context.Background(), tc.owner, tc.query)
+			if got.Outcome != tc.want {
+				t.Fatalf("outcome = %q, want %q", got.Outcome, tc.want)
+			}
+			for _, note := range got.Notes {
+				if note.Text != "" {
+					continue
+				}
+				t.Fatalf("empty note served")
+			}
+		})
+	}
+}
+
+func TestRecallTurnReportsTimeout(t *testing.T) {
+	store := &fakeStore{delay: time.Second, notes: []model.EpisodicNote{testNote("膝盖", time.Now(), uuid.New())}}
+	got := newTestRecaller(store).RecallTurn(context.Background(), uuid.New(), "膝盖")
+	if got.Outcome != OutcomeTimeout || len(got.Notes) != 0 {
+		t.Fatalf("outcome = %q notes = %d, want timeout/0", got.Outcome, len(got.Notes))
 	}
 }

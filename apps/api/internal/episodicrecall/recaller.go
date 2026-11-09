@@ -2,7 +2,7 @@ package episodicrecall
 
 import (
 	"context"
-	"log"
+	"errors"
 	"sort"
 	"strings"
 	"time"
@@ -23,6 +23,42 @@ type RecalledNote struct {
 	Text             string
 	CreatedAt        time.Time
 	Score            int
+}
+
+// RecallOutcome classifies one recall attempt for the structured turn-level
+// log. It carries no note content or user text.
+type RecallOutcome string
+
+const (
+	// OutcomeServed means at least one note was served.
+	OutcomeServed RecallOutcome = "served"
+	// OutcomeNoCandidates means the owner-scoped store returned no rows.
+	OutcomeNoCandidates RecallOutcome = "no_candidates"
+	// OutcomeNoOverlap means candidates existed but none reached MinScore.
+	OutcomeNoOverlap RecallOutcome = "no_overlap"
+	// OutcomeInvalidProvenance means scoring matched but the surviving notes
+	// had no verifiable source message ids, so none could be served.
+	OutcomeInvalidProvenance RecallOutcome = "invalid_provenance"
+	// OutcomeTimeout means the 100 ms budget expired before the store replied.
+	OutcomeTimeout RecallOutcome = "timeout"
+	// OutcomeStoreError means the store returned an error other than timeout.
+	OutcomeStoreError RecallOutcome = "store_error"
+	// OutcomeEmptyQuery means the turn had no subject terms to match.
+	OutcomeEmptyQuery RecallOutcome = "empty_query"
+	// OutcomeInvalidOwner means the caller had no owner to scope by.
+	OutcomeInvalidOwner RecallOutcome = "invalid_owner"
+	// OutcomeDisabled is emitted by the context assembly when the switch is
+	// off and no recaller is attached; the recaller itself never returns it.
+	OutcomeDisabled RecallOutcome = "disabled"
+)
+
+// RecallResult is the complete, content-free result of one attempt.
+type RecallResult struct {
+	Notes      []RecalledNote
+	Outcome    RecallOutcome
+	Candidates int
+	Elapsed    time.Duration
+	Err        error
 }
 
 // CandidateStore is the only data dependency of the recall path. The SQL
@@ -71,7 +107,6 @@ type Recaller struct {
 	topK     int
 	minScore int
 	limit    int
-	logf     func(format string, args ...any)
 }
 
 func NewRecaller(store CandidateStore) *Recaller {
@@ -81,19 +116,37 @@ func NewRecaller(store CandidateStore) *Recaller {
 		topK:     TopK,
 		minScore: MinScore,
 		limit:    CandidateLimit,
-		logf:     log.Printf,
 	}
 }
 
 // Recall returns the most relevant notes for one owner and one query turn.
 // Timeout, cancellation and any store error all degrade to an empty result.
 func (r *Recaller) Recall(ctx context.Context, owner uuid.UUID, query string) []RecalledNote {
-	if r == nil || r.store == nil || owner == uuid.Nil {
-		return nil
+	return r.RecallTurn(ctx, owner, query).Notes
+}
+
+// RecallTurn is Recall plus the content-free outcome used by the structured
+// turn log. Callers that only need notes should keep using Recall.
+func (r *Recaller) RecallTurn(ctx context.Context, owner uuid.UUID, query string) RecallResult {
+	started := time.Now()
+	result := func(outcome RecallOutcome, notes []RecalledNote, candidates int, err error) RecallResult {
+		return RecallResult{
+			Notes:      notes,
+			Outcome:    outcome,
+			Candidates: candidates,
+			Elapsed:    time.Since(started),
+			Err:        err,
+		}
+	}
+	if r == nil || r.store == nil {
+		return result(OutcomeDisabled, nil, 0, nil)
+	}
+	if owner == uuid.Nil {
+		return result(OutcomeInvalidOwner, nil, 0, nil)
 	}
 	tokens := QueryTokens(query)
 	if len(tokens) == 0 {
-		return nil
+		return result(OutcomeEmptyQuery, nil, 0, nil)
 	}
 
 	callCtx, cancel := context.WithTimeout(ctx, r.timeout)
@@ -101,16 +154,16 @@ func (r *Recaller) Recall(ctx context.Context, owner uuid.UUID, query string) []
 
 	notes, err := r.store.ListOwnedRecallCandidates(callCtx, owner, r.limit)
 	if err != nil {
-		if r.logf != nil {
-			r.logf("episodic recall degraded for user %s: %v", owner, err)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			return result(OutcomeTimeout, nil, 0, err)
 		}
-		return nil
+		return result(OutcomeStoreError, nil, 0, err)
 	}
 	if callCtx.Err() != nil {
-		if r.logf != nil {
-			r.logf("episodic recall timed out for user %s", owner)
-		}
-		return nil
+		return result(OutcomeTimeout, nil, len(notes), callCtx.Err())
+	}
+	if len(notes) == 0 {
+		return result(OutcomeNoCandidates, nil, 0, nil)
 	}
 
 	type scored struct {
@@ -124,6 +177,9 @@ func (r *Recaller) Recall(ctx context.Context, owner uuid.UUID, query string) []
 			continue
 		}
 		ranked = append(ranked, scored{note: note, score: score})
+	}
+	if len(ranked) == 0 {
+		return result(OutcomeNoOverlap, nil, len(notes), nil)
 	}
 	// Deterministic ranking: relevance first, then newest, then id, so equal
 	// scores never depend on database row order.
@@ -166,5 +222,8 @@ func (r *Recaller) Recall(ctx context.Context, owner uuid.UUID, query string) []
 			Score:            item.score,
 		})
 	}
-	return out
+	if len(out) == 0 {
+		return result(OutcomeInvalidProvenance, nil, len(notes), nil)
+	}
+	return result(OutcomeServed, out, len(notes), nil)
 }
