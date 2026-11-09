@@ -13,6 +13,7 @@ import (
 	"github.com/bodysense/api/internal/auth"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
+	"github.com/bodysense/api/internal/episodicrecall"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
@@ -251,6 +252,13 @@ func main() {
 		nativeDiagnosisReader,
 		outcomeService,
 	)
+	// S4: the recall path is attached only when the default-off switch is on.
+	// With it off the Runtime holds a nil recaller: no query, no payload field.
+	if episodicrecall.EpisodicRecallEnabledFromEnv(os.Getenv) {
+		consultationRuntime.AttachEpisodicRecall(
+			episodicrecall.NewRecaller(repository.NewEpisodicRecallRepository(database.DB)),
+		)
+	}
 	consultationRolloutRepo := repository.NewConsultationRolloutRepository(database.DB)
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
