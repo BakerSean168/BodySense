@@ -210,7 +210,8 @@ ORDER BY m.seq`, conversationID, start, throughSeq).Scan(&rows).Error
 		if seg.Eligible {
 			seg.Messages = make([]EpisodicDistillationMessage, len(grp))
 			for i, row := range grp {
-				seg.Messages[i] = EpisodicDistillationMessage{ID: row.ID, Seq: row.Seq, Role: row.Role, Text: row.ContentText}
+				text, _, _ := episodicSourceText(row.Parts, row.ContentText)
+				seg.Messages[i] = EpisodicDistillationMessage{ID: row.ID, Seq: row.Seq, Role: row.Role, Text: text}
 			}
 			seg.Context = distillationContext(rows, from, owner, conversationID, tombstones)
 		}
@@ -255,6 +256,11 @@ func groupTurns(rows []episodicDistillationRow) ([]uuid.UUID, map[uuid.UUID][]ep
 // evaluateDistillationGroup is intentionally narrower than SaveShadowDraft:
 // S2-B1 only proposes an exact whole user message from a two-message turn.
 // The repository write remains the authoritative check under the row lock.
+//
+// Source text is read through episodicSourceText so the planner admits the
+// shapes the runtime actually persists. In particular the user's body may
+// live only in text parts, and the assistant's parts may carry quotes; only
+// the user message has to be pure text because only it can be quoted.
 func evaluateDistillationGroup(
 	grp []episodicDistillationRow, owner, conversationID uuid.UUID, tombstones []seqRange,
 ) (bool, string) {
@@ -279,13 +285,21 @@ func evaluateDistillationGroup(
 		default:
 			return false, "unsupported_role"
 		}
-		if row.Parts != "[]" {
+		text, pureText, ok := episodicSourceText(row.Parts, row.ContentText)
+		if !ok {
+			return false, "invalid_source"
+		}
+		// Only the user message is a quotable source, so only it must be
+		// pure text. Assistant replies may carry non-text parts (quotes
+		// and similar) because assistant content is never a quote source;
+		// the writer still constrains every quote to a user message.
+		if row.Role == "user" && !pureText {
 			return false, "multimodal_source"
 		}
-		if row.ContentBytes == 0 || strings.TrimSpace(row.ContentText) == "" {
+		if strings.TrimSpace(text) == "" {
 			return false, "empty_source"
 		}
-		if strings.TrimSpace(row.ContentText) != row.ContentText {
+		if strings.TrimSpace(text) != text {
 			return false, "padded_source"
 		}
 		if row.RunStatus != nil && *row.RunStatus != "completed" {
@@ -299,7 +313,7 @@ func evaluateDistillationGroup(
 		if row.ClinicalRefs != 0 {
 			return false, "clinical_source"
 		}
-		size := utf8.RuneCountInString(row.ContentText)
+		size := utf8.RuneCountInString(text)
 		if size > EpisodicShadowSourceMaxRunes {
 			return false, "oversized_source"
 		}
