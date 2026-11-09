@@ -50,7 +50,23 @@ func main() {
 	fixturePath := flag.String("fixtures", filepath.Join("benchmarks", "episodic", "fixtures", "queries.json"), "query fixture path")
 	outPath := flag.String("out", filepath.Join("benchmarks", "episodic", "results", "benchmark.json"), "result JSON path")
 	writeFix := flag.Bool("write-fixtures", false, "regenerate the committed query fixture and exit (no database needed)")
+	s4Eval := flag.Bool("s4-eval", false, "score the synthetic S4 recall fixture and exit (no database needed)")
+	s4Path := flag.String("s4-fixtures", filepath.Join("benchmarks", "episodic", "fixtures", "s4_multiweek.json"), "S4 recall fixture path")
 	flag.Parse()
+
+	if *s4Eval {
+		fx, err := loadS4Fixture(*s4Path)
+		if err != nil {
+			fail(fmt.Errorf("load S4 fixture: %w", err))
+		}
+		report := runS4Eval(fx)
+		raw, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			fail(err)
+		}
+		fmt.Println(string(raw))
+		return
+	}
 
 	c := buildCorpus(*seed, *users, *weeks)
 	if *writeFix {
