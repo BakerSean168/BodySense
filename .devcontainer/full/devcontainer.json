@@ -1,0 +1,58 @@
+{
+  "name": "BodySense - Codespaces Full",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24.22.1",
+      "pnpmVersion": "11.27.1",
+      "nodeGypDependencies": true
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.26.0",
+      "golangciLintVersion": "none"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "oxc.oxc-vscode",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "golang.go",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github"
+      ],
+      "settings": {
+        "files.eol": "\n",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "forwardPorts": [5173, 8080, 8000],
+  "portsAttributes": {
+    "5173": {
+      "label": "BodySense Web",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "Local PostgreSQL",
+      "onAutoForward": "ignore"
+    },
+    "8000": {
+      "label": "Python AI Service",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Go API",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh --full-check"
+}
