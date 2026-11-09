@@ -26,6 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -192,15 +193,16 @@ func main() {
 	// moves no cursor until the ai-service checkpoint cleanup is verified.
 	// Slice 3: Run settlement reconciles P and the token-budget C, and
 	// enqueues a prune job once C - 1 and P are both past R.
-	// S2: the HTTP proposer is constructed only while the default-off switch
-	// is on. With the switch off the trigger keeps its previous inert shape
-	// (nil proposer, one log line, no model traffic).
+	// S2: the HTTP proposer and the writer admission gate are wired only while
+	// the default-off switch is on. With the switch off the trigger keeps its
+	// previous inert shape (nil proposer, disabled writer, one log line, no
+	// model traffic).
 	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
 		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv)).
 		WithEpisodicDistillation(service.NewEpisodicDistillationTriggerFromEnv(
 			os.Getenv,
 			repository.NewEpisodicDistillationRepository(database.DB),
-			repository.NewEpisodicShadowRepository(database.DB),
+			episodicShadowWriterFromEnv(os.Getenv, database.DB),
 			episodicShadowProposerFromEnv(os.Getenv, aiClient),
 		))
 	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
@@ -419,6 +421,21 @@ func episodicShadowProposerFromEnv(
 		return nil
 	}
 	return service.NewEpisodicShadowHTTPProposer(client)
+}
+
+// episodicShadowWriterFromEnv enables admission on the shadow writer only while
+// the same default-off switch is on. NewEpisodicShadowRepository stays
+// disabled by default, so without this step every real selection is rejected
+// with ErrEpisodicShadowDisabled and never persists. With the switch off the
+// writer keeps its disabled semantics.
+func episodicShadowWriterFromEnv(
+	getenv func(string) string, db *gorm.DB,
+) *repository.EpisodicShadowRepository {
+	writer := repository.NewEpisodicShadowRepository(db)
+	if service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return writer.WithShadowAdmissionEnabled(true)
+	}
+	return writer
 }
 
 func startRunLeaseReconciler(
