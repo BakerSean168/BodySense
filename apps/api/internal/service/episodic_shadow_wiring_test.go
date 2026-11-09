@@ -85,3 +85,13 @@ func TestNewEpisodicDistillationTriggerWiresConfiguredTimeouts(t *testing.T) {
 		t.Fatalf("passBudget = %s, want 900s", trigger.passBudget)
 	}
 }
+
+// A writer left at its default-off admission is a wiring fault, not a model
+// failure: it must terminate the segment as admission_disabled instead of
+// being retried as model_error.
+func TestEpisodicFailureReasonClassifiesDisabledAdmission(t *testing.T) {
+	reason, terminal := episodicFailureReason(repository.ErrEpisodicShadowDisabled)
+	if reason != "admission_disabled" || !terminal {
+		t.Fatalf("reason = %q, terminal = %v, want admission_disabled and terminal", reason, terminal)
+	}
+}

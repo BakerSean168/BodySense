@@ -359,6 +359,8 @@ func episodicFailureReason(err error) (string, bool) {
 		return "timeout", false
 	case errors.Is(err, ErrEpisodicShadowProposalFailed):
 		return "model_error", false
+	case errors.Is(err, repository.ErrEpisodicShadowDisabled):
+		return "admission_disabled", true
 	case errors.Is(err, repository.ErrEpisodicNoteUserDeleted):
 		return "user_deleted", true
 	case errors.Is(err, repository.ErrEpisodicDraftConflict):
