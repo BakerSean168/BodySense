@@ -1,5 +1,8 @@
+import datetime
+
 from src.generated.runtimeproto.buf.validate import validate_pb2 as _validate_pb2
 from google.protobuf import struct_pb2 as _struct_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -107,7 +110,7 @@ class ConsultationSpatialContext(_message.Message):
     def __init__(self, body_region_id: _Optional[str] = ..., body_region_label: _Optional[str] = ..., anatomy_id: _Optional[str] = ..., anatomy_name: _Optional[str] = ..., body_region_ids: _Optional[_Iterable[str]] = ..., reference_motion: _Optional[_Union[ConsultationReferenceMotion, _Mapping]] = ...) -> None: ...
 
 class ConsultationBusinessContext(_message.Message):
-    __slots__ = ("profile", "body_state", "runtime_state", "relevant_history", "current_diagnosis", "current_treatment", "recent_outcomes", "spatial_context", "posture_analysis", "context_window")
+    __slots__ = ("profile", "body_state", "runtime_state", "relevant_history", "current_diagnosis", "current_treatment", "recent_outcomes", "spatial_context", "posture_analysis", "context_window", "episodic_notes")
     PROFILE_FIELD_NUMBER: _ClassVar[int]
     BODY_STATE_FIELD_NUMBER: _ClassVar[int]
     RUNTIME_STATE_FIELD_NUMBER: _ClassVar[int]
@@ -118,6 +121,7 @@ class ConsultationBusinessContext(_message.Message):
     SPATIAL_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     POSTURE_ANALYSIS_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_WINDOW_FIELD_NUMBER: _ClassVar[int]
+    EPISODIC_NOTES_FIELD_NUMBER: _ClassVar[int]
     profile: _struct_pb2.Struct
     body_state: _struct_pb2.Struct
     runtime_state: ConsultationRuntimeState
@@ -128,7 +132,26 @@ class ConsultationBusinessContext(_message.Message):
     spatial_context: ConsultationSpatialContext
     posture_analysis: _struct_pb2.Struct
     context_window: ConsultationContextWindow
-    def __init__(self, profile: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., body_state: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., runtime_state: _Optional[_Union[ConsultationRuntimeState, _Mapping]] = ..., relevant_history: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., current_diagnosis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., current_treatment: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., recent_outcomes: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., spatial_context: _Optional[_Union[ConsultationSpatialContext, _Mapping]] = ..., posture_analysis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., context_window: _Optional[_Union[ConsultationContextWindow, _Mapping]] = ...) -> None: ...
+    episodic_notes: _containers.RepeatedCompositeFieldContainer[ConsultationEpisodicNote]
+    def __init__(self, profile: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., body_state: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., runtime_state: _Optional[_Union[ConsultationRuntimeState, _Mapping]] = ..., relevant_history: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., current_diagnosis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., current_treatment: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., recent_outcomes: _Optional[_Iterable[_Union[_struct_pb2.Struct, _Mapping]]] = ..., spatial_context: _Optional[_Union[ConsultationSpatialContext, _Mapping]] = ..., posture_analysis: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., context_window: _Optional[_Union[ConsultationContextWindow, _Mapping]] = ..., episodic_notes: _Optional[_Iterable[_Union[ConsultationEpisodicNote, _Mapping]]] = ...) -> None: ...
+
+class ConsultationEpisodicNote(_message.Message):
+    __slots__ = ("note_id", "from_seq", "to_seq", "source_message_ids", "created_at", "text", "authority")
+    NOTE_ID_FIELD_NUMBER: _ClassVar[int]
+    FROM_SEQ_FIELD_NUMBER: _ClassVar[int]
+    TO_SEQ_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_MESSAGE_IDS_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    AUTHORITY_FIELD_NUMBER: _ClassVar[int]
+    note_id: str
+    from_seq: int
+    to_seq: int
+    source_message_ids: _containers.RepeatedScalarFieldContainer[str]
+    created_at: _timestamp_pb2.Timestamp
+    text: str
+    authority: str
+    def __init__(self, note_id: _Optional[str] = ..., from_seq: _Optional[int] = ..., to_seq: _Optional[int] = ..., source_message_ids: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., text: _Optional[str] = ..., authority: _Optional[str] = ...) -> None: ...
 
 class ConsultationContextWindow(_message.Message):
     __slots__ = ("context_start_seq", "run_ids")

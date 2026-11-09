@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"sort"
@@ -952,24 +953,9 @@ func (r *Runtime) buildBusinessContext(
 	// bounds itself by the 100ms budget and degrades to an empty slice, so this
 	// block can never fail, block or delay the clinical paths below.
 	if r.episodicRecall != nil {
-		if notes := r.episodicRecall.Recall(ctx, uid, queryText); len(notes) > 0 {
-			bc.EpisodicNotes = make([]service.ConsultationEpisodicNote, 0, len(notes))
-			for _, note := range notes {
-				sourceIDs := make([]string, len(note.SourceMessageIDs))
-				for i, id := range note.SourceMessageIDs {
-					sourceIDs[i] = id.String()
-				}
-				bc.EpisodicNotes = append(bc.EpisodicNotes, service.ConsultationEpisodicNote{
-					NoteID:           note.ID.String(),
-					FromSeq:          note.FromSeq,
-					ToSeq:            note.ToSeq,
-					SourceMessageIDs: sourceIDs,
-					CreatedAt:        note.CreatedAt,
-					Text:             note.Text,
-					Authority:        service.ConsultationEpisodicNoteAuthority,
-				})
-			}
-		}
+		r.attachRecalledEpisodicNotes(ctx, uid, conversationID, queryText, &bc)
+	} else {
+		r.logEpisodicRecall(uid, conversationID, episodicrecall.RecallResult{Outcome: episodicrecall.OutcomeDisabled})
 	}
 	if r.diagnosisReader != nil {
 		if diagnosis, err := r.diagnosisReader.Read(ctx, uid); err != nil {
@@ -999,6 +985,69 @@ func (r *Runtime) buildBusinessContext(
 		bc.PostureAnalysis = raw
 	}
 	return bc
+}
+
+// attachRecalledEpisodicNotes adds the served notes to the non-clinical
+// business context and always emits one content-free structured record. The
+// record makes the serving boundary observable: a "served" outcome with an
+// empty runtime payload means a later projection dropped the notes.
+func (r *Runtime) attachRecalledEpisodicNotes(
+	ctx context.Context,
+	uid uuid.UUID,
+	conversationID uuid.UUID,
+	queryText string,
+	bc *service.ConsultationBusinessContext,
+) {
+	result := r.episodicRecall.RecallTurn(ctx, uid, queryText)
+	r.logEpisodicRecall(uid, conversationID, result)
+	if len(result.Notes) == 0 {
+		return
+	}
+	bc.EpisodicNotes = make([]service.ConsultationEpisodicNote, 0, len(result.Notes))
+	for _, note := range result.Notes {
+		sourceIDs := make([]string, len(note.SourceMessageIDs))
+		for i, id := range note.SourceMessageIDs {
+			sourceIDs[i] = id.String()
+		}
+		bc.EpisodicNotes = append(bc.EpisodicNotes, service.ConsultationEpisodicNote{
+			NoteID:           note.ID.String(),
+			FromSeq:          note.FromSeq,
+			ToSeq:            note.ToSeq,
+			SourceMessageIDs: sourceIDs,
+			CreatedAt:        note.CreatedAt,
+			Text:             note.Text,
+			Authority:        service.ConsultationEpisodicNoteAuthority,
+		})
+	}
+}
+
+// logEpisodicRecall emits the S4 serving outcome. It carries ids and counts
+// only: never note text and never the user's message.
+func (r *Runtime) logEpisodicRecall(uid, conversationID uuid.UUID, result episodicrecall.RecallResult) {
+	level := slog.LevelInfo
+	switch result.Outcome {
+	case episodicrecall.OutcomeTimeout, episodicrecall.OutcomeStoreError, episodicrecall.OutcomeInvalidProvenance:
+		level = slog.LevelWarn
+	}
+	noteIDs := make([]string, len(result.Notes))
+	for i, note := range result.Notes {
+		noteIDs[i] = note.ID.String()
+	}
+	attrs := []any{
+		"outcome", string(result.Outcome),
+		"served", len(result.Notes),
+		"candidates", result.Candidates,
+		"elapsed_ms", result.Elapsed.Milliseconds(),
+		"user_id", uid.String(),
+		"conversation_id", conversationID.String(),
+	}
+	if len(noteIDs) > 0 {
+		attrs = append(attrs, "note_ids", noteIDs)
+	}
+	if result.Err != nil {
+		attrs = append(attrs, "error", result.Err.Error())
+	}
+	slog.Default().Log(context.Background(), level, "episodic_recall", attrs...)
 }
 
 // consultationContextWindow reads Go's retention context cursor for the turn.
