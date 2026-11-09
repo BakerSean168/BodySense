@@ -173,6 +173,55 @@ func TestEpisodicDistillationPruneBoundaryCreatesShadowNotePostgres(t *testing.T
 	}
 }
 
+// The runtime persistence shape (user body only in a text part with empty
+// content_text, assistant body in content_text beside a quote part) must flow
+// through generation, Go quote validation and the locked write.
+func TestEpisodicDistillationRuntimeSourceShapeCreatesShadowNotePostgres(t *testing.T) {
+	f := newPruneJobFixture(t)
+	ctx := context.Background()
+	f.addTurn("completed")
+	f.addTurn("completed")
+	f.addTurn("completed")
+	ids := f.messageIDs(1, 6)
+	f.exec(`UPDATE messages SET content_text='', parts='[{"text":"请简短回答。","type":"text"}]'::jsonb WHERE id=?`,
+		ids[2])
+	f.exec(`UPDATE messages SET parts=?::jsonb WHERE id=?`,
+		`[{"type":"quote","message_id":"`+ids[2].String()+`"},{"type":"text","text":"请简短回答。"}]`,
+		ids[3])
+	f.advance(4, 5)
+
+	proposer := &fakeEpisodicProposer{quote: true}
+	f.attachDistillation(proposer, true)
+	receipt, err := f.svc.Prune(ctx, f.owner)
+	if err != nil || receipt == nil || receipt.PrunedThroughSeq != 4 {
+		t.Fatalf("prune receipt=%+v err=%v", receipt, err)
+	}
+	if f.noteCount() != 1 {
+		t.Fatalf("notes=%d, want one", f.noteCount())
+	}
+	var note model.EpisodicNote
+	if err := f.db.Where("user_id = ?", f.owner).Take(&note).Error; err != nil {
+		t.Fatal(err)
+	}
+	if note.FromSeq != 3 || note.ToSeq != 4 || note.ContentText != "对话偏好：回答简短。" ||
+		len(note.SourceMessageIDs) != 2 || note.SourceMessageIDs[0] != ids[2].String() ||
+		note.SourceMessageIDs[1] != ids[3].String() {
+		t.Fatalf("note provenance=%+v", note)
+	}
+	calls := proposer.snapshot()
+	if len(calls) != 2 || len(calls[1].Source) != 2 ||
+		calls[1].Source[0].Text != "请简短回答。" ||
+		calls[1].Source[1].Text != "synthetic" {
+		t.Fatalf("canonical source handed to the proposer=%+v", calls)
+	}
+	if status, reason, _ := f.ledger(3, 4); status != repository.EpisodicDistillationDistilled || reason != "persisted" {
+		t.Fatalf("ledger=%s/%s", status, reason)
+	}
+	if f.distilled() != 4 {
+		t.Fatalf("watermark=%d, want 4", f.distilled())
+	}
+}
+
 // Clinical, multimodal and unsupported turns are skipped without a model
 // call; the prune still deletes every source row on schedule.
 func TestEpisodicDistillationIneligibleSegmentsDoNotCallTheModelPostgres(t *testing.T) {
