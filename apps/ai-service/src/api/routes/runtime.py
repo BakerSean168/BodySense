@@ -170,6 +170,10 @@ class BusinessContext(BaseModel):
     body_state: dict[str, Any] = Field(default_factory=dict)
     runtime_state: ConsultationRuntimeState = Field(default_factory=ConsultationRuntimeState)
     relevant_history: list[dict[str, Any]] = Field(default_factory=list)
+    # S4 real-time recall: non-authoritative narrative notes with provenance.
+    # Absent/empty is today's behavior. Never used by Diagnosis, Safety or
+    # TrainingPlan inputs.
+    episodic_notes: list[dict[str, Any]] = Field(default_factory=list, max_length=8)
     current_diagnosis: dict[str, Any] = Field(default_factory=dict)
     current_treatment: dict[str, Any] = Field(default_factory=dict)
     recent_outcomes: list[dict[str, Any]] = Field(default_factory=list)
@@ -417,6 +421,7 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
                 phase=request.business_context.runtime_state.phase,
                 posture_analysis=request.business_context.posture_analysis,
                 relevant_history=request.business_context.relevant_history,
+                episodic_notes=request.business_context.episodic_notes,
                 current_diagnosis=request.business_context.current_diagnosis,
                 current_treatment=request.business_context.current_treatment,
                 recent_outcomes=request.business_context.recent_outcomes,
@@ -554,6 +559,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
                 profile=request.business_context.profile,
                 body_state=request.business_context.body_state,
                 relevant_history=request.business_context.relevant_history,
+                episodic_notes=request.business_context.episodic_notes,
                 current_diagnosis=request.business_context.current_diagnosis,
                 current_treatment=request.business_context.current_treatment,
                 recent_outcomes=request.business_context.recent_outcomes,

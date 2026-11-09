@@ -13,6 +13,7 @@ import (
 	"github.com/bodysense/api/internal/auth"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
+	"github.com/bodysense/api/internal/episodicrecall"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
@@ -26,6 +27,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -192,16 +194,17 @@ func main() {
 	// moves no cursor until the ai-service checkpoint cleanup is verified.
 	// Slice 3: Run settlement reconciles P and the token-budget C, and
 	// enqueues a prune job once C - 1 and P are both past R.
+	// S2: the HTTP proposer and the writer admission gate are wired only while
+	// the default-off switch is on. With the switch off the trigger keeps its
+	// previous inert shape (nil proposer, disabled writer, one log line, no
+	// model traffic).
 	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
 		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv)).
-		// S2 wiring exists but is inert: EPISODIC_SHADOW_GENERATION_ENABLED
-		// alone cannot generate because no approved model proposer is
-		// connected, and the shadow writer stays admission-disabled.
 		WithEpisodicDistillation(service.NewEpisodicDistillationTriggerFromEnv(
 			os.Getenv,
 			repository.NewEpisodicDistillationRepository(database.DB),
-			repository.NewEpisodicShadowRepository(database.DB),
-			nil,
+			episodicShadowWriterFromEnv(os.Getenv, database.DB),
+			episodicShadowProposerFromEnv(os.Getenv, aiClient),
 		))
 	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
@@ -249,6 +252,13 @@ func main() {
 		nativeDiagnosisReader,
 		outcomeService,
 	)
+	// S4: the recall path is attached only when the default-off switch is on.
+	// With it off the Runtime holds a nil recaller: no query, no payload field.
+	if episodicrecall.EpisodicRecallEnabledFromEnv(os.Getenv) {
+		consultationRuntime.AttachEpisodicRecall(
+			episodicrecall.NewRecaller(repository.NewEpisodicRecallRepository(database.DB)),
+		)
+	}
 	consultationRolloutRepo := repository.NewConsultationRolloutRepository(database.DB)
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
@@ -407,6 +417,33 @@ func resolveAPIListenAddress(host, port string) string {
 		port = "8080"
 	}
 	return net.JoinHostPort(host, port)
+}
+
+// episodicShadowProposerFromEnv wires the S2 HTTP proposer only while the
+// explicit, default-off switch is on. A falsy or absent value returns a nil
+// proposer, which keeps NewEpisodicDistillationTriggerFromEnv inert.
+func episodicShadowProposerFromEnv(
+	getenv func(string) string, client *service.AIClient,
+) service.EpisodicShadowProposer {
+	if !service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return nil
+	}
+	return service.NewEpisodicShadowHTTPProposer(client)
+}
+
+// episodicShadowWriterFromEnv enables admission on the shadow writer only while
+// the same default-off switch is on. NewEpisodicShadowRepository stays
+// disabled by default, so without this step every real selection is rejected
+// with ErrEpisodicShadowDisabled and never persists. With the switch off the
+// writer keeps its disabled semantics.
+func episodicShadowWriterFromEnv(
+	getenv func(string) string, db *gorm.DB,
+) *repository.EpisodicShadowRepository {
+	writer := repository.NewEpisodicShadowRepository(db)
+	if service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return writer.WithShadowAdmissionEnabled(true)
+	}
+	return writer
 }
 
 func startRunLeaseReconciler(

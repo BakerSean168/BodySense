@@ -54,6 +54,31 @@ def test_start_turn_proto_boundary_rejects_path_identity_mismatch() -> None:
         parse_start_turn_command("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", CORPUS["start_turn"])
 
 
+def test_start_turn_proto_boundary_preserves_episodic_notes() -> None:
+    command = json.loads(json.dumps(CORPUS["start_turn"]))
+    command["business_context"]["episodic_notes"] = [
+        {
+            "note_id": "77777777-7777-4777-8777-777777777777",
+            "from_seq": 11,
+            "to_seq": 12,
+            "source_message_ids": ["88888888-8888-4888-8888-888888888888"],
+            "created_at": "2026-11-09T08:00:00Z",
+            "text": "用户提到周末去了早市买菜。",
+            "authority": "narrative_non_authoritative",
+        }
+    ]
+
+    runtime_input = parse_start_turn_command(command["thread_id"], command)
+
+    notes = runtime_input["business_context"]["episodic_notes"]
+    assert len(notes) == 1
+    assert notes[0]["note_id"] == "77777777-7777-4777-8777-777777777777"
+    assert notes[0]["text"] == "用户提到周末去了早市买菜。"
+    assert notes[0]["authority"] == "narrative_non_authoritative"
+    assert notes[0]["source_message_ids"] == ["88888888-8888-4888-8888-888888888888"]
+    assert notes[0]["created_at"].startswith("2026-11-09")
+
+
 def test_resume_proto_boundary_projects_to_runtime_input() -> None:
     command = CORPUS["resume_interrupt"]
     runtime_input = parse_resume_interrupt_command(

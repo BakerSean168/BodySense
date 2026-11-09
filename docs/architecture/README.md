@@ -40,5 +40,6 @@
 - [知识库生命周期](./knowledge-lifecycle-architecture.md)
 - [知识扩展 Stage A 调研：基线、需求与参考架构](./knowledge-expansion-stage-a.md)
 - [知识扩展 Stage B 盘点与候选目录](./knowledge-expansion-stage-b-inventory.md)
+- [MedlinePlus 健康主题 XML 适配器](./medlineplus-topic-adapter.md)
 
 运行细节以真实代码、API 契约和数据库迁移为准。产品规格中的逻辑对象、字段、工具名是要实现和验证的目标。

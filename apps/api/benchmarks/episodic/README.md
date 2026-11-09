@@ -44,11 +44,35 @@ go run ./benchmarks/episodic -write-fixtures
 BODYSENSE_EPISODIC_BENCH_DSN='postgres://postgres:benchlocal@127.0.0.1:55432/bodysense_bench?sslmode=disable' \
   GIT_COMMIT=$(git rev-parse HEAD) \
   go run ./benchmarks/episodic
+
+# 4. Score the S4 real-time recall fixture (no database needed)
+go run ./benchmarks/episodic -s4-eval
 ```
 
 The run writes `results/benchmark.json` and prints one line per cap/mode and
 per recall slice. The harness deletes and re-seeds its own synthetic users on
 every cap/mode, so repeated runs are deterministic apart from latency.
+
+## S4 real-time recall fixture
+
+`fixtures/s4_multiweek.json` is a six-week, two-user synthetic conversation
+set with 28 notes and 19 later queries (three deliberately paraphrase-only so
+the metric is not trivially 1.0). It exercises the shipping
+`internal/episodicrecall` scorer — same tokenizer, top-8 cap, score>=1
+threshold and 100ms budget — through an in-memory candidate store.
+
+- `recall_at_k` / `hit_rate_at_k` are computed over queries with an expected
+  note; the fixture gate is >= 0.80 (ADR Stage 2).
+- `ghost_hits` counts recalled notes whose source range is covered by an S6-A
+  deletion tombstone and must be 0.
+- `naive_control_ghost_hits` reruns without the tombstone exclusion; it must be
+  > 0, proving the fixture contains a genuine deleted-note ghost risk rather
+  than passing by construction.
+- Latency is in-process scoring only; the PostgreSQL round trip is measured by
+  the runtime path and is bounded by the same 100ms hard timeout.
+
+`go test ./benchmarks/episodic -run TestS4SyntheticMultiweekRecall -v` runs the
+same fixture and asserts the gates.
 
 ## Committed data
 

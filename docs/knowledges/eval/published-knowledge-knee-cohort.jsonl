@@ -1,0 +1,12 @@
+{"case_id": "knee-pos-01", "query": "膝盖疼通常和哪些结构有关？", "expect": "hit", "expected_unit_key": "mlp-knee-001", "expected_claim_id": "mlc-knee-f0cb221ab484", "expected_evidence_terms": ["骨骼", "软骨", "韧带", "关节液"]}
+{"case_id": "knee-pos-02", "query": "膝关节问题是怎么产生的？", "expect": "hit", "expected_unit_key": "mlp-knee-003", "expected_claim_id": "mlc-knee-fa9b13047d97", "expected_evidence_terms": ["受伤", "疾病"]}
+{"case_id": "knee-pos-03", "query": "膝关节问题会影响日常活动吗？", "expect": "hit", "expected_unit_key": "mlp-knee-006", "expected_claim_id": "mlc-knee-91708e596ee0", "expected_evidence_terms": ["参加运动", "站起来", "走路"]}
+{"case_id": "knee-pos-04", "query": "影响膝关节最常见的疾病是什么？", "expect": "hit", "expected_unit_key": "mlp-knee-007", "expected_claim_id": "mlc-knee-e23d1a7027f4", "expected_evidence_terms": ["骨关节炎", "最常见"]}
+{"case_id": "knee-pos-05", "query": "前交叉韧带通常是怎么受伤的？", "expect": "hit", "expected_unit_key": "mlp-knee-011", "expected_claim_id": "mlc-knee-7234abac5532", "expected_evidence_terms": ["突然扭转"]}
+{"case_id": "knee-pos-06", "query": "膝关节问题的治疗由什么决定？", "expect": "hit", "expected_unit_key": "mlp-knee-013", "expected_claim_id": "mlc-knee-1a041e39e510", "expected_evidence_terms": ["治疗取决于", "原因"]}
+{"case_id": "knee-neg-01", "query": "半月板撕裂必须做手术吗？", "expect": "no_result"}
+{"case_id": "knee-neg-02", "query": "膝盖红肿发热还发烧，需要马上去医院吗？", "expect": "no_result"}
+{"case_id": "knee-neg-03", "query": "腰椎间盘突出需要手术吗？", "expect": "no_result"}
+{"case_id": "knee-neg-04", "query": "术后第三天怎么开始康复训练？", "expect": "no_result"}
+{"case_id": "knee-neg-05", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "knee-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}

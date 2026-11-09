@@ -4,6 +4,7 @@ package bodysense.runtime.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1";
 
@@ -88,6 +89,28 @@ message ConsultationBusinessContext {
   // Go's chat retention context cursor. Absent only when Go could not read
   // it; the runtime then falls back to its own bounded history.
   optional ConsultationContextWindow context_window = 10;
+  // S4 real-time episodic recall. Each note is a non-authoritative narrative
+  // with provenance; the runtime renders it under a separate heading and must
+  // never feed it to Diagnosis, Safety or TrainingPlan inputs. Empty means
+  // today's exact behavior.
+  repeated ConsultationEpisodicNote episodic_notes = 11;
+}
+
+// ConsultationEpisodicNote is one recalled note crossing the Go -> Python
+// serving boundary. Go has already filtered tombstones, owner scope, relevance
+// and the 100 ms budget; the text is the stored canonical note, never rewritten.
+message ConsultationEpisodicNote {
+  string note_id = 1 [(buf.validate.field).string.uuid = true];
+  uint32 from_seq = 2 [(buf.validate.field).uint32.gte = 1];
+  uint32 to_seq = 3 [(buf.validate.field).uint32.gte = 1];
+  repeated string source_message_ids = 4 [(buf.validate.field).repeated = {
+    min_items: 1,
+    max_items: 128,
+    items: {string: {uuid: true}}
+  }];
+  google.protobuf.Timestamp created_at = 5 [(buf.validate.field).required = true];
+  string text = 6 [(buf.validate.field).string = {min_len: 1, max_len: 4096}];
+  string authority = 7 [(buf.validate.field).string.const = "narrative_non_authoritative"];
 }
 
 // ConsultationContextWindow is the raw chat history the model may see

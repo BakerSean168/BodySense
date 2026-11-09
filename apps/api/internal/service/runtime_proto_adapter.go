@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
+	"unicode/utf8"
 
 	protovalidate "buf.build/go/protovalidate"
 	runtimev1 "github.com/bodysense/api/internal/generated/runtimeproto/v1"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var runtimeProtoJSON = protojson.MarshalOptions{UseProtoNames: true}
@@ -122,12 +126,14 @@ func consultationBusinessContextToProto(input ConsultationBusinessContext) (*run
 	if err != nil {
 		return nil, err
 	}
+	episodicNotes := episodicNotesToProto(input.EpisodicNotes)
 
 	output := &runtimev1.ConsultationBusinessContext{
 		Profile:          profile,
 		BodyState:        bodyState,
 		RuntimeState:     &runtimev1.ConsultationRuntimeState{Phase: input.RuntimeState.Phase, ExtractedInfo: extractedInfo},
 		RelevantHistory:  relevantHistory,
+		EpisodicNotes:    episodicNotes,
 		CurrentDiagnosis: currentDiagnosis,
 		CurrentTreatment: currentTreatment,
 		RecentOutcomes:   recentOutcomes,
@@ -170,6 +176,72 @@ func consultationBusinessContextToProto(input ConsultationBusinessContext) (*run
 		output.SpatialContext = spatial
 	}
 	return output, nil
+}
+
+// episodicNotesToProto projects the recalled notes onto the runtime contract.
+// A malformed note is dropped with a structured warning instead of failing the
+// command: episodic memory is non-authoritative and must never break a
+// consultation turn. The warning carries ids and field names only.
+func episodicNotesToProto(input []ConsultationEpisodicNote) []*runtimev1.ConsultationEpisodicNote {
+	if len(input) == 0 {
+		return nil
+	}
+	output := make([]*runtimev1.ConsultationEpisodicNote, 0, len(input))
+	for _, note := range input {
+		projected, err := episodicNoteToProto(note)
+		if err != nil {
+			slog.Default().Warn(
+				"episodic_recall_note_dropped",
+				"note_id", note.NoteID,
+				"reason", err.Error(),
+			)
+			continue
+		}
+		output = append(output, projected)
+	}
+	if len(output) == 0 {
+		return nil
+	}
+	return output
+}
+
+func episodicNoteToProto(note ConsultationEpisodicNote) (*runtimev1.ConsultationEpisodicNote, error) {
+	noteID, err := uuid.Parse(note.NoteID)
+	if err != nil {
+		return nil, fmt.Errorf("note_id is not a uuid")
+	}
+	if note.FromSeq < 1 || note.ToSeq < note.FromSeq {
+		return nil, fmt.Errorf("seq range is invalid")
+	}
+	if note.Authority != ConsultationEpisodicNoteAuthority {
+		return nil, fmt.Errorf("authority label is invalid")
+	}
+	if note.Text == "" || utf8.RuneCountInString(note.Text) > 4096 {
+		return nil, fmt.Errorf("text length is outside 1..4096 runes")
+	}
+	if len(note.SourceMessageIDs) == 0 || len(note.SourceMessageIDs) > 128 {
+		return nil, fmt.Errorf("source_message_ids count is outside 1..128")
+	}
+	if note.CreatedAt.IsZero() {
+		return nil, fmt.Errorf("created_at is missing")
+	}
+	sourceIDs := make([]string, 0, len(note.SourceMessageIDs))
+	for _, raw := range note.SourceMessageIDs {
+		sourceID, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, fmt.Errorf("source_message_ids contains a non-uuid")
+		}
+		sourceIDs = append(sourceIDs, sourceID.String())
+	}
+	return &runtimev1.ConsultationEpisodicNote{
+		NoteId:           noteID.String(),
+		FromSeq:          uint32(note.FromSeq),
+		ToSeq:            uint32(note.ToSeq),
+		SourceMessageIds: sourceIDs,
+		CreatedAt:        timestamppb.New(note.CreatedAt.UTC()),
+		Text:             note.Text,
+		Authority:        note.Authority,
+	}, nil
 }
 
 func rawObjectToProto(raw json.RawMessage, field string) (*structpb.Struct, error) {

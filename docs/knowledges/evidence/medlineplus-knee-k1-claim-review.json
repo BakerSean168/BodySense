@@ -1,0 +1,69 @@
+{
+  "schema_version": "bodysense.claim-review.v1",
+  "review_id": "medlineplus-knee-k1-claim-review-2026-11-08",
+  "snapshot_git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+  "external_evidence_review_id": "medlineplus-knee-k1-evidence-review-2026-11-08",
+  "reviewed_at": "2026-11-08T21:30:00Z",
+  "decisions": [
+    {
+      "unit_key": "mlp-knee-001",
+      "claim_id": "mlc-knee-f0cb221ab484",
+      "claim_content_hash": "c2b42a3601f24f43eaf5c3ab2979987a93db1f33ad4891e1f61ec9d8cde0d7d9",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.95,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-knee-002",
+      "claim_id": "mlc-knee-9ecd49619265",
+      "claim_content_hash": "147059b5682703714df428e108555a764bea4416d6d5b475954289813c0925a1",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.94,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-knee-003",
+      "claim_id": "mlc-knee-fa9b13047d97",
+      "claim_content_hash": "d0041989a425a6939a1aa629693cf0b46638926f5feaa5b80bcd4b7ab5e2362f",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-knee-004",
+      "claim_id": "mlc-knee-3f4768b4f981",
+      "claim_content_hash": "179d78ffb6764f155b1932015ec268d702a9beed1a71f5ebecf3c02f1f75cb2f",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-knee-005",
+      "claim_id": "mlc-knee-9a8768875f84",
+      "claim_content_hash": "76e4d3f64d64c63ff90526cfb8fc961f40ccf64299423cf3c6bfc7f37c5d4370",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.94,
+      "certainty": "high",
+      "population": "general"
+    }
+  ]
+}

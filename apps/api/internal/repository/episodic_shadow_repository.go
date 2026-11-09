@@ -120,6 +120,9 @@ type episodicSourceRow struct {
 	Parts        string
 	ContentBytes int
 	ContentText  string
+	// Text is the canonical source text derived by episodicSourceText. It is
+	// never scanned from the database; the scan only fills the row columns.
+	Text string
 }
 
 // SaveShadowDraft enforces same-owner, exact and fully settled source
@@ -198,23 +201,31 @@ ORDER BY m.seq`, c.ID, draft.FromSeq, draft.ToSeq).Scan(&rows).Error; err != nil
 		if len(rows) != len(draft.SourceMessageIDs) {
 			return ErrEpisodicSourceInvalid
 		}
-		for i, msg := range rows {
-			if msg.ID != draft.SourceMessageIDs[i] || msg.Seq != draft.FromSeq+i ||
-				msg.Status != "completed" || msg.ContentBytes == 0 ||
+		for i := range rows {
+			msg := &rows[i]
+			text, pureText, ok := episodicSourceText(msg.Parts, msg.ContentText)
+			// The user message is the only quotable source, so it must still
+			// be pure text. Assistant replies may carry non-text parts
+			// (quotes and similar) as long as their canonical body exists.
+			if !ok || msg.ID != draft.SourceMessageIDs[i] || msg.Seq != draft.FromSeq+i ||
+				msg.Status != "completed" || text == "" ||
 				(msg.Role != "user" && msg.Role != "assistant") ||
 				(msg.RunStatus != nil && *msg.RunStatus != "completed") ||
-				msg.Parts != "[]" { // reject uploads/multimodal/opaque source
+				(msg.Role == "user" && !pureText) {
 				return ErrEpisodicSourceInvalid
 			}
+			msg.Text = text
 		}
-		// S2-B quote must match the actual owner-locked *whole user message*.
-		// Quotes from a model or its caller have no authority over DB source
-		// content, and never enter the stored text verbatim.
+		// S2-B quote must match the actual owner-locked *whole user message*,
+		// compared against its canonical text rather than the legacy
+		// content_text column. Quotes from a model or its caller have no
+		// authority over DB source content, and never enter the stored text
+		// verbatim. Only a user message may be quoted.
 		if draft.QuotedMessageID != uuid.Nil {
 			matched := false
 			for _, msg := range rows {
 				if msg.ID == draft.QuotedMessageID && msg.Role == "user" &&
-					msg.ContentText == draft.QuotedMessageText {
+					msg.Text == draft.QuotedMessageText {
 					matched = true
 					break
 				}
