@@ -8,6 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ALLOWED_RUNTIME_PROTO_CONSUMERS = {
     "apps/ai-service/src/api/runtime_proto_adapter.py",
+    "apps/ai-service/src/api/episodic_shadow_proto_adapter.py",
     "apps/ai-service/tests/unit/test_runtime_proto_contract.py",
 }
 RETIRED_STREAM_EVENT_AUTHORITY = "apps/ai-service/src/models/stream_event.py"

@@ -124,10 +124,10 @@ PY
 "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 \
   -v operator_id="$operator_id" -v member_id="$member_id" -v source_key="$source_key" \
   -v unit_key="$unit_key" -v body_hash="$body_hash" -v metadata="$metadata" >/dev/null <<'SQL'
-INSERT INTO users (id, email, password_hash, role)
+INSERT INTO users (id, email, role)
 VALUES
-  (:'operator_id'::uuid, 'knowledge-validator-operator@invalid.local', 'not-a-login-hash', 'operator'),
-  (:'member_id'::uuid, 'knowledge-validator-member@invalid.local', 'not-a-login-hash', 'member');
+  (:'operator_id'::uuid, 'knowledge-validator-operator@invalid.local', 'operator'),
+  (:'member_id'::uuid, 'knowledge-validator-member@invalid.local', 'member');
 
 INSERT INTO knowledge_sources (
   source_key, source_type, title, author, problem_slug, problem_display_name,

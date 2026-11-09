@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/cache"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
+	"github.com/bodysense/api/internal/episodicrecall"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
@@ -27,6 +27,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -59,14 +60,17 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	// JWT + browser auth security configuration.
-	jwtConfig := auth.JWTConfigFromEnv()
 	corsOrigins := parseCORSOrigins()
-	authSecurity := auth.DefaultSecurityConfig(jwtConfig.RefreshTokenTTL)
-	authSecurity.CookieSecure = strings.EqualFold(os.Getenv("APP_ENV"), "production")
-	authSecurity.RequireOrigin = authSecurity.CookieSecure
-	authSecurity.TrustedOrigins = corsOrigins
-	authSecurity.RateLimiter = auth.NewRedisRateLimiter(database.RedisClient, "bodysense:auth:rate")
+	// Hosted Supabase is the only identity authority. Go verifies its ES256
+	// access tokens and keeps the existing local health-data ownership boundary.
+	supabaseConfig, err := auth.SupabaseConfigFromEnv()
+	if err != nil {
+		log.Fatalf("Supabase Auth configuration failed: %v", err)
+	}
+	supabaseVerifier, err := auth.NewSupabaseVerifier(supabaseConfig.URL, nil)
+	if err != nil {
+		log.Fatalf("Supabase JWT verifier failed: %v", err)
+	}
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
@@ -96,17 +100,14 @@ func main() {
 	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 
-	// User session cache (Redis-backed). Sessions live as long as their refresh
-	// token, so the session TTL matches the refresh-token TTL and outlives the
-	// short-lived access token.
-	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.RefreshTokenTTL)
-
-	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
+	// Hosted identity revocation is required before a full account erasure
+	// can be accepted. The server-only admin key is never exposed to the web.
+	authAdmin := auth.NewSupabaseAdminRevoker(supabaseConfig, nil)
 	privacyErasureRepo := repository.NewPrivacyErasureRepository(database.DB)
 	privacyErasureService := service.NewPrivacyErasureService(
 		privacyErasureRepo,
 		userRepo,
-		authService,
+		authAdmin,
 		uploadStorage,
 		database.NewTransactionManager(database.DB),
 	)
@@ -193,8 +194,18 @@ func main() {
 	// moves no cursor until the ai-service checkpoint cleanup is verified.
 	// Slice 3: Run settlement reconciles P and the token-budget C, and
 	// enqueues a prune job once C - 1 and P are both past R.
+	// S2: the HTTP proposer and the writer admission gate are wired only while
+	// the default-off switch is on. With the switch off the trigger keeps its
+	// previous inert shape (nil proposer, disabled writer, one log line, no
+	// model traffic).
 	chatRetentionService := service.NewChatRetentionService(repository.NewChatRetentionRepository(database.DB), aiClient, jobRuntime).
-		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv))
+		WithContextTokenBudget(model.ChatContextTokenBudget(os.Getenv)).
+		WithEpisodicDistillation(service.NewEpisodicDistillationTriggerFromEnv(
+			os.Getenv,
+			repository.NewEpisodicDistillationRepository(database.DB),
+			episodicShadowWriterFromEnv(os.Getenv, database.DB),
+			episodicShadowProposerFromEnv(os.Getenv, aiClient),
+		))
 	chatRetentionService.StartPruneWorker(context.Background(), time.Minute, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo, userAssetRepo)
 	assessmentService := service.NewAssessmentService(
@@ -241,6 +252,13 @@ func main() {
 		nativeDiagnosisReader,
 		outcomeService,
 	)
+	// S4: the recall path is attached only when the default-off switch is on.
+	// With it off the Runtime holds a nil recaller: no query, no payload field.
+	if episodicrecall.EpisodicRecallEnabledFromEnv(os.Getenv) {
+		consultationRuntime.AttachEpisodicRecall(
+			episodicrecall.NewRecaller(repository.NewEpisodicRecallRepository(database.DB)),
+		)
+	}
 	consultationRolloutRepo := repository.NewConsultationRolloutRepository(database.DB)
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
@@ -351,7 +369,7 @@ func main() {
 
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
-	authMiddleware := middleware.AuthMiddleware(jwtConfig, sessionCache)
+	authMiddleware := middleware.AuthMiddleware(supabaseVerifier, userRepo)
 	protected := r.Group("/api/v1")
 	protected.Use(authMiddleware)
 	{
@@ -375,7 +393,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithReportedDiscomfort(reportedDiscomfortService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithNativeDiagnosis(reviewedDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithNativeDiagnosisReview(service.NewDiagnosisAnalysisRequestService(database.DB), service.NewDiagnosisReviewPromptService(database.DB, reviewedDiagnosisReader)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithAssetErasure(assetErasureService).WithStatementErasure(statementErasureService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer().WithSafetyRestrictions(bodyStateRepo).WithEquipment(equipmentRepo).WithBodyFacts(bodyFactService).WithBodyObservations(bodyObservationService).WithBodyHypotheses(bodyHypothesisService).WithEpisodes(episodeReadService).WithEpisodeCommands(episodeCommandService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithReportedDiscomfort(reportedDiscomfortService).WithProfile(profileService).WithPrivacy(privacyErasureService).WithEpisodicNotesControls(repository.NewEpisodicNoteControlsRepository(database.DB), httpapi.EpisodicNotesControlsEnabledFromEnv(os.Getenv)).WithAssessment(assessmentService, assessmentReplayService).WithConversations(conversationService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService).WithNativeDiagnosis(reviewedDiagnosisReader).WithNativeDiagnosisRuns(nativeDiagnosisRuns).WithNativeDiagnosisAnalysis(service.NewDiagnosisFormalAnalysisService(database.DB, profileService, aiClient, agentDeploymentPolicy), nativeDiagnosisRuns).WithNativeDiagnosisCommands(service.NewDiagnosisProposalDecisionService(database.DB), service.NewDiagnosisSettlementService(database.DB)).WithNativeDiagnosisDirectEdits(service.NewDiagnosisDirectEditService(database.DB)).WithNativeDiagnosisReview(service.NewDiagnosisAnalysisRequestService(database.DB), service.NewDiagnosisReviewPromptService(database.DB, reviewedDiagnosisReader)).WithOutcomes(outcomeService).WithPlanGeneration(treatmentService).WithTrainingPlans(service.NewIndependentTrainingPlanService(database.DB)).WithTrainerSessions(service.NewTrainerSessionService(database.DB)).WithUploads(uploadService, healthDocumentReviewService).WithAssetErasure(assetErasureService).WithStatementErasure(statementErasureService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),
@@ -399,6 +417,33 @@ func resolveAPIListenAddress(host, port string) string {
 		port = "8080"
 	}
 	return net.JoinHostPort(host, port)
+}
+
+// episodicShadowProposerFromEnv wires the S2 HTTP proposer only while the
+// explicit, default-off switch is on. A falsy or absent value returns a nil
+// proposer, which keeps NewEpisodicDistillationTriggerFromEnv inert.
+func episodicShadowProposerFromEnv(
+	getenv func(string) string, client *service.AIClient,
+) service.EpisodicShadowProposer {
+	if !service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return nil
+	}
+	return service.NewEpisodicShadowHTTPProposer(client)
+}
+
+// episodicShadowWriterFromEnv enables admission on the shadow writer only while
+// the same default-off switch is on. NewEpisodicShadowRepository stays
+// disabled by default, so without this step every real selection is rejected
+// with ErrEpisodicShadowDisabled and never persists. With the switch off the
+// writer keeps its disabled semantics.
+func episodicShadowWriterFromEnv(
+	getenv func(string) string, db *gorm.DB,
+) *repository.EpisodicShadowRepository {
+	writer := repository.NewEpisodicShadowRepository(db)
+	if service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
+		return writer.WithShadowAdmissionEnabled(true)
+	}
+	return writer
 }
 
 func startRunLeaseReconciler(

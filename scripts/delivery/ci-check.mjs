@@ -37,6 +37,11 @@ try {
         result.receipt.runId +
         " attempt=" +
         result.receipt.runAttempt +
+        " manifest_attempt=" +
+        result.receipt.manifestAttempt +
+        (result.receipt.manifestReusedEarlierAttempt
+          ? " manifest_reuse=earlier-attempt"
+          : "") +
         " head=" +
         result.receipt.headSha +
         " manifest=" +

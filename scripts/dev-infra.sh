@@ -34,9 +34,9 @@ logs() {
 }
 
 case "${1:-status}" in
-  up) up ;;
+  up) "$ROOT/scripts/dev-litellm-gateway-preflight.sh"; up ;;
   status) status ;;
-  restart) down; up ;;
+  restart) "$ROOT/scripts/dev-litellm-gateway-preflight.sh"; down; up ;;
   down) down ;;
   logs) shift; logs "${1:-120}" ;;
   *)

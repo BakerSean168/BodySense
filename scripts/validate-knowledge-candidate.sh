@@ -23,12 +23,11 @@ PYPORT
 : "${LITELLM_PORT:=$(pick_port)}"
 : "${API_PORT:=$(pick_port)}"
 : "${AI_SERVICE_PORT:=$(pick_port)}"
-: "${JWT_SECRET_KEY:=bodysense-kb-validator-jwt-secret}"
 : "${LITELLM_MASTER_KEY:=sk-bodysense-kb-validator}"
 : "${EMBEDDING_PROVIDER:=hashing}"
 
 export COMPOSE_PROJECT_NAME DB_USER DB_PASSWORD DB_NAME DB_PORT REDIS_PORT LITELLM_PORT API_PORT AI_SERVICE_PORT
-export JWT_SECRET_KEY LITELLM_MASTER_KEY EMBEDDING_PROVIDER
+export LITELLM_MASTER_KEY EMBEDDING_PROVIDER
 
 compose=(docker compose -p "$COMPOSE_PROJECT_NAME" -f docker/docker-compose.yml --profile dev)
 reviewed_artifact="$repo_root/docs/knowledges/evidence/reviewed-knowledge-pain-nociception-cohort.json"
@@ -99,15 +98,15 @@ echo "KNOWLEDGE_SOURCE_SNAPSHOT=PASS id=$actual_snapshot_id"
 "${compose[@]}" up -d --build --wait --wait-timeout 180 postgres-dev redis-dev litellm-gateway ai-service api
 
 version="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT version, dirty FROM schema_migrations;")"
-if [[ "$version" != "56|f" ]]; then
+if [[ "$version" != "6|f" ]]; then
   echo "KNOWLEDGE_CANDIDATE_SCHEMA=FAIL state=$version" >&2
   exit 1
 fi
 echo "KNOWLEDGE_CANDIDATE_SCHEMA=PASS state=$version"
 
 "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 >/dev/null <<SQL
-INSERT INTO users (id, email, password_hash, role)
-VALUES ('$operator_id'::uuid, 'knowledge-candidate-operator@invalid.local', 'not-a-login-hash', 'operator');
+INSERT INTO users (id, email, role)
+VALUES ('$operator_id'::uuid, 'knowledge-candidate-operator@invalid.local', 'operator');
 SQL
 
 api_cid="$("${compose[@]}" ps -q api)"

@@ -222,9 +222,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
-      JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-0.25}
-      JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
+      SUPABASE_URL: ${SUPABASE_URL:?set SUPABASE_URL}
+      # Only Go may use the hosted Auth Admin API for complete account erasure.
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://115.29.222.2}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT:-8100}

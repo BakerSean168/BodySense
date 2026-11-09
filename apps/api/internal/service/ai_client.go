@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -120,11 +121,17 @@ type ConsultationBusinessContext struct {
 	RuntimeState ConsultationRuntimeState `json:"runtime_state"`
 	// RelevantHistory is a small quoted retrieval result from older messages.
 	// It is never health truth and current BodyState always has precedence.
-	RelevantHistory  []ConsultationHistoricalMessage `json:"relevant_history,omitempty"`
-	CurrentDiagnosis json.RawMessage                 `json:"current_diagnosis,omitempty"`
-	CurrentTreatment json.RawMessage                 `json:"current_treatment,omitempty"`
-	RecentOutcomes   json.RawMessage                 `json:"recent_outcomes,omitempty"`
-	SpatialContext   *ConsultationSpatialContext     `json:"spatial_context,omitempty"`
+	RelevantHistory []ConsultationHistoricalMessage `json:"relevant_history,omitempty"`
+	// EpisodicNotes is the S4 real-time recall channel. Every entry is a
+	// non-authoritative narrative note with its source binding. It is only
+	// populated by the consultation context assembly when EPISODIC_RECALL_ENABLED
+	// is on, and it is deliberately absent from every Diagnosis, Safety and
+	// TrainingPlan input.
+	EpisodicNotes    []ConsultationEpisodicNote  `json:"episodic_notes,omitempty"`
+	CurrentDiagnosis json.RawMessage             `json:"current_diagnosis,omitempty"`
+	CurrentTreatment json.RawMessage             `json:"current_treatment,omitempty"`
+	RecentOutcomes   json.RawMessage             `json:"recent_outcomes,omitempty"`
+	SpatialContext   *ConsultationSpatialContext `json:"spatial_context,omitempty"`
 	// PostureAnalysis is the user's completed three-view analysis summary,
 	// prefetched by Go so the consultation Agent tool can read it without a
 	// Python→Go round trip.
@@ -139,6 +146,25 @@ type ConsultationContextWindow struct {
 	ContextStartSeq int      `json:"context_start_seq"`
 	RunIDs          []string `json:"run_ids"`
 }
+
+// ConsultationEpisodicNote is one recalled episodic note on the consultation
+// wire. Text is the note's canonical text verbatim (never rewritten or
+// summarised). Provenance is the stored seq range plus the source message ids,
+// so the model can cite "you mentioned / we discussed" rather than treat the
+// note as clinical evidence.
+type ConsultationEpisodicNote struct {
+	NoteID           string    `json:"note_id"`
+	FromSeq          int       `json:"from_seq"`
+	ToSeq            int       `json:"to_seq"`
+	SourceMessageIDs []string  `json:"source_message_ids"`
+	CreatedAt        time.Time `json:"created_at"`
+	Text             string    `json:"text"`
+	Authority        string    `json:"authority"`
+}
+
+// ConsultationEpisodicNoteAuthority is the fixed label every recalled note
+// carries. Notes are narrative, may be stale, and never outrank BodyState.
+const ConsultationEpisodicNoteAuthority = "narrative_non_authoritative"
 
 type StartConsultationTurnRequest struct {
 	RunID           string                      `json:"run_id"`
@@ -159,13 +185,36 @@ type ResumeConsultationInterruptRequest struct {
 	BusinessContext ConsultationBusinessContext `json:"business_context"`
 }
 
+const (
+	aiRuntimeTimeoutEnv     = "AI_RUNTIME_TIMEOUT_SECONDS"
+	defaultAIRuntimeTimeout = 120 * time.Second
+)
+
+// aiRuntimeTimeout resolves the HTTP client timeout for the AI runtime client.
+// http.Client.Timeout bounds the total read of the whole AI stream — every
+// serial model call plus the complete answer — not a single packet, so a slow
+// provider handling multi-turn work can legitimately exceed the previous fixed
+// 120s. AI_RUNTIME_TIMEOUT_SECONDS lets a deployment raise it without a code
+// change; unset, non-numeric, zero, or negative values keep the safe default.
+func aiRuntimeTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(aiRuntimeTimeoutEnv))
+	if raw == "" {
+		return defaultAIRuntimeTimeout
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return defaultAIRuntimeTimeout
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func NewAIClient() *AIClient {
 	baseURL := os.Getenv("AI_SERVICE_URL")
 	if baseURL == "" {
 		baseURL = "http://localhost:8100"
 	}
 	return &AIClient{
-		httpClient: &http.Client{Timeout: 120 * time.Second},
+		httpClient: &http.Client{Timeout: aiRuntimeTimeout()},
 		baseURL:    baseURL,
 	}
 }

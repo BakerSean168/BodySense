@@ -33,7 +33,6 @@ func routeErrorHandler(c *gin.Context, err error, statusCode int) {
 // RegisterRoutes registers every operation from the generated public OpenAPI
 // contract exactly once, partitioned by security domain:
 //
-//   - auth public:     account session establishment without authentication
 //   - knowledge:       authenticated knowledge operator authority
 //   - protected:       authenticated browser user
 //
@@ -45,12 +44,6 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 		Handler:      si,
 		ErrorHandler: routeErrorHandler,
 	}
-
-	authPublic := router.Group("/api/v1/auth", security.Validator)
-	authPublic.POST("/register", wrapper.RegisterAccount)
-	authPublic.POST("/login", wrapper.LoginAccount)
-	authPublic.POST("/refresh", wrapper.RefreshAccountSession)
-	authPublic.POST("/logout", wrapper.LogoutAccount)
 
 	// Knowledge administration is a distinct authorization domain. Authenticate
 	// first, resolve durable operator role second, then validate the request.
@@ -132,6 +125,11 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	// Privacy.
 	protected.GET("/privacy/erasure-plan", wrapper.GetPrivacyErasurePlan)
 	protected.POST("/privacy/erasure", wrapper.RequestPrivacyErasure)
+
+	// Non-authoritative conversational memory (S6-B). The handlers themselves
+	// stay owner-masked 404 while EPISODIC_NOTES_CONTROLS_ENABLED is off.
+	protected.GET("/profile/episodic-notes", wrapper.ListEpisodicNotes)
+	protected.DELETE("/profile/episodic-notes/:noteId", wrapper.DeleteEpisodicNote)
 
 	// Client diagnostics.
 	protected.POST("/client-diagnostics", wrapper.RecordClientDiagnostic)

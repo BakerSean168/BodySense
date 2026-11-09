@@ -6,6 +6,7 @@ const LABELS = {
   media: "媒体",
   reports: "报告",
   habits: "生活习惯",
+  memory: "记忆",
 } as const;
 
 export type PersonCategory = keyof typeof LABELS;

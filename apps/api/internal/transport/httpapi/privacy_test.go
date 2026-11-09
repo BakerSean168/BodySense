@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bodysense/api/internal/auth"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
@@ -51,7 +50,7 @@ func newPrivacyOpenAPIRouter(t *testing.T, privacy privacyErasureApplication, se
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))
-	server := NewPublicServer().WithPrivacy(privacy, auth.DefaultRefreshCookieName, secure)
+	server := NewPublicServer().WithPrivacy(privacy)
 	openapiv1.RegisterHandlers(g, StrictHandler(server))
 	return r
 }
@@ -100,7 +99,7 @@ func TestPrivacyErasureRejectsWrongConfirmationBeforeApplication(t *testing.T) {
 	assertErrorCode(t, rec, "INVALID_REQUEST")
 }
 
-func TestPrivacyErasureAcceptanceClearsRefreshCredentialAndIsNoStore(t *testing.T) {
+func TestPrivacyErasureAcceptanceDoesNotClaimSupabaseSessionRevocation(t *testing.T) {
 	requestID := uuid.New()
 	privacy := &fakePrivacyApplication{request: &model.PrivacyErasureRequest{
 		ID: requestID, Status: "completed", RequestedAt: time.Now().UTC(),
@@ -122,13 +121,8 @@ func TestPrivacyErasureAcceptanceClearsRefreshCredentialAndIsNoStore(t *testing.
 	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("Cache-Control=%q want=no-store", got)
 	}
-	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 {
-		t.Fatalf("cookies=%d want=1 header=%q", len(cookies), rec.Header().Get("Set-Cookie"))
-	}
-	cookie := cookies[0]
-	if cookie.Name != auth.DefaultRefreshCookieName || cookie.MaxAge != -1 || !cookie.HttpOnly || !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode || cookie.Path != auth.RefreshCookiePath {
-		t.Fatalf("cleared refresh cookie=%+v", cookie)
+	if cookie := rec.Header().Get("Set-Cookie"); cookie != "" {
+		t.Fatalf("Go API must not mutate Supabase browser session cookies: %q", cookie)
 	}
 	assertOpenAPIResponse(t, req, rec)
 	var body openapiv1.PrivacyErasureAccepted

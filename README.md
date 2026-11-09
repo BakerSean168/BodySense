@@ -20,6 +20,8 @@ The interface uses a persistent interactive 3D body canvas with movable Chat and
 > [!IMPORTANT]
 > BodySense supports personal health-information organization and evidence-aware explanation. It is not a medical device and does not replace qualified medical diagnosis or treatment.
 
+若您是相关内容的权利人并认为知识库内容侵权，请联系维护者，我们将及时下架处理。
+
 ## Business model
 
 - **BodyState** — one durable state per user, with clear self-reports saved automatically and correction distinguished from actual progression.
@@ -122,6 +124,24 @@ pnpm dev:infra:down    # explicit teardown; persistent volumes are preserved
 The default direct-dev ports are Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, and LiteLLM `20112`. Infrastructure containers use `restart: unless-stopped`, so a normal Docker/host restart brings them back without requiring the application processes to stay running.
 
 Put host-specific overrides and provider credentials in the gitignored `.env.dev.local`; `scripts/dev-env.sh` supplies non-secret development defaults, so copying `.env.example` to `.env` is not required. The direct-dev Web lane enables Vite Bundled Dev by default so a workstation reaching GCP over Tailscale/SSH receives a small set of bundled development assets instead of a large native-ESM request waterfall while keeping HMR. Set `BODYSENSE_VITE_BUNDLED_DEV=false` in `.env.dev.local` to temporarily return to classic Vite for diagnostics; tests remain on classic Vite.
+
+For a persistent remote development host, use [Process Compose](https://github.com/F1bonacc1/process-compose) inside one tmux window to manage independent application processes instead of the single-terminal `pnpm dev` process group:
+
+```bash
+pnpm dev:tmux                # starts Docker infra and tmux windows: services (Process Compose TUI), ops
+pnpm dev:tmux:status         # includes HTTP health and Docker status
+bash scripts/dev-tmux.sh restart api   # restart only the Go API
+bash scripts/dev-tmux.sh stop ai       # stop only the AI process
+bash scripts/dev-tmux.sh logs api      # inspect API logs from Process Compose
+tmux attach -t bodysense-dev # Process Compose TUI: start/stop/restart/logs; detach Ctrl+a, d
+pnpm dev:tmux:down           # stop app processes; leave Postgres/Redis/LiteLLM running
+```
+
+Go auto-restart uses [Air](https://github.com/air-verse/air) (`GOBIN="$HOME/.local/bin" go install github.com/air-verse/air@v1.67.4`). Process Compose v1.124.0 (`GOBIN="$HOME/.local/bin" go install github.com/f1bonacc1/process-compose@v1.124.0`) provides service dependency ordering, status, logs, health checks and manual start/stop/restart via TUI or CLI. The Process Compose control API is bound to **127.0.0.1:20120**, not exposed to the internet. Vite and Python retain their own hot reload. The stable session is started from the `main` worktree only. Feature worktrees do not affect its source files, but shared database and Redis state are not isolated by Git.
+
+To discard **only** the dedicated BodySense development database, first stop the application session, then run `bash scripts/dev-tmux.sh reset-db`. It validates the Compose project, loopback port, database name and active connections before dropping/recreating the empty database. Starting the Go API then initializes the current schema from the repository baseline; no old rows are migrated. This does **not** affect production or other projects. Do not run it while feature processes use the same database.
+
+From a local workstation, use `ssh -N -L 20100:127.0.0.1:20100 oracle2` and open <http://127.0.0.1:20100>; the Vite `/api` proxy forwards requests to Go. No public ingress is required.
 
 Run a single surface when you do not need the full stack:
 

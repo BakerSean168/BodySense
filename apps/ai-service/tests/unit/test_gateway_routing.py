@@ -83,8 +83,13 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         assert "LITELLM_BASE_URL" in ai_env
         assert "LITELLM_API_KEY" in ai_env
         assert retired_llm_env.isdisjoint(ai_env)
-        assert "PRIMARY_LLM_API_KEY" in gateway_env
-        assert "OPENROUTER_API_KEY" in gateway_env
+        if relative.endswith(".prod.yml"):
+            assert "PRIMARY_LLM_API_KEY" in gateway_env
+            assert "OPENROUTER_API_KEY" in gateway_env
+        else:
+            # Direct-dev is intentionally offline, including raw Compose.
+            assert "PRIMARY_LLM_API_KEY" not in gateway_env
+            assert "OPENROUTER_API_KEY" not in gateway_env
 
     staging = yaml.safe_load(
         (ROOT / "docker/docker-compose.staging.yml").read_text(encoding="utf-8")

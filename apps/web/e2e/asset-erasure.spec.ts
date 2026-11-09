@@ -151,6 +151,7 @@ const targetNames = [
   "document_extractions",
   "assessment_reports",
   "runtime_checkpoints",
+  "episodic_notes",
   "asset_manifest",
 ];
 
@@ -176,7 +177,7 @@ function syntheticReceipt(
     request_id: crypto.randomUUID(),
     asset_id: assetId,
     status,
-    inventory_revision: "asset-erasure-inventory-v1",
+    inventory_revision: "asset-erasure-inventory-v2",
     requested_at: "2026-10-19T00:00:00Z",
     targets,
     outstanding_targets: targets

@@ -25,7 +25,21 @@ class GoDatabaseInventoryTests(unittest.TestCase):
         self.assertGreaterEqual(sum(map(len, inventory.values())), 20)
         self.assertIn("TestBodyFactHTTPRecordReadRetryRoundTripPostgres",
                       inventory["./internal/transport/httpapi"])
-        self.assertEqual(sum(len(v) for v in go_db.cases_for("pr").values()), 7)
+        pr_cases = go_db.cases_for("pr")
+        self.assertEqual(sum(len(v) for v in pr_cases.values()), 26)
+        self.assertTrue({
+            "TestEpisodicNoteControlsOwnerDeleteAndNoRegenerationPostgres",
+            "TestEpisodicNoteDeletionMigrationRefusesRollbackWithTombstonePostgres",
+            "TestEpisodicNoteControlsDeletionWaitsForConversationLockPostgres",
+            "TestEpisodicDistillationSegmentsWatermarkAndGapPostgres",
+            "TestEpisodicDistillationMigrationRefusesRollbackWithGapPostgres",
+        } <= pr_cases["./internal/repository"])
+        self.assertTrue({
+            "TestEpisodicDistillationPruneBoundaryCreatesShadowNotePostgres",
+            "TestEpisodicDistillationRetriesAreBoundedPostgres",
+            "TestEpisodicDistillationFailureDoesNotBlockPrunePostgres",
+            "TestEpisodicDistillationFlagOffPreservesPrunePostgres",
+        } <= pr_cases["./internal/service"])
         self.assertGreaterEqual(sum(len(v) for v in go_db.cases_for("full").values()), 20)
 
     def test_all_required_tests_must_pass_with_actual_package_match(self):

@@ -67,6 +67,51 @@ and re-reads it under a share lock at commit time; a pruned source rejects
 the commit (`ErrBodyStateSuggestionRejected`) instead of trusting a stale
 excerpt. That is fail-closed, not a kept reference.
 
+### Inert episodic provenance (S1, #495 / #509)
+
+Migration `000003_episodic_notes` reserves `source_message_ids uuid[]` for future,
+non-authoritative conversation notes. This **soft provenance** has no foreign
+key to `messages` and is **never** a reason for `protectedMessages` to keep a
+raw chat row. The PostgreSQL scope regression
+`TestEpisodicNoteSchemaIsInertAndOwnerScopedPostgres` asserts that no chat FK
+appears, that the provenance array remains typed, and that owner deletion
+cascades to all notes. The composite Conversation-owner FK prevents notes
+from crossing users.
+
+S1 adds **no writer, model retrieval, HTTP route, background generation or
+serving**. The database restricts new notes to `status = shadow`; neither
+the Agent nor clinical domains read them. Migration `000004_episodic_statement_erasure`
+adds a separately receipted **statement-source** erasure target: it deletes
+all shadow notes naming any chat message cited by the erased statement,
+rechecks before finalization and rejects later notes naming an erased
+statement. Source-message provenance still never pins raw chat retention.
+Migration `000005_episodic_asset_erasure` adds optional typed
+`source_asset_ids uuid[]` provenance and its **asset-source** erasure target.
+Any explicitly listed upload is validated as owner-scoped/non-erased under a
+source-row lock; deleting the asset deletes those notes whole and the asset
+finalizer rechecks for notes that reappear. **There is still no runtime writer,
+reader or serving path**: future Go admission must attach *every* underlying
+asset source ID and reject undeclared asset-derived content. S2-A (#515) adds
+only a **default-disabled, repository-level** Go writer that validates an
+already context-expired, still-unpruned, whole-turn and owner-scoped range of
+complete text-only messages; rejects any referenced clinical statement,
+safety source or asset-bearing content; and persists bounded shadow rows.
+It is not called by chat, prune or the AI runtime, does not modify the
+non-protecting source-message classification, and cannot delay raw pruning.
+S2-B1 additionally defines an **unwired typed quote-only model proposal**;
+Go independently verifies the entire persisted user message inside the same
+Conversation lock and only permits one of four non-clinical canonical reply
+preferences. It does not create a serving path or authorize model egress.
+See [S2-A admission](../architecture/episodic-shadow-admission-s2a.md)
+and [S2-B1 quote proposal](../architecture/episodic-shadow-s2b-quote-proposal.md).
+S6-A adds persistent, content-free user-delete suppression markers for source
+sequence ranges; they do not pin raw messages or block retention pruning, and
+only the owning account can erase them via full account erasure. S6-A remains
+unwired to any public user control until separate UI/privacy approval; see
+[S6-A note deletion](../architecture/episodic-s6a-user-note-deletion.md).
+User controls, clinical authority, full source audit and production approval
+in #495/#514/#515 remain gating.
+
 ## 2. Why no cascade decides what is kept
 
 `interaction_resumes` references `messages` (answer and reply) and

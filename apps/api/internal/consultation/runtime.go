@@ -8,13 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
+	"github.com/bodysense/api/internal/episodicrecall"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
 	"github.com/bodysense/api/internal/stream"
@@ -24,11 +28,32 @@ import (
 
 const (
 	maxSSEEvents = 10000
-	sseTimeout   = 5 * time.Minute
+
+	consultationExecutionTimeoutEnv     = "CONSULTATION_EXECUTION_TIMEOUT_SECONDS"
+	defaultConsultationExecutionTimeout = 5 * time.Minute
 )
 
+// consultationExecutionTimeout resolves the total time budget for one
+// consultation execution. durableExecutionContext applies it to every serial
+// model call (diagnosis, structuring, knowledge tool rounds, final
+// composition) plus all persistence, so a slow provider doing multi-turn work
+// can legitimately exceed the previous fixed five minutes. The environment
+// variable lets a deployment raise the budget without a code change; unset,
+// non-numeric, zero, or negative values keep the safe default.
+func consultationExecutionTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv(consultationExecutionTimeoutEnv))
+	if raw == "" {
+		return defaultConsultationExecutionTimeout
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return defaultConsultationExecutionTimeout
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func durableExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(parent), sseTimeout)
+	return context.WithTimeout(context.WithoutCancel(parent), consultationExecutionTimeout())
 }
 
 type ConsultationErrorCode string
@@ -81,6 +106,7 @@ type Runtime struct {
 	interactionResumes          *service.InteractionResumeService
 	suggestionSources           service.BodyStateSuggestionSourceReader
 	contextRetrievalService     *service.ContextRetrievalService
+	episodicRecall              *episodicrecall.Recaller
 	diagnosisReader             runtimeDiagnosisReader
 	outcomeService              *service.OutcomeService
 	streamRuntime               *stream.Runtime
@@ -143,6 +169,13 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	r.contextRetrievalService = contextRetrieval
 	r.diagnosisReader = diagnosis
 	r.outcomeService = outcomes
+}
+
+// AttachEpisodicRecall wires the default-off S4 real-time recall path. A nil
+// recaller is the off state: buildBusinessContext performs no query and emits
+// no episodic_notes field, so the payload is byte-identical to today.
+func (r *Runtime) AttachEpisodicRecall(recaller *episodicrecall.Recaller) {
+	r.episodicRecall = recaller
 }
 
 // runtimeDiagnosisReader is the native Diagnosis projection; the consultation
@@ -916,6 +949,14 @@ func (r *Runtime) buildBusinessContext(
 			bc.RelevantHistory = history
 		}
 	}
+	// S4: real-time episodic recall, non-clinical context only. Recall already
+	// bounds itself by the 100ms budget and degrades to an empty slice, so this
+	// block can never fail, block or delay the clinical paths below.
+	if r.episodicRecall != nil {
+		r.attachRecalledEpisodicNotes(ctx, uid, conversationID, queryText, &bc)
+	} else {
+		r.logEpisodicRecall(uid, conversationID, episodicrecall.RecallResult{Outcome: episodicrecall.OutcomeDisabled})
+	}
 	if r.diagnosisReader != nil {
 		if diagnosis, err := r.diagnosisReader.Read(ctx, uid); err != nil {
 			log.Printf("current diagnosis context load failed for user %s: %v", uid, err)
@@ -944,6 +985,69 @@ func (r *Runtime) buildBusinessContext(
 		bc.PostureAnalysis = raw
 	}
 	return bc
+}
+
+// attachRecalledEpisodicNotes adds the served notes to the non-clinical
+// business context and always emits one content-free structured record. The
+// record makes the serving boundary observable: a "served" outcome with an
+// empty runtime payload means a later projection dropped the notes.
+func (r *Runtime) attachRecalledEpisodicNotes(
+	ctx context.Context,
+	uid uuid.UUID,
+	conversationID uuid.UUID,
+	queryText string,
+	bc *service.ConsultationBusinessContext,
+) {
+	result := r.episodicRecall.RecallTurn(ctx, uid, queryText)
+	r.logEpisodicRecall(uid, conversationID, result)
+	if len(result.Notes) == 0 {
+		return
+	}
+	bc.EpisodicNotes = make([]service.ConsultationEpisodicNote, 0, len(result.Notes))
+	for _, note := range result.Notes {
+		sourceIDs := make([]string, len(note.SourceMessageIDs))
+		for i, id := range note.SourceMessageIDs {
+			sourceIDs[i] = id.String()
+		}
+		bc.EpisodicNotes = append(bc.EpisodicNotes, service.ConsultationEpisodicNote{
+			NoteID:           note.ID.String(),
+			FromSeq:          note.FromSeq,
+			ToSeq:            note.ToSeq,
+			SourceMessageIDs: sourceIDs,
+			CreatedAt:        note.CreatedAt,
+			Text:             note.Text,
+			Authority:        service.ConsultationEpisodicNoteAuthority,
+		})
+	}
+}
+
+// logEpisodicRecall emits the S4 serving outcome. It carries ids and counts
+// only: never note text and never the user's message.
+func (r *Runtime) logEpisodicRecall(uid, conversationID uuid.UUID, result episodicrecall.RecallResult) {
+	level := slog.LevelInfo
+	switch result.Outcome {
+	case episodicrecall.OutcomeTimeout, episodicrecall.OutcomeStoreError, episodicrecall.OutcomeInvalidProvenance:
+		level = slog.LevelWarn
+	}
+	noteIDs := make([]string, len(result.Notes))
+	for i, note := range result.Notes {
+		noteIDs[i] = note.ID.String()
+	}
+	attrs := []any{
+		"outcome", string(result.Outcome),
+		"served", len(result.Notes),
+		"candidates", result.Candidates,
+		"elapsed_ms", result.Elapsed.Milliseconds(),
+		"user_id", uid.String(),
+		"conversation_id", conversationID.String(),
+	}
+	if len(noteIDs) > 0 {
+		attrs = append(attrs, "note_ids", noteIDs)
+	}
+	if result.Err != nil {
+		attrs = append(attrs, "error", result.Err.Error())
+	}
+	slog.Default().Log(context.Background(), level, "episodic_recall", attrs...)
 }
 
 // consultationContextWindow reads Go's retention context cursor for the turn.

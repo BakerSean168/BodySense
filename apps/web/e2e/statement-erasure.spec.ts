@@ -64,6 +64,7 @@ const targetNames = [
   "assessment_reports",
   "decision_records",
   "runtime_checkpoints",
+  "episodic_notes",
   "source_message",
   "statement_manifest",
 ];
@@ -89,7 +90,7 @@ function syntheticReceipt(
     request_id: crypto.randomUUID(),
     statement_id: statementId,
     status,
-    inventory_revision: "statement-erasure-inventory-v2",
+    inventory_revision: "statement-erasure-inventory-v3",
     requested_at: "2026-10-19T00:00:00Z",
     ...(status.startsWith("erased")
       ? { erased_at: "2026-10-19T00:01:00Z" }

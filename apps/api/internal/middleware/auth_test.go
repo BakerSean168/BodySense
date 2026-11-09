@@ -2,209 +2,109 @@ package middleware
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/repository"
+	"github.com/bodysense/api/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-type fakeSessionCache struct {
-	live map[uuid.UUID]bool
-	down bool
+type fakeIdentityRepo struct {
+	received uuid.UUID
+	email    string
+	err      error
 }
 
-func (f *fakeSessionCache) Exists(_ context.Context, sessionID uuid.UUID) (bool, error) {
-	if f.down {
-		return false, context.DeadlineExceeded
+func (r *fakeIdentityRepo) EnsureIdentity(_ context.Context, id uuid.UUID, email string) (*model.User, error) {
+	r.received, r.email = id, email
+	if r.err != nil {
+		return nil, r.err
 	}
-	live, ok := f.live[sessionID]
-	return ok && live, nil
+	return &model.User{ID: id, Email: email, Role: model.UserRoleMember}, nil
 }
 
-func (f *fakeSessionCache) Set(_ context.Context, _, _ uuid.UUID) error { return nil }
-
-func (f *fakeSessionCache) Delete(_ context.Context, _, _ uuid.UUID) error { return nil }
-
-func (f *fakeSessionCache) RevokeAllForUser(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
-	return nil, nil
-}
-
-func newMiddlewareTestDB(t *testing.T) (*repository.UserRepository, sqlmock.Sqlmock, func()) {
-	t.Helper()
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock.New: %v", err)
-	}
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("gorm.Open: %v", err)
-	}
-	return repository.NewUserRepository(gormDB), mock, func() { _ = sqlDB.Close() }
-}
-
-func performRequest(mw func(*gin.Context), token string) *httptest.ResponseRecorder {
+func TestSupabaseAuthMiddlewareValidatesAndProvisionsOnlySignedIdentity(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	r.GET("/protected", mw, func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	point, err := key.PublicKey.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/auth/v1/.well-known/jwks.json" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{{
+			"kid": "test-key", "kty": "EC", "alg": "ES256", "crv": "P-256",
+			"x": base64.RawURLEncoding.EncodeToString(point[1:33]),
+			"y": base64.RawURLEncoding.EncodeToString(point[33:65]),
+		}}})
+	}))
+	defer server.Close()
+	verifier, err := auth.NewSupabaseVerifier(server.URL, server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &fakeIdentityRepo{}
+	router := gin.New()
+	router.GET("/test", AuthMiddleware(verifier, repo), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"user_id": c.GetString("user_id"), "email": c.GetString("email")})
 	})
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	call := func(token string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
 	}
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-	return rec
-}
-
-func TestAuthMiddlewareSessionLiveAllows(t *testing.T) {
-	_, _, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	sessionCache := &fakeSessionCache{live: map[uuid.UUID]bool{}}
-	sessionID := uuid.New()
-	token, err := auth.GenerateAccessToken(cfg, uuid.New(), sessionID, "test@example.com")
-	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
+	if w := call(""); w.Code != http.StatusUnauthorized {
+		t.Fatalf("missing bearer HTTP %d", w.Code)
 	}
-	sessionCache.live[sessionID] = true
-
-	mw := AuthMiddleware(cfg, sessionCache)
-	if rec := performRequest(mw, token); rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	if repo.received != uuid.Nil {
+		t.Fatal("missing token provisioned an identity")
 	}
-}
-
-func TestAuthMiddlewareSessionRevokedRejects(t *testing.T) {
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	sessionCache := &fakeSessionCache{live: map[uuid.UUID]bool{}}
-	token, err := auth.GenerateAccessToken(cfg, uuid.New(), uuid.New(), "test@example.com")
-	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
-	}
-
-	mw := AuthMiddleware(cfg, sessionCache)
-	if rec := performRequest(mw, token); rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", rec.Code)
-	}
-}
-
-func TestAuthMiddlewareRedisDownFailsClosed(t *testing.T) {
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	token, err := auth.GenerateAccessToken(cfg, uuid.New(), uuid.New(), "test@example.com")
-	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
-	}
-
-	mw := AuthMiddleware(cfg, &fakeSessionCache{down: true})
-	if rec := performRequest(mw, token); rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want 503 (body=%s)", rec.Code, rec.Body.String())
-	}
-}
-
-func TestAuthMiddlewareRejectsTokenWithoutSessionIdentity(t *testing.T) {
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	userID := uuid.New()
-	claims := auth.Claims{
-		UserID: userID,
-		Email:  "test@example.com",
+	id := uuid.New()
+	now := time.Now()
+	claims := auth.SupabaseClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.AccessTokenTTL)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   userID.String(),
+			Subject: id.String(), Issuer: server.URL + "/auth/v1", Audience: jwt.ClaimStrings{"authenticated"},
+			IssuedAt: jwt.NewNumericDate(now), ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute)),
 		},
+		Email: "USER@EXAMPLE.TEST", Role: "authenticated",
 	}
-	legacyToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := legacyToken.SignedString([]byte(cfg.SecretKey))
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token.Header["kid"] = "test-key"
+	value, err := token.SignedString(key)
 	if err != nil {
-		t.Fatalf("sign sessionless token: %v", err)
-	}
-
-	mw := AuthMiddleware(cfg, &fakeSessionCache{live: map[uuid.UUID]bool{}})
-	rec := performRequest(mw, token)
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401 (body=%s)", rec.Code, rec.Body.String())
-	}
-}
-
-func TestAuthMiddlewareMissingHeaderRejects(t *testing.T) {
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	mw := AuthMiddleware(cfg, &fakeSessionCache{live: map[uuid.UUID]bool{}})
-	rec := performRequest(mw, "")
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", rec.Code)
-	}
-	var body struct {
-		Error struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decode canonical error envelope: %v body=%s", err, rec.Body.String())
-	}
-	if body.Error.Code != "UNAUTHORIZED" || body.Error.Message == "" {
-		t.Fatalf("unexpected canonical error envelope: %+v", body)
-	}
-}
-
-func performKnowledgeOperatorRequest(userRepo *repository.UserRepository, userID uuid.UUID) *httptest.ResponseRecorder {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	r.GET("/knowledge", func(c *gin.Context) {
-		c.Set("user_id", userID.String())
-		c.Next()
-	}, RequireKnowledgeOperator(userRepo), func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-	req := httptest.NewRequest(http.MethodGet, "/knowledge", nil)
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-	return rec
-}
-
-func TestRequireKnowledgeOperatorAllowsOperator(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-	userID := uuid.New()
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "role"}).AddRow(userID, "operator"))
-
-	rec := performKnowledgeOperatorRequest(userRepo, userID)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestRequireKnowledgeOperatorRejectsMember(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-	userID := uuid.New()
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "role"}).AddRow(userID, "member"))
-
-	rec := performKnowledgeOperatorRequest(userRepo, userID)
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("status=%d want=403 body=%s", rec.Code, rec.Body.String())
+	w := call(value)
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid bearer HTTP %d: %s", w.Code, w.Body.String())
 	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatal(err)
+	if repo.received != id || repo.email != "user@example.test" {
+		t.Fatalf("signed identity mismatch id=%s email=%q", repo.received, repo.email)
+	}
+	repo.err = errors.New("erasure tombstone")
+	if w := call(value); w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("closed account HTTP %d", w.Code)
 	}
 }

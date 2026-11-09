@@ -364,8 +364,8 @@ func TestBodyHypothesisHTTPRealRoundTripPostgres(t *testing.T) {
 	t.Cleanup(func() { _ = raw.Close() })
 	owner, foreign := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, foreign} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)", id,
-			"hypothesis-http-"+id.String()+"@example.test", "synthetic").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)", id,
+			"hypothesis-http-"+id.String()+"@example.test").Error; err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = db.Exec("DELETE FROM users WHERE id=?", id).Error })

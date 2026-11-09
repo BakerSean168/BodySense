@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
-	"time"
+	"crypto/sha256"
+	"fmt"
 
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 把“数据库操作”集中封装起来，让上层业务代码不要直接到处调用 GORM。
@@ -25,21 +27,6 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// Create creates a new user.
-func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
-	return r.db.WithContext(ctx).Create(user).Error
-}
-
-// FindByEmail finds a user by email.
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
-	var user model.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
-
 // FindByID finds a user by ID.
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
@@ -50,21 +37,52 @@ func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Use
 	return &user, nil
 }
 
-// UpdateLastLoginAt updates the user's last login timestamp.
-func (r *UserRepository) UpdateLastLoginAt(ctx context.Context, userID uuid.UUID) error {
-	now := time.Now()
-	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("last_login_at", now).Error
-}
-
-// EmailExists checks if an email already exists.
-func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, error) {
+// IsClosed checks the permanent anonymized erasure tombstone. A Supabase JWT
+// issued before account deletion must never recreate the local health identity.
+func (r *UserRepository) IsClosed(ctx context.Context, id uuid.UUID) (bool, error) {
+	digest := sha256.Sum256([]byte("bodysense/privacy-erasure/v1:" + id.String()))
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.User{}).Where("email = ?", email).Count(&count).Error
+	err := r.db.WithContext(ctx).Table("privacy_erasure_requests").
+		Where("subject_digest = ?", fmt.Sprintf("%x", digest[:])).
+		Count(&count).Error
 	return count > 0, err
 }
 
-// DeleteByID deletes a user by ID.
-// WARNING: Callers must also invalidate the user's session cache.
+// EnsureIdentity materializes a Supabase-authenticated user ID as the local
+// business principal. The unique primary key makes concurrent first requests
+// safe. A prior privacy erasure permanently prevents re-provisioning.
+func (r *UserRepository) EnsureIdentity(ctx context.Context, id uuid.UUID, email string) (*model.User, error) {
+	closed, err := r.IsClosed(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if closed {
+		return nil, fmt.Errorf("account has been closed")
+	}
+
+	record := &model.User{ID: id, Email: email, Role: model.UserRoleMember}
+	if err := r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).Create(record).Error; err != nil {
+		return nil, fmt.Errorf("provision user: %w", err)
+	}
+	user, err := r.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Protect against an erasure request racing with account provisioning.
+	closed, err = r.IsClosed(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if closed {
+		return nil, fmt.Errorf("account has been closed")
+	}
+	return user, nil
+}
+
+// DeleteByID deletes a user by ID. Supabase identity deletion and the local
+// erasure tombstone are managed by the durable privacy-erasure worker.
 func (r *UserRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return database.FromContext(ctx, r.db).Where("id = ?", id).Delete(&model.User{}).Error
 }

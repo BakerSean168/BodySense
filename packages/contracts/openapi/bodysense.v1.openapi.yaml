@@ -962,11 +962,6 @@ paths:
               schema:
                 type: string
                 enum: [no-store]
-            Set-Cookie:
-              description: Clears the browser refresh credential immediately after durable acceptance.
-              schema:
-                type: string
-                minLength: 1
           content:
             application/json:
               schema:
@@ -975,6 +970,80 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/profile/episodic-notes:
+    get:
+      operationId: listEpisodicNotes
+      summary: List the authenticated user's non-authoritative conversational memory notes.
+      description: >
+        S6-B owner-scoped inspection of episodic memory. Returns only the
+        caller's active shadow notes, newest first. The projection deliberately
+        omits source message IDs, source asset IDs, user IDs and Conversation
+        IDs. These notes are conversational memory, not BodyState facts, and
+        this surface never serves them to a model. The whole surface is
+        default-off behind EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the
+        route behaves as if it does not exist (owner-masked 404).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Owner-scoped episodic notes, newest first.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodicNoteList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/profile/episodic-notes/{noteId}:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteEpisodicNote
+      summary: Permanently remove one owned non-authoritative memory note.
+      description: >
+        S6-B owner-only deletion. Removes the selected note and every note
+        whose source range overlaps it, then records a content-free tombstone
+        that prevents regeneration from the same source window. Repeating the
+        command for the same owner is idempotent; foreign and unknown IDs are
+        indistinguishable (owner-masked 404). This never deletes BodyState,
+        Diagnosis, Safety or raw chat records, and it is not an account or
+        health-data erasure request. Default-off behind
+        EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the route behaves as if
+        it does not exist (404).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Episodic note removed (or already removed; idempotent).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodicNoteDeleteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1133,131 +1202,6 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
-  /api/v1/auth/register:
-    post:
-      operationId: registerAccount
-      summary: Register a new account and establish a browser session family.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthRegisterRequest"
-      responses:
-        "201":
-          description: Account created; HttpOnly refresh credential set via Set-Cookie.
-          headers:
-            Cache-Control:
-              $ref: "#/components/headers/NoStore"
-            Pragma:
-              $ref: "#/components/headers/NoCachePragma"
-            Set-Cookie:
-              $ref: "#/components/headers/RefreshCookie"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthSession"
-        "400":
-          $ref: "#/components/responses/InvalidRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  /api/v1/auth/login:
-    post:
-      operationId: loginAccount
-      summary: Log in and establish a browser session family.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthLoginRequest"
-      responses:
-        "200":
-          description: Session established; HttpOnly refresh credential set via Set-Cookie.
-          headers:
-            Cache-Control:
-              $ref: "#/components/headers/NoStore"
-            Pragma:
-              $ref: "#/components/headers/NoCachePragma"
-            Set-Cookie:
-              $ref: "#/components/headers/RefreshCookie"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthSession"
-        "400":
-          $ref: "#/components/responses/InvalidRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  /api/v1/auth/refresh:
-    post:
-      operationId: refreshAccountSession
-      summary: Rotate the HttpOnly refresh credential and return a fresh access credential.
-      security: []
-      responses:
-        "200":
-          description: Refresh credential rotated via Set-Cookie; short-lived access credential returned.
-          headers:
-            Cache-Control:
-              $ref: "#/components/headers/NoStore"
-            Pragma:
-              $ref: "#/components/headers/NoCachePragma"
-            Set-Cookie:
-              $ref: "#/components/headers/RefreshCookie"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthSession"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "429":
-          $ref: "#/components/responses/TooManyRequests"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalError"
-  /api/v1/auth/logout:
-    post:
-      operationId: logoutAccount
-      summary: Revoke the current refresh/session family and clear the browser credential.
-      security: []
-      responses:
-        "200":
-          description: Session revoked; refresh credential cleared via Set-Cookie.
-          headers:
-            Set-Cookie:
-              $ref: "#/components/headers/RefreshCookie"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LogoutAcknowledgement"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "503":
-          $ref: "#/components/responses/ServiceUnavailable"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
   /api/v1/conversation:
     get:
       operationId: getConversation
@@ -3276,20 +3220,6 @@ components:
         type: string
         format: uuid
   headers:
-    NoStore:
-      description: Credential-bearing responses must not be cached.
-      schema:
-        type: string
-        const: no-store
-    NoCachePragma:
-      description: HTTP Pragma no-cache directive for credential-bearing responses.
-      schema:
-        type: string
-        const: no-cache
-    RefreshCookie:
-      description: HttpOnly refresh credential cookie (set or cleared).
-      schema:
-        type: string
     RetryAfter:
       description: Seconds until the next authentication attempt may be retried.
       schema:
@@ -4713,59 +4643,6 @@ components:
     AssessmentEvidenceSource:
       type: string
       enum: [body_state, report, posture_analysis]
-    AuthRegisterRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          minLength: 3
-          maxLength: 254
-          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-        password:
-          type: string
-          minLength: 8
-          maxLength: 128
-    AuthLoginRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          minLength: 3
-          maxLength: 254
-          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-        password:
-          type: string
-          minLength: 1
-          maxLength: 128
-    AuthSession:
-      type: object
-      additionalProperties: false
-      required:
-        - access_token
-        - expires_in
-      properties:
-        access_token:
-          type: string
-          minLength: 1
-        expires_in:
-          type: integer
-          minimum: 0
-    LogoutAcknowledgement:
-      type: object
-      additionalProperties: false
-      required:
-        - message
-      properties:
-        message:
-          type: string
     AssessmentEvidenceDomain:
       type: string
       enum:
@@ -5239,6 +5116,81 @@ components:
         status:
           type: string
           enum: [pending, running, retryable, completed]
+        message:
+          type: string
+          minLength: 1
+    EpisodicNoteStatus:
+      type: string
+      enum: [shadow]
+      description: >
+        Storage state of a non-authoritative conversational memory note.
+        shadow means it is retained only for user review and is never served to
+        a model in this slice.
+    EpisodicNoteSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - contentText
+        - fromSeq
+        - toSeq
+        - status
+        - generatorVersion
+        - retentionPolicyVersion
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        contentText:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        fromSeq:
+          type: integer
+          minimum: 1
+          description: First raw-chat sequence covered by this note.
+        toSeq:
+          type: integer
+          minimum: 1
+          description: Last raw-chat sequence covered by this note.
+        status:
+          $ref: "#/components/schemas/EpisodicNoteStatus"
+        generatorVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+        retentionPolicyVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EpisodicNoteList:
+      type: object
+      additionalProperties: false
+      required: [notes]
+      properties:
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/EpisodicNoteSummary"
+    EpisodicNoteDeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [noteId, deleted, message]
+      properties:
+        noteId:
+          type: string
+          format: uuid
+        deleted:
+          type: boolean
+          description: False when the same owner repeated an already-completed deletion. Both outcomes are successful and idempotent.
         message:
           type: string
           minLength: 1
@@ -8545,9 +8497,10 @@ components:
           document_extractions,
           assessment_reports,
           runtime_checkpoints,
+          episodic_notes,
           asset_manifest,
         ]
-      description: One controlled-copy family of the asset, in execution order. asset_manifest (the asset row itself) is finalized last.
+      description: One controlled-copy family of the asset, in execution order. episodic_notes clears non-authoritative notes referencing the upload. asset_manifest (the asset row itself) is finalized last.
     AssetErasureTargetReceipt:
       type: object
       additionalProperties: false
@@ -8680,10 +8633,11 @@ components:
           assessment_reports,
           decision_records,
           runtime_checkpoints,
+          episodic_notes,
           source_message,
           statement_manifest,
         ]
-      description: One controlled-copy family of the statement, in execution order. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.
+      description: One controlled-copy family of the statement, in execution order. episodic_notes clears non-authoritative notes referencing this statement's chat source. source_message is the user chat message the statement was taken from (deleted unless another durable record cites it). statement_manifest (the statement itself) is finalized last.
     StatementErasureTargetReceipt:
       type: object
       additionalProperties: false

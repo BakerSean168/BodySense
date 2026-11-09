@@ -4,6 +4,7 @@ package bodysense.runtime.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1";
 
@@ -88,6 +89,28 @@ message ConsultationBusinessContext {
   // Go's chat retention context cursor. Absent only when Go could not read
   // it; the runtime then falls back to its own bounded history.
   optional ConsultationContextWindow context_window = 10;
+  // S4 real-time episodic recall. Each note is a non-authoritative narrative
+  // with provenance; the runtime renders it under a separate heading and must
+  // never feed it to Diagnosis, Safety or TrainingPlan inputs. Empty means
+  // today's exact behavior.
+  repeated ConsultationEpisodicNote episodic_notes = 11;
+}
+
+// ConsultationEpisodicNote is one recalled note crossing the Go -> Python
+// serving boundary. Go has already filtered tombstones, owner scope, relevance
+// and the 100 ms budget; the text is the stored canonical note, never rewritten.
+message ConsultationEpisodicNote {
+  string note_id = 1 [(buf.validate.field).string.uuid = true];
+  uint32 from_seq = 2 [(buf.validate.field).uint32.gte = 1];
+  uint32 to_seq = 3 [(buf.validate.field).uint32.gte = 1];
+  repeated string source_message_ids = 4 [(buf.validate.field).repeated = {
+    min_items: 1,
+    max_items: 128,
+    items: {string: {uuid: true}}
+  }];
+  google.protobuf.Timestamp created_at = 5 [(buf.validate.field).required = true];
+  string text = 6 [(buf.validate.field).string = {min_len: 1, max_len: 4096}];
+  string authority = 7 [(buf.validate.field).string.const = "narrative_non_authoritative"];
 }
 
 // ConsultationContextWindow is the raw chat history the model may see
@@ -286,4 +309,48 @@ message StreamDone {
 
 message StreamError {
   string message = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+
+// Episodic S2-B private *proposal* boundary (ADR #495 / #515).
+// These types are NOT new HTTP routes. Go selects the exact source window;
+// Python can only propose a bounded verbatim source quote. No model may write
+// a note, select ownership/retention, or provide clinical authority.
+message EpisodicShadowSourceMessage {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  uint32 seq = 2 [(buf.validate.field).uint32.gte = 1];
+  string role = 3 [(buf.validate.field).string = {in: ["user", "assistant"]}];
+  string text = 4 [(buf.validate.field).string = {min_len: 1, max_len: 1200}];
+}
+
+message EpisodicShadowGenerationCommand {
+  string conversation_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  uint32 from_seq = 3 [(buf.validate.field).uint32.gte = 1];
+  uint32 to_seq = 4 [(buf.validate.field).uint32.gte = 1];
+  string policy_revision = 5 [(buf.validate.field).string.const = "episodic-shadow-quote-v1"];
+  repeated EpisodicShadowSourceMessage source_messages = 6 [
+    (buf.validate.field).repeated = {min_items: 2, max_items: 128}
+  ];
+  // Optional untrusted context immediately preceding from_seq (at most two
+  // messages). It is never a quote source, never stored and never part of the
+  // note's provenance; Go selects it from the same owner-scoped transcript.
+  repeated EpisodicShadowSourceMessage context_messages = 7 [
+    (buf.validate.field).repeated.max_items = 2
+  ];
+}
+
+message EpisodicShadowQuote {
+  string source_message_id = 1 [(buf.validate.field).string.uuid = true];
+  string quote = 2 [(buf.validate.field).string = {min_len: 3, max_len: 120}];
+  string preference = 3 [(buf.validate.field).string = {
+    in: ["brief_answers", "bullet_answers", "chinese_answers", "detailed_answers"]
+  }];
+}
+
+message EpisodicShadowDraftProposal {
+  string policy_revision = 1 [(buf.validate.field).string.const = "episodic-shadow-quote-v1"];
+  // Zero = explicit abstention. Exactly one verified quote at most; no free
+  // summary text and no user/conversation/sequence ids in the model output.
+  repeated EpisodicShadowQuote quotes = 2 [(buf.validate.field).repeated.max_items = 1];
 }

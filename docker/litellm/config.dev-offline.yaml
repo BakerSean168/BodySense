@@ -1,0 +1,8 @@
+# Default direct-dev gateway. Deliberately no external models or fallbacks.
+# A local client cannot cause upstream calls, even via raw docker compose.
+# Provider activation requires a separately reviewed and authorized config.
+model_list: []
+router_settings:
+  num_retries: 0
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

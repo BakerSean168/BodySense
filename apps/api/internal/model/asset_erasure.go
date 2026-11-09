@@ -9,7 +9,7 @@ import (
 
 // AssetErasureInventoryRevision names the controlled-copy inventory a request
 // was planned against. A later inventory adds targets under a new revision.
-const AssetErasureInventoryRevision = "asset-erasure-inventory-v1"
+const AssetErasureInventoryRevision = "asset-erasure-inventory-v2"
 
 // AssetErasureStatus is the request lifecycle. Erased is terminal and is
 // only reachable once every inventoried target verified (enforced in SQL).
@@ -44,6 +44,9 @@ const (
 	// image of a turn that attached the asset and any derived copy naming it.
 	// The ai-service erases and verifies it (POST /runtime/assets/{id}/erasure).
 	AssetErasureRuntimeCheckpoints AssetErasureTargetName = "runtime_checkpoints"
+	// AssetErasureEpisodicNotes removes narrative copies with explicit source
+	// asset provenance before the asset manifest can be erased.
+	AssetErasureEpisodicNotes AssetErasureTargetName = "episodic_notes"
 	// AssetErasureManifest is the asset row itself, tombstoned last.
 	AssetErasureManifest AssetErasureTargetName = "asset_manifest"
 )
@@ -60,6 +63,7 @@ var AssetErasureTargets = []AssetErasureTargetName{
 	AssetErasureDocumentExtractions,
 	AssetErasureAssessmentReports,
 	AssetErasureRuntimeCheckpoints,
+	AssetErasureEpisodicNotes,
 	AssetErasureManifest,
 }
 

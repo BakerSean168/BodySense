@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -581,6 +582,11 @@ type ConsultationBusinessContext struct {
 	// Go's chat retention context cursor. Absent only when Go could not read
 	// it; the runtime then falls back to its own bounded history.
 	ContextWindow *ConsultationContextWindow `protobuf:"bytes,10,opt,name=context_window,json=contextWindow,proto3,oneof" json:"context_window,omitempty"`
+	// S4 real-time episodic recall. Each note is a non-authoritative narrative
+	// with provenance; the runtime renders it under a separate heading and must
+	// never feed it to Diagnosis, Safety or TrainingPlan inputs. Empty means
+	// today's exact behavior.
+	EpisodicNotes []*ConsultationEpisodicNote `protobuf:"bytes,11,rep,name=episodic_notes,json=episodicNotes,proto3" json:"episodic_notes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -685,6 +691,108 @@ func (x *ConsultationBusinessContext) GetContextWindow() *ConsultationContextWin
 	return nil
 }
 
+func (x *ConsultationBusinessContext) GetEpisodicNotes() []*ConsultationEpisodicNote {
+	if x != nil {
+		return x.EpisodicNotes
+	}
+	return nil
+}
+
+// ConsultationEpisodicNote is one recalled note crossing the Go -> Python
+// serving boundary. Go has already filtered tombstones, owner scope, relevance
+// and the 100 ms budget; the text is the stored canonical note, never rewritten.
+type ConsultationEpisodicNote struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	NoteId           string                 `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
+	FromSeq          uint32                 `protobuf:"varint,2,opt,name=from_seq,json=fromSeq,proto3" json:"from_seq,omitempty"`
+	ToSeq            uint32                 `protobuf:"varint,3,opt,name=to_seq,json=toSeq,proto3" json:"to_seq,omitempty"`
+	SourceMessageIds []string               `protobuf:"bytes,4,rep,name=source_message_ids,json=sourceMessageIds,proto3" json:"source_message_ids,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Text             string                 `protobuf:"bytes,6,opt,name=text,proto3" json:"text,omitempty"`
+	Authority        string                 `protobuf:"bytes,7,opt,name=authority,proto3" json:"authority,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ConsultationEpisodicNote) Reset() {
+	*x = ConsultationEpisodicNote{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConsultationEpisodicNote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConsultationEpisodicNote) ProtoMessage() {}
+
+func (x *ConsultationEpisodicNote) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConsultationEpisodicNote.ProtoReflect.Descriptor instead.
+func (*ConsultationEpisodicNote) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ConsultationEpisodicNote) GetNoteId() string {
+	if x != nil {
+		return x.NoteId
+	}
+	return ""
+}
+
+func (x *ConsultationEpisodicNote) GetFromSeq() uint32 {
+	if x != nil {
+		return x.FromSeq
+	}
+	return 0
+}
+
+func (x *ConsultationEpisodicNote) GetToSeq() uint32 {
+	if x != nil {
+		return x.ToSeq
+	}
+	return 0
+}
+
+func (x *ConsultationEpisodicNote) GetSourceMessageIds() []string {
+	if x != nil {
+		return x.SourceMessageIds
+	}
+	return nil
+}
+
+func (x *ConsultationEpisodicNote) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ConsultationEpisodicNote) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *ConsultationEpisodicNote) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
 // ConsultationContextWindow is the raw chat history the model may see
 // (PC-RET-001). Go advances context_start_seq by a token budget; run_ids are
 // the Runs owning messages at or after it, oldest first. The runtime drops
@@ -700,7 +808,7 @@ type ConsultationContextWindow struct {
 
 func (x *ConsultationContextWindow) Reset() {
 	*x = ConsultationContextWindow{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +820,7 @@ func (x *ConsultationContextWindow) String() string {
 func (*ConsultationContextWindow) ProtoMessage() {}
 
 func (x *ConsultationContextWindow) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -725,7 +833,7 @@ func (x *ConsultationContextWindow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsultationContextWindow.ProtoReflect.Descriptor instead.
 func (*ConsultationContextWindow) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ConsultationContextWindow) GetContextStartSeq() uint32 {
@@ -754,7 +862,7 @@ type RuntimeEventIds struct {
 
 func (x *RuntimeEventIds) Reset() {
 	*x = RuntimeEventIds{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +874,7 @@ func (x *RuntimeEventIds) String() string {
 func (*RuntimeEventIds) ProtoMessage() {}
 
 func (x *RuntimeEventIds) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,7 +887,7 @@ func (x *RuntimeEventIds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeEventIds.ProtoReflect.Descriptor instead.
 func (*RuntimeEventIds) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RuntimeEventIds) GetConversationId() string {
@@ -844,7 +952,7 @@ type RuntimeEvent struct {
 
 func (x *RuntimeEvent) Reset() {
 	*x = RuntimeEvent{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -856,7 +964,7 @@ func (x *RuntimeEvent) String() string {
 func (*RuntimeEvent) ProtoMessage() {}
 
 func (x *RuntimeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -869,7 +977,7 @@ func (x *RuntimeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeEvent.ProtoReflect.Descriptor instead.
 func (*RuntimeEvent) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RuntimeEvent) GetVersion() uint32 {
@@ -1169,7 +1277,7 @@ type AgentConfigurationHandshake struct {
 
 func (x *AgentConfigurationHandshake) Reset() {
 	*x = AgentConfigurationHandshake{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1181,7 +1289,7 @@ func (x *AgentConfigurationHandshake) String() string {
 func (*AgentConfigurationHandshake) ProtoMessage() {}
 
 func (x *AgentConfigurationHandshake) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1194,7 +1302,7 @@ func (x *AgentConfigurationHandshake) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentConfigurationHandshake.ProtoReflect.Descriptor instead.
 func (*AgentConfigurationHandshake) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AgentConfigurationHandshake) GetAgentConfiguration() *AgentConfiguration {
@@ -1229,7 +1337,7 @@ type AgentConfiguration struct {
 
 func (x *AgentConfiguration) Reset() {
 	*x = AgentConfiguration{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1241,7 +1349,7 @@ func (x *AgentConfiguration) String() string {
 func (*AgentConfiguration) ProtoMessage() {}
 
 func (x *AgentConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1254,7 +1362,7 @@ func (x *AgentConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentConfiguration.ProtoReflect.Descriptor instead.
 func (*AgentConfiguration) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgentConfiguration) GetId() string {
@@ -1345,7 +1453,7 @@ type ConsultationIntakeConfiguration struct {
 
 func (x *ConsultationIntakeConfiguration) Reset() {
 	*x = ConsultationIntakeConfiguration{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1357,7 +1465,7 @@ func (x *ConsultationIntakeConfiguration) String() string {
 func (*ConsultationIntakeConfiguration) ProtoMessage() {}
 
 func (x *ConsultationIntakeConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1370,7 +1478,7 @@ func (x *ConsultationIntakeConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsultationIntakeConfiguration.ProtoReflect.Descriptor instead.
 func (*ConsultationIntakeConfiguration) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ConsultationIntakeConfiguration) GetLogicalModel() string {
@@ -1425,7 +1533,7 @@ type ConsultationGenerationConfiguration struct {
 
 func (x *ConsultationGenerationConfiguration) Reset() {
 	*x = ConsultationGenerationConfiguration{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1437,7 +1545,7 @@ func (x *ConsultationGenerationConfiguration) String() string {
 func (*ConsultationGenerationConfiguration) ProtoMessage() {}
 
 func (x *ConsultationGenerationConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1450,7 +1558,7 @@ func (x *ConsultationGenerationConfiguration) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ConsultationGenerationConfiguration.ProtoReflect.Descriptor instead.
 func (*ConsultationGenerationConfiguration) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ConsultationGenerationConfiguration) GetTemperature() float64 {
@@ -1480,7 +1588,7 @@ type ExecutionProvenance struct {
 
 func (x *ExecutionProvenance) Reset() {
 	*x = ExecutionProvenance{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1492,7 +1600,7 @@ func (x *ExecutionProvenance) String() string {
 func (*ExecutionProvenance) ProtoMessage() {}
 
 func (x *ExecutionProvenance) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1505,7 +1613,7 @@ func (x *ExecutionProvenance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionProvenance.ProtoReflect.Descriptor instead.
 func (*ExecutionProvenance) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ExecutionProvenance) GetStatus() string {
@@ -1552,7 +1660,7 @@ type MessageTextDelta struct {
 
 func (x *MessageTextDelta) Reset() {
 	*x = MessageTextDelta{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1564,7 +1672,7 @@ func (x *MessageTextDelta) String() string {
 func (*MessageTextDelta) ProtoMessage() {}
 
 func (x *MessageTextDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1577,7 +1685,7 @@ func (x *MessageTextDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageTextDelta.ProtoReflect.Descriptor instead.
 func (*MessageTextDelta) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *MessageTextDelta) GetDelta() string {
@@ -1597,7 +1705,7 @@ type ToolCall struct {
 
 func (x *ToolCall) Reset() {
 	*x = ToolCall{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1717,7 @@ func (x *ToolCall) String() string {
 func (*ToolCall) ProtoMessage() {}
 
 func (x *ToolCall) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1730,7 @@ func (x *ToolCall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolCall.ProtoReflect.Descriptor instead.
 func (*ToolCall) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ToolCall) GetTool() string {
@@ -1649,7 +1757,7 @@ type ToolResult struct {
 
 func (x *ToolResult) Reset() {
 	*x = ToolResult{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1661,7 +1769,7 @@ func (x *ToolResult) String() string {
 func (*ToolResult) ProtoMessage() {}
 
 func (x *ToolResult) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1674,7 +1782,7 @@ func (x *ToolResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolResult.ProtoReflect.Descriptor instead.
 func (*ToolResult) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ToolResult) GetTool() string {
@@ -1700,7 +1808,7 @@ type ExtractedInfoUpsert struct {
 
 func (x *ExtractedInfoUpsert) Reset() {
 	*x = ExtractedInfoUpsert{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1712,7 +1820,7 @@ func (x *ExtractedInfoUpsert) String() string {
 func (*ExtractedInfoUpsert) ProtoMessage() {}
 
 func (x *ExtractedInfoUpsert) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1725,7 +1833,7 @@ func (x *ExtractedInfoUpsert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExtractedInfoUpsert.ProtoReflect.Descriptor instead.
 func (*ExtractedInfoUpsert) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ExtractedInfoUpsert) GetInfo() *structpb.Struct {
@@ -1744,7 +1852,7 @@ type LifestyleContextUpsert struct {
 
 func (x *LifestyleContextUpsert) Reset() {
 	*x = LifestyleContextUpsert{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1756,7 +1864,7 @@ func (x *LifestyleContextUpsert) String() string {
 func (*LifestyleContextUpsert) ProtoMessage() {}
 
 func (x *LifestyleContextUpsert) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1769,7 +1877,7 @@ func (x *LifestyleContextUpsert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LifestyleContextUpsert.ProtoReflect.Descriptor instead.
 func (*LifestyleContextUpsert) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *LifestyleContextUpsert) GetContext() *structpb.Struct {
@@ -1793,7 +1901,7 @@ type InteractionRequired struct {
 
 func (x *InteractionRequired) Reset() {
 	*x = InteractionRequired{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +1913,7 @@ func (x *InteractionRequired) String() string {
 func (*InteractionRequired) ProtoMessage() {}
 
 func (x *InteractionRequired) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1818,7 +1926,7 @@ func (x *InteractionRequired) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InteractionRequired.ProtoReflect.Descriptor instead.
 func (*InteractionRequired) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *InteractionRequired) GetInteractionId() string {
@@ -1860,7 +1968,7 @@ type BodyStateSuggestion struct {
 
 func (x *BodyStateSuggestion) Reset() {
 	*x = BodyStateSuggestion{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[22]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1872,7 +1980,7 @@ func (x *BodyStateSuggestion) String() string {
 func (*BodyStateSuggestion) ProtoMessage() {}
 
 func (x *BodyStateSuggestion) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[22]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1885,7 +1993,7 @@ func (x *BodyStateSuggestion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BodyStateSuggestion.ProtoReflect.Descriptor instead.
 func (*BodyStateSuggestion) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{22}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *BodyStateSuggestion) GetKind() string {
@@ -1934,7 +2042,7 @@ type BodyStateSuggestionSpan struct {
 
 func (x *BodyStateSuggestionSpan) Reset() {
 	*x = BodyStateSuggestionSpan{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[23]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +2054,7 @@ func (x *BodyStateSuggestionSpan) String() string {
 func (*BodyStateSuggestionSpan) ProtoMessage() {}
 
 func (x *BodyStateSuggestionSpan) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[23]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1959,7 +2067,7 @@ func (x *BodyStateSuggestionSpan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BodyStateSuggestionSpan.ProtoReflect.Descriptor instead.
 func (*BodyStateSuggestionSpan) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{23}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *BodyStateSuggestionSpan) GetStart() uint32 {
@@ -1987,7 +2095,7 @@ type PhaseChanged struct {
 
 func (x *PhaseChanged) Reset() {
 	*x = PhaseChanged{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[24]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1999,7 +2107,7 @@ func (x *PhaseChanged) String() string {
 func (*PhaseChanged) ProtoMessage() {}
 
 func (x *PhaseChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[24]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2012,7 +2120,7 @@ func (x *PhaseChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PhaseChanged.ProtoReflect.Descriptor instead.
 func (*PhaseChanged) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{24}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PhaseChanged) GetFrom() string {
@@ -2045,7 +2153,7 @@ type CitationAdded struct {
 
 func (x *CitationAdded) Reset() {
 	*x = CitationAdded{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[25]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2057,7 +2165,7 @@ func (x *CitationAdded) String() string {
 func (*CitationAdded) ProtoMessage() {}
 
 func (x *CitationAdded) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[25]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2070,7 +2178,7 @@ func (x *CitationAdded) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CitationAdded.ProtoReflect.Descriptor instead.
 func (*CitationAdded) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{25}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CitationAdded) GetCitation() *structpb.Struct {
@@ -2089,7 +2197,7 @@ type AnswerAttributionAdded struct {
 
 func (x *AnswerAttributionAdded) Reset() {
 	*x = AnswerAttributionAdded{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[26]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2101,7 +2209,7 @@ func (x *AnswerAttributionAdded) String() string {
 func (*AnswerAttributionAdded) ProtoMessage() {}
 
 func (x *AnswerAttributionAdded) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[26]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2114,7 +2222,7 @@ func (x *AnswerAttributionAdded) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerAttributionAdded.ProtoReflect.Descriptor instead.
 func (*AnswerAttributionAdded) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{26}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *AnswerAttributionAdded) GetAttribution() *structpb.Struct {
@@ -2134,7 +2242,7 @@ type KnowledgeGap struct {
 
 func (x *KnowledgeGap) Reset() {
 	*x = KnowledgeGap{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[27]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2146,7 +2254,7 @@ func (x *KnowledgeGap) String() string {
 func (*KnowledgeGap) ProtoMessage() {}
 
 func (x *KnowledgeGap) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[27]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2159,7 +2267,7 @@ func (x *KnowledgeGap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeGap.ProtoReflect.Descriptor instead.
 func (*KnowledgeGap) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{27}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *KnowledgeGap) GetQuery() string {
@@ -2186,7 +2294,7 @@ type RedFlagDetected struct {
 
 func (x *RedFlagDetected) Reset() {
 	*x = RedFlagDetected{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[28]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2198,7 +2306,7 @@ func (x *RedFlagDetected) String() string {
 func (*RedFlagDetected) ProtoMessage() {}
 
 func (x *RedFlagDetected) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[28]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2211,7 +2319,7 @@ func (x *RedFlagDetected) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedFlagDetected.ProtoReflect.Descriptor instead.
 func (*RedFlagDetected) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{28}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RedFlagDetected) GetHasRedFlags() bool {
@@ -2241,7 +2349,7 @@ type SafetyOutputEvent struct {
 
 func (x *SafetyOutputEvent) Reset() {
 	*x = SafetyOutputEvent{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[29]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2253,7 +2361,7 @@ func (x *SafetyOutputEvent) String() string {
 func (*SafetyOutputEvent) ProtoMessage() {}
 
 func (x *SafetyOutputEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[29]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2266,7 +2374,7 @@ func (x *SafetyOutputEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SafetyOutputEvent.ProtoReflect.Descriptor instead.
 func (*SafetyOutputEvent) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{29}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SafetyOutputEvent) GetKind() string {
@@ -2313,7 +2421,7 @@ type UsageReported struct {
 
 func (x *UsageReported) Reset() {
 	*x = UsageReported{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[30]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2325,7 +2433,7 @@ func (x *UsageReported) String() string {
 func (*UsageReported) ProtoMessage() {}
 
 func (x *UsageReported) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[30]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2338,7 +2446,7 @@ func (x *UsageReported) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageReported.ProtoReflect.Descriptor instead.
 func (*UsageReported) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{30}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *UsageReported) GetUsage() *structpb.Struct {
@@ -2359,7 +2467,7 @@ type StreamDone struct {
 
 func (x *StreamDone) Reset() {
 	*x = StreamDone{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[31]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2371,7 +2479,7 @@ func (x *StreamDone) String() string {
 func (*StreamDone) ProtoMessage() {}
 
 func (x *StreamDone) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[31]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2492,7 @@ func (x *StreamDone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamDone.ProtoReflect.Descriptor instead.
 func (*StreamDone) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{31}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *StreamDone) GetResponseId() string {
@@ -2417,7 +2525,7 @@ type StreamError struct {
 
 func (x *StreamError) Reset() {
 	*x = StreamError{}
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[32]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2429,7 +2537,7 @@ func (x *StreamError) String() string {
 func (*StreamError) ProtoMessage() {}
 
 func (x *StreamError) ProtoReflect() protoreflect.Message {
-	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[32]
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2442,7 +2550,7 @@ func (x *StreamError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamError.ProtoReflect.Descriptor instead.
 func (*StreamError) Descriptor() ([]byte, []int) {
-	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{32}
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *StreamError) GetMessage() string {
@@ -2452,11 +2560,292 @@ func (x *StreamError) GetMessage() string {
 	return ""
 }
 
+// Episodic S2-B private *proposal* boundary (ADR #495 / #515).
+// These types are NOT new HTTP routes. Go selects the exact source window;
+// Python can only propose a bounded verbatim source quote. No model may write
+// a note, select ownership/retention, or provide clinical authority.
+type EpisodicShadowSourceMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowSourceMessage) Reset() {
+	*x = EpisodicShadowSourceMessage{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowSourceMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowSourceMessage) ProtoMessage() {}
+
+func (x *EpisodicShadowSourceMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowSourceMessage.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowSourceMessage) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *EpisodicShadowSourceMessage) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EpisodicShadowSourceMessage) GetSeq() uint32 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowSourceMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *EpisodicShadowSourceMessage) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+type EpisodicShadowGenerationCommand struct {
+	state          protoimpl.MessageState         `protogen:"open.v1"`
+	ConversationId string                         `protobuf:"bytes,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	UserId         string                         `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	FromSeq        uint32                         `protobuf:"varint,3,opt,name=from_seq,json=fromSeq,proto3" json:"from_seq,omitempty"`
+	ToSeq          uint32                         `protobuf:"varint,4,opt,name=to_seq,json=toSeq,proto3" json:"to_seq,omitempty"`
+	PolicyRevision string                         `protobuf:"bytes,5,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
+	SourceMessages []*EpisodicShadowSourceMessage `protobuf:"bytes,6,rep,name=source_messages,json=sourceMessages,proto3" json:"source_messages,omitempty"`
+	// Optional untrusted context immediately preceding from_seq (at most two
+	// messages). It is never a quote source, never stored and never part of the
+	// note's provenance; Go selects it from the same owner-scoped transcript.
+	ContextMessages []*EpisodicShadowSourceMessage `protobuf:"bytes,7,rep,name=context_messages,json=contextMessages,proto3" json:"context_messages,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowGenerationCommand) Reset() {
+	*x = EpisodicShadowGenerationCommand{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowGenerationCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowGenerationCommand) ProtoMessage() {}
+
+func (x *EpisodicShadowGenerationCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowGenerationCommand.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowGenerationCommand) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *EpisodicShadowGenerationCommand) GetConversationId() string {
+	if x != nil {
+		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetFromSeq() uint32 {
+	if x != nil {
+		return x.FromSeq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowGenerationCommand) GetToSeq() uint32 {
+	if x != nil {
+		return x.ToSeq
+	}
+	return 0
+}
+
+func (x *EpisodicShadowGenerationCommand) GetPolicyRevision() string {
+	if x != nil {
+		return x.PolicyRevision
+	}
+	return ""
+}
+
+func (x *EpisodicShadowGenerationCommand) GetSourceMessages() []*EpisodicShadowSourceMessage {
+	if x != nil {
+		return x.SourceMessages
+	}
+	return nil
+}
+
+func (x *EpisodicShadowGenerationCommand) GetContextMessages() []*EpisodicShadowSourceMessage {
+	if x != nil {
+		return x.ContextMessages
+	}
+	return nil
+}
+
+type EpisodicShadowQuote struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SourceMessageId string                 `protobuf:"bytes,1,opt,name=source_message_id,json=sourceMessageId,proto3" json:"source_message_id,omitempty"`
+	Quote           string                 `protobuf:"bytes,2,opt,name=quote,proto3" json:"quote,omitempty"`
+	Preference      string                 `protobuf:"bytes,3,opt,name=preference,proto3" json:"preference,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowQuote) Reset() {
+	*x = EpisodicShadowQuote{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowQuote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowQuote) ProtoMessage() {}
+
+func (x *EpisodicShadowQuote) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowQuote.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowQuote) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *EpisodicShadowQuote) GetSourceMessageId() string {
+	if x != nil {
+		return x.SourceMessageId
+	}
+	return ""
+}
+
+func (x *EpisodicShadowQuote) GetQuote() string {
+	if x != nil {
+		return x.Quote
+	}
+	return ""
+}
+
+func (x *EpisodicShadowQuote) GetPreference() string {
+	if x != nil {
+		return x.Preference
+	}
+	return ""
+}
+
+type EpisodicShadowDraftProposal struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	PolicyRevision string                 `protobuf:"bytes,1,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
+	// Zero = explicit abstention. Exactly one verified quote at most; no free
+	// summary text and no user/conversation/sequence ids in the model output.
+	Quotes        []*EpisodicShadowQuote `protobuf:"bytes,2,rep,name=quotes,proto3" json:"quotes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EpisodicShadowDraftProposal) Reset() {
+	*x = EpisodicShadowDraftProposal{}
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EpisodicShadowDraftProposal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EpisodicShadowDraftProposal) ProtoMessage() {}
+
+func (x *EpisodicShadowDraftProposal) ProtoReflect() protoreflect.Message {
+	mi := &file_bodysense_runtime_v1_runtime_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EpisodicShadowDraftProposal.ProtoReflect.Descriptor instead.
+func (*EpisodicShadowDraftProposal) Descriptor() ([]byte, []int) {
+	return file_bodysense_runtime_v1_runtime_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *EpisodicShadowDraftProposal) GetPolicyRevision() string {
+	if x != nil {
+		return x.PolicyRevision
+	}
+	return ""
+}
+
+func (x *EpisodicShadowDraftProposal) GetQuotes() []*EpisodicShadowQuote {
+	if x != nil {
+		return x.Quotes
+	}
+	return nil
+}
+
 var File_bodysense_runtime_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	"\"bodysense/runtime/v1/runtime.proto\x12\x14bodysense.runtime.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xb2\x03\n" +
+	"\"bodysense/runtime/v1/runtime.proto\x12\x14bodysense.runtime.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb2\x03\n" +
 	"\x10StartTurnCommand\x12%\n" +
 	"\tthread_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bthreadId\x12\x1f\n" +
 	"\x06run_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05runId\x121\n" +
@@ -2513,7 +2902,7 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x12_body_region_labelB\r\n" +
 	"\v_anatomy_idB\x0f\n" +
 	"\r_anatomy_nameB\x13\n" +
-	"\x11_reference_motion\"\x9f\x06\n" +
+	"\x11_reference_motion\"\xf6\x06\n" +
 	"\x1bConsultationBusinessContext\x121\n" +
 	"\aprofile\x18\x01 \x01(\v2\x17.google.protobuf.StructR\aprofile\x126\n" +
 	"\n" +
@@ -2526,9 +2915,21 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x0fspatial_context\x18\b \x01(\v20.bodysense.runtime.v1.ConsultationSpatialContextH\x00R\x0espatialContext\x88\x01\x01\x12B\n" +
 	"\x10posture_analysis\x18\t \x01(\v2\x17.google.protobuf.StructR\x0fpostureAnalysis\x12[\n" +
 	"\x0econtext_window\x18\n" +
-	" \x01(\v2/.bodysense.runtime.v1.ConsultationContextWindowH\x01R\rcontextWindow\x88\x01\x01B\x12\n" +
+	" \x01(\v2/.bodysense.runtime.v1.ConsultationContextWindowH\x01R\rcontextWindow\x88\x01\x01\x12U\n" +
+	"\x0eepisodic_notes\x18\v \x03(\v2..bodysense.runtime.v1.ConsultationEpisodicNoteR\repisodicNotesB\x12\n" +
 	"\x10_spatial_contextB\x11\n" +
-	"\x0f_context_window\"}\n" +
+	"\x0f_context_window\"\xe8\x02\n" +
+	"\x18ConsultationEpisodicNote\x12!\n" +
+	"\anote_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06noteId\x12\"\n" +
+	"\bfrom_seq\x18\x02 \x01(\rB\a\xbaH\x04*\x02(\x01R\afromSeq\x12\x1e\n" +
+	"\x06to_seq\x18\x03 \x01(\rB\a\xbaH\x04*\x02(\x01R\x05toSeq\x12@\n" +
+	"\x12source_message_ids\x18\x04 \x03(\tB\x12\xbaH\x0f\x92\x01\f\b\x01\x10\x80\x01\"\x05r\x03\xb0\x01\x01R\x10sourceMessageIds\x12A\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12\x1e\n" +
+	"\x04text\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80 R\x04text\x12@\n" +
+	"\tauthority\x18\a \x01(\tB\"\xbaH\x1fr\x1d\n" +
+	"\x1bnarrative_non_authoritativeR\tauthority\"}\n" +
 	"\x19ConsultationContextWindow\x123\n" +
 	"\x11context_start_seq\x18\x01 \x01(\rB\a\xbaH\x04*\x02(\x01R\x0fcontextStartSeq\x12+\n" +
 	"\arun_ids\x18\x02 \x03(\tB\x12\xbaH\x0f\x92\x01\f\x10\x80 \x18\x01\"\x05r\x03\xb0\x01\x01R\x06runIds\"\xfc\x01\n" +
@@ -2670,7 +3071,32 @@ const file_bodysense_runtime_v1_runtime_proto_rawDesc = "" +
 	"governanceB\x0e\n" +
 	"\f_response_id\"0\n" +
 	"\vStreamError\x12!\n" +
-	"\amessage\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\amessageBGZEgithub.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1b\x06proto3"
+	"\amessage\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\amessage\"\x9e\x01\n" +
+	"\x1bEpisodicShadowSourceMessage\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
+	"\x03seq\x18\x02 \x01(\rB\a\xbaH\x04*\x02(\x01R\x03seq\x12*\n" +
+	"\x04role\x18\x03 \x01(\tB\x16\xbaH\x13r\x11R\x04userR\tassistantR\x04role\x12\x1e\n" +
+	"\x04text\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xb0\tR\x04text\"\xd6\x03\n" +
+	"\x1fEpisodicShadowGenerationCommand\x121\n" +
+	"\x0fconversation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0econversationId\x12!\n" +
+	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12\"\n" +
+	"\bfrom_seq\x18\x03 \x01(\rB\a\xbaH\x04*\x02(\x01R\afromSeq\x12\x1e\n" +
+	"\x06to_seq\x18\x04 \x01(\rB\a\xbaH\x04*\x02(\x01R\x05toSeq\x12H\n" +
+	"\x0fpolicy_revision\x18\x05 \x01(\tB\x1f\xbaH\x1cr\x1a\n" +
+	"\x18episodic-shadow-quote-v1R\x0epolicyRevision\x12g\n" +
+	"\x0fsource_messages\x18\x06 \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\v\xbaH\b\x92\x01\x05\b\x02\x10\x80\x01R\x0esourceMessages\x12f\n" +
+	"\x10context_messages\x18\a \x03(\v21.bodysense.runtime.v1.EpisodicShadowSourceMessageB\b\xbaH\x05\x92\x01\x02\x10\x02R\x0fcontextMessages\"\xd5\x01\n" +
+	"\x13EpisodicShadowQuote\x124\n" +
+	"\x11source_message_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceMessageId\x12\x1f\n" +
+	"\x05quote\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x03\x18xR\x05quote\x12g\n" +
+	"\n" +
+	"preference\x18\x03 \x01(\tBG\xbaHDrBR\rbrief_answersR\x0ebullet_answersR\x0fchinese_answersR\x10detailed_answersR\n" +
+	"preference\"\xb4\x01\n" +
+	"\x1bEpisodicShadowDraftProposal\x12H\n" +
+	"\x0fpolicy_revision\x18\x01 \x01(\tB\x1f\xbaH\x1cr\x1a\n" +
+	"\x18episodic-shadow-quote-v1R\x0epolicyRevision\x12K\n" +
+	"\x06quotes\x18\x02 \x03(\v2).bodysense.runtime.v1.EpisodicShadowQuoteB\b\xbaH\x05\x92\x01\x02\x10\x01R\x06quotesBGZEgithub.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1b\x06proto3"
 
 var (
 	file_bodysense_runtime_v1_runtime_proto_rawDescOnce sync.Once
@@ -2684,7 +3110,7 @@ func file_bodysense_runtime_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_bodysense_runtime_v1_runtime_proto_rawDescData
 }
 
-var file_bodysense_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_bodysense_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_bodysense_runtime_v1_runtime_proto_goTypes = []any{
 	(*StartTurnCommand)(nil),                    // 0: bodysense.runtime.v1.StartTurnCommand
 	(*ResumeInterruptCommand)(nil),              // 1: bodysense.runtime.v1.ResumeInterruptCommand
@@ -2694,95 +3120,106 @@ var file_bodysense_runtime_v1_runtime_proto_goTypes = []any{
 	(*ConsultationReferenceMotion)(nil),         // 5: bodysense.runtime.v1.ConsultationReferenceMotion
 	(*ConsultationSpatialContext)(nil),          // 6: bodysense.runtime.v1.ConsultationSpatialContext
 	(*ConsultationBusinessContext)(nil),         // 7: bodysense.runtime.v1.ConsultationBusinessContext
-	(*ConsultationContextWindow)(nil),           // 8: bodysense.runtime.v1.ConsultationContextWindow
-	(*RuntimeEventIds)(nil),                     // 9: bodysense.runtime.v1.RuntimeEventIds
-	(*RuntimeEvent)(nil),                        // 10: bodysense.runtime.v1.RuntimeEvent
-	(*AgentConfigurationHandshake)(nil),         // 11: bodysense.runtime.v1.AgentConfigurationHandshake
-	(*AgentConfiguration)(nil),                  // 12: bodysense.runtime.v1.AgentConfiguration
-	(*ConsultationIntakeConfiguration)(nil),     // 13: bodysense.runtime.v1.ConsultationIntakeConfiguration
-	(*ConsultationGenerationConfiguration)(nil), // 14: bodysense.runtime.v1.ConsultationGenerationConfiguration
-	(*ExecutionProvenance)(nil),                 // 15: bodysense.runtime.v1.ExecutionProvenance
-	(*MessageTextDelta)(nil),                    // 16: bodysense.runtime.v1.MessageTextDelta
-	(*ToolCall)(nil),                            // 17: bodysense.runtime.v1.ToolCall
-	(*ToolResult)(nil),                          // 18: bodysense.runtime.v1.ToolResult
-	(*ExtractedInfoUpsert)(nil),                 // 19: bodysense.runtime.v1.ExtractedInfoUpsert
-	(*LifestyleContextUpsert)(nil),              // 20: bodysense.runtime.v1.LifestyleContextUpsert
-	(*InteractionRequired)(nil),                 // 21: bodysense.runtime.v1.InteractionRequired
-	(*BodyStateSuggestion)(nil),                 // 22: bodysense.runtime.v1.BodyStateSuggestion
-	(*BodyStateSuggestionSpan)(nil),             // 23: bodysense.runtime.v1.BodyStateSuggestionSpan
-	(*PhaseChanged)(nil),                        // 24: bodysense.runtime.v1.PhaseChanged
-	(*CitationAdded)(nil),                       // 25: bodysense.runtime.v1.CitationAdded
-	(*AnswerAttributionAdded)(nil),              // 26: bodysense.runtime.v1.AnswerAttributionAdded
-	(*KnowledgeGap)(nil),                        // 27: bodysense.runtime.v1.KnowledgeGap
-	(*RedFlagDetected)(nil),                     // 28: bodysense.runtime.v1.RedFlagDetected
-	(*SafetyOutputEvent)(nil),                   // 29: bodysense.runtime.v1.SafetyOutputEvent
-	(*UsageReported)(nil),                       // 30: bodysense.runtime.v1.UsageReported
-	(*StreamDone)(nil),                          // 31: bodysense.runtime.v1.StreamDone
-	(*StreamError)(nil),                         // 32: bodysense.runtime.v1.StreamError
-	(*structpb.Struct)(nil),                     // 33: google.protobuf.Struct
-	(*structpb.ListValue)(nil),                  // 34: google.protobuf.ListValue
+	(*ConsultationEpisodicNote)(nil),            // 8: bodysense.runtime.v1.ConsultationEpisodicNote
+	(*ConsultationContextWindow)(nil),           // 9: bodysense.runtime.v1.ConsultationContextWindow
+	(*RuntimeEventIds)(nil),                     // 10: bodysense.runtime.v1.RuntimeEventIds
+	(*RuntimeEvent)(nil),                        // 11: bodysense.runtime.v1.RuntimeEvent
+	(*AgentConfigurationHandshake)(nil),         // 12: bodysense.runtime.v1.AgentConfigurationHandshake
+	(*AgentConfiguration)(nil),                  // 13: bodysense.runtime.v1.AgentConfiguration
+	(*ConsultationIntakeConfiguration)(nil),     // 14: bodysense.runtime.v1.ConsultationIntakeConfiguration
+	(*ConsultationGenerationConfiguration)(nil), // 15: bodysense.runtime.v1.ConsultationGenerationConfiguration
+	(*ExecutionProvenance)(nil),                 // 16: bodysense.runtime.v1.ExecutionProvenance
+	(*MessageTextDelta)(nil),                    // 17: bodysense.runtime.v1.MessageTextDelta
+	(*ToolCall)(nil),                            // 18: bodysense.runtime.v1.ToolCall
+	(*ToolResult)(nil),                          // 19: bodysense.runtime.v1.ToolResult
+	(*ExtractedInfoUpsert)(nil),                 // 20: bodysense.runtime.v1.ExtractedInfoUpsert
+	(*LifestyleContextUpsert)(nil),              // 21: bodysense.runtime.v1.LifestyleContextUpsert
+	(*InteractionRequired)(nil),                 // 22: bodysense.runtime.v1.InteractionRequired
+	(*BodyStateSuggestion)(nil),                 // 23: bodysense.runtime.v1.BodyStateSuggestion
+	(*BodyStateSuggestionSpan)(nil),             // 24: bodysense.runtime.v1.BodyStateSuggestionSpan
+	(*PhaseChanged)(nil),                        // 25: bodysense.runtime.v1.PhaseChanged
+	(*CitationAdded)(nil),                       // 26: bodysense.runtime.v1.CitationAdded
+	(*AnswerAttributionAdded)(nil),              // 27: bodysense.runtime.v1.AnswerAttributionAdded
+	(*KnowledgeGap)(nil),                        // 28: bodysense.runtime.v1.KnowledgeGap
+	(*RedFlagDetected)(nil),                     // 29: bodysense.runtime.v1.RedFlagDetected
+	(*SafetyOutputEvent)(nil),                   // 30: bodysense.runtime.v1.SafetyOutputEvent
+	(*UsageReported)(nil),                       // 31: bodysense.runtime.v1.UsageReported
+	(*StreamDone)(nil),                          // 32: bodysense.runtime.v1.StreamDone
+	(*StreamError)(nil),                         // 33: bodysense.runtime.v1.StreamError
+	(*EpisodicShadowSourceMessage)(nil),         // 34: bodysense.runtime.v1.EpisodicShadowSourceMessage
+	(*EpisodicShadowGenerationCommand)(nil),     // 35: bodysense.runtime.v1.EpisodicShadowGenerationCommand
+	(*EpisodicShadowQuote)(nil),                 // 36: bodysense.runtime.v1.EpisodicShadowQuote
+	(*EpisodicShadowDraftProposal)(nil),         // 37: bodysense.runtime.v1.EpisodicShadowDraftProposal
+	(*structpb.Struct)(nil),                     // 38: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),               // 39: google.protobuf.Timestamp
+	(*structpb.ListValue)(nil),                  // 40: google.protobuf.ListValue
 }
 var file_bodysense_runtime_v1_runtime_proto_depIdxs = []int32{
 	3,  // 0: bodysense.runtime.v1.StartTurnCommand.input:type_name -> bodysense.runtime.v1.ConsultationUserInput
 	7,  // 1: bodysense.runtime.v1.StartTurnCommand.business_context:type_name -> bodysense.runtime.v1.ConsultationBusinessContext
-	33, // 2: bodysense.runtime.v1.ResumeInterruptCommand.answer:type_name -> google.protobuf.Struct
+	38, // 2: bodysense.runtime.v1.ResumeInterruptCommand.answer:type_name -> google.protobuf.Struct
 	7,  // 3: bodysense.runtime.v1.ResumeInterruptCommand.business_context:type_name -> bodysense.runtime.v1.ConsultationBusinessContext
 	2,  // 4: bodysense.runtime.v1.ConsultationUserInput.images:type_name -> bodysense.runtime.v1.ConsultationImageRef
-	33, // 5: bodysense.runtime.v1.ConsultationRuntimeState.extracted_info:type_name -> google.protobuf.Struct
+	38, // 5: bodysense.runtime.v1.ConsultationRuntimeState.extracted_info:type_name -> google.protobuf.Struct
 	5,  // 6: bodysense.runtime.v1.ConsultationSpatialContext.reference_motion:type_name -> bodysense.runtime.v1.ConsultationReferenceMotion
-	33, // 7: bodysense.runtime.v1.ConsultationBusinessContext.profile:type_name -> google.protobuf.Struct
-	33, // 8: bodysense.runtime.v1.ConsultationBusinessContext.body_state:type_name -> google.protobuf.Struct
+	38, // 7: bodysense.runtime.v1.ConsultationBusinessContext.profile:type_name -> google.protobuf.Struct
+	38, // 8: bodysense.runtime.v1.ConsultationBusinessContext.body_state:type_name -> google.protobuf.Struct
 	4,  // 9: bodysense.runtime.v1.ConsultationBusinessContext.runtime_state:type_name -> bodysense.runtime.v1.ConsultationRuntimeState
-	33, // 10: bodysense.runtime.v1.ConsultationBusinessContext.relevant_history:type_name -> google.protobuf.Struct
-	33, // 11: bodysense.runtime.v1.ConsultationBusinessContext.current_diagnosis:type_name -> google.protobuf.Struct
-	33, // 12: bodysense.runtime.v1.ConsultationBusinessContext.current_treatment:type_name -> google.protobuf.Struct
-	33, // 13: bodysense.runtime.v1.ConsultationBusinessContext.recent_outcomes:type_name -> google.protobuf.Struct
+	38, // 10: bodysense.runtime.v1.ConsultationBusinessContext.relevant_history:type_name -> google.protobuf.Struct
+	38, // 11: bodysense.runtime.v1.ConsultationBusinessContext.current_diagnosis:type_name -> google.protobuf.Struct
+	38, // 12: bodysense.runtime.v1.ConsultationBusinessContext.current_treatment:type_name -> google.protobuf.Struct
+	38, // 13: bodysense.runtime.v1.ConsultationBusinessContext.recent_outcomes:type_name -> google.protobuf.Struct
 	6,  // 14: bodysense.runtime.v1.ConsultationBusinessContext.spatial_context:type_name -> bodysense.runtime.v1.ConsultationSpatialContext
-	33, // 15: bodysense.runtime.v1.ConsultationBusinessContext.posture_analysis:type_name -> google.protobuf.Struct
-	8,  // 16: bodysense.runtime.v1.ConsultationBusinessContext.context_window:type_name -> bodysense.runtime.v1.ConsultationContextWindow
-	9,  // 17: bodysense.runtime.v1.RuntimeEvent.ids:type_name -> bodysense.runtime.v1.RuntimeEventIds
-	11, // 18: bodysense.runtime.v1.RuntimeEvent.agent_configuration:type_name -> bodysense.runtime.v1.AgentConfigurationHandshake
-	16, // 19: bodysense.runtime.v1.RuntimeEvent.text_delta:type_name -> bodysense.runtime.v1.MessageTextDelta
-	17, // 20: bodysense.runtime.v1.RuntimeEvent.tool_call:type_name -> bodysense.runtime.v1.ToolCall
-	18, // 21: bodysense.runtime.v1.RuntimeEvent.tool_result:type_name -> bodysense.runtime.v1.ToolResult
-	19, // 22: bodysense.runtime.v1.RuntimeEvent.extracted_info:type_name -> bodysense.runtime.v1.ExtractedInfoUpsert
-	20, // 23: bodysense.runtime.v1.RuntimeEvent.lifestyle_context:type_name -> bodysense.runtime.v1.LifestyleContextUpsert
-	21, // 24: bodysense.runtime.v1.RuntimeEvent.interaction_required:type_name -> bodysense.runtime.v1.InteractionRequired
-	24, // 25: bodysense.runtime.v1.RuntimeEvent.phase_changed:type_name -> bodysense.runtime.v1.PhaseChanged
-	25, // 26: bodysense.runtime.v1.RuntimeEvent.citation_added:type_name -> bodysense.runtime.v1.CitationAdded
-	26, // 27: bodysense.runtime.v1.RuntimeEvent.answer_attribution_added:type_name -> bodysense.runtime.v1.AnswerAttributionAdded
-	27, // 28: bodysense.runtime.v1.RuntimeEvent.knowledge_gap:type_name -> bodysense.runtime.v1.KnowledgeGap
-	28, // 29: bodysense.runtime.v1.RuntimeEvent.red_flag_detected:type_name -> bodysense.runtime.v1.RedFlagDetected
-	29, // 30: bodysense.runtime.v1.RuntimeEvent.output_reviewed:type_name -> bodysense.runtime.v1.SafetyOutputEvent
-	29, // 31: bodysense.runtime.v1.RuntimeEvent.output_rejected:type_name -> bodysense.runtime.v1.SafetyOutputEvent
-	30, // 32: bodysense.runtime.v1.RuntimeEvent.usage_reported:type_name -> bodysense.runtime.v1.UsageReported
-	31, // 33: bodysense.runtime.v1.RuntimeEvent.stream_done:type_name -> bodysense.runtime.v1.StreamDone
-	32, // 34: bodysense.runtime.v1.RuntimeEvent.stream_error:type_name -> bodysense.runtime.v1.StreamError
-	12, // 35: bodysense.runtime.v1.AgentConfigurationHandshake.agent_configuration:type_name -> bodysense.runtime.v1.AgentConfiguration
-	15, // 36: bodysense.runtime.v1.AgentConfigurationHandshake.execution_provenance:type_name -> bodysense.runtime.v1.ExecutionProvenance
-	13, // 37: bodysense.runtime.v1.AgentConfiguration.intake:type_name -> bodysense.runtime.v1.ConsultationIntakeConfiguration
-	14, // 38: bodysense.runtime.v1.ConsultationIntakeConfiguration.generation:type_name -> bodysense.runtime.v1.ConsultationGenerationConfiguration
-	33, // 39: bodysense.runtime.v1.ExecutionProvenance.usage:type_name -> google.protobuf.Struct
-	33, // 40: bodysense.runtime.v1.ToolCall.args:type_name -> google.protobuf.Struct
-	33, // 41: bodysense.runtime.v1.ToolResult.result:type_name -> google.protobuf.Struct
-	33, // 42: bodysense.runtime.v1.ExtractedInfoUpsert.info:type_name -> google.protobuf.Struct
-	33, // 43: bodysense.runtime.v1.LifestyleContextUpsert.context:type_name -> google.protobuf.Struct
-	33, // 44: bodysense.runtime.v1.InteractionRequired.question:type_name -> google.protobuf.Struct
-	22, // 45: bodysense.runtime.v1.InteractionRequired.suggestion:type_name -> bodysense.runtime.v1.BodyStateSuggestion
-	23, // 46: bodysense.runtime.v1.BodyStateSuggestion.span:type_name -> bodysense.runtime.v1.BodyStateSuggestionSpan
-	33, // 47: bodysense.runtime.v1.BodyStateSuggestion.payload:type_name -> google.protobuf.Struct
-	33, // 48: bodysense.runtime.v1.CitationAdded.citation:type_name -> google.protobuf.Struct
-	33, // 49: bodysense.runtime.v1.AnswerAttributionAdded.attribution:type_name -> google.protobuf.Struct
-	33, // 50: bodysense.runtime.v1.RedFlagDetected.flags:type_name -> google.protobuf.Struct
-	34, // 51: bodysense.runtime.v1.SafetyOutputEvent.issues:type_name -> google.protobuf.ListValue
-	33, // 52: bodysense.runtime.v1.UsageReported.usage:type_name -> google.protobuf.Struct
-	33, // 53: bodysense.runtime.v1.StreamDone.usage:type_name -> google.protobuf.Struct
-	33, // 54: bodysense.runtime.v1.StreamDone.governance:type_name -> google.protobuf.Struct
-	55, // [55:55] is the sub-list for method output_type
-	55, // [55:55] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	38, // 15: bodysense.runtime.v1.ConsultationBusinessContext.posture_analysis:type_name -> google.protobuf.Struct
+	9,  // 16: bodysense.runtime.v1.ConsultationBusinessContext.context_window:type_name -> bodysense.runtime.v1.ConsultationContextWindow
+	8,  // 17: bodysense.runtime.v1.ConsultationBusinessContext.episodic_notes:type_name -> bodysense.runtime.v1.ConsultationEpisodicNote
+	39, // 18: bodysense.runtime.v1.ConsultationEpisodicNote.created_at:type_name -> google.protobuf.Timestamp
+	10, // 19: bodysense.runtime.v1.RuntimeEvent.ids:type_name -> bodysense.runtime.v1.RuntimeEventIds
+	12, // 20: bodysense.runtime.v1.RuntimeEvent.agent_configuration:type_name -> bodysense.runtime.v1.AgentConfigurationHandshake
+	17, // 21: bodysense.runtime.v1.RuntimeEvent.text_delta:type_name -> bodysense.runtime.v1.MessageTextDelta
+	18, // 22: bodysense.runtime.v1.RuntimeEvent.tool_call:type_name -> bodysense.runtime.v1.ToolCall
+	19, // 23: bodysense.runtime.v1.RuntimeEvent.tool_result:type_name -> bodysense.runtime.v1.ToolResult
+	20, // 24: bodysense.runtime.v1.RuntimeEvent.extracted_info:type_name -> bodysense.runtime.v1.ExtractedInfoUpsert
+	21, // 25: bodysense.runtime.v1.RuntimeEvent.lifestyle_context:type_name -> bodysense.runtime.v1.LifestyleContextUpsert
+	22, // 26: bodysense.runtime.v1.RuntimeEvent.interaction_required:type_name -> bodysense.runtime.v1.InteractionRequired
+	25, // 27: bodysense.runtime.v1.RuntimeEvent.phase_changed:type_name -> bodysense.runtime.v1.PhaseChanged
+	26, // 28: bodysense.runtime.v1.RuntimeEvent.citation_added:type_name -> bodysense.runtime.v1.CitationAdded
+	27, // 29: bodysense.runtime.v1.RuntimeEvent.answer_attribution_added:type_name -> bodysense.runtime.v1.AnswerAttributionAdded
+	28, // 30: bodysense.runtime.v1.RuntimeEvent.knowledge_gap:type_name -> bodysense.runtime.v1.KnowledgeGap
+	29, // 31: bodysense.runtime.v1.RuntimeEvent.red_flag_detected:type_name -> bodysense.runtime.v1.RedFlagDetected
+	30, // 32: bodysense.runtime.v1.RuntimeEvent.output_reviewed:type_name -> bodysense.runtime.v1.SafetyOutputEvent
+	30, // 33: bodysense.runtime.v1.RuntimeEvent.output_rejected:type_name -> bodysense.runtime.v1.SafetyOutputEvent
+	31, // 34: bodysense.runtime.v1.RuntimeEvent.usage_reported:type_name -> bodysense.runtime.v1.UsageReported
+	32, // 35: bodysense.runtime.v1.RuntimeEvent.stream_done:type_name -> bodysense.runtime.v1.StreamDone
+	33, // 36: bodysense.runtime.v1.RuntimeEvent.stream_error:type_name -> bodysense.runtime.v1.StreamError
+	13, // 37: bodysense.runtime.v1.AgentConfigurationHandshake.agent_configuration:type_name -> bodysense.runtime.v1.AgentConfiguration
+	16, // 38: bodysense.runtime.v1.AgentConfigurationHandshake.execution_provenance:type_name -> bodysense.runtime.v1.ExecutionProvenance
+	14, // 39: bodysense.runtime.v1.AgentConfiguration.intake:type_name -> bodysense.runtime.v1.ConsultationIntakeConfiguration
+	15, // 40: bodysense.runtime.v1.ConsultationIntakeConfiguration.generation:type_name -> bodysense.runtime.v1.ConsultationGenerationConfiguration
+	38, // 41: bodysense.runtime.v1.ExecutionProvenance.usage:type_name -> google.protobuf.Struct
+	38, // 42: bodysense.runtime.v1.ToolCall.args:type_name -> google.protobuf.Struct
+	38, // 43: bodysense.runtime.v1.ToolResult.result:type_name -> google.protobuf.Struct
+	38, // 44: bodysense.runtime.v1.ExtractedInfoUpsert.info:type_name -> google.protobuf.Struct
+	38, // 45: bodysense.runtime.v1.LifestyleContextUpsert.context:type_name -> google.protobuf.Struct
+	38, // 46: bodysense.runtime.v1.InteractionRequired.question:type_name -> google.protobuf.Struct
+	23, // 47: bodysense.runtime.v1.InteractionRequired.suggestion:type_name -> bodysense.runtime.v1.BodyStateSuggestion
+	24, // 48: bodysense.runtime.v1.BodyStateSuggestion.span:type_name -> bodysense.runtime.v1.BodyStateSuggestionSpan
+	38, // 49: bodysense.runtime.v1.BodyStateSuggestion.payload:type_name -> google.protobuf.Struct
+	38, // 50: bodysense.runtime.v1.CitationAdded.citation:type_name -> google.protobuf.Struct
+	38, // 51: bodysense.runtime.v1.AnswerAttributionAdded.attribution:type_name -> google.protobuf.Struct
+	38, // 52: bodysense.runtime.v1.RedFlagDetected.flags:type_name -> google.protobuf.Struct
+	40, // 53: bodysense.runtime.v1.SafetyOutputEvent.issues:type_name -> google.protobuf.ListValue
+	38, // 54: bodysense.runtime.v1.UsageReported.usage:type_name -> google.protobuf.Struct
+	38, // 55: bodysense.runtime.v1.StreamDone.usage:type_name -> google.protobuf.Struct
+	38, // 56: bodysense.runtime.v1.StreamDone.governance:type_name -> google.protobuf.Struct
+	34, // 57: bodysense.runtime.v1.EpisodicShadowGenerationCommand.source_messages:type_name -> bodysense.runtime.v1.EpisodicShadowSourceMessage
+	34, // 58: bodysense.runtime.v1.EpisodicShadowGenerationCommand.context_messages:type_name -> bodysense.runtime.v1.EpisodicShadowSourceMessage
+	36, // 59: bodysense.runtime.v1.EpisodicShadowDraftProposal.quotes:type_name -> bodysense.runtime.v1.EpisodicShadowQuote
+	60, // [60:60] is the sub-list for method output_type
+	60, // [60:60] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_bodysense_runtime_v1_runtime_proto_init() }
@@ -2794,8 +3231,8 @@ func file_bodysense_runtime_v1_runtime_proto_init() {
 	file_bodysense_runtime_v1_runtime_proto_msgTypes[3].OneofWrappers = []any{}
 	file_bodysense_runtime_v1_runtime_proto_msgTypes[6].OneofWrappers = []any{}
 	file_bodysense_runtime_v1_runtime_proto_msgTypes[7].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[9].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[10].OneofWrappers = []any{
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[10].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[11].OneofWrappers = []any{
 		(*RuntimeEvent_AgentConfiguration)(nil),
 		(*RuntimeEvent_TextDelta)(nil),
 		(*RuntimeEvent_ToolCall)(nil),
@@ -2814,19 +3251,19 @@ func file_bodysense_runtime_v1_runtime_proto_init() {
 		(*RuntimeEvent_StreamDone)(nil),
 		(*RuntimeEvent_StreamError)(nil),
 	}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[16].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[21].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[24].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[28].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[17].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[22].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[25].OneofWrappers = []any{}
 	file_bodysense_runtime_v1_runtime_proto_msgTypes[29].OneofWrappers = []any{}
-	file_bodysense_runtime_v1_runtime_proto_msgTypes[31].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[30].OneofWrappers = []any{}
+	file_bodysense_runtime_v1_runtime_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bodysense_runtime_v1_runtime_proto_rawDesc), len(file_bodysense_runtime_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

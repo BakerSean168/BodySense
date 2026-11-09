@@ -332,6 +332,8 @@ export function CanvasBusinessWindows({
 
   const renderHeaderActions = (window: BusinessWindowId): ReactNode => {
     if (window === "person") {
+      // Memory is inspect/delete-only; it has no add command.
+      if (personCategory === "memory") return null;
       const upload = personCategory === "media" || personCategory === "reports";
       return (
         <PersonAddButton

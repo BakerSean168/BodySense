@@ -167,8 +167,15 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      SUPABASE_URL: ${SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       AI_SERVICE_URL: http://ai-service:8100
+      # Bounds the whole AI runtime stream read (all serial model calls plus
+      # the full answer). Empty keeps the in-code default of 120 seconds.
+      AI_RUNTIME_TIMEOUT_SECONDS: ${AI_RUNTIME_TIMEOUT_SECONDS:-}
+      # Total time budget for one consultation execution (every serial model
+      # call plus persistence). Empty keeps the in-code default of 300 seconds.
+      CONSULTATION_EXECUTION_TIMEOUT_SECONDS: ${CONSULTATION_EXECUTION_TIMEOUT_SECONDS:-}
       HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
       HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
       HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
@@ -213,6 +220,9 @@ services:
       dockerfile: docker/Dockerfile.web
       args:
         BODYSENSE_ANATOMY_ATLAS_VERSION: ${BODYSENSE_ANATOMY_ATLAS_VERSION:-1.4.0}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
         # Staging keeps application/API traffic private on Tailnet, but public immutable
         # atlas bytes use Vanatome's version-pinned Cloudflare distribution. This avoids
         # coupling multi-megabyte GLBs to a lossy developer Tailnet path. Production

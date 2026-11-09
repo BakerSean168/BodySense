@@ -107,8 +107,8 @@ func TestUserAssetSourceRemovalPostgres(t *testing.T) {
 
 	owner, foreign := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, foreign} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES(?,?,?)",
-			id, "asset-removal-"+id.String()+"@example.test", "synthetic").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)",
+			id, "asset-removal-"+id.String()+"@example.test").Error; err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() {

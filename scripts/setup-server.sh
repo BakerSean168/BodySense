@@ -71,14 +71,15 @@ mkdir -p "$DEPLOY_DIR/docker/litellm" "$DEPLOY_DIR/scripts" "$DEPLOY_DIR/deploy/
 if [ ! -f "$DEPLOY_DIR/.env.production.local" ]; then
   DB_PASSWORD=$(openssl rand -hex 24)
   REDIS_PASSWORD=$(openssl rand -hex 24)
-  JWT_SECRET_KEY=$(openssl rand -base64 48 | tr -d '\n')
   LITELLM_MASTER_KEY=$(openssl rand -hex 32)
   (
     umask 077
     cat > "$DEPLOY_DIR/.env.production.local" <<SECRET
 DB_PASSWORD=$DB_PASSWORD
 REDIS_PASSWORD=$REDIS_PASSWORD
-JWT_SECRET_KEY=$JWT_SECRET_KEY
+# Supabase Auth issues session tokens. Set SUPABASE_SECRET_KEY manually
+# in this protected file to enable permanent account erasure.
+SUPABASE_SECRET_KEY=
 
 # LiteLLM is the production model-routing authority. Provider keys are consumed only by the gateway.
 OPENROUTER_API_KEY=

@@ -13,6 +13,7 @@ const targets = [
   "document_extractions",
   "assessment_reports",
   "runtime_checkpoints",
+  "episodic_notes",
   "asset_manifest",
 ] as const;
 
@@ -30,7 +31,7 @@ function receipt(
     request_id: "00000000-0000-4000-8000-000000000001",
     asset_id: "00000000-0000-4000-8000-000000000002",
     status,
-    inventory_revision: "asset-erasure-inventory-v1",
+    inventory_revision: "asset-erasure-inventory-v2",
     requested_at: "2026-10-19T00:00:00Z",
     targets: targets.map((target) => ({
       target,
@@ -45,6 +46,27 @@ function receipt(
 }
 
 describe("projectAssetErasure", () => {
+  it("projects the ninth episodic_notes controlled-copy target", () => {
+    const value = receipt("outstanding", {
+      episodic_notes: {
+        state: "failed",
+        failure_code: "copy_reappeared",
+        outstanding_count: 1,
+      },
+    });
+    value.outstanding_targets = ["episodic_notes"];
+    const projected = projectAssetErasure(value);
+    expect(projected.outstanding).toContainEqual(
+      expect.objectContaining({
+        target: "episodic_notes",
+        label: "关联的对话摘要",
+      }),
+    );
+    expect(
+      groupAssetErasure(value).find((f) => f.id === "derived")?.verified,
+    ).toBe(false);
+  });
+
   it("shows done only for a fully verified receipt", () => {
     const view = projectAssetErasure(receipt("erased"));
     expect(view.phase).toBe("erased");

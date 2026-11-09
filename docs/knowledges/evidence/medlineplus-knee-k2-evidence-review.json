@@ -1,0 +1,52 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-knee-k2-evidence-review-2026-11-08",
+  "snapshot_git_commit": "a127b7e642d929072bb78557a87d17646fb0571e",
+  "reviewed_at": "2026-11-08T21:30:00Z",
+  "sources": [
+    {
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "canonical_url": "https://medlineplus.gov/kneeinjuriesanddisorders.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-knee-91708e596ee0",
+      "claim_content_hash": "5f369f3c95f2883c61c9fec8e9156ca1be789ea46f7ae814313ff01046903f54",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-e23d1a7027f4",
+      "claim_content_hash": "95eeed8a1b596bc4858f961d904c3aacc4a332ea9133d1b3c99eb46d26508f76",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-b21fe7d3c288",
+      "claim_content_hash": "6de60ab81d797372d2570b200b8ad18ef9e0c681413d81b1ba603e12ce32dbad",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-knee-015c703181d6",
+      "claim_content_hash": "0d173a6458f355c76d9afa40e51ecbc22117dc4d2d588f8f9ecf203aa0286e6a",
+      "canonical_key": "url:4054485361671569a672aa0b43c599a7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}

@@ -17,6 +17,10 @@
 | 当前服务与数据边界 | [Current Longitudinal System](./current-longitudinal-system.md) |
 | Agent 工具运行 | [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) |
 | Agent 上下文 | [Context Engineering](./context-engineering-architecture.md) |
+| 情景连续性决策 | [Episodic Continuity Decision](./episodic-continuity-decision.md) |
+| 情景记忆混合方案（已定案） | [Episodic Memory Hybrid Plan](./episodic-memory-hybrid-plan.md) |
+| 情景影子生成触发（S2） | [Episodic S2 Trigger](./episodic-s2-trigger.md) |
+| 情景记忆基准与召回评测 | [Episodic S2 Benchmark & Recall Eval](./episodic-s2-benchmark-recall-eval.md) |
 | 业务/AI 事件与流协议 | [Stream Event Contract](./stream-event-contract-runtime.md) |
 | 诊断证据及安全判定 | [Diagnosis Decision Authority](./diagnosis-decision-authority.md) |
 | 训练方案生成治理 | [Treatment Agent Configuration](./treatment-agent-configuration.md) |
@@ -34,5 +38,8 @@
 - [真实业务 LLM 接入调研（Chatwoot / FastGPT / Onyx）](./business-llm-integration-case-studies.md)
 - [OpenRouter / Groq 免费渠道连通性记录](../runbooks/openrouter-groq-free-connectivity.md)
 - [知识库生命周期](./knowledge-lifecycle-architecture.md)
+- [知识扩展 Stage A 调研：基线、需求与参考架构](./knowledge-expansion-stage-a.md)
+- [知识扩展 Stage B 盘点与候选目录](./knowledge-expansion-stage-b-inventory.md)
+- [MedlinePlus 健康主题 XML 适配器](./medlineplus-topic-adapter.md)
 
 运行细节以真实代码、API 契约和数据库迁移为准。产品规格中的逻辑对象、字段、工具名是要实现和验证的目标。

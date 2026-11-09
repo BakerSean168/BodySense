@@ -9,7 +9,7 @@ import (
 
 // StatementErasureInventoryRevision names the controlled-copy inventory a
 // statement erasure was planned against.
-const StatementErasureInventoryRevision = "statement-erasure-inventory-v2"
+const StatementErasureInventoryRevision = "statement-erasure-inventory-v3"
 
 // StatementErasureStatus is the request lifecycle. Erased and
 // ErasedWithRetention are terminal and are only reachable once the statement
@@ -58,6 +58,10 @@ const (
 	// StatementErasureRuntimeCheckpoints is consultation runtime state naming
 	// the statement or a derived record (POST /runtime/statements/{id}/erasure).
 	StatementErasureRuntimeCheckpoints StatementErasureTargetName = "runtime_checkpoints"
+	// StatementErasureEpisodicNotes removes each non-authoritative note copying
+	// the statement's chat source. A note never protects raw chat retention;
+	// the DB blocks citing an already erased statement even after a retry.
+	StatementErasureEpisodicNotes StatementErasureTargetName = "episodic_notes"
 	// StatementErasureSourceMessage is the user chat message the statement was
 	// taken from. Once the statement is erased it no longer protects that
 	// message from chat retention; when no other durable record cites it, the
@@ -77,6 +81,7 @@ var StatementErasureTargets = []StatementErasureTargetName{
 	StatementErasureAssessmentReports,
 	StatementErasureDecisionRecords,
 	StatementErasureRuntimeCheckpoints,
+	StatementErasureEpisodicNotes,
 	StatementErasureSourceMessage,
 	StatementErasureManifest,
 }

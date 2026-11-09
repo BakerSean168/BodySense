@@ -12,7 +12,6 @@ import {
   AssessmentReportV2,
   AssetErasureReceipt,
   AssetSourceRemovalResponse,
-  AuthSession,
   BodyEpisodeCommandReceipt,
   BodyEpisodePage,
   BodyEpisodeRecord,
@@ -34,6 +33,8 @@ import {
   CurrentUser,
   DerivedConcernGroupList,
   DocumentIndicatorReviewRecord,
+  EpisodicNoteDeleteResponse,
+  EpisodicNoteList,
   EquipmentAsset,
   EquipmentAssetList,
   HealthDocumentReviewContext,
@@ -48,7 +49,6 @@ import {
   KnowledgeSourceListResponse,
   KnowledgeStats,
   LifestyleSnapshot,
-  LogoutAcknowledgement,
   NativeDiagnosisAnalysisRequest,
   NativeDiagnosisDecisionReceipt,
   NativeDiagnosisDirectEditReceipt,
@@ -93,9 +93,6 @@ import type {
   AssessmentReportV2Output,
   AssetErasureReceiptOutput,
   AssetSourceRemovalResponseOutput,
-  AuthLoginRequest,
-  AuthRegisterRequest,
-  AuthSessionOutput,
   BodyEpisodeAssociationRequest,
   BodyEpisodeCommandReceiptOutput,
   BodyEpisodePageOutput,
@@ -128,6 +125,8 @@ import type {
   CurrentUserOutput,
   DerivedConcernGroupListOutput,
   DocumentIndicatorReviewRecordOutput,
+  EpisodicNoteDeleteResponseOutput,
+  EpisodicNoteListOutput,
   EquipmentAssetListOutput,
   EquipmentAssetOutput,
   FinishTrainingSessionRequest,
@@ -156,7 +155,6 @@ import type {
   ListPlanProposalRecordsParams,
   ListRunEventsParams,
   ListTrainingSessionsParams,
-  LogoutAcknowledgementOutput,
   NativeDiagnosisAnalysisRequestCreate,
   NativeDiagnosisAnalysisRequestOutput,
   NativeDiagnosisDecisionReceiptOutput,
@@ -2009,6 +2007,86 @@ const res = await (fetchFn ?? fetch)(getRequestPrivacyErasureUrl(),
 
 
 
+export const getListEpisodicNotesUrl = () => {
+
+
+
+
+  return `/api/v1/profile/episodic-notes`
+}
+
+/**
+ * S6-B owner-scoped inspection of episodic memory. Returns only the caller's active shadow notes, newest first. The projection deliberately omits source message IDs, source asset IDs, user IDs and Conversation IDs. These notes are conversational memory, not BodyState facts, and this surface never serves them to a model. The whole surface is default-off behind EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the route behaves as if it does not exist (owner-masked 404).
+ * @summary List the authenticated user's non-authoritative conversational memory notes.
+ */
+export const listEpisodicNotes = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EpisodicNoteListOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListEpisodicNotesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EpisodicNoteList, status?: number} = new globalThis.Error();
+    const data : EpisodicNoteList = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EpisodicNoteList.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteEpisodicNoteUrl = (noteId: string,) => {
+
+
+
+
+  return `/api/v1/profile/episodic-notes/${noteId}`
+}
+
+/**
+ * S6-B owner-only deletion. Removes the selected note and every note whose source range overlaps it, then records a content-free tombstone that prevents regeneration from the same source window. Repeating the command for the same owner is idempotent; foreign and unknown IDs are indistinguishable (owner-masked 404). This never deletes BodyState, Diagnosis, Safety or raw chat records, and it is not an account or health-data erasure request. Default-off behind EPISODIC_NOTES_CONTROLS_ENABLED; while disabled the route behaves as if it does not exist (404).
+ * @summary Permanently remove one owned non-authoritative memory note.
+ */
+export const deleteEpisodicNote = async (noteId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<EpisodicNoteDeleteResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteEpisodicNoteUrl(noteId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: EpisodicNoteDeleteResponse, status?: number} = new globalThis.Error();
+    const data : EpisodicNoteDeleteResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? EpisodicNoteDeleteResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
 export const getRecordClientDiagnosticUrl = () => {
 
 
@@ -2273,190 +2351,6 @@ export const exportAssessmentRegressionCase = async (id: string, options?: Reque
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? AssessmentRegressionExport.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getRegisterAccountUrl = () => {
-
-
-
-
-  return `/api/v1/auth/register`
-}
-
-/**
- * @summary Register a new account and establish a browser session family.
- */
-export const registerAccount = async (authRegisterRequest: AuthRegisterRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getRegisterAccountUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(authRegisterRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
-    const data : AuthSession = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getLoginAccountUrl = () => {
-
-
-
-
-  return `/api/v1/auth/login`
-}
-
-/**
- * @summary Log in and establish a browser session family.
- */
-export const loginAccount = async (authLoginRequest: AuthLoginRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-const res = await (fetchFn ?? fetch)(getLoginAccountUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(authLoginRequest)
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
-    const data : AuthSession = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getRefreshAccountSessionUrl = () => {
-
-
-
-
-  return `/api/v1/auth/refresh`
-}
-
-/**
- * @summary Rotate the HttpOnly refresh credential and return a fresh access credential.
- */
-export const refreshAccountSession = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getRefreshAccountSessionUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
-    const data : AuthSession = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
-  return data
-}
-
-
-
-export const getLogoutAccountUrl = () => {
-
-
-
-
-  return `/api/v1/auth/logout`
-}
-
-/**
- * @summary Revoke the current refresh/session family and clear the browser credential.
- */
-export const logoutAccount = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LogoutAcknowledgementOutput> => {
-
-  const res = await (fetchFn ?? fetch)(getLogoutAccountUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-)
-
-  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  if (!res.ok) {
-
-    const err: globalThis.Error & {info?: LogoutAcknowledgement, status?: number} = new globalThis.Error();
-    const data : LogoutAcknowledgement = body ? JSON.parse(body) : {}
-    err.info = data;
-    err.status = res.status;
-    throw err;
-  }
-  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
-  const data = contentType.includes('json') ? LogoutAcknowledgement.parse(parsedBody) : parsedBody
   return data
 }
 

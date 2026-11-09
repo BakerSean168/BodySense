@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -939,5 +940,54 @@ func TestProjectConsultationRuntimeInteractionDoesNotExposeLangGraphInterruptID(
 	}
 	if publicEvent.IDs.ToolCallID != "tool-ask" {
 		t.Fatalf("tool-call correlation was lost: %#v", publicEvent.IDs)
+	}
+}
+
+func TestConsultationExecutionTimeout(t *testing.T) {
+	cases := []struct {
+		name  string
+		unset bool
+		value string
+		want  time.Duration
+	}{
+		{name: "unset uses default", unset: true, want: 5 * time.Minute},
+		{name: "configured seconds override default", value: "600", want: 10 * time.Minute},
+		{name: "zero falls back to default", value: "0", want: 5 * time.Minute},
+		{name: "negative falls back to default", value: "-30", want: 5 * time.Minute},
+		{name: "non numeric falls back to default", value: "ten-minutes", want: 5 * time.Minute},
+		{name: "empty falls back to default", value: "", want: 5 * time.Minute},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Register the ambient value for cleanup before mutating it.
+			t.Setenv(consultationExecutionTimeoutEnv, "")
+			if tc.unset {
+				if err := os.Unsetenv(consultationExecutionTimeoutEnv); err != nil {
+					t.Fatalf("unset %s: %v", consultationExecutionTimeoutEnv, err)
+				}
+			} else {
+				t.Setenv(consultationExecutionTimeoutEnv, tc.value)
+			}
+
+			if got := consultationExecutionTimeout(); got != tc.want {
+				t.Fatalf("consultationExecutionTimeout() = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestConsultationExecutionTimeoutDrivesDurableExecutionContext(t *testing.T) {
+	t.Setenv(consultationExecutionTimeoutEnv, "600")
+
+	ctx, cancel := durableExecutionContext(context.Background())
+	defer cancel()
+
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatal("durable execution context has no deadline")
+	}
+	remaining := time.Until(deadline)
+	if remaining < 590*time.Second || remaining > 600*time.Second {
+		t.Fatalf("durable execution deadline = %s, want about 600s", remaining)
 	}
 }

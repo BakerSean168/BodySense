@@ -57,8 +57,8 @@ func TestTrainingOwnerLockConcurrentNativePG18(t *testing.T) {
 	}
 	owner, other := uuid.New(), uuid.New()
 	for _, id := range []uuid.UUID{owner, other} {
-		if err := db.Exec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)",
-			id, "synthetic-training-lock-"+id.String()+"@example.invalid", "synthetic-only").Error; err != nil {
+		if err := db.Exec("INSERT INTO users(id,email) VALUES(?,?)",
+			id, "synthetic-training-lock-"+id.String()+"@example.invalid").Error; err != nil {
 			t.Fatalf("create ephemeral owner: %v", err)
 		}
 	}

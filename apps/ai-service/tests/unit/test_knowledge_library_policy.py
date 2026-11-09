@@ -296,3 +296,92 @@ def test_published_hashing_rerank_specific_body_evidence_beats_generic_boundary_
     assert library._published_hashing_rerank_score(
         query, nociception
     ) > library._published_hashing_rerank_score(query, boundary)
+
+
+def _published_medlineplus_result(body: str):
+    from src.rag.knowledge_library import SearchResult
+
+    return SearchResult(
+        id=200,
+        unit_key="mlp-knee-001",
+        problem_slug="knee-pain",
+        category="knee-pain-explanation",
+        unit_type="definition",
+        title="膝关节损伤与疾病 · 膝关节由哪些结构组成",
+        summary="膝关节由骨骼、软骨、韧带和关节液组成。",
+        body_markdown=body,
+        similarity=0.04,
+        source_key="medlineplus:health-topic:knee-injuries-and-disorders",
+        source_type="medlineplus_topic",
+        source_title="Knee Injuries and Disorders",
+        source_author="MedlinePlus / U.S. National Library of Medicine",
+        source_start_sec=7.0,
+        source_end_sec=9.0,
+        lifecycle_status="published",
+        review_status="reviewed",
+        quality_score=0.95,
+        unit_metadata={
+            "source_locator": {"heading_path": ["膝关节损伤与疾病", "膝关节由哪些结构组成"]}
+        },
+    )
+
+
+def test_published_hashing_gate_applies_to_medlineplus_topics():
+    result = _published_medlineplus_result("膝关节由骨骼、软骨、韧带和关节液共同组成。")
+
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "膝关节由哪些结构组成？", result, embedding_provider="hashing"
+        )
+        is True
+    )
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "脚踝扭伤怎么处理？", result, embedding_provider="hashing"
+        )
+        is False
+    )
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "怎么设置 PostgreSQL 索引？", result, embedding_provider="hashing"
+        )
+        is False
+    )
+
+
+def test_medlineplus_gate_is_disabled_for_semantic_embedding_providers():
+    result = _published_medlineplus_result("膝关节由骨骼和软骨组成。")
+
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "脚踝扭伤怎么处理？", result, embedding_provider="sentence-transformers"
+        )
+        is True
+    )
+
+
+def test_published_hashing_gate_still_admits_video_results():
+    from src.rag.knowledge_library import SearchResult
+
+    video = SearchResult(
+        id=201,
+        problem_slug="shoulder",
+        category="exercise",
+        unit_type="exercise",
+        title="Video exercise",
+        summary="summary",
+        body_markdown="body",
+        similarity=0.01,
+        source_type="video",
+        source_title="Video",
+        source_author="Author",
+        source_start_sec=0.0,
+        source_end_sec=1.0,
+    )
+
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "unrelated query", video, embedding_provider="hashing"
+        )
+        is True
+    )

@@ -60,6 +60,42 @@ function rejected(original, mutate, label) {
   return r;
 }
 
+// One manifest + job map for a single workflow run at a chosen attempt.
+// `currentAttempt` is what GitHub reports to the Check job, which may be a
+// later attempt than the one that produced the reused manifest artifact.
+function runScoped({
+  manifestAttempt = 2,
+  currentAttempt = manifestAttempt,
+  runId = "1234567",
+  expectedRunId = runId,
+} = {}) {
+  const ref = "refs/pull/523/merge";
+  const manifest = createManifest({
+    requestedBaseSha: SHA_A,
+    baseSha: SHA_A,
+    headSha: SHA_B,
+    event: "pull_request",
+    ref,
+    changedPaths: ["apps/ai-service/src/litellm_client.py"],
+    forceFull: false,
+    runId,
+    runAttempt: manifestAttempt,
+  });
+  const required = expectedCiJobs(manifest);
+  return {
+    manifest,
+    results: Object.fromEntries(
+      CI_JOB_IDS.map((job) => [job, required[job] ? "success" : "skipped"]),
+    ),
+    expectedDigest: manifest.digest,
+    expectedHeadSha: SHA_B,
+    expectedRunId: String(expectedRunId),
+    expectedRunAttempt: String(currentAttempt),
+    expectedEvent: "pull_request",
+    expectedRef: ref,
+  };
+}
+
 test("PR and Main require exact selected outcomes without independent Oracle runners", () => {
   assert.equal(MANIFEST_SCHEMA, "bodysense.delivery-manifest/v9");
   for (const [event, files, wide] of [
@@ -160,9 +196,9 @@ test("wrong SHA, run, attempt, digest and stage cannot pass", () => {
   rejected(
     x,
     (f) => {
-      f.expectedRunAttempt = 3;
+      f.expectedRunAttempt = 1;
     },
-    "attempt",
+    "future attempt",
   );
   rejected(
     x,
@@ -186,6 +222,146 @@ test("wrong SHA, run, attempt, digest and stage cannot pass", () => {
       f.manifest.digest = computeManifestDigest(f.manifest);
     },
     "policy",
+  );
+});
+
+test("attempt 1: an initial run accepts the manifest it just produced", () => {
+  const f = runScoped({ manifestAttempt: 1, currentAttempt: 1 });
+  const r = verifyCiCheck(f);
+  assert.equal(r.ok, true, r.failures.join("; "));
+  assert.equal(r.receipt.runAttempt, 1);
+  assert.equal(r.receipt.manifestAttempt, 1);
+  assert.equal(r.receipt.manifestReusedEarlierAttempt, false);
+});
+
+test("attempt 2: selective rerun accepts a same-run earlier-attempt manifest", () => {
+  for (const manifestAttempt of [1, 2]) {
+    const currentAttempt = manifestAttempt + 1;
+    const f = runScoped({ manifestAttempt, currentAttempt });
+    const r = verifyCiCheck(f);
+    assert.equal(
+      r.ok,
+      true,
+      `manifest ${manifestAttempt} -> attempt ${currentAttempt}: ` +
+        r.failures.join("; "),
+    );
+    assert.equal(r.receipt.runAttempt, currentAttempt);
+    assert.equal(r.receipt.manifestAttempt, manifestAttempt);
+    assert.equal(
+      r.receipt.manifestReusedEarlierAttempt,
+      manifestAttempt < currentAttempt,
+    );
+  }
+});
+
+test("attempt 3: a foreign run ID is rejected even with an older-looking attempt", () => {
+  const x = runScoped({ manifestAttempt: 1, currentAttempt: 2 });
+  const foreign = verifyCiCheck({ ...x, expectedRunId: "9876543" });
+  assert.equal(foreign.ok, false);
+  assert.ok(
+    foreign.failures.some((f) => /run ID/.test(f)),
+    foreign.failures,
+  );
+  rejected(
+    x,
+    (f) => {
+      f.manifest.execution.runId = "9876543";
+      f.manifest.digest = computeManifestDigest(f.manifest);
+    },
+    "manifest rebound to a foreign run",
+  );
+  rejected(
+    x,
+    (f) => {
+      f.expectedRunId = "0";
+    },
+    "invalid GitHub run ID",
+  );
+});
+
+test("attempt 4: stale or altered manifests and forged results are rejected", () => {
+  const x = runScoped({ manifestAttempt: 1, currentAttempt: 2 });
+  rejected(
+    x,
+    (f) => {
+      f.manifest.execution.attempt = 3;
+      f.manifest.digest = computeManifestDigest(f.manifest);
+    },
+    "future manifest attempt",
+  );
+  rejected(
+    x,
+    (f) => {
+      f.manifest.execution.attempt = 0;
+      f.manifest.digest = computeManifestDigest(f.manifest);
+    },
+    "non-positive manifest attempt",
+  );
+  rejected(
+    x,
+    (f) => {
+      delete f.manifest.execution;
+    },
+    "absent provenance",
+  );
+  rejected(
+    x,
+    (f) => {
+      // Rewriting the attempt without re-signing leaves the self-digest stale.
+      f.manifest.execution.attempt = 4;
+    },
+    "tampered attempt without re-signing",
+  );
+  rejected(
+    x,
+    (f) => {
+      f.manifest.execution.attempt = 2;
+      f.manifest.digest = computeManifestDigest(f.manifest);
+    },
+    "resigned manifest no longer matches the delivered digest",
+  );
+  rejected(
+    x,
+    (f) => {
+      f.results["quality-ai-child"] = "failure";
+    },
+    "forged successful job replaced by failure",
+  );
+  rejected(
+    x,
+    (f) => {
+      f.results.lint = "skipped";
+    },
+    "forged required job replaced by skip",
+  );
+  const downgraded = verifyCiCheck({
+    ...runScoped({ manifestAttempt: 2, currentAttempt: 2 }),
+    expectedRunAttempt: "1",
+  });
+  assert.equal(downgraded.ok, false);
+  assert.ok(
+    downgraded.failures.some((f) => /attempt provenance/.test(f)),
+    downgraded.failures,
+  );
+});
+
+test("attempt 5: a full rerun uses the current-attempt manifest at every attempt", () => {
+  for (const attempt of [1, 2, 3]) {
+    const f = runScoped({
+      manifestAttempt: attempt,
+      currentAttempt: attempt,
+    });
+    const r = verifyCiCheck(f);
+    assert.equal(r.ok, true, `full rerun attempt ${attempt}`);
+    assert.equal(r.receipt.manifestAttempt, attempt);
+    assert.equal(r.receipt.manifestReusedEarlierAttempt, false);
+  }
+  const x = runScoped({ manifestAttempt: 4, currentAttempt: 3 });
+  const future = verifyCiCheck(x);
+  assert.equal(future.ok, false);
+  assert.ok(
+    future.failures.some((f) => /attempt provenance/.test(f)),
+    future.failures,
   );
 });
 

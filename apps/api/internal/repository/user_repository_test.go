@@ -23,10 +23,9 @@ func TestUserRepository_Create(t *testing.T) {
 
 	// 测试创建用户
 	user := &model.User{
-		ID:           uuid.New(),
-		Email:        "test-" + uuid.New().String()[:8] + "@example.com",
-		PasswordHash: "$2a$12$test-hash",
-		CreatedAt:    time.Now(),
+		ID:        uuid.New(),
+		Email:     "test-" + uuid.New().String()[:8] + "@example.com",
+		CreatedAt: time.Now(),
 	}
 
 	t.Logf("Would create user: %s", user.Email)

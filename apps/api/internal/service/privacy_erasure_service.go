@@ -20,6 +20,7 @@ import (
 const PrivacyErasureConfirmationPhrase = "DELETE ALL BODY DATA"
 
 var ErrPrivacyErasureConfirmation = errors.New("privacy erasure confirmation phrase does not match")
+var ErrPrivacyErasureUnavailable = errors.New("hosted account deletion is not configured")
 
 type PrivacyErasurePlan struct {
 	Destructive        bool                          `json:"destructive"`
@@ -71,7 +72,7 @@ type PrivacyErasureService struct {
 func NewPrivacyErasureService(
 	requests *repository.PrivacyErasureRepository,
 	users *repository.UserRepository,
-	authService *AuthService,
+	authService authPrivacyRevoker,
 	objects UserObjectCleaner,
 	transactions *database.TransactionManager,
 ) *PrivacyErasureService {
@@ -116,6 +117,11 @@ func (s *PrivacyErasureService) Request(ctx context.Context, userID uuid.UUID, c
 	if confirmation != PrivacyErasureConfirmationPhrase {
 		return nil, ErrPrivacyErasureConfirmation
 	}
+	// Do not accept a permanent erasure if the Supabase admin authority has
+	// not been configured: otherwise we would falsely promise completion.
+	if ready, ok := s.auth.(interface{ Ready() error }); ok && ready.Ready() != nil {
+		return nil, ErrPrivacyErasureUnavailable
+	}
 	plan, err := s.Plan(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("build privacy erasure plan: %w", err)
@@ -157,8 +163,8 @@ func (s *PrivacyErasureService) ProcessRequest(ctx context.Context, id uuid.UUID
 		return wrapped
 	}
 
-	// Revoke first. The Redis user tombstone prevents any concurrent login or
-	// refresh from re-arming a session after this point.
+	// Delete the hosted identity first. The durable local subject digest also
+	// prevents still-valid Supabase JWTs from re-provisioning the local user.
 	if err := s.auth.RevokeUser(ctx, userID); err != nil {
 		return fail("revoke authentication", err)
 	}
