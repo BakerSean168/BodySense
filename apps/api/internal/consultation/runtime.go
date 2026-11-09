@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
+	"github.com/bodysense/api/internal/episodicrecall"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
 	"github.com/bodysense/api/internal/stream"
@@ -104,6 +105,7 @@ type Runtime struct {
 	interactionResumes          *service.InteractionResumeService
 	suggestionSources           service.BodyStateSuggestionSourceReader
 	contextRetrievalService     *service.ContextRetrievalService
+	episodicRecall              *episodicrecall.Recaller
 	diagnosisReader             runtimeDiagnosisReader
 	outcomeService              *service.OutcomeService
 	streamRuntime               *stream.Runtime
@@ -166,6 +168,13 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	r.contextRetrievalService = contextRetrieval
 	r.diagnosisReader = diagnosis
 	r.outcomeService = outcomes
+}
+
+// AttachEpisodicRecall wires the default-off S4 real-time recall path. A nil
+// recaller is the off state: buildBusinessContext performs no query and emits
+// no episodic_notes field, so the payload is byte-identical to today.
+func (r *Runtime) AttachEpisodicRecall(recaller *episodicrecall.Recaller) {
+	r.episodicRecall = recaller
 }
 
 // runtimeDiagnosisReader is the native Diagnosis projection; the consultation
@@ -937,6 +946,29 @@ func (r *Runtime) buildBusinessContext(
 			log.Printf("historical context retrieval failed for conversation %s: %v", conversationID, err)
 		} else {
 			bc.RelevantHistory = history
+		}
+	}
+	// S4: real-time episodic recall, non-clinical context only. Recall already
+	// bounds itself by the 100ms budget and degrades to an empty slice, so this
+	// block can never fail, block or delay the clinical paths below.
+	if r.episodicRecall != nil {
+		if notes := r.episodicRecall.Recall(ctx, uid, queryText); len(notes) > 0 {
+			bc.EpisodicNotes = make([]service.ConsultationEpisodicNote, 0, len(notes))
+			for _, note := range notes {
+				sourceIDs := make([]string, len(note.SourceMessageIDs))
+				for i, id := range note.SourceMessageIDs {
+					sourceIDs[i] = id.String()
+				}
+				bc.EpisodicNotes = append(bc.EpisodicNotes, service.ConsultationEpisodicNote{
+					NoteID:           note.ID.String(),
+					FromSeq:          note.FromSeq,
+					ToSeq:            note.ToSeq,
+					SourceMessageIDs: sourceIDs,
+					CreatedAt:        note.CreatedAt,
+					Text:             note.Text,
+					Authority:        service.ConsultationEpisodicNoteAuthority,
+				})
+			}
 		}
 	}
 	if r.diagnosisReader != nil {
