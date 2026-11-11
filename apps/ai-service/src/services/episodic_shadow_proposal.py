@@ -10,6 +10,7 @@ by Go behind its default-off switch.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
@@ -21,6 +22,31 @@ from pydantic_ai.models import Model
 POLICY_REVISION = "episodic-shadow-quote-v1"
 SOURCE_MAX_CHARS = 8192
 CONTEXT_MAX_CHARS = 2400
+
+EPISODIC_PROPOSAL_MAX_TOKENS_ENV = "EPISODIC_PROPOSAL_MAX_TOKENS"
+DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS = 1024
+
+
+def episodic_proposal_max_tokens() -> int:
+    """Resolve the output cap for one shadow proposal.
+
+    Reasoning models spend several hundred reasoning tokens even at
+    temperature 0 with the forced tool choice, so a 256-token cap ends every
+    real call with finish_reason=length and no tool call. The environment
+    override lets a deployment tune the cap without a code change; unset,
+    non-numeric, zero or negative values keep the safe default.
+    """
+    raw = os.getenv(EPISODIC_PROPOSAL_MAX_TOKENS_ENV, "").strip()
+    if raw == "":
+        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
+    try:
+        max_tokens = int(raw)
+    except ValueError:
+        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
+    if max_tokens <= 0:
+        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
+    return max_tokens
+
 
 # Exact whole-message allowlist. No substring, health statement, free summary
 # or model-inferred clinical detail can become persisted text in S2-B1.
@@ -154,6 +180,6 @@ async def propose_shadow_quote(
     result = await agent.run(
         "Choose zero or one exact, non-clinical response-style preference quote.",
         deps=window,
-        model_settings={"temperature": 0.0, "max_tokens": 256},
+        model_settings={"temperature": 0.0, "max_tokens": episodic_proposal_max_tokens()},
     )
     return validate_shadow_selection(window, result.output)
