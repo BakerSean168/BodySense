@@ -8,7 +8,10 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 import pytest
 from pydantic import ValidationError
+from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.models import ModelRequestParameters
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.settings import ModelSettings
 
 from src.api.episodic_shadow_proto_adapter import (
     parse_shadow_source_window,
@@ -21,6 +24,7 @@ from src.services.episodic_shadow_proposal import (
     ShadowGenerationDisabledError,
     ShadowQuoteSelection,
     ShadowSelectionOutput,
+    propose_shadow_quote,
     validate_shadow_selection,
 )
 
@@ -247,3 +251,69 @@ def test_120_synthetic_claims_are_exact_with_no_clinical_vocabulary() -> None:
                 parse_shadow_source_window(source_payload(text)),
                 selected(quote=text, preference="brief_answers"),
             )
+
+
+class CapturingTestModel(TestModel):
+    """Records the settings the proposal actually hands to the model call."""
+
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.model_settings_seen: list[ModelSettings | None] = []
+
+    async def request(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None,
+        model_request_parameters: ModelRequestParameters,
+    ) -> ModelResponse:
+        self.model_settings_seen.append(model_settings)
+        return await super().request(messages, model_settings, model_request_parameters)
+
+
+def proposal_model() -> CapturingTestModel:
+    return CapturingTestModel(
+        custom_output_args={
+            "quotes": [
+                {
+                    "source_message_id": MESSAGE_ID,
+                    "quote": "请简短回答。",
+                    "preference": "brief_answers",
+                }
+            ]
+        }
+    )
+
+
+async def captured_proposal_settings(
+    monkeypatch: pytest.MonkeyPatch, value: str | None
+) -> list[ModelSettings | None]:
+    if value is None:
+        monkeypatch.delenv("EPISODIC_PROPOSAL_MAX_TOKENS", raising=False)
+    else:
+        monkeypatch.setenv("EPISODIC_PROPOSAL_MAX_TOKENS", value)
+    model = proposal_model()
+    window = parse_shadow_source_window(source_payload())
+    await propose_shadow_quote(window, model=model, enabled=True)
+    assert model.model_settings_seen, "proposal never reached the model boundary"
+    return model.model_settings_seen
+
+
+@pytest.mark.asyncio
+async def test_proposal_defaults_max_tokens_to_1024(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = await captured_proposal_settings(monkeypatch, None)
+    assert all(settings == {"temperature": 0.0, "max_tokens": 1024} for settings in captured)
+
+
+@pytest.mark.asyncio
+async def test_proposal_max_tokens_comes_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = await captured_proposal_settings(monkeypatch, "777")
+    assert all(settings == {"temperature": 0.0, "max_tokens": 777} for settings in captured)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid", ["", "   ", "not-a-number", "0", "-5"])
+async def test_proposal_invalid_max_tokens_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch, invalid: str
+) -> None:
+    captured = await captured_proposal_settings(monkeypatch, invalid)
+    assert all(settings == {"temperature": 0.0, "max_tokens": 1024} for settings in captured)
