@@ -50,14 +50,18 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
         "bodysense-diagnosis",
         "bodysense-consultation",
         "bodysense-structured",
-        "bodysense-text",
     ):
-        assert groups[logical_model]["model"] == "openai/gemini-3.7-flash"
+        assert groups[logical_model]["model"] == "openai/deepseek-v4.1-flash-1017"
         assert groups[logical_model]["api_base"] == "os.environ/PRIMARY_LLM_BASE_URL"
         assert groups[logical_model]["api_key"] == "os.environ/PRIMARY_LLM_API_KEY"
-    assert groups["bodysense-general-fallback"]["model"] == ("openrouter/deepseek/deepseek-chat")
+    assert groups["bodysense-text"]["model"] == "openrouter/nvidia/nemotron-3.5-lightning:free"
+    assert groups["bodysense-text"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
+    assert "api_base" not in groups["bodysense-text"]
+    assert groups["bodysense-general-fallback"]["model"] == (
+        "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    )
     assert groups["bodysense-general-fallback"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
-    assert groups["bodysense-posture"]["model"] == ("openrouter/qwen/qwen2.5-vl-72b-instruct")
+    assert groups["bodysense-posture"]["model"] == ("openrouter/nvidia/nemotron-3.5-super-vl:free")
     assert config["general_settings"]["master_key"] == "os.environ/LITELLM_MASTER_KEY"
 
 

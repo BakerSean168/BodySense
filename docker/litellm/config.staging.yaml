@@ -10,9 +10,9 @@ model_list:
       timeout: 45
   - model_name: bodysense-diagnosis-fallback
     litellm_params:
-      model: openrouter/deepseek/deepseek-chat
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
       api_key: os.environ/OPENROUTER_API_KEY
-      timeout: 45
+      timeout: 180
 
   # General chat/tool use. Application code never names the physical model.
   - model_name: bodysense-consultation
@@ -42,16 +42,16 @@ model_list:
   # Shared operational fallback for non-vision general groups.
   - model_name: bodysense-general-fallback
     litellm_params:
-      model: openrouter/deepseek/deepseek-chat
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
       api_key: os.environ/OPENROUTER_API_KEY
-      timeout: 45
+      timeout: 180
 
   # Vision stays a distinct logical capability group.
   - model_name: bodysense-posture
     litellm_params:
-      model: openrouter/qwen/qwen2.5-vl-72b-instruct
+      model: openrouter/nvidia/nemotron-3.5-super-vl:free
       api_key: os.environ/OPENROUTER_API_KEY
-      timeout: 60
+      timeout: 180
   - model_name: bodysense-posture-fallback
     litellm_params:
       model: openrouter/google/gemini-2.0-flash-001
