@@ -51,9 +51,11 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
         "bodysense-consultation",
         "bodysense-structured",
     ):
-        assert groups[logical_model]["model"] == "openai/deepseek-v4.1-flash-1017"
-        assert groups[logical_model]["api_base"] == "os.environ/PRIMARY_LLM_BASE_URL"
-        assert groups[logical_model]["api_key"] == "os.environ/PRIMARY_LLM_API_KEY"
+        assert groups[logical_model]["model"] == (
+            "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+        )
+        assert groups[logical_model]["api_key"] == "os.environ/OPENROUTER_API_KEY"
+        assert "api_base" not in groups[logical_model]
     assert groups["bodysense-text"]["model"] == "openrouter/nvidia/nemotron-3.5-lightning:free"
     assert groups["bodysense-text"]["api_key"] == "os.environ/OPENROUTER_API_KEY"
     assert "api_base" not in groups["bodysense-text"]
