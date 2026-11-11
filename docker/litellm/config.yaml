@@ -2,9 +2,8 @@ model_list:
   # Diagnosis: immutable Agent configuration selects this logical group only.
   - model_name: bodysense-diagnosis
     litellm_params:
-      model: openai/deepseek-v4.1-flash-1017
-      api_base: os.environ/PRIMARY_LLM_BASE_URL
-      api_key: os.environ/PRIMARY_LLM_API_KEY
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+      api_key: os.environ/OPENROUTER_API_KEY
       timeout: 180
   - model_name: bodysense-diagnosis-fallback
     litellm_params:
@@ -15,17 +14,15 @@ model_list:
   # General chat/tool use. Application code never names the physical model.
   - model_name: bodysense-consultation
     litellm_params:
-      model: openai/deepseek-v4.1-flash-1017
-      api_base: os.environ/PRIMARY_LLM_BASE_URL
-      api_key: os.environ/PRIMARY_LLM_API_KEY
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+      api_key: os.environ/OPENROUTER_API_KEY
       timeout: 180
 
   # Structured typed-Agent / knowledge JSON generation.
   - model_name: bodysense-structured
     litellm_params:
-      model: openai/deepseek-v4.1-flash-1017
-      api_base: os.environ/PRIMARY_LLM_BASE_URL
-      api_key: os.environ/PRIMARY_LLM_API_KEY
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+      api_key: os.environ/OPENROUTER_API_KEY
       timeout: 180
 
   # General text generation for non-conversation consumers.
