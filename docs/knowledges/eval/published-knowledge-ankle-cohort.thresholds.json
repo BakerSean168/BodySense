@@ -1,0 +1,12 @@
+{
+  "schema_version": "bodysense.published-knowledge-qualification-thresholds.v1",
+  "dataset": "docs/knowledges/eval/published-knowledge-ankle-cohort.jsonl",
+  "dataset_sha256": "c7faea4128074d77c6a0a3874f37d2e9ae4e4d7e1375b5d2b6a64d5938148839",
+  "expected_cases": 12,
+  "min_pass_rate": 1.0,
+  "min_positive_hits": 6,
+  "min_negative_rejections": 6,
+  "min_citation_valid": 6,
+  "min_grounding_supported": 6,
+  "require_publication_identity": true
+}

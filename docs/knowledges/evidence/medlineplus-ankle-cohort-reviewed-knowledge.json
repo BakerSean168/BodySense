@@ -1,0 +1,282 @@
+{
+  "schema_version": "bodysense.reviewed-knowledge-snapshot.v1",
+  "reviewed_snapshot_id": "reviewed-knowledge:761bc1b2573c57cfa807599d",
+  "source_snapshot_id": "medlineplus-topics:4805af824dd7dcd6911b8a93dac96896d6621c1a:86bf03e35daa",
+  "source_git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+  "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14",
+  "claim_review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+  "units": [
+    {
+      "unit_key": "mlp-ankle-001",
+      "claim_id": "mlc-ankle-359ee2e15e1d",
+      "claim_content_hash": "c5bfaa03133c8f87f9130bac18ca618725532b1e596d824057289e9ac0dbb41d",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 7,
+        "line_end": 9,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "踝关节由哪些骨骼组成"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-002",
+      "claim_id": "mlc-ankle-c0056e5425c5",
+      "claim_content_hash": "a80d607bdad0ba18832cbed765fdee18053fe1eec5952242e8643c7a91dbb0b2",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 11,
+        "line_end": 13,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "韧带怎样稳定踝关节"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-003",
+      "claim_id": "mlc-ankle-3c2f8f9f9ae9",
+      "claim_content_hash": "dde80d42aafcb97752b030c9b6e6acfce51c3a0fc57ba78c506d5da98a01ce18",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 15,
+        "line_end": 17,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "肌肉和肌腱怎样让踝关节活动"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-004",
+      "claim_id": "mlc-ankle-0331df6420ed",
+      "claim_content_hash": "3457a9fabdbf72995d43645f30e48711e71fc74f275440eb6aecc65859a0f842",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 19,
+        "line_end": 21,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "最常见的踝部问题是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-005",
+      "claim_id": "mlc-ankle-1ba3ef10fddf",
+      "claim_content_hash": "5b42f85d8aeafc4b6e253c838fe6a2a36fc676ca3e8a7e95fe511fe1e0cbfa84",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 23,
+        "line_end": 25,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "踝部扭伤是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-006",
+      "claim_id": "mlc-ankle-b5549c8c417b",
+      "claim_content_hash": "f25211a71242368ddbdd3e3e2313961b3227757b0325b1edeae39f80069c9daa",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.92,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 27,
+        "line_end": 29,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "踝部扭伤完全恢复需要多久"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.92,
+        "certainty": "moderate",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-007",
+      "claim_id": "mlc-ankle-1541c12bb71e",
+      "claim_content_hash": "ce1e1ed987262f4fdb42e8cc5e07bae6b63b6bd9925e4f52c9c27189f7ab765c",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 31,
+        "line_end": 33,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "踝部骨折是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-ankle-008",
+      "claim_id": "mlc-ankle-784c9a975dc3",
+      "claim_content_hash": "2acb7035f8c183a61f173964307edfa2462841f5593b99dbfa387be59c88979d",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+        "path": "topics/ankleinjuriesanddisorders.md",
+        "line_start": 35,
+        "line_end": 37,
+        "heading_path": [
+          "踝部损伤与疾病",
+          "踝部扭伤和骨折与运动有什么关系"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-ankle-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:52:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14"
+      }
+    }
+  ]
+}
