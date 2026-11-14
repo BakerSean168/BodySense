@@ -1,0 +1,12 @@
+{"case_id": "shoulder-pos-01", "query": "肩关节由哪些骨骼组成？", "expect": "hit", "expected_unit_key": "mlp-shoulder-001", "expected_claim_id": "mlc-shoulder-c5b813ebcea6", "expected_evidence_terms": ["锁骨", "肩胛骨", "肱骨"]}
+{"case_id": "shoulder-pos-02", "query": "肩关节是活动度最大的关节吗？", "expect": "hit", "expected_unit_key": "mlp-shoulder-002", "expected_claim_id": "mlc-shoulder-f6205a8f26d7", "expected_evidence_terms": ["活动度", "最大的关节"]}
+{"case_id": "shoulder-pos-03", "query": "肩关节为什么会不稳定？", "expect": "hit", "expected_unit_key": "mlp-shoulder-003", "expected_claim_id": "mlc-shoulder-54cc732ee689", "expected_evidence_terms": ["不稳定", "肩窝"]}
+{"case_id": "shoulder-pos-04", "query": "肌肉、肌腱和韧带怎样稳定肩关节？", "expect": "hit", "expected_unit_key": "mlp-shoulder-004", "expected_claim_id": "mlc-shoulder-37b0ce71c0cd", "expected_evidence_terms": ["肌肉", "肌腱", "韧带"]}
+{"case_id": "shoulder-pos-05", "query": "肩关节为什么容易受伤？", "expect": "hit", "expected_unit_key": "mlp-shoulder-005", "expected_claim_id": "mlc-shoulder-ff60e7255f93", "expected_evidence_terms": ["不稳定", "容易受伤"]}
+{"case_id": "shoulder-pos-06", "query": "常见的肩部问题有哪些？", "expect": "hit", "expected_unit_key": "mlp-shoulder-006", "expected_claim_id": "mlc-shoulder-0e8268c1729d", "expected_evidence_terms": ["扭伤", "脱位", "肩袖撕裂", "冻结肩"]}
+{"case_id": "shoulder-neg-01", "query": "肩膀需要开刀吗？", "expect": "no_result"}
+{"case_id": "shoulder-neg-02", "query": "摔伤后手臂抬不起来要急诊吗？", "expect": "no_result"}
+{"case_id": "shoulder-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "shoulder-neg-04", "query": "肩膀手术后第三天怎么康复？", "expect": "no_result"}
+{"case_id": "shoulder-neg-05", "query": "肩膀摸到肿块需要做核磁吗？", "expect": "no_result"}
+{"case_id": "shoulder-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}
