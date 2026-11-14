@@ -1,0 +1,12 @@
+{"case_id": "back-pos-01", "query": "背痛常见吗？有多少人一生中会经历背痛？", "expect": "hit", "expected_unit_key": "mlp-back-001", "expected_claim_id": "mlc-back-1f870c1d22ec", "expected_evidence_terms": ["背痛", "最常见", "8 个人"]}
+{"case_id": "back-pos-02", "query": "什么是急性背痛？急性背痛通常持续多久？", "expect": "hit", "expected_unit_key": "mlp-back-003", "expected_claim_id": "mlc-back-849aaecdc392", "expected_evidence_terms": ["急性背痛", "几天到几周"]}
+{"case_id": "back-pos-03", "query": "什么是慢性背痛？背痛超过多久算慢性？", "expect": "hit", "expected_unit_key": "mlp-back-004", "expected_claim_id": "mlc-back-1212ed2e15e3", "expected_evidence_terms": ["慢性背痛", "三个月"]}
+{"case_id": "back-pos-04", "query": "大多数背痛会自己缓解吗？", "expect": "hit", "expected_unit_key": "mlp-back-005", "expected_claim_id": "mlc-back-d94b21c166dd", "expected_evidence_terms": ["大多数背痛", "自行缓解"]}
+{"case_id": "back-pos-05", "query": "背痛时卧床休息太久会加重吗？", "expect": "hit", "expected_unit_key": "mlp-back-006", "expected_claim_id": "mlc-back-f994087312d2", "expected_evidence_terms": ["卧床休息", "加重"]}
+{"case_id": "back-pos-06", "query": "背痛的治疗取决于什么？", "expect": "hit", "expected_unit_key": "mlp-back-007", "expected_claim_id": "mlc-back-7689c52d106a", "expected_evidence_terms": ["治疗", "疼痛的类型", "原因"]}
+{"case_id": "back-neg-01", "query": "腰椎间盘突出必须做手术吗？", "expect": "no_result"}
+{"case_id": "back-neg-02", "query": "腰痛伴发烧需要马上就医吗？", "expect": "no_result"}
+{"case_id": "back-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "back-neg-04", "query": "腰椎融合术后第三天怎么康复？", "expect": "no_result"}
+{"case_id": "back-neg-05", "query": "背部肿块需要穿刺活检吗？", "expect": "no_result"}
+{"case_id": "back-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}

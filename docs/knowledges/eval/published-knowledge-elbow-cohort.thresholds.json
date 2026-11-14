@@ -1,0 +1,12 @@
+{
+  "schema_version": "bodysense.published-knowledge-qualification-thresholds.v1",
+  "dataset": "docs/knowledges/eval/published-knowledge-elbow-cohort.jsonl",
+  "dataset_sha256": "2bd0d2702bae218c8d00dae6191c5a7c424e48abbd9ba70fa973bed966c48534",
+  "expected_cases": 12,
+  "min_pass_rate": 1.0,
+  "min_positive_hits": 6,
+  "min_negative_rejections": 6,
+  "min_citation_valid": 6,
+  "min_grounding_supported": 6,
+  "require_publication_identity": true
+}

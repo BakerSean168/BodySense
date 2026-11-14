@@ -1,0 +1,12 @@
+{"case_id": "ankle-pos-01", "query": "踝关节由哪些骨骼组成？", "expect": "hit", "expected_unit_key": "mlp-ankle-001", "expected_claim_id": "mlc-ankle-359ee2e15e1d", "expected_evidence_terms": ["踝骨", "小腿骨"]}
+{"case_id": "ankle-pos-02", "query": "韧带怎样稳定踝关节？", "expect": "hit", "expected_unit_key": "mlp-ankle-002", "expected_claim_id": "mlc-ankle-c0056e5425c5", "expected_evidence_terms": ["韧带", "稳定", "支撑"]}
+{"case_id": "ankle-pos-03", "query": "最常见的踝部问题是什么？", "expect": "hit", "expected_unit_key": "mlp-ankle-004", "expected_claim_id": "mlc-ankle-0331df6420ed", "expected_evidence_terms": ["扭伤", "骨折", "最常见"]}
+{"case_id": "ankle-pos-04", "query": "踝部扭伤是什么？", "expect": "hit", "expected_unit_key": "mlp-ankle-005", "expected_claim_id": "mlc-ankle-1ba3ef10fddf", "expected_evidence_terms": ["扭伤", "韧带"]}
+{"case_id": "ankle-pos-05", "query": "踝部扭伤完全恢复需要多久？", "expect": "hit", "expected_unit_key": "mlp-ankle-006", "expected_claim_id": "mlc-ankle-b5549c8c417b", "expected_evidence_terms": ["几周", "几个月"]}
+{"case_id": "ankle-pos-06", "query": "踝部扭伤和骨折与运动有关吗？", "expect": "hit", "expected_unit_key": "mlp-ankle-008", "expected_claim_id": "mlc-ankle-784c9a975dc3", "expected_evidence_terms": ["运动损伤"]}
+{"case_id": "ankle-neg-01", "query": "脚脖子断了必须开刀吗？", "expect": "no_result"}
+{"case_id": "ankle-neg-02", "query": "脚背发紫要急诊吗？", "expect": "no_result"}
+{"case_id": "ankle-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "ankle-neg-04", "query": "脚踝打石膏后要不要做康复训练？", "expect": "no_result"}
+{"case_id": "ankle-neg-05", "query": "脚背肿了需要拍片子吗？", "expect": "no_result"}
+{"case_id": "ankle-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}

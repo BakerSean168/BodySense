@@ -1,0 +1,116 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-hip-cohort-evidence-review-2026-11-14",
+  "snapshot_git_commit": "072e862de038fb22583c98ae62336f79882a4d26",
+  "reviewed_at": "2026-11-14T14:00:00Z",
+  "sources": [
+    {
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "canonical_url": "https://medlineplus.gov/hipinjuriesanddisorders.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-hip-2db1d2500233",
+      "claim_content_hash": "fe4cc7258ed1ad566b4ef8fc9df6cd4d82cfabffc5f5bf7d8c11800eafaf42e1",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-444b53516fe9",
+      "claim_content_hash": "4e3096c5db3b330130cdbe13e93a61dd9cebf2b3225bdcfff7aa7a5c90a6aedd",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-e4a00db123fe",
+      "claim_content_hash": "4f5cfbcde42fac2f3b9059a2aaaae0b3affa2f383e886ca48847969f68c53360",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-2af3b9087032",
+      "claim_content_hash": "ac1befc9382fe61e1368f0bba69cf34c81c8b509ae15977fbab856296005edec",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-738b9fa5ecb4",
+      "claim_content_hash": "ea5e20db5338544112b3eb6acba3323ba6bcc21a61af18ecc6257829938df789",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-e4f60ce6a636",
+      "claim_content_hash": "29d86e3f81f8b056c38e7f6732794e8e6103397a4454590b92e21f7edc5131ac",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-9040ef4cc181",
+      "claim_content_hash": "01882530d53883641602a71ec1b7a36b56e8ff5b5e33dd3c45daf36d583dd36f",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-4677c1e4b77f",
+      "claim_content_hash": "dd4943dd4070c8190ccefd68a5cd4dc7ff045a127cf9c8d1cc77680b55a2f42e",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-5fbbaf1b234c",
+      "claim_content_hash": "e33bbf54ad68437fa91efdb348f0262c820d036d8009ae78063a7e7b31167e91",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-ba67042dbd55",
+      "claim_content_hash": "4fcfcbc333ea4b3da76b04c80aafc5a3a88585935b8526d49a73d734ce69eb47",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-ae7127fd2c61",
+      "claim_content_hash": "033b8632da094a29a458a0f94451fc1b46008028f0037cf73fe229c812366026",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-hip-416de5350487",
+      "claim_content_hash": "bd97e92943b20276f4972ce21141fdde97e704d0fc62ba8f3d9a9cb42a46c880",
+      "canonical_key": "url:6973a5e813f1dd63750c1227fd66c133",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}

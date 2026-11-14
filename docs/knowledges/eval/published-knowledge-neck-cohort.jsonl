@@ -1,0 +1,12 @@
+{"case_id": "neck-pos-01", "query": "颈部的哪些结构会引起颈部问题？", "expect": "hit", "expected_unit_key": "mlp-neck-001", "expected_claim_id": "mlc-neck-836673ff26e4", "expected_evidence_terms": ["颈部", "肌肉", "韧带", "神经"]}
+{"case_id": "neck-pos-02", "query": "颈部疼痛还可能来自肩部或下颌吗？", "expect": "hit", "expected_unit_key": "mlp-neck-003", "expected_claim_id": "mlc-neck-6960791793db", "expected_evidence_terms": ["颈部疼痛", "肩部", "下颌"]}
+{"case_id": "neck-pos-03", "query": "长时间坐在电脑前会引起颈痛吗？", "expect": "hit", "expected_unit_key": "mlp-neck-005", "expected_claim_id": "mlc-neck-2e706e96d476", "expected_evidence_terms": ["过度使用", "电脑"]}
+{"case_id": "neck-pos-04", "query": "跌倒或车祸会造成颈痛吗？", "expect": "hit", "expected_unit_key": "mlp-neck-007", "expected_claim_id": "mlc-neck-21f8e841a14d", "expected_evidence_terms": ["跌倒", "车祸", "颈痛"]}
+{"case_id": "neck-pos-05", "query": "挥鞭伤是什么？", "expect": "hit", "expected_unit_key": "mlp-neck-008", "expected_claim_id": "mlc-neck-4e3e17a82891", "expected_evidence_terms": ["挥鞭伤", "软组织损伤"]}
+{"case_id": "neck-pos-06", "query": "颈痛的治疗取决于什么？", "expect": "hit", "expected_unit_key": "mlp-neck-009", "expected_claim_id": "mlc-neck-2f2a4e8771b1", "expected_evidence_terms": ["治疗", "原因"]}
+{"case_id": "neck-neg-01", "query": "颈椎间盘突出必须做手术吗？", "expect": "no_result"}
+{"case_id": "neck-neg-02", "query": "手麻伴头晕需要马上就医吗？", "expect": "no_result"}
+{"case_id": "neck-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "neck-neg-04", "query": "颈椎融合术后第三天怎么康复？", "expect": "no_result"}
+{"case_id": "neck-neg-05", "query": "脖子摸到肿块需要穿刺活检吗？", "expect": "no_result"}
+{"case_id": "neck-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}

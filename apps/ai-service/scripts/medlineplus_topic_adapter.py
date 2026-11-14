@@ -103,6 +103,8 @@ def materialize(args: argparse.Namespace) -> int:
     record = load_topic_xml(paths["xml"], args.topic)
     plan = load_rendering_plan(paths["rendering"])
     spec = load_unit_spec(snapshot_dir / "units" / f"{args.topic}.{args.shard}.json")
+    short = str(spec.get("short") or "knee")
+    review_date = args.reviewed_at[:10]
 
     expected_markdown = render_markdown(
         record, plan, raw_sha256=raw_sha256, xml_path=f"topics/{args.topic}.xml"
@@ -124,8 +126,8 @@ def materialize(args: argparse.Namespace) -> int:
         markdown_path=f"topics/{args.topic}.md",
     )
 
-    evidence_id = f"medlineplus-knee-{args.shard}-evidence-review-2026-11-08"
-    claim_review_id = f"medlineplus-knee-{args.shard}-claim-review-2026-11-08"
+    evidence_id = f"medlineplus-{short}-{args.shard}-evidence-review-{review_date}"
+    claim_review_id = f"medlineplus-{short}-{args.shard}-claim-review-{review_date}"
     sources = [
         {
             "canonical_key": resolve_external_reference(build_external_reference(record, 1))[
@@ -188,7 +190,7 @@ def materialize(args: argparse.Namespace) -> int:
     }
 
     output_dir = Path(args.output_dir).expanduser().resolve()
-    prefix = f"medlineplus-knee-{args.shard}"
+    prefix = f"medlineplus-{short}-{args.shard}"
     _write_json(output_dir / f"{prefix}-evidence-review.json", evidence_payload)
     _write_json(output_dir / f"{prefix}-claim-review.json", claims_payload)
 

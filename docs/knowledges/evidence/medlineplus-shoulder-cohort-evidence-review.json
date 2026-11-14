@@ -1,0 +1,68 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-shoulder-cohort-evidence-review-2026-11-14",
+  "snapshot_git_commit": "a13b1eefd3ba2b248ef7bf5865878d3627846fad",
+  "reviewed_at": "2026-11-14T13:48:00Z",
+  "sources": [
+    {
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "canonical_url": "https://medlineplus.gov/shoulderinjuriesanddisorders.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-shoulder-c5b813ebcea6",
+      "claim_content_hash": "3d5537492cf077a12bfa03f38ed8453b8bcb0e417e46d7bde5979247184081e3",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-shoulder-f6205a8f26d7",
+      "claim_content_hash": "eed955a5c06bf60e5dba7bf5f4d534c511f2b48923b970d394a021446a85b3aa",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-shoulder-54cc732ee689",
+      "claim_content_hash": "f95141d0f94b7fd5ce27e6bae23cd30e3ec18e5f91583acb0dae4ec22a38af65",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-shoulder-37b0ce71c0cd",
+      "claim_content_hash": "acb19b697910f50e7e41a42763332028bc558fa9fa1190c410ed4028cdbb89b3",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-shoulder-ff60e7255f93",
+      "claim_content_hash": "97cc28fbadce873364467fba7a5fa3532badfa5249cca408fd70fcd11cc2fc5d",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-shoulder-0e8268c1729d",
+      "claim_content_hash": "c5426107526ac97ae78bbfd58d127fad9789e6ce980a3aa3d7a30b9b33fc2ddb",
+      "canonical_key": "url:fb89aaa70dad5f26bf5a10ac63b171fe",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}

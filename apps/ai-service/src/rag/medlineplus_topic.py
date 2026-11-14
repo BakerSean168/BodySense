@@ -279,9 +279,9 @@ def _section_slice(
     )
 
 
-def claim_id_for(unit_key: str, claim_content_hash: str) -> str:
+def claim_id_for(unit_key: str, claim_content_hash: str, prefix: str = "knee") -> str:
     digest = sha256_text(f"{unit_key}\n{claim_content_hash}")[:12]
-    return f"mlc-knee-{digest}"
+    return f"mlc-{prefix}-{digest}"
 
 
 def snapshot_id_for(content_commit: str, raw_sha256: str) -> str:
@@ -302,6 +302,7 @@ def build_units(
     validate_rendering_plan(record, plan)
     sections = {section.heading: section for section in parse_markdown_sections(markdown)}
     snapshot_id = snapshot_id_for(content_commit, raw_sha256)
+    claim_prefix = str(spec.get("claim_prefix") or "knee")
     planned_headings = [section["heading"] for section in plan["sections"]]
     units: list[KnowledgeUnitCandidate] = []
     seen_keys: set[str] = set()
@@ -320,7 +321,7 @@ def build_units(
             raise ValueError(f"unit spec has empty or duplicate unit_key {unit_key!r}")
         seen_keys.add(unit_key)
         content_hash = sha256_text(section.body_markdown)
-        claim_id = claim_id_for(unit_key, content_hash)
+        claim_id = claim_id_for(unit_key, content_hash, claim_prefix)
         problem_slug = str(item.get("problem_slug") or record.slug).strip()
         knowledge_kinds = list(item.get("knowledge_kinds") or [])
         locator = {

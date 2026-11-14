@@ -1,0 +1,12 @@
+{"case_id": "elbow-pos-01", "query": "肘关节由哪些结构组成？", "expect": "hit", "expected_unit_key": "mlp-elbow-001", "expected_claim_id": "mlc-elbow-d08ff5e2b893", "expected_evidence_terms": ["骨骼", "软骨", "韧带", "关节液"]}
+{"case_id": "elbow-pos-02", "query": "肘部问题是怎么产生的？", "expect": "hit", "expected_unit_key": "mlp-elbow-003", "expected_claim_id": "mlc-elbow-91c81bcc03ee", "expected_evidence_terms": ["受伤", "患病"]}
+{"case_id": "elbow-pos-03", "query": "肌腱炎是什么？", "expect": "hit", "expected_unit_key": "mlp-elbow-005", "expected_claim_id": "mlc-elbow-451f47716cde", "expected_evidence_terms": ["肌腱", "炎症", "损伤"]}
+{"case_id": "elbow-pos-04", "query": "肘部肌腱炎和运动有什么关系？", "expect": "hit", "expected_unit_key": "mlp-elbow-006", "expected_claim_id": "mlc-elbow-b748a146847e", "expected_evidence_terms": ["运动损伤", "网球", "高尔夫"]}
+{"case_id": "elbow-pos-05", "query": "肘部疼痛还有哪些其他原因？", "expect": "hit", "expected_unit_key": "mlp-elbow-008", "expected_claim_id": "mlc-elbow-baf11ae07169", "expected_evidence_terms": ["扭伤", "骨折", "滑囊炎", "关节炎"]}
+{"case_id": "elbow-pos-06", "query": "肘部疼痛的治疗由什么决定？", "expect": "hit", "expected_unit_key": "mlp-elbow-009", "expected_claim_id": "mlc-elbow-cfd8eabd4bf4", "expected_evidence_terms": ["治疗", "原因"]}
+{"case_id": "elbow-neg-01", "query": "手肘需要开刀吗？", "expect": "no_result"}
+{"case_id": "elbow-neg-02", "query": "手肘红肿发热要急诊吗？", "expect": "no_result"}
+{"case_id": "elbow-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "elbow-neg-04", "query": "手肘手术后怎么锻炼？", "expect": "no_result"}
+{"case_id": "elbow-neg-05", "query": "手肘摸到硬块需要拍片吗？", "expect": "no_result"}
+{"case_id": "elbow-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}

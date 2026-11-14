@@ -1,0 +1,117 @@
+{
+  "schema_version": "bodysense.claim-review.v1",
+  "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+  "snapshot_git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+  "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14",
+  "reviewed_at": "2026-11-14T13:44:00Z",
+  "decisions": [
+    {
+      "unit_key": "mlp-neck-001",
+      "claim_id": "mlc-neck-836673ff26e4",
+      "claim_content_hash": "4515abc4a2bdcb795c45852c409c600c1058126058d266581c8448158a906fff",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.95,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-002",
+      "claim_id": "mlc-neck-51cd58bd733f",
+      "claim_content_hash": "06918dc1d209ef01c3de0eb78be3eabda4036b93342b6fa7e7f3be71060ddecb",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.94,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-003",
+      "claim_id": "mlc-neck-6960791793db",
+      "claim_content_hash": "f5c5f4ccfd2abaa3dfce91a01b892953ffcf839563f1390c6e22bfaea815ad28",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-004",
+      "claim_id": "mlc-neck-18aeaa353a9c",
+      "claim_content_hash": "4efb3a44c874c877396da84b66d854924145e55d614a2addf22f22f6ee667fbe",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.94,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-005",
+      "claim_id": "mlc-neck-2e706e96d476",
+      "claim_content_hash": "933bc768ce9299ae83f4e2c2487a4ecf548187721ed26cb7feeb41b5f9d3709b",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-006",
+      "claim_id": "mlc-neck-77c141fed4a0",
+      "claim_content_hash": "f70bb59d08e388a67745922908ef2cd39faf568beee432f38f3d8601f7661ba8",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-007",
+      "claim_id": "mlc-neck-21f8e841a14d",
+      "claim_content_hash": "3e07e5fed21662ea54c57636e285ffc89717ad02247ab0f143509b3102c52911",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.93,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-008",
+      "claim_id": "mlc-neck-4e3e17a82891",
+      "claim_content_hash": "d16480d476188f768758de01ef1564fe01b4a0c11b3620ffce5701d9fa3493fb",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.94,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "mlp-neck-009",
+      "claim_id": "mlc-neck-2f2a4e8771b1",
+      "claim_content_hash": "f611fefc6b62510724f9c7572fcd6545633ec0f42dd9756e8b90a1a33abf36c5",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+      "quality_score": 0.92,
+      "certainty": "moderate",
+      "population": "general"
+    }
+  ]
+}

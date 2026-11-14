@@ -1,0 +1,316 @@
+{
+  "schema_version": "bodysense.reviewed-knowledge-snapshot.v1",
+  "reviewed_snapshot_id": "reviewed-knowledge:aa5124c1ad8985be1d0c646e",
+  "source_snapshot_id": "medlineplus-topics:c21bfdc7d675138601c77d74f274f5b7183687f3:66715bc3bad9",
+  "source_git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+  "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14",
+  "claim_review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+  "units": [
+    {
+      "unit_key": "mlp-elbow-001",
+      "claim_id": "mlc-elbow-d08ff5e2b893",
+      "claim_content_hash": "91b0ffc1d56a8cae9b42834466feb84bc2518dd368761dad925be67583628a17",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 7,
+        "line_end": 9,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘关节由哪些结构组成"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-002",
+      "claim_id": "mlc-elbow-ff1fc7fa19e1",
+      "claim_content_hash": "e7351eaf47dc817d4939969255badc19519eac10a0929bb39f3c1ca3bd58eb6c",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 11,
+        "line_end": 13,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肌肉和肌腱怎样帮助肘关节运动"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-003",
+      "claim_id": "mlc-elbow-91c81bcc03ee",
+      "claim_content_hash": "a1e9acc3271da824c4083fee4269751c9b8f6f9cf4dc5e8f8b5c5e72b374d5ff",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 15,
+        "line_end": 17,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘部问题是怎么产生的"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-004",
+      "claim_id": "mlc-elbow-8b3a9386a0a7",
+      "claim_content_hash": "7c4ae25c6515f8c4d4d3dd3d81dfb0337f7e003ecdb76d0fd6c0b1d18b6f75d0",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 19,
+        "line_end": 21,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘部疼痛的常见原因是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-005",
+      "claim_id": "mlc-elbow-451f47716cde",
+      "claim_content_hash": "185edb8f882aa338fd96e032cff89062b465ecdcaade39404004e786da2f0e1f",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 23,
+        "line_end": 25,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肌腱炎是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-006",
+      "claim_id": "mlc-elbow-b748a146847e",
+      "claim_content_hash": "331aea4591711ae2ec2e2c9fa8f639ff88440a760e9c98cbad8a7ec809e6f975",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 27,
+        "line_end": 29,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘部肌腱炎和运动有什么关系"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-007",
+      "claim_id": "mlc-elbow-8965330cf6a6",
+      "claim_content_hash": "e8f5729a275255aba4d585806d5ca3597bd80ac1ade993ee0e04b8520e0cb31e",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 31,
+        "line_end": 33,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "过度使用也会引起肌腱炎吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-008",
+      "claim_id": "mlc-elbow-baf11ae07169",
+      "claim_content_hash": "763a7864c6b2b754de368728b51b0c7aa039914e0328c4a2d8c91fdd80b1d70d",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 35,
+        "line_end": 37,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘部疼痛还有哪些其他原因"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-elbow-009",
+      "claim_id": "mlc-elbow-cfd8eabd4bf4",
+      "claim_content_hash": "ede7bcf563d56aa44dd2e828116ae33d2e0e6a9033483f68c56e8ae186d42a4f",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.92,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c21bfdc7d675138601c77d74f274f5b7183687f3",
+        "path": "topics/elbowinjuriesanddisorders.md",
+        "line_start": 39,
+        "line_end": 41,
+        "heading_path": [
+          "肘部损伤与疾病",
+          "肘部疼痛的治疗由什么决定"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-elbow-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:56:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.92,
+        "certainty": "moderate",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-elbow-cohort-evidence-review-2026-11-14"
+      }
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-ankle-cohort-evidence-review-2026-11-14",
+  "snapshot_git_commit": "4805af824dd7dcd6911b8a93dac96896d6621c1a",
+  "reviewed_at": "2026-11-14T13:52:00Z",
+  "sources": [
+    {
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "canonical_url": "https://medlineplus.gov/ankleinjuriesanddisorders.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-ankle-359ee2e15e1d",
+      "claim_content_hash": "c5bfaa03133c8f87f9130bac18ca618725532b1e596d824057289e9ac0dbb41d",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-c0056e5425c5",
+      "claim_content_hash": "a80d607bdad0ba18832cbed765fdee18053fe1eec5952242e8643c7a91dbb0b2",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-3c2f8f9f9ae9",
+      "claim_content_hash": "dde80d42aafcb97752b030c9b6e6acfce51c3a0fc57ba78c506d5da98a01ce18",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-0331df6420ed",
+      "claim_content_hash": "3457a9fabdbf72995d43645f30e48711e71fc74f275440eb6aecc65859a0f842",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-1ba3ef10fddf",
+      "claim_content_hash": "5b42f85d8aeafc4b6e253c838fe6a2a36fc676ca3e8a7e95fe511fe1e0cbfa84",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-b5549c8c417b",
+      "claim_content_hash": "f25211a71242368ddbdd3e3e2313961b3227757b0325b1edeae39f80069c9daa",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-1541c12bb71e",
+      "claim_content_hash": "ce1e1ed987262f4fdb42e8cc5e07bae6b63b6bd9925e4f52c9c27189f7ab765c",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-ankle-784c9a975dc3",
+      "claim_content_hash": "2acb7035f8c183a61f173964307edfa2462841f5593b99dbfa387be59c88979d",
+      "canonical_key": "url:746360b0221256fffe3865a04a5d01af",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}
