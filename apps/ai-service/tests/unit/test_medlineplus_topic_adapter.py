@@ -204,3 +204,25 @@ def test_duplicate_unit_keys_are_rejected():
             raw_sha256="0" * 64,
             markdown_path="topics/fixture-topic.md",
         )
+
+
+def test_claim_prefix_defaults_to_knee_and_follows_the_unit_spec():
+    markdown = _render()
+    spec = copy.deepcopy(SPEC)
+    spec["claim_prefix"] = "back"
+
+    units = build_units(
+        _record(),
+        PLAN,
+        spec,
+        markdown,
+        content_commit=COMMIT,
+        raw_sha256=sha256_bytes(FIXTURE.read_bytes()),
+        markdown_path="topics/fixture-topic.md",
+    )
+
+    assert all(
+        unit.metadata["claim_candidate"]["claim_id"].startswith("mlc-back-") for unit in units
+    )
+    assert claim_id_for("mlp-test-001", "0" * 64) == claim_id_for("mlp-test-001", "0" * 64, "knee")
+    assert claim_id_for("mlp-test-001", "0" * 64, "hip").startswith("mlc-hip-")
