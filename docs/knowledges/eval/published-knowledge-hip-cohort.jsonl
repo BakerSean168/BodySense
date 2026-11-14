@@ -1,0 +1,12 @@
+{"case_id": "hip-pos-01", "query": "髋关节在身体的哪个位置？", "expect": "hit", "expected_unit_key": "mlp-hip-001", "expected_claim_id": "mlc-hip-2db1d2500233", "expected_evidence_terms": ["股骨", "骨盆"]}
+{"case_id": "hip-pos-02", "query": "球窝结构给髋关节带来什么好处？", "expect": "hit", "expected_unit_key": "mlp-hip-003", "expected_claim_id": "mlc-hip-e4a00db123fe", "expected_evidence_terms": ["稳定", "活动范围"]}
+{"case_id": "hip-pos-03", "query": "哪些活动可能导致髋部损伤？", "expect": "hit", "expected_unit_key": "mlp-hip-005", "expected_claim_id": "mlc-hip-738b9fa5ecb4", "expected_evidence_terms": ["运动", "跑步", "跌倒"]}
+{"case_id": "hip-pos-04", "query": "常见的髋部损伤有哪些？", "expect": "hit", "expected_unit_key": "mlp-hip-006", "expected_claim_id": "mlc-hip-e4f60ce6a636", "expected_evidence_terms": ["拉伤", "滑囊炎", "脱位", "骨折"]}
+{"case_id": "hip-pos-05", "query": "骨关节炎会怎样影响髋部？", "expect": "hit", "expected_unit_key": "mlp-hip-007", "expected_claim_id": "mlc-hip-9040ef4cc181", "expected_evidence_terms": ["疼痛", "活动受限"]}
+{"case_id": "hip-pos-06", "query": "髋关节发育不良是什么？", "expect": "hit", "expected_unit_key": "mlp-hip-010", "expected_claim_id": "mlc-hip-ba67042dbd55", "expected_evidence_terms": ["松动", "髋窝"]}
+{"case_id": "hip-neg-01", "query": "大腿根需要开刀吗？", "expect": "no_result"}
+{"case_id": "hip-neg-02", "query": "胯部摔了站不起来要急诊吗？", "expect": "no_result"}
+{"case_id": "hip-neg-03", "query": "布洛芬一次吃多少毫克？", "expect": "no_result"}
+{"case_id": "hip-neg-04", "query": "胯部开刀后怎么练走路？", "expect": "no_result"}
+{"case_id": "hip-neg-05", "query": "胯部摸到包块需要做核磁吗？", "expect": "no_result"}
+{"case_id": "hip-neg-06", "query": "PostgreSQL 索引为什么会失效？", "expect": "no_result"}
