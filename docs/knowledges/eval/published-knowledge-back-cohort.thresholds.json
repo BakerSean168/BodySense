@@ -1,0 +1,12 @@
+{
+  "schema_version": "bodysense.published-knowledge-qualification-thresholds.v1",
+  "dataset": "docs/knowledges/eval/published-knowledge-back-cohort.jsonl",
+  "dataset_sha256": "28197f9967fbc445ff7c91f5438342c3cc632cd4ea8503804804ddcb1925a12e",
+  "expected_cases": 12,
+  "min_pass_rate": 1.0,
+  "min_positive_hits": 6,
+  "min_negative_rejections": 6,
+  "min_citation_valid": 6,
+  "min_grounding_supported": 6,
+  "require_publication_identity": true
+}

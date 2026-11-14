@@ -1,0 +1,76 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "medlineplus-back-cohort-evidence-review-2026-11-14",
+  "snapshot_git_commit": "41bb12a4a0aa146e26302ad6d9fe651a577131ff",
+  "reviewed_at": "2026-11-14T13:40:23Z",
+  "sources": [
+    {
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "canonical_url": "https://medlineplus.gov/backpain.html",
+      "authority_tier": "B",
+      "evidence_level": "governmental_health_topic_summary",
+      "license_status": "verified_reuse",
+      "review_status": "reviewed",
+      "reviewed_by": "adapter-self-review",
+      "review_basis": "MedlinePlus states that summaries on health topic pages are public-domain U.S. federal government work reusable with attribution, and the captured topic page carries no third-party copyright label. The topic page is the direct supporting source for every claim in this shard."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "mlc-back-1f870c1d22ec",
+      "claim_content_hash": "b7f472e2c91d119fc608da010e680b175b998383da1fa2052a252e28b36216dd",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-1d4d77d57745",
+      "claim_content_hash": "ef6aa1492d3cc830fea89282a7320a58382f94f99c344d157e9ed6a7ca386e15",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-849aaecdc392",
+      "claim_content_hash": "f48fde1d58bf66aa8d66d3bed94a573b9c278f4f41170573e0e6a68559bb369f",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-1212ed2e15e3",
+      "claim_content_hash": "501eb2c2f01284a43c00165e0f08e9c5528916e8809caf121f0648e79ae29ce8",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-d94b21c166dd",
+      "claim_content_hash": "ed078b8cd836856f40fe7b6f2f296daced4ca4b099666bb10591412880858a87",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-f994087312d2",
+      "claim_content_hash": "12ad1f00fc9f511a2dcc522d72dfd8a95e96232a3a8699fbac7eb5cfb937082c",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    },
+    {
+      "claim_id": "mlc-back-7689c52d106a",
+      "claim_content_hash": "1060960ab6d7086ea8f48da89c9856d9ccc4f0e0f58b6d3c875653c722948711",
+      "canonical_key": "url:49304142b245ac3dd85d6b00f266a7c7",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}
