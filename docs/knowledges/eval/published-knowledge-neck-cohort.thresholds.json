@@ -1,0 +1,12 @@
+{
+  "schema_version": "bodysense.published-knowledge-qualification-thresholds.v1",
+  "dataset": "docs/knowledges/eval/published-knowledge-neck-cohort.jsonl",
+  "dataset_sha256": "d3dcd6957d53c09999d234b2134ebb0734e0bb618b943526388f288aefd2805c",
+  "expected_cases": 12,
+  "min_pass_rate": 1.0,
+  "min_positive_hits": 6,
+  "min_negative_rejections": 6,
+  "min_citation_valid": 6,
+  "min_grounding_supported": 6,
+  "require_publication_identity": true
+}

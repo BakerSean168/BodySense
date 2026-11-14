@@ -1,0 +1,316 @@
+{
+  "schema_version": "bodysense.reviewed-knowledge-snapshot.v1",
+  "reviewed_snapshot_id": "reviewed-knowledge:c1182ccff5fca2aef3333804",
+  "source_snapshot_id": "medlineplus-topics:c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2:d7deb9edafea",
+  "source_git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+  "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14",
+  "claim_review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+  "units": [
+    {
+      "unit_key": "mlp-neck-001",
+      "claim_id": "mlc-neck-836673ff26e4",
+      "claim_content_hash": "4515abc4a2bdcb795c45852c409c600c1058126058d266581c8448158a906fff",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 7,
+        "line_end": 9,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "颈部的哪些结构会引发颈部问题"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-002",
+      "claim_id": "mlc-neck-51cd58bd733f",
+      "claim_content_hash": "06918dc1d209ef01c3de0eb78be3eabda4036b93342b6fa7e7f3be71060ddecb",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 11,
+        "line_end": 13,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "颈痛常见吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-003",
+      "claim_id": "mlc-neck-6960791793db",
+      "claim_content_hash": "f5c5f4ccfd2abaa3dfce91a01b892953ffcf839563f1390c6e22bfaea815ad28",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 15,
+        "line_end": 17,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "颈部疼痛还可能来自哪里"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-004",
+      "claim_id": "mlc-neck-18aeaa353a9c",
+      "claim_content_hash": "4efb3a44c874c877396da84b66d854924145e55d614a2addf22f22f6ee667fbe",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 19,
+        "line_end": 21,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "肌肉拉伤或紧张会引起颈痛吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-005",
+      "claim_id": "mlc-neck-2e706e96d476",
+      "claim_content_hash": "933bc768ce9299ae83f4e2c2487a4ecf548187721ed26cb7feeb41b5f9d3709b",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 23,
+        "line_end": 25,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "长时间坐在电脑前会引发颈痛吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-006",
+      "claim_id": "mlc-neck-77c141fed4a0",
+      "claim_content_hash": "f70bb59d08e388a67745922908ef2cd39faf568beee432f38f3d8601f7661ba8",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 27,
+        "line_end": 29,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "睡姿和运动也会拉伤颈部肌肉吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-007",
+      "claim_id": "mlc-neck-21f8e841a14d",
+      "claim_content_hash": "3e07e5fed21662ea54c57636e285ffc89717ad02247ab0f143509b3102c52911",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.93,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 31,
+        "line_end": 33,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "跌倒和车祸会造成颈痛吗"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.93,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-008",
+      "claim_id": "mlc-neck-4e3e17a82891",
+      "claim_content_hash": "d16480d476188f768758de01ef1564fe01b4a0c11b3620ffce5701d9fa3493fb",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.94,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 35,
+        "line_end": 37,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "挥鞭伤是什么"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.94,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    },
+    {
+      "unit_key": "mlp-neck-009",
+      "claim_id": "mlc-neck-2f2a4e8771b1",
+      "claim_content_hash": "f611fefc6b62510724f9c7572fcd6545633ec0f42dd9756e8b90a1a33abf36c5",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.92,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "bodysense-knowledge-snapshots",
+        "git_commit": "c72e77318f593eac7b7b5a92c681cb1c9f0c7ae2",
+        "path": "topics/neckinjuriesanddisorders.md",
+        "line_start": 39,
+        "line_end": 41,
+        "heading_path": [
+          "颈部损伤与疾病",
+          "颈痛的治疗由什么决定"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "medlineplus-neck-cohort-claim-review-2026-11-14",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-11-14T13:44:00Z",
+        "reviewed_by": "adapter-self-review",
+        "review_basis": "The section is a bounded Chinese rewrite of one MedlinePlus summary sentence; the exact English sentence is re-checked by the renderer at materialization. It states no diagnosis, red flag, medication, surgery indication or post-operative protocol, and makes no individual inference.",
+        "quality_score": 0.92,
+        "certainty": "moderate",
+        "population": "general",
+        "external_evidence_review_id": "medlineplus-neck-cohort-evidence-review-2026-11-14"
+      }
+    }
+  ]
+}
