@@ -14,7 +14,7 @@ import {
 } from "../../../model/profileCategories";
 import { PersonAssetDeletion } from "./asset-deletion/PersonAssetDeletion";
 import { PersonMediaGrid } from "./PersonMediaGrid";
-import { PersonEmptyState } from "./PersonEmptyState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ReportCard } from "./ReportCard";
 import { IconTip } from "@/components/ui/tooltip";
 
@@ -149,7 +149,8 @@ export function UploadsCategory({
     return (
       <>
         {picker}
-        <PersonEmptyState
+        <EmptyState
+          className="min-h-[300px]"
           icon={
             category === "reports" ? (
               <FileText size={24} />
@@ -158,7 +159,7 @@ export function UploadsCategory({
             )
           }
           title={category === "reports" ? "还没有报告" : "还没有照片或视频"}
-          message={
+          description={
             category === "reports"
               ? "体检、影像或化验报告"
               : "动作视频或身体照片"

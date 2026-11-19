@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { HealthDocumentReviewPanel } from "./HealthDocumentReviewPanel";
 import type {
   HealthIndicator,
@@ -16,7 +17,7 @@ export function OCRResultView({ result, uploadId }: OCRResultViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!result.indicators || result.indicators.length === 0) {
-    return <div className="text-sm text-gray-500">未识别到指标候选</div>;
+    return <EmptyState size="sm" title="未识别到指标候选" />;
   }
 
   const admissibleCount = result.indicators.filter(

@@ -1,4 +1,5 @@
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { selectBodyZoneSummaries, type BodyZone } from "../../model/bodyMap";
 import { cn } from "@/lib/utils";
 
@@ -108,16 +109,16 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
       </div>
 
       {summaries.length === 0 ? (
-        <div className="mx-auto mt-3 w-full max-w-[300px] px-3 pb-2 text-center">
-          <p className="text-[13px] font-medium text-foreground/85">
-            {snapshot ? "还没有关联区域的陈述" : "身体记录尚未读取"}
-          </p>
-          <p className="mx-auto mt-1 max-w-[240px] text-xs leading-[1.55] text-muted-foreground">
-            {snapshot
+        <EmptyState
+          size="sm"
+          className="mx-auto mt-3 max-w-[300px] pb-2"
+          title={snapshot ? "还没有关联区域的陈述" : "身体记录尚未读取"}
+          description={
+            snapshot
               ? "在对话里描述身体感受。"
-              : "暂时不能判断是否存在关联记录。"}
-          </p>
-        </div>
+              : "暂时不能判断是否存在关联记录。"
+          }
+        />
       ) : (
         <ul
           aria-label="身体区域状态摘要"

@@ -1,4 +1,5 @@
 import { Check, ChevronDown, Play, Undo2, X } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import type { BodyRegionId } from "@/features/body-explorer/model/bodyRegionOntology";
 import { getBodyRegionDefinition } from "@/features/body-explorer/model/bodyRegionOntology";
@@ -114,10 +115,12 @@ export function CanvasRegionDetails({
                 ))}
               </>
             ) : (
-              <>
-                <h3>还没有记录</h3>
-                <p>选中一个位置，不代表那里一定存在问题。</p>
-              </>
+              <EmptyState
+                size="sm"
+                className="py-0"
+                title="还没有记录"
+                description="选中一个位置，不代表那里一定存在问题。"
+              />
             )}
           </div>
           {motionMode && (

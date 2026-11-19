@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { BodyRecords } from "@/features/profile/services/bodyRecordsService";
 import { formatInstantInZone } from "@/features/profile/model/profilePreferences";
 import { episodeTitle } from "../../../../model/personRecordsTimeline";
@@ -60,9 +61,11 @@ export function EpisodesScene({
         </div>
       ) : null}
       {data && !episodes.length ? (
-        <p className="bc-window-empty-text">
-          还没有整理出经历。把同一症状的陈述整理到一段经历里，就会出现在这里。
-        </p>
+        <EmptyState
+          size="sm"
+          title="还没有整理出经历"
+          description="把同一症状的陈述整理到一段经历里，就会出现在这里。"
+        />
       ) : null}
       {episodes.length ? (
         <ul className="bc-person-timeline" aria-label="已读取的症状经历">
@@ -133,7 +136,7 @@ export function ObservationsScene({
         </div>
       ) : null}
       {dataLoaded && !observations.length ? (
-        <p className="bc-window-empty-text">暂无观察记录</p>
+        <EmptyState size="sm" title="暂无观察记录" />
       ) : null}
       {observations.length ? (
         <ul className="bc-person-timeline" aria-label="观察记录">

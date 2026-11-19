@@ -13,6 +13,7 @@ import {
   type NativeDiagnosisRun,
 } from "@/features/consultation/services/nativeDiagnosisService";
 import { ApiRequestError, errorMessage } from "@/lib/api-client";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface DiagnosisRequestMessage {
   /** Persisted id of a completed message the user wrote. */
@@ -217,9 +218,11 @@ export default function DiagnosisRequestEntry({
           </div>
         </>
       ) : (
-        <p className="bc-dx-note" data-testid="diagnosis-request-empty">
-          先在对话里说明想分析的问题。
-        </p>
+        <EmptyState
+          size="sm"
+          title="先在对话里说明想分析的问题。"
+          data-testid="diagnosis-request-empty"
+        />
       )}
     </section>
   );

@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { BodyEpisode } from "@/features/profile/services/bodyEpisodeService";
 import { BodyEpisodeStatus } from "./BodyEpisodeStatus";
 
@@ -29,7 +30,7 @@ export function BodyEpisodeList({
         ))}
       </ul>
       {episodes.length === 0 ? (
-        <p className="bc-window-empty-text">还没有症状经历</p>
+        <EmptyState size="sm" title="还没有症状经历" />
       ) : null}
       {hasNextPage ? (
         <button

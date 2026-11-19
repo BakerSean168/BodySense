@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEquipmentInventory } from "../hooks/useEquipmentInventory";
 import { PersonFormDialog } from "../PersonFormDialog";
-import { PersonEmptyState } from "./PersonEmptyState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PersonDataError } from "./PersonDataError";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/textarea";
@@ -130,10 +130,11 @@ export function EquipmentCategory({
   if (equipment.length === 0) {
     return (
       <>
-        <PersonEmptyState
+        <EmptyState
+          className="min-h-[300px]"
           icon={<Dumbbell size={24} />}
           title="还没有器材"
-          message="训练会按你的器材安排"
+          description="训练会按你的器材安排"
         />
         {listError}
         {dialog}
