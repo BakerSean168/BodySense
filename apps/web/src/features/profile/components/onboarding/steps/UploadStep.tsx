@@ -142,6 +142,8 @@ export function UploadStep() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* U5 豁免：上传必须走系统文件对话框，只能用原生 <input type="file">；
+          控件隐藏，由下方上传按钮触发。 */}
       <input
         ref={inputRef}
         type="file"

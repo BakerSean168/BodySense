@@ -85,6 +85,8 @@ export function ChatInputArea({
 
   return (
     <div className="w-full">
+      {/* U5 豁免：图片选择必须走系统文件对话框，只能用原生 <input type="file">；
+          控件隐藏，由下方「添加图片」按钮触发。 */}
       <input
         ref={fileInputRef}
         type="file"
