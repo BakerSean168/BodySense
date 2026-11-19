@@ -15,6 +15,7 @@ import type {
 } from "../../types/health-document-review.types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { toast } from "sonner";
 interface HealthDocumentReviewPanelProps {
   uploadId: string;
 }
@@ -24,7 +25,8 @@ export function HealthDocumentReviewPanel({
 }: HealthDocumentReviewPanelProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [context, setContext] = useState<HealthDocumentReviewContext | null>();
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [submittingIndex, setSubmittingIndex] = useState<number | null>(null);
   const [sourceIndex, setSourceIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -37,13 +39,11 @@ export function HealthDocumentReviewPanel({
       setContext(null);
       return;
     }
-    setError(null);
+    setLoadError(null);
     try {
       setContext(await fetchHealthDocumentReviewContext(uploadId));
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error ? loadError.message : "复核信息加载失败",
-      );
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : "复核信息加载失败");
     }
   }, [accessToken, uploadId]);
 
@@ -53,15 +53,15 @@ export function HealthDocumentReviewPanel({
       setContext(null);
       return;
     }
-    setError(null);
+    setLoadError(null);
     void fetchHealthDocumentReviewContext(uploadId)
       .then((value) => {
         if (active) setContext(value);
       })
-      .catch((loadError: unknown) => {
+      .catch((cause: unknown) => {
         if (active) {
-          setError(
-            loadError instanceof Error ? loadError.message : "复核信息加载失败",
+          setLoadError(
+            cause instanceof Error ? cause.message : "复核信息加载失败",
           );
         }
       });
@@ -86,14 +86,14 @@ export function HealthDocumentReviewPanel({
     if (!accessToken || !context) return;
     const sourceRefs = projection.candidate.source_refs ?? [];
     if (sourceRefs.length === 0) {
-      setError("该指标缺少可验证来源，不能提交人工复核。");
+      setActionError("该指标缺少可验证来源，不能提交人工复核。");
       return;
     }
     let reviewedPayload: Record<string, unknown> | undefined;
     if (action === "correct") {
       const value = correctedValue.trim();
       if (!value) {
-        setError("请输入修正后的指标值。");
+        setActionError("请输入修正后的指标值。");
         return;
       }
       reviewedPayload = {
@@ -105,7 +105,7 @@ export function HealthDocumentReviewPanel({
       };
     }
     setSubmittingIndex(projection.indicator_index);
-    setError(null);
+    setActionError(null);
     try {
       await appendHealthDocumentReview(uploadId, context.extraction_run_id, {
         indicator_index: projection.indicator_index,
@@ -121,7 +121,7 @@ export function HealthDocumentReviewPanel({
       setCorrectedRange("");
       await load();
     } catch (submitError) {
-      setError(
+      toast.error(
         submitError instanceof Error ? submitError.message : "复核提交失败",
       );
     } finally {
@@ -132,7 +132,7 @@ export function HealthDocumentReviewPanel({
   const openSource = async (projection: DocumentIndicatorReviewProjection) => {
     if (!accessToken || !context) return;
     setSourceIndex(projection.indicator_index);
-    setError(null);
+    setActionError(null);
     try {
       const blob = await fetchHealthDocumentSource(
         uploadId,
@@ -149,7 +149,7 @@ export function HealthDocumentReviewPanel({
       window.open(sourceUrl, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } catch (sourceError) {
-      setError(
+      toast.error(
         sourceError instanceof Error ? sourceError.message : "原始报告加载失败",
       );
     } finally {
@@ -165,7 +165,7 @@ export function HealthDocumentReviewPanel({
     );
   }
 
-  if (context === undefined && !error) {
+  if (context === undefined && !loadError) {
     return (
       <div className="text-xs text-gray-500" role="status">
         正在加载人工复核信息…
@@ -198,16 +198,32 @@ export function HealthDocumentReviewPanel({
         </p>
       </div>
 
-      {error && (
+      {loadError && (
         <div
           role="alert"
           className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700"
         >
-          {error.trim()}
+          {loadError.trim()}
+          <button
+            type="button"
+            className="ml-2 font-medium"
+            onClick={() => void load()}
+          >
+            重试
+          </button>
         </div>
       )}
 
-      {reviewItems.length === 0 ? (
+      {actionError && (
+        <div
+          role="alert"
+          className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700"
+        >
+          {actionError.trim()}
+        </div>
+      )}
+
+      {!loadError && reviewItems.length === 0 ? (
         <p className="text-xs text-gray-500" role="status">
           当前没有需要人工处理的指标。
         </p>
@@ -277,7 +293,7 @@ export function HealthDocumentReviewPanel({
                       setCorrectedRange(
                         projection.candidate.reference_range || "",
                       );
-                      setError(null);
+                      setActionError(null);
                     }}
                     disabled={submitting}
                   >

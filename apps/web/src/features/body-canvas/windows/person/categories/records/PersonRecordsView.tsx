@@ -107,6 +107,7 @@ export function PersonRecordsView({
         onSelectEpisode={(id) =>
           setView({ kind: "episode", id, from: "episodes" })
         }
+        onRetry={() => void records.refetch()}
       />
     );
   }

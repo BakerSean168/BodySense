@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import {
+  ProfileConflictError,
   useProfileStore,
   type UpdateUserProfileInput,
 } from "@/stores/profileStore";
 import { useUploadStore } from "@/stores/uploadStore";
 import { useAuthStore } from "@/stores/authStore";
+import { errorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ProfileView } from "./ProfileView";
@@ -26,7 +29,7 @@ type ProfileTab = "profile" | "lifestyle" | "history" | "uploads" | "privacy";
 
 export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const navigate = useNavigate();
-  const { profile, isLoading, error, fetchProfile, updateProfile, clearError } =
+  const { profile, isLoading, error, fetchProfile, updateProfile } =
     useProfileStore();
   const { uploads, fetchUploads } = useUploadStore();
   const forgetSession = useAuthStore((state) => state.forgetSession);
@@ -40,8 +43,16 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   }, [open, fetchProfile, fetchUploads]);
 
   const handleSave = async (data: UpdateUserProfileInput) => {
-    await updateProfile(data);
-    setIsEditing(false);
+    try {
+      await updateProfile(data);
+      setIsEditing(false);
+    } catch (cause) {
+      if (cause instanceof ProfileConflictError) {
+        toast.warning(cause.message);
+        return;
+      }
+      toast.error(errorMessage(cause, "身体档案保存失败"));
+    }
   };
 
   return (
@@ -94,15 +105,15 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          {error ? (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+          {error && !profile ? (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
               <span>{error}</span>
               <button
                 type="button"
-                className="font-medium"
-                onClick={clearError}
+                className="shrink-0 font-medium"
+                onClick={() => void fetchProfile()}
               >
-                关闭
+                重试
               </button>
             </div>
           ) : null}
@@ -127,7 +138,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
                 />
                 <BodyMetricsPanel />
               </div>
-            ) : (
+            ) : error ? null : (
               <div className="rounded-2xl border border-dashed border-border p-8 text-center">
                 <p className="text-sm font-semibold">身体档案尚未建立</p>
                 <Button

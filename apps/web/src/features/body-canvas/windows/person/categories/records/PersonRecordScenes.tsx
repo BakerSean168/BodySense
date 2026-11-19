@@ -18,6 +18,7 @@ export function EpisodesScene({
   onBack,
   onEdit,
   onSelectEpisode,
+  onRetry,
 }: {
   canEdit: boolean;
   editing: boolean;
@@ -27,6 +28,7 @@ export function EpisodesScene({
   onBack: () => void;
   onEdit: () => void;
   onSelectEpisode: (id: string) => void;
+  onRetry: () => void;
 }) {
   const episodes = (data?.episodes ?? []).filter(
     (episode) => episode.identity_status === "current",
@@ -50,9 +52,12 @@ export function EpisodesScene({
     >
       {loading ? <PersonRecordsLoading label="正在读取经历" /> : null}
       {error ? (
-        <p role="alert" className="bc-error">
+        <div role="alert" className="bc-error">
           经历没有读取出来，不能据此判断没有记录。
-        </p>
+          <button type="button" className="bc-text-button" onClick={onRetry}>
+            重试
+          </button>
+        </div>
       ) : null}
       {data && !episodes.length ? (
         <p className="bc-window-empty-text">

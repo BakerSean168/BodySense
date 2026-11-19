@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PencilLine } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { errorMessage } from "@/lib/api-client";
 import {
@@ -35,18 +36,19 @@ export function BodyMetricsPanel() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await bodyMetricsService.get();
       setSnapshot(data);
       setHeight(data.height?.value.toString() || "");
       setWeight(data.weight?.value.toString() || "");
     } catch (cause) {
-      setError(errorMessage(cause, "身体测量加载失败"));
+      setLoadError(errorMessage(cause, "身体测量加载失败"));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export function BodyMetricsPanel() {
       heightValue < 50 ||
       heightValue > 250
     ) {
-      setError("身高必须在 50-250 cm 之间");
+      setFieldError("身高必须在 50-250 cm 之间");
       return;
     }
     if (
@@ -73,11 +75,11 @@ export function BodyMetricsPanel() {
       weightValue < 20 ||
       weightValue > 300
     ) {
-      setError("体重必须在 20-300 kg 之间");
+      setFieldError("体重必须在 20-300 kg 之间");
       return;
     }
     setSaving(true);
-    setError(null);
+    setFieldError(null);
     try {
       const next = await bodyMetricsService.update({
         expected_revision: snapshot.current_revision,
@@ -87,7 +89,7 @@ export function BodyMetricsPanel() {
       setSnapshot(next);
       setEditing(false);
     } catch (cause) {
-      setError(errorMessage(cause, "身体测量保存失败"));
+      toast.error(errorMessage(cause, "身体测量保存失败"));
     } finally {
       setSaving(false);
     }
@@ -105,21 +107,33 @@ export function BodyMetricsPanel() {
     <div className="space-y-4 border-t border-border pt-6">
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-lg font-semibold text-foreground">身体测量</h2>
-        {!editing ? (
-          <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+        {!editing && !loadError ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setFieldError(null);
+              setEditing(true);
+            }}
+          >
             <PencilLine className="h-4 w-4" />
             更新测量
           </Button>
         ) : null}
       </div>
 
-      {error ? (
+      {loadError ? (
         <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+          <p>{loadError}</p>
+          <button
+            type="button"
+            className="mt-2 font-medium"
+            onClick={() => void load()}
+          >
+            重试
+          </button>
         </div>
-      ) : null}
-
-      {editing ? (
+      ) : editing ? (
         <div className="rounded-2xl border border-border p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-foreground">
@@ -147,6 +161,9 @@ export function BodyMetricsPanel() {
               />
             </label>
           </div>
+          {fieldError ? (
+            <p className="mt-2 text-xs text-destructive">{fieldError}</p>
+          ) : null}
           <div className="mt-4 flex justify-end gap-2">
             <Button
               variant="ghost"
