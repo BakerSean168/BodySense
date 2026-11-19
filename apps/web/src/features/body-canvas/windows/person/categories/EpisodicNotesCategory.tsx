@@ -22,8 +22,9 @@ export function formatEpisodicNoteDate(value: string): string {
   return `${date.getFullYear()}/${month}/${day}`;
 }
 
+/** An unrecognised service state keeps a neutral label, never the raw enum. */
 export function episodicNoteStatusLabel(status: string): string {
-  return NOTE_STATUS_LABELS[status] ?? status;
+  return NOTE_STATUS_LABELS[status] ?? "状态未知";
 }
 
 /**
