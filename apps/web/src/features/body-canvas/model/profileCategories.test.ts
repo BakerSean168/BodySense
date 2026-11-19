@@ -54,7 +54,10 @@ describe("profile categories", () => {
     expect(formatFileSize(2048)).toBe("2 KB");
     expect(formatFileSize(3 * 1024 * 1024)).toBe("3.0 MB");
     expect(formatOcrStatus("completed")).toBe("已识别");
-    expect(formatOcrStatus("weird")).toBe("weird");
+  });
+
+  it("keeps an unknown OCR status neutral instead of showing the raw enum", () => {
+    expect(formatOcrStatus("weird")).toBe("识别状态未知");
   });
 
   it("treats a blank habit summary as absent", () => {

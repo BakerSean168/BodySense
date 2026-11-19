@@ -116,8 +116,9 @@ const OCR_STATUS_LABELS: Record<string, string> = {
   failed: "识别失败",
 };
 
+/** An unrecognised service state keeps a neutral label, never the raw enum. */
 export function formatOcrStatus(status: string): string {
-  return OCR_STATUS_LABELS[status] ?? status;
+  return OCR_STATUS_LABELS[status] ?? "识别状态未知";
 }
 
 /** Habits reuses the lifestyle API sections; each section is user-editable. */

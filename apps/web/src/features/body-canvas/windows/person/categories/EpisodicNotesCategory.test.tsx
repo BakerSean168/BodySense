@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { EpisodicNotesCategory } from "./EpisodicNotesCategory";
+import {
+  EpisodicNotesCategory,
+  episodicNoteStatusLabel,
+} from "./EpisodicNotesCategory";
 
 const service = vi.hoisted(() => ({
   list: vi.fn(),
@@ -56,6 +59,11 @@ describe("EpisodicNotesCategory", () => {
     expect(screen.getByText("2026/11/05 · 对话第 3–8 条")).toBeVisible();
     expect(screen.getByText("仅保存，不参与对话")).toBeVisible();
     expect(screen.queryByTestId("person-add")).toBeNull();
+  });
+
+  it("keeps an unknown note status neutral instead of showing the raw enum", () => {
+    expect(episodicNoteStatusLabel("weird")).toBe("状态未知");
+    expect(episodicNoteStatusLabel("shadow")).toBe("仅保存，不参与对话");
   });
 
   it("uses an honest empty state that is not a clinical or erasure claim", async () => {
