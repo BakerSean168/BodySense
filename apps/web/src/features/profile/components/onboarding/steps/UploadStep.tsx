@@ -6,6 +6,13 @@
  * reports; for an image we ask one small follow-up (体检报告 / 正面 / 侧面 / 背面).
  */
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useUploadStore } from "@/stores/uploadStore";
 import type {
   FileType,
@@ -27,6 +34,10 @@ const KIND_CHOICES: { value: UploadKind; label: string }[] = [
   { value: "photo_side", label: "侧面照" },
   { value: "photo_back", label: "背面照" },
 ];
+
+/** Removing the original cannot be undone, so it asks once before it runs. */
+const REMOVAL_NOTE =
+  "原始文件会被永久移除，不能再查看或核验；由它整理出的记录和指标会保留，并标注来源不可用。移除不可撤销。";
 
 function statusText(file: UserUpload): string {
   if (file.file_type === "report") {
@@ -71,6 +82,9 @@ export function UploadStep() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<UserUpload | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removalError, setRemovalError] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchUploads();
@@ -126,10 +140,15 @@ export function UploadStep() {
   };
 
   const remove = async (id: string) => {
+    setRemovingId(id);
+    setRemovalError(null);
     try {
       await deleteUpload(id);
+      setPendingRemoval(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "文件删除失败");
+      setRemovalError(err instanceof Error ? err.message : "文件删除失败");
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -236,34 +255,79 @@ export function UploadStep() {
                   {FILE_TYPE_LABELS[file.file_type] ?? "资料"} ·{" "}
                 </span>
                 {file.original_name}
+                {file.source_availability === "source_unavailable" ? (
+                  <span className="block text-[13px] text-[#9CA3AF]">
+                    原件已移除
+                  </span>
+                ) : null}
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 <span className="text-[13px] text-[#2C694F]">
                   {statusText(file)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => void remove(file.id)}
-                  aria-label={`删除 ${file.original_name}`}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#B42318] focus-visible:outline-2 focus-visible:outline-[#2C694F]"
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 16 16"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    strokeLinecap="round"
+                {file.source_availability === "source_unavailable" ? null : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemovalError(null);
+                      setPendingRemoval(file);
+                    }}
+                    aria-label={`删除 ${file.original_name}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#B42318] focus-visible:outline-2 focus-visible:outline-[#2C694F]"
                   >
-                    <path d="m4 4 8 8M12 4l-8 8" />
-                  </svg>
-                </button>
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 16 16"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                    >
+                      <path d="m4 4 8 8M12 4l-8 8" />
+                    </svg>
+                  </button>
+                )}
               </span>
             </li>
           ))}
         </ul>
       )}
+
+      <Dialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => {
+          if (!open && removingId === null) setPendingRemoval(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogTitle>移除这个文件？</DialogTitle>
+          <DialogDescription>{REMOVAL_NOTE}</DialogDescription>
+          {removalError ? (
+            <p role="alert" className="text-sm text-[#B42318]">
+              {removalError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <button
+              type="button"
+              disabled={removingId !== null}
+              onClick={() => setPendingRemoval(null)}
+              className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              disabled={removingId !== null}
+              onClick={() => pendingRemoval && void remove(pendingRemoval.id)}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {removingId !== null ? "正在移除" : "移除原件"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {postureAnalyses.length > 0 && (
         <PostureAnalysisView analyses={postureAnalyses} />
