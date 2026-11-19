@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PencilLine } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { errorMessage } from "@/lib/api-client";
 import {
@@ -73,7 +74,7 @@ export function LifestylePanel() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const syncSnapshot = (data: LifestyleSnapshot) => {
     setSnapshot(data);
@@ -86,12 +87,12 @@ export function LifestylePanel() {
 
   const load = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await lifestyleService.get();
       syncSnapshot(data);
     } catch (cause) {
-      setError(errorMessage(cause, "生活方式加载失败"));
+      setLoadError(errorMessage(cause, "生活方式加载失败"));
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,6 @@ export function LifestylePanel() {
   const save = async () => {
     if (!snapshot) return;
     setSaving(true);
-    setError(null);
     try {
       const next = await lifestyleService.update({
         expected_revision: snapshot.current_revision,
@@ -121,7 +121,7 @@ export function LifestylePanel() {
       syncSnapshot(next);
       setEditing(false);
     } catch (cause) {
-      setError(errorMessage(cause, "生活方式保存失败"));
+      toast.error(errorMessage(cause, "生活方式保存失败"));
     } finally {
       setSaving(false);
     }
@@ -139,7 +139,7 @@ export function LifestylePanel() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-lg font-semibold text-foreground">生活方式</h2>
-        {!editing ? (
+        {!editing && !loadError ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PencilLine className="h-4 w-4" />
             编辑生活方式
@@ -147,13 +147,18 @@ export function LifestylePanel() {
         ) : null}
       </div>
 
-      {error ? (
+      {loadError ? (
         <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+          <p>{loadError}</p>
+          <button
+            type="button"
+            className="mt-2 font-medium"
+            onClick={() => void load()}
+          >
+            重试
+          </button>
         </div>
-      ) : null}
-
-      {editing ? (
+      ) : editing ? (
         <div className="space-y-4">
           {sections.map((section) => (
             <div
