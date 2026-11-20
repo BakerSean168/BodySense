@@ -131,7 +131,7 @@ export function RegisterForm() {
       />
 
       <div className="mt-[22px] lg:mt-6">
-        <label className="flex cursor-pointer items-start gap-[10px] text-[13px] leading-[1.2] text-[#52665A]">
+        <label className="flex cursor-pointer items-start gap-[10px] text-[13px] leading-[1.2] text-[var(--ui-secondary)]">
           <Checkbox
             checked={consent}
             onCheckedChange={(checked) => setConsent(checked)}
@@ -140,7 +140,7 @@ export function RegisterForm() {
               validationErrors.consent ? "consent-error" : undefined
             }
             data-testid="auth-register-consent"
-            className="mt-px size-4 rounded-[4px] border-[#AEC0B0] bg-white focus-visible:ring-offset-[#FBFAF5]"
+            className="mt-px size-4 rounded-[4px] border-[var(--ui-line)] bg-[var(--ui-field)] focus-visible:ring-offset-[var(--ui-paper)]"
           />
           <span>同意《服务条款》和《健康数据处理说明》</span>
         </label>
@@ -148,7 +148,7 @@ export function RegisterForm() {
           <p
             id="consent-error"
             role="alert"
-            className="mt-2 text-[13px] leading-[1.2] font-semibold text-[#9A3F35]"
+            className="mt-2 text-[13px] leading-[1.2] font-semibold text-[var(--ui-danger)]"
           >
             {validationErrors.consent}
           </p>
@@ -157,7 +157,7 @@ export function RegisterForm() {
 
       <AuthCaptcha captchaRef={captchaRef} />
       {validationErrors.captcha && (
-        <p role="alert" className="mt-2 text-[13px] text-[#9A3F35]">
+        <p role="alert" className="mt-2 text-[13px] text-[var(--ui-danger)]">
           {validationErrors.captcha}
         </p>
       )}
@@ -166,7 +166,7 @@ export function RegisterForm() {
         <p
           role="alert"
           data-testid="auth-register-error"
-          className="mt-3 text-[13px] leading-[1.2] font-semibold text-[#9A3F35]"
+          className="mt-3 text-[13px] leading-[1.2] font-semibold text-[var(--ui-danger)]"
         >
           {error}
         </p>

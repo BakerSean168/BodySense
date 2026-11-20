@@ -92,7 +92,7 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
     <div className="space-y-4">
       {/* File type selector */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground/80 mb-2">
           文件类型
         </label>
         <div className="flex flex-wrap gap-2">
@@ -106,7 +106,7 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
                 className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                   selectedType === value
                     ? "bg-blue-50 border-blue-300 text-blue-700"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    : "bg-card border-border text-foreground/80 hover:bg-muted/50"
                 }`}
               >
                 {label}
@@ -125,7 +125,7 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
         className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
           isDragging
             ? "border-blue-400 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
+            : "border-border hover:border-muted-foreground/40"
         } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
       >
         {/* U5 豁免：上传必须走系统文件对话框，只能用原生 <input type="file">；
@@ -140,7 +140,7 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
 
         <div className="space-y-2">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-muted-foreground/70"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -153,20 +153,20 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
             />
           </svg>
 
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             <span className="font-medium text-blue-600 hover:text-blue-500">
               点击选择文件
             </span>{" "}
             或拖拽文件到此处
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             支持 JPEG、PNG、WebP、PDF，最大 10MB
           </p>
         </div>
 
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-card/80 rounded-lg">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
@@ -174,8 +174,8 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
 
       {/* Error message */}
       {error && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="rounded-md bg-destructive/10 p-3">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
     </div>

@@ -168,7 +168,7 @@ export function HealthDocumentReviewPanel({
 
   if (context === undefined && !loadError) {
     return (
-      <div className="text-xs text-gray-500" role="status">
+      <div className="text-xs text-muted-foreground" role="status">
         正在加载人工复核信息…
       </div>
     );
@@ -190,11 +190,11 @@ export function HealthDocumentReviewPanel({
       <div>
         <h4
           id={`health-document-review-${uploadId}`}
-          className="text-sm font-medium text-gray-800"
+          className="text-sm font-medium text-foreground"
         >
           人工复核
         </h4>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           请对照原始报告确认识别值。确认、修正或排除只影响证据资格，不代表医学诊断。
         </p>
       </div>
@@ -202,7 +202,7 @@ export function HealthDocumentReviewPanel({
       {loadError && (
         <div
           role="alert"
-          className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700"
+          className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive"
         >
           {loadError.trim()}
           <button
@@ -218,7 +218,7 @@ export function HealthDocumentReviewPanel({
       {actionError && (
         <div
           role="alert"
-          className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700"
+          className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive"
         >
           {actionError.trim()}
         </div>
@@ -238,14 +238,14 @@ export function HealthDocumentReviewPanel({
             return (
               <article
                 key={`${projection.indicator_id}-${projection.indicator_index}`}
-                className="rounded-lg border border-gray-200 bg-white p-3"
+                className="rounded-lg border border-border bg-card p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-foreground">
                       {projection.candidate.name || projection.indicator_id}
                     </div>
-                    <div className="mt-1 text-sm text-gray-700">
+                    <div className="mt-1 text-sm text-foreground/80">
                       机器识别：
                       {formatDisplayValue(projection.candidate.value ?? "-")}
                       {projection.candidate.unit
@@ -253,7 +253,7 @@ export function HealthDocumentReviewPanel({
                         : ""}
                     </div>
                     {projection.candidate.reference_range && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         参考范围：{projection.candidate.reference_range}
                       </div>
                     )}
@@ -314,8 +314,8 @@ export function HealthDocumentReviewPanel({
                 </div>
 
                 {editing && (
-                  <div className="mt-3 grid gap-2 rounded-md bg-gray-50 p-3 sm:grid-cols-3">
-                    <label className="text-xs text-gray-700">
+                  <div className="mt-3 grid gap-2 rounded-md bg-muted/50 p-3 sm:grid-cols-3">
+                    <label className="text-xs text-foreground/80">
                       修正值
                       <Input
                         aria-label={`${projection.candidate.name} 修正值`}
@@ -326,7 +326,7 @@ export function HealthDocumentReviewPanel({
                         className="mt-1 min-h-9"
                       />
                     </label>
-                    <label className="text-xs text-gray-700">
+                    <label className="text-xs text-foreground/80">
                       单位
                       <Input
                         aria-label={`${projection.candidate.name} 修正单位`}
@@ -337,7 +337,7 @@ export function HealthDocumentReviewPanel({
                         className="mt-1 min-h-9"
                       />
                     </label>
-                    <label className="text-xs text-gray-700">
+                    <label className="text-xs text-foreground/80">
                       参考范围
                       <Input
                         aria-label={`${projection.candidate.name} 修正参考范围`}
@@ -371,7 +371,7 @@ export function HealthDocumentReviewPanel({
                 )}
 
                 {(projection.history?.length ?? 0) > 0 && (
-                  <details className="mt-3 text-xs text-gray-600">
+                  <details className="mt-3 text-xs text-muted-foreground">
                     <summary className="cursor-pointer select-none">
                       查看复核历史（{projection.history?.length}）
                     </summary>
@@ -398,7 +398,7 @@ function ReviewNotice({ children }: { children: ReactNode }) {
   return (
     <div
       role="status"
-      className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800"
+      className="rounded-md bg-warning/20 px-3 py-2 text-xs text-warning-foreground"
     >
       {children}
     </div>
@@ -415,7 +415,7 @@ function ReviewState({ record }: { record?: DocumentIndicatorReviewRecord }) {
         : "已排除";
   return (
     <span
-      className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700"
+      className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-foreground/80"
       role="status"
     >
       状态：{label}
@@ -431,14 +431,14 @@ function SourceRegions({
   const regions = projection.candidate.source_regions ?? [];
   if (regions.length === 0) {
     return (
-      <p className="mt-2 text-xs text-amber-700">
+      <p className="mt-2 text-xs text-warning-foreground">
         来源定位缺失：该候选保持待复核状态。
       </p>
     );
   }
   return (
     <div
-      className="mt-2 space-y-1 text-xs text-gray-600"
+      className="mt-2 space-y-1 text-xs text-muted-foreground"
       aria-label="原始报告来源位置"
     >
       {regions.map((region) => (

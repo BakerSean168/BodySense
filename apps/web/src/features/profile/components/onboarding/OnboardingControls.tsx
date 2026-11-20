@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import type { ChoiceOption } from "./onboardingSteps";
 
 const focusRing =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F]";
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)]";
 
 interface ChoiceListProps {
   options: ChoiceOption[];
@@ -33,8 +33,8 @@ export function ChoiceList({ options, value, onChoose }: ChoiceListProps) {
             onClick={() => onChoose(option.value)}
             className={`flex h-[60px] w-full items-center justify-between rounded-[14px] border-2 px-[26px] text-left text-base motion-safe:transition-colors lg:h-[66px] ${focusRing} ${
               selected
-                ? "border-[#2C694F] bg-[#E8F0EA] font-bold text-[#2C694F]"
-                : "border-transparent bg-[#F7F7F7] text-[#1A1A1A] hover:bg-[#F0F2F0]"
+                ? "border-[var(--ui-primary)] bg-[var(--ui-highlight)] font-bold text-[var(--ui-primary)]"
+                : "border-transparent bg-muted/60 text-foreground hover:bg-muted"
             }`}
           >
             <span>{option.label}</span>
@@ -71,8 +71,8 @@ export function ChipGrid({ options, values, onToggle }: ChipGridProps) {
             onClick={() => onToggle(option.value)}
             className={`flex h-[52px] items-center rounded-[10px] border-2 px-[14px] text-left text-[15px] motion-safe:transition-colors lg:h-[60px] lg:px-[18px] ${focusRing} ${
               selected
-                ? "border-[#2C694F] bg-[#E8F0EA] font-bold text-[#2C694F]"
-                : "border-transparent bg-[#F7F7F7] text-[#1A1A1A] hover:bg-[#F0F2F0]"
+                ? "border-[var(--ui-primary)] bg-[var(--ui-highlight)] font-bold text-[var(--ui-primary)]"
+                : "border-transparent bg-muted/60 text-foreground hover:bg-muted"
             }`}
           >
             {option.label}
@@ -87,7 +87,7 @@ function CheckDot() {
   return (
     <span
       aria-hidden="true"
-      className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#2C694F] text-white"
+      className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[var(--ui-primary)] text-[var(--ui-primary-ink)]"
     >
       <svg
         viewBox="0 0 16 16"
@@ -143,7 +143,7 @@ export function ValueBox({
   const errorId = `${id}-error`;
   return (
     <div className="flex flex-col items-center">
-      <div className="flex h-[76px] w-full max-w-[320px] items-center justify-center gap-3 rounded-2xl bg-[#F7F7F7] px-6 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2C694F]">
+      <div className="flex h-[76px] w-full max-w-[320px] items-center justify-center gap-3 rounded-2xl bg-muted/60 px-6 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ui-primary)]">
         <Input
           id={id}
           variant="bare"
@@ -162,18 +162,21 @@ export function ValueBox({
           onKeyDown={(event) => {
             if (event.key === "Enter" && onEnter) onEnter();
           }}
-          className={`min-h-0 py-0 text-center font-normal text-[#1A1A1A] placeholder:text-[#9CA3AF] ${
+          className={`min-h-0 py-0 text-center font-normal text-foreground placeholder:text-muted-foreground/70 ${
             type === "date" ? "w-full text-2xl" : "w-[96px] text-[28px]"
           }`}
         />
         {unit && (
-          <span aria-hidden="true" className="text-[15px] text-[#6B7280]">
+          <span
+            aria-hidden="true"
+            className="text-[15px] text-muted-foreground"
+          >
             {unit}
           </span>
         )}
       </div>
       {error && (
-        <p id={errorId} role="alert" className="mt-3 text-sm text-[#B42318]">
+        <p id={errorId} role="alert" className="mt-3 text-sm text-destructive">
           {error}
         </p>
       )}

@@ -27,15 +27,15 @@ export function BodyVisualization({
   return (
     <div className="flex flex-col items-center">
       {/* View selector */}
-      <div className="flex gap-2.5 mb-5 bg-[#F7F5F0] p-1 rounded-full border border-[#E5E3DF]">
+      <div className="flex gap-2.5 mb-5 bg-accent-sand p-1 rounded-full border border-border">
         {VIEW_TYPES.map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view)}
             className={`px-4.5 py-1.5 text-xs font-bold rounded-full transition-all duration-300 cursor-pointer ${
               activeView === view
-                ? "bg-primary-700 text-[#FBFBFA] shadow-sm shadow-[#2a4b3a]/10"
-                : "text-[#4A554E] hover:text-[#1A221E]"
+                ? "bg-primary-700 text-accent-linen shadow-sm shadow-primary-700/10"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {view === "front" ? "正面" : view === "side" ? "侧面" : "背面"}

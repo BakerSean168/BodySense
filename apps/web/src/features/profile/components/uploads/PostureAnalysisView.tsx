@@ -12,9 +12,9 @@ const VIEW_LABELS: Record<PostureView, string> = {
 };
 
 const SEVERITY_STYLES: Record<Severity, string> = {
-  mild: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  moderate: "bg-amber-50 text-amber-700 border-amber-200",
-  marked: "bg-rose-50 text-rose-700 border-rose-200",
+  mild: "bg-success/15 text-success-foreground border-success/30",
+  moderate: "bg-warning/15 text-warning-foreground border-warning/40",
+  marked: "bg-destructive/10 text-destructive border-destructive/25",
 };
 
 interface PostureAnalysisViewProps {
@@ -36,17 +36,17 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
     "本分析基于照片视觉判断，仅供参考，不构成医疗诊断。";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-5">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-900">AI 体态分析</h3>
-        <span className="text-[10px] uppercase tracking-widest text-slate-400">
+        <h3 className="text-base font-bold text-foreground">AI 体态分析</h3>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground/70">
           三视图 · {valid.length} 项已完成
         </span>
       </div>
 
       {redFlags.length > 0 && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 space-y-1.5">
-          <div className="flex items-center gap-2 text-rose-800 text-xs font-semibold">
+        <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3 space-y-1.5">
+          <div className="flex items-center gap-2 text-destructive text-xs font-semibold">
             <svg
               className="w-4 h-4 shrink-0"
               fill="none"
@@ -65,7 +65,7 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
           {redFlags.map((rf, i) => (
             <p
               key={`${rf.category}-${i}`}
-              className="text-xs text-rose-700 leading-relaxed"
+              className="text-xs text-destructive leading-relaxed"
             >
               {rf.message}
             </p>
@@ -77,10 +77,10 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
         {valid.map((a) => (
           <div key={a.view} className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold tracking-wider">
+              <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground text-[10px] font-bold tracking-wider">
                 {VIEW_LABELS[a.view]}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-muted-foreground/70">
                 置信度{" "}
                 {CONFIDENCE_LABELS[a.overall_confidence] ??
                   a.overall_confidence}
@@ -88,7 +88,9 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
             </div>
 
             {a.findings.length === 0 ? (
-              <p className="text-xs text-slate-500">未检出明显体态偏差。</p>
+              <p className="text-xs text-muted-foreground">
+                未检出明显体态偏差。
+              </p>
             ) : (
               <ul className="space-y-1.5">
                 {a.findings.map((f) => (
@@ -104,17 +106,17 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
                       {SEVERITY_LABELS[f.severity] ?? f.severity}
                     </span>
                     <div className="min-w-0">
-                      <span className="font-semibold text-slate-800">
+                      <span className="font-semibold text-foreground">
                         {f.label}
                       </span>
                       {f.metric && (
-                        <span className="ml-1 text-slate-500">
+                        <span className="ml-1 text-muted-foreground">
                           （{f.metric.name} {f.metric.value}
                           {f.metric.unit}）
                         </span>
                       )}
                       {f.evidence && (
-                        <p className="text-slate-500 mt-0.5 leading-relaxed">
+                        <p className="text-muted-foreground mt-0.5 leading-relaxed">
                           {f.evidence}
                         </p>
                       )}
@@ -125,7 +127,7 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
             )}
 
             {a.summary_markdown && (
-              <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
                 {a.summary_markdown}
               </p>
             )}
@@ -133,7 +135,7 @@ export function PostureAnalysisView({ analyses }: PostureAnalysisViewProps) {
         ))}
       </div>
 
-      <p className="text-[10px] text-slate-400 leading-relaxed border-t border-slate-100 pt-3">
+      <p className="text-[10px] text-muted-foreground/70 leading-relaxed border-t border-border pt-3">
         {disclaimer}
       </p>
     </div>
