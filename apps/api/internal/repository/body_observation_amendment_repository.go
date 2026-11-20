@@ -93,7 +93,7 @@ func (r *BodyStateRepository) amendDirectObservation(
 		// foreign target with a stale revision leaks a 409 instead of owner-
 		// scoped 404, even though no foreign health record is returned.
 		if state.CurrentRevision != c.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, c.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, c.ExpectedRevision, state.CurrentRevision)
 		}
 		if original.AssertionStatus != "asserted" {
 			return model.ErrBodyObservationNotCurrent

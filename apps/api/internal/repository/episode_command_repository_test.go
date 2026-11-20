@@ -56,7 +56,7 @@ func TestSymptomEpisodeExplicitCreateLinkAndReceiptPostgres(t *testing.T) {
 	if _, err := repo.CreateEpisode(ctx, owner, collision); !errors.Is(err, model.ErrEpisodeIdempotencyConflict) {
 		t.Fatalf("same key different fact ignored fingerprint: %v", err)
 	}
-	if _, err := repo.CreateEpisode(ctx, owner, episodeAssociationCommand(first.ID, 1, "new-key-reused-fact")); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.CreateEpisode(ctx, owner, episodeAssociationCommand(first.ID, 1, "new-key-reused-fact")); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale expected revision was accepted: %v", err)
 	}
 	if _, err := repo.CreateEpisode(ctx, other, episodeAssociationCommand(first.ID, 0, "foreign-fact")); !errors.Is(err, model.ErrEpisodeFactUnavailable) {

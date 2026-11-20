@@ -157,7 +157,7 @@ func bindSafetyReverification(ctx context.Context, tx *gorm.DB, interaction *mod
 		return err
 	}
 	if restriction.CreatedRevision != request.RestrictionVersion {
-		return fmt.Errorf("%w: stale reverification target", ErrBodyStateRevisionConflict)
+		return fmt.Errorf("%w: stale reverification target", model.ErrBodyStateRevisionConflict)
 	}
 	if err := tx.Model(&model.SafetyRestrictionExercise{}).Where("user_id=? AND restriction_id=?", restriction.UserID, restriction.ID).Order("exercise_id").Pluck("exercise_id", &restriction.ExerciseIDs).Error; err != nil {
 		return err

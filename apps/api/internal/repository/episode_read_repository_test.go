@@ -111,7 +111,7 @@ func TestSymptomEpisodeReadOwnerEvidenceAndRevocationPostgres(t *testing.T) {
 	if err != nil || read.ID != episode || read.Projection.State != "ended" {
 		t.Fatalf("one-record read=%#v err=%v", read, err)
 	}
-	if foreign, err := repo.GetEpisode(context.Background(), other, episode); !errors.Is(err, ErrEpisodeNotFound) || foreign != nil {
+	if foreign, err := repo.GetEpisode(context.Background(), other, episode); !errors.Is(err, model.ErrEpisodeNotFound) || foreign != nil {
 		t.Fatalf("foreign owner leaked another episode: %#v %v", foreign, err)
 	}
 	otherPage, err := repo.ListEpisodes(context.Background(), other, 0)
@@ -158,7 +158,7 @@ func TestSymptomEpisodeReadOwnerEvidenceAndRevocationPostgres(t *testing.T) {
 		Update("availability", "blocked").Error; err != nil {
 		t.Fatal(err)
 	}
-	if item, err := repo.GetEpisode(context.Background(), owner, episode); !errors.Is(err, ErrEpisodeNotFound) || item != nil {
+	if item, err := repo.GetEpisode(context.Background(), owner, episode); !errors.Is(err, model.ErrEpisodeNotFound) || item != nil {
 		t.Fatalf("fully blocked identity leaked: %#v %v", item, err)
 	}
 	hidden, err := repo.ListEpisodes(context.Background(), owner, 0)
@@ -242,7 +242,7 @@ func TestSymptomEpisodeReadRemainsConsistentAcrossSourceBlockPostgres(t *testing
 		previous.record.Projection.State != "ended" || len(previous.record.Links) != 1 {
 		t.Fatalf("partially mixed revision and source snapshot: %#v", previous)
 	}
-	if current, err := repo.GetEpisode(context.Background(), owner, episode); !errors.Is(err, ErrEpisodeNotFound) || current != nil {
+	if current, err := repo.GetEpisode(context.Background(), owner, episode); !errors.Is(err, model.ErrEpisodeNotFound) || current != nil {
 		t.Fatalf("fresh read ignored source blocking: %#v %v", current, err)
 	}
 }

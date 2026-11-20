@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
 
@@ -62,19 +63,19 @@ func TestEpisodicNoteControlsOwnerDeleteAndNoRegenerationPostgres(t *testing.T) 
 	if err != nil || len(foreign) != 1 || foreign[0].ID != foreignNote.ID {
 		t.Fatalf("other owner list: %+v %v", foreign, err)
 	}
-	if _, err := controls.ListOwned(ctx, uuid.Nil); !errors.Is(err, ErrEpisodicNoteNotFound) {
+	if _, err := controls.ListOwned(ctx, uuid.Nil); !errors.Is(err, model.ErrEpisodicNoteNotFound) {
 		t.Fatalf("nil owner was not rejected: %v", err)
 	}
-	if _, err := controls.DeleteOwned(ctx, f.owner, foreignNote.ID); !errors.Is(err, ErrEpisodicNoteNotFound) {
+	if _, err := controls.DeleteOwned(ctx, f.owner, foreignNote.ID); !errors.Is(err, model.ErrEpisodicNoteNotFound) {
 		t.Fatalf("foreign deletion leaked note existence: %v", err)
 	}
-	if _, err := controls.DeleteOwned(ctx, other.owner, note1.ID); !errors.Is(err, ErrEpisodicNoteNotFound) {
+	if _, err := controls.DeleteOwned(ctx, other.owner, note1.ID); !errors.Is(err, model.ErrEpisodicNoteNotFound) {
 		t.Fatalf("reverse foreign delete: %v", err)
 	}
-	if _, err := controls.DeleteOwned(ctx, f.owner, uuid.New()); !errors.Is(err, ErrEpisodicNoteNotFound) {
+	if _, err := controls.DeleteOwned(ctx, f.owner, uuid.New()); !errors.Is(err, model.ErrEpisodicNoteNotFound) {
 		t.Fatalf("unknown id was accepted: %v", err)
 	}
-	if _, err := controls.DeleteOwned(ctx, uuid.Nil, note1.ID); !errors.Is(err, ErrEpisodicNoteNotFound) {
+	if _, err := controls.DeleteOwned(ctx, uuid.Nil, note1.ID); !errors.Is(err, model.ErrEpisodicNoteNotFound) {
 		t.Fatalf("unauthenticated caller was accepted: %v", err)
 	}
 	// An adjacent BodyState evidence record is authoritative and MUST NOT

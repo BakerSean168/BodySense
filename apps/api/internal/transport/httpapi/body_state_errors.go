@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/bodysense/api/internal/repository"
+	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ type bodyStatePublicError struct {
 
 func classifyBodyStatePublicError(err error) bodyStatePublicError {
 	switch {
-	case errors.Is(err, repository.ErrBodyStateRevisionConflict):
+	case errors.Is(err, model.ErrBodyStateRevisionConflict):
 		return bodyStatePublicError{status: http.StatusConflict, code: "BODY_STATE_REVISION_CONFLICT", message: err.Error()}
 	case errors.Is(err, service.ErrUnknownBodyRegionID):
 		return bodyStatePublicError{status: http.StatusBadRequest, code: "INVALID_BODY_REGION_ID", message: err.Error()}

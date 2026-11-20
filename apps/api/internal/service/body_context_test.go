@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/bodysense/api/internal/repository"
+	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
 
@@ -34,7 +34,7 @@ func TestBodyMetricsRecordsNewMeasurementsAndProjectsLatest(t *testing.T) {
 		t.Fatalf("unchanged height must not be re-recorded; history must be kept: %d", len(store.ledger.observations))
 	}
 	stale := int64(0)
-	if _, err := svc.Update(context.Background(), owner, UpdateBodyMetricsRequest{ExpectedRevision: &stale, WeightKg: &weight}); !errors.Is(err, repository.ErrBodyStateRevisionConflict) {
+	if _, err := svc.Update(context.Background(), owner, UpdateBodyMetricsRequest{ExpectedRevision: &stale, WeightKg: &weight}); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale revision must conflict: %v", err)
 	}
 }

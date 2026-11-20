@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -14,11 +13,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-// ErrBodyStateRevisionConflict is returned when a caller tries to mutate a
-// BodyState from an older revision. This is the optimistic-concurrency guard
-// that prevents two devices/runs from silently overwriting each other.
-var ErrBodyStateRevisionConflict = errors.New("body state revision conflict")
 
 // BodyStateRepository is the transactional persistence boundary for the
 // longitudinal BodyState aggregate. The current projection is stored in normal
@@ -59,7 +53,7 @@ func bodyStateLockNextRevision(ctx context.Context, tx *gorm.DB, userID uuid.UUI
 		return nil, 0, err
 	}
 	if expected != nil && state.CurrentRevision != *expected {
-		return nil, 0, fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, *expected, state.CurrentRevision)
+		return nil, 0, fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, *expected, state.CurrentRevision)
 	}
 	return &state, state.CurrentRevision + 1, nil
 }

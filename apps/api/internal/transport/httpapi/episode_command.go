@@ -7,7 +7,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -98,13 +97,13 @@ func classifyEpisodeCommandError(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, model.ErrInvalidEpisodeEvidence):
 		return http.StatusBadRequest, "INVALID_EPISODE_COMMAND", "invalid Episode command or source"
-	case errors.Is(err, model.ErrEpisodeFactUnavailable), errors.Is(err, repository.ErrEpisodeNotFound):
+	case errors.Is(err, model.ErrEpisodeFactUnavailable), errors.Is(err, model.ErrEpisodeNotFound):
 		return http.StatusNotFound, "EPISODE_SOURCE_UNAVAILABLE", "Episode or symptom source unavailable"
 	case errors.Is(err, model.ErrEpisodeIdempotencyConflict):
 		return http.StatusConflict, "EPISODE_IDEMPOTENCY_CONFLICT", "this command key has been used for another operation"
 	case errors.Is(err, model.ErrEpisodeAssociationConflict):
 		return http.StatusConflict, "EPISODE_ASSOCIATION_CONFLICT", "Episode and source cannot be associated by this command"
-	case errors.Is(err, repository.ErrBodyStateRevisionConflict):
+	case errors.Is(err, model.ErrBodyStateRevisionConflict):
 		return http.StatusConflict, "REVISION_CONFLICT", "BodyState was updated; reload and retry"
 	default:
 		return http.StatusInternalServerError, "EPISODE_COMMAND_FAILED", "Episode command could not be committed"

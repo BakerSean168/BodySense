@@ -114,7 +114,7 @@ func TestBodyFactRetryBeforeRevisionCheckAndMismatchedKeyPostgres(t *testing.T) 
 	if receipt, err := repo.RecordDirectFacts(ctx, userID, command); !errors.Is(err, model.ErrBodyFactIdempotencyConflict) || receipt != nil {
 		t.Fatalf("mismatched key receipt=%v err=%v", receipt, err)
 	}
-	if receipt, err := repo.RecordDirectFacts(ctx, userID, bodyFactTestCommand("stale", 0)); !errors.Is(err, ErrBodyStateRevisionConflict) || receipt != nil {
+	if receipt, err := repo.RecordDirectFacts(ctx, userID, bodyFactTestCommand("stale", 0)); !errors.Is(err, model.ErrBodyStateRevisionConflict) || receipt != nil {
 		t.Fatalf("stale receipt=%v err=%v", receipt, err)
 	}
 	assertBodyFactCount(t, db, "body_fact_commits", userID, 2)
@@ -175,7 +175,7 @@ func TestBodyFactConcurrentDistinctCommandsConflictPostgres(t *testing.T) {
 		err := <-results
 		if err == nil {
 			successes++
-		} else if errors.Is(err, ErrBodyStateRevisionConflict) {
+		} else if errors.Is(err, model.ErrBodyStateRevisionConflict) {
 			conflicts++
 		} else {
 			t.Fatal(err)

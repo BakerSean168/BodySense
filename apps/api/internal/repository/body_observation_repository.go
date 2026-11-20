@@ -53,7 +53,7 @@ func (r *BodyStateRepository) RecordDirectObservation(ctx context.Context, owner
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: observation revision %d != current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: observation revision %d != current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		// PostgreSQL timestamptz persists microsecond precision. Truncate
 		// before the first HTTP reply so an identical replay returns the

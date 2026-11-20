@@ -134,7 +134,7 @@ func TestBodyHypothesisCorrectionKeepsHistoryAndGroupIDPostgres(t *testing.T) {
 	}
 	stale := cmd
 	stale.IdempotencyKey, stale.ExpectedRevision = "fix-stale", 2
-	if _, err := repo.CorrectBodyHypothesis(ctx, owner, original.HypothesisID, stale); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.CorrectBodyHypothesis(ctx, owner, original.HypothesisID, stale); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale correction: %v", err)
 	}
 

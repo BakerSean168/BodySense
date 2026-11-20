@@ -14,8 +14,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrEpisodeNotFound = errors.New("episode not available for this owner")
-
 // ListEpisodes reads all current Episode identities and status-evidence links
 // from one repeatable-read snapshot. It never recomputes medical truth from
 // plain symptoms or absence of new records. The generated public read
@@ -48,7 +46,7 @@ func (r *BodyStateRepository) GetEpisode(ctx context.Context, owner, id uuid.UUI
 			return err
 		}
 		if len(page.Episodes) != 1 {
-			return ErrEpisodeNotFound
+			return model.ErrEpisodeNotFound
 		}
 		result = &page.Episodes[0]
 		return nil
