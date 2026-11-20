@@ -158,7 +158,7 @@ func (r *BodyStateRepository) ConfirmBodyStateSuggestion(ctx context.Context, ow
 			return err
 		}
 		if state.CurrentRevision != command.BaseBodyStateRevision {
-			return fmt.Errorf("%w: %w: bound %d, current %d", model.ErrBodyStateSuggestionStale, ErrBodyStateRevisionConflict, command.BaseBodyStateRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: %w: bound %d, current %d", model.ErrBodyStateSuggestionStale, model.ErrBodyStateRevisionConflict, command.BaseBodyStateRevision, state.CurrentRevision)
 		}
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		authorization := map[string]any{"authorization": "ask_user_confirmation", "interaction_id": answer.InteractionID}

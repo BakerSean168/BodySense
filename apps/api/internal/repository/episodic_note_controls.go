@@ -12,8 +12,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var ErrEpisodicNoteNotFound = errors.New("episodic note not found")
-
 // EpisodicNoteDeletion stores only provenance range and note identity.
 // It deliberately contains no message UUIDs, quoted text, clinical detail or
 // model output. Owner account erasure cascades from Conversation.
@@ -44,7 +42,7 @@ func NewEpisodicNoteControlsRepository(db *gorm.DB) *EpisodicNoteControlsReposit
 // raw message provenance are exposed as separate user content.
 func (r *EpisodicNoteControlsRepository) ListOwned(ctx context.Context, owner uuid.UUID) ([]model.EpisodicNote, error) {
 	if owner == uuid.Nil {
-		return nil, ErrEpisodicNoteNotFound
+		return nil, model.ErrEpisodicNoteNotFound
 	}
 	notes := make([]model.EpisodicNote, 0)
 	err := database.FromContext(ctx, r.db).
@@ -61,7 +59,7 @@ func (r *EpisodicNoteControlsRepository) ListOwned(ctx context.Context, owner uu
 // as not found. Deletion never changes BodyState, statements or raw chat.
 func (r *EpisodicNoteControlsRepository) DeleteOwned(ctx context.Context, owner, noteID uuid.UUID) (bool, error) {
 	if owner == uuid.Nil || noteID == uuid.Nil {
-		return false, ErrEpisodicNoteNotFound
+		return false, model.ErrEpisodicNoteNotFound
 	}
 	deleted := false
 	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
@@ -77,7 +75,7 @@ func (r *EpisodicNoteControlsRepository) DeleteOwned(ctx context.Context, owner,
 			if count == 1 {
 				return nil
 			}
-			return ErrEpisodicNoteNotFound
+			return model.ErrEpisodicNoteNotFound
 		}
 		if err != nil {
 			return err
@@ -90,7 +88,7 @@ func (r *EpisodicNoteControlsRepository) DeleteOwned(ctx context.Context, owner,
 			Where("id = ? AND user_id = ?", note.ConversationID, owner).
 			Take(&conv).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEpisodicNoteNotFound
+				return model.ErrEpisodicNoteNotFound
 			}
 			return err
 		}
@@ -100,7 +98,7 @@ func (r *EpisodicNoteControlsRepository) DeleteOwned(ctx context.Context, owner,
 			Where("user_id = ? AND id = ?", owner, noteID).
 			Take(&note).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEpisodicNoteNotFound
+				return model.ErrEpisodicNoteNotFound
 			}
 			return err
 		}

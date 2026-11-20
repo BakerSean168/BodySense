@@ -192,7 +192,7 @@ func TestBodyFactMessageRejectsOtherOwnerAndMismatchedReplayPostgres(t *testing.
 	}
 	if _, err := repo.RecordMessageFacts(context.Background(), owner, source, model.RecordBodyFactsCommand{
 		IdempotencyKey: fmt.Sprintf("stale-%s", uuid.NewString()), ExpectedRevision: 0, Facts: command.Facts,
-	}); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	}); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale revision must fail: %v", err)
 	}
 	assertBodyFactCount(t, db, "body_state_revisions", owner, 1)

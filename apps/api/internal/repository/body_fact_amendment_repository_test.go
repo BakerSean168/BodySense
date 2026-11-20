@@ -118,7 +118,7 @@ func TestBodyFactAmendmentRejectsForeignStaleNoopAndReboundCommandsPostgres(t *t
 	if receipt, err := repo.CorrectDirectFact(ctx, owner, original.ID, noop); !errors.Is(err, model.ErrInvalidBodyFact) || receipt != nil {
 		t.Fatal("no-op created a revision")
 	}
-	if _, err := repo.WithdrawDirectFact(ctx, owner, original.ID, model.AmendBodyFactCommand{IdempotencyKey: "stale", ExpectedRevision: 0}); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.WithdrawDirectFact(ctx, owner, original.ID, model.AmendBodyFactCommand{IdempotencyKey: "stale", ExpectedRevision: 0}); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatal("stale request accepted")
 	}
 	command := model.AmendBodyFactCommand{IdempotencyKey: "same-key", ExpectedRevision: 1}

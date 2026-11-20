@@ -101,7 +101,7 @@ func TestSafetyResolutionRejectsInvalidSourcesAndStaleWritesPostgres(t *testing.
 				cmd = clearanceCommand(t, db, owner, "user", "你说的“"+model.ProfessionalClearanceStatement+"”是什么意思？")
 			case "stale":
 				cmd.ExpectedRevision = 0
-				want = ErrBodyStateRevisionConflict
+				want = model.ErrBodyStateRevisionConflict
 			case "predates-restriction":
 				if err := db.Model(&model.Message{}).Where("id=?", cmd.SourceMessageID).Update("created_at", time.Now().Add(-24*time.Hour)).Error; err != nil {
 					t.Fatal(err)
@@ -220,7 +220,7 @@ func TestSafetyResolutionConcurrentDistinctLiftsRequireFreshRevisionPostgres(t *
 		switch {
 		case err == nil:
 			passed++
-		case errors.Is(err, ErrBodyStateRevisionConflict):
+		case errors.Is(err, model.ErrBodyStateRevisionConflict):
 			conflicted++
 		default:
 			t.Fatal(err)

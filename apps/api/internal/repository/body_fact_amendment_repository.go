@@ -63,7 +63,7 @@ func (r *BodyStateRepository) amendDirectFact(ctx context.Context, owner, target
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		var original model.BodyFact
 		err = tx.Table("body_facts AS f").Select("f.*").

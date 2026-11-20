@@ -1,11 +1,16 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+// ErrEpisodeNotFound is the public read boundary for an episode identity or
+// status snapshot that is not visible to the requesting owner.
+var ErrEpisodeNotFound = errors.New("episode not available for this owner")
 
 // EpisodeFactReference is a link to an available and currently asserted
 // source-backed symptom statement. Corrected, withdrawn, blocked or erased

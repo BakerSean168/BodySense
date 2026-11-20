@@ -89,7 +89,7 @@ func (r *BodyStateRepository) recordFacts(ctx context.Context, userID uuid.UUID,
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 
 		// User messages deliberately have no run_id FK: the Run is identified

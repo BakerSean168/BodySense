@@ -10,7 +10,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -165,7 +164,7 @@ func TestBodyEpisodeHTTPFailsClosedForUntrustedInputsAndResponse(t *testing.T) {
 
 func TestBodyEpisodeHTTPUnauthenticatedAndSourceBlockedNotFound(t *testing.T) {
 	owner := uuid.New()
-	fake := &episodeReadHTTPFake{err: repository.ErrEpisodeNotFound}
+	fake := &episodeReadHTTPFake{err: model.ErrEpisodeNotFound}
 	denied := performJSONAt(episodeHTTPRouter(t, uuid.Nil, fake), http.MethodGet, "/api/v1/body-state/episodes", "")
 	if denied.Code != http.StatusUnauthorized || fake.calls != 0 {
 		t.Fatalf("anonymous read: %d", denied.Code)

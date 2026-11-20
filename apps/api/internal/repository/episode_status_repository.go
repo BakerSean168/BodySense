@@ -65,7 +65,7 @@ func (r *BodyStateRepository) AdmitEpisodeStatus(ctx context.Context, owner, epi
 		var episode model.SymptomEpisode
 		err = tx.Where("user_id=? AND id=? AND identity_status='current'", owner, episodeID).Take(&episode).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrEpisodeNotFound
+			return model.ErrEpisodeNotFound
 		}
 		if err != nil {
 			return err
@@ -74,7 +74,7 @@ func (r *BodyStateRepository) AdmitEpisodeStatus(ctx context.Context, owner, epi
 		// a foreign Episode ID with a stale caller revision incorrectly returns
 		// 409 instead of a non-disclosing 404.
 		if state.CurrentRevision != c.ExpectedRevision {
-			return fmt.Errorf("%w: stale Episode evidence revision", ErrBodyStateRevisionConflict)
+			return fmt.Errorf("%w: stale Episode evidence revision", model.ErrBodyStateRevisionConflict)
 		}
 		var fact model.BodyFact
 		err = tx.Table("public.body_facts AS f").Select("f.*").
@@ -114,7 +114,7 @@ func (r *BodyStateRepository) AdmitEpisodeStatus(ctx context.Context, owner, epi
 				return err
 			}
 			if len(page.Episodes) != 1 {
-				return ErrEpisodeNotFound
+				return model.ErrEpisodeNotFound
 			}
 			if page.Episodes[0].Projection.State == "ended" {
 				return model.ErrEpisodeAssociationConflict
