@@ -10,7 +10,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -153,7 +152,7 @@ func TestBodyEpisodeHTTPDenialsAndNoUncommittedSuccess(t *testing.T) {
 		{"wrong_owner", nil, testEpisodeReceipt(uuid.New(), episode, fact, "create"), http.StatusInternalServerError},
 		{"wrong_fact", nil, testEpisodeReceipt(owner, episode, uuid.New(), "create"), http.StatusInternalServerError},
 		{"wrong_operation", nil, testEpisodeReceipt(owner, episode, fact, "link"), http.StatusInternalServerError},
-		{"stale", repository.ErrBodyStateRevisionConflict, nil, http.StatusConflict},
+		{"stale", model.ErrBodyStateRevisionConflict, nil, http.StatusConflict},
 		{"same_key_other_payload", model.ErrEpisodeIdempotencyConflict, nil, http.StatusConflict},
 		{"incompatible", model.ErrEpisodeAssociationConflict, nil, http.StatusConflict},
 		{"foreign_or_unavailable", model.ErrEpisodeFactUnavailable, nil, http.StatusNotFound},

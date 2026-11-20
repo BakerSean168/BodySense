@@ -9,7 +9,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -74,7 +73,7 @@ func (s *PublicServer) ListEpisodicNotes(
 	}
 	notes, err := s.episodicNotes.ListOwned(ctx, userID)
 	if err != nil {
-		if errors.Is(err, repository.ErrEpisodicNoteNotFound) {
+		if errors.Is(err, model.ErrEpisodicNoteNotFound) {
 			return listEpisodicNotesError(http.StatusNotFound, "NOT_FOUND", "episodic notes are not available"), nil
 		}
 		return listEpisodicNotesError(http.StatusInternalServerError, "EPISODIC_NOTES_UNAVAILABLE", "unable to read episodic notes"), nil
@@ -119,7 +118,7 @@ func (s *PublicServer) DeleteEpisodicNote(
 	}
 	deleted, err := s.episodicNotes.DeleteOwned(ctx, userID, request.NoteId)
 	if err != nil {
-		if errors.Is(err, repository.ErrEpisodicNoteNotFound) {
+		if errors.Is(err, model.ErrEpisodicNoteNotFound) {
 			// Foreign, unknown, already-user-deleted by another owner and
 			// disabled are all one owner-masked response.
 			return deleteEpisodicNoteError(http.StatusNotFound, "NOT_FOUND", "episodic note not found"), nil

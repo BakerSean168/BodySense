@@ -7,7 +7,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -88,7 +87,7 @@ func (s *PublicServer) ListBodyEpisodeRelations(ctx context.Context, req openapi
 	page, err := s.episodes.ListEpisodeRelations(applicationRequestContext(ctx), owner, req.Id, before)
 	if err != nil {
 		switch {
-		case errors.Is(err, repository.ErrEpisodeNotFound):
+		case errors.Is(err, model.ErrEpisodeNotFound):
 			return relationReadHTTPError(http.StatusNotFound, "EPISODE_NOT_FOUND", "episode unavailable"), nil
 		case errors.Is(err, model.ErrInvalidEpisodeEvidence):
 			return relationReadHTTPError(http.StatusBadRequest, "INVALID_EPISODE_CURSOR", "invalid Episode relation cursor"), nil

@@ -66,7 +66,7 @@ func TestSymptomEpisodeStatusSourceAdmissionAndRevisionReplayPostgres(t *testing
 	if _, err := repo.AdmitEpisodeStatus(ctx, owner, created.EpisodeID, wrong); !errors.Is(err, model.ErrEpisodeIdempotencyConflict) {
 		t.Fatalf("fingerprint did not block command key reassignment: %v", err)
 	}
-	if _, err := repo.AdmitEpisodeStatus(ctx, other, created.EpisodeID, episodeAssociationCommand(sourceStart.ID, 0, "foreign-status")); !errors.Is(err, ErrEpisodeNotFound) {
+	if _, err := repo.AdmitEpisodeStatus(ctx, other, created.EpisodeID, episodeAssociationCommand(sourceStart.ID, 0, "foreign-status")); !errors.Is(err, model.ErrEpisodeNotFound) {
 		t.Fatalf("other user had access to Episode state: %v", err)
 	}
 
@@ -102,7 +102,7 @@ func TestSymptomEpisodeStatusSourceAdmissionAndRevisionReplayPostgres(t *testing
 	if _, err := repo.AdmitEpisodeStatus(ctx, owner, created.EpisodeID, episodeAssociationCommand(endFact.ID, 6, "another-key-same-basis")); !errors.Is(err, model.ErrEpisodeAssociationConflict) {
 		t.Fatalf("already accepted status was duplicated: %v", err)
 	}
-	if _, err := repo.AdmitEpisodeStatus(ctx, owner, created.EpisodeID, episodeAssociationCommand(sourceStart.ID, 5, "stale-status")); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.AdmitEpisodeStatus(ctx, owner, created.EpisodeID, episodeAssociationCommand(sourceStart.ID, 5, "stale-status")); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale revision accepted: %v", err)
 	}
 	// After the end fact is explicitly withdrawn, source-bound projection

@@ -1,11 +1,17 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+// ErrBodyStateRevisionConflict is returned when a caller tries to mutate a
+// BodyState from an older revision. This is the optimistic-concurrency guard
+// that prevents two devices/runs from silently overwriting each other.
+var ErrBodyStateRevisionConflict = errors.New("body state revision conflict")
 
 // BodyState is the user-scoped durable health aggregate introduced by ADR 0004.
 //

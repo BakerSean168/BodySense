@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
@@ -52,7 +51,7 @@ func (m *memoryBodyContextLedger) GetBodyFactsByIDs(_ context.Context, owner uui
 
 func (m *memoryBodyContextLedger) guard(expected int64) error {
 	if expected != m.revision {
-		return fmt.Errorf("%w: expected %d current %d", repository.ErrBodyStateRevisionConflict, expected, m.revision)
+		return fmt.Errorf("%w: expected %d current %d", model.ErrBodyStateRevisionConflict, expected, m.revision)
 	}
 	m.revision++
 	m.commands++

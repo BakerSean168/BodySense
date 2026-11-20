@@ -64,14 +64,14 @@ func (r *BodyStateRepository) ReportEpisodeRecurrence(ctx context.Context, owner
 		}{{oldEpisodeID, &oldEpisode}, {c.NewEpisodeID, &newEpisode}} {
 			err = tx.Where("user_id=? AND id=? AND identity_status='current'", owner, item.id).Take(item.out).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEpisodeNotFound
+				return model.ErrEpisodeNotFound
 			}
 			if err != nil {
 				return err
 			}
 		}
 		if state.CurrentRevision != c.ExpectedRevision {
-			return fmt.Errorf("%w: recurrence source snapshot changed", ErrBodyStateRevisionConflict)
+			return fmt.Errorf("%w: recurrence source snapshot changed", model.ErrBodyStateRevisionConflict)
 		}
 		// The new course's real, CURRENT, primary-linked self-report and the
 		// user's original direct-edit source are held stable until COMMIT.
@@ -133,7 +133,7 @@ func (r *BodyStateRepository) ReportEpisodeRecurrence(ctx context.Context, owner
 			return err
 		}
 		if len(oldPage.Episodes) != 1 {
-			return ErrEpisodeNotFound
+			return model.ErrEpisodeNotFound
 		}
 		if oldPage.Episodes[0].Projection.State != "ended" {
 			return model.ErrEpisodeAssociationConflict
@@ -144,7 +144,7 @@ func (r *BodyStateRepository) ReportEpisodeRecurrence(ctx context.Context, owner
 			return err
 		}
 		if len(newPage.Episodes) != 1 {
-			return ErrEpisodeNotFound
+			return model.ErrEpisodeNotFound
 		}
 
 		var duplicate model.EpisodeRelation

@@ -11,7 +11,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -124,7 +123,7 @@ func TestBodyFactHTTPNeverReportsUncommittedSuccess(t *testing.T) {
 		{"wrong_owner", bodyFactHTTPReceipt(uuid.New()), nil, http.StatusInternalServerError},
 		{"failed_commit", nil, errors.New("private internal database diagnostic"), http.StatusInternalServerError},
 		{"idempotency_conflict", nil, model.ErrBodyFactIdempotencyConflict, http.StatusConflict},
-		{"revision_conflict", nil, repository.ErrBodyStateRevisionConflict, http.StatusConflict},
+		{"revision_conflict", nil, model.ErrBodyStateRevisionConflict, http.StatusConflict},
 		{"invalid_fact", nil, model.ErrInvalidBodyFact, http.StatusBadRequest},
 	}
 	for _, test := range cases {

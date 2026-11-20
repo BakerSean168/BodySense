@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -50,7 +49,7 @@ func TestSafetyRestrictionHTTPExplicitSourceAndFailureMapping(t *testing.T) {
 	for _, tc := range []struct {
 		err    error
 		status int
-	}{{model.ErrSafetyRestrictionNotFound, 404}, {model.ErrSafetyResolutionSourceNotFound, 404}, {model.ErrInvalidSafetyResolution, 400}, {model.ErrSafetyResolutionIdempotencyConflict, 409}, {fmt.Errorf("%w: stale restriction version", repository.ErrBodyStateRevisionConflict), 409}, {errors.New("database offline"), 503}} {
+	}{{model.ErrSafetyRestrictionNotFound, 404}, {model.ErrSafetyResolutionSourceNotFound, 404}, {model.ErrInvalidSafetyResolution, 400}, {model.ErrSafetyResolutionIdempotencyConflict, 409}, {fmt.Errorf("%w: stale restriction version", model.ErrBodyStateRevisionConflict), 409}, {errors.New("database offline"), 503}} {
 		app.err = tc.err
 		rec = performJSONAt(router, http.MethodPost, path, body)
 		if rec.Code != tc.status {

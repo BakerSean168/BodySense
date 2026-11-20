@@ -72,7 +72,7 @@ func TestBodyObservationDirectReportSourceRevisionAndExactReplayPostgres(t *test
 		t.Fatalf("changed body value silently reused authorization: %v", err)
 	}
 	changed.IdempotencyKey = "new-key-stale"
-	if _, err := repo.RecordDirectObservation(ctx, owner, changed); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.RecordDirectObservation(ctx, owner, changed); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale BodyState revision accepted: %v", err)
 	}
 	var revision model.BodyStateRevision

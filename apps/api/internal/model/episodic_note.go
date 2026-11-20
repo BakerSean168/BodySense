@@ -1,11 +1,16 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+// ErrEpisodicNoteNotFound is returned when an owner-scoped note control target
+// does not exist or is not visible to the requesting owner.
+var ErrEpisodicNoteNotFound = errors.New("episodic note not found")
 
 // EpisodicNote is a non-authoritative, provenance-bound conversational note.
 // S1 declares the schema; S2-A adds only a Go admission boundary that is

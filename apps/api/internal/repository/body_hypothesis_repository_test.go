@@ -60,7 +60,7 @@ func TestBodyHypothesisRecordWithdrawOwnerIsolationPostgres(t *testing.T) {
 		t.Fatalf("changed payload reused key: %v", err)
 	}
 	changed.IdempotencyKey = "hyp-stale"
-	if _, err := repo.RecordBodyHypothesis(ctx, owner, changed); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := repo.RecordBodyHypothesis(ctx, owner, changed); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale revision accepted: %v", err)
 	}
 

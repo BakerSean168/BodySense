@@ -11,7 +11,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -145,7 +144,7 @@ func TestDeleteEpisodicNoteMasksForeignAndUnknownIDs(t *testing.T) {
 	owner := uuid.New()
 	controls := &fakeEpisodicNoteControls{
 		deleteFn: func(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
-			return false, repository.ErrEpisodicNoteNotFound
+			return false, model.ErrEpisodicNoteNotFound
 		},
 	}
 	server := NewPublicServer().WithEpisodicNotesControls(controls, true)

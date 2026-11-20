@@ -28,7 +28,7 @@ func (r *BodyStateRepository) ListEpisodeRelations(ctx context.Context, owner, e
 			return err
 		}
 		if len(visible.Episodes) != 1 {
-			return ErrEpisodeNotFound
+			return model.ErrEpisodeNotFound
 		}
 		result = &model.EpisodeRelationPage{
 			UserID: owner, EpisodeID: episodeID, CurrentRevision: visible.CurrentRevision,
@@ -112,7 +112,7 @@ func (r *BodyStateRepository) ListEpisodeRelations(ctx context.Context, owner, e
 		return nil
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrEpisodeNotFound
+		return nil, model.ErrEpisodeNotFound
 	}
 	if err != nil {
 		return nil, err

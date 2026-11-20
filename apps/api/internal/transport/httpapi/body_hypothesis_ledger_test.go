@@ -145,12 +145,12 @@ func TestBodyHypothesisHTTPRecordStrictDirectUserOnly(t *testing.T) {
 	}
 	fake.commit = nil
 	for err, want := range map[error]int{
-		model.ErrBodyHypothesisFactNotFound:                          http.StatusNotFound,
-		model.ErrBodyHypothesisObservationNotFound:                   http.StatusNotFound,
-		fmt.Errorf("%w: x", repository.ErrBodyStateRevisionConflict): http.StatusConflict,
-		model.ErrBodyHypothesisIdempotencyConflict:                   http.StatusConflict,
-		fmt.Errorf("%w: bad", model.ErrInvalidBodyHypothesis):        http.StatusBadRequest,
-		fmt.Errorf("backend private guess statement"):                http.StatusInternalServerError,
+		model.ErrBodyHypothesisFactNotFound:                     http.StatusNotFound,
+		model.ErrBodyHypothesisObservationNotFound:              http.StatusNotFound,
+		fmt.Errorf("%w: x", model.ErrBodyStateRevisionConflict): http.StatusConflict,
+		model.ErrBodyHypothesisIdempotencyConflict:              http.StatusConflict,
+		fmt.Errorf("%w: bad", model.ErrInvalidBodyHypothesis):   http.StatusBadRequest,
+		fmt.Errorf("backend private guess statement"):           http.StatusInternalServerError,
 	} {
 		fake.err = err
 		r := performJSONAt(router, http.MethodPost, hypothesisPath, hypothesisJSON)

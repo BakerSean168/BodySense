@@ -112,7 +112,7 @@ func TestSymptomEpisodeRecurrenceDirectAuthorizationReadAndExactReplayPostgres(t
 	if _, err := f.repo.ReportEpisodeRecurrence(ctx, f.owner, f.old, sameKeyDifferent); !errors.Is(err, model.ErrEpisodeIdempotencyConflict) {
 		t.Fatalf("relation key was rebound to a different Fact: %v", err)
 	}
-	if _, err := f.repo.ReportEpisodeRecurrence(ctx, f.owner, f.old, recurrenceCommand(f, uuid.NewString())); !errors.Is(err, ErrBodyStateRevisionConflict) {
+	if _, err := f.repo.ReportEpisodeRecurrence(ctx, f.owner, f.old, recurrenceCommand(f, uuid.NewString())); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale old snapshot allowed duplicate: %v", err)
 	}
 	var count int64
@@ -155,10 +155,10 @@ func TestSymptomEpisodeRecurrenceOwnerSourceWithdrawalAndReviewPostgres(t *testi
 	f := prepareRecurrenceFixture(t, db, "2026-10-08")
 	ctx := context.Background()
 	foreign := seedBodyStateContextUser(t, db)
-	if _, err := f.repo.ReportEpisodeRecurrence(ctx, foreign, f.old, recurrenceCommand(f, "foreign-denied")); !errors.Is(err, ErrEpisodeNotFound) {
+	if _, err := f.repo.ReportEpisodeRecurrence(ctx, foreign, f.old, recurrenceCommand(f, "foreign-denied")); !errors.Is(err, model.ErrEpisodeNotFound) {
 		t.Fatalf("foreign Episode was exposed by write: %v", err)
 	}
-	if _, err := f.repo.ListEpisodeRelations(ctx, foreign, f.old, 0); !errors.Is(err, ErrEpisodeNotFound) {
+	if _, err := f.repo.ListEpisodeRelations(ctx, foreign, f.old, 0); !errors.Is(err, model.ErrEpisodeNotFound) {
 		t.Fatalf("foreign Episode was exposed by read: %v", err)
 	}
 	if _, err := f.repo.ReportEpisodeRecurrence(ctx, f.owner, f.old, model.EpisodeRecurrenceCommand{
@@ -195,7 +195,7 @@ func TestSymptomEpisodeRecurrenceOwnerSourceWithdrawalAndReviewPostgres(t *testi
 	if err != nil || len(hidden.Relations) != 0 {
 		t.Fatalf("blocked new source leaked relation: %#v %v", hidden, err)
 	}
-	if _, err := f.repo.ListEpisodeRelations(ctx, f.owner, f.newer, 0); !errors.Is(err, ErrEpisodeNotFound) {
+	if _, err := f.repo.ListEpisodeRelations(ctx, f.owner, f.newer, 0); !errors.Is(err, model.ErrEpisodeNotFound) {
 		t.Fatalf("blocked Episode identity remained visible: %v", err)
 	}
 	// Exact retry after source deletion cannot create a second authorization.
