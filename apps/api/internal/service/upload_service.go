@@ -95,8 +95,8 @@ type UploadService struct {
 	postureRuns              postureAnalysisRunRepository
 	jobRuntime               *JobRuntime
 	outputReviewService      *OutputReviewService
-	aiServiceURL             string
-	healthDocumentServiceURL string
+	aiClient                 *AIClient
+	healthDocumentClient     *AIClient
 	deployment               *AgentDeploymentPolicy
 	healthDocumentDeployment *HealthDocumentDeploymentPolicy
 	storage                  *uploadstorage.Registry
@@ -120,14 +120,14 @@ func NewUploadService(
 		healthDocumentServiceURL = aiServiceURL
 	}
 	return &UploadService{
-		assets:                   assets,
-		extractionRuns:           extractionRuns,
-		postureRuns:              postureRuns,
-		jobRuntime:               jobRuntime,
-		outputReviewService:      outputReviewService,
-		aiServiceURL:             aiServiceURL,
-		healthDocumentServiceURL: healthDocumentServiceURL,
-		storage:                  storage,
+		assets:               assets,
+		extractionRuns:       extractionRuns,
+		postureRuns:          postureRuns,
+		jobRuntime:           jobRuntime,
+		outputReviewService:  outputReviewService,
+		aiClient:             newAIClient(aiServiceURL, uploadJobTimeout),
+		healthDocumentClient: newAIClient(healthDocumentServiceURL, uploadJobTimeout),
+		storage:              storage,
 	}
 }
 
