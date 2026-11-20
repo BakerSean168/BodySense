@@ -5,7 +5,7 @@ import type { EpisodicNote } from "@/features/profile/services/episodicNotesServ
 import { useEpisodicNotes } from "../hooks/useEpisodicNotes";
 import { PersonConfirmDialog } from "../PersonConfirmDialog";
 import { PersonDataError } from "./PersonDataError";
-import { PersonEmptyState } from "./PersonEmptyState";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const NOTE_STATUS_LABELS: Record<string, string> = {
   shadow: "仅保存，不参与对话",
@@ -65,10 +65,11 @@ export function EpisodicNotesCategory() {
   }
   if (notes.length === 0) {
     return (
-      <PersonEmptyState
+      <EmptyState
+        className="min-h-[300px]"
         icon={<Brain size={24} />}
         title="还没有记忆"
-        message="对话摘要会出现在这里；它们是对话记忆，不是身体记录，也不会用于诊断。"
+        description="对话摘要会出现在这里；它们是对话记忆，不是身体记录，也不会用于诊断。"
       />
     );
   }

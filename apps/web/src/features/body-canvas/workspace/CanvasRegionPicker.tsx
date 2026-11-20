@@ -7,6 +7,7 @@ import {
   type BodyRegionId,
 } from "@/features/body-explorer/model/bodyRegionOntology";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import {
   regionPaletteShortcut,
@@ -174,7 +175,7 @@ export function CanvasRegionPicker({
             })}
           </ul>
         ) : (
-          <p className="bc-region-palette-empty">没有匹配的区域</p>
+          <EmptyState size="sm" title="没有匹配的区域" />
         )}
       </DialogContent>
     </Dialog>

@@ -8,6 +8,7 @@ import {
 } from "@/features/profile/model/profilePreferences";
 import { useBodyHypothesisController } from "../hooks/useBodyHypothesisController";
 import { Checkbox } from "@/components/ui/checkbox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -170,7 +171,7 @@ function HypothesisPanel({
       {readable && data ? (
         <>
           {!data.hypotheses.length && (
-            <p className="bc-window-empty-text">还没有你提出的猜测。</p>
+            <EmptyState size="sm" title="还没有你提出的猜测。" />
           )}
           {data.hypotheses.map((record) => (
             <article key={record.id} className="bc-person-hypothesis">
@@ -406,7 +407,7 @@ function HypothesisPanel({
             </article>
           ))
         ) : (
-          <p className="bc-window-empty-text">暂无相关记录分组。</p>
+          <EmptyState size="sm" title="暂无相关记录分组。" />
         )
       ) : null}
     </section>

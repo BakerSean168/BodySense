@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Check, Eye, Minus, Sparkle, X } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { nativeDiagnosisKeys } from "@/features/consultation/hooks/useDiagnosisActions";
 import { nativeDiagnosisService as api } from "@/features/consultation/services/nativeDiagnosisService";
 import { errorMessage } from "@/lib/api-client";
@@ -90,9 +91,11 @@ export function DiagnosisHistoryList({
           正在读取诊断历史
         </p>
       ) : entries.length === 0 ? (
-        <p className="bc-dx-note" data-testid="diagnosis-history-empty">
-          还没有诊断决定。
-        </p>
+        <EmptyState
+          size="sm"
+          title="还没有诊断决定。"
+          data-testid="diagnosis-history-empty"
+        />
       ) : (
         <ol className="bc-dx-timeline" aria-label="诊断决定记录">
           {entries.map((entry) => {

@@ -4,6 +4,7 @@ import { BodyEpisodeAssociations } from "@/features/body-canvas/components/BodyE
 import { useBodyRecordsQuery } from "@/features/profile/hooks/useBodyRecordsQuery";
 import { errorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 /** User statements, measurements and Episode identities keep their native semantics. */
 export function BodyStateWorkbench({ canEdit }: { canEdit: boolean }) {
@@ -45,7 +46,7 @@ export function BodyStateWorkbench({ canEdit }: { canEdit: boolean }) {
               </article>
             ))
           ) : (
-            <p className="text-xs text-muted-foreground">暂无观察记录</p>
+            <EmptyState size="sm" title="暂无观察记录" />
           )}
         </section>
       )}

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useThemeClass } from "../windows/person/useThemeClass";
 import {
   Check,
@@ -558,16 +559,16 @@ export function BodyFactRecords({
         </div>
       ) : null}
       {emptyState ? (
-        <div className="bc-person-state">
-          <span className="bc-person-state-icon" aria-hidden="true">
-            {habitsOnly ? <Repeat2 size={18} /> : <FileText size={18} />}
-          </span>
-          <strong>{habitsOnly ? "还没有生活习惯" : "还没有身体记录"}</strong>
-          <span>
-            {habitsOnly
+        <EmptyState
+          className="min-h-[300px]"
+          icon={habitsOnly ? <Repeat2 size={24} /> : <FileText size={24} />}
+          title={habitsOnly ? "还没有生活习惯" : "还没有身体记录"}
+          description={
+            habitsOnly
               ? "作息、久坐、饮食这些，在对话里说过就会整理到这里"
-              : "在对话里说一句身体感受，就会出现在这里"}
-          </span>
+              : "在对话里说一句身体感受，就会出现在这里"
+          }
+        >
           {notice ? (
             <p role="status" className="bc-record-saved">
               <Check size={15} />
@@ -579,7 +580,7 @@ export function BodyFactRecords({
           {related ? (
             <div className="bc-person-state-related">{related}</div>
           ) : null}
-        </div>
+        </EmptyState>
       ) : null}
       {!query.isPending && !readFailed && !emptyState ? (
         <>
