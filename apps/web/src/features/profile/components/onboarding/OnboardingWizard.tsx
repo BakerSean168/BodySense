@@ -248,17 +248,17 @@ export function OnboardingWizard() {
     return (
       <div
         data-testid="onboarding-generating"
-        className="flex min-h-[100dvh] flex-col items-center justify-center bg-white p-6 text-[#1A1A1A]"
+        className="flex min-h-[100dvh] flex-col items-center justify-center bg-background p-6 text-foreground"
       >
         <div
           aria-hidden="true"
-          className="h-14 w-14 rounded-full border-4 border-[#E8F0EA] border-t-[#2C694F] motion-safe:animate-spin"
+          className="h-14 w-14 rounded-full border-4 border-[var(--ui-highlight)] border-t-[var(--ui-primary)] motion-safe:animate-spin"
         />
         <h1 className="mt-6 text-xl font-bold">正在生成您的健康评估</h1>
         <p
           role="status"
           aria-live="polite"
-          className="mt-2 h-6 text-sm text-[#6B7280]"
+          className="mt-2 h-6 text-sm text-muted-foreground"
         >
           {LOADING_PHRASES[phraseIndex]}
         </p>

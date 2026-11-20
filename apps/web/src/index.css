@@ -59,11 +59,11 @@
   }
 
   .glass-dark {
-    @apply bg-[#14221a]/85 backdrop-blur-xl border border-[#2a4b3a]/30 shadow-[0_4px_30px_rgba(0,0,0,0.15)];
+    @apply bg-[var(--color-primary-900)]/85 backdrop-blur-xl border border-[var(--color-primary-700)]/30 shadow-[0_4px_30px_rgba(0,0,0,0.15)];
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#365d48] to-[#CD7B67];
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-600)] to-[var(--color-accent-terracotta)];
   }
 
   .editorial-card {
@@ -94,12 +94,12 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #c5d7cc;
+    background: var(--color-primary-200);
     border-radius: 9999px;
     transition: background 0.3s;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #9ebdad;
+    background: var(--color-primary-300);
   }
 }
 
@@ -372,7 +372,7 @@
 .prose-markdown td {
   border: 1px solid var(--color-border);
   padding: 0.5rem 0.75rem;
-  background-color: #ffffff;
+  background-color: var(--card);
 }
 
 .prose-markdown tr:nth-child(even) td {
@@ -444,14 +444,14 @@
   transform: translateY(1px);
 }
 .auth-ink-button:focus-visible {
-  outline: 2px solid #2c694f;
+  outline: 2px solid var(--ui-primary);
   outline-offset: 2px;
 }
 .auth-ink-link {
   border-radius: 4px;
 }
 .auth-ink-link:focus-visible {
-  outline: 2px solid #2c694f;
+  outline: 2px solid var(--ui-primary);
   outline-offset: 2px;
 }
 @keyframes auth-dantian-breathe {

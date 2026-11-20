@@ -42,7 +42,7 @@ export function OnboardingLayout({
     <div
       data-testid="onboarding-page"
       data-step={step}
-      className="flex min-h-[100dvh] flex-col bg-white text-[#1A1A1A]"
+      className="flex min-h-[100dvh] flex-col bg-background text-foreground"
     >
       <header className="mx-4 flex h-14 shrink-0 items-center lg:mx-10 lg:h-16">
         <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-0">
@@ -51,7 +51,7 @@ export function OnboardingLayout({
               type="button"
               onClick={onBack}
               aria-label="上一步"
-              className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-[#1A1A1A] hover:bg-[#F7F7F7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] lg:-ml-[10px] lg:h-8 lg:w-8"
+              className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)] lg:-ml-[10px] lg:h-8 lg:w-8"
             >
               <svg
                 aria-hidden="true"
@@ -73,10 +73,10 @@ export function OnboardingLayout({
             BodySense
           </span>
         </div>
-        <span className="text-[13px] leading-[18px] text-[#6B7280]">
+        <span className="text-[13px] leading-[18px] text-muted-foreground">
           {section}
         </span>
-        <span className="flex flex-1 justify-end text-[13px] leading-[18px] text-[#6B7280] tabular-nums">
+        <span className="flex flex-1 justify-end text-[13px] leading-[18px] text-muted-foreground tabular-nums">
           {step}/{totalSteps}
         </span>
       </header>
@@ -88,11 +88,11 @@ export function OnboardingLayout({
         aria-valuemax={totalSteps}
         aria-valuenow={step}
         aria-valuetext={`第 ${step} 步，共 ${totalSteps} 步`}
-        className="mx-4 mt-1 h-1.5 shrink-0 overflow-hidden rounded-[3px] bg-[#E5E7EB] lg:mx-10 lg:mt-2"
+        className="mx-4 mt-1 h-1.5 shrink-0 overflow-hidden rounded-[3px] bg-border lg:mx-10 lg:mt-2"
       >
         <div
           data-testid="onboarding-progress-fill"
-          className="h-full rounded-[3px] bg-[#2C694F] motion-safe:transition-[width] motion-safe:duration-300"
+          className="h-full rounded-[3px] bg-[var(--ui-primary)] motion-safe:transition-[width] motion-safe:duration-300"
           style={{ width: `${(step / totalSteps) * 100}%` }}
         />
       </div>
@@ -109,7 +109,7 @@ export function OnboardingLayout({
         {subtitle ? (
           <p
             id="onboarding-question-hint"
-            className="mt-2 text-sm leading-[19px] text-[#6B7280]"
+            className="mt-2 text-sm leading-[19px] text-muted-foreground"
           >
             {subtitle}
           </p>
@@ -119,9 +119,9 @@ export function OnboardingLayout({
         {footer && (
           <div
             data-testid="onboarding-footer"
-            className="sticky bottom-0 mt-auto bg-white pt-6 pb-[max(24px,env(safe-area-inset-bottom))] lg:static lg:pt-0 lg:pb-[min(192px,21.33vh)]"
+            className="sticky bottom-0 mt-auto bg-background pt-6 pb-[max(24px,env(safe-area-inset-bottom))] lg:static lg:pt-0 lg:pb-[min(192px,21.33vh)]"
           >
-            <div className="mt-6 border-t border-[#E5E7EB] pt-3 lg:mt-10">
+            <div className="mt-6 border-t border-border pt-3 lg:mt-10">
               {footer}
             </div>
           </div>
@@ -147,7 +147,7 @@ export function OnboardingPrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="h-14 w-full rounded-[28px] bg-[#2C694F] text-base font-bold text-white hover:bg-[#245A43] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] disabled:cursor-not-allowed disabled:opacity-40"
+      className="h-14 w-full rounded-[28px] bg-[var(--ui-primary)] text-base font-bold text-[var(--ui-primary-ink)] hover:bg-[color-mix(in_srgb,var(--ui-primary)_90%,black)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)] disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -159,7 +159,7 @@ export function OnboardingSkipButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="h-14 w-full rounded-[28px] text-[15px] text-[#6B7280] hover:bg-[#F7F7F7] hover:text-[#1A1A1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F]"
+      className="h-14 w-full rounded-[28px] text-[15px] text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)]"
     >
       跳过
     </button>

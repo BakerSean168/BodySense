@@ -55,7 +55,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
         <div className="group relative flex h-6 items-center">
           <Icon
             aria-hidden="true"
-            className="h-6 w-6 shrink-0 text-[#7C8C81] transition-colors group-focus-within:text-[#2C694F]"
+            className="h-6 w-6 shrink-0 text-[#7C8C81] transition-colors group-focus-within:text-[var(--ui-primary)]"
             strokeWidth={1.8}
           />
           <Input
@@ -66,7 +66,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
             aria-label={accessibleLabel}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            className="h-6 min-h-0 w-auto flex-1 py-0 pl-[10px] text-[15px] leading-[1.2] font-normal text-[#182A21] placeholder:text-[#9AA89E]"
+            className="h-6 min-h-0 w-auto flex-1 py-0 pl-[10px] text-[15px] leading-[1.2] font-normal text-[var(--ui-ink)] placeholder:text-[#9AA89E]"
             {...props}
           />
           {kind === "password" && (
@@ -77,7 +77,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
               aria-pressed={visible}
               aria-controls={id}
               data-testid={`${id}-visibility`}
-              className="-mr-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#7C8C81] hover:text-[#2C694F] focus-visible:ring-2 focus-visible:ring-[#2C694F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBFAF5] focus-visible:outline-none"
+              className="-mr-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#7C8C81] hover:text-[var(--ui-primary)] focus-visible:ring-2 focus-visible:ring-[var(--ui-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ui-paper)] focus-visible:outline-none"
             >
               {visible ? (
                 <Eye aria-hidden="true" className="h-6 w-6" strokeWidth={1.8} />
@@ -98,7 +98,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
           />
           <div
             className={`auth-ink-underline-focus absolute top-[3px] right-0 left-0 h-px ${
-              error ? "bg-[#9A3F35]" : "bg-[#2C694F]"
+              error ? "bg-[var(--ui-danger)]" : "bg-[var(--ui-primary)]"
             }`}
           />
         </div>
@@ -106,7 +106,7 @@ export const InkField = forwardRef<HTMLInputElement, InkFieldProps>(
           <p
             id={errorId}
             role="alert"
-            className="mt-2 text-[13px] leading-[1.2] font-semibold text-[#9A3F35]"
+            className="mt-2 text-[13px] leading-[1.2] font-semibold text-[var(--ui-danger)]"
           >
             {error}
             {errorExtra}
