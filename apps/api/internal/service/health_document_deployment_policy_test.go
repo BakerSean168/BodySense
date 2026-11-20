@@ -12,7 +12,7 @@ func clearHealthDocumentDeploymentEnv(t *testing.T) {
 
 func TestHealthDocumentDeploymentDefaultsToFrozenTesseractChampion(t *testing.T) {
 	clearHealthDocumentDeploymentEnv(t)
-	policy, err := NewHealthDocumentDeploymentPolicy()
+	policy, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestHealthDocumentDeploymentDefaultsToFrozenTesseractChampion(t *testing.T)
 func TestHealthDocumentQualificationStageUsesBenchmarkGatedCandidate(t *testing.T) {
 	clearHealthDocumentDeploymentEnv(t)
 	t.Setenv("HEALTH_DOCUMENT_STAGE", HealthDocumentStageQualification)
-	policy, err := NewHealthDocumentDeploymentPolicy()
+	policy, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestHealthDocumentQualificationStageUsesBenchmarkGatedCandidate(t *testing.
 func TestHealthDocumentRollbackUsesFrozenTesseract(t *testing.T) {
 	clearHealthDocumentDeploymentEnv(t)
 	t.Setenv("HEALTH_DOCUMENT_STAGE", HealthDocumentStageRollback)
-	policy, err := NewHealthDocumentDeploymentPolicy()
+	policy, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,21 +52,21 @@ func TestHealthDocumentDeploymentRejectsInvalidStageAndPointerRoles(t *testing.T
 	t.Run("stage", func(t *testing.T) {
 		clearHealthDocumentDeploymentEnv(t)
 		t.Setenv("HEALTH_DOCUMENT_STAGE", "canary")
-		if _, err := NewHealthDocumentDeploymentPolicy(); err == nil {
+		if _, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument); err == nil {
 			t.Fatal("expected invalid stage")
 		}
 	})
 	t.Run("unqualified candidate cannot masquerade as champion", func(t *testing.T) {
 		clearHealthDocumentDeploymentEnv(t)
 		t.Setenv("HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID", healthDocumentCandidateConfigurationID)
-		if _, err := NewHealthDocumentDeploymentPolicy(); err == nil {
+		if _, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument); err == nil {
 			t.Fatal("qualification candidate must not masquerade as champion")
 		}
 	})
 	t.Run("champion cannot masquerade as qualification candidate", func(t *testing.T) {
 		clearHealthDocumentDeploymentEnv(t)
 		t.Setenv("HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID", tesseractChampionConfigurationID)
-		if _, err := NewHealthDocumentDeploymentPolicy(); err == nil {
+		if _, err := NewHealthDocumentDeploymentPolicy(testProcessConfig().HealthDocument); err == nil {
 			t.Fatal("current champion must not masquerade as qualification candidate")
 		}
 	})

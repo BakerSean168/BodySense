@@ -119,7 +119,7 @@ func TestUserAssetStorageMigrationRemovalPostgres(t *testing.T) {
 	}
 	removed := make(chan error, 1)
 	go func() {
-		_, err := NewUploadService(repo, nil, nil, nil, nil, registry).RemoveSource(ctx, owner, asset.ID)
+		_, err := NewUploadService(repo, nil, nil, nil, nil, registry, testProcessConfig().Upload).RemoveSource(ctx, owner, asset.ID)
 		removed <- err
 	}()
 	close(target.resume)

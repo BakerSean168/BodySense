@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bodysense/api/internal/config"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
@@ -39,7 +40,7 @@ func assetRemovalIntegrationRouter(t *testing.T, db *gorm.DB, actingUser uuid.UU
 	extractionRepo := repository.NewDocumentExtractionRunRepository(db)
 	postureRepo := repository.NewPostureAnalysisRunRepository(db)
 	reviewRepo := repository.NewDocumentIndicatorReviewRepository(db)
-	uploadService := service.NewUploadService(assetRepo, extractionRepo, postureRepo, nil, nil, registry)
+	uploadService := service.NewUploadService(assetRepo, extractionRepo, postureRepo, nil, nil, registry, config.Load(os.Getenv).Upload)
 	reviewService := service.NewHealthDocumentReviewService(extractionRepo, reviewRepo, assetRepo)
 	router := gin.New()
 	RegisterRoutes(router, StrictHandler(NewPublicServer().WithUploads(uploadService, reviewService)), RouteSecurity{
@@ -129,7 +130,7 @@ func TestUserAssetSourceRemovalPostgres(t *testing.T) {
 	extractionRepo := repository.NewDocumentExtractionRunRepository(db)
 	postureRepo := repository.NewPostureAnalysisRunRepository(db)
 	reviewRepo := repository.NewDocumentIndicatorReviewRepository(db)
-	uploadService := service.NewUploadService(assetRepo, extractionRepo, postureRepo, nil, nil, registry)
+	uploadService := service.NewUploadService(assetRepo, extractionRepo, postureRepo, nil, nil, registry, config.Load(os.Getenv).Upload)
 	reviewService := service.NewHealthDocumentReviewService(extractionRepo, reviewRepo, assetRepo)
 	ownerRouter := assetRemovalIntegrationRouter(t, db, owner, registry)
 	foreignRouter := assetRemovalIntegrationRouter(t, db, foreign, registry)

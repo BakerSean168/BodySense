@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -336,7 +335,7 @@ func TestDurableExecutionContextSurvivesRequestCancellation(t *testing.T) {
 	parent, cancelParent := context.WithCancel(context.Background())
 	cancelParent()
 
-	executionCtx, cancelExecution := durableExecutionContext(parent)
+	executionCtx, cancelExecution := (&Runtime{}).durableExecutionContext(parent)
 	defer cancelExecution()
 	select {
 	case <-executionCtx.Done():
@@ -665,7 +664,7 @@ func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
 
 func TestDurableExecutionContextSurvivesTransportDisconnect(t *testing.T) {
 	parent, disconnect := context.WithCancel(context.Background())
-	executionCtx, cancelExecution := durableExecutionContext(parent)
+	executionCtx, cancelExecution := (&Runtime{}).durableExecutionContext(parent)
 	defer cancelExecution()
 	disconnect()
 
@@ -943,51 +942,29 @@ func TestProjectConsultationRuntimeInteractionDoesNotExposeLangGraphInterruptID(
 	}
 }
 
-func TestConsultationExecutionTimeout(t *testing.T) {
+func TestExecutionTimeoutDrivesDurableExecutionContext(t *testing.T) {
 	cases := []struct {
-		name  string
-		unset bool
-		value string
-		want  time.Duration
+		name    string
+		timeout time.Duration
+		want    time.Duration
 	}{
-		{name: "unset uses default", unset: true, want: 5 * time.Minute},
-		{name: "configured seconds override default", value: "600", want: 10 * time.Minute},
-		{name: "zero falls back to default", value: "0", want: 5 * time.Minute},
-		{name: "negative falls back to default", value: "-30", want: 5 * time.Minute},
-		{name: "non numeric falls back to default", value: "ten-minutes", want: 5 * time.Minute},
-		{name: "empty falls back to default", value: "", want: 5 * time.Minute},
+		{name: "injected budget", timeout: 10 * time.Minute, want: 10 * time.Minute},
+		{name: "zero value keeps the safe default", want: 5 * time.Minute},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Register the ambient value for cleanup before mutating it.
-			t.Setenv(consultationExecutionTimeoutEnv, "")
-			if tc.unset {
-				if err := os.Unsetenv(consultationExecutionTimeoutEnv); err != nil {
-					t.Fatalf("unset %s: %v", consultationExecutionTimeoutEnv, err)
-				}
-			} else {
-				t.Setenv(consultationExecutionTimeoutEnv, tc.value)
-			}
+			runtime := &Runtime{executionTimeout: tc.timeout}
+			ctx, cancel := runtime.durableExecutionContext(context.Background())
+			defer cancel()
 
-			if got := consultationExecutionTimeout(); got != tc.want {
-				t.Fatalf("consultationExecutionTimeout() = %s, want %s", got, tc.want)
+			deadline, ok := ctx.Deadline()
+			if !ok {
+				t.Fatal("durable execution context has no deadline")
+			}
+			remaining := time.Until(deadline)
+			if remaining < tc.want-time.Second || remaining > tc.want {
+				t.Fatalf("durable execution deadline = %s, want about %s", remaining, tc.want)
 			}
 		})
-	}
-}
-
-func TestConsultationExecutionTimeoutDrivesDurableExecutionContext(t *testing.T) {
-	t.Setenv(consultationExecutionTimeoutEnv, "600")
-
-	ctx, cancel := durableExecutionContext(context.Background())
-	defer cancel()
-
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		t.Fatal("durable execution context has no deadline")
-	}
-	remaining := time.Until(deadline)
-	if remaining < 590*time.Second || remaining > 600*time.Second {
-		t.Fatalf("durable execution deadline = %s, want about 600s", remaining)
 	}
 }
