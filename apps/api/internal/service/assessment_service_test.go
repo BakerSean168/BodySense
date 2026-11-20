@@ -331,7 +331,7 @@ func TestAssessmentSourceReadFailurePreventsReportPersistence(t *testing.T) {
 func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 	userID := uuid.New()
 	repo := &fakeAssessmentRepository{}
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 
 func TestAssessmentRejectsIdentityMismatch(t *testing.T) {
 	userID := uuid.New()
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
 	}

@@ -191,7 +191,7 @@ func TestMigrationThenRemovalDeletesEverySourceReplica(t *testing.T) {
 	if _, err := NewUploadStorageMigrator(repo, registry).Migrate(context.Background(), "local", "oss", false); err != nil {
 		t.Fatal(err)
 	}
-	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 	removed, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID)
 	if err != nil || removed.Availability != model.UserAssetSourceRemoved {
 		t.Fatalf("removed=%v err=%v", removed, err)
@@ -208,7 +208,7 @@ func TestMigrationThenRemovalDeletesEverySourceReplica(t *testing.T) {
 
 func TestRemovalThenMigrationCannotRecreateSource(t *testing.T) {
 	registry, _, target, repo, asset := migrationFixture(t, []byte("private-upload"))
-	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 	if _, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestRemovalRetriesKnownReplicasAndVerifiesAbsence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+			svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 			if _, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID); err == nil {
 				t.Fatal("must report failed cleanup")
 			}
@@ -334,7 +334,7 @@ func TestRemovalRetriesBothReplicasAfterCutoverCleanupFailure(t *testing.T) {
 	if len(repo.replicas) != 2 {
 		t.Fatal("must track both old and new source replicas")
 	}
-	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 	if _, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID); err == nil {
 		t.Fatal("must report uncleared old replica")
 	}
@@ -405,7 +405,7 @@ func TestMigrationResolvesCASWriteErrorsWithoutDeletingAuthoritativeTarget(t *te
 func TestRemovalOfErasedAssetStillVerifiesKnownSourceCleanup(t *testing.T) {
 	registry, source, _, repo, asset := migrationFixture(t, []byte("private-upload"))
 	asset.Availability = model.UserAssetErased
-	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry)
+	svc := NewUploadService(&repo.fakeUserAssetRepository, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 	result, err := svc.RemoveSource(context.Background(), asset.UserID, asset.ID)
 	if err != nil || result.Availability != model.UserAssetErased {
 		t.Fatalf("result=%+v err=%v", result, err)

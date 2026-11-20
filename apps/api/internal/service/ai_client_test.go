@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 )
@@ -379,44 +378,15 @@ func TestRuntimeApplicationPayloadValidatesAnswerAttribution(t *testing.T) {
 	}
 }
 
-func TestAIRuntimeTimeoutResolution(t *testing.T) {
-	cases := []struct {
-		name  string
-		value string
-		unset bool
-		want  time.Duration
-	}{
-		{name: "unset uses default", unset: true, want: 120 * time.Second},
-		{name: "configured seconds override default", value: "300", want: 300 * time.Second},
-		{name: "zero falls back to default", value: "0", want: 120 * time.Second},
-		{name: "negative falls back to default", value: "-30", want: 120 * time.Second},
-		{name: "non numeric falls back to default", value: "two-minutes", want: 120 * time.Second},
-		{name: "empty falls back to default", value: "", want: 120 * time.Second},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Register the ambient value for cleanup before mutating it.
-			t.Setenv(aiRuntimeTimeoutEnv, "")
-			if tc.unset {
-				if err := os.Unsetenv(aiRuntimeTimeoutEnv); err != nil {
-					t.Fatalf("unset %s: %v", aiRuntimeTimeoutEnv, err)
-				}
-			} else {
-				t.Setenv(aiRuntimeTimeoutEnv, tc.value)
-			}
+func TestNewAIClientWiresInjectedConfig(t *testing.T) {
+	t.Setenv("AI_RUNTIME_TIMEOUT_SECONDS", "300")
+	t.Setenv("AI_SERVICE_URL", "http://ai.test:8100")
 
-			if got := aiRuntimeTimeout(); got != tc.want {
-				t.Fatalf("aiRuntimeTimeout() = %s, want %s", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestNewAIClientWiresConfiguredRuntimeTimeout(t *testing.T) {
-	t.Setenv(aiRuntimeTimeoutEnv, "300")
-
-	client := NewAIClient()
+	client := NewAIClient(testProcessConfig().AI)
 	if client.httpClient.Timeout != 300*time.Second {
 		t.Fatalf("httpClient.Timeout = %s, want 300s", client.httpClient.Timeout)
+	}
+	if client.BaseURL() != "http://ai.test:8100" {
+		t.Fatalf("baseURL = %q, want the injected endpoint", client.BaseURL())
 	}
 }
