@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,8 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
-	"net/http"
 	"strings"
 	"time"
 
@@ -19,48 +16,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
-
-// executeOCRCall streams an already-authorized asset to the bounded
-// health-document runtime. Go remains the blob authority; Python receives only
-// the request body, never OSS credentials or an object-store location.
-func (s *UploadService) executeOCRCall(reader io.Reader, mimeType, configurationID string) ([]byte, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
-		"Content-Type":        {mimeType},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create form part: %w", err)
-	}
-	if _, err = io.Copy(part, reader); err != nil {
-		return nil, fmt.Errorf("failed to copy file content: %w", err)
-	}
-	if err := writer.WriteField("configuration_id", configurationID); err != nil {
-		return nil, fmt.Errorf("failed to write OCR configuration id: %w", err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("failed to finalize OCR multipart body: %w", err)
-	}
-
-	baseURL := s.healthDocumentServiceURL
-	if baseURL == "" {
-		baseURL = s.aiServiceURL
-	}
-	resp, err := http.Post(baseURL+"/api/ocr/extract", writer.FormDataContentType(), body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to health-document service: %w", err)
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read OCR response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("OCR service returned status %d", resp.StatusCode)
-	}
-	return respBody, nil
-}
 
 type ocrJobInput struct {
 	AssetID         string `json:"asset_id"`
@@ -205,7 +160,7 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		return s.finalizeOCRFailure(ctx, job, assetID, model.JobStatusFailed, err, json.RawMessage(`{"error":"upload object unavailable"}`))
 	}
 	documentHasher := sha256.New()
-	respBody, callErr := s.executeOCRCall(io.TeeReader(reader, documentHasher), asset.MimeType, input.ConfigurationID)
+	respBody, callErr := s.healthDocumentClient.ExtractHealthDocument(io.TeeReader(reader, documentHasher), asset.MimeType, input.ConfigurationID)
 	closeErr := reader.Close()
 	if callErr == nil && closeErr != nil {
 		callErr = closeErr
@@ -327,48 +282,6 @@ type postureJobInput struct {
 	ConfigurationID string `json:"configuration_id,omitempty"`
 }
 
-// executePostureCall sends a photo to the AI service posture endpoint together
-// with its view and returns the raw response body.
-func (s *UploadService) executePostureCall(reader io.Reader, mimeType, view, configurationID string) ([]byte, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	if err := writer.WriteField("view", view); err != nil {
-		return nil, fmt.Errorf("failed to write view field: %w", err)
-	}
-	if strings.TrimSpace(configurationID) == "" {
-		return nil, fmt.Errorf("posture configuration id is required")
-	}
-	if err := writer.WriteField("configuration_id", configurationID); err != nil {
-		return nil, fmt.Errorf("failed to write configuration_id field: %w", err)
-	}
-	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
-		"Content-Type":        {mimeType},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create form part: %w", err)
-	}
-	if _, err = io.Copy(part, reader); err != nil {
-		return nil, fmt.Errorf("failed to copy file content: %w", err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("failed to finalize posture multipart body: %w", err)
-	}
-	resp, err := http.Post(s.aiServiceURL+"/api/posture/analyze", writer.FormDataContentType(), body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
-	}
-	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read posture response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("posture service returned status %d", resp.StatusCode)
-	}
-	return respBody, nil
-}
-
 func (s *UploadService) enqueuePostureJob(ctx context.Context, assetID, userID uuid.UUID, fileType string) (*model.Job, bool, error) {
 	kind, photoView, known := model.UserAssetKindFromFileType(fileType)
 	if !known || kind != model.UserAssetKindPhoto || photoView == "" {
@@ -446,7 +359,7 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		errPayload, _ := json.Marshal(map[string]string{"error": "upload object unavailable"})
 		return s.finalizeAnalysisFailure(ctx, job, assetID, model.JobStatusFailed, err, errPayload)
 	}
-	respBody, callErr := s.executePostureCall(reader, asset.MimeType, input.View, input.ConfigurationID)
+	respBody, callErr := s.aiClient.AnalyzePosture(reader, asset.MimeType, input.View, input.ConfigurationID)
 	closeErr := reader.Close()
 	if callErr == nil && closeErr != nil {
 		callErr = closeErr
