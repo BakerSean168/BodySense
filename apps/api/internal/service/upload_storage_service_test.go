@@ -279,7 +279,7 @@ func multipartUploadHeader(t *testing.T, filename, contentType string, payload [
 }
 
 func newTestUploadService(assets *fakeUserAssetRepository, extractionRuns *fakeExtractionRunRepository, postureRuns *fakePostureRunRepository, registry *uploadstorage.Registry) *UploadService {
-	return NewUploadService(assets, extractionRuns, postureRuns, nil, nil, registry)
+	return NewUploadService(assets, extractionRuns, postureRuns, nil, nil, registry, testProcessConfig().Upload)
 }
 
 func TestUploadStorageVerticalWriteReadRemoveSource(t *testing.T) {

@@ -39,7 +39,7 @@ func formalAgentResponse(req DiagnosisRequest, formal any) json.RawMessage {
 
 func newFormalAnalysisForTest(t *testing.T, agent diagnosisFormalAgent) *DiagnosisFormalAnalysisService {
 	t.Helper()
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}

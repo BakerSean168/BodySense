@@ -9,10 +9,10 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bodysense/api/internal/config"
 )
 
 type DiagnosisRequest struct {
@@ -187,9 +187,6 @@ type ResumeConsultationInterruptRequest struct {
 }
 
 const (
-	aiRuntimeTimeoutEnv     = "AI_RUNTIME_TIMEOUT_SECONDS"
-	defaultAIRuntimeTimeout = 120 * time.Second
-
 	// knowledgeQueryTimeout bounds one knowledge search/stats round trip.
 	knowledgeQueryTimeout = 30 * time.Second
 	// knowledgeIngestionTimeout bounds one full video-ingestion pipeline call.
@@ -199,26 +196,11 @@ const (
 	uploadJobTimeout = time.Duration(0)
 )
 
-// aiRuntimeTimeout resolves the HTTP client timeout for the AI runtime client.
-// http.Client.Timeout bounds the total read of the whole AI stream — every
-// serial model call plus the complete answer — not a single packet, so a slow
-// provider handling multi-turn work can legitimately exceed the previous fixed
-// 120s. AI_RUNTIME_TIMEOUT_SECONDS lets a deployment raise it without a code
-// change; unset, non-numeric, zero, or negative values keep the safe default.
-func aiRuntimeTimeout() time.Duration {
-	raw := strings.TrimSpace(os.Getenv(aiRuntimeTimeoutEnv))
-	if raw == "" {
-		return defaultAIRuntimeTimeout
-	}
-	seconds, err := strconv.Atoi(raw)
-	if err != nil || seconds <= 0 {
-		return defaultAIRuntimeTimeout
-	}
-	return time.Duration(seconds) * time.Second
-}
-
-func NewAIClient() *AIClient {
-	return newAIClient(os.Getenv("AI_SERVICE_URL"), aiRuntimeTimeout())
+// NewAIClient builds the AI runtime client from the injected configuration.
+// The stream timeout and the service endpoint are resolved by the composition
+// root; see config.AI.
+func NewAIClient(cfg config.AI) *AIClient {
+	return newAIClient(cfg.ServiceURL, cfg.RuntimeTimeout)
 }
 
 // newAIClient builds the one adapter instance for an explicit AI service base

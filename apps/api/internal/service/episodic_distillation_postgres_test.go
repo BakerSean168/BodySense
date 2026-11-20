@@ -95,6 +95,7 @@ func (f *pruneJobFixture) attachDistillation(proposer EpisodicShadowProposer, en
 		repository.NewEpisodicDistillationRepository(f.db),
 		repository.NewEpisodicShadowRepository(f.db).WithShadowAdmissionEnabled(true),
 		proposer,
+		testProcessConfig().Episodic,
 	).WithEnabled(enabled)
 	f.svc.WithEpisodicDistillation(trigger)
 	return trigger

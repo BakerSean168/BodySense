@@ -54,7 +54,7 @@ func (r *Runtime) resumeBodyFactInteraction(ctx context.Context, w http.Response
 	// Install cancellation before exposing resume milestones or dispatching AI.
 	// A concurrent cancellation that won before registration is visible here;
 	// replay its durable result rather than restarting the stopped Run.
-	executionCtx, cancel := durableExecutionContext(ctx)
+	executionCtx, cancel := r.durableExecutionContext(ctx)
 	defer cancel()
 	unregister := r.registerRunCancellation(run.ID, cancel)
 	defer unregister()

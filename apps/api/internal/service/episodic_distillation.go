@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"log"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/bodysense/api/internal/config"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
@@ -19,43 +18,6 @@ import (
 // opts in; a wired env flag alone still cannot generate because no approved
 // model proposer is connected in the production constructor.
 const EpisodicShadowGenerationEnv = "EPISODIC_SHADOW_GENERATION_ENABLED"
-
-const (
-	episodicProposalTimeoutEnv = "EPISODIC_PROPOSAL_TIMEOUT_SECONDS"
-	episodicPassBudgetEnv      = "EPISODIC_PASS_BUDGET_SECONDS"
-
-	defaultEpisodicProposalTimeout = 120 * time.Second
-	defaultEpisodicPassBudget      = 600 * time.Second
-)
-
-// episodicProposalTimeout resolves the deadline for one shadow proposal. A
-// proposal is a full model round trip (Go → ai-service → gateway → model), so
-// the previous fixed 5s aborted every real call. EPISODIC_PROPOSAL_TIMEOUT_SECONDS
-// lets a deployment tune it without a code change; unset, non-numeric, zero, or
-// negative values keep the safe default.
-func episodicProposalTimeout() time.Duration {
-	return episodicSecondsFromEnv(episodicProposalTimeoutEnv, defaultEpisodicProposalTimeout)
-}
-
-// episodicPassBudget resolves the total budget for one prune-boundary pass,
-// which bounds the serial proposal calls plus ledger writes. The previous
-// fixed 20s could not cover even a single real proposal round trip.
-// EPISODIC_PASS_BUDGET_SECONDS overrides it with the same fallback rules.
-func episodicPassBudget() time.Duration {
-	return episodicSecondsFromEnv(episodicPassBudgetEnv, defaultEpisodicPassBudget)
-}
-
-func episodicSecondsFromEnv(name string, fallback time.Duration) time.Duration {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return fallback
-	}
-	seconds, err := strconv.Atoi(raw)
-	if err != nil || seconds <= 0 {
-		return fallback
-	}
-	return time.Duration(seconds) * time.Second
-}
 
 // EpisodicShadowGenerationEnabledFromEnv reads the default-off kill switch.
 func EpisodicShadowGenerationEnabledFromEnv(getenv func(string) string) bool {
@@ -101,10 +63,11 @@ func NewEpisodicDistillationTrigger(
 	repo *repository.EpisodicDistillationRepository,
 	writer *repository.EpisodicShadowRepository,
 	proposer EpisodicShadowProposer,
+	cfg config.Episodic,
 ) *EpisodicDistillationTrigger {
 	return &EpisodicDistillationTrigger{
 		repo: repo, writer: writer, proposer: proposer,
-		proposalTimeout: episodicProposalTimeout(), passBudget: episodicPassBudget(),
+		proposalTimeout: cfg.ProposalTimeout, passBudget: cfg.PassBudget,
 		maxSegments: repository.EpisodicDistillationMaxSegmentsPerPass,
 		maxAttempts: repository.EpisodicDistillationMaxAttempts,
 	}
@@ -119,7 +82,7 @@ func NewEpisodicDistillationTriggerFromEnv(
 	writer *repository.EpisodicShadowRepository,
 	proposer EpisodicShadowProposer,
 ) *EpisodicDistillationTrigger {
-	t := NewEpisodicDistillationTrigger(repo, writer, proposer)
+	t := NewEpisodicDistillationTrigger(repo, writer, proposer, config.Load(getenv).Episodic)
 	requested := EpisodicShadowGenerationEnabledFromEnv(getenv)
 	if requested && (proposer == nil || writer == nil) {
 		log.Printf("episodic shadow generation requested but no approved proposer is wired; generation stays off")

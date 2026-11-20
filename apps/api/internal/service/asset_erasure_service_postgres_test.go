@@ -61,7 +61,7 @@ func newAssetErasureFixture(t *testing.T) *assetErasureFixture {
 		t.Fatal(err)
 	}
 	f := &assetErasureFixture{db: db, store: store, assets: repository.NewUserAssetRepository(db)}
-	uploads := NewUploadService(f.assets, nil, nil, nil, nil, registry)
+	uploads := NewUploadService(f.assets, nil, nil, nil, nil, registry, testProcessConfig().Upload)
 	f.erasure = NewAssetErasureService(repository.NewAssetErasureRepository(db), uploads)
 	f.owner = f.seedUser(t)
 	foreign := f.seedUser(t)

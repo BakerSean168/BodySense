@@ -51,7 +51,7 @@ func clearAgentDeploymentEnv(t *testing.T) {
 
 func TestAgentDeploymentPolicyDefaultsToCurrentChampionsOnly(t *testing.T) {
 	clearAgentDeploymentEnv(t)
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestRetiredAgentConfigurationsCannotReenterRuntimeServing(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			clearAgentDeploymentEnv(t)
 			t.Setenv(tc.env, tc.id)
-			if _, err := NewAgentDeploymentPolicy(); err == nil {
+			if _, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment); err == nil {
 				t.Fatalf("retired configuration %q must be rejected", tc.id)
 			}
 		})
@@ -147,7 +147,7 @@ func TestRollbackIsNotARuntimeServingStage(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 			clearAgentDeploymentEnv(t)
 			t.Setenv(env, "rollback")
-			if _, err := NewAgentDeploymentPolicy(); err == nil {
+			if _, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment); err == nil {
 				t.Fatalf("%s=rollback must be rejected; rollback changes the champion pointer instead", env)
 			}
 		})
@@ -168,7 +168,7 @@ func TestNonChampionRolloutRequiresADistinctRepositoryKnownChallenger(t *testing
 		t.Run(tc.name, func(t *testing.T) {
 			clearAgentDeploymentEnv(t)
 			t.Setenv(tc.stageEnv, tc.stage)
-			if _, err := NewAgentDeploymentPolicy(); err == nil {
+			if _, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment); err == nil {
 				t.Fatal("non-Champion rollout must require a distinct active Challenger")
 			}
 		})
@@ -218,7 +218,7 @@ func TestDiagnosisClaimSurfaceConfigurationIsAnExplicitDistinctChallenger(t *tes
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +255,7 @@ func TestDiagnosisPromotionAdmissionRequiresExactRegisteredPair(t *testing.T) {
 			t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", tc.challenger)
 			t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", tc.record)
-			_, err := NewAgentDeploymentPolicy()
+			_, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("NewAgentDeploymentPolicy error=%v wantErr=%v", err, tc.wantErr)
 			}
@@ -270,7 +270,7 @@ func TestDiagnosisPromotionV8SelectsStructuredAuthorityRolloutPolicy(t *testing.
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v8")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestDiagnosisPromotionV9SelectsBudgetSuccessorRolloutPolicy(t *testing.T) {
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v9")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +308,7 @@ func TestDiagnosisPromotionV10SelectsProviderFreshCohort(t *testing.T) {
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v10")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestDiagnosisPromotionV11SelectsPreAgentAuthorityCohort(t *testing.T) {
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v11")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestDiagnosisPromotionV12SelectsReplayNormalizedCohort(t *testing.T) {
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v12")
 
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +368,7 @@ func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
 			t.Setenv("DIAGNOSIS_CANARY_BPS", strconv.Itoa(bps))
 			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
 
-			policy, err := NewAgentDeploymentPolicy()
+			policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -391,7 +391,7 @@ func TestDiagnosisCanaryAdmissionUsesApprovedPromotionSteps(t *testing.T) {
 			t.Setenv("DIAGNOSIS_CANARY_BPS", strconv.Itoa(bps))
 			t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "diagnosis_promotion_v2")
 
-			_, err := NewAgentDeploymentPolicy()
+			_, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 			if err == nil || !strings.Contains(err.Error(), "500, 2500, 5000") {
 				t.Fatalf("expected approved-step error for %d, got %v", bps, err)
 			}
@@ -408,7 +408,7 @@ func TestPostureChampionBindsPinnedGeometry(t *testing.T) {
 
 func TestAgentDeploymentPolicyOwnsKnowledgeAgentPointers(t *testing.T) {
 	clearAgentDeploymentEnv(t)
-	policy, err := NewAgentDeploymentPolicy()
+	policy, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestAgentDeploymentPolicyRejectsUnknownKnowledgeConfigurations(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			clearAgentDeploymentEnv(t)
 			t.Setenv(tc.env, tc.id)
-			if _, err := NewAgentDeploymentPolicy(); err == nil {
+			if _, err := NewAgentDeploymentPolicy(testProcessConfig().Deployment); err == nil {
 				t.Fatalf("unknown %s configuration must fail closed", tc.name)
 			}
 		})
